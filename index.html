@@ -1,0 +1,788 @@
+<!DOCTYPE html>
+<html lang="en" data-bs-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>The Divide of Argaloth: Initiative Tracker</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" crossorigin="anonymous" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.8.3/font/bootstrap-icons.css" />
+  <!-- Custom CSS -->
+  <link href="/css/site.css" rel="stylesheet" />
+  <!-- Dev Icons -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/devicons/devicon@v2.15.1/devicon.min.css" />
+  <!-- Favicon -->
+  <link rel="icon" type="image/png" href="/images/dndFavicon (2).png" />
+  <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
+  <style>
+    .bgimage{
+        background: url('images/BGMap.png') no-repeat center center fixed;
+        background-size: cover;}
+    .bg-orange { background-color: #fd7e14 !important; color: #212529 !important; }
+    .drag-handle { cursor: move; }
+    .active-turn {
+      border-left: 5px solid #1d9e6d !important;
+      color: #f8f9fa !important;
+      font-weight: bold;
+    }
+    #saveHistorySelect { min-width: 200px; }
+  </style>
+</head>
+<body class="bgimage">
+  <main class="content pt-3">
+    <div class="container-fluid text-center backdrop">
+      <h1 class="display-1 mb-0">Initiative Tracker</h1>
+      <p class="lead">Manage initiative, health, AC, notes, dice rolls, and combat rounds.</p>
+      <div class="row">
+        <div class="col-12 col-md-6">
+            <div class="d-flex justify-content-center align-items-center gap-3 my-3 flex-wrap">
+              <div class="form-check form-switch">
+                <input class="form-check-input" type="checkbox" id="autoSaveToggle" checked>
+                <label class="form-check-label" for="autoSaveToggle">Auto-Save</label>
+              </div>
+              <button id="manualSaveBtn" class="btn btn-outline-success">Manual Save</button>
+              <select id="saveHistorySelect" class="form-select form-select-sm w-auto">
+                <option disabled selected>Load Previous Save</option>
+              </select>
+              <input type="file" id="import-file" accept=".json" class="d-none" />
+              <button id="export-btn" class="btn btn-outline-warning">Export Session</button>
+              <button id="import-btn" class="btn btn-outline-secondary">Import Session</button>
+            </div>
+        </div>
+        <div class="col-12 col-md-6">
+          <div class="accordion mb-4" id="savedCharactersAccordion">
+            <div class="accordion-item">
+              <h2 class="accordion-header" id="savedCharactersHeading">
+                <button class="accordion-button collapsed bg-dark text-light" type="button" data-bs-toggle="collapse" data-bs-target="#savedCharactersCollapse" aria-expanded="false" aria-controls="savedCharactersCollapse">
+                  Saved Character Stat Blocks (Max: 10)
+                </button>
+              </h2>
+              <div id="savedCharactersCollapse" class="accordion-collapse collapse" aria-labelledby="savedCharactersHeading" data-bs-parent="#savedCharactersAccordion">
+                <div class="accordion-body bg-dark text-light">
+                  <div class="row g-2 mb-3">
+                    <div class="col-md-3"><input id="save-name" class="form-control" type="text" placeholder="Name" /></div>
+                    <div class="col-md-2"><input id="save-health" class="form-control" type="number" placeholder="HP" /></div>
+                    <div class="col-md-2"><input id="save-ac" class="form-control" type="number" placeholder="AC" /></div>
+                    <div class="col-md-2"><button id="save-character-btn" class="btn btn-outline-success w-100">Save Character</button></div>
+                  </div>
+                  <ul id="saved-characters-list" class="list-group"></ul>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+
+      <form id="initiative-form" class="mb-4">
+        <div class="row g-2">
+          <div class="col-md-3"><input id="character-name" class="form-control" type="text" placeholder="Character Name" required></div>
+          <div class="col-md-2"><input id="initiative-roll" class="form-control" type="number" placeholder="Initiative" required></div>
+          <div class="col-md-2"><input id="character-health" class="form-control" type="number" placeholder="Max HP" required></div>
+          <div class="col-md-2"><input id="character-ac" class="form-control" type="number" placeholder="AC" required></div>
+          <div class="col-md-2"><input id="character-notes" class="form-control" type="text" placeholder="Notes (optional)"></div>
+          <div class="col-md-1"><button class="btn btn-outline-success w-100" type="submit">Add</button></div>
+        </div>
+      </form>
+
+      <h2>Combat Round: <span id="combat-round">1</span></h2>
+
+      <!-- Dice Roller Section -->
+      <div class="my-4 text-light">
+        <div class="d-flex justify-content-center gap-2 flex-wrap">
+          <button class="btn btn-outline-info dice-btn" data-dice="4">Roll d4</button>
+          <button class="btn btn-outline-info dice-btn" data-dice="6">Roll d6</button>
+          <button class="btn btn-outline-info dice-btn" data-dice="8">Roll d8</button>
+          <button class="btn btn-outline-info dice-btn" data-dice="10">Roll d10</button>
+          <button class="btn btn-outline-info dice-btn" data-dice="12">Roll d12</button>
+          <button class="btn btn-outline-info dice-btn" data-dice="20">Roll d20</button>
+          <button class="btn btn-outline-info dice-btn" data-dice="100">Roll d100</button>
+        </div>
+        <div class="mt-3">
+          <label for="custom-dice-input" class="form-label">Custom Roll:</label>
+          <div class="input-group w-auto mx-auto">
+            <input id="custom-dice-input" type="text" class="form-control form-control-sm" placeholder="e.g. 2d6+3">
+            <button id="roll-custom-dice" class="btn btn-outline-warning btn-sm">Roll</button>
+          </div>
+        </div>
+        <div class="text-light mt-2" id="dice-result" style="font-size: 1.25rem;"></div>
+        <div class="mt-3">
+          <button class="btn btn-outline-light btn-sm" data-bs-toggle="collapse" data-bs-target="#dice-history">Toggle Roll History</button>
+          <button class="btn btn-outline-danger btn-sm" id="clear-dice-history">Clear Dice History</button>
+          <div class="collapse mt-2" id="dice-history">
+            <div class="card card-body bg-dark text-light" id="dice-history-log" style="max-height: 200px; overflow-y: auto;"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Initiative Table -->
+      <div class="d-none d-md-block">
+        <div class="table-responsive">
+          <table class="table table-striped text-light align-middle">
+            <thead>
+              <tr>
+                <th></th>
+                <th>Turn</th>
+                <th>Character</th>
+                <th>Initiative</th>
+                <th>AC</th>
+                <th>Health</th>
+                <th>Notes</th>
+                <th>Status</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="initiative-order"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div id="mobile-initiative-order" class="d-block d-md-none"></div>
+
+      <div class="mt-3 d-flex gap-2 justify-content-center flex-wrap">
+        <button id="next-turn" class="btn btn-outline-success">Next Turn</button>
+        <button id="reset-turns" class="btn btn-outline-danger">Reset Rounds</button>
+        <button id="clear-all" class="btn btn-outline-light">Clear All</button>
+        <button id="clear-storage" class="btn btn-outline-warning">Clear Saved Data</button>
+        <button class="btn btn-outline-light" type="button" data-bs-toggle="offcanvas" data-bs-target="#sessionNotes" aria-controls="sessionNotes">
+          <i class="bi bi-journal-text me-1"></i> Session Notes
+        </button>
+      </div>
+    </div>
+  </main>
+
+  <!-- Status Modal -->
+  <div class="modal fade" id="statusModal" tabindex="-1" aria-labelledby="statusModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+      <div class="modal-content bg-dark text-light">
+        <div class="modal-header">
+          <h5 class="modal-title" id="statusModalLabel">Edit Status Effects</h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <div id="status-badges" class="mb-3 d-flex flex-wrap gap-2"></div>
+          <div class="dropdown w-100 mb-3">
+            <button class="btn btn-outline-light dropdown-toggle w-100" type="button" id="statusDropdownBtn" data-bs-toggle="dropdown" aria-expanded="false">
+              Add Status Effect
+            </button>
+            <ul class="dropdown-menu dropdown-menu-dark w-100" aria-labelledby="statusDropdownBtn" id="status-dropdown-list">
+              <!-- Populated dynamically -->
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Session Notes Offcanvas -->
+  <div class="offcanvas offcanvas-end text-bg-dark" tabindex="-1" id="sessionNotes" aria-labelledby="sessionNotesLabel">
+    <div class="offcanvas-header">
+      <h5 id="sessionNotesLabel">Session Notes</h5>
+      <button type="button" class="btn-close btn-close-white" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+    </div>
+    <div class="offcanvas-body d-flex flex-column">
+      <textarea id="session-notes" class="form-control mb-3" rows="10" placeholder="Enter your session notes..."></textarea>
+      <div class="d-flex justify-content-between gap-2">
+        <button id="save-notes" class="btn btn-outline-success w-100">Save</button>
+        <button id="export-notes" class="btn btn-outline-warning w-100">Export</button>
+        <button id="import-notes" class="btn btn-outline-secondary w-100">Import</button>
+      </div>
+      <input type="file" id="import-notes-file" class="d-none" accept=".txt,.md,.json" />
+    </div>
+  </div>
+
+  <!-- Scripts -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  <script>
+
+      document.getElementById('session-notes').addEventListener('input', () => {
+        saveNotes();
+      });
+
+    // Session Notes
+    const notesKey = 'sessionNotes';
+
+    function loadNotes() {
+      const saved = localStorage.getItem(notesKey);
+      if (saved) document.getElementById('session-notes').value = saved;
+    }
+
+    function saveNotes() {
+      const content = document.getElementById('session-notes').value;
+      localStorage.setItem(notesKey, content);
+    }
+
+    document.getElementById('save-notes').addEventListener('click', () => {
+      saveNotes();
+      alert("Notes saved.");
+    });
+
+    document.getElementById('export-notes').addEventListener('click', () => {
+      const notes = document.getElementById('session-notes').value;
+      const blob = new Blob([notes], { type: 'text/plain' });
+      const url = URL.createObjectURL(blob);
+    
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `session_notes_${new Date().toISOString().slice(0, 10)}.txt`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    });
+
+    document.getElementById('import-notes').addEventListener('click', () => {
+      document.getElementById('import-notes-file').click();
+    });
+
+    document.getElementById('import-notes-file').addEventListener('change', function () {
+      const file = this.files[0];
+      if (!file) return;
+    
+      const reader = new FileReader();
+      reader.onload = function (e) {
+        document.getElementById('session-notes').value = e.target.result;
+        saveNotes();
+        alert("Notes imported.");
+      };
+      reader.readAsText(file);
+      this.value = ''; // Reset input
+    });
+
+  // Load notes when the DOM is ready
+  loadNotes();
+
+    const statusEffects = [
+      { name: 'Blinded', icon: '👁️' },
+      { name: 'Exhaustion', icon: '💤' },
+      { name: 'Incapacitated', icon: '😴' },
+      { name: 'Petrified', icon: '🪨' },
+      { name: 'Restrained', icon: '🪢' },
+      { name: 'Charmed', icon: '🔮' },
+      { name: 'Frightened', icon: '😱' },
+      { name: 'Invisible', icon: '🔎' },
+      { name: 'Poisoned', icon: '☠️' },
+      { name: 'Unconscious', icon: '😪' },
+      { name: 'Deafened', icon: '🔈' },
+      { name: 'Grappled', icon: '🤼‍♂️' },
+      { name: 'Paralyzed', icon: '🔐' },
+      { name: 'Prone', icon: '🛌' },
+    ];
+      
+
+    document.addEventListener('DOMContentLoaded', function () {
+      let characters = [];
+      let currentTurn = 0;
+      let combatRound = 1;
+      let modalCharacterIndex = null;
+      let autoSaveEnabled = true;
+      let diceHistory = [];
+
+      const statusModal = new bootstrap.Modal(document.getElementById('statusModal'));
+
+      const saved = localStorage.getItem('initiativeTrackerData');
+      if (saved) {
+        try {
+          const data = JSON.parse(saved);
+          characters = data.characters || [];
+          if (Array.isArray(characters)) {
+            characters.forEach(c => {
+              if (c.status && typeof c.status[0] === 'string') {
+                c.status = c.status.map(name => ({
+                  name,
+                  icon: statusEffects.find(e => e.name === name)?.icon || '❓'
+                }));
+              }
+            });
+          }
+          currentTurn = data.currentTurn || 0;
+          combatRound = data.combatRound || 1;
+          diceHistory = Array.isArray(data.diceHistory) && typeof data.diceHistory[0] === 'object'
+            ? data.diceHistory
+            : (data.diceHistory || []).map(t => ({ text: t, timestamp: 'Unknown' }));
+        } catch (e) {
+          console.warn("Failed to load tracker state:", e);
+        }
+      }
+
+      function hpClass(percent) {
+        if (percent <= 0) return 'bg-secondary text-light text-decoration-line-through';
+        if (percent <= 25) return 'bg-danger text-light';
+        if (percent <= 50) return 'bg-warning text-dark';
+        if (percent <= 75) return 'bg-orange text-dark';
+        return 'bg-success text-light';
+      }
+
+      function saveToLocalStorage(manual = false) {
+        const timestamp = new Date().toISOString();
+        const state = { characters, currentTurn, combatRound, diceHistory };
+        const key = manual ? `initiativeTrackerData_${timestamp}` : 'initiativeTrackerData';
+        localStorage.setItem(key, JSON.stringify(state));
+        if (manual) updateSaveHistory();
+      }
+
+      function updateSaveHistory() {
+        const select = document.getElementById('saveHistorySelect');
+        select.innerHTML = `<option disabled selected>Load Previous Save</option>`;
+        Object.keys(localStorage)
+          .filter(k => k.startsWith('initiativeTrackerData_'))
+          .sort().reverse()
+          .forEach(key => {
+            const time = key.replace('initiativeTrackerData_', '');
+            const label = new Date(time).toLocaleString();
+            const opt = document.createElement('option');
+            opt.value = key;
+            opt.textContent = label;
+            select.appendChild(opt);
+          });
+      }
+
+      function addToHistory(text) {
+        const timestamp = new Date().toLocaleTimeString();
+        diceHistory.unshift({ text, timestamp });
+        buildDiceHistory();
+        if (autoSaveEnabled) saveToLocalStorage();
+      }
+
+      function buildDiceHistory() {
+        const history = document.getElementById('dice-history-log');
+        history.innerHTML = '';
+        diceHistory.forEach(entry => {
+          const div = document.createElement('div');
+          div.className = "border-bottom pb-1 mb-1";
+          div.innerHTML = `<strong>${entry.timestamp}</strong>: ${entry.text}`;
+          history.appendChild(div);
+        });
+      }
+
+      function buildTable() {
+        document.getElementById('combat-round').textContent = combatRound;
+        const tableBody = document.getElementById('initiative-order');
+        const mobileBody = document.getElementById('mobile-initiative-order');
+        tableBody.innerHTML = '';
+        mobileBody.innerHTML = '';
+
+        characters.forEach((c, i) => {
+          const pct = Math.round((c.currentHP / c.maxHP) * 100);
+          const row = document.createElement('tr');
+          row.innerHTML = `
+            <td class="drag-handle"><i class="bi bi-grip-vertical"></i></td>
+            <td>${i === currentTurn ? '<i class="bi bi-caret-right-fill"></i>' : ''}</td>
+            <td class="${pct <= 0 ? 'text-decoration-line-through' : ''}">${c.name}</td>
+            <td><input type="number" class="form-control form-control-sm init-input" value="${c.initiative}" data-index="${i}"></td>
+            <td>${c.ac ?? '-'}</td>
+            <td><input type="number" class="form-control form-control-sm health-input ${hpClass(pct)}" value="${c.currentHP}" data-index="${i}"></td>
+            <td><input type="text" class="form-control form-control-sm notes-input" placeholder="Notes..." value="${c.notes}" data-index="${i}"></td>
+            <td><button class="btn btn-sm btn-outline-info w-100 status-btn" data-index="${i}" title="${(c.status || []).map(s => s.name).join(', ') || 'No active effects'}">Status</button></td>
+            <td class="d-flex gap-1">
+              <button class="btn btn-sm btn-outline-success duplicate-btn" data-index="${i}" title="Duplicate Character"><i class="bi bi-files"></i></button>
+              <button class="btn btn-sm btn-outline-danger delete-btn" data-index="${i}" title="Delete Character"><i class="bi bi-trash"></i></button>
+            </td>
+          `;
+          if (i === currentTurn) row.classList.add('active-turn');
+          tableBody.appendChild(row);
+
+          const card = document.createElement('div');
+          card.className = 'card mb-2 text-start';
+          if (i === currentTurn) card.classList.add('border-success');
+          card.innerHTML = `
+            <div class="card-body">
+              <h5 class="card-title mb-1">${c.name} <small class="text-muted">(${c.initiative} Init)</small></h5>
+              <p class="mb-1">AC: ${c.ac ?? '-'}</p>
+              <p class="mb-1">HP: <input type="number" class="form-control form-control-sm health-input ${hpClass(pct)}" value="${c.currentHP}" data-index="${i}"></p>
+              <p class="mb-1">Notes: <input type="text" class="form-control form-control-sm notes-input" placeholder="Notes..." value="${c.notes}" data-index="${i}"></p>
+              <p class="mb-1">Status: <button class="btn btn-sm btn-outline-info status-btn" data-index="${i}" title="${(c.status || []).map(s => s.name).join(', ') || 'No active effects'}">Status</button></p>
+              <button class="btn btn-sm btn-outline-success duplicate-btn" data-index="${i}" title="Duplicate Character"><i class="bi bi-files"></i></button>
+              <button class="btn btn-sm btn-outline-danger delete-btn" data-index="${i}"><i class="bi bi-trash"></i> Remove</button>
+            </div>
+          `;
+
+                // Reordering Buttons for Mobile
+          const upBtn = document.createElement('button');
+          upBtn.className = 'btn btn-sm btn-outline-light me-1';
+          upBtn.innerHTML = '<i class="bi bi-arrow-up"></i>';
+          upBtn.onclick = () => {
+            if (i > 0) {
+              [characters[i - 1], characters[i]] = [characters[i], characters[i - 1]];
+              buildTable();
+            }
+          };
+        
+          const downBtn = document.createElement('button');
+          downBtn.className = 'btn btn-sm btn-outline-light';
+          downBtn.innerHTML = '<i class="bi bi-arrow-down"></i>';
+          downBtn.onclick = () => {
+            if (i < characters.length - 1) {
+              [characters[i], characters[i + 1]] = [characters[i + 1], characters[i]];
+              buildTable();
+            }
+          };
+        
+          const reorderDiv = document.createElement('div');
+          reorderDiv.className = 'd-flex justify-content-end mt-2';
+          reorderDiv.appendChild(upBtn);
+          reorderDiv.appendChild(downBtn);
+          card.querySelector('.card-body').appendChild(reorderDiv);
+
+          mobileBody.appendChild(card);
+        });
+
+        document.querySelectorAll('.health-input').forEach(inp => inp.addEventListener('input', function () {
+          const idx = parseInt(this.dataset.index);
+          characters[idx].currentHP = isNaN(this.value) ? 0 : parseInt(this.value);
+          buildTable();
+        }));
+
+        document.querySelectorAll('.init-input').forEach(inp => inp.addEventListener('input', function () {
+          const idx = parseInt(this.dataset.index);
+          characters[idx].initiative = parseInt(this.value) || 0;
+          characters.sort((a, b) => b.initiative - a.initiative);
+          buildTable();
+        }));
+
+
+        document.querySelectorAll('.duplicate-btn').forEach(btn => btn.addEventListener('click', () => {
+          const idx = parseInt(btn.dataset.index);
+          const original = characters[idx];
+          const copy = { ...original, name: original.name + ' (copy)' };
+          characters.splice(idx + 1, 0, copy);
+          buildTable();
+        }));
+        
+        document.querySelectorAll('.notes-input').forEach(inp => inp.addEventListener('input', function () {
+          characters[this.dataset.index].notes = this.value;
+        }));
+
+        document.querySelectorAll('.delete-btn').forEach(btn => btn.addEventListener('click', () => deleteChar(btn.dataset.index)));
+
+       document.querySelectorAll('.status-btn').forEach(btn => btn.addEventListener('click', function () {
+        modalCharacterIndex = parseInt(this.dataset.index);
+        const char = characters[modalCharacterIndex];
+        const dropdown = document.getElementById('status-dropdown-list');
+        dropdown.innerHTML = '';
+
+        // Populate dropdown
+        statusEffects.forEach(effect => {
+          const alreadyHas = char.status.some(s => s.name === effect.name);
+          const li = document.createElement('li');
+          li.innerHTML = `
+            <a class="dropdown-item d-flex align-items-center gap-2 ${alreadyHas ? 'disabled text-muted' : ''}" href="#" data-effect="${effect.name}">
+              <span title="${effect.name}">${effect.icon}</span> ${effect.name}
+            </a>`;
+          dropdown.appendChild(li);
+        });
+      
+        dropdown.querySelectorAll('a[data-effect]').forEach(a => {
+          a.addEventListener('click', function (e) {
+            e.preventDefault();
+            const name = this.dataset.effect;
+            const icon = statusEffects.find(x => x.name === name)?.icon ?? '';
+            char.status.push({ name, icon });
+            buildTable();
+            statusModal.hide();
+          });
+        });
+      
+        // Render badges
+        const container = document.getElementById('status-badges');
+        container.innerHTML = char.status.map(effect =>
+          `<span class="badge bg-secondary px-2 py-1" title="${effect.name}">
+            ${effect.icon}
+            <i class="bi bi-x ms-1 remove-status" data-effect="${effect.name}" role="button"></i>
+          </span>`).join('');
+        
+        container.querySelectorAll('.remove-status').forEach(x => {
+        x.addEventListener('click', function () {
+          const eff = this.dataset.effect;
+          char.status = char.status.filter(s => s.name !== eff);
+          this.parentElement.remove();
+        
+          // Update the button's title attribute
+          const btn = document.querySelector(`.status-btn[data-index="${modalCharacterIndex}"]`);
+          btn.setAttribute(
+            'title',
+            (char.status.length
+              ? char.status.map(s => s.name).join(', ')
+              : 'No active effects')
+          );
+        
+          // Refresh Bootstrap tooltip instance (if using BS5)
+          const tip = bootstrap.Tooltip.getInstance(btn);
+          if (tip) {
+            tip.setContent({ '.tooltip-inner': btn.getAttribute('title') });
+          }
+        });
+      });
+      
+        statusModal.show();
+      }));
+
+        
+        // Initialize Sortable for drag-and-drop reordering
+        new Sortable(document.getElementById('initiative-order'), {
+          handle: '.drag-handle',
+          animation: 150,
+          onEnd: function (evt) {
+            const [movedItem] = characters.splice(evt.oldIndex, 1);
+            characters.splice(evt.newIndex, 0, movedItem);
+            buildTable();
+          }
+        });
+
+        buildDiceHistory();
+        if (autoSaveEnabled) saveToLocalStorage();
+      }
+
+      function parseDiceFormula(formula) {
+        const match = formula.toLowerCase().match(/^(\d*)d(\d+)([+-]\d+)?$/);
+        if (!match) return null;
+        const num = parseInt(match[1] || '1', 10);
+        const sides = parseInt(match[2], 10);
+        const mod = parseInt(match[3] || '0', 10);
+        const rolls = Array.from({ length: num }, () => Math.floor(Math.random() * sides) + 1);
+        const total = rolls.reduce((a, b) => a + b, 0) + mod;
+        return { rolls, modifier: mod, total, sides, num };
+      }
+
+      function deleteChar(idx) {
+        characters.splice(idx, 1);
+        if (currentTurn >= characters.length) currentTurn = 0;
+        if (characters.length === 0) combatRound = 1;
+        buildTable();
+      }
+
+      // Event Listeners
+      document.getElementById('initiative-form').addEventListener('submit', e => {
+        e.preventDefault();
+        const name = document.getElementById('character-name').value.trim();
+        const init = parseInt(document.getElementById('initiative-roll').value, 10);
+        const maxHP = parseInt(document.getElementById('character-health').value, 10);
+        const ac = parseInt(document.getElementById('character-ac').value, 10);
+        const notes = document.getElementById('character-notes').value.trim();
+        if (!name || isNaN(init) || isNaN(maxHP) || isNaN(ac)) return;
+
+        characters.push({ name, initiative: init, currentHP: maxHP, maxHP, notes, ac, status: [] });
+        characters.sort((a, b) => b.initiative - a.initiative);
+        e.target.reset();
+        buildTable();
+      });
+
+      document.getElementById('clear-all').addEventListener('click', () => {
+        characters = [];
+        currentTurn = 0;
+        combatRound = 1;
+        buildTable();
+      });
+
+      document.getElementById('clear-storage').addEventListener('click', () => {
+        localStorage.clear();
+        alert('All saved tracker data cleared.');
+        updateSaveHistory();
+      });
+
+      document.getElementById('next-turn').addEventListener('click', () => {
+        if (characters.length === 0) return;
+
+        const len = characters.length;
+        let attempts = 0;
+
+        do {
+          currentTurn = (currentTurn + 1) % len;
+          if (currentTurn === 0) combatRound++;
+          attempts++;
+        } while (characters[currentTurn].currentHP <= 0 && attempts < len);
+      
+        buildTable();
+      });
+
+
+      document.getElementById('reset-turns').addEventListener('click', () => {
+        currentTurn = 0;
+        combatRound = 1;
+        buildTable();
+      });
+
+      document.getElementById('manualSaveBtn').addEventListener('click', () => {
+        saveToLocalStorage(true);
+        alert('Manual save complete.');
+      });
+
+      document.getElementById('saveHistorySelect').addEventListener('change', function () {
+        const raw = localStorage.getItem(this.value);
+        if (!raw) return;
+        try {
+          const data = JSON.parse(raw);
+          characters = data.characters || [];
+          characters.forEach(c => {
+            if (c.status && typeof c.status[0] === 'string') {
+              c.status = c.status.map(name => ({
+                name,
+                icon: statusEffects.find(e => e.name === name)?.icon || '❓'
+              }));
+            }
+          });
+          currentTurn = data.currentTurn || 0;
+          combatRound = data.combatRound || 1;
+          diceHistory = Array.isArray(data.diceHistory) && typeof data.diceHistory[0] === 'object'
+            ? data.diceHistory
+            : (data.diceHistory || []).map(t => ({ text: t, timestamp: 'Unknown' }));
+          buildTable();
+        } catch (e) {
+          alert('Failed to load that save.');
+        }
+      });
+
+      document.getElementById('autoSaveToggle').addEventListener('change', e => {
+        autoSaveEnabled = e.target.checked;
+      });
+
+      document.querySelectorAll('.dice-btn').forEach(btn => {
+        btn.addEventListener('click', function () {
+          const sides = parseInt(this.dataset.dice);
+          const result = Math.floor(Math.random() * sides) + 1;
+          const output = `🎲 Rolled d${sides}: ${result}`;
+          document.getElementById('dice-result').textContent = output;
+          addToHistory(output);
+        });
+      });
+
+      document.getElementById('roll-custom-dice').addEventListener('click', function () {
+        const input = document.getElementById('custom-dice-input').value.trim();
+        const parsed = parseDiceFormula(input);
+        if (!parsed) return alert("Invalid format. Use XdY+Z (e.g., 2d6+3)");
+        const { rolls, modifier, total, sides, num } = parsed;
+        const modStr = modifier !== 0 ? (modifier > 0 ? ` + ${modifier}` : ` - ${Math.abs(modifier)}`) : '';
+        const output = `🎲 Rolled ${num}d${sides}${modStr}: [${rolls.join(', ')}] = ${total}`;
+        document.getElementById('dice-result').textContent = output;
+        addToHistory(output);
+      });
+
+      document.getElementById('clear-dice-history').addEventListener('click', () => {
+        if (confirm("Clear all dice history?")) {
+          diceHistory = [];
+          buildDiceHistory();
+          if (autoSaveEnabled) saveToLocalStorage();
+        }
+      });
+
+      window.addEventListener('beforeunload', () => {
+        if (autoSaveEnabled) saveToLocalStorage();
+      });
+
+      updateSaveHistory();
+      buildTable();
+
+      // Export session to file
+      document.getElementById('export-btn').addEventListener('click', () => {
+        const data = {
+          characters,
+          currentTurn,
+          combatRound,
+          diceHistory
+        };
+        const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `initiativeTracker_${new Date().toISOString()}.json`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+      });
+
+      // Import session from file
+      document.getElementById('import-btn').addEventListener('click', () => {
+        document.getElementById('import-file').click();
+      });
+
+      document.getElementById('import-file').addEventListener('change', function () {
+        const file = this.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = function (e) {
+          try {
+            const importedData = JSON.parse(e.target.result);
+            characters = importedData.characters || [];
+            currentTurn = importedData.currentTurn || 0;
+            combatRound = importedData.combatRound || 1;
+            diceHistory = importedData.diceHistory || [];
+            buildTable();
+            alert("Session imported successfully.");
+          } catch (err) {
+            alert("Failed to import session. Invalid file format.");
+          }
+        };
+        reader.readAsText(file);
+        this.value = ''; // Reset file input
+        });
+    });
+
+    let savedCharacters = JSON.parse(localStorage.getItem('savedCharacters') || '[]');
+
+    function buildSavedCharactersList() {
+      const list = document.getElementById('saved-characters-list');
+      list.innerHTML = '';
+    
+      savedCharacters.forEach((char, index) => {
+        const li = document.createElement('li');
+        li.className = 'list-group-item d-flex justify-content-between align-items-center bg-dark text-light border-light';
+        li.innerHTML = `
+          <span><strong>${char.name}</strong> - HP: ${char.health}, AC: ${char.ac}</span>
+          <div>
+            <button class="btn btn-sm btn-outline-success me-2" data-load-index="${index}">Load</button>
+            <button class="btn btn-sm btn-outline-danger" data-index="${index}">Delete</button>
+          </div>
+        `;
+        list.appendChild(li);
+      });
+    
+      list.querySelectorAll('button[data-index]').forEach(btn => {
+        btn.addEventListener('click', function () {
+          const i = parseInt(this.dataset.index);
+          savedCharacters.splice(i, 1);
+          localStorage.setItem('savedCharacters', JSON.stringify(savedCharacters));
+          buildSavedCharactersList();
+        });
+      });
+    
+      list.querySelectorAll('button[data-load-index]').forEach(btn => {
+        btn.addEventListener('click', function () {
+          const i = parseInt(this.dataset.loadIndex);
+          const char = savedCharacters[i];
+          document.getElementById('character-name').value = char.name;
+          document.getElementById('character-health').value = char.health;
+          document.getElementById('character-ac').value = char.ac;
+        });
+      });
+    }
+
+    document.getElementById('save-character-btn').addEventListener('click', () => {
+      const name = document.getElementById('save-name').value.trim();
+      const health = parseInt(document.getElementById('save-health').value);
+      const ac = parseInt(document.getElementById('save-ac').value);
+    
+      if (!name || isNaN(health) || isNaN(ac)) {
+        alert("Please enter valid Name, Health, and AC.");
+        return;
+      }
+    
+      if (savedCharacters.length >= 10) {
+        alert("You can only save up to 10 characters.");
+        return;
+      }
+    
+      savedCharacters.push({ name, health, ac });
+      localStorage.setItem('savedCharacters', JSON.stringify(savedCharacters));
+      buildSavedCharactersList();
+    
+      document.getElementById('save-name').value = '';
+      document.getElementById('save-health').value = '';
+      document.getElementById('save-ac').value = '';
+    });
+
+    // Call this in DOMContentLoaded block
+    buildSavedCharactersList();
+  </script>
+</body>
+</html>
