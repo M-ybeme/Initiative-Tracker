@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en" data-bs-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>The DM's Toolbox: </title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" crossorigin="anonymous" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.8.3/font/bootstrap-icons.css" />
+  <!-- Custom CSS -->
+  <link href="/css/site.css" rel="stylesheet" />
+  <!-- Dev Icons -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/devicons/devicon@v2.15.1/devicon.min.css" />
+  <!-- Favicon -->
+  <link rel="icon" type="image/png" href="/images/dndFavicon (2).png" />
+  <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" crossorigin="anonymous"></script>
+  <style>
+    .bgimage{
+        background: url('images/BGMap.png') no-repeat center center fixed;
+        background-size: cover;}
+    .bg-orange { background-color: #fd7e14 !important; color: #212529 !important; }
+    .drag-handle { cursor: move; }
+    .active-turn {
+      border-left: 5px solid #1d9e6d !important;
+      color: #f8f9fa !important;
+      font-weight: bold;
+    }
+    #saveHistorySelect { min-width: 200px; }
+  </style>
+</head>
+<body class="bgimage">
+   <nav class="navbar navbar-expand-lg navbar-dark fixed-top text-light" id="mainNav">
+    <div class="container-fluid">
+      <a class="navbar-brand" href="index.html">
+        <img src="/images/dndFavicon (2).png" height="40" width="40" alt="App Logo" class="d-inline-block" />
+        The DM Toolbox
+      </a>
+      <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarSupportedContent"
+        aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+        <span class="navbar-toggler-icon">
+          <i class="bi bi-list"></i>
+        </span>
+      </button>
+      <div class="collapse navbar-collapse" id="navbarSupportedContent">
+        <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+          <li class="nav-item">
+            <a class="nav-link active" aria-current="page" href="index.html">Initiative</a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" href="name.html">Name Gen</a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" href="loot.html">Loot Gen</a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" href="shop.html">Shop Gen</a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" href="npc.html">NPC Gen</a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" href="tav.html">Tavern/Inn Gen</a>
+          </li>
+        </ul>
+      </div>
+    </div>
+   </nav>
+  <main class="content pt-3">
+    <div class="container-fluid text-center backdrop">
+        <!--New page here-->
+    </div>
+  </main>
+  <!-- Footer -->
+  <footer class="container-fluid mt-5 site-footer" role="contentinfo"> 
+    <div class="row footer-main"> 
+      <div class="col">
+        <div class="container">
+          <div class="row align-items-center">
+            <div class="col-12 col-md-4 text-md-start text-center order-last order-md-first">
+              &copy; 2025 Marlo Mayberry 
+            </div>
+            <div class="col-12 col-md-4 text-center">
+              <img src="/images/White logo - no background.png" height="50">
+            </div>
+            <div class="col-12 col-md-4 d-flex justify-content-center justify-content-md-end">
+              <a href="https://www.linkedin.com/in/marlo-mayberry-930ab9b7/" class="socialicons"  target="_blank"><i class="bi bi-linkedin p-2"></i></a>
+              <a href="https://github.com/M-ybeme" class="socialicons" target="_blank"><i class="bi bi-github p-2"></i></a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </footer>
+</body>
+</html>

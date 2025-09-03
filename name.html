@@ -1,0 +1,500 @@
+<!DOCTYPE html>
+<html lang="en" data-bs-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>The DM's Toolbox: Name Generator</title>
+
+  <!-- Bootstrap CSS + Icons -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" crossorigin="anonymous" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.8.3/font/bootstrap-icons.css" />
+
+  <!-- Custom CSS -->
+  <link href="/css/site.css" rel="stylesheet" />
+
+  <!-- Dev Icons -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/devicons/devicon@v2.15.1/devicon.min.css" />
+  <!-- Favicon -->
+  <link rel="icon" type="image/png" href="/images/dndFavicon (2).png" />
+
+  <!-- Sortable (if needed elsewhere) -->
+  <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
+
+  <style>
+    .bgimage{
+      background: url('images/BGMap.png') no-repeat center center fixed;
+      background-size: cover;
+    }
+    @media (max-width: 576px){
+      /* Improve mobile perf by avoiding fixed backgrounds on tiny screens */
+      .bgimage{ background-attachment: scroll; }
+    }
+    .bg-orange { background-color: #fd7e14 !important; color: #212529 !important; }
+    .drag-handle { cursor: move; }
+    .active-turn {
+      border-left: 5px solid #1d9e6d !important;
+      color: #f8f9fa !important;
+      font-weight: bold;
+    }
+    #saveHistorySelect { min-width: 200px; }
+    /* Local helpers for name tiles */
+    .ng-pill { border: 1px solid rgba(255,255,255,.15); border-radius: 50rem; padding: .15rem .5rem; }
+    .ng-tile { border: 1px solid rgba(255,255,255,.15); border-radius: .6rem; padding: .5rem .6rem; background: rgba(0,0,0,.2); }
+  </style>
+</head>
+<body class="bgimage">
+  <!-- Nav -->
+  <nav class="navbar navbar-expand-lg navbar-dark fixed-top text-light" id="mainNav">
+    <div class="container-fluid">
+      <a class="navbar-brand" href="index.html">
+        <img src="/images/dndFavicon (2).png" height="40" width="40" alt="App Logo" class="d-inline-block" />
+        The DM Toolbox
+      </a>
+      <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarSupportedContent"
+        aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+        <span class="navbar-toggler-icon">
+          <i class="bi bi-list"></i>
+        </span>
+      </button>
+      <div class="collapse navbar-collapse" id="navbarSupportedContent">
+        <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+          <li class="nav-item">
+            <a class="nav-link" href="index.html">Initiative</a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link active" aria-current="page" href="name.html">Name Gen</a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" href="loot.html">Loot Gen</a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" href="shop.html">Shop Gen</a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" href="npc.html">NPC Gen</a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" href="tav.html">Tavern/Inn Gen</a>
+          </li>
+        </ul>
+      </div>
+    </div>
+   </nav>
+
+  <!-- Main -->
+  <main class="content pt-5 mt-3">
+    <div class="container py-3">
+      <div class="d-flex align-items-center justify-content-between gap-2">
+        <div class="backdrop">
+            <h1 class="h3 mb-0">Name Generator</h1>
+
+        <!-- Mobile: open settings offcanvas -->
+        <button class="btn btn-outline-light d-lg-none" data-bs-toggle="offcanvas" data-bs-target="#settingsOffcanvas" aria-controls="settingsOffcanvas">
+          <i class="bi bi-sliders"></i> Open Settings
+        </button>
+        </div>
+      </div>
+
+      <!-- Helper blurb -->
+      <div class="alert alert-info text-start shadow-sm mt-3">
+        <h5 class="mb-2"><i class="bi bi-magic"></i> How to Use the Name Generator</h5>
+        <p class="mb-2">
+          Choose a <strong>Style</strong> (Elven, Dwarven, Human, etc.), set <strong>Count</strong>, and adjust options like
+          <strong>syllables</strong>, <strong>gender leaning</strong>, <strong>alliteration</strong>, and special characters.
+          Click <strong>Generate</strong> to create a list.
+        </p>
+        <ul class="mb-2">
+          <li><strong>Copy</strong> copies all results to your clipboard.</li>
+          <li><strong>Download</strong> saves results as a <code>.txt</code> file.</li>
+          <li><strong>Import/Export</strong> loads or shares your own JSON style tables.</li>
+        </ul>
+        <p class="mb-0">
+          Use the <strong>Seed</strong> box for repeatable results (handy for consistent prep).
+        </p>
+      </div>
+
+      <div class="row g-3 align-items-start">
+        <!-- Desktop/LG+ Settings panel -->
+        <div class="col-lg-4 d-none d-lg-block">
+          <div class="card bg-dark border-secondary h-100">
+            <div class="card-header border-secondary"><h5 class="mb-0">Generator Settings</h5></div>
+            <div class="card-body" id="settingsCardBody"><!-- settings form gets injected/duplicated --></div>
+          </div>
+        </div>
+
+        <!-- Results -->
+        <div class="col-12 col-lg-8">
+          <div class="card bg-dark border-secondary h-100">
+            <div class="card-header border-secondary d-flex align-items-center justify-content-between">
+              <h5 class="mb-0">Results</h5>
+              <!-- Quick actions on mobile -->
+              <div class="d-flex gap-2 d-lg-none">
+                <button class="btn btn-success btn-sm" id="ng-generate-xs"><i class="bi bi-stars"></i></button>
+                <button class="btn btn-outline-light btn-sm" id="ng-copy-xs"><i class="bi bi-clipboard"></i></button>
+              </div>
+            </div>
+            <div class="card-body d-flex flex-column">
+              <div id="ng-meta" class="d-flex flex-wrap gap-2 small text-secondary mb-2"></div>
+              <!-- Responsive grid: 1 on xs, 2 on sm, 3 on md, 4 on lg, 5 on xl+ -->
+              <div id="ng-out" class="row row-cols-1 row-cols-sm-2 row-cols-md-3 row-cols-lg-4 row-cols-xl-5 g-2" aria-live="polite"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Offcanvas (mobile settings) -->
+    <div class="offcanvas offcanvas-end" tabindex="-1" id="settingsOffcanvas" aria-labelledby="settingsOffcanvasLabel">
+      <div class="offcanvas-header">
+        <h5 id="settingsOffcanvasLabel" class="mb-0">Generator Settings</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+      </div>
+      <div class="offcanvas-body" id="settingsOffcanvasBody"><!-- settings form gets injected --></div>
+    </div>
+  </main>
+
+  <!-- Footer -->
+  <footer class="container-fluid mt-5 site-footer" role="contentinfo"> 
+    <div class="row footer-main"> 
+      <div class="col">
+        <div class="container">
+          <div class="row align-items-center">
+            <div class="col-12 col-md-4 text-md-start text-center order-last order-md-first">
+              &copy; 2025 Marlo Mayberry 
+            </div>
+            <div class="col-12 col-md-4 text-center">
+              <img src="/images/White logo - no background.png" height="50" alt="Logo">
+            </div>
+            <div class="col-12 col-md-4 d-flex justify-content-center justify-content-md-end">
+              <a href="https://www.linkedin.com/in/marlo-mayberry-930ab9b7/" class="socialicons"  target="_blank" rel="noopener"><i class="bi bi-linkedin p-2"></i></a>
+              <a href="https://github.com/M-ybeme" class="socialicons" target="_blank" rel="noopener"><i class="bi bi-github p-2"></i></a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </footer>
+
+  <!-- Bootstrap JS (needed for navbar/offcanvas) -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" crossorigin="anonymous"></script>
+
+  <!-- Generator script -->
+  <script>
+  (() => {
+    // --- Seeded RNG (Mulberry32) ---
+    function hashString(str){let h=1779033703^str.length;for(let i=0;i<str.length;i++){h=Math.imul(h^str.charCodeAt(i),3432918353);h=h<<13|h>>>19;}return (h>>>0)>>>0}
+    function mulberry32(a){return function(){let t=a+=0x6D2B79F5;t=Math.imul(t^t>>>15,t|1);t^=t+Math.imul(t^t>>>7,t|61);return ((t^t>>>14)>>>0)/4294967296}}
+    function prand(seedStr){const s = seedStr? hashString(seedStr) : Math.floor(Math.random()*2**32); return mulberry32(s) }
+
+    // --- Data Tables (expanded) ---
+    let TABLES = {
+      Styles: {
+        "Elven": { start:["ae","e","i","lia","fae","sha","thi","yla","ari","ela"], mid:["ri","na","la","th","si","el","ia","lith","mir","vya"], end:["el","iel","ith","ien","a","ara","ielle","wyn","ion","ria"] },
+        "Dwarven": { start:["br","dr","gr","kr","th","kh","st","sk","dur","bal","kor"], mid:["a","o","u","an","or","un","grim","gar","dr","brom"], end:["ar","orn","dur","mir","grin","gar","rak","dun","rik","stone"] },
+        "Human (Norse)": { start:["al","bir","ein","har","ing","jor","kar","leif","sig","thor","ulf"], mid:["a","e","i","ar","ir","or","un","vald","bjorn","frid"], end:["ar","en","ir","or","ulf","vald","son","hild","brand","rid"] },
+        "Human (Latin)": { start:["mar","luc","val","cass","dom","jul","oct","aur","fel","max"], mid:["a","e","i","o","u","an","or","us","ian","ell"], end:["a","us","ius","ian","ella","ina","or","io","ius","um"] },
+        "Goblin": { start:["sk","sn","gr","kr","zik","rag","nib","skr","blit","krik"], mid:["a","e","i","o","u","ak","ik","ok","zz","g"], end:["it","ik","ak","ug","azz","nix","gob","git","grit","zag"] },
+        "Fiendish": { start:["az","bal","mal","xan","vor","zar","oth","vel","sama","bel"], mid:["a","e","i","o","u","az","ath","ir","or","ul","z"], end:["zor","oth","iel","ion","ius","ith","zel","zor","rax","mon"] },
+        "Halfling": { start:["al","ben","cor","dav","eli","fil","jon","mer","pip","sam"], mid:["a","e","i","o","u","on","an","el","er","il"], end:["o","y","ie","in","er","o","an","wick","foot","hill"] },
+        "Gnome": { start:["bod","cor","dim","fiz","gar","ned","pil","quin","ros","tim"], mid:["a","e","i","o","u","al","el","il","on","um"], end:["bin","dle","wick","ock","bit","er","um","win","ick","bur"] },
+        "Orc": { start:["gr","br","dr","kr","mok","gar","zug","tok","urk","rag"], mid:["a","o","u","ag","og","uk","ur","ar","ok","ug"], end:["th","g","k","z","gor","nak","ruk","dok","zug","tar"] },
+        "Dragonborn": { start:["arj","bal","drax","fen","gal","kry","mor","rax","thal","vor"], mid:["a","e","i","o","u","ar","ir","or","ul","an"], end:["thor","rax","ion","ys","dor","drim","thas","var","mir","zor"] },
+        "Aasimar": { start:["ara","cel","div","elo","ira","lum","ora","ser","tha","val"], mid:["a","e","i","o","u","el","an","or","ia","al"], end:["el","iel","ion","iel","ith","or","iel","an","ara","eus"] },
+        "Tabaxi": { start:["cha","fe","ja","ki","ma","na","ra","sa","ta","zi"], mid:["ka","ra","sa","na","mi","ti","lo","ja","za","ri"], end:["ri","ta","ka","sa","lo","mi","na","ra","zi","to"] },
+        "Lizardfolk": { start:["sli","dra","kra","iss","thi","ska","tro","laz","ss","vrak"], mid:["s","ss","az","iz","or","ur","ar","ra","ri","ko"], end:["th","ss","k","zz","g","sith","gash","kriss","zith","gor"] },
+        "Genasi": { start:["aer","ign","ter","hyd","zel","cal","phyr","pyra","thal","lum"], mid:["a","e","i","o","u","ra","ri","el","or","um"], end:["os","on","ius","ara","eth","or","as","ion","ir","al"] },
+        "Fey": { start:["ly","fae","tia","ari","elo","vio","nyx","syl","zea","aur"], mid:["li","ra","ri","si","na","ve","ya","ie","el","mi"], end:["wyn","elle","ria","ith","ara","ien","iel","is","ora","yse"] }
+      },
+      GenderSuffix: {
+        feminine:["a","ia","elle","ine","yra","wyn","issa"],
+        masculine:["ar","or","ric","dan","ion","mir","ath"],
+        neutral:[]
+      }
+    };
+
+    // --- Utilities ---
+    const $ = (id) => document.getElementById(id);
+    function pick(rng, arr){ return arr[Math.floor(rng()*arr.length)] }
+    function maybe(rng, p){ return rng() < p }
+    function injectApostrophe(rng, s){
+      if(s.length<4) return s;
+      const i = 1 + Math.floor(rng()*(s.length-2));
+      return s.slice(0,i)+"'"+s.slice(i);
+    }
+    const DIA = { map: { a:['á','â','ä','à'], e:['é','ê','ë','è'], i:['í','î','ï','ì'], o:['ó','ô','ö','ò'], u:['ú','û','ü','ù'], y:['ý','ÿ'] } };
+    function sprinkleDiacritics(rng, s){
+      return s.split('').map(ch=>{
+        const low = ch.toLowerCase();
+        if(DIA.map[low] && maybe(rng, 0.2)){
+          const rep = pick(rng, DIA.map[low]);
+          return ch===low?rep:rep.toUpperCase();
+        }
+        return ch;
+      }).join('');
+    }
+    function applyAlliteration(letter, s){
+      if(!letter) return s;
+      const l = letter.toLowerCase();
+      return s.replace(/^[a-zA-Z]/, l);
+    }
+
+    // --- Core generator ---
+    function makeName(rng, styleKey, minSyl, maxSyl, gender, allowApos, withDia, allit){
+      const style = TABLES.Styles[styleKey];
+      const sylCount = Math.max(minSyl, Math.min(maxSyl, 1 + Math.floor(rng()*maxSyl)));
+      const parts = [];
+      for(let i=0;i<sylCount;i++){
+        if(i===0) parts.push(pick(rng, style.start));
+        else if(i===sylCount-1) parts.push(pick(rng, style.end));
+        else parts.push(pick(rng, style.mid));
+      }
+      let name = parts.join('');
+      name = name.replace(/([aeiou])\1{2,}/gi,'$1$1').replace(/([^aeiou])\1{2,}/gi,'$1$1');
+      const gset = TABLES.GenderSuffix[gender]||[];
+      if(gset.length && maybe(rng, gender==='neutral'?0.1:0.6)) name += pick(rng,gset);
+      if(allowApos && maybe(rng, 0.12)) name = injectApostrophe(rng, name);
+      if(withDia) name = sprinkleDiacritics(rng, name);
+      name = applyAlliteration(allit, name);
+      return name.charAt(0).toUpperCase()+name.slice(1);
+    }
+
+    function renderMeta({style, count, seedStr, minSyl, maxSyl, gender, allit}){
+      const meta = $('ng-meta');
+      meta.innerHTML = '';
+      const pills = [
+        `Style: ${style}`,
+        `Count: ${count}`,
+        seedStr ? `Seed: ${seedStr}` : 'Seed: (random)',
+        `Syllables: ${minSyl}-${maxSyl}`,
+        `Gender: ${gender}`,
+        allit ? `Alliteration: ${allit.toUpperCase()}` : ''
+      ].filter(Boolean);
+      for(const p of pills){
+        const span = document.createElement('span');
+        span.className = 'ng-pill';
+        span.textContent = p;
+        meta.appendChild(span);
+      }
+    }
+
+    function generate(){
+      const style = $('ng-style').value;
+      const count = +$('ng-count').value || 20;
+      const seedStr = $('ng-seed').value.trim();
+      const minSyl = +$('ng-minSyl').value || 2;
+      const maxSyl = +$('ng-maxSyl').value || 3;
+      const gender = $('ng-gender').value;
+      const allit = ($('ng-allit').value||'').slice(0,1);
+      const allowApos = $('ng-apos').checked;
+      const withDia = $('ng-diacritics').checked;
+
+      const rng = prand(seedStr);
+      const out = $('ng-out');
+      out.innerHTML = '';
+      const list = [];
+      for(let i=0;i<Math.min(count, 500);i++){
+        list.push(makeName(rng, style, minSyl, maxSyl, gender, allowApos, withDia, allit));
+      }
+      list.forEach(n=>{
+        const col = document.createElement('div');
+        col.className = 'col';
+        const tile = document.createElement('div');
+        tile.className = 'ng-tile';
+        tile.textContent = n;
+        col.appendChild(tile);
+        out.appendChild(col);
+      });
+
+      renderMeta({style, count, seedStr, minSyl, maxSyl, gender, allit});
+      return list;
+    }
+
+    function copyNames(){
+      const items = [...document.querySelectorAll('#ng-out .ng-tile')].map(n=>n.textContent);
+      if(!items.length) return;
+      navigator.clipboard.writeText(items.join('\n'));
+    }
+    function downloadNames(){
+      const items = [...document.querySelectorAll('#ng-out .ng-tile')].map(n=>n.textContent);
+      if(!items.length) return;
+      const blob = new Blob([items.join('\n')], {type:'text/plain'});
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a'); a.href=url; a.download='names.txt'; a.click();
+      URL.revokeObjectURL(url);
+    }
+    function importTables(){
+      const raw = $('ng-import').value.trim();
+      if(!raw) return;
+      try{
+        const data = JSON.parse(raw);
+        if(!data.Styles) throw new Error('Missing Styles root');
+        TABLES.Styles = { ...TABLES.Styles, ...data.Styles };
+        populateStyles();
+      }catch(e){
+        alert('Import failed: ' + e.message);
+      }
+    }
+    function exportCurrent(){
+      const payload = JSON.stringify({Styles: TABLES.Styles}, null, 2);
+      const blob = new Blob([payload], {type:'application/json'});
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a'); a.href=url; a.download='name-tables.json'; a.click();
+      URL.revokeObjectURL(url);
+    }
+
+    // --- Settings form (one source of truth) ---
+    const settingsFormHTML = `
+      <div class="mb-3">
+        <label for="ng-style" class="form-label">Style</label>
+        <select id="ng-style" class="form-select"></select>
+      </div>
+
+      <div class="row g-2">
+        <div class="col-6">
+          <label for="ng-count" class="form-label">Count</label>
+          <input id="ng-count" type="number" inputmode="numeric" min="1" max="200" value="20" class="form-control" />
+        </div>
+        <div class="col-6">
+          <label for="ng-seed" class="form-label">Seed <span class="text-secondary small">(repeatable)</span></label>
+          <input id="ng-seed" type="text" placeholder="optional" class="form-control" />
+        </div>
+      </div>
+
+      <div class="row g-2 mt-1">
+        <div class="col-6">
+          <label for="ng-minSyl" class="form-label">Min syllables</label>
+          <input id="ng-minSyl" type="number" inputmode="numeric" min="1" max="6" value="2" class="form-control" />
+        </div>
+        <div class="col-6">
+          <label for="ng-maxSyl" class="form-label">Max syllables</label>
+          <input id="ng-maxSyl" type="number" inputmode="numeric" min="1" max="8" value="3" class="form-control" />
+        </div>
+      </div>
+
+      <div class="row g-2 mt-1">
+        <div class="col-6">
+          <label for="ng-gender" class="form-label">Gender leaning</label>
+          <select id="ng-gender" class="form-select">
+            <option value="neutral" selected>Neutral</option>
+            <option value="feminine">Feminine</option>
+            <option value="masculine">Masculine</option>
+          </select>
+        </div>
+        <div class="col-6">
+          <label for="ng-allit" class="form-label">Alliteration</label>
+          <input id="ng-allit" type="text" maxlength="1" placeholder="e.g. R" class="form-control" />
+        </div>
+      </div>
+
+      <div class="form-check mt-2">
+        <input class="form-check-input" type="checkbox" id="ng-apos" checked />
+        <label class="form-check-label" for="ng-apos">Allow occasional apostrophes</label>
+      </div>
+      <div class="form-check">
+        <input class="form-check-input" type="checkbox" id="ng-diacritics" />
+        <label class="form-check-label" for="ng-diacritics">Sprinkle fantasy diacritics</label>
+      </div>
+
+      <div class="d-grid d-sm-flex gap-2 mt-3">
+        <button class="btn btn-success w-100 w-sm-auto" id="ng-generate"><i class="bi bi-stars me-1"></i>Generate</button>
+        <button class="btn btn-outline-light w-100 w-sm-auto" id="ng-copy"><i class="bi bi-clipboard me-1"></i>Copy</button>
+        <button class="btn btn-warning w-100 w-sm-auto" id="ng-download"><i class="bi bi-download me-1"></i>Download .txt</button>
+        <button class="btn btn-danger w-100 w-sm-auto" id="ng-clear"><i class="bi bi-trash me-1"></i>Clear</button>
+      </div>
+
+      <details class="mt-3">
+        <summary class="text-secondary">Custom Tables (advanced)</summary>
+        <div class="mt-2">
+          <label class="form-label">Import JSON (styles)</label>
+          <textarea id="ng-import" class="form-control form-control-sm font-monospace" rows="6"
+            placeholder='{"Styles":{"Elven":{"start":["ae","lia"],"mid":["ri","na"],"end":["el","ith"]}}}'></textarea>
+          <div class="d-flex gap-2 mt-2">
+            <button class="btn btn-outline-light btn-sm" id="ng-importBtn">Import</button>
+            <button class="btn btn-outline-light btn-sm" id="ng-exportBtn">Export current</button>
+          </div>
+        </div>
+      </details>
+    `;
+
+    function populateStyles(){
+      const sel = $('ng-style');
+      const current = sel?.value;
+      sel.innerHTML = '';
+      Object.keys(TABLES.Styles).forEach(k=>{
+        const opt = document.createElement('option');
+        opt.value = k; opt.textContent = k; sel.appendChild(opt);
+      });
+      sel.value = (current && TABLES.Styles[current]) ? current : 'Elven';
+    }
+
+    // Wire up both desktop and offcanvas instances
+    function mountSettingsForms(){
+      // Inject the same form markup into both containers
+      document.getElementById('settingsCardBody').innerHTML = settingsFormHTML;
+      document.getElementById('settingsOffcanvasBody').innerHTML = settingsFormHTML;
+
+      // Because we cloned markup twice, we only want ONE active set of inputs at a time.
+      // Strategy: Keep the desktop (LG) form as the source of truth. On mobile, we sync values.
+      const isLgUp = window.matchMedia('(min-width: 992px)').matches;
+
+      const desktopRoot = document.getElementById('settingsCardBody');
+      const mobileRoot  = document.getElementById('settingsOffcanvasBody');
+
+      function q(root, sel){ return root.querySelector(sel); }
+
+      // if mobile, wire the mobile buttons to call desktop handlers
+      function connect(root){
+        q(root,'#ng-generate') .addEventListener('click', (e)=>{ e.preventDefault(); syncToDesktop(); generate(); });
+        q(root,'#ng-copy')     .addEventListener('click', (e)=>{ e.preventDefault(); copyNames(); });
+        q(root,'#ng-download') .addEventListener('click', (e)=>{ e.preventDefault(); downloadNames(); });
+        q(root,'#ng-clear')    .addEventListener('click', (e)=>{ e.preventDefault(); document.getElementById('ng-out').innerHTML=''; document.getElementById('ng-meta').innerHTML=''; });
+
+        q(root,'#ng-importBtn').addEventListener('click', (e)=>{ e.preventDefault(); syncToDesktop(); importTables(); });
+        q(root,'#ng-exportBtn').addEventListener('click', (e)=>{ e.preventDefault(); exportCurrent(); });
+      }
+
+      // copy values FROM mobile form TO desktop inputs (so generator reads one source)
+      function syncToDesktop(){
+        ['ng-style','ng-count','ng-seed','ng-minSyl','ng-maxSyl','ng-gender','ng-allit','ng-apos','ng-diacritics'].forEach(id=>{
+          const m = q(mobileRoot, '#'+id);
+          const d = q(desktopRoot,'#'+id);
+          if(!m || !d) return;
+          if(m.type === 'checkbox'){ d.checked = m.checked; }
+          else { d.value = m.value; }
+        });
+      }
+
+      connect(desktopRoot);
+      connect(mobileRoot);
+
+      // Populate styles in BOTH selects, keep desktop as truth then mirror into mobile.
+      populateStyles(); // runs against the FIRST #ng-style found; ensure desktop is first
+      // Mirror desktop values into mobile initially
+      ['ng-style','ng-count','ng-seed','ng-minSyl','ng-maxSyl','ng-gender','ng-allit','ng-apos','ng-diacritics'].forEach(id=>{
+        const d = q(desktopRoot,'#'+id);
+        const m = q(mobileRoot, '#'+id);
+        if(!d || !m) return;
+        if(d.type === 'checkbox'){ m.checked = d.checked; }
+        else { m.value = d.value; }
+      });
+
+      // Extra quick buttons inside Results header for xs
+      const genXs = document.getElementById('ng-generate-xs');
+      const copyXs = document.getElementById('ng-copy-xs');
+      if(genXs){ genXs.addEventListener('click', ()=> generate()); }
+      if(copyXs){ copyXs.addEventListener('click', ()=> copyNames()); }
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      mountSettingsForms();
+      generate();
+    });
+
+    // Rebuild settings UIs if breakpoint crosses (optional safety)
+    window.addEventListener('resize', () => {
+      // No-op; using one source of truth pattern already
+    });
+  })();
+  </script>
+</body>
+</html>

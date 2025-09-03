@@ -1,0 +1,565 @@
+<!DOCTYPE html>
+<html lang="en" data-bs-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>The Divide of Argaloth: Shop Generator</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" crossorigin="anonymous" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.8.3/font/bootstrap-icons.css" />
+  <!-- Custom CSS -->
+  <link href="/css/site.css" rel="stylesheet" />
+  <!-- Dev Icons -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/devicons/devicon@v2.15.1/devicon.min.css" />
+  <!-- Favicon -->
+  <link rel="icon" type="image/png" href="/images/dndFavicon (2).png" />
+  <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
+  <!-- Bootstrap JS (required for navbar collapse / hamburger) -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" crossorigin="anonymous"></script>
+
+  <style>
+    .bgimage{
+        background: url('images/BGMap.png') no-repeat center center fixed;
+        background-size: cover;}
+    .bg-orange { background-color: #fd7e14 !important; color: #212529 !important; }
+    .drag-handle { cursor: move; }
+    .active-turn {
+      border-left: 5px solid #1d9e6d !important;
+      color: #f8f9fa !important;
+      font-weight: bold;
+    }
+    #saveHistorySelect { min-width: 200px; }
+  </style>
+</head>
+<body class="bgimage">
+   <nav class="navbar navbar-expand-lg navbar-dark fixed-top text-light" id="mainNav">
+    <div class="container-fluid">
+      <a class="navbar-brand" href="index.html">
+        <img src="/images/dndFavicon (2).png" height="40" width="40" alt="App Logo" class="d-inline-block" />
+        The DM Toolbox
+      </a>
+      <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarSupportedContent"
+        aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+        <span class="navbar-toggler-icon">
+          <i class="bi bi-list"></i>
+        </span>
+      </button>
+      <div class="collapse navbar-collapse" id="navbarSupportedContent">
+        <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+          <li class="nav-item">
+            <a class="nav-link" href="index.html">Initiative</a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" href="name.html">Name Gen</a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" href="loot.html">Loot Gen</a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link active" aria-current="page" href="shop.html">Shop Gen</a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" href="npc.html">NPC Gen</a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" href="tav.html">Tavern/Inn Gen</a>
+          </li>
+        </ul>
+      </div>
+    </div>
+   </nav>
+  <main class="content pt-3">
+    <div class="container-fluid text-center backdrop">
+        <!-- ===== Shop Generator (drop-in) ===== -->
+<div class="row g-3">
+  <!-- Settings -->
+  <div class="col-12 col-lg-4">
+    <div class="card bg-dark border-secondary h-100">
+      <div class="card-header border-secondary"><h5 class="mb-0">Shop Settings</h5></div>
+      <div class="card-body">
+        <div class="mb-2">
+          <label for="sg-settlement" class="form-label">Settlement</label>
+          <select id="sg-settlement" class="form-select">
+            <option value="village">Village (scarcer, pricier)</option>
+            <option value="town" selected>Town (balanced)</option>
+            <option value="capital">Capital (broader, cheaper)</option>
+          </select>
+        </div>
+
+        <div class="row g-2">
+          <div class="col-6">
+            <label for="sg-itemsPerShop" class="form-label">Items per shop</label>
+            <input id="sg-itemsPerShop" class="form-control" type="number" inputmode="numeric" min="5" max="20" value="9">
+          </div>
+          <div class="col-6">
+            <label for="sg-uniquePct" class="form-label">Unique chance %</label>
+            <input id="sg-uniquePct" class="form-control" type="number" inputmode="numeric" min="0" max="100" value="25">
+          </div>
+        </div>
+
+        <div class="row g-2 mt-1">
+          <div class="col-6">
+            <label for="sg-seed" class="form-label">Seed (optional)</label>
+            <input id="sg-seed" class="form-control" type="text" placeholder="e.g. session-13">
+          </div>
+          <div class="col-6">
+            <label for="sg-allowRare" class="form-label">Allow rare items</label>
+            <select id="sg-allowRare" class="form-select">
+              <option value="auto" selected>Auto by settlement</option>
+              <option value="no">No</option>
+              <option value="yes">Yes</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="mt-3">
+          <div class="d-flex justify-content-between align-items-center">
+            <label class="form-label mb-0">Shop Types</label>
+            <div class="btn-group btn-group-sm">
+              <button class="btn btn-outline-light" id="sg-selectAll">All</button>
+              <button class="btn btn-outline-light" id="sg-selectNone">None</button>
+            </div>
+          </div>
+          <div id="sg-types" class="row row-cols-2 g-1 mt-1"></div>
+        </div>
+
+        <div class="d-grid d-sm-flex gap-2 mt-3">
+          <button class="btn btn-success w-100 w-sm-auto" id="sg-generate"><i class="bi bi-shop me-1"></i>Generate</button>
+          <button class="btn btn-outline-light w-100 w-sm-auto" id="sg-copy"><i class="bi bi-clipboard me-1"></i>Copy</button>
+          <button class="btn btn-warning w-100 w-sm-auto" id="sg-download"><i class="bi bi-download me-1"></i>Download .txt</button>
+          <button class="btn btn-danger w-100 w-sm-auto" id="sg-clear"><i class="bi bi-trash me-1"></i>Clear</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Results -->
+  <div class="col-12 col-lg-8">
+    <div class="card bg-dark border-secondary h-100">
+      <div class="card-header border-secondary">
+        <h5 class="mb-0">Shops</h5>
+      </div>
+      <div class="card-body">
+        <div id="sg-meta" class="d-flex flex-wrap gap-2 small text-secondary mb-2"></div>
+        <div id="sg-out" class="d-flex flex-column gap-3" aria-live="polite"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<style>
+  .sg-pill{border:1px solid rgba(255,255,255,.15);border-radius:50rem;padding:.15rem .5rem}
+  .sg-shopcard{border:1px solid rgba(255,255,255,.15);border-radius:.6rem}
+  .sg-uniq{font-size:.85rem;color:#c3dafe}
+  .sg-tbl{width:100%}
+  .sg-tbl th,.sg-tbl td{padding:.35rem .5rem;border-bottom:1px solid rgba(255,255,255,.08);vertical-align:top}
+  .sg-tbl th{color:#9aa0a6;font-weight:600}
+  @media (max-width:576px){
+    .sg-tbl thead{display:none}
+    .sg-tbl tr{display:block;margin-bottom:.5rem;border:1px solid rgba(255,255,255,.08);border-radius:.5rem;padding:.25rem}
+    .sg-tbl td{display:block;border:0}
+    .sg-tbl td::before{content:attr(data-label) ": ";font-weight:600;color:#9aa0a6}
+  }
+</style>
+
+<script>
+(()=>{
+// ---------- Seeded RNG ----------
+function hashString(str){let h=1779033703^str.length;for(let i=0;i<str.length;i++){h=Math.imul(h^str.charCodeAt(i),3432918353);h=h<<13|h>>>19;}return (h>>>0)>>>0}
+function mulberry32(a){return function(){let t=a+=0x6D2B79F5;t=Math.imul(t^t>>>15,t|1);t^=t+Math.imul(t^t>>>7,t|61);return ((t^t>>>14)>>>0)/4294967296}}
+function prand(seedStr){const s = seedStr? hashString(seedStr) : Math.floor(Math.random()*2**32); return mulberry32(s) }
+const $ = (id)=>document.getElementById(id);
+
+// ---------- Settlement Profiles ----------
+const SETTLEMENT = {
+  village: { price:[1.10,1.35], stock:[5,8], weights:{common:0.75, uncommon:0.23, rare:0.02}, allowRare:'low', uniquePct:15 },
+  town:    { price:[0.95,1.15], stock:[7,12], weights:{common:0.60, uncommon:0.33, rare:0.07}, allowRare:'mid', uniquePct:25 },
+  capital: { price:[0.85,1.20], stock:[10,16],weights:{common:0.45, uncommon:0.40, rare:0.15}, allowRare:'high', uniquePct:40 }
+};
+
+// ---------- Flavor / Quirk Pools (non-plot) ----------
+const FLAV_ADJ = ["sturdy","well-made","neatly finished","serviceable","balanced","polished","matte","lacquered","rifled","fine-grain","braided","stitched","grooved"];
+const FLAV_MAT = ["oakwood","ashwood","yew","maple","pine","boiled leather","suede","bronze","iron","copper","pewter","tin","linen","wool","canvas","felt","parchment","rag paper","glass"];
+const FLAV_DEC = ["herringbone","chevron","crosshatch","spiral","ringed","flecked","knotted","chiseled","etched"];
+const FLAV_UNIQUE = [
+  "inset with river-stone flecks",
+  "faintly citrus-scented",
+  "keeps a steady warmth to the touch",
+  "finished in deep indigo dye",
+  "edges burnish to a soft sheen with use",
+  "balanced for comfortable carry",
+  "trim stitched in contrasting thread",
+  "grain shows a pleasant wave",
+  "subtle maker’s circle under the base",
+  "polished to mirror-bright"
+];
+
+// ---------- Shop Data ----------
+// price is in silver pieces (sp). rarity: 'common' | 'uncommon' | 'rare'
+const SHOPS = {
+  // --- General Goods Stores ---
+  "General Goods": [
+    {n:"Lantern, hooded", d:"Metal hood and hinged panels.", u:"Portable light", sp:120, r:"common"},
+    {n:"Lamp oil (flask)", d:"Refined mineral oil.", u:"Fuel", sp:10, r:"common"},
+    {n:"Rope (50 ft, hemp)", d:"Twisted 3-strand.", u:"Climbing/tie-down", sp:10, r:"common"},
+    {n:"Sack, large", d:"Woven burlap.", u:"Carrying", sp:2, r:"common"},
+    {n:"Bedroll", d:"Canvas roll with ties.", u:"Camping", sp:10, r:"common"},
+    {n:"Chalk (10 sticks)", d:"Packed in paper.", u:"Marking", sp:2, r:"common"},
+    {n:"Waterskin", d:"Seamed leather, cork stop.", u:"Carry water", sp:8, r:"common"},
+    {n:"Fishing kit", d:"Line, hooks, corks.", u:"Basic fishing", sp:25, r:"uncommon"},
+    {n:"Lock, simple", d:"Warded tumbler, 2 keys.", u:"Securing", sp:300, r:"uncommon"}
+  ],
+
+  // --- Food & Drink ---
+  "Bakery": [
+    {n:"Loaf, hearty", d:"Crusty rye or wheat.", u:"Meal", sp:2, r:"common"},
+    {n:"Sweet roll (pair)", d:"Glazed, spice-dusted.", u:"Snack", sp:3, r:"common"},
+    {n:"Travel biscuits (dozen)", d:"Hard, dry, long-keeping.", u:"Rations", sp:4, r:"common"}
+  ],
+  "Butcher": [
+    {n:"Cured sausage (link)", d:"Hung and smoked.", u:"Meal", sp:2, r:"common"},
+    {n:"Salted jerky (1/2 lb)", d:"Lean cuts, well dried.", u:"Rations", sp:5, r:"common"},
+    {n:"Soup bones", d:"Marrow-rich.", u:"Stock", sp:1, r:"common"}
+  ],
+  "Grocer": [
+    {n:"Dried beans (1 lb)", d:"Canvas bag.", u:"Meal", sp:3, r:"common"},
+    {n:"Dried fruit (packet)", d:"Apple or plum.", u:"Snack", sp:4, r:"common"},
+    {n:"Spice pouch", d:"Pepper, cumin, or herb mix.", u:"Cooking", sp:10, r:"uncommon"}
+  ],
+  "Inn/Tavern": [
+    {n:"Meal, simple", d:"Bread, stew, drink.", u:"Meal (1 person)", sp:5, r:"common"},
+    {n:"Meal, hearty", d:"Meat, greens, ale.", u:"Meal (1 person)", sp:10, r:"common"},
+    {n:"Lodging (1 night)", d:"Common room cot.", u:"Rest (1 person)", sp:10, r:"common"},
+    {n:"Private room (1 night)", d:"Lockable door, basin.", u:"Rest (1 person)", sp:30, r:"uncommon"}
+  ],
+
+  // --- Clothing & Craft ---
+  "Tailor": [
+    {n:"Shirt, linen", d:"Plain weave.", u:"Clothing", sp:12, r:"common"},
+    {n:"Trousers, wool", d:"Twill weave.", u:"Clothing", sp:18, r:"common"},
+    {n:"Cloak, hooded", d:"Clasped at neck.", u:"Outerwear", sp:25, r:"uncommon"}
+  ],
+  "Cobbler": [
+    {n:"Shoes, soft", d:"Suede uppers.", u:"Footwear", sp:20, r:"common"},
+    {n:"Boots, sturdy", d:"Thick soles.", u:"Footwear", sp:40, r:"uncommon"},
+    {n:"Repair, resoling", d:"Return next day.", u:"Service", sp:15, r:"common"}
+  ],
+  "Tanner": [
+    {n:"Leather scraps (bundle)", d:"Useful for patches.", u:"Crafting", sp:6, r:"common"},
+    {n:"Hide, cured", d:"2×3 ft.", u:"Crafting", sp:25, r:"uncommon"},
+    {n:"Belt blanks (pair)", d:"Pre-punched ends.", u:"Crafting", sp:8, r:"common"}
+  ],
+  "Fabric Shop": [
+    {n:"Bolt, linen (5 yd)", d:"Undyed.", u:"Sewing", sp:50, r:"common"},
+    {n:"Bolt, wool (5 yd)", d:"Plain colors.", u:"Sewing", sp:80, r:"uncommon"},
+    {n:"Thread & needles kit", d:"Wooden spool.", u:"Sewing", sp:6, r:"common"}
+  ],
+
+  // --- Tools & Materials ---
+  "Blacksmith (Arms/Armor)": [
+    {n:"Dagger", d:"Simple crossguard.", u:"Weapon", sp:200, r:"common"},
+    {n:"Spear", d:"Ash shaft, leaf head.", u:"Weapon", sp:100, r:"common"},
+    {n:"Shield, wooden", d:"Iron boss.", u:"Defense", sp:500, r:"uncommon"},
+    {n:"Helmet, open", d:"Riveted bands.", u:"Armor part", sp:600, r:"uncommon"}
+  ],
+  "Farrier": [
+    {n:"Horseshoes (set of 4)", d:"Sized to fit.", u:"Mount care", sp:20, r:"common"},
+    {n:"Hoof pick", d:"Curved tip.", u:"Mount care", sp:5, r:"common"},
+    {n:"Farrier service", d:"Shoe/trim per mount.", u:"Service", sp:50, r:"common"}
+  ],
+  "Carpenter": [
+    {n:"Ladder (10 ft)", d:"Pinned rungs.", u:"Access", sp:30, r:"common"},
+    {n:"Crate, large", d:"Rope handles.", u:"Storage", sp:12, r:"common"},
+    {n:"Repair service (small)", d:"Furniture mends.", u:"Service", sp:20, r:"common"}
+  ],
+  "Wheelwright": [
+    {n:"Handcart", d:"Single-axle.", u:"Hauling", sp:800, r:"uncommon"},
+    {n:"Wagon wheel", d:"Band of iron.", u:"Repair", sp:300, r:"uncommon"},
+    {n:"Grease pot", d:"Tallow-based.", u:"Maintenance", sp:8, r:"common"}
+  ],
+
+  // --- Services ---
+  "Stables": [
+    {n:"Stabling (per day)", d:"Feed & water.", u:"Service", sp:10, r:"common"},
+    {n:"Tack & bit", d:"Leather straps.", u:"Riding", sp:25, r:"common"},
+    {n:"Saddle, pack", d:"For loads.", u:"Riding", sp:50, r:"uncommon"}
+  ],
+  "Messenger": [
+    {n:"Local delivery", d:"Within town walls.", u:"Service", sp:10, r:"common"},
+    {n:"Regional courier", d:"1–2 days’ ride.", u:"Service", sp:80, r:"uncommon"},
+    {n:"Notice posting", d:"Board & corners.", u:"Service", sp:5, r:"common"}
+  ],
+
+  // --- Specialty: Adventuring / Magic / Knowledge / Alchemy / Arts ---
+  "Adventuring Gear": [
+    {n:"Pitons (10)", d:"Climbing spikes.", u:"Climbing", sp:5, r:"common"},
+    {n:"Grappling hook", d:"Three-prong.", u:"Climbing", sp:20, r:"uncommon"},
+    {n:"Ball bearings (bag)", d:"Hundreds of steel.", u:"Obstacle", sp:10, r:"uncommon"},
+    {n:"Healer’s satchel", d:"Lint, salves, bandage.", u:"Stabilize", sp:150, r:"uncommon"}
+  ],
+  "Magic Items": [
+    {n:"Minor healing draught", d:"Red-tinted cordial.", u:"Restore a bit of vigor", sp:500, r:"uncommon"},
+    {n:"Scroll, simple ward", d:"Short protective verse.", u:"One-use ward", sp:450, r:"uncommon"},
+    {n:"Charm, clean & dry", d:"Keeps gear fresh.", u:"Keeps item clean", sp:250, r:"uncommon"},
+    {n:"Lamp, ever-wick", d:"Tiny sustained glow.", u:"Dim light source", sp:800, r:"rare"}
+  ],
+  "Bookshop/Library": [
+    {n:"Primer, common tongue", d:"Letters & phrases.", u:"Study", sp:100, r:"common"},
+    {n:"Bestiary, local", d:"Sketches & notes.", u:"Reference", sp:250, r:"uncommon"},
+    {n:"Ledger (blank)", d:"Ruled pages.", u:"Records", sp:60, r:"common"},
+    {n:"Treatise, old customs", d:"Regional law & rites.", u:"Reference", sp:180, r:"uncommon"}
+  ],
+  "Cartographer": [
+    {n:"Town map (current)", d:"Streets & gates.", u:"Navigation", sp:60, r:"common"},
+    {n:"Region map", d:"Roads & rivers.", u:"Travel", sp:150, r:"uncommon"},
+    {n:"Compass, simple", d:"Magnetized needle.", u:"Direction", sp:300, r:"rare"}
+  ],
+  "Alchemist/Apothecary": [
+    {n:"Antiseptic tincture", d:"Cleans minor wounds.", u:"Sterilize", sp:120, r:"uncommon"},
+    {n:"Antidote (common)", d:"Herbal binding agents.", u:"Counter mild toxin", sp:300, r:"uncommon"},
+    {n:"Smoke pellet (pair)", d:"Short, dense puff.", u:"Cover/escape", sp:80, r:"uncommon"},
+    {n:"Scented salts", d:"Sharper wakefulness.", u:"Rouse/focus", sp:40, r:"common"}
+  ],
+  "Jeweler": [
+    {n:"Ring, brass", d:"Plain band.", u:"Adornment", sp:120, r:"common"},
+    {n:"Earrings, copper", d:"Small hoops.", u:"Adornment", sp:160, r:"uncommon"},
+    {n:"Necklace, glass bead", d:"Varied hues.", u:"Adornment", sp:220, r:"uncommon"}
+  ],
+  "Painter/Sculptor": [
+    {n:"Pigment set", d:"Earth tones.", u:"Art supplies", sp:140, r:"uncommon"},
+    {n:"Brush kit", d:"Boar hair, fine.", u:"Art supplies", sp:80, r:"common"},
+    {n:"Carving block", d:"Soft stone or wood.", u:"Sculpting", sp:100, r:"common"}
+  ],
+  "Fortune Teller": [
+    {n:"Palm reading", d:"Lines & callus study.", u:"Service", sp:20, r:"common"},
+    {n:"Card spread", d:"Symbolic draw.", u:"Service", sp:50, r:"uncommon"},
+    {n:"Charm bundle", d:"Twine, bead, feather.", u:"Keepsake", sp:60, r:"common"}
+  ],
+
+  // --- Unique & Shady ---
+  "Black Market": [
+    {n:"Poison, mild", d:"Bitter extract.", u:"Toxin (light)", sp:800, r:"rare"},
+    {n:"Lockpicks, slim set", d:"Fold case.", u:"Finesse tools", sp:400, r:"uncommon"},
+    {n:"Stolen trinkets (assort.)", d:"Mixed small goods.", u:"Fencing", sp:200, r:"uncommon"}
+  ],
+  "Pawn Shop": [
+    {n:"Used cookware", d:"Dings & polish.", u:"Household", sp:8, r:"common"},
+    {n:"Secondhand cloak", d:"Re-hemmed.", u:"Clothing", sp:12, r:"common"},
+    {n:"Old instrument", d:"Well-tuned.", u:"Music", sp:160, r:"uncommon"}
+  ],
+  "Clockwork Repair": [
+    {n:"Spring repair", d:"Handwatch/toy.", u:"Service", sp:120, r:"uncommon"},
+    {n:"Gear set", d:"Assorted sizes.", u:"Parts", sp:90, r:"uncommon"},
+    {n:"Key-wind toy", d:"Marching beetle.", u:"Novelty", sp:250, r:"uncommon"}
+  ],
+  "Pet Shop": [
+    {n:"Songbird (caged)", d:"Simple melody.", u:"Companion", sp:200, r:"uncommon"},
+    {n:"Pack rat (trained)", d:"Carries light load.", u:"Utility", sp:150, r:"uncommon"},
+    {n:"Cat (tame)", d:"Mouser.", u:"Companion", sp:120, r:"common"}
+  ],
+  "Oddities": [
+    {n:"Self-warming mug", d:"Keeps liquid warm.", u:"Comfort", sp:300, r:"rare"},
+    {n:"Ink that fades by dawn", d:"Pale residue.", u:"Short-lived notes", sp:180, r:"uncommon"},
+    {n:"Whistle, wind-tone", d:"Plays in breeze.", u:"Signal", sp:60, r:"common"}
+  ],
+  "Mercenary/Bounty": [
+    {n:"Guard hire (per day)", d:"Watch & deter.", u:"Service", sp:200, r:"uncommon"},
+    {n:"Courier-escort (per day)", d:"Armed rider.", u:"Service", sp:300, r:"uncommon"},
+    {n:"Notice posting fee", d:"Guild board.", u:"Service", sp:20, r:"common"}
+  ]
+};
+
+// ---------- Build type checkboxes ----------
+(function(){
+  const wrap = $("sg-types");
+  Object.keys(SHOPS).forEach(k=>{
+    const id = "sgt-"+k.replace(/[^a-z0-9]/gi,'');
+    const col = document.createElement("div"); col.className="col";
+    col.innerHTML = `<div class="form-check">
+        <input class="form-check-input" type="checkbox" id="${id}" data-type="${k}" ${k!=="Black Market"?"checked":""}>
+        <label class="form-check-label" for="${id}">${k}</label>
+      </div>`;
+    wrap.appendChild(col);
+  });
+})();
+
+// ---------- Helpers ----------
+function pick(rng, arr){ return arr[Math.floor(rng()*arr.length)] }
+function within(rng, [a,b]){ return a + rng()*(b-a) }
+function choiceByRarity(rng, items, weights, allowRare){
+  const pool = items.filter(it=>{
+    if(it.r==='rare' && allowRare==='no') return false;
+    if(it.r==='rare' && allowRare==='auto') return Math.random()<0.00001; // never used; stub
+    return true;
+  });
+  // Weighted pick
+  const w = pool.map(it => it.r==='common'?weights.common : it.r==='uncommon'?weights.uncommon : weights.rare);
+  const total = w.reduce((a,b)=>a+b,0);
+  let r = rng()*total;
+  for(let i=0;i<pool.length;i++){ if((r-=w[i])<=0) return pool[i]; }
+  return pool[pool.length-1];
+}
+function formatPrice(sp){
+  if(sp>=10){ const gp = sp/10; return (gp%1? gp.toFixed(1): gp.toFixed(0))+" gp"; }
+  return sp+" sp";
+}
+function priceWithSettlement(rng, baseSp, settle){
+  const mul = within(rng, SETTLEMENT[settle].price);
+  return Math.max(1, Math.round(baseSp*mul));
+}
+function uniqueLine(rng){
+  const adj = pick(rng, FLAV_ADJ), mat = pick(rng, FLAV_MAT), dec = pick(rng, FLAV_DEC), uq = pick(rng, FLAV_UNIQUE);
+  return `${adj} ${mat}, ${dec} pattern; ${uq}.`;
+}
+function decorateDesc(rng, d){
+  if(rng()<0.6) d += ` ${pick(rng, FLAV_ADJ)} finish.`;
+  if(rng()<0.35) d += ` ${pick(rng, FLAV_DEC)} detail.`;
+  return d;
+}
+
+// ---------- Generation ----------
+function generate(){
+  const seed = $("sg-seed").value.trim();
+  const rng = prand(seed);
+  const settlement = $("sg-settlement").value;
+  const itemsPerShop = Math.max(5, Math.min(20, +$("sg-itemsPerShop").value||9));
+
+  // Unique chance default by settlement if left as number; user can override
+  const uniquePct = Math.max(0, Math.min(100, +$("sg-uniquePct").value||SETTLEMENT[settlement].uniquePct));
+  const allowRareSel = $("sg-allowRare").value;
+  const selected = [...document.querySelectorAll("#sg-types input:checked")].map(x=>x.dataset.type);
+  if(!selected.length){ alert("Select at least one shop type."); return; }
+
+  // meta pills
+  const meta = $("sg-meta"); meta.innerHTML="";
+  [["Settlement", settlement],[ "Items/shop", itemsPerShop ],["Unique chance", uniquePct+"%"],["Shop types", selected.length],["Seed", seed||"(random)"]]
+    .forEach(([k,v])=>{ const sp=document.createElement("span"); sp.className="sg-pill"; sp.textContent=`${k}: ${v}`; meta.appendChild(sp); });
+
+  const out = $("sg-out"); out.innerHTML="";
+
+  selected.forEach(type=>{
+    const shop = document.createElement("div");
+    shop.className = "sg-shopcard";
+    shop.innerHTML = `
+      <div class="p-2 border-bottom border-secondary d-flex justify-content-between align-items-center">
+        <div class="fw-semibold"><i class="bi bi-shop"></i> ${type}</div>
+        <div class="text-secondary small">Settlement: ${settlement}</div>
+      </div>
+      <div class="p-2">
+        <div class="table-responsive">
+          <table class="sg-tbl">
+            <thead><tr><th style="width:26%">Item</th><th style="width:44%">Description</th><th style="width:15%">Use</th><th style="width:15%">Price</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+        <div class="sg-uniq mt-2"></div>
+      </div>`;
+    out.appendChild(shop);
+
+    const tbody = shop.querySelector("tbody");
+    const uniqBox = shop.querySelector(".sg-uniq");
+
+    const items = SHOPS[type];
+    const weights = SETTLEMENT[settlement].weights;
+
+    const seen = new Set();
+    let tries = 0;
+    while(seen.size < itemsPerShop && tries++ < itemsPerShop*50){
+      const allowRare = (allowRareSel==='auto' ? (SETTLEMENT[settlement].allowRare) : (allowRareSel==='yes'?'high':'no'));
+      const it = choiceByRarity(rng, items, weights, allowRareSel);
+      const key = it.n+"|"+it.r;
+      if(seen.has(key)) continue;
+      seen.add(key);
+
+      const sp = priceWithSettlement(rng, it.sp * (it.r==='rare'? (settlement==='village'?1.6:settlement==='town'?1.3:1.15): 1), settlement);
+      const d = decorateDesc(rng, it.d);
+      const tr = document.createElement("tr");
+      tr.innerHTML = `
+        <td data-label="Item">${it.n}${it.r==='rare'?' <span class="badge text-bg-danger ms-1">rare</span>': it.r==='uncommon'?' <span class="badge text-bg-warning text-dark ms-1">uncommon</span>':''}</td>
+        <td data-label="Description">${d}</td>
+        <td data-label="Use">${it.u}</td>
+        <td data-label="Price">${formatPrice(sp)}</td>`;
+      tbody.appendChild(tr);
+    }
+
+    // Unique item chance
+    if(rng()*100 < uniquePct){
+      const base = pick(rng, items);
+      const sp = priceWithSettlement(rng, Math.round(base.sp*1.35), settlement);
+      uniqBox.textContent = `Unique Stock: ${base.n} — ${uniqueLine(rng)} (${formatPrice(sp)})`;
+    }
+  });
+}
+
+// Copy / Download
+function copyOut(){
+  const blocks = [...document.querySelectorAll("#sg-out .sg-shopcard")].map(card=>{
+    const title = card.querySelector(".fw-semibold").textContent.trim();
+    const rows = [...card.querySelectorAll("tbody tr")].map(tr=>{
+      const t = tr.children[0].innerText.replace(/\s+(common|uncommon|rare)$/,'');
+      const d = tr.children[1].innerText;
+      const u = tr.children[2].innerText;
+      const p = tr.children[3].innerText;
+      return `- ${t} | ${d} | Use: ${u} | ${p}`;
+    });
+    const uniq = card.querySelector(".sg-uniq").textContent.trim();
+    return `# ${title}\n${rows.join("\n")}${uniq?`\n* ${uniq}`:""}`;
+  });
+  if(!blocks.length) return;
+  navigator.clipboard.writeText(blocks.join("\n\n"));
+}
+function downloadOut(){
+  const text = [...document.querySelectorAll("#sg-out .sg-shopcard")].map(card=>card.innerText).join("\n\n---\n\n");
+  if(!text.trim()) return;
+  const blob = new Blob([text], {type:"text/plain"});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a"); a.href=url; a.download="shops.txt"; a.click(); URL.revokeObjectURL(url);
+}
+
+// Wire up
+document.addEventListener("DOMContentLoaded", ()=>{
+  $("sg-generate").addEventListener("click", generate);
+  $("sg-copy").addEventListener("click", copyOut);
+  $("sg-download").addEventListener("click", downloadOut);
+  $("sg-clear").addEventListener("click", ()=>{ $("sg-out").innerHTML=""; $("sg-meta").innerHTML=""; });
+  $("sg-selectAll").addEventListener("click", (e)=>{ e.preventDefault(); document.querySelectorAll("#sg-types input").forEach(i=>i.checked=true); });
+  $("sg-selectNone").addEventListener("click", (e)=>{ e.preventDefault(); document.querySelectorAll("#sg-types input").forEach(i=>i.checked=false); });
+  // Defaults tuned per settlement on change
+  $("sg-settlement").addEventListener("change", ()=>{
+    const s = $("sg-settlement").value;
+    const def = SETTLEMENT[s].uniquePct;
+    $("sg-uniquePct").value = def;
+    const [min,max] = SETTLEMENT[s].stock;
+    $("sg-itemsPerShop").value = Math.round((min+max)/2);
+  });
+  // First run
+  generate();
+});
+})();
+</script>
+<!-- ===== /Shop Generator ===== -->
+
+    </div>
+  </main>
+  <!-- Footer -->
+  <footer class="container-fluid mt-5 site-footer" role="contentinfo"> 
+    <div class="row footer-main"> 
+      <div class="col">
+        <div class="container">
+          <div class="row align-items-center">
+            <div class="col-12 col-md-4 text-md-start text-center order-last order-md-first">
+              &copy; 2025 Marlo Mayberry 
+            </div>
+            <div class="col-12 col-md-4 text-center">
+              <img src="/images/White logo - no background.png" height="50">
+            </div>
+            <div class="col-12 col-md-4 d-flex justify-content-center justify-content-md-end">
+              <a href="https://www.linkedin.com/in/marlo-mayberry-930ab9b7/" class="socialicons"  target="_blank"><i class="bi bi-linkedin p-2"></i></a>
+              <a href="https://github.com/M-ybeme" class="socialicons" target="_blank"><i class="bi bi-github p-2"></i></a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </footer>
+</body>
+</html>

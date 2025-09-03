@@ -1,0 +1,464 @@
+<!DOCTYPE html>
+<html lang="en" data-bs-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>The DM's Toolbox: Loot Generator</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" crossorigin="anonymous" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.8.3/font/bootstrap-icons.css" />
+  <!-- Custom CSS -->
+  <link href="/css/site.css" rel="stylesheet" />
+  <!-- Dev Icons -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/devicons/devicon@v2.15.1/devicon.min.css" />
+  <!-- Favicon -->
+  <link rel="icon" type="image/png" href="/images/dndFavicon (2).png" />
+  <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
+  <!-- Bootstrap JS (required for navbar collapse / hamburger) -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" crossorigin="anonymous"></script>
+
+  <style>
+    .bgimage{
+        background: url('images/BGMap.png') no-repeat center center fixed;
+        background-size: cover;}
+    .bg-orange { background-color: #fd7e14 !important; color: #212529 !important; }
+    .drag-handle { cursor: move; }
+    .active-turn {
+      border-left: 5px solid #1d9e6d !important;
+      color: #f8f9fa !important;
+      font-weight: bold;
+    }
+    #saveHistorySelect { min-width: 200px; }
+  </style>
+</head>
+<body class="bgimage">
+   <nav class="navbar navbar-expand-lg navbar-dark fixed-top text-light" id="mainNav">
+    <div class="container-fluid">
+      <a class="navbar-brand" href="index.html">
+        <img src="/images/dndFavicon (2).png" height="40" width="40" alt="App Logo" class="d-inline-block" />
+        The DM Toolbox
+      </a>
+      <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarSupportedContent"
+        aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+        <span class="navbar-toggler-icon">
+          <i class="bi bi-list"></i>
+        </span>
+      </button>
+      <div class="collapse navbar-collapse" id="navbarSupportedContent">
+        <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+          <li class="nav-item">
+            <a class="nav-link" href="index.html">Initiative</a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" href="name.html">Name Gen</a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link active" aria-current="page" href="loot.html">Loot Gen</a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" href="shop.html">Shop Gen</a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" href="npc.html">NPC Gen</a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" href="tav.html">Tavern/Inn Gen</a>
+          </li>
+        </ul>
+      </div>
+    </div>
+   </nav>
+  <main class="content pt-3">
+    <h1 class="d-flex justify-content-center mt-2">Loot Generator</h1>
+    <div class="container-fluid text-center backdrop">
+        <!-- ===== Loot Generator (drop-in) ===== -->
+<div class="row g-3">
+  <!-- Settings -->
+  <div class="col-12 col-lg-4">
+    <div class="card bg-dark border-secondary h-100">
+      <div class="card-header border-secondary">
+        <h5 class="mb-0">Loot Settings</h5>
+      </div>
+      <div class="card-body">
+        <div class="row g-2">
+          <div class="col-6">
+            <label for="lg-count" class="form-label">Count</label>
+            <input id="lg-count" class="form-control" type="number" inputmode="numeric" min="1" max="5000" value="50">
+          </div>
+          <div class="col-6">
+            <label for="lg-seed" class="form-label">Seed (optional)</label>
+            <input id="lg-seed" class="form-control" type="text" placeholder="e.g. session-12">
+          </div>
+        </div>
+
+        <div class="mt-2">
+          <label class="form-label">Categories</label>
+          <div class="row row-cols-2 g-1" id="lg-cats"></div>
+        </div>
+
+        <div class="row g-2 mt-1">
+          <div class="col-6">
+            <label for="lg-min" class="form-label">Min value (sp)</label>
+            <input id="lg-min" class="form-control" type="number" inputmode="numeric" min="0" max="500" value="1">
+          </div>
+          <div class="col-6">
+            <label for="lg-max" class="form-label">Max value (gp)</label>
+            <input id="lg-max" class="form-control" type="number" inputmode="numeric" min="1" max="50" value="25">
+          </div>
+        </div>
+
+        <div class="form-check mt-2">
+          <input class="form-check-input" type="checkbox" id="lg-weight" checked>
+          <label class="form-check-label" for="lg-weight">Show weight estimate</label>
+        </div>
+        <div class="form-check">
+          <input class="form-check-input" type="checkbox" id="lg-tags" checked>
+          <label class="form-check-label" for="lg-tags">Show tags</label>
+        </div>
+
+        <div class="d-grid d-sm-flex gap-2 mt-3">
+          <button class="btn btn-success" id="lg-generate"><i class="bi bi-stars me-1"></i>Generate</button>
+          <button class="btn btn-outline-light" id="lg-copy"><i class="bi bi-clipboard me-1"></i>Copy</button>
+          <button class="btn btn-warning" id="lg-download"><i class="bi bi-download me-1"></i>Download .txt</button>
+          <button class="btn btn-danger" id="lg-clear"><i class="bi bi-trash me-1"></i>Clear</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Results -->
+  <div class="col-12 col-lg-8">
+    <div class="card bg-dark border-secondary h-100">
+      <div class="card-header border-secondary">
+        <h5 class="mb-0">Results</h5>
+      </div>
+      <div class="card-body">
+        <div id="lg-meta" class="d-flex flex-wrap gap-2 small text-secondary mb-2"></div>
+        <div id="lg-out" class="row row-cols-1 row-cols-sm-2 row-cols-md-3 row-cols-lg-4 g-2" aria-live="polite"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<style>
+  .loot-tile{border:1px solid rgba(255,255,255,.15);border-radius:.6rem;padding:.6rem;background:rgba(0,0,0,.2)}
+  .loot-title{font-weight:600}
+  .loot-sub{font-size:.9rem;color:#9aa0a6}
+  .loot-meta{font-size:.8rem;color:#8b93a1}
+  .pill{border:1px solid rgba(255,255,255,.15);border-radius:50rem;padding:.15rem .5rem}
+</style>
+
+<script>
+(()=>{
+// ---------- Seeded RNG ----------
+function hashString(str){let h=1779033703^str.length;for(let i=0;i<str.length;i++){h=Math.imul(h^str.charCodeAt(i),3432918353);h=h<<13|h>>>19;}return (h>>>0)>>>0}
+function mulberry32(a){return function(){let t=a+=0x6D2B79F5;t=Math.imul(t^t>>>15,t|1);t^=t+Math.imul(t^t>>>7,t|61);return ((t^t>>>14)>>>0)/4294967296}}
+function prand(seedStr){const s = seedStr? hashString(seedStr) : Math.floor(Math.random()*2**32); return mulberry32(s) }
+const $ = id=>document.getElementById(id);
+
+// ---------- Flavor Pools (kept intentionally generic; no plot hooks) ----------
+const COLORS = ["umber","sable","ash","ivory","verdant","umbered","ochre","crimson","indigo","cobalt","pearl","smoke","rust","teal","brass"];
+const ADJS   = ["plain","neatly made","well-used","serviceable","careworn","sturdy","dainty","homespun","faded","scuffed","polished","patched","clean","oiled","balanced"];
+const COND   = ["mint","good","used","worn","weathered","patched","chipped","tarnished","dented","frayed","scuffed","stained"];
+const PATTERNS = ["herringbone","chevron","crosshatch","spiral","flecked","ringed","braided","stitched","knotted","grooved"];
+const MARKS = ["simple maker’s mark","initials (illegible)","tiny circle stamp","plain triangle stamp","short tally mark","simple hash","basic starburst","three dots"];
+const MATERIALS = {
+  cloth:["linen","wool","cotton","canvas","burlap","felt"],
+  leather:["leather","boiled leather","suede","rawhide"],
+  wood:["oak","ashwood","birch","maple","yew","pine"],
+  metal:["iron","bronze","copper","pewter","brass","tin"],
+  stone:["riverstone","slate","granite","marble chip","soapstone"],
+  clay:["terracotta","earthenware","stoneware"],
+  glass:["clear glass","green glass","smoked glass"],
+  paper:["rag paper","vellum","parchment"]
+};
+const SIZES = ["miniature","small","hand-sized","broad","long","wide","narrow","compact","thin","thick"];
+const SCENTS = ["oiled","soap-scented","smoky","spice-dusted","fresh","musty","earthy","herbal","neutral"];
+const ANIMALS = ["stag","fox","herring","sparrow","boar","ram","hare","owl","wolf","bee"];
+const SIMPLE_ICONS = ["leaf","sun","moon","key","wheel","hammer","anvil","cup","sheaf","river"];
+
+// Categories with item bases and templates
+const CATS = {
+  "Coins & Purses": {
+    base:[
+      {n:"small coin purse",mat:"leather",w:0.2,sp:[5,90]},
+      {n:"drawstring pouch",mat:"cloth",w:0.2,sp:[5,60]},
+      {n:"wrapped roll of coppers",mat:"paper",w:0.1,sp:[10,50]},
+      {n:"stacked brass tokens",mat:"metal",w:0.1,sp:[10,80]}
+    ],
+    make:(rng, b)=> {
+      const c = Math.floor(5 + rng()*45); // coins
+      const mix = (rng()<0.8) ? `${c} copper` : `${Math.max(1,Math.floor(c/10))} silver`;
+      return [`${pick(rng,ADJS)} ${b.n} with ${mix}`, tags("currency","common")]
+    }
+  },
+  "Clothing & Wearables": {
+    base:[
+      {n:"wool cap",mat:"cloth",w:0.2,sp:[5,120]},
+      {n:"linen scarf",mat:"cloth",w:0.2,sp:[8,160]},
+      {n:"leather belt",mat:"leather",w:0.3,sp:[10,180]},
+      {n:"work gloves",mat:"leather",w:0.3,sp:[10,160]},
+      {n:"simple brooch",mat:"metal",w:0.05,sp:[30,400]}
+    ],
+    make:(rng,b)=>{
+      const m = pick(rng,MATERIALS[b.mat]);
+      const adj = pick(rng,ADJS);
+      const pat = rng()<0.4 ? `, ${pick(rng,PATTERNS)} pattern` : "";
+      const col = rng()<0.5 ? `, ${pick(rng,COLORS)}` : "";
+      return [`${adj} ${m} ${b.n}${pat}${col}`, tags("apparel","civilian")]
+    }
+  },
+  "Tools & Utensils": {
+    base:[
+      {n:"folding knife",mat:"metal",w:0.2,sp:[20,300]},
+      {n:"wooden spoon",mat:"wood",w:0.1,sp:[2,40]},
+      {n:"small hammer",mat:"metal",w:0.8,sp:[20,300]},
+      {n:"awl",mat:"metal",w:0.1,sp:[5,100]},
+      {n:"whetstone",mat:"stone",w:0.7,sp:[5,80]},
+      {n:"needle kit",mat:"metal",w:0.05,sp:[10,150]}
+    ],
+    make:(rng,b)=>{
+      const m = pick(rng,MATERIALS[b.mat]);
+      const cond = pick(rng,COND);
+      const scent = rng()<0.25 ? `, ${pick(rng,SCENTS)}` : "";
+      return [`${cond} ${m} ${b.n}${scent}`, tags("tool","common")]
+    }
+  },
+  "Household & Table": {
+    base:[
+      {n:"clay cup",mat:"clay",w:0.4,sp:[3,60]},
+      {n:"wooden bowl",mat:"wood",w:0.4,sp:[3,60]},
+      {n:"glass vial (empty)",mat:"glass",w:0.1,sp:[15,250]},
+      {n:"tin plate",mat:"metal",w:0.5,sp:[8,160]},
+      {n:"linen napkin",mat:"cloth",w:0.05,sp:[2,40]}
+    ],
+    make:(rng,b)=>{
+      const m = pick(rng,MATERIALS[b.mat]);
+      const pat = rng()<0.4 ? ` with ${pick(rng,PATTERNS)} motif` : "";
+      const mark = rng()<0.35 ? `, ${pick(rng,MARKS)}` : "";
+      return [`${m} ${b.n}${pat}${mark}`, tags("household","mundane")]
+    }
+  },
+  "Writing & Games": {
+    base:[
+      {n:"rag-paper booklet (blank)",mat:"paper",w:0.2,sp:[12,220]},
+      {n:"graphite stick",mat:"stone",w:0.05,sp:[4,70]},
+      {n:"dice pair (bone)",mat:"stone",w:0.1,sp:[20,300]},
+      {n:"simple playing cards",mat:"paper",w:0.1,sp:[15,250]},
+      {n:"bookmark ribbon",mat:"cloth",w:0.01,sp:[2,40]}
+    ],
+    make:(rng,b)=>{
+      const m = pick(rng,MATERIALS[b.mat]);
+      const add = rng()<0.5 ? `, edged in ${pick(rng,COLORS)}` : "";
+      return [`${m} ${b.n}${add}`, tags("leisure","stationery")]
+    }
+  },
+  "Food & Provisions": {
+    base:[
+      {n:"dried fruit packet",mat:"cloth",w:0.2,sp:[5,120]},
+      {n:"hardtack stack",mat:"paper",w:0.3,sp:[4,80]},
+      {n:"smoked nuts pouch",mat:"cloth",w:0.2,sp:[6,140]},
+      {n:"small cheese wedge (wrapped)",mat:"paper",w:0.3,sp:[8,180]},
+      {n:"herbal tea sachet",mat:"paper",w:0.05,sp:[6,120]}
+    ],
+    make:(rng,b)=>{
+      const scent = rng()<0.6 ? `, ${pick(rng,SCENTS)}` : "";
+      return [`${pick(rng,ADJS)} ${b.n}${scent}`, tags("provisions","edible")]
+    }
+  },
+  "Curios & Charms": {
+    base:[
+      {n:"carved token",mat:"wood",w:0.05,sp:[10,240]},
+      {n:"braided cord bracelet",mat:"cloth",w:0.02,sp:[6,120]},
+      {n:"pressed flower in paper",mat:"paper",w:0.01,sp:[4,90]},
+      {n:"stone bead on wire",mat:"metal",w:0.03,sp:[10,240]},
+      {n:"simple pendant",mat:"metal",w:0.04,sp:[15,300]}
+    ],
+    make:(rng,b)=>{
+      const m = pick(rng,MATERIALS[b.mat]);
+      const icon = rng()<0.6 ? ` bearing a ${pick(rng,SIMPLE_ICONS)}` : "";
+      const animal = rng()<0.25 ? ` and a tiny ${pick(rng,ANIMALS)}` : "";
+      return [`${pick(rng,ADJS)} ${m} ${b.n}${icon}${animal}`, tags("curio","keepsake")]
+    }
+  },
+  "Bags & Containers": {
+    base:[
+      {n:"small sack",mat:"cloth",w:0.2,sp:[5,120]},
+      {n:"roll-up tool wrap",mat:"cloth",w:0.25,sp:[10,180]},
+      {n:"tin box",mat:"metal",w:0.3,sp:[15,240]},
+      {n:"wooden case",mat:"wood",w:0.6,sp:[18,300]},
+      {n:"glass jar (stoppered)",mat:"glass",w:0.4,sp:[15,260]}
+    ],
+    make:(rng,b)=>{
+      const m = pick(rng,MATERIALS[b.mat]);
+      const size = rng()<0.4 ? ` (${pick(rng,SIZES)})` : "";
+      const col = rng()<0.35 ? `, ${pick(rng,COLORS)}` : "";
+      return [`${m} ${b.n}${size}${col}`, tags("container","storage")]
+    }
+  }
+};
+
+// Build category checkboxes
+(function(){
+  const wrap = $("lg-cats");
+  Object.keys(CATS).forEach(k=>{
+    const id = "cat-"+k.replace(/[^a-z0-9]/gi,'');
+    const div = document.createElement("div"); div.className = "col";
+    div.innerHTML = `<div class="form-check">
+      <input class="form-check-input" type="checkbox" id="${id}" data-cat="${k}" checked>
+      <label class="form-check-label" for="${id}">${k}</label>
+    </div>`;
+    wrap.appendChild(div);
+  });
+})();
+
+// ---------- Helpers ----------
+function pick(rng, arr){ return arr[Math.floor(rng()*arr.length)] }
+function clamp(v,min,max){ return Math.max(min,Math.min(max,v)) }
+function tags(...xs){ return xs }
+
+// Value & weight calculators (bounded to low–mid value)
+function estimateValue(rng, b){
+  // b.sp is [min_sp, max_sp] rough range; add light randomness
+  const baseSp = b.sp[0] + Math.floor(rng()*(b.sp[1]-b.sp[0]+1));
+  return Math.max(1, baseSp);
+}
+function estimateWeight(rng, b){
+  const jitter = (rng()-0.5)*0.1*b.w;
+  return Math.max(0.01, +(b.w + jitter).toFixed(2));
+}
+
+// Compose one item text + metadata
+function makeOne(rng, catKey){
+  const cat = CATS[catKey];
+  const base = pick(rng, cat.base);
+  const [desc, taglist] = cat.make(rng, base);
+  const sp = estimateValue(rng, base);
+  const wt = estimateWeight(rng, base);
+  const title = toTitle(desc);
+  return {
+    k: `${catKey}:${title}`, // uniqueness key within run
+    cat: catKey,
+    title,
+    value: sp, // in silver pieces baseline
+    weight: wt,
+    tags: taglist
+  };
+}
+function toTitle(s){
+  // capitalize first letter sensibly
+  return s.charAt(0).toUpperCase() + s.slice(1);
+}
+
+// ---------- Generation ----------
+function generate(){
+  const seed = $("lg-seed").value.trim();
+  const rng = prand(seed);
+  const count = clamp(+$("lg-count").value || 50, 1, 5000);
+  const minSp = Math.max(0, +$("lg-min").value || 0);
+  const maxGp = Math.max(1, +$("lg-max").value || 25);
+  const maxSp = maxGp * 10;
+
+  const selectedCats = [...document.querySelectorAll("#lg-cats input:checked")].map(x=>x.dataset.cat);
+  if(!selectedCats.length){ alert("Select at least one category."); return; }
+
+  const wantWeight = $("lg-weight").checked;
+  const wantTags = $("lg-tags").checked;
+
+  const out = $("lg-out"); out.innerHTML = "";
+  const meta = $("lg-meta"); meta.innerHTML = "";
+
+  // pills
+  [["Seed", seed||"(random)"],["Count", count],["Value range", `${minSp} sp – ${maxGp} gp`],["Categories", selectedCats.length]].forEach(([k,v])=>{
+    const span = document.createElement("span"); span.className="pill"; span.textContent=`${k}: ${v}`; meta.appendChild(span);
+  });
+
+  const seen = new Set();
+  const list = [];
+  let guard = 0, maxGuard = count*50; // safety to avoid infinite loops
+
+  while(list.length < count && guard++ < maxGuard){
+    const cat = pick(rng, selectedCats);
+    const item = makeOne(rng, cat);
+    if(item.value < minSp || item.value > maxSp) continue;
+    if(seen.has(item.k)) continue;
+    seen.add(item.k);
+    list.push(item);
+  }
+
+  // render
+  for(const it of list){
+    const col = document.createElement("div"); col.className="col";
+    const div = document.createElement("div"); div.className="loot-tile";
+    const gp = (it.value/10);
+    div.innerHTML = `
+      <div class="loot-title">${it.title}</div>
+      <div class="loot-sub">${it.cat}</div>
+      <div class="loot-meta">${gp.toFixed(gp%1?2:0)} gp (${it.value} sp)${wantWeight?` • ${it.weight} lb`:``}${wantTags?` • ${it.tags.join(", ")}`:``}</div>
+    `;
+    col.appendChild(div); $("lg-out").appendChild(col);
+  }
+
+  return list;
+}
+
+function copyOut(){
+  const wantWeight = $("lg-weight").checked, wantTags = $("lg-tags").checked;
+  const rows = [...document.querySelectorAll("#lg-out .loot-tile")].map(tile=>{
+    const t = tile.querySelector(".loot-title").textContent;
+    const m = tile.querySelector(".loot-meta").textContent;
+    return `${t} — ${m}`;
+  });
+  if(!rows.length) return;
+  navigator.clipboard.writeText(rows.join("\n"));
+}
+function downloadOut(){
+  const rows = [...document.querySelectorAll("#lg-out .loot-tile")].map(tile=>{
+    const t = tile.querySelector(".loot-title").textContent;
+    const s = tile.querySelector(".loot-sub").textContent;
+    const m = tile.querySelector(".loot-meta").textContent;
+    return `${t}\n${s}\n${m}\n`;
+  });
+  if(!rows.length) return;
+  const blob = new Blob([rows.join("\n")], {type:"text/plain"});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a"); a.href=url; a.download="loot.txt"; a.click(); URL.revokeObjectURL(url);
+}
+
+// Wire up
+document.addEventListener("DOMContentLoaded", ()=>{
+  $("lg-generate").addEventListener("click", generate);
+  $("lg-copy").addEventListener("click", copyOut);
+  $("lg-download").addEventListener("click", downloadOut);
+  $("lg-clear").addEventListener("click", ()=>{ $("lg-out").innerHTML=""; $("lg-meta").innerHTML=""; });
+  // first run
+  generate();
+});
+})();
+</script>
+<!-- ===== /Loot Generator ===== -->
+
+    </div>
+  </main>
+  <!-- Footer -->
+  <footer class="container-fluid mt-5 site-footer" role="contentinfo"> 
+    <div class="row footer-main"> 
+      <div class="col">
+        <div class="container">
+          <div class="row align-items-center">
+            <div class="col-12 col-md-4 text-md-start text-center order-last order-md-first">
+              &copy; 2025 Marlo Mayberry 
+            </div>
+            <div class="col-12 col-md-4 text-center">
+              <img src="/images/White logo - no background.png" height="50">
+            </div>
+            <div class="col-12 col-md-4 d-flex justify-content-center justify-content-md-end">
+              <a href="https://www.linkedin.com/in/marlo-mayberry-930ab9b7/" class="socialicons"  target="_blank"><i class="bi bi-linkedin p-2"></i></a>
+              <a href="https://github.com/M-ybeme" class="socialicons" target="_blank"><i class="bi bi-github p-2"></i></a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </footer>
+</body>
+</html>
