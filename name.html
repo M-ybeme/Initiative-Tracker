@@ -26,18 +26,12 @@
       background-size: cover;
     }
     @media (max-width: 576px){
-      /* Improve mobile perf by avoiding fixed backgrounds on tiny screens */
       .bgimage{ background-attachment: scroll; }
     }
     .bg-orange { background-color: #fd7e14 !important; color: #212529 !important; }
     .drag-handle { cursor: move; }
-    .active-turn {
-      border-left: 5px solid #1d9e6d !important;
-      color: #f8f9fa !important;
-      font-weight: bold;
-    }
+    .active-turn { border-left: 5px solid #1d9e6d !important; color: #f8f9fa !important; font-weight: bold; }
     #saveHistorySelect { min-width: 200px; }
-    /* Local helpers for name tiles */
     .ng-pill { border: 1px solid rgba(255,255,255,.15); border-radius: 50rem; padding: .15rem .5rem; }
     .ng-tile { border: 1px solid rgba(255,255,255,.15); border-radius: .6rem; padding: .5rem .6rem; background: rgba(0,0,0,.2); }
   </style>
@@ -58,24 +52,12 @@
       </button>
       <div class="collapse navbar-collapse" id="navbarSupportedContent">
         <ul class="navbar-nav me-auto mb-2 mb-lg-0">
-          <li class="nav-item">
-            <a class="nav-link" href="index.html">Initiative</a>
-          </li>
-          <li class="nav-item">
-            <a class="nav-link active" aria-current="page" href="name.html">Name Gen</a>
-          </li>
-          <li class="nav-item">
-            <a class="nav-link" href="loot.html">Loot Gen</a>
-          </li>
-          <li class="nav-item">
-            <a class="nav-link" href="shop.html">Shop Gen</a>
-          </li>
-          <li class="nav-item">
-            <a class="nav-link" href="npc.html">NPC Gen</a>
-          </li>
-          <li class="nav-item">
-            <a class="nav-link" href="tav.html">Tavern/Inn Gen</a>
-          </li>
+          <li class="nav-item"><a class="nav-link" href="index.html">Initiative</a></li>
+          <li class="nav-item"><a class="nav-link active" aria-current="page" href="name.html">Name Gen</a></li>
+          <li class="nav-item"><a class="nav-link" href="loot.html">Loot Gen</a></li>
+          <li class="nav-item"><a class="nav-link" href="shop.html">Shop Gen</a></li>
+          <li class="nav-item"><a class="nav-link" href="npc.html">NPC Gen</a></li>
+          <li class="nav-item"><a class="nav-link" href="tav.html">Tavern/Inn Gen</a></li>
         </ul>
       </div>
     </div>
@@ -86,13 +68,12 @@
     <div class="container py-3">
       <div class="d-flex align-items-center justify-content-between gap-2">
         <div class="backdrop">
-            <h1 class="h3 mb-0">Name Generator</h1>
-
+          <h1 class="h3 mb-0">Name Generator</h1>
+        </div>
         <!-- Mobile: open settings offcanvas -->
         <button class="btn btn-outline-light d-lg-none" data-bs-toggle="offcanvas" data-bs-target="#settingsOffcanvas" aria-controls="settingsOffcanvas">
           <i class="bi bi-sliders"></i> Open Settings
         </button>
-        </div>
       </div>
 
       <!-- Helper blurb -->
@@ -118,7 +99,7 @@
         <div class="col-lg-4 d-none d-lg-block">
           <div class="card bg-dark border-secondary h-100">
             <div class="card-header border-secondary"><h5 class="mb-0">Generator Settings</h5></div>
-            <div class="card-body" id="settingsCardBody"><!-- settings form gets injected/duplicated --></div>
+            <div class="card-body" id="settingsCardBody"><!-- settings form gets injected --></div>
           </div>
         </div>
 
@@ -135,7 +116,7 @@
             </div>
             <div class="card-body d-flex flex-column">
               <div id="ng-meta" class="d-flex flex-wrap gap-2 small text-secondary mb-2"></div>
-              <!-- Responsive grid: 1 on xs, 2 on sm, 3 on md, 4 on lg, 5 on xl+ -->
+              <!-- Responsive grid -->
               <div id="ng-out" class="row row-cols-1 row-cols-sm-2 row-cols-md-3 row-cols-lg-4 row-cols-xl-5 g-2" aria-live="polite"></div>
             </div>
           </div>
@@ -175,7 +156,7 @@
     </div>
   </footer>
 
-  <!-- Bootstrap JS (needed for navbar/offcanvas) -->
+  <!-- Bootstrap JS -->
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" crossorigin="anonymous"></script>
 
   <!-- Generator script -->
@@ -213,7 +194,6 @@
     };
 
     // --- Utilities ---
-    const $ = (id) => document.getElementById(id);
     function pick(rng, arr){ return arr[Math.floor(rng()*arr.length)] }
     function maybe(rng, p){ return rng() < p }
     function injectApostrophe(rng, s){
@@ -240,8 +220,14 @@
 
     // --- Core generator ---
     function makeName(rng, styleKey, minSyl, maxSyl, gender, allowApos, withDia, allit){
-      const style = TABLES.Styles[styleKey];
-      const sylCount = Math.max(minSyl, Math.min(maxSyl, 1 + Math.floor(rng()*maxSyl)));
+      const fallbackStyle = 'Elven';
+      const style = TABLES.Styles[styleKey] || TABLES.Styles[fallbackStyle];
+
+      // inclusive range [minSyl, maxSyl]
+      const lo = Math.max(1, Math.min(minSyl, maxSyl));
+      const hi = Math.max(lo, maxSyl);
+      const sylCount = lo + Math.floor(rng() * (hi - lo + 1));
+
       const parts = [];
       for(let i=0;i<sylCount;i++){
         if(i===0) parts.push(pick(rng, style.start));
@@ -250,8 +236,10 @@
       }
       let name = parts.join('');
       name = name.replace(/([aeiou])\1{2,}/gi,'$1$1').replace(/([^aeiou])\1{2,}/gi,'$1$1');
+
       const gset = TABLES.GenderSuffix[gender]||[];
       if(gset.length && maybe(rng, gender==='neutral'?0.1:0.6)) name += pick(rng,gset);
+
       if(allowApos && maybe(rng, 0.12)) name = injectApostrophe(rng, name);
       if(withDia) name = sprinkleDiacritics(rng, name);
       name = applyAlliteration(allit, name);
@@ -259,7 +247,7 @@
     }
 
     function renderMeta({style, count, seedStr, minSyl, maxSyl, gender, allit}){
-      const meta = $('ng-meta');
+      const meta = document.getElementById('ng-meta');
       meta.innerHTML = '';
       const pills = [
         `Style: ${style}`,
@@ -277,19 +265,19 @@
       }
     }
 
-    function generate(){
-      const style = $('ng-style').value;
-      const count = +$('ng-count').value || 20;
-      const seedStr = $('ng-seed').value.trim();
-      const minSyl = +$('ng-minSyl').value || 2;
-      const maxSyl = +$('ng-maxSyl').value || 3;
-      const gender = $('ng-gender').value;
-      const allit = ($('ng-allit').value||'').slice(0,1);
-      const allowApos = $('ng-apos').checked;
-      const withDia = $('ng-diacritics').checked;
+    function generate($d){
+      const style = $d('ng-style').value;
+      const count = +$d('ng-count').value || 20;
+      const seedStr = $d('ng-seed').value.trim();
+      const minSyl = +$d('ng-minSyl').value || 2;
+      const maxSyl = +$d('ng-maxSyl').value || 3;
+      const gender = $d('ng-gender').value;
+      const allit = ($d('ng-allit').value||'').slice(0,1);
+      const allowApos = $d('ng-apos').checked;
+      const withDia = $d('ng-diacritics').checked;
 
       const rng = prand(seedStr);
-      const out = $('ng-out');
+      const out = document.getElementById('ng-out');
       out.innerHTML = '';
       const list = [];
       for(let i=0;i<Math.min(count, 500);i++){
@@ -322,14 +310,14 @@
       const a = document.createElement('a'); a.href=url; a.download='names.txt'; a.click();
       URL.revokeObjectURL(url);
     }
-    function importTables(){
-      const raw = $('ng-import').value.trim();
+    function importTables($d, mobileRoot){
+      const raw = $d('ng-import').value.trim();
       if(!raw) return;
       try{
         const data = JSON.parse(raw);
         if(!data.Styles) throw new Error('Missing Styles root');
         TABLES.Styles = { ...TABLES.Styles, ...data.Styles };
-        populateStyles();
+        populateStyles($d, mobileRoot);
       }catch(e){
         alert('Import failed: ' + e.message);
       }
@@ -416,8 +404,8 @@
       </details>
     `;
 
-    function populateStyles(){
-      const sel = $('ng-style');
+    function populateStyles($d, mobileRoot){
+      const sel = $d('ng-style');
       const current = sel?.value;
       sel.innerHTML = '';
       Object.keys(TABLES.Styles).forEach(k=>{
@@ -425,75 +413,95 @@
         opt.value = k; opt.textContent = k; sel.appendChild(opt);
       });
       sel.value = (current && TABLES.Styles[current]) ? current : 'Elven';
+
+      // Mirror desktop → mobile
+      const mobileSel = mobileRoot.querySelector('#ng-style');
+      if (mobileSel) {
+        mobileSel.innerHTML = sel.innerHTML;
+        mobileSel.value = sel.value;
+      }
     }
 
-    // Wire up both desktop and offcanvas instances
     function mountSettingsForms(){
-      // Inject the same form markup into both containers
-      document.getElementById('settingsCardBody').innerHTML = settingsFormHTML;
-      document.getElementById('settingsOffcanvasBody').innerHTML = settingsFormHTML;
-
-      // Because we cloned markup twice, we only want ONE active set of inputs at a time.
-      // Strategy: Keep the desktop (LG) form as the source of truth. On mobile, we sync values.
-      const isLgUp = window.matchMedia('(min-width: 992px)').matches;
-
+      // Inject identical markup into both containers (desktop + mobile)
       const desktopRoot = document.getElementById('settingsCardBody');
       const mobileRoot  = document.getElementById('settingsOffcanvasBody');
+      desktopRoot.innerHTML = settingsFormHTML;
+      mobileRoot.innerHTML  = settingsFormHTML;
 
+      // Scoped query helpers
       function q(root, sel){ return root.querySelector(sel); }
+      const $d = (id) => q(desktopRoot, '#' + id);  // DESKTOP is source of truth
+      const $m = (id) => q(mobileRoot,  '#' + id);
 
-      // if mobile, wire the mobile buttons to call desktop handlers
-      function connect(root){
-        q(root,'#ng-generate') .addEventListener('click', (e)=>{ e.preventDefault(); syncToDesktop(); generate(); });
-        q(root,'#ng-copy')     .addEventListener('click', (e)=>{ e.preventDefault(); copyNames(); });
-        q(root,'#ng-download') .addEventListener('click', (e)=>{ e.preventDefault(); downloadNames(); });
-        q(root,'#ng-clear')    .addEventListener('click', (e)=>{ e.preventDefault(); document.getElementById('ng-out').innerHTML=''; document.getElementById('ng-meta').innerHTML=''; });
+      // Populate styles initially (desktop only, then mirror)
+      populateStyles($d, mobileRoot);
 
-        q(root,'#ng-importBtn').addEventListener('click', (e)=>{ e.preventDefault(); syncToDesktop(); importTables(); });
-        q(root,'#ng-exportBtn').addEventListener('click', (e)=>{ e.preventDefault(); exportCurrent(); });
-      }
+      // Mirror desktop → mobile for all fields initially
+      ['ng-style','ng-count','ng-seed','ng-minSyl','ng-maxSyl','ng-gender','ng-allit','ng-apos','ng-diacritics'].forEach(id=>{
+        const d = $d(id);
+        const m = $m(id);
+        if(!d || !m) return;
+        if (d.type === 'checkbox') m.checked = d.checked;
+        else m.value = d.value;
+      });
 
-      // copy values FROM mobile form TO desktop inputs (so generator reads one source)
+      // Sync FROM mobile TO desktop when user triggers actions in offcanvas
       function syncToDesktop(){
         ['ng-style','ng-count','ng-seed','ng-minSyl','ng-maxSyl','ng-gender','ng-allit','ng-apos','ng-diacritics'].forEach(id=>{
-          const m = q(mobileRoot, '#'+id);
-          const d = q(desktopRoot,'#'+id);
+          const m = $m(id);
+          const d = $d(id);
           if(!m || !d) return;
           if(m.type === 'checkbox'){ d.checked = m.checked; }
           else { d.value = m.value; }
         });
       }
 
+      // Wire shared button handlers for a given root
+      function connect(root){
+        const isMobile = (root === mobileRoot);
+        q(root,'#ng-generate') .addEventListener('click', (e)=>{ e.preventDefault(); if(isMobile) syncToDesktop(); generate($d); });
+        q(root,'#ng-copy')     .addEventListener('click', (e)=>{ e.preventDefault(); copyNames(); });
+        q(root,'#ng-download') .addEventListener('click', (e)=>{ e.preventDefault(); downloadNames(); });
+        q(root,'#ng-clear')    .addEventListener('click', (e)=>{ e.preventDefault(); document.getElementById('ng-out').innerHTML=''; document.getElementById('ng-meta').innerHTML=''; });
+
+        q(root,'#ng-importBtn').addEventListener('click', (e)=>{ e.preventDefault(); if(isMobile) syncToDesktop(); importTables($d, mobileRoot); });
+        q(root,'#ng-exportBtn').addEventListener('click', (e)=>{ e.preventDefault(); exportCurrent(); });
+      }
+
       connect(desktopRoot);
       connect(mobileRoot);
-
-      // Populate styles in BOTH selects, keep desktop as truth then mirror into mobile.
-      populateStyles(); // runs against the FIRST #ng-style found; ensure desktop is first
-      // Mirror desktop values into mobile initially
-      ['ng-style','ng-count','ng-seed','ng-minSyl','ng-maxSyl','ng-gender','ng-allit','ng-apos','ng-diacritics'].forEach(id=>{
-        const d = q(desktopRoot,'#'+id);
-        const m = q(mobileRoot, '#'+id);
-        if(!d || !m) return;
-        if(d.type === 'checkbox'){ m.checked = d.checked; }
-        else { m.value = d.value; }
-      });
 
       // Extra quick buttons inside Results header for xs
       const genXs = document.getElementById('ng-generate-xs');
       const copyXs = document.getElementById('ng-copy-xs');
-      if(genXs){ genXs.addEventListener('click', ()=> generate()); }
+      if(genXs){ genXs.addEventListener('click', ()=> generate($d)); }
       if(copyXs){ copyXs.addEventListener('click', ()=> copyNames()); }
+
+      // Keep mobile form mirrored right before showing the offcanvas
+      const offcanvasEl = document.getElementById('settingsOffcanvas');
+      if (offcanvasEl) {
+        offcanvasEl.addEventListener('show.bs.offcanvas', () => {
+          // desktop → mobile
+          ['ng-style','ng-count','ng-seed','ng-minSyl','ng-maxSyl','ng-gender','ng-allit','ng-apos','ng-diacritics'].forEach(id=>{
+            const d = $d(id);
+            const m = $m(id);
+            if(!d || !m) return;
+            if (d.type === 'checkbox') m.checked = d.checked;
+            else m.value = d.value;
+          });
+        });
+      }
+
+      // Initial generation
+      generate($d);
     }
 
     document.addEventListener('DOMContentLoaded', () => {
       mountSettingsForms();
-      generate();
     });
 
-    // Rebuild settings UIs if breakpoint crosses (optional safety)
-    window.addEventListener('resize', () => {
-      // No-op; using one source of truth pattern already
-    });
+    // No-op on resize; desktop is single source of truth
   })();
   </script>
 </body>
