@@ -34,6 +34,8 @@
     #saveHistorySelect { min-width: 200px; }
     .ng-pill { border: 1px solid rgba(255,255,255,.15); border-radius: 50rem; padding: .15rem .5rem; }
     .ng-tile { border: 1px solid rgba(255,255,255,.15); border-radius: .6rem; padding: .5rem .6rem; background: rgba(0,0,0,.2); }
+    .help-badge { font-size: .8rem; vertical-align: middle; }
+    .code-block { background: rgba(255,255,255,.05); border: 1px solid rgba(255,255,255,.1); border-radius: .5rem; padding: .75rem; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace; font-size: .9rem; overflow:auto;}
   </style>
 </head>
 <body class="bgimage">
@@ -80,18 +82,25 @@
       <div class="alert alert-info text-start shadow-sm mt-3">
         <h5 class="mb-2"><i class="bi bi-magic"></i> How to Use the Name Generator</h5>
         <p class="mb-2">
-          Choose a <strong>Style</strong> (Elven, Dwarven, Human, etc.), set <strong>Count</strong>, and adjust options like
-          <strong>syllables</strong>, <strong>gender leaning</strong>, <strong>alliteration</strong>, and special characters.
-          Click <strong>Generate</strong> to create a list.
+          Pick a <strong>Style</strong>
+          <i class="bi bi-question-circle help-badge" data-bs-toggle="tooltip" title="Style picks the letter chunks used to assemble names."></i>,
+          set <strong>Count</strong>
+          <i class="bi bi-question-circle help-badge" data-bs-toggle="tooltip" title="How many names to produce (1–200)."></i>,
+          adjust <strong>syllables</strong>
+          <i class="bi bi-question-circle help-badge" data-bs-toggle="tooltip" title="The generator stitches start/mid/end chunks; these set min/max of those chunks."></i>,
+          <strong>gender leaning</strong>
+          <i class="bi bi-question-circle help-badge" data-bs-toggle="tooltip" title="Optionally appends common masculine/feminine suffixes (neutral = none)."></i>,
+          <strong>alliteration</strong>
+          <i class="bi bi-question-circle help-badge" data-bs-toggle="tooltip" title="Force names to start with a given letter (e.g., R). Leave blank for random."></i>,
+          and special characters.
+          Click <strong>Generate</strong>.
         </p>
         <ul class="mb-2">
           <li><strong>Copy</strong> copies all results to your clipboard.</li>
-          <li><strong>Download</strong> saves results as a <code>.txt</code> file.</li>
-          <li><strong>Import/Export</strong> loads or shares your own JSON style tables.</li>
+          <li><strong>Download</strong> saves a <code>.txt</code>.</li>
+          <li><strong>Seed</strong> makes your results repeatable (same seed ⇒ same list).</li>
+          <li><strong>Custom Tables</strong> lets you add/override styles with JSON (see the guide inside).</li>
         </ul>
-        <p class="mb-0">
-          Use the <strong>Seed</strong> box for repeatable results (handy for consistent prep).
-        </p>
       </div>
 
       <div class="row g-3 align-items-start">
@@ -223,7 +232,6 @@
       const fallbackStyle = 'Elven';
       const style = TABLES.Styles[styleKey] || TABLES.Styles[fallbackStyle];
 
-      // inclusive range [minSyl, maxSyl]
       const lo = Math.max(1, Math.min(minSyl, maxSyl));
       const hi = Math.max(lo, maxSyl);
       const sylCount = lo + Math.floor(rng() * (hi - lo + 1));
@@ -310,18 +318,90 @@
       const a = document.createElement('a'); a.href=url; a.download='names.txt'; a.click();
       URL.revokeObjectURL(url);
     }
+
+    // --- Advanced tables helpers ---
+    function validateTablesObject(obj){
+      const errors = [];
+      if (!obj || typeof obj !== 'object') { errors.push('Root is not an object.'); return errors; }
+      if (!obj.Styles || typeof obj.Styles !== 'object') errors.push('Missing "Styles" object.');
+      const styles = obj.Styles || {};
+      for (const [name, spec] of Object.entries(styles)){
+        if (!spec || typeof spec !== 'object'){ errors.push(`Style "${name}" must be an object.`); continue; }
+        ['start','mid','end'].forEach(k=>{
+          if (!Array.isArray(spec[k]) || spec[k].length===0) errors.push(`Style "${name}" missing non-empty array "${k}".`);
+          else if(!spec[k].every(x=>typeof x==='string')) errors.push(`Style "${name}" "${k}" must be strings only.`);
+        });
+      }
+      return errors;
+    }
+
     function importTables($d, mobileRoot){
       const raw = $d('ng-import').value.trim();
-      if(!raw) return;
+      const alertBox = $d('ng-adv-alert');
+      alertBox.innerHTML = '';
+      if(!raw){
+        alertBox.innerHTML = '<div class="alert alert-warning py-2 mb-2">Nothing to import. Paste JSON first.</div>';
+        return;
+      }
       try{
         const data = JSON.parse(raw);
-        if(!data.Styles) throw new Error('Missing Styles root');
+        const errs = validateTablesObject(data);
+        if (errs.length){
+          alertBox.innerHTML = '<div class="alert alert-danger mb-2"><strong>Invalid JSON structure:</strong><ul class="mb-0">' + errs.map(e=>`<li>${e}</li>`).join('') + '</ul></div>';
+          return;
+        }
         TABLES.Styles = { ...TABLES.Styles, ...data.Styles };
         populateStyles($d, mobileRoot);
+        alertBox.innerHTML = '<div class="alert alert-success py-2 mb-2">Imported successfully. New styles are now available in the Style dropdown.</div>';
       }catch(e){
-        alert('Import failed: ' + e.message);
+        alertBox.innerHTML = '<div class="alert alert-danger py-2 mb-2">Parse error: ' + e.message + '</div>';
       }
     }
+
+    function validateOnly($d){
+      const raw = $d('ng-import').value.trim();
+      const alertBox = $d('ng-adv-alert');
+      alertBox.innerHTML = '';
+      if(!raw){
+        alertBox.innerHTML = '<div class="alert alert-warning py-2 mb-2">Nothing to validate. Paste JSON first.</div>';
+        return;
+      }
+      try{
+        const data = JSON.parse(raw);
+        const errs = validateTablesObject(data);
+        if (errs.length){
+          alertBox.innerHTML = '<div class="alert alert-danger mb-2"><strong>Issues found:</strong><ul class="mb-0">' + errs.map(e=>`<li>${e}</li>`).join('') + '</ul></div>';
+        } else {
+          alertBox.innerHTML = '<div class="alert alert-success py-2 mb-2">Looks good. You can Import safely.</div>';
+        }
+      }catch(e){
+        alertBox.innerHTML = '<div class="alert alert-danger py-2 mb-2">Parse error: ' + e.message + '</div>';
+      }
+    }
+
+    const SAMPLE_ADVANCED = {
+      "Styles": {
+        "Wizard\'s Study": {
+          "start": ["ar","el","io","ka","the","vor","xan","zea"],
+          "mid":   ["ca","el","io","ith","or","ul","ym","ez"],
+          "end":   ["ion","iel","oth","eus","ar","is","or","em"]
+        },
+        "Bandit Cant": {
+          "start": ["sk","scr","br","kr","dag","cut","scar","shiv"],
+          "mid":   ["a","e","i","ar","ir","ur","ash","rag","sliv"],
+          "end":   ["er","en","ik","ash","in","o","ax","e"]
+        }
+      }
+    };
+
+    function loadExamplePack($d){
+      const ta = $d('ng-import');
+      ta.value = JSON.stringify(SAMPLE_ADVANCED, null, 2);
+      const alertBox = $d('ng-adv-alert');
+      alertBox.innerHTML = '<div class="alert alert-info py-2 mb-2">Example JSON loaded. Click <strong>Validate</strong> and then <strong>Import</strong> to add these styles.</div>';
+      ta.focus();
+    }
+
     function exportCurrent(){
       const payload = JSON.stringify({Styles: TABLES.Styles}, null, 2);
       const blob = new Blob([payload], {type:'application/json'});
@@ -333,35 +413,47 @@
     // --- Settings form (one source of truth) ---
     const settingsFormHTML = `
       <div class="mb-3">
-        <label for="ng-style" class="form-label">Style</label>
+        <label for="ng-style" class="form-label">Style
+          <i class="bi bi-question-circle help-badge" data-bs-toggle="tooltip" title="Select the table of letter chunks used to build names. Custom styles appear here after import."></i>
+        </label>
         <select id="ng-style" class="form-select"></select>
       </div>
 
       <div class="row g-2">
         <div class="col-6">
-          <label for="ng-count" class="form-label">Count</label>
+          <label for="ng-count" class="form-label">Count
+            <i class="bi bi-question-circle help-badge" data-bs-toggle="tooltip" title="How many names to generate (1–200)."></i>
+          </label>
           <input id="ng-count" type="number" inputmode="numeric" min="1" max="200" value="20" class="form-control" />
         </div>
         <div class="col-6">
-          <label for="ng-seed" class="form-label">Seed <span class="text-secondary small">(repeatable)</span></label>
+          <label for="ng-seed" class="form-label">Seed <span class="text-secondary small">(repeatable)</span>
+            <i class="bi bi-question-circle help-badge" data-bs-toggle="tooltip" title="Use any text. Re-using the same seed reproduces the same list for the same settings."></i>
+          </label>
           <input id="ng-seed" type="text" placeholder="optional" class="form-control" />
         </div>
       </div>
 
       <div class="row g-2 mt-1">
         <div class="col-6">
-          <label for="ng-minSyl" class="form-label">Min syllables</label>
+          <label for="ng-minSyl" class="form-label">Min syllables
+            <i class="bi bi-question-circle help-badge" data-bs-toggle="tooltip" title="Minimum number of chunks per name."></i>
+          </label>
           <input id="ng-minSyl" type="number" inputmode="numeric" min="1" max="6" value="2" class="form-control" />
         </div>
         <div class="col-6">
-          <label for="ng-maxSyl" class="form-label">Max syllables</label>
+          <label for="ng-maxSyl" class="form-label">Max syllables
+            <i class="bi bi-question-circle help-badge" data-bs-toggle="tooltip" title="Maximum number of chunks per name."></i>
+          </label>
           <input id="ng-maxSyl" type="number" inputmode="numeric" min="1" max="8" value="3" class="form-control" />
         </div>
       </div>
 
       <div class="row g-2 mt-1">
         <div class="col-6">
-          <label for="ng-gender" class="form-label">Gender leaning</label>
+          <label for="ng-gender" class="form-label">Gender leaning
+            <i class="bi bi-question-circle help-badge" data-bs-toggle="tooltip" title="Optionally append common masculine/feminine endings. Neutral disables suffix bias."></i>
+          </label>
           <select id="ng-gender" class="form-select">
             <option value="neutral" selected>Neutral</option>
             <option value="feminine">Feminine</option>
@@ -369,18 +461,24 @@
           </select>
         </div>
         <div class="col-6">
-          <label for="ng-allit" class="form-label">Alliteration</label>
+          <label for="ng-allit" class="form-label">Alliteration
+            <i class="bi bi-question-circle help-badge" data-bs-toggle="tooltip" title="Force the first letter (e.g., R for all names starting with R)."></i>
+          </label>
           <input id="ng-allit" type="text" maxlength="1" placeholder="e.g. R" class="form-control" />
         </div>
       </div>
 
       <div class="form-check mt-2">
         <input class="form-check-input" type="checkbox" id="ng-apos" checked />
-        <label class="form-check-label" for="ng-apos">Allow occasional apostrophes</label>
+        <label class="form-check-label" for="ng-apos">Allow occasional apostrophes
+          <i class="bi bi-question-circle help-badge" data-bs-toggle="tooltip" title="Adds fantasy apostrophes in some names."></i>
+        </label>
       </div>
       <div class="form-check">
         <input class="form-check-input" type="checkbox" id="ng-diacritics" />
-        <label class="form-check-label" for="ng-diacritics">Sprinkle fantasy diacritics</label>
+        <label class="form-check-label" for="ng-diacritics">Sprinkle fantasy diacritics
+          <i class="bi bi-question-circle help-badge" data-bs-toggle="tooltip" title="Randomly replaces some vowels with accented versions."></i>
+        </label>
       </div>
 
       <div class="d-grid d-sm-flex gap-2 mt-3">
@@ -391,14 +489,55 @@
       </div>
 
       <details class="mt-3">
-        <summary class="text-secondary">Custom Tables (advanced)</summary>
+        <summary class="text-secondary">Custom Tables (advanced)
+          <span class="badge rounded-pill text-bg-secondary ms-2">JSON</span>
+          <i class="bi bi-info-circle help-badge ms-1" data-bs-toggle="tooltip" title="Add your own Styles here. Each Style needs start/mid/end arrays of strings."></i>
+        </summary>
         <div class="mt-2">
-          <label class="form-label">Import JSON (styles)</label>
-          <textarea id="ng-import" class="form-control form-control-sm font-monospace" rows="6"
+          <div id="ng-adv-alert"></div>
+
+          <div class="accordion mb-3" id="advGuide">
+            <div class="accordion-item bg-dark border-secondary">
+              <h2 class="accordion-header">
+                <button class="accordion-button collapsed bg-dark text-light" type="button" data-bs-toggle="collapse" data-bs-target="#advGuideBody">
+                  Advanced Tables Guide
+                </button>
+              </h2>
+              <div id="advGuideBody" class="accordion-collapse collapse" data-bs-parent="#advGuide">
+                <div class="accordion-body">
+                  <ol class="mb-3">
+                    <li>Create a JSON object with a <code>Styles</code> property.</li>
+                    <li>Under <code>Styles</code>, each key is the visible style name.</li>
+                    <li>Each style must have non-empty <code>start</code>, <code>mid</code>, and <code>end</code> arrays of strings.</li>
+                    <li>Click <strong>Validate</strong>. Fix errors if any. Then <strong>Import</strong>.</li>
+                    <li>Select your new style from the <strong>Style</strong> dropdown and generate.</li>
+                  </ol>
+                  <div class="code-block mb-2"><pre>{
+  "Styles": {
+    "Wizard's Study": {
+      "start": ["ar","el","io","ka","the","vor","xan","zea"],
+      "mid":   ["ca","el","io","ith","or","ul","ym","ez"],
+      "end":   ["ion","iel","oth","eus","ar","is","or","em"]
+    }
+  }
+}</pre></div>
+                  <p class="mb-0 small text-secondary">Tip: Keep chunks short and phonetic. Avoid long full words; this generator stitches chunks together for you.</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <label class="form-label">Import JSON (styles)
+            <i class="bi bi-question-circle help-badge" data-bs-toggle="tooltip" title='Paste a JSON object containing {"Styles": {...}}. Use Validate before Import.'></i>
+          </label>
+          <textarea id="ng-import" class="form-control form-control-sm font-monospace" rows="8"
             placeholder='{"Styles":{"Elven":{"start":["ae","lia"],"mid":["ri","na"],"end":["el","ith"]}}}'></textarea>
-          <div class="d-flex gap-2 mt-2">
-            <button class="btn btn-outline-light btn-sm" id="ng-importBtn">Import</button>
-            <button class="btn btn-outline-light btn-sm" id="ng-exportBtn">Export current</button>
+
+          <div class="d-flex flex-wrap gap-2 mt-2">
+            <button class="btn btn-outline-light btn-sm" id="ng-validateBtn"><i class="bi bi-check2-circle me-1"></i>Validate</button>
+            <button class="btn btn-outline-light btn-sm" id="ng-importBtn"><i class="bi bi-upload me-1"></i>Import</button>
+            <button class="btn btn-outline-light btn-sm" id="ng-exportBtn"><i class="bi bi-download me-1"></i>Export current</button>
+            <button class="btn btn-outline-info btn-sm" id="ng-loadExample"><i class="bi bi-file-earmark-code me-1"></i>Load example</button>
           </div>
         </div>
       </details>
@@ -467,6 +606,8 @@
 
         q(root,'#ng-importBtn').addEventListener('click', (e)=>{ e.preventDefault(); if(isMobile) syncToDesktop(); importTables($d, mobileRoot); });
         q(root,'#ng-exportBtn').addEventListener('click', (e)=>{ e.preventDefault(); exportCurrent(); });
+        q(root,'#ng-validateBtn').addEventListener('click', (e)=>{ e.preventDefault(); if(isMobile) syncToDesktop(); validateOnly($d); });
+        q(root,'#ng-loadExample').addEventListener('click', (e)=>{ e.preventDefault(); loadExamplePack($d); });
       }
 
       connect(desktopRoot);
@@ -482,7 +623,6 @@
       const offcanvasEl = document.getElementById('settingsOffcanvas');
       if (offcanvasEl) {
         offcanvasEl.addEventListener('show.bs.offcanvas', () => {
-          // desktop → mobile
           ['ng-style','ng-count','ng-seed','ng-minSyl','ng-maxSyl','ng-gender','ng-allit','ng-apos','ng-diacritics'].forEach(id=>{
             const d = $d(id);
             const m = $m(id);
@@ -493,6 +633,10 @@
         });
       }
 
+      // Activate tooltips globally (desktop + mobile)
+      const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+      tooltipTriggerList.forEach(el => new bootstrap.Tooltip(el));
+
       // Initial generation
       generate($d);
     }
@@ -500,8 +644,6 @@
     document.addEventListener('DOMContentLoaded', () => {
       mountSettingsForms();
     });
-
-    // No-op on resize; desktop is single source of truth
   })();
   </script>
 </body>
