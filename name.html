@@ -34,7 +34,7 @@
     #saveHistorySelect { min-width: 200px; }
     .ng-pill { border: 1px solid rgba(255,255,255,.15); border-radius: 50rem; padding: .15rem .5rem; }
     .ng-tile { border: 1px solid rgba(255,255,255,.15); border-radius: .6rem; padding: .5rem .6rem; background: rgba(0,0,0,.2); }
-    .help-badge { font-size: .8rem; vertical-align: middle; }
+    .help-badge { font-size: .8rem; vertical-align: middle; cursor: help; }
     .code-block { background: rgba(255,255,255,.05); border: 1px solid rgba(255,255,255,.1); border-radius: .5rem; padding: .75rem; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace; font-size: .9rem; overflow:auto;}
   </style>
 </head>
@@ -80,26 +80,16 @@
 
       <!-- Helper blurb -->
       <div class="alert alert-info text-start shadow-sm mt-3">
-        <h5 class="mb-2"><i class="bi bi-magic"></i> How to Use the Name Generator</h5>
+        <h5 class="mb-2"><i class="bi bi-magic"></i> How to Use</h5>
         <p class="mb-2">
-          Pick a <strong>Style</strong>
-          <i class="bi bi-question-circle help-badge" data-bs-toggle="tooltip" title="Style picks the letter chunks used to assemble names."></i>,
-          set <strong>Count</strong>
-          <i class="bi bi-question-circle help-badge" data-bs-toggle="tooltip" title="How many names to produce (1–200)."></i>,
-          adjust <strong>syllables</strong>
-          <i class="bi bi-question-circle help-badge" data-bs-toggle="tooltip" title="The generator stitches start/mid/end chunks; these set min/max of those chunks."></i>,
-          <strong>gender leaning</strong>
-          <i class="bi bi-question-circle help-badge" data-bs-toggle="tooltip" title="Optionally appends common masculine/feminine suffixes (neutral = none)."></i>,
-          <strong>alliteration</strong>
-          <i class="bi bi-question-circle help-badge" data-bs-toggle="tooltip" title="Force names to start with a given letter (e.g., R). Leave blank for random."></i>,
-          and special characters.
-          Click <strong>Generate</strong>.
+          Pick a <strong>Race Style</strong>, optionally <strong>Apply Race Preset</strong> for smart defaults, adjust
+          <strong>syllables</strong>, <strong>gender leaning</strong>, and the <strong>flavor knobs</strong>
+          (<em>Harshness</em>, <em>Exoticness</em>), then click <strong>Generate</strong>.
         </p>
         <ul class="mb-2">
-          <li><strong>Copy</strong> copies all results to your clipboard.</li>
-          <li><strong>Download</strong> saves a <code>.txt</code>.</li>
-          <li><strong>Seed</strong> makes your results repeatable (same seed ⇒ same list).</li>
-          <li><strong>Custom Tables</strong> lets you add/override styles with JSON (see the guide inside).</li>
+          <li><strong>Copy</strong> copies results. <strong>Download</strong> saves a <code>.txt</code>.</li>
+          <li><strong>Seed</strong> makes results repeatable.</li>
+          <li><strong>Custom Tables</strong> lets you add/override styles with JSON.</li>
         </ul>
       </div>
 
@@ -129,8 +119,40 @@
               <div id="ng-out" class="row row-cols-1 row-cols-sm-2 row-cols-md-3 row-cols-lg-4 row-cols-xl-5 g-2" aria-live="polite"></div>
             </div>
           </div>
-        </div>
-      </div>
+
+          <!-- Quick Help accordion for clarity -->
+          <div class="accordion mt-3" id="quickHelp">
+            <div class="accordion-item bg-dark border-secondary">
+              <h2 class="accordion-header">
+                <button class="accordion-button collapsed bg-dark text-light" type="button" data-bs-toggle="collapse" data-bs-target="#qh1">
+                  What do Harshness & Exoticness do?
+                </button>
+              </h2>
+              <div id="qh1" class="accordion-collapse collapse" data-bs-parent="#quickHelp">
+                <div class="accordion-body">
+                  <ul class="mb-0">
+                    <li><strong>Harshness</strong> increases consonant clusters (<em>kr, gr, zz</em>), good for Orcs/Dwarves.</li>
+                    <li><strong>Exoticness</strong> increases apostrophes and diacritics (<em>á, ê, ü</em>), good for Drow/Draconic.</li>
+                    <li>Race presets set sensible defaults, but you can tweak both for flavor.</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+            <div class="accordion-item bg-dark border-secondary mt-2">
+              <h2 class="accordion-header">
+                <button class="accordion-button collapsed bg-dark text-light" type="button" data-bs-toggle="collapse" data-bs-target="#qh2">
+                  Race Presets explained
+                </button>
+              </h2>
+              <div id="qh2" class="accordion-collapse collapse">
+                <div class="accordion-body">
+                  Clicking <strong>Apply Race Preset</strong> adjusts <em>syllables, suffix tendencies, harshness, exoticness, apostrophes, diacritics</em> (and can add race-flavored suffixes) to match the chosen race. You can still tweak afterward.
+                </div>
+              </div>
+            </div>
+          </div>
+        </div><!-- /results col -->
+      </div><!-- /row -->
     </div>
 
     <!-- Offcanvas (mobile settings) -->
@@ -176,24 +198,23 @@
     function mulberry32(a){return function(){let t=a+=0x6D2B79F5;t=Math.imul(t^t>>>15,t|1);t^=t+Math.imul(t^t>>>7,t|61);return ((t^t>>>14)>>>0)/4294967296}}
     function prand(seedStr){const s = seedStr? hashString(seedStr) : Math.floor(Math.random()*2**32); return mulberry32(s) }
 
-    // --- Data Tables (expanded) ---
+    // --- Core tables (race styles aligned to D&D vibes; original + additions) ---
     let TABLES = {
       Styles: {
-        "Elven": { start:["ae","e","i","lia","fae","sha","thi","yla","ari","ela"], mid:["ri","na","la","th","si","el","ia","lith","mir","vya"], end:["el","iel","ith","ien","a","ara","ielle","wyn","ion","ria"] },
-        "Dwarven": { start:["br","dr","gr","kr","th","kh","st","sk","dur","bal","kor"], mid:["a","o","u","an","or","un","grim","gar","dr","brom"], end:["ar","orn","dur","mir","grin","gar","rak","dun","rik","stone"] },
+        "Elf":        { start:["ae","e","i","lia","fae","sha","thi","yla","ari","ela"], mid:["ri","na","la","th","si","el","ia","lith","mir","vya"], end:["el","iel","ith","ien","a","ara","ielle","wyn","ion","ria"] },
+        "Dwarf":      { start:["br","dr","gr","kr","th","kh","st","sk","dur","bal","kor"], mid:["a","o","u","an","or","un","grim","gar","dr","brom"], end:["ar","orn","dur","mir","grin","gar","rak","dun","rik","stone"] },
         "Human (Norse)": { start:["al","bir","ein","har","ing","jor","kar","leif","sig","thor","ulf"], mid:["a","e","i","ar","ir","or","un","vald","bjorn","frid"], end:["ar","en","ir","or","ulf","vald","son","hild","brand","rid"] },
         "Human (Latin)": { start:["mar","luc","val","cass","dom","jul","oct","aur","fel","max"], mid:["a","e","i","o","u","an","or","us","ian","ell"], end:["a","us","ius","ian","ella","ina","or","io","ius","um"] },
-        "Goblin": { start:["sk","sn","gr","kr","zik","rag","nib","skr","blit","krik"], mid:["a","e","i","o","u","ak","ik","ok","zz","g"], end:["it","ik","ak","ug","azz","nix","gob","git","grit","zag"] },
-        "Fiendish": { start:["az","bal","mal","xan","vor","zar","oth","vel","sama","bel"], mid:["a","e","i","o","u","az","ath","ir","or","ul","z"], end:["zor","oth","iel","ion","ius","ith","zel","zor","rax","mon"] },
-        "Halfling": { start:["al","ben","cor","dav","eli","fil","jon","mer","pip","sam"], mid:["a","e","i","o","u","on","an","el","er","il"], end:["o","y","ie","in","er","o","an","wick","foot","hill"] },
-        "Gnome": { start:["bod","cor","dim","fiz","gar","ned","pil","quin","ros","tim"], mid:["a","e","i","o","u","al","el","il","on","um"], end:["bin","dle","wick","ock","bit","er","um","win","ick","bur"] },
-        "Orc": { start:["gr","br","dr","kr","mok","gar","zug","tok","urk","rag"], mid:["a","o","u","ag","og","uk","ur","ar","ok","ug"], end:["th","g","k","z","gor","nak","ruk","dok","zug","tar"] },
+        "Goblin":     { start:["sk","sn","gr","kr","zik","rag","nib","skr","blit","krik"], mid:["a","e","i","o","u","ak","ik","ok","zz","g"], end:["it","ik","ak","ug","azz","nix","gob","git","grit","zag"] },
+        "Orc":        { start:["gr","br","dr","kr","mok","gar","zug","tok","urk","rag"], mid:["a","o","u","ag","og","uk","ur","ar","ok","ug"], end:["th","g","k","z","gor","nak","ruk","dok","zug","tar"] },
         "Dragonborn": { start:["arj","bal","drax","fen","gal","kry","mor","rax","thal","vor"], mid:["a","e","i","o","u","ar","ir","or","ul","an"], end:["thor","rax","ion","ys","dor","drim","thas","var","mir","zor"] },
-        "Aasimar": { start:["ara","cel","div","elo","ira","lum","ora","ser","tha","val"], mid:["a","e","i","o","u","el","an","or","ia","al"], end:["el","iel","ion","iel","ith","or","iel","an","ara","eus"] },
-        "Tabaxi": { start:["cha","fe","ja","ki","ma","na","ra","sa","ta","zi"], mid:["ka","ra","sa","na","mi","ti","lo","ja","za","ri"], end:["ri","ta","ka","sa","lo","mi","na","ra","zi","to"] },
+        "Tiefling":   { start:["az","bal","mal","xan","vor","zar","oth","vel","sama","bel"], mid:["a","e","i","o","u","az","ath","ir","or","ul","z"], end:["zor","oth","iel","ion","ius","ith","zel","rax","mon","eon"] },
+        "Drow":       { start:["zae","xil","drae","vyr","zil","nyx","ssra","il","shi","ria"], mid:["ri","z","ss","yl","dra","vyr","il","ae","ith","yr"], end:["th","z","rin","thrae","ith","ria","zra","lyn","ithra","zz"] },
+        "Halfling":   { start:["al","ben","cor","dav","eli","fil","jon","mer","pip","sam"], mid:["a","e","i","o","u","on","an","el","er","il"], end:["o","y","ie","in","er","o","an","wick","foot","hill"] },
+        "Gnome":      { start:["bod","cor","dim","fiz","gar","ned","pil","quin","ros","tim"], mid:["a","e","i","o","u","al","el","il","on","um"], end:["bin","dle","wick","ock","bit","er","um","win","ick","bur"] },
         "Lizardfolk": { start:["sli","dra","kra","iss","thi","ska","tro","laz","ss","vrak"], mid:["s","ss","az","iz","or","ur","ar","ra","ri","ko"], end:["th","ss","k","zz","g","sith","gash","kriss","zith","gor"] },
-        "Genasi": { start:["aer","ign","ter","hyd","zel","cal","phyr","pyra","thal","lum"], mid:["a","e","i","o","u","ra","ri","el","or","um"], end:["os","on","ius","ara","eth","or","as","ion","ir","al"] },
-        "Fey": { start:["ly","fae","tia","ari","elo","vio","nyx","syl","zea","aur"], mid:["li","ra","ri","si","na","ve","ya","ie","el","mi"], end:["wyn","elle","ria","ith","ara","ien","iel","is","ora","yse"] }
+        "Genasi":     { start:["aer","ign","ter","hyd","zel","cal","phyr","pyra","thal","lum"], mid:["a","e","i","o","u","ra","ri","el","or","um"], end:["os","on","ius","ara","eth","or","as","ion","ir","al"] },
+        "Fey":        { start:["ly","fae","tia","ari","elo","vio","nyx","syl","zea","aur"], mid:["li","ra","ri","si","na","ve","ya","ie","el","mi"], end:["wyn","elle","ria","ith","ara","ien","iel","is","ora","yse"] }
       },
       GenderSuffix: {
         feminine:["a","ia","elle","ine","yra","wyn","issa"],
@@ -201,6 +222,28 @@
         neutral:[]
       }
     };
+
+    // --- Race presets (clear defaults + flavor) ---
+    // Probabilities are 0..1; sliders for harsh/exotic are 0..100 (converted at use).
+    const RACE_PRESETS = {
+      "Elf":        { minSyl:2,maxSyl:3, gender:"neutral", aposProb:0.06, diaProb:0.10, harsh:10, exotic:25, raceSuffix:["ion","iel","ith","iel"], allowRaceSuffix:true },
+      "Drow":       { minSyl:2,maxSyl:3, gender:"neutral", aposProb:0.15, diaProb:0.20, harsh:35, exotic:55, raceSuffix:["zr","ith","rae","lyn"], allowRaceSuffix:true },
+      "Dwarf":      { minSyl:2,maxSyl:3, gender:"masculine", aposProb:0.02, diaProb:0.00, harsh:60, exotic:5,  raceSuffix:["gar","grim","dun","rik"], allowRaceSuffix:true },
+      "Orc":        { minSyl:2,maxSyl:2, gender:"masculine", aposProb:0.04, diaProb:0.00, harsh:75, exotic:10, raceSuffix:["g","th","zug","nak"], allowRaceSuffix:true },
+      "Dragonborn": { minSyl:2,maxSyl:3, gender:"neutral", aposProb:0.08, diaProb:0.08, harsh:55, exotic:35, raceSuffix:["thas","rax","dor","var"], allowRaceSuffix:true },
+      "Tiefling":   { minSyl:2,maxSyl:3, gender:"neutral", aposProb:0.12, diaProb:0.15, harsh:40, exotic:45, raceSuffix:["iel","ius","eon","ith"], allowRaceSuffix:true },
+      "Halfling":   { minSyl:2,maxSyl:2, gender:"neutral", aposProb:0.01, diaProb:0.00, harsh:5,  exotic:5,  raceSuffix:["o","y","ie"], allowRaceSuffix:true },
+      "Gnome":      { minSyl:2,maxSyl:3, gender:"neutral", aposProb:0.02, diaProb:0.00, harsh:15, exotic:10, raceSuffix:["bin","dle","wick"], allowRaceSuffix:true },
+      "Lizardfolk": { minSyl:2,maxSyl:3, gender:"neutral", aposProb:0.07, diaProb:0.00, harsh:65, exotic:20, raceSuffix:["ss","th","zz"], allowRaceSuffix:true },
+      "Genasi":     { minSyl:2,maxSyl:3, gender:"neutral", aposProb:0.05, diaProb:0.10, harsh:30, exotic:35, raceSuffix:["eth","ion","ir"], allowRaceSuffix:true },
+      "Fey":        { minSyl:2,maxSyl:3, gender:"feminine", aposProb:0.05, diaProb:0.18, harsh:10, exotic:40, raceSuffix:["wyn","elle","yse"], allowRaceSuffix:true },
+      "Goblin":     { minSyl:2,maxSyl:2, gender:"neutral", aposProb:0.03, diaProb:0.00, harsh:55, exotic:10, raceSuffix:["gob","git","grit","zag"], allowRaceSuffix:true },
+      "Human (Norse)": { minSyl:2,maxSyl:3, gender:"masculine", aposProb:0.00, diaProb:0.00, harsh:25, exotic:0, raceSuffix:["ulf","son","brand"], allowRaceSuffix:true },
+      "Human (Latin)": { minSyl:2,maxSyl:3, gender:"neutral", aposProb:0.00, diaProb:0.02, harsh:15, exotic:5, raceSuffix:["us","ius","ian","a"], allowRaceSuffix:true }
+    };
+
+    // consonant cluster pool for "harshness" injections
+    const HARSH_CLUSTERS = ["kr","gr","dr","br","zz","rk","sk","st","thr","kr","gr","zg"];
 
     // --- Utilities ---
     function pick(rng, arr){ return arr[Math.floor(rng()*arr.length)] }
@@ -211,10 +254,10 @@
       return s.slice(0,i)+"'"+s.slice(i);
     }
     const DIA = { map: { a:['á','â','ä','à'], e:['é','ê','ë','è'], i:['í','î','ï','ì'], o:['ó','ô','ö','ò'], u:['ú','û','ü','ù'], y:['ý','ÿ'] } };
-    function sprinkleDiacritics(rng, s){
+    function sprinkleDiacritics(rng, s, p){
       return s.split('').map(ch=>{
         const low = ch.toLowerCase();
-        if(DIA.map[low] && maybe(rng, 0.2)){
+        if(DIA.map[low] && maybe(rng, p)){
           const rep = pick(rng, DIA.map[low]);
           return ch===low?rep:rep.toUpperCase();
         }
@@ -227,10 +270,11 @@
       return s.replace(/^[a-zA-Z]/, l);
     }
 
-    // --- Core generator ---
-    function makeName(rng, styleKey, minSyl, maxSyl, gender, allowApos, withDia, allit){
-      const fallbackStyle = 'Elven';
+    // --- Core generator (now parameterized with flavor knobs + race suffix option) ---
+    function makeName(rng, styleKey, minSyl, maxSyl, gender, allit, opts){
+      const fallbackStyle = 'Elf';
       const style = TABLES.Styles[styleKey] || TABLES.Styles[fallbackStyle];
+      const { aposProb, diaProb, harsh, exotic, useRaceSuffix, raceSuffixList } = opts;
 
       const lo = Math.max(1, Math.min(minSyl, maxSyl));
       const hi = Math.max(lo, maxSyl);
@@ -238,23 +282,41 @@
 
       const parts = [];
       for(let i=0;i<sylCount;i++){
-        if(i===0) parts.push(pick(rng, style.start));
-        else if(i===sylCount-1) parts.push(pick(rng, style.end));
-        else parts.push(pick(rng, style.mid));
+        if(i===0){
+          parts.push(pick(rng, style.start));
+        } else if(i===sylCount-1){
+          parts.push(pick(rng, style.end));
+        } else {
+          // harshness: with some probability, inject a consonant cluster instead of a typical mid chunk
+          const useHarsh = maybe(rng, Math.min(1, harsh/100));
+          parts.push(useHarsh ? pick(rng, HARSH_CLUSTERS) : pick(rng, style.mid));
+        }
       }
       let name = parts.join('');
+      // collapse long runs
       name = name.replace(/([aeiou])\1{2,}/gi,'$1$1').replace(/([^aeiou])\1{2,}/gi,'$1$1');
 
+      // Gender suffix (existing behavior)
       const gset = TABLES.GenderSuffix[gender]||[];
-      if(gset.length && maybe(rng, gender==='neutral'?0.1:0.6)) name += pick(rng,gset);
+      if(gset.length && maybe(rng, gender==='neutral'?0.10:0.55)) name += pick(rng,gset);
 
-      if(allowApos && maybe(rng, 0.12)) name = injectApostrophe(rng, name);
-      if(withDia) name = sprinkleDiacritics(rng, name);
+      // Optional race-flavored suffix
+      if(useRaceSuffix && raceSuffixList && raceSuffixList.length && maybe(rng, 0.35)){
+        name += pick(rng, raceSuffixList);
+      }
+
+      // Exoticness effects
+      const effectiveApos = Math.min(1, aposProb + (exotic/100)*0.10);
+      const effectiveDia  = Math.min(1, diaProb  + (exotic/100)*0.20);
+
+      if(maybe(rng, effectiveApos)) name = injectApostrophe(rng, name);
+      if(effectiveDia > 0) name = sprinkleDiacritics(rng, name, effectiveDia);
       name = applyAlliteration(allit, name);
+
       return name.charAt(0).toUpperCase()+name.slice(1);
     }
 
-    function renderMeta({style, count, seedStr, minSyl, maxSyl, gender, allit}){
+    function renderMeta({style, count, seedStr, minSyl, maxSyl, gender, allit, harsh, exotic, raceSuffixOn}){
       const meta = document.getElementById('ng-meta');
       meta.innerHTML = '';
       const pills = [
@@ -263,7 +325,10 @@
         seedStr ? `Seed: ${seedStr}` : 'Seed: (random)',
         `Syllables: ${minSyl}-${maxSyl}`,
         `Gender: ${gender}`,
-        allit ? `Alliteration: ${allit.toUpperCase()}` : ''
+        allit ? `Alliteration: ${allit.toUpperCase()}` : '',
+        `Harsh: ${harsh}`,
+        `Exotic: ${exotic}`,
+        raceSuffixOn ? `Race suffix: on` : `Race suffix: off`
       ].filter(Boolean);
       for(const p of pills){
         const span = document.createElement('span');
@@ -281,15 +346,33 @@
       const maxSyl = +$d('ng-maxSyl').value || 3;
       const gender = $d('ng-gender').value;
       const allit = ($d('ng-allit').value||'').slice(0,1);
+
+      // new knobs
+      const harsh = +$d('ng-harsh').value || 0;
+      const exotic = +$d('ng-exotic').value || 0;
+      const useRaceSuffix = $d('ng-raceSuffix').checked;
+
+      // apostrophe/diacritics base (UI checkboxes control base prob presence)
       const allowApos = $d('ng-apos').checked;
-      const withDia = $d('ng-diacritics').checked;
+      const withDia   = $d('ng-diacritics').checked;
+      const baseAposProb = allowApos ? 0.12 : 0.0;
+      const baseDiaProb  = withDia   ? 0.08 : 0.0;
+
+      // pick race suffix list from presets if exists
+      const preset = RACE_PRESETS[style] || null;
+      const raceSuffixList = preset ? (preset.raceSuffix || []) : [];
 
       const rng = prand(seedStr);
       const out = document.getElementById('ng-out');
       out.innerHTML = '';
       const list = [];
       for(let i=0;i<Math.min(count, 500);i++){
-        list.push(makeName(rng, style, minSyl, maxSyl, gender, allowApos, withDia, allit));
+        list.push(
+          makeName(
+            rng, style, minSyl, maxSyl, gender, allit,
+            { aposProb: baseAposProb, diaProb: baseDiaProb, harsh, exotic, useRaceSuffix, raceSuffixList }
+          )
+        );
       }
       list.forEach(n=>{
         const col = document.createElement('div');
@@ -301,7 +384,7 @@
         out.appendChild(col);
       });
 
-      renderMeta({style, count, seedStr, minSyl, maxSyl, gender, allit});
+      renderMeta({style, count, seedStr, minSyl, maxSyl, gender, allit, harsh, exotic, raceSuffixOn: useRaceSuffix});
       return list;
     }
 
@@ -319,7 +402,7 @@
       URL.revokeObjectURL(url);
     }
 
-    // --- Advanced tables helpers ---
+    // --- Advanced tables helpers (unchanged except for IDs in markup) ---
     function validateTablesObject(obj){
       const errors = [];
       if (!obj || typeof obj !== 'object') { errors.push('Root is not an object.'); return errors; }
@@ -352,7 +435,7 @@
         }
         TABLES.Styles = { ...TABLES.Styles, ...data.Styles };
         populateStyles($d, mobileRoot);
-        alertBox.innerHTML = '<div class="alert alert-success py-2 mb-2">Imported successfully. New styles are now available in the Style dropdown.</div>';
+        alertBox.innerHTML = '<div class="alert alert-success py-2 mb-2">Imported successfully. New styles are now available in the Race Style dropdown.</div>';
       }catch(e){
         alertBox.innerHTML = '<div class="alert alert-danger py-2 mb-2">Parse error: ' + e.message + '</div>';
       }
@@ -381,7 +464,7 @@
 
     const SAMPLE_ADVANCED = {
       "Styles": {
-        "Wizard\'s Study": {
+        "Wizard's Study": {
           "start": ["ar","el","io","ka","the","vor","xan","zea"],
           "mid":   ["ca","el","io","ith","or","ul","ym","ez"],
           "end":   ["ion","iel","oth","eus","ar","is","or","em"]
@@ -412,13 +495,19 @@
 
     // --- Settings form (one source of truth) ---
     const settingsFormHTML = `
+      <!-- Race & Preset -->
       <div class="mb-3">
-        <label for="ng-style" class="form-label">Style
-          <i class="bi bi-question-circle help-badge" data-bs-toggle="tooltip" title="Select the table of letter chunks used to build names. Custom styles appear here after import."></i>
+        <label for="ng-style" class="form-label">Race Style
+          <i class="bi bi-question-circle help-badge" data-bs-toggle="tooltip" title="Choose the race/culture flavor. Presets below will tune options for this race."></i>
         </label>
-        <select id="ng-style" class="form-select"></select>
+        <div class="input-group">
+          <select id="ng-style" class="form-select"></select>
+          <button class="btn btn-outline-info" id="ng-applyPreset" type="button" title="Apply race defaults">Apply Race Preset</button>
+        </div>
+        <div class="form-text text-secondary">Presets adjust syllables, suffixes, and flavor knobs to match the race.</div>
       </div>
 
+      <!-- Counts & seed -->
       <div class="row g-2">
         <div class="col-6">
           <label for="ng-count" class="form-label">Count
@@ -428,31 +517,33 @@
         </div>
         <div class="col-6">
           <label for="ng-seed" class="form-label">Seed <span class="text-secondary small">(repeatable)</span>
-            <i class="bi bi-question-circle help-badge" data-bs-toggle="tooltip" title="Use any text. Re-using the same seed reproduces the same list for the same settings."></i>
+            <i class="bi bi-question-circle help-badge" data-bs-toggle="tooltip" title="Use any text. Re-using the same seed reproduces the same list with the same settings."></i>
           </label>
           <input id="ng-seed" type="text" placeholder="optional" class="form-control" />
         </div>
       </div>
 
+      <!-- Syllables -->
       <div class="row g-2 mt-1">
         <div class="col-6">
           <label for="ng-minSyl" class="form-label">Min syllables
-            <i class="bi bi-question-circle help-badge" data-bs-toggle="tooltip" title="Minimum number of chunks per name."></i>
+            <i class="bi bi-question-circle help-badge" data-bs-toggle="tooltip" title="Minimum syllable (chunk) count per name."></i>
           </label>
           <input id="ng-minSyl" type="number" inputmode="numeric" min="1" max="6" value="2" class="form-control" />
         </div>
         <div class="col-6">
           <label for="ng-maxSyl" class="form-label">Max syllables
-            <i class="bi bi-question-circle help-badge" data-bs-toggle="tooltip" title="Maximum number of chunks per name."></i>
+            <i class="bi bi-question-circle help-badge" data-bs-toggle="tooltip" title="Maximum syllable (chunk) count per name."></i>
           </label>
           <input id="ng-maxSyl" type="number" inputmode="numeric" min="1" max="8" value="3" class="form-control" />
         </div>
       </div>
 
+      <!-- Gender & Alliteration -->
       <div class="row g-2 mt-1">
         <div class="col-6">
           <label for="ng-gender" class="form-label">Gender leaning
-            <i class="bi bi-question-circle help-badge" data-bs-toggle="tooltip" title="Optionally append common masculine/feminine endings. Neutral disables suffix bias."></i>
+            <i class="bi bi-question-circle help-badge" data-bs-toggle="tooltip" title="Optionally append common masculine/feminine endings. Neutral reduces suffix bias."></i>
           </label>
           <select id="ng-gender" class="form-select">
             <option value="neutral" selected>Neutral</option>
@@ -462,25 +553,56 @@
         </div>
         <div class="col-6">
           <label for="ng-allit" class="form-label">Alliteration
-            <i class="bi bi-question-circle help-badge" data-bs-toggle="tooltip" title="Force the first letter (e.g., R for all names starting with R)."></i>
+            <i class="bi bi-question-circle help-badge" data-bs-toggle="tooltip" title="Force the first letter (e.g., R makes all names start with R). Leave blank for random."></i>
           </label>
           <input id="ng-allit" type="text" maxlength="1" placeholder="e.g. R" class="form-control" />
         </div>
       </div>
 
+      <!-- Flavor knobs -->
+      <div class="mt-2">
+        <label class="form-label">Flavor knobs</label>
+        <div class="row g-2">
+          <div class="col-6">
+            <label for="ng-harsh" class="form-label d-flex justify-content-between">
+              <span>Harshness</span>
+              <span class="text-secondary"><span id="ng-harsh-val">25</span></span>
+            </label>
+            <input id="ng-harsh" type="range" class="form-range" min="0" max="100" value="25"
+              title="Higher = more consonant clusters (kr, gr, zz)">
+          </div>
+          <div class="col-6">
+            <label for="ng-exotic" class="form-label d-flex justify-content-between">
+              <span>Exoticness</span>
+              <span class="text-secondary"><span id="ng-exotic-val">20</span></span>
+            </label>
+            <input id="ng-exotic" type="range" class="form-range" min="0" max="100" value="20"
+              title="Higher = more apostrophes/diacritics">
+          </div>
+        </div>
+        <div class="form-check mt-2">
+          <input class="form-check-input" type="checkbox" id="ng-raceSuffix" checked />
+          <label class="form-check-label" for="ng-raceSuffix">Enable race-flavored suffix
+            <i class="bi bi-question-circle help-badge" data-bs-toggle="tooltip" title="Appends race-typical endings sometimes (e.g., -ion for elves, -gar for dwarves)."></i>
+          </label>
+        </div>
+      </div>
+
+      <!-- Special chars base toggles -->
       <div class="form-check mt-2">
         <input class="form-check-input" type="checkbox" id="ng-apos" checked />
-        <label class="form-check-label" for="ng-apos">Allow occasional apostrophes
-          <i class="bi bi-question-circle help-badge" data-bs-toggle="tooltip" title="Adds fantasy apostrophes in some names."></i>
+        <label class="form-check-label" for="ng-apos">Allow apostrophes
+          <i class="bi bi-question-circle help-badge" data-bs-toggle="tooltip" title="Base chance to add an apostrophe. Exoticness raises this further."></i>
         </label>
       </div>
       <div class="form-check">
         <input class="form-check-input" type="checkbox" id="ng-diacritics" />
-        <label class="form-check-label" for="ng-diacritics">Sprinkle fantasy diacritics
-          <i class="bi bi-question-circle help-badge" data-bs-toggle="tooltip" title="Randomly replaces some vowels with accented versions."></i>
+        <label class="form-check-label" for="ng-diacritics">Allow diacritics
+          <i class="bi bi-question-circle help-badge" data-bs-toggle="tooltip" title="Base chance to add accented vowels. Exoticness raises this further."></i>
         </label>
       </div>
 
+      <!-- Actions -->
       <div class="d-grid d-sm-flex gap-2 mt-3">
         <button class="btn btn-success w-100 w-sm-auto" id="ng-generate"><i class="bi bi-stars me-1"></i>Generate</button>
         <button class="btn btn-outline-light w-100 w-sm-auto" id="ng-copy"><i class="bi bi-clipboard me-1"></i>Copy</button>
@@ -488,10 +610,11 @@
         <button class="btn btn-danger w-100 w-sm-auto" id="ng-clear"><i class="bi bi-trash me-1"></i>Clear</button>
       </div>
 
+      <!-- Advanced tables -->
       <details class="mt-3">
         <summary class="text-secondary">Custom Tables (advanced)
           <span class="badge rounded-pill text-bg-secondary ms-2">JSON</span>
-          <i class="bi bi-info-circle help-badge ms-1" data-bs-toggle="tooltip" title="Add your own Styles here. Each Style needs start/mid/end arrays of strings."></i>
+          <i class="bi bi-info-circle help-badge ms-1" data-bs-toggle="tooltip" title="Add/override Styles. Each Style needs start/mid/end arrays of strings."></i>
         </summary>
         <div class="mt-2">
           <div id="ng-adv-alert"></div>
@@ -507,10 +630,9 @@
                 <div class="accordion-body">
                   <ol class="mb-3">
                     <li>Create a JSON object with a <code>Styles</code> property.</li>
-                    <li>Under <code>Styles</code>, each key is the visible style name.</li>
-                    <li>Each style must have non-empty <code>start</code>, <code>mid</code>, and <code>end</code> arrays of strings.</li>
-                    <li>Click <strong>Validate</strong>. Fix errors if any. Then <strong>Import</strong>.</li>
-                    <li>Select your new style from the <strong>Style</strong> dropdown and generate.</li>
+                    <li>Each key under <code>Styles</code> is the visible race/style name.</li>
+                    <li>Each entry must have non-empty <code>start</code>, <code>mid</code>, and <code>end</code> arrays of strings.</li>
+                    <li>Click <strong>Validate</strong>, then <strong>Import</strong>. Select it in Race Style and generate.</li>
                   </ol>
                   <div class="code-block mb-2"><pre>{
   "Styles": {
@@ -521,7 +643,7 @@
     }
   }
 }</pre></div>
-                  <p class="mb-0 small text-secondary">Tip: Keep chunks short and phonetic. Avoid long full words; this generator stitches chunks together for you.</p>
+                  <p class="mb-0 small text-secondary">Keep chunks short and phonetic; the generator stitches them together.</p>
                 </div>
               </div>
             </div>
@@ -531,7 +653,7 @@
             <i class="bi bi-question-circle help-badge" data-bs-toggle="tooltip" title='Paste a JSON object containing {"Styles": {...}}. Use Validate before Import.'></i>
           </label>
           <textarea id="ng-import" class="form-control form-control-sm font-monospace" rows="8"
-            placeholder='{"Styles":{"Elven":{"start":["ae","lia"],"mid":["ri","na"],"end":["el","ith"]}}}'></textarea>
+            placeholder='{"Styles":{"Elf":{"start":["ae","lia"],"mid":["ri","na"],"end":["el","ith"]}}}'></textarea>
 
           <div class="d-flex flex-wrap gap-2 mt-2">
             <button class="btn btn-outline-light btn-sm" id="ng-validateBtn"><i class="bi bi-check2-circle me-1"></i>Validate</button>
@@ -551,7 +673,7 @@
         const opt = document.createElement('option');
         opt.value = k; opt.textContent = k; sel.appendChild(opt);
       });
-      sel.value = (current && TABLES.Styles[current]) ? current : 'Elven';
+      sel.value = (current && TABLES.Styles[current]) ? current : 'Elf';
 
       // Mirror desktop → mobile
       const mobileSel = mobileRoot.querySelector('#ng-style');
@@ -559,6 +681,28 @@
         mobileSel.innerHTML = sel.innerHTML;
         mobileSel.value = sel.value;
       }
+    }
+
+    function applyRacePreset($d){
+      const style = $d('ng-style').value;
+      const preset = RACE_PRESETS[style];
+      if(!preset) return;
+
+      // set recommended core values
+      $d('ng-minSyl').value = preset.minSyl;
+      $d('ng-maxSyl').value = preset.maxSyl;
+      $d('ng-gender').value = preset.gender;
+
+      // flavor knobs
+      $d('ng-harsh').value = preset.harsh;
+      $d('ng-exotic').value = preset.exotic;
+      $d('ng-harsh-val').textContent = preset.harsh;
+      $d('ng-exotic-val').textContent = preset.exotic;
+
+      // base toggles derived from preset intent
+      $d('ng-apos').checked = preset.aposProb > 0;
+      $d('ng-diacritics').checked = preset.diaProb > 0;
+      $d('ng-raceSuffix').checked = !!preset.allowRaceSuffix;
     }
 
     function mountSettingsForms(){
@@ -577,23 +721,28 @@
       populateStyles($d, mobileRoot);
 
       // Mirror desktop → mobile for all fields initially
-      ['ng-style','ng-count','ng-seed','ng-minSyl','ng-maxSyl','ng-gender','ng-allit','ng-apos','ng-diacritics'].forEach(id=>{
+      ['ng-style','ng-count','ng-seed','ng-minSyl','ng-maxSyl','ng-gender','ng-allit','ng-harsh','ng-exotic','ng-apos','ng-diacritics','ng-raceSuffix'].forEach(id=>{
         const d = $d(id);
         const m = $m(id);
         if(!d || !m) return;
         if (d.type === 'checkbox') m.checked = d.checked;
         else m.value = d.value;
       });
+      // init live labels for sliders
+      $d('ng-harsh-val').textContent = $d('ng-harsh').value;
+      $d('ng-exotic-val').textContent = $d('ng-exotic').value;
 
       // Sync FROM mobile TO desktop when user triggers actions in offcanvas
       function syncToDesktop(){
-        ['ng-style','ng-count','ng-seed','ng-minSyl','ng-maxSyl','ng-gender','ng-allit','ng-apos','ng-diacritics'].forEach(id=>{
+        ['ng-style','ng-count','ng-seed','ng-minSyl','ng-maxSyl','ng-gender','ng-allit','ng-harsh','ng-exotic','ng-apos','ng-diacritics','ng-raceSuffix'].forEach(id=>{
           const m = $m(id);
           const d = $d(id);
           if(!m || !d) return;
           if(m.type === 'checkbox'){ d.checked = m.checked; }
           else { d.value = m.value; }
         });
+        $d('ng-harsh-val').textContent = $d('ng-harsh').value;
+        $d('ng-exotic-val').textContent = $d('ng-exotic').value;
       }
 
       // Wire shared button handlers for a given root
@@ -608,6 +757,16 @@
         q(root,'#ng-exportBtn').addEventListener('click', (e)=>{ e.preventDefault(); exportCurrent(); });
         q(root,'#ng-validateBtn').addEventListener('click', (e)=>{ e.preventDefault(); if(isMobile) syncToDesktop(); validateOnly($d); });
         q(root,'#ng-loadExample').addEventListener('click', (e)=>{ e.preventDefault(); loadExamplePack($d); });
+
+        q(root,'#ng-applyPreset').addEventListener('click', (e)=>{ e.preventDefault(); if(isMobile) syncToDesktop(); applyRacePreset($d); });
+
+        // sliders live label
+        const harsh = q(root,'#ng-harsh');
+        const exotic = q(root,'#ng-exotic');
+        const harshVal = q(root,'#ng-harsh-val');
+        const exoticVal = q(root,'#ng-exotic-val');
+        harsh.addEventListener('input', ()=> harshVal.textContent = harsh.value);
+        exotic.addEventListener('input', ()=> exoticVal.textContent = exotic.value);
       }
 
       connect(desktopRoot);
@@ -623,13 +782,15 @@
       const offcanvasEl = document.getElementById('settingsOffcanvas');
       if (offcanvasEl) {
         offcanvasEl.addEventListener('show.bs.offcanvas', () => {
-          ['ng-style','ng-count','ng-seed','ng-minSyl','ng-maxSyl','ng-gender','ng-allit','ng-apos','ng-diacritics'].forEach(id=>{
+          ['ng-style','ng-count','ng-seed','ng-minSyl','ng-maxSyl','ng-gender','ng-allit','ng-harsh','ng-exotic','ng-apos','ng-diacritics','ng-raceSuffix'].forEach(id=>{
             const d = $d(id);
             const m = $m(id);
             if(!d || !m) return;
             if (d.type === 'checkbox') m.checked = d.checked;
             else m.value = d.value;
           });
+          $m('ng-harsh-val').textContent = $m('ng-harsh').value;
+          $m('ng-exotic-val').textContent = $m('ng-exotic').value;
         });
       }
 
