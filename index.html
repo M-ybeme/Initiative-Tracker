@@ -5,30 +5,58 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>The DM's Toolbox: Initiative Tracker</title>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" crossorigin="anonymous" />
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.8.3/font/bootstrap-icons.css" />
-  <!-- Custom CSS -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" />
   <link href="/css/site.css" rel="stylesheet" />
-  <!-- Dev Icons -->
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/devicons/devicon@v2.15.1/devicon.min.css" />
-  <!-- Favicon -->
   <link rel="icon" type="image/png" href="/images/dndFavicon (2).png" />
-  <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
   <style>
-    .bgimage{
-        background: url('images/BGMap.png') no-repeat center center fixed;
-        background-size: cover;}
-    .bg-orange { background-color: #fd7e14 !important; color: #212529 !important; }
-    .drag-handle { cursor: move; }
-    .active-turn {
-      border-left: 5px solid #1d9e6d !important;
-      color: #f8f9fa !important;
-      font-weight: bold;
+    .bgimage{ background:url('images/BGMap.png') no-repeat center center fixed; background-size:cover; }
+    .bg-orange{ background-color:#fd7e14 !important; color:#212529 !important; }
+    .drag-handle{ cursor:move; }
+    .active-turn{ border-left:5px solid #1d9e6d !important; color:#f8f9fa !important; font-weight:bold; }
+    #saveHistorySelect{ min-width:200px; }
+
+    /* Compact status icon row */
+    .status-icon-row{ display:flex; flex-wrap:wrap; gap:.25rem; align-items:center; }
+    .status-chip{ font-size:1rem; line-height:1; }
+    .status-chip[data-remaining]:after{
+      content: attr(data-remaining);
+      display:inline-block; font-size:.7rem; margin-left:.15rem; opacity:.8;
     }
-    #saveHistorySelect { min-width: 200px; }
+    .conc-btn{ border:1px dashed rgba(255,255,255,.3); }
+    .conc-on{ border-color:#ffc107; color:#ffc107; }
+    .hp-controls .btn{ padding:.1rem .35rem; line-height:1; }
+
+    /* Sticky table header for long lists */
+    table thead th{ position:sticky; top:0; background:#1a1d20; z-index:1; }
+
+    @media (max-width:576px){
+      .btn,.form-control{ padding:.6rem .8rem; font-size:1rem; }
+      .table td,.table th{ padding:.6rem .5rem; }
+    }
+
+    .notes-cell {
+      display: flex;
+      flex-direction: column;
+      gap: 0.25rem;
+    }
+    .notes-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .status-icons {
+      display: flex;
+      gap: 0.25rem;
+      flex-wrap: wrap;
+      font-size: 1rem;
+    }
+    .status-icons span {
+      cursor: default;
+    }
   </style>
 </head>
 <body class="bgimage">
-   <nav class="navbar navbar-expand-lg navbar-dark fixed-top text-light" id="mainNav">
+  <nav class="navbar navbar-expand-lg navbar-dark fixed-top text-light" id="mainNav">
     <div class="container-fluid">
       <a class="navbar-brand" href="index.html">
         <img src="/images/dndFavicon (2).png" height="40" width="40" alt="App Logo" class="d-inline-block" />
@@ -36,93 +64,65 @@
       </a>
       <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarSupportedContent"
         aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
-        <span class="navbar-toggler-icon">
-          <i class="bi bi-list"></i>
-        </span>
+        <span class="navbar-toggler-icon"><i class="bi bi-list"></i></span>
       </button>
       <div class="collapse navbar-collapse" id="navbarSupportedContent">
         <ul class="navbar-nav me-auto mb-2 mb-lg-0">
-          <li class="nav-item">
-            <a class="nav-link active" aria-current="page" href="index.html">Initiative</a>
-          </li>
-          <li class="nav-item">
-            <a class="nav-link" href="name.html">Name Gen</a>
-          </li>
-          <li class="nav-item">
-            <a class="nav-link" href="loot.html">Loot Gen</a>
-          </li>
-          <li class="nav-item">
-            <a class="nav-link" href="shop.html">Shop Gen</a>
-          </li>
-          <li class="nav-item">
-            <a class="nav-link" href="npc.html">NPC Gen</a>
-          </li>
-          <li class="nav-item">
-            <a class="nav-link" href="tav.html">Tavern/Inn Gen</a>
-          </li>
+          <li class="nav-item"><a class="nav-link active" aria-current="page" href="index.html">Initiative</a></li>
+          <li class="nav-item"><a class="nav-link" href="name.html">Name Gen</a></li>
+          <li class="nav-item"><a class="nav-link" href="loot.html">Loot Gen</a></li>
+          <li class="nav-item"><a class="nav-link" href="shop.html">Shop Gen</a></li>
+          <li class="nav-item"><a class="nav-link" href="npc.html">NPC Gen</a></li>
+          <li class="nav-item"><a class="nav-link" href="tav.html">Tavern/Inn Gen</a></li>
         </ul>
       </div>
     </div>
-   </nav>
+  </nav>
+
   <main class="content pt-3">
     <div class="container-fluid text-center backdrop">
       <h1 class="display-1 mb-0">Initiative Tracker</h1>
-      <p class="lead">Manage initiative, health, AC, notes, dice rolls, and combat rounds.</p>
-      <div class="row">
-        <div class="col-12 col-md-6">
-            <div class="d-flex justify-content-center align-items-center gap-3 my-3 flex-wrap">
-              <div class="form-check form-switch">
-                <input class="form-check-input" type="checkbox" id="autoSaveToggle" checked>
-                <label class="form-check-label" for="autoSaveToggle">Auto-Save</label>
-              </div>
-              <button id="manualSaveBtn" class="btn btn-outline-success">Manual Save</button>
-              <select id="saveHistorySelect" class="form-select form-select-sm w-auto">
-                <option disabled selected>Load Previous Save</option>
-              </select>
-              <input type="file" id="import-file" accept=".json" class="d-none" />
-              <button id="export-btn" class="btn btn-outline-warning">Export Session</button>
-              <button id="import-btn" class="btn btn-outline-secondary">Import Session</button>
-            </div>
-        </div>
-        <div class="col-12 col-md-6">
-          <div class="accordion mb-4" id="savedCharactersAccordion">
-            <div class="accordion-item">
-              <h2 class="accordion-header" id="savedCharactersHeading">
-                <button class="accordion-button collapsed bg-dark text-light" type="button" data-bs-toggle="collapse" data-bs-target="#savedCharactersCollapse" aria-expanded="false" aria-controls="savedCharactersCollapse">
-                  Saved Character Stat Blocks (Max: 10)
-                </button>
-              </h2>
-              <div id="savedCharactersCollapse" class="accordion-collapse collapse" aria-labelledby="savedCharactersHeading" data-bs-parent="#savedCharactersAccordion">
-                <div class="accordion-body bg-dark text-light">
-                  <div class="row g-2 mb-3">
-                    <div class="col-md-3"><input id="save-name" class="form-control" type="text" placeholder="Name" /></div>
-                    <div class="col-md-2"><input id="save-health" class="form-control" type="number" placeholder="HP" /></div>
-                    <div class="col-md-2"><input id="save-ac" class="form-control" type="number" placeholder="AC" /></div>
-                    <div class="col-md-2"><button id="save-character-btn" class="btn btn-outline-success w-100">Save Character</button></div>
-                  </div>
-                  <ul id="saved-characters-list" class="list-group"></ul>
-                </div>
-              </div>
-            </div>
+      <p class="lead">Manage initiative, health, AC, notes, status effects, and combat rounds.</p>
+
+      <div class="row g-3 align-items-center justify-content-center my-2">
+        <div class="col-12 col-lg-7 d-flex flex-wrap gap-2 justify-content-center">
+          <div class="form-check form-switch">
+            <input class="form-check-input" type="checkbox" id="autoSaveToggle" checked>
+            <label class="form-check-label" for="autoSaveToggle">Auto-Save</label>
           </div>
+
+          <div class="form-check form-switch">
+            <input class="form-check-input" type="checkbox" id="lockOrderToggle">
+            <label class="form-check-label" for="lockOrderToggle">Lock Order</label>
+          </div>
+
+          <button id="manualSaveBtn" class="btn btn-outline-success">Manual Save</button>
+          <button id="copyOrderBtn" class="btn btn-outline-light">Copy Turn Order</button>
+
+          <select id="saveHistorySelect" class="form-select form-select-sm w-auto">
+            <option disabled selected>Load Previous Save</option>
+          </select>
+
+          <input type="file" id="import-file" accept=".json" class="d-none" />
+          <button id="export-btn" class="btn btn-outline-warning">Export Session</button>
+          <button id="import-btn" class="btn btn-outline-secondary">Import Session</button>
         </div>
       </div>
-      
 
       <form id="initiative-form" class="mb-4">
-        <div class="row g-2">
-          <div class="col-md-3"><input id="character-name" class="form-control" type="text" placeholder="Character Name" required></div>
-          <div class="col-md-2"><input id="initiative-roll" class="form-control" type="number" placeholder="Initiative" required></div>
-          <div class="col-md-2"><input id="character-health" class="form-control" type="number" placeholder="Max HP" required></div>
-          <div class="col-md-2"><input id="character-ac" class="form-control" type="number" placeholder="AC" required></div>
-          <div class="col-md-2"><input id="character-notes" class="form-control" type="text" placeholder="Notes (optional)"></div>
-          <div class="col-md-1"><button class="btn btn-outline-success w-100" type="submit">Add</button></div>
+        <div class="row g-2 justify-content-center">
+          <div class="col-12 col-md-3"><input id="character-name" class="form-control" type="text" placeholder="Character Name" required></div>
+          <div class="col-6 col-md-2"><input id="initiative-roll" class="form-control" type="number" placeholder="Initiative" required></div>
+          <div class="col-6 col-md-2"><input id="character-health" class="form-control" type="number" placeholder="Max HP" required></div>
+          <div class="col-6 col-md-2"><input id="character-ac" class="form-control" type="number" placeholder="AC" required></div>
+          <div class="col-6 col-md-2"><input id="character-notes" class="form-control" type="text" placeholder="Notes (optional)"></div>
+          <div class="col-12 col-md-1"><button class="btn btn-outline-success w-100" type="submit">Add</button></div>
         </div>
       </form>
 
       <h2>Combat Round: <span id="combat-round">1</span></h2>
 
-      <!-- Dice Roller Section -->
+      <!-- Dice Roller -->
       <div class="my-4 text-light">
         <div class="d-flex justify-content-center gap-2 flex-wrap">
           <button class="btn btn-outline-info dice-btn" data-dice="4">Roll d4</button>
@@ -150,7 +150,7 @@
         </div>
       </div>
 
-      <!-- Initiative Table -->
+      <!-- Desktop Table -->
       <div class="d-none d-md-block">
         <div class="table-responsive">
           <table class="table table-striped text-light align-middle">
@@ -162,8 +162,7 @@
                 <th>Initiative</th>
                 <th>AC</th>
                 <th>Health</th>
-                <th>Notes</th>
-                <th>Status</th>
+                <th>Notes & Effects</th>
                 <th>Actions</th>
               </tr>
             </thead>
@@ -172,6 +171,7 @@
         </div>
       </div>
 
+      <!-- Mobile Cards -->
       <div id="mobile-initiative-order" class="d-block d-md-none"></div>
 
       <div class="mt-3 d-flex gap-2 justify-content-center flex-wrap">
@@ -195,15 +195,19 @@
           <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
         </div>
         <div class="modal-body">
+          <!-- Current effects -->
           <div id="status-badges" class="mb-3 d-flex flex-wrap gap-2"></div>
-          <div class="dropdown w-100 mb-3">
-            <button class="btn btn-outline-light dropdown-toggle w-100" type="button" id="statusDropdownBtn" data-bs-toggle="dropdown" aria-expanded="false">
-              Add Status Effect
+
+          <!-- Add effect -->
+          <div class="input-group mb-2">
+            <button class="btn btn-outline-light dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+              Add Effect
             </button>
-            <ul class="dropdown-menu dropdown-menu-dark w-100" aria-labelledby="statusDropdownBtn" id="status-dropdown-list">
-              <!-- Populated dynamically -->
-            </ul>
+            <ul class="dropdown-menu dropdown-menu-dark" id="status-dropdown-list"></ul>
+            <input id="status-duration" type="number" min="0" class="form-control" placeholder="Duration (rounds, optional)">
+            <button id="add-status-btn" class="btn btn-outline-success">Add</button>
           </div>
+          <div class="form-text text-secondary">Leave duration blank for indefinite effects. Effects with a duration tick down each new round.</div>
         </div>
       </div>
     </div>
@@ -226,620 +230,575 @@
     </div>
   </div>
 
-  <!-- Scripts -->
-  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-  <script>
-
-      document.getElementById('session-notes').addEventListener('input', () => {
-        saveNotes();
-      });
-
-    // Session Notes
-    const notesKey = 'sessionNotes';
-
-    function loadNotes() {
-      const saved = localStorage.getItem(notesKey);
-      if (saved) document.getElementById('session-notes').value = saved;
-    }
-
-    function saveNotes() {
-      const content = document.getElementById('session-notes').value;
-      localStorage.setItem(notesKey, content);
-    }
-
-    document.getElementById('save-notes').addEventListener('click', () => {
-      saveNotes();
-      alert("Notes saved.");
-    });
-
-    document.getElementById('export-notes').addEventListener('click', () => {
-      const notes = document.getElementById('session-notes').value;
-      const blob = new Blob([notes], { type: 'text/plain' });
-      const url = URL.createObjectURL(blob);
-    
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `session_notes_${new Date().toISOString().slice(0, 10)}.txt`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-    });
-
-    document.getElementById('import-notes').addEventListener('click', () => {
-      document.getElementById('import-notes-file').click();
-    });
-
-    document.getElementById('import-notes-file').addEventListener('change', function () {
-      const file = this.files[0];
-      if (!file) return;
-    
-      const reader = new FileReader();
-      reader.onload = function (e) {
-        document.getElementById('session-notes').value = e.target.result;
-        saveNotes();
-        alert("Notes imported.");
-      };
-      reader.readAsText(file);
-      this.value = ''; // Reset input
-    });
-
-  // Load notes when the DOM is ready
-  loadNotes();
-
-    const statusEffects = [
-      { name: 'Blinded', icon: '👁️' },
-      { name: 'Exhaustion', icon: '💤' },
-      { name: 'Incapacitated', icon: '😴' },
-      { name: 'Petrified', icon: '🪨' },
-      { name: 'Restrained', icon: '🪢' },
-      { name: 'Charmed', icon: '🔮' },
-      { name: 'Frightened', icon: '😱' },
-      { name: 'Invisible', icon: '🔎' },
-      { name: 'Poisoned', icon: '☠️' },
-      { name: 'Unconscious', icon: '😪' },
-      { name: 'Deafened', icon: '🔈' },
-      { name: 'Grappled', icon: '🤼‍♂️' },
-      { name: 'Paralyzed', icon: '🔐' },
-      { name: 'Prone', icon: '🛌' },
-    ];
-      
-
-    document.addEventListener('DOMContentLoaded', function () {
-      let characters = [];
-      let currentTurn = 0;
-      let combatRound = 1;
-      let modalCharacterIndex = null;
-      let autoSaveEnabled = true;
-      let diceHistory = [];
-
-      const statusModal = new bootstrap.Modal(document.getElementById('statusModal'));
-
-      const saved = localStorage.getItem('initiativeTrackerData');
-      if (saved) {
-        try {
-          const data = JSON.parse(saved);
-          characters = data.characters || [];
-          if (Array.isArray(characters)) {
-            characters.forEach(c => {
-              if (c.status && typeof c.status[0] === 'string') {
-                c.status = c.status.map(name => ({
-                  name,
-                  icon: statusEffects.find(e => e.name === name)?.icon || '❓'
-                }));
-              }
-            });
-          }
-          currentTurn = data.currentTurn || 0;
-          combatRound = data.combatRound || 1;
-          diceHistory = Array.isArray(data.diceHistory) && typeof data.diceHistory[0] === 'object'
-            ? data.diceHistory
-            : (data.diceHistory || []).map(t => ({ text: t, timestamp: 'Unknown' }));
-        } catch (e) {
-          console.warn("Failed to load tracker state:", e);
-        }
-      }
-
-      function hpClass(percent) {
-        if (percent <= 0) return 'bg-secondary text-light text-decoration-line-through';
-        if (percent <= 25) return 'bg-danger text-light';
-        if (percent <= 50) return 'bg-warning text-dark';
-        if (percent <= 75) return 'bg-orange text-dark';
-        return 'bg-success text-light';
-      }
-
-      function saveToLocalStorage(manual = false) {
-        const timestamp = new Date().toISOString();
-        const state = { characters, currentTurn, combatRound, diceHistory };
-        const key = manual ? `initiativeTrackerData_${timestamp}` : 'initiativeTrackerData';
-        localStorage.setItem(key, JSON.stringify(state));
-        if (manual) updateSaveHistory();
-      }
-
-      function updateSaveHistory() {
-        const select = document.getElementById('saveHistorySelect');
-        select.innerHTML = `<option disabled selected>Load Previous Save</option>`;
-        Object.keys(localStorage)
-          .filter(k => k.startsWith('initiativeTrackerData_'))
-          .sort().reverse()
-          .forEach(key => {
-            const time = key.replace('initiativeTrackerData_', '');
-            const label = new Date(time).toLocaleString();
-            const opt = document.createElement('option');
-            opt.value = key;
-            opt.textContent = label;
-            select.appendChild(opt);
-          });
-      }
-
-      function addToHistory(text) {
-        const timestamp = new Date().toLocaleTimeString();
-        diceHistory.unshift({ text, timestamp });
-        buildDiceHistory();
-        if (autoSaveEnabled) saveToLocalStorage();
-      }
-
-      function buildDiceHistory() {
-        const history = document.getElementById('dice-history-log');
-        history.innerHTML = '';
-        diceHistory.forEach(entry => {
-          const div = document.createElement('div');
-          div.className = "border-bottom pb-1 mb-1";
-          div.innerHTML = `<strong>${entry.timestamp}</strong>: ${entry.text}`;
-          history.appendChild(div);
-        });
-      }
-
-      function buildTable() {
-        document.getElementById('combat-round').textContent = combatRound;
-        const tableBody = document.getElementById('initiative-order');
-        const mobileBody = document.getElementById('mobile-initiative-order');
-        tableBody.innerHTML = '';
-        mobileBody.innerHTML = '';
-
-        characters.forEach((c, i) => {
-          const pct = Math.round((c.currentHP / c.maxHP) * 100);
-          const row = document.createElement('tr');
-          row.innerHTML = `
-            <td class="drag-handle"><i class="bi bi-grip-vertical"></i></td>
-            <td>${i === currentTurn ? '<i class="bi bi-caret-right-fill"></i>' : ''}</td>
-            <td class="${pct <= 0 ? 'text-decoration-line-through' : ''}">${c.name}</td>
-            <td><input type="number" class="form-control form-control-sm init-input" value="${c.initiative}" data-index="${i}"></td>
-            <td>${c.ac ?? '-'}</td>
-            <td><input type="number" class="form-control form-control-sm health-input ${hpClass(pct)}" value="${c.currentHP}" data-index="${i}"></td>
-            <td><input type="text" class="form-control form-control-sm notes-input" placeholder="Notes..." value="${c.notes}" data-index="${i}"></td>
-            <td><button class="btn btn-sm btn-outline-info w-100 status-btn" data-index="${i}" title="${(c.status || []).map(s => s.name).join(', ') || 'No active effects'}">Status</button></td>
-            <td class="d-flex gap-1">
-              <button class="btn btn-sm btn-outline-success duplicate-btn" data-index="${i}" title="Duplicate Character"><i class="bi bi-files"></i></button>
-              <button class="btn btn-sm btn-outline-danger delete-btn" data-index="${i}" title="Delete Character"><i class="bi bi-trash"></i></button>
-            </td>
-          `;
-          if (i === currentTurn) row.classList.add('active-turn');
-          tableBody.appendChild(row);
-
-          const card = document.createElement('div');
-          card.className = 'card mb-2 text-start';
-          if (i === currentTurn) card.classList.add('border-success');
-          card.innerHTML = `
-            <div class="card-body">
-              <h5 class="card-title mb-1">${c.name} <small class="text-muted">(${c.initiative} Init)</small></h5>
-              <p class="mb-1">AC: ${c.ac ?? '-'}</p>
-              <p class="mb-1">HP: <input type="number" class="form-control form-control-sm health-input ${hpClass(pct)}" value="${c.currentHP}" data-index="${i}"></p>
-              <p class="mb-1">Notes: <input type="text" class="form-control form-control-sm notes-input" placeholder="Notes..." value="${c.notes}" data-index="${i}"></p>
-              <p class="mb-1">Status: <button class="btn btn-sm btn-outline-info status-btn" data-index="${i}" title="${(c.status || []).map(s => s.name).join(', ') || 'No active effects'}">Status</button></p>
-              <button class="btn btn-sm btn-outline-success duplicate-btn" data-index="${i}" title="Duplicate Character"><i class="bi bi-files"></i></button>
-              <button class="btn btn-sm btn-outline-danger delete-btn" data-index="${i}"><i class="bi bi-trash"></i> Remove</button>
-            </div>
-          `;
-
-                // Reordering Buttons for Mobile
-          const upBtn = document.createElement('button');
-          upBtn.className = 'btn btn-sm btn-outline-light me-1';
-          upBtn.innerHTML = '<i class="bi bi-arrow-up"></i>';
-          upBtn.onclick = () => {
-            if (i > 0) {
-              [characters[i - 1], characters[i]] = [characters[i], characters[i - 1]];
-              buildTable();
-            }
-          };
-        
-          const downBtn = document.createElement('button');
-          downBtn.className = 'btn btn-sm btn-outline-light';
-          downBtn.innerHTML = '<i class="bi bi-arrow-down"></i>';
-          downBtn.onclick = () => {
-            if (i < characters.length - 1) {
-              [characters[i], characters[i + 1]] = [characters[i + 1], characters[i]];
-              buildTable();
-            }
-          };
-        
-          const reorderDiv = document.createElement('div');
-          reorderDiv.className = 'd-flex justify-content-end mt-2';
-          reorderDiv.appendChild(upBtn);
-          reorderDiv.appendChild(downBtn);
-          card.querySelector('.card-body').appendChild(reorderDiv);
-
-          mobileBody.appendChild(card);
-        });
-
-        document.querySelectorAll('.health-input').forEach(inp => inp.addEventListener('input', function () {
-          const idx = parseInt(this.dataset.index);
-          characters[idx].currentHP = isNaN(this.value) ? 0 : parseInt(this.value);
-          buildTable();
-        }));
-
-        document.querySelectorAll('.init-input').forEach(inp => inp.addEventListener('input', function () {
-          const idx = parseInt(this.dataset.index);
-          characters[idx].initiative = parseInt(this.value) || 0;
-          characters.sort((a, b) => b.initiative - a.initiative);
-          buildTable();
-        }));
-
-
-        document.querySelectorAll('.duplicate-btn').forEach(btn => btn.addEventListener('click', () => {
-          const idx = parseInt(btn.dataset.index);
-          const original = characters[idx];
-          const copy = { ...original, name: original.name + ' (copy)' };
-          characters.splice(idx + 1, 0, copy);
-          buildTable();
-        }));
-        
-        document.querySelectorAll('.notes-input').forEach(inp => inp.addEventListener('input', function () {
-          characters[this.dataset.index].notes = this.value;
-        }));
-
-        document.querySelectorAll('.delete-btn').forEach(btn => btn.addEventListener('click', () => deleteChar(btn.dataset.index)));
-
-       document.querySelectorAll('.status-btn').forEach(btn => btn.addEventListener('click', function () {
-        modalCharacterIndex = parseInt(this.dataset.index);
-        const char = characters[modalCharacterIndex];
-        const dropdown = document.getElementById('status-dropdown-list');
-        dropdown.innerHTML = '';
-
-        // Populate dropdown
-        statusEffects.forEach(effect => {
-          const alreadyHas = char.status.some(s => s.name === effect.name);
-          const li = document.createElement('li');
-          li.innerHTML = `
-            <a class="dropdown-item d-flex align-items-center gap-2 ${alreadyHas ? 'disabled text-muted' : ''}" href="#" data-effect="${effect.name}">
-              <span title="${effect.name}">${effect.icon}</span> ${effect.name}
-            </a>`;
-          dropdown.appendChild(li);
-        });
-      
-        dropdown.querySelectorAll('a[data-effect]').forEach(a => {
-          a.addEventListener('click', function (e) {
-            e.preventDefault();
-            const name = this.dataset.effect;
-            const icon = statusEffects.find(x => x.name === name)?.icon ?? '';
-            char.status.push({ name, icon });
-            buildTable();
-            statusModal.hide();
-          });
-        });
-      
-        // Render badges
-        const container = document.getElementById('status-badges');
-        container.innerHTML = char.status.map(effect =>
-          `<span class="badge bg-secondary px-2 py-1" title="${effect.name}">
-            ${effect.icon}
-            <i class="bi bi-x ms-1 remove-status" data-effect="${effect.name}" role="button"></i>
-          </span>`).join('');
-        
-        container.querySelectorAll('.remove-status').forEach(x => {
-        x.addEventListener('click', function () {
-          const eff = this.dataset.effect;
-          char.status = char.status.filter(s => s.name !== eff);
-          this.parentElement.remove();
-        
-          // Update the button's title attribute
-          const btn = document.querySelector(`.status-btn[data-index="${modalCharacterIndex}"]`);
-          btn.setAttribute(
-            'title',
-            (char.status.length
-              ? char.status.map(s => s.name).join(', ')
-              : 'No active effects')
-          );
-        
-          // Refresh Bootstrap tooltip instance (if using BS5)
-          const tip = bootstrap.Tooltip.getInstance(btn);
-          if (tip) {
-            tip.setContent({ '.tooltip-inner': btn.getAttribute('title') });
-          }
-        });
-      });
-      
-        statusModal.show();
-      }));
-
-        
-        // Initialize Sortable for drag-and-drop reordering
-        new Sortable(document.getElementById('initiative-order'), {
-          handle: '.drag-handle',
-          animation: 150,
-          onEnd: function (evt) {
-            const [movedItem] = characters.splice(evt.oldIndex, 1);
-            characters.splice(evt.newIndex, 0, movedItem);
-            buildTable();
-          }
-        });
-
-        buildDiceHistory();
-        if (autoSaveEnabled) saveToLocalStorage();
-      }
-
-      function parseDiceFormula(formula) {
-        const match = formula.toLowerCase().match(/^(\d*)d(\d+)([+-]\d+)?$/);
-        if (!match) return null;
-        const num = parseInt(match[1] || '1', 10);
-        const sides = parseInt(match[2], 10);
-        const mod = parseInt(match[3] || '0', 10);
-        const rolls = Array.from({ length: num }, () => Math.floor(Math.random() * sides) + 1);
-        const total = rolls.reduce((a, b) => a + b, 0) + mod;
-        return { rolls, modifier: mod, total, sides, num };
-      }
-
-      function deleteChar(idx) {
-        characters.splice(idx, 1);
-        if (currentTurn >= characters.length) currentTurn = 0;
-        if (characters.length === 0) combatRound = 1;
-        buildTable();
-      }
-
-      // Event Listeners
-      document.getElementById('initiative-form').addEventListener('submit', e => {
-        e.preventDefault();
-        const name = document.getElementById('character-name').value.trim();
-        const init = parseInt(document.getElementById('initiative-roll').value, 10);
-        const maxHP = parseInt(document.getElementById('character-health').value, 10);
-        const ac = parseInt(document.getElementById('character-ac').value, 10);
-        const notes = document.getElementById('character-notes').value.trim();
-        if (!name || isNaN(init) || isNaN(maxHP) || isNaN(ac)) return;
-
-        characters.push({ name, initiative: init, currentHP: maxHP, maxHP, notes, ac, status: [] });
-        characters.sort((a, b) => b.initiative - a.initiative);
-        e.target.reset();
-        buildTable();
-      });
-
-      document.getElementById('clear-all').addEventListener('click', () => {
-        characters = [];
-        currentTurn = 0;
-        combatRound = 1;
-        buildTable();
-      });
-
-      document.getElementById('clear-storage').addEventListener('click', () => {
-        localStorage.clear();
-        alert('All saved tracker data cleared.');
-        updateSaveHistory();
-      });
-
-      document.getElementById('next-turn').addEventListener('click', () => {
-        if (characters.length === 0) return;
-
-        const len = characters.length;
-        let attempts = 0;
-
-        do {
-          currentTurn = (currentTurn + 1) % len;
-          if (currentTurn === 0) combatRound++;
-          attempts++;
-        } while (characters[currentTurn].currentHP <= 0 && attempts < len);
-      
-        buildTable();
-      });
-
-
-      document.getElementById('reset-turns').addEventListener('click', () => {
-        currentTurn = 0;
-        combatRound = 1;
-        buildTable();
-      });
-
-      document.getElementById('manualSaveBtn').addEventListener('click', () => {
-        saveToLocalStorage(true);
-        alert('Manual save complete.');
-      });
-
-      document.getElementById('saveHistorySelect').addEventListener('change', function () {
-        const raw = localStorage.getItem(this.value);
-        if (!raw) return;
-        try {
-          const data = JSON.parse(raw);
-          characters = data.characters || [];
-          characters.forEach(c => {
-            if (c.status && typeof c.status[0] === 'string') {
-              c.status = c.status.map(name => ({
-                name,
-                icon: statusEffects.find(e => e.name === name)?.icon || '❓'
-              }));
-            }
-          });
-          currentTurn = data.currentTurn || 0;
-          combatRound = data.combatRound || 1;
-          diceHistory = Array.isArray(data.diceHistory) && typeof data.diceHistory[0] === 'object'
-            ? data.diceHistory
-            : (data.diceHistory || []).map(t => ({ text: t, timestamp: 'Unknown' }));
-          buildTable();
-        } catch (e) {
-          alert('Failed to load that save.');
-        }
-      });
-
-      document.getElementById('autoSaveToggle').addEventListener('change', e => {
-        autoSaveEnabled = e.target.checked;
-      });
-
-      document.querySelectorAll('.dice-btn').forEach(btn => {
-        btn.addEventListener('click', function () {
-          const sides = parseInt(this.dataset.dice);
-          const result = Math.floor(Math.random() * sides) + 1;
-          const output = `🎲 Rolled d${sides}: ${result}`;
-          document.getElementById('dice-result').textContent = output;
-          addToHistory(output);
-        });
-      });
-
-      document.getElementById('roll-custom-dice').addEventListener('click', function () {
-        const input = document.getElementById('custom-dice-input').value.trim();
-        const parsed = parseDiceFormula(input);
-        if (!parsed) return alert("Invalid format. Use XdY+Z (e.g., 2d6+3)");
-        const { rolls, modifier, total, sides, num } = parsed;
-        const modStr = modifier !== 0 ? (modifier > 0 ? ` + ${modifier}` : ` - ${Math.abs(modifier)}`) : '';
-        const output = `🎲 Rolled ${num}d${sides}${modStr}: [${rolls.join(', ')}] = ${total}`;
-        document.getElementById('dice-result').textContent = output;
-        addToHistory(output);
-      });
-
-      document.getElementById('clear-dice-history').addEventListener('click', () => {
-        if (confirm("Clear all dice history?")) {
-          diceHistory = [];
-          buildDiceHistory();
-          if (autoSaveEnabled) saveToLocalStorage();
-        }
-      });
-
-      window.addEventListener('beforeunload', () => {
-        if (autoSaveEnabled) saveToLocalStorage();
-      });
-
-      updateSaveHistory();
-      buildTable();
-
-      // Export session to file
-      document.getElementById('export-btn').addEventListener('click', () => {
-        const data = {
-          characters,
-          currentTurn,
-          combatRound,
-          diceHistory
-        };
-        const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-        const url = URL.createObjectURL(blob);
-
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `initiativeTracker_${new Date().toISOString()}.json`;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
-      });
-
-      // Import session from file
-      document.getElementById('import-btn').addEventListener('click', () => {
-        document.getElementById('import-file').click();
-      });
-
-      document.getElementById('import-file').addEventListener('change', function () {
-        const file = this.files[0];
-        if (!file) return;
-        const reader = new FileReader();
-        reader.onload = function (e) {
-          try {
-            const importedData = JSON.parse(e.target.result);
-            characters = importedData.characters || [];
-            currentTurn = importedData.currentTurn || 0;
-            combatRound = importedData.combatRound || 1;
-            diceHistory = importedData.diceHistory || [];
-            buildTable();
-            alert("Session imported successfully.");
-          } catch (err) {
-            alert("Failed to import session. Invalid file format.");
-          }
-        };
-        reader.readAsText(file);
-        this.value = ''; // Reset file input
-        });
-    });
-
-    let savedCharacters = JSON.parse(localStorage.getItem('savedCharacters') || '[]');
-
-    function buildSavedCharactersList() {
-      const list = document.getElementById('saved-characters-list');
-      list.innerHTML = '';
-    
-      savedCharacters.forEach((char, index) => {
-        const li = document.createElement('li');
-        li.className = 'list-group-item d-flex justify-content-between align-items-center bg-dark text-light border-light';
-        li.innerHTML = `
-          <span><strong>${char.name}</strong> - HP: ${char.health}, AC: ${char.ac}</span>
-          <div>
-            <button class="btn btn-sm btn-outline-success me-2" data-load-index="${index}">Load</button>
-            <button class="btn btn-sm btn-outline-danger" data-index="${index}">Delete</button>
-          </div>
-        `;
-        list.appendChild(li);
-      });
-    
-      list.querySelectorAll('button[data-index]').forEach(btn => {
-        btn.addEventListener('click', function () {
-          const i = parseInt(this.dataset.index);
-          savedCharacters.splice(i, 1);
-          localStorage.setItem('savedCharacters', JSON.stringify(savedCharacters));
-          buildSavedCharactersList();
-        });
-      });
-    
-      list.querySelectorAll('button[data-load-index]').forEach(btn => {
-        btn.addEventListener('click', function () {
-          const i = parseInt(this.dataset.loadIndex);
-          const char = savedCharacters[i];
-          document.getElementById('character-name').value = char.name;
-          document.getElementById('character-health').value = char.health;
-          document.getElementById('character-ac').value = char.ac;
-        });
-      });
-    }
-
-    document.getElementById('save-character-btn').addEventListener('click', () => {
-      const name = document.getElementById('save-name').value.trim();
-      const health = parseInt(document.getElementById('save-health').value);
-      const ac = parseInt(document.getElementById('save-ac').value);
-    
-      if (!name || isNaN(health) || isNaN(ac)) {
-        alert("Please enter valid Name, Health, and AC.");
-        return;
-      }
-    
-      if (savedCharacters.length >= 10) {
-        alert("You can only save up to 10 characters.");
-        return;
-      }
-    
-      savedCharacters.push({ name, health, ac });
-      localStorage.setItem('savedCharacters', JSON.stringify(savedCharacters));
-      buildSavedCharactersList();
-    
-      document.getElementById('save-name').value = '';
-      document.getElementById('save-health').value = '';
-      document.getElementById('save-ac').value = '';
-    });
-
-    // Call this in DOMContentLoaded block
-    buildSavedCharactersList();
-  </script>
-  <!-- Footer -->
-  <footer class="container-fluid mt-5 site-footer" role="contentinfo"> 
-    <div class="row footer-main"> 
+  <footer class="container-fluid mt-5 site-footer" role="contentinfo">
+    <div class="row footer-main">
       <div class="col">
         <div class="container">
           <div class="row align-items-center">
             <div class="col-12 col-md-4 text-md-start text-center order-last order-md-first">
-              &copy; 2025 Marlo Mayberry 
+              &copy; 2025 Marlo Mayberry
             </div>
             <div class="col-12 col-md-4 text-center">
-              <img src="/images/White logo - no background.png" height="50">
+              <img src="/images/White logo - no background.png" height="50" alt="logo">
             </div>
             <div class="col-12 col-md-4 d-flex justify-content-center justify-content-md-end">
-              <a href="https://www.linkedin.com/in/marlo-mayberry-930ab9b7/" class="socialicons"  target="_blank"><i class="bi bi-linkedin p-2"></i></a>
-              <a href="https://github.com/M-ybeme" class="socialicons" target="_blank"><i class="bi bi-github p-2"></i></a>
+              <a href="https://www.linkedin.com/in/marlo-mayberry-930ab9b7/" class="socialicons" target="_blank" rel="noopener"><i class="bi bi-linkedin p-2"></i></a>
+              <a href="https://github.com/M-ybeme" class="socialicons" target="_blank" rel="noopener"><i class="bi bi-github p-2"></i></a>
             </div>
           </div>
         </div>
       </div>
     </div>
   </footer>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
+  <script>
+  (()=>{
+    const $ = (id) => document.getElementById(id);
+
+    // ---------- Notes autosave ----------
+    const notesKey = 'sessionNotes';
+    function loadNotes(){ const s = localStorage.getItem(notesKey); if(s) $('session-notes').value = s; }
+    function saveNotes(){ localStorage.setItem(notesKey, $('session-notes').value); }
+    document.addEventListener('DOMContentLoaded', loadNotes);
+    $('session-notes').addEventListener('input', saveNotes);
+    $('save-notes').addEventListener('click', ()=>{ saveNotes(); alert('Notes saved.'); });
+    $('export-notes').addEventListener('click', ()=>{
+      const blob = new Blob([$('session-notes').value], {type:'text/plain'});
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a'); a.href=url; a.download=`session_notes_${new Date().toISOString().slice(0,10)}.txt`;
+      document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
+    });
+    $('import-notes').addEventListener('click', ()=> $('import-notes-file').click());
+    $('import-notes-file').addEventListener('change', function(){
+      const f=this.files[0]; if(!f) return;
+      const r = new FileReader(); r.onload = e => { $('session-notes').value = e.target.result; saveNotes(); alert('Notes imported.'); };
+      r.readAsText(f); this.value='';
+    });
+
+    // ---------- Status palette ----------
+    const statusEffects = [
+      { name:'Blinded', icon:'👁️' }, { name:'Exhaustion', icon:'💤' }, { name:'Incapacitated', icon:'😴' },
+      { name:'Petrified', icon:'🪨' }, { name:'Restrained', icon:'🪢' }, { name:'Charmed', icon:'🔮' },
+      { name:'Frightened', icon:'😱' }, { name:'Invisible', icon:'🔎' }, { name:'Poisoned', icon:'☠️' },
+      { name:'Unconscious', icon:'😪' }, { name:'Deafened', icon:'🔈' }, { name:'Grappled', icon:'🤼‍♂️' },
+      { name:'Paralyzed', icon:'🔐' }, { name:'Prone', icon:'🛌' }
+    ];
+
+    // ---------- State ----------
+    let characters = [];
+    let currentTurn = 0;
+    let combatRound = 1;
+    let autoSaveEnabled = true;
+    let diceHistory = [];
+    let modalCharacterIndex = null;
+    const statusModal = new bootstrap.Modal(document.getElementById('statusModal'));
+
+    // ---------- Persistence ----------
+    function saveState(manual=false){
+      const key = manual ? `initiativeTrackerData_${new Date().toISOString()}` : 'initiativeTrackerData';
+      const payload = { characters, currentTurn, combatRound, diceHistory };
+      localStorage.setItem(key, JSON.stringify(payload));
+      if (manual) updateSaveHistory();
+    }
+    function loadState(){
+      const raw = localStorage.getItem('initiativeTrackerData');
+      if(!raw) return;
+      try{
+        const data = JSON.parse(raw);
+        characters = (data.characters||[]).map(c => normalizeChar(c));
+        currentTurn = data.currentTurn||0;
+        combatRound = data.combatRound||1;
+        diceHistory = Array.isArray(data.diceHistory) ? data.diceHistory : [];
+      }catch(e){ console.warn('Load failed', e); }
+    }
+    function normalizeChar(c){
+      return {
+        name: c.name,
+        initiative: c.initiative|0,
+        currentHP: c.currentHP|0,
+        maxHP: c.maxHP|0,
+        ac: (c.ac ?? null),
+        notes: c.notes||'',
+        concentration: !!c.concentration,
+        status: (c.status||[]).map(s => typeof s==='string'
+          ? { name:s, icon:(statusEffects.find(e=>e.name===s)?.icon||'❓') }
+          : { name:s.name, icon:s.icon||(statusEffects.find(e=>e.name===s.name)?.icon||'❓'), remaining: (s.remaining ?? undefined) })
+      };
+    }
+
+    // ---------- UI Helpers ----------
+    function hpClass(percent){
+      if (percent <= 0) return 'bg-secondary text-light text-decoration-line-through';
+      if (percent <= 25) return 'bg-danger text-light';
+      if (percent <= 50) return 'bg-warning text-dark';
+      if (percent <= 75) return 'bg-orange text-dark';
+      return 'bg-success text-light';
+    }
+    function maybeSortByInitiative(){
+      if ($('lockOrderToggle')?.checked) return;
+      characters.sort((a,b)=> b.initiative - a.initiative);
+    }
+    function buildDiceHistory(){
+      const wrap = $('dice-history-log'); wrap.innerHTML='';
+      diceHistory.forEach(entry=>{
+        const div = document.createElement('div');
+        div.className = 'border-bottom pb-1 mb-1';
+        div.innerHTML = `<strong>${entry.timestamp}</strong>: ${entry.text}`;
+        wrap.appendChild(div);
+      });
+    }
+    function addToHistory(text){
+      diceHistory.unshift({ text, timestamp: new Date().toLocaleTimeString() });
+      buildDiceHistory();
+      if (autoSaveEnabled) saveState();
+    }
+    function statusTooltipText(c){
+      const parts = [];
+      if (c.concentration) parts.push('Concentration: ON');
+      if (c.status.length){
+        parts.push('Effects:');
+        c.status.forEach(s=>{
+          if (typeof s.remaining === 'number') parts.push(`- ${s.name} (${s.remaining})`);
+          else parts.push(`- ${s.name}`);
+        });
+      }else{
+        parts.push('Effects: none');
+      }
+      return parts.join('\n');
+    }
+
+    // ---------- Build UI ----------
+    function buildTable(){
+      $('combat-round').textContent = combatRound;
+      const tableBody = $('initiative-order');
+      const mobileBody = $('mobile-initiative-order');
+      tableBody.innerHTML = '';
+      mobileBody.innerHTML = '';
+
+      characters.forEach((c,i)=>{
+        const pct = Math.round((c.currentHP / c.maxHP) * 100);
+
+        // --- Desktop row ---
+        const tr = document.createElement('tr');
+        if (i === currentTurn) tr.classList.add('active-turn');
+        tr.innerHTML = `
+          <td class="drag-handle"><i class="bi bi-grip-vertical"></i></td>
+          <td>${i===currentTurn ? '<i class="bi bi-caret-right-fill"></i>' : ''}</td>
+          <td class="${pct<=0 ? 'text-decoration-line-through' : ''}">
+            ${c.name}
+            ${c.concentration ? '<span class="ms-1 text-warning" title="Concentration"><i class="bi bi-star-fill"></i></span>' : ''}
+          </td>
+          <td>
+            <input type="number" class="form-control form-control-sm init-input" value="${c.initiative}" data-index="${i}" data-commit="init">
+          </td>
+          <td>${c.ac ?? '-'}</td>
+          <td>
+            <div class="d-flex align-items-center">
+              <input type="number" class="form-control form-control-sm health-input ${hpClass(pct)}" value="${c.currentHP}" data-index="${i}" style="max-width:6rem">
+              <div class="btn-group btn-group-sm ms-1 hp-controls" role="group">
+                <button class="btn btn-outline-light hit-btn" data-delta="-5" data-index="${i}">-5</button>
+                <button class="btn btn-outline-light hit-btn" data-delta="-1" data-index="${i}">-1</button>
+                <button class="btn btn-outline-light hit-btn" data-delta="1" data-index="${i}">+1</button>
+                <button class="btn btn-outline-light hit-btn" data-delta="5" data-index="${i}">+5</button>
+              </div>
+            </div>
+          </td>
+          <td>
+            <div class="text-start">
+              <input type="text" class="form-control form-control-sm notes-input mb-1" placeholder="Notes..." value="${c.notes}" data-index="${i}">
+              <div class="d-flex align-items-center justify-content-between">
+                <div class="status-icon-row"
+                  data-bs-toggle="tooltip"
+                  data-bs-placement="top"
+                  title="${statusTooltipText(c)}">
+                  ${c.status.map(s=>{
+                    const rem = (typeof s.remaining==='number') ? ` data-remaining="${s.remaining}"` : '';
+                    return `<span class="status-chip" ${rem} title="${s.name}">${s.icon}</span>`;
+                  }).join('')}
+                </div>
+                <div class="d-flex align-items-center gap-1">
+                  <button class="btn btn-sm conc-btn ${c.concentration?'conc-on':''}" title="Toggle Concentration" data-index="${i}">
+                    <i class="bi ${c.concentration?'bi-star-fill':'bi-star'}"></i>
+                  </button>
+                  <button class="btn btn-sm btn-outline-info status-btn" data-index="${i}" title="Edit Status"><i class="bi bi-emoji-smile"></i></button>
+                </div>
+              </div>
+            </div>
+          </td>
+          <td class="d-flex gap-1">
+            <button class="btn btn-sm btn-outline-success duplicate-btn" data-index="${i}" title="Duplicate"><i class="bi bi-files"></i></button>
+            <button class="btn btn-sm btn-outline-danger delete-btn" data-index="${i}" title="Delete"><i class="bi bi-trash"></i></button>
+          </td>
+        `;
+        tableBody.appendChild(tr);
+
+        // --- Mobile card ---
+        const card = document.createElement('div');
+        card.className = 'card mb-2 text-start';
+        if (i === currentTurn) card.classList.add('border-success');
+        card.innerHTML = `
+          <div class="card-body">
+            <h5 class="card-title mb-1">
+              ${c.name}
+              <small class="text-muted">(${c.initiative} Init, AC ${c.ac ?? '-'})</small>
+              ${c.concentration ? '<span class="ms-1 text-warning" title="Concentration"><i class="bi bi-star-fill"></i></span>' : ''}
+            </h5>
+            <div class="mb-1">HP:
+              <input type="number" class="form-control form-control-sm health-input ${hpClass(pct)} d-inline-block" style="max-width:6rem" value="${c.currentHP}" data-index="${i}">
+              <div class="btn-group btn-group-sm ms-1 hp-controls">
+                <button class="btn btn-outline-light hit-btn" data-delta="-5" data-index="${i}">-5</button>
+                <button class="btn btn-outline-light hit-btn" data-delta="-1" data-index="${i}">-1</button>
+                <button class="btn btn-outline-light hit-btn" data-delta="1" data-index="${i}">+1</button>
+                <button class="btn btn-outline-light hit-btn" data-delta="5" data-index="${i}">+5</button>
+              </div>
+            </div>
+            <div class="mb-1">Notes:
+              <input type="text" class="form-control form-control-sm notes-input d-inline-block" style="max-width:100%" value="${c.notes}" data-index="${i}">
+            </div>
+            <div class="d-flex align-items-center justify-content-between">
+              <div class="status-icon-row"
+                data-bs-toggle="tooltip"
+                data-bs-placement="top"
+                title="${statusTooltipText(c)}">
+                ${c.status.map(s=>{
+                  const rem = (typeof s.remaining==='number') ? ` data-remaining="${s.remaining}"` : '';
+                  return `<span class="status-chip" ${rem} title="${s.name}">${s.icon}</span>`;
+                }).join('')}
+              </div>
+              <div class="d-flex align-items-center gap-1">
+                <button class="btn btn-sm conc-btn ${c.concentration?'conc-on':''}" title="Toggle Concentration" data-index="${i}">
+                  <i class="bi ${c.concentration?'bi-star-fill':'bi-star'}"></i>
+                </button>
+                <button class="btn btn-sm btn-outline-info status-btn" data-index="${i}" title="Edit Status"><i class="bi bi-emoji-smile"></i></button>
+              </div>
+            </div>
+            <div class="d-flex justify-content-end mt-2 gap-1">
+              <button class="btn btn-sm btn-outline-light move-up" data-index="${i}"><i class="bi bi-arrow-up"></i></button>
+              <button class="btn btn-sm btn-outline-light move-down" data-index="${i}"><i class="bi bi-arrow-down"></i></button>
+              <button class="btn btn-sm btn-outline-success duplicate-btn" data-index="${i}"><i class="bi bi-files"></i></button>
+              <button class="btn btn-sm btn-outline-danger delete-btn" data-index="${i}"><i class="bi bi-trash"></i></button>
+            </div>
+          </div>
+        `;
+        mobileBody.appendChild(card);
+      });
+
+      // Tooltips (re-init each build)
+      document.querySelectorAll('[data-bs-toggle="tooltip"]').forEach(el => {
+        new bootstrap.Tooltip(el, { trigger: 'hover', html: false });
+      });
+
+      // Wire inputs (HP)
+      document.querySelectorAll('.hit-btn').forEach(b=>{
+        b.addEventListener('click', function(){
+          const idx = +this.dataset.index;
+          const delta = +this.dataset.delta;
+          const c = characters[idx];
+          c.currentHP = Math.max(0, Math.min(c.maxHP, (c.currentHP|0) + delta));
+          buildTable();
+        });
+      });
+      document.querySelectorAll('.health-input').forEach(inp=>{
+        inp.addEventListener('input', function(){
+          const idx = +this.dataset.index;
+          characters[idx].currentHP = parseInt(this.value,10) || 0;
+          buildTable();
+        });
+      });
+
+      // Initiative (commit to edit)
+      document.querySelectorAll('.init-input[data-commit="init"]').forEach(inp=>{
+        let original = inp.value;
+        const idx = +inp.dataset.index;
+        function commit(){
+          const val = parseInt(inp.value,10) || 0;
+          characters[idx].initiative = val;
+          maybeSortByInitiative();
+          buildTable();
+        }
+        inp.addEventListener('keydown', e=>{
+          if (e.key === 'Enter') { e.preventDefault(); commit(); }
+          if (e.key === 'Escape') { inp.value = original; inp.blur(); }
+        });
+        inp.addEventListener('focus', ()=> { original = inp.value; });
+        inp.addEventListener('blur', commit);
+      });
+
+      // Notes
+      document.querySelectorAll('.notes-input').forEach(inp=>{
+        inp.addEventListener('input', function(){ characters[this.dataset.index].notes = this.value; if (autoSaveEnabled) saveState(); });
+      });
+
+      // Concentration toggle
+      document.querySelectorAll('.conc-btn').forEach(btn=>{
+        btn.addEventListener('click', function(){
+          const idx = +this.dataset.index;
+          characters[idx].concentration = !characters[idx].concentration;
+          buildTable();
+        });
+      });
+
+      // Status Modal open
+      document.querySelectorAll('.status-btn').forEach(btn=>{
+        btn.addEventListener('click', function(){
+          modalCharacterIndex = +this.dataset.index;
+          openStatusModal(modalCharacterIndex);
+        });
+      });
+
+      // Duplicate/Delete
+      document.querySelectorAll('.duplicate-btn').forEach(btn=>{
+        btn.addEventListener('click', function(){
+          const idx = +this.dataset.index;
+          const copy = JSON.parse(JSON.stringify(characters[idx]));
+          copy.name += ' (copy)';
+          characters.splice(idx+1, 0, copy);
+          buildTable();
+        });
+      });
+      document.querySelectorAll('.delete-btn').forEach(btn=>{
+        btn.addEventListener('click', function(){
+          const idx = +this.dataset.index;
+          characters.splice(idx,1);
+          if (currentTurn >= characters.length) currentTurn = 0;
+          if (!characters.length) combatRound = 1;
+          buildTable();
+        });
+      });
+
+      // Mobile up/down
+      document.querySelectorAll('.move-up').forEach(btn=>{
+        btn.addEventListener('click', function(){
+          const i = +this.dataset.index; if (i<=0) return;
+          [characters[i-1], characters[i]] = [characters[i], characters[i-1]];
+          buildTable();
+        });
+      });
+      document.querySelectorAll('.move-down').forEach(btn=>{
+        btn.addEventListener('click', function(){
+          const i = +this.dataset.index; if (i>=characters.length-1) return;
+          [characters[i+1], characters[i]] = [characters[i], characters[i+1]];
+          buildTable();
+        });
+      });
+
+      // Sortable (desktop)
+      new Sortable($('initiative-order'), {
+        handle: '.drag-handle', animation: 150,
+        onEnd: function(evt){
+          const [moved] = characters.splice(evt.oldIndex,1);
+          characters.splice(evt.newIndex,0,moved);
+          buildTable();
+        }
+      });
+
+      buildDiceHistory();
+      if (autoSaveEnabled) saveState();
+    }
+
+    // ---------- Status Modal logic ----------
+    function openStatusModal(i){
+      const c = characters[i];
+      // badges
+      const badges = $('status-badges'); badges.innerHTML = '';
+      c.status.forEach(s=>{
+        const span = document.createElement('span');
+        const rem = typeof s.remaining==='number' ? ` (${s.remaining})` : '';
+        span.className = 'badge bg-secondary px-2 py-1';
+        span.innerHTML = `${s.icon} ${s.name}${rem}
+          <i class="bi bi-x ms-1 remove-status" data-eff="${s.name}" role="button" title="Remove"></i>`;
+        badges.appendChild(span);
+      });
+      badges.querySelectorAll('.remove-status').forEach(x=>{
+        x.addEventListener('click', function(){
+          const eff = this.dataset.eff;
+          c.status = c.status.filter(ss => ss.name !== eff);
+          openStatusModal(i); // refresh
+        });
+      });
+
+      // dropdown
+      const list = $('status-dropdown-list'); list.innerHTML = '';
+      statusEffects.forEach(effect=>{
+        const has = c.status.some(s=> s.name === effect.name);
+        const li = document.createElement('li');
+        li.innerHTML = `<a class="dropdown-item ${has?'disabled text-muted':''}" href="#" data-eff="${effect.name}">${effect.icon} ${effect.name}</a>`;
+        list.appendChild(li);
+      });
+
+      let pendingEffect = null;
+      list.querySelectorAll('a[data-eff]').forEach(a=>{
+        a.addEventListener('click', function(e){
+          e.preventDefault();
+          if (this.classList.contains('disabled')) return;
+          pendingEffect = this.dataset.eff;
+        });
+      });
+
+      $('add-status-btn').onclick = function(){
+        if (!pendingEffect) { alert('Choose an effect first.'); return; }
+        const durVal = parseInt($('status-duration').value,10);
+        const base = statusEffects.find(x=>x.name===pendingEffect) || {icon:'❓'};
+        const eff = { name: pendingEffect, icon: base.icon };
+        if (!isNaN(durVal) && durVal > 0) eff.remaining = durVal;
+        c.status.push(eff);
+        $('status-duration').value = '';
+        pendingEffect = null;
+        statusModal.hide();
+        buildTable();
+      };
+
+      statusModal.show();
+    }
+
+    // ---------- Round & durations ----------
+    function tickStatusDurationsOnNewRound(){
+      characters.forEach(c=>{
+        c.status = (c.status||[]).map(s=>{
+          if (typeof s.remaining === 'number' && s.remaining > 0){
+            return { ...s, remaining: s.remaining - 1 };
+          }
+          return s;
+        }).filter(s=> s.remaining === undefined || s.remaining > 0);
+      });
+    }
+
+    // ---------- Dice ----------
+    document.querySelectorAll('.dice-btn').forEach(btn=>{
+      btn.addEventListener('click', function(){
+        const sides = parseInt(this.dataset.dice,10);
+        const result = Math.floor(Math.random()*sides)+1;
+        const out = `Rolled d${sides}: ${result}`;
+        $('dice-result').textContent = `🎲 ${out}`;
+        addToHistory(out);
+      });
+    });
+    $('roll-custom-dice').addEventListener('click', function(){
+      const input = $('custom-dice-input').value.trim();
+      const m = input.toLowerCase().match(/^(\d*)d(\d+)([+-]\d+)?$/);
+      if(!m) return alert('Invalid format. Use XdY+Z (e.g., 2d6+3)');
+      const num = parseInt(m[1]||'1',10), sides = parseInt(m[2],10), mod = parseInt(m[3]||'0',10);
+      const rolls = Array.from({length:num}, ()=> Math.floor(Math.random()*sides)+1);
+      const total = rolls.reduce((a,b)=>a+b,0) + mod;
+      const modStr = mod ? (mod>0?` + ${mod}`:` - ${Math.abs(mod)}`) : '';
+      const out = `Rolled ${num}d${sides}${modStr}: [${rolls.join(', ')}] = ${total}`;
+      $('dice-result').textContent = `🎲 ${out}`;
+      addToHistory(out);
+    });
+    $('clear-dice-history').addEventListener('click', ()=>{
+      if (!confirm('Clear all dice history?')) return;
+      diceHistory = []; buildDiceHistory(); if (autoSaveEnabled) saveState();
+    });
+
+    // ---------- Controls ----------
+    $('initiative-form').addEventListener('submit', e=>{
+      e.preventDefault();
+      const name = $('character-name').value.trim();
+      const init = parseInt($('initiative-roll').value,10);
+      const maxHP = parseInt($('character-health').value,10);
+      const ac = parseInt($('character-ac').value,10);
+      const notes = $('character-notes').value.trim();
+      if(!name || isNaN(init) || isNaN(maxHP) || isNaN(ac)) return;
+
+      characters.push({ name, initiative:init, currentHP:maxHP, maxHP, notes, ac, status:[], concentration:false });
+      maybeSortByInitiative();
+      e.target.reset();
+      buildTable();
+    });
+
+    $('next-turn').addEventListener('click', ()=>{
+      if (!characters.length) return;
+      const len = characters.length;
+      let prev = currentTurn;
+      let attempts = 0;
+      do{
+        currentTurn = (currentTurn + 1) % len;
+        if (currentTurn === 0) {
+          combatRound++;
+          tickStatusDurationsOnNewRound();
+        }
+        attempts++;
+      }while(characters[currentTurn].currentHP <= 0 && attempts < len);
+      buildTable();
+      document.querySelector('.active-turn')?.scrollIntoView({ block:'nearest' });
+    });
+
+    $('reset-turns').addEventListener('click', ()=>{ currentTurn=0; combatRound=1; buildTable(); });
+    $('clear-all').addEventListener('click', ()=>{ characters=[]; currentTurn=0; combatRound=1; buildTable(); });
+
+    $('manualSaveBtn').addEventListener('click', ()=>{ saveState(true); alert('Manual save complete.'); });
+    $('autoSaveToggle').addEventListener('change', e=>{ autoSaveEnabled = e.target.checked; });
+    $('copyOrderBtn').addEventListener('click', ()=>{
+      const out = characters.map((c,i)=> `${i+1}. ${c.name} (Init ${c.initiative})`).join('\n');
+      if (!out) return;
+      navigator.clipboard.writeText(out);
+    });
+
+    function updateSaveHistory(){
+      const sel = $('saveHistorySelect');
+      sel.innerHTML = '<option disabled selected>Load Previous Save</option>';
+      Object.keys(localStorage).filter(k=>k.startsWith('initiativeTrackerData_')).sort().reverse().forEach(key=>{
+        const t = key.replace('initiativeTrackerData_','');
+        const opt = document.createElement('option');
+        opt.value = key; opt.textContent = new Date(t).toLocaleString();
+        sel.appendChild(opt);
+      });
+    }
+    $('saveHistorySelect').addEventListener('change', function(){
+      const raw = localStorage.getItem(this.value); if(!raw) return;
+      try{
+        const data = JSON.parse(raw);
+        characters = (data.characters||[]).map(c=>normalizeChar(c));
+        currentTurn = data.currentTurn||0;
+        combatRound = data.combatRound||1;
+        diceHistory = Array.isArray(data.diceHistory) ? data.diceHistory : [];
+        buildTable();
+      }catch(e){ alert('Failed to load that save.'); }
+    });
+
+    // Export/Import
+    $('export-btn').addEventListener('click', ()=>{
+      const blob = new Blob([JSON.stringify({characters,currentTurn,combatRound,diceHistory}, null, 2)], {type:'application/json'});
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a'); a.href=url; a.download=`initiativeTracker_${new Date().toISOString()}.json`;
+      document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
+    });
+    $('import-btn').addEventListener('click', ()=> $('import-file').click());
+    $('import-file').addEventListener('change', function(){
+      const f = this.files[0]; if(!f) return;
+      const r = new FileReader();
+      r.onload = e=>{
+        try{
+          const d = JSON.parse(e.target.result);
+          characters = (d.characters||[]).map(c=>normalizeChar(c));
+          currentTurn = d.currentTurn||0;
+          combatRound = d.combatRound||1;
+          diceHistory = d.diceHistory||[];
+          buildTable(); alert('Session imported.');
+        }catch(err){ alert('Failed to import session.'); }
+      };
+      r.readAsText(f); this.value='';
+    });
+
+    // Keyboard shortcuts (not when typing)
+    document.addEventListener('keydown', e=>{
+      const tag = document.activeElement?.tagName || '';
+      if (tag === 'INPUT' || tag === 'TEXTAREA') return;
+      if (e.key==='n') $('next-turn').click();
+      else if (e.key==='r') $('reset-turns').click();
+      else if (e.key==='c') $('copyOrderBtn').click();
+      else if (e.key==='s') $('manualSaveBtn').click();
+      else if (e.key==='l') $('lockOrderToggle').click();
+    });
+
+    // Boot
+    loadState();
+    updateSaveHistory();
+    buildTable();
+    window.addEventListener('beforeunload', ()=>{ if (autoSaveEnabled) saveState(); });
+  })();
+  </script>
 </body>
 </html>

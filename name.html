@@ -12,13 +12,10 @@
   <!-- Custom CSS -->
   <link href="/css/site.css" rel="stylesheet" />
 
-  <!-- Dev Icons -->
+  <!-- Dev Icons (unused here but kept for parity) -->
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/devicons/devicon@v2.15.1/devicon.min.css" />
   <!-- Favicon -->
   <link rel="icon" type="image/png" href="/images/dndFavicon (2).png" />
-
-  <!-- Sortable (if needed elsewhere) -->
-  <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
 
   <style>
     .bgimage{
@@ -28,14 +25,41 @@
     @media (max-width: 576px){
       .bgimage{ background-attachment: scroll; }
     }
-    .bg-orange { background-color: #fd7e14 !important; color: #212529 !important; }
-    .drag-handle { cursor: move; }
-    .active-turn { border-left: 5px solid #1d9e6d !important; color: #f8f9fa !important; font-weight: bold; }
-    #saveHistorySelect { min-width: 200px; }
     .ng-pill { border: 1px solid rgba(255,255,255,.15); border-radius: 50rem; padding: .15rem .5rem; }
-    .ng-tile { border: 1px solid rgba(255,255,255,.15); border-radius: .6rem; padding: .5rem .6rem; background: rgba(0,0,0,.2); }
+    .ng-tile {
+                display: flex;
+                flex-direction: column;  
+                align-items: stretch;
+                justify-content: center;
+                gap: .4rem;
+                border: 1px solid rgba(255,255,255,.15);
+                border-radius: .6rem;
+                padding: .6rem .75rem;
+                background: rgba(0,0,0,.25);
+                min-height: 64px;
+          }
+
+    .ng-name {
+                text-align: center;
+                font-weight: 500;
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis;
+              }
+
+    .ng-actions {
+                  display: flex;
+                  justify-content: center;
+                  gap: .4rem;
+                }
+    .ng-actions .btn {
+                        padding: .25rem .4rem;
+                        font-size: .9rem;
+                      }
     .help-badge { font-size: .8rem; vertical-align: middle; cursor: help; }
     .code-block { background: rgba(255,255,255,.05); border: 1px solid rgba(255,255,255,.1); border-radius: .5rem; padding: .75rem; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace; font-size: .9rem; overflow:auto;}
+    #ng-out .col { display: flex; }
+    #ng-out .ng-tile {width: 100%; height: 100%;}
   </style>
 </head>
 <body class="bgimage">
@@ -61,6 +85,12 @@
           <li class="nav-item"><a class="nav-link" href="npc.html">NPC Gen</a></li>
           <li class="nav-item"><a class="nav-link" href="tav.html">Tavern/Inn Gen</a></li>
         </ul>
+        <div class="d-none d-lg-flex gap-2">
+          <button class="btn btn-outline-warning btn-sm" id="btnFavorites" data-bs-toggle="offcanvas" data-bs-target="#favoritesDrawer" aria-controls="favoritesDrawer">
+            <i class="bi bi-star me-1"></i>Favorites
+          </button>
+          <button class="btn btn-outline-info btn-sm" id="btnShare"><i class="bi bi-link-45deg me-1"></i>Share</button>
+        </div>
       </div>
     </div>
    </nav>
@@ -73,23 +103,26 @@
           <h1 class="h3 mb-0">Name Generator</h1>
         </div>
         <!-- Mobile: open settings offcanvas -->
-        <button class="btn btn-outline-light d-lg-none" data-bs-toggle="offcanvas" data-bs-target="#settingsOffcanvas" aria-controls="settingsOffcanvas">
-          <i class="bi bi-sliders"></i> Open Settings
-        </button>
+        <div class="d-lg-none d-flex gap-2">
+          <button class="btn btn-outline-warning btn-sm" data-bs-toggle="offcanvas" data-bs-target="#favoritesDrawer"><i class="bi bi-star"></i></button>
+          <button class="btn btn-outline-info btn-sm" id="btnShareXS"><i class="bi bi-link-45deg"></i></button>
+          <button class="btn btn-outline-light" data-bs-toggle="offcanvas" data-bs-target="#settingsOffcanvas" aria-controls="settingsOffcanvas">
+            <i class="bi bi-sliders"></i> Settings
+          </button>
+        </div>
       </div>
 
       <!-- Helper blurb -->
       <div class="alert alert-info text-start shadow-sm mt-3">
         <h5 class="mb-2"><i class="bi bi-magic"></i> How to Use</h5>
         <p class="mb-2">
-          Pick a <strong>Race Style</strong>, optionally <strong>Apply Race Preset</strong> for smart defaults, adjust
-          <strong>syllables</strong>, <strong>gender leaning</strong>, and the <strong>flavor knobs</strong>
-          (<em>Harshness</em>, <em>Exoticness</em>), then click <strong>Generate</strong>.
+          Pick a <strong>Race Style</strong>, optionally <strong>Apply Race Preset</strong> for smart defaults, set
+          <strong>syllables</strong>, <strong>gender leaning</strong>, and flavor (<em>Harshness</em>, <em>Exoticness</em>).
+          Toggle <strong>Surname</strong> to generate two-part names. Click <strong>Generate</strong>.
         </p>
         <ul class="mb-2">
-          <li><strong>Copy</strong> copies results. <strong>Download</strong> saves a <code>.txt</code>.</li>
-          <li><strong>Seed</strong> makes results repeatable.</li>
-          <li><strong>Custom Tables</strong> lets you add/override styles with JSON.</li>
+          <li>Per-tile: <span class="text-nowrap">⭐ favorite</span>, <span class="text-nowrap">📋 copy</span>, and <span class="text-nowrap">↻ re-roll</span> (or double-click the tile).</li>
+          <li>Settings/results auto-save. Use <strong>Share</strong> to copy a link that reproduces your setup.</li>
         </ul>
       </div>
 
@@ -115,12 +148,11 @@
             </div>
             <div class="card-body d-flex flex-column">
               <div id="ng-meta" class="d-flex flex-wrap gap-2 small text-secondary mb-2"></div>
-              <!-- Responsive grid -->
-              <div id="ng-out" class="row row-cols-1 row-cols-sm-2 row-cols-md-3 row-cols-lg-4 row-cols-xl-5 g-2" aria-live="polite"></div>
+              <div id="ng-out" class="row row-cols-1 row-cols-sm-2 row-cols-md-2 row-cols-lg-3 row-cols-xl-4 g-3" aria-live="polite"></div>
             </div>
           </div>
 
-          <!-- Quick Help accordion for clarity -->
+          <!-- Quick Help -->
           <div class="accordion mt-3" id="quickHelp">
             <div class="accordion-item bg-dark border-secondary">
               <h2 class="accordion-header">
@@ -131,22 +163,10 @@
               <div id="qh1" class="accordion-collapse collapse" data-bs-parent="#quickHelp">
                 <div class="accordion-body">
                   <ul class="mb-0">
-                    <li><strong>Harshness</strong> increases consonant clusters (<em>kr, gr, zz</em>), good for Orcs/Dwarves.</li>
-                    <li><strong>Exoticness</strong> increases apostrophes and diacritics (<em>á, ê, ü</em>), good for Drow/Draconic.</li>
-                    <li>Race presets set sensible defaults, but you can tweak both for flavor.</li>
+                    <li><strong>Harshness</strong> increases consonant clusters (kr, gr, zz).</li>
+                    <li><strong>Exoticness</strong> increases apostrophes and diacritics (á, ê, ü).</li>
+                    <li>Race presets set sensible defaults; tweak as needed.</li>
                   </ul>
-                </div>
-              </div>
-            </div>
-            <div class="accordion-item bg-dark border-secondary mt-2">
-              <h2 class="accordion-header">
-                <button class="accordion-button collapsed bg-dark text-light" type="button" data-bs-toggle="collapse" data-bs-target="#qh2">
-                  Race Presets explained
-                </button>
-              </h2>
-              <div id="qh2" class="accordion-collapse collapse">
-                <div class="accordion-body">
-                  Clicking <strong>Apply Race Preset</strong> adjusts <em>syllables, suffix tendencies, harshness, exoticness, apostrophes, diacritics</em> (and can add race-flavored suffixes) to match the chosen race. You can still tweak afterward.
                 </div>
               </div>
             </div>
@@ -162,6 +182,21 @@
         <button type="button" class="btn-close btn-close-white" data-bs-dismiss="offcanvas" aria-label="Close"></button>
       </div>
       <div class="offcanvas-body" id="settingsOffcanvasBody"><!-- settings form gets injected --></div>
+    </div>
+
+    <!-- Favorites Drawer -->
+    <div class="offcanvas offcanvas-start text-bg-dark" tabindex="-1" id="favoritesDrawer" aria-labelledby="favoritesDrawerLabel">
+      <div class="offcanvas-header">
+        <h5 class="offcanvas-title" id="favoritesDrawerLabel"><i class="bi bi-star me-2"></i>Favorites</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+      </div>
+      <div class="offcanvas-body">
+        <div id="favList" class="d-grid gap-2"></div>
+        <div class="d-grid d-sm-flex gap-2 mt-3">
+          <button class="btn btn-outline-light" id="favCopyAll"><i class="bi bi-clipboard me-1"></i>Copy all</button>
+          <button class="btn btn-outline-danger" id="favClear"><i class="bi bi-trash me-1"></i>Clear</button>
+        </div>
+      </div>
     </div>
   </main>
 
@@ -198,7 +233,7 @@
     function mulberry32(a){return function(){let t=a+=0x6D2B79F5;t=Math.imul(t^t>>>15,t|1);t^=t+Math.imul(t^t>>>7,t|61);return ((t^t>>>14)>>>0)/4294967296}}
     function prand(seedStr){const s = seedStr? hashString(seedStr) : Math.floor(Math.random()*2**32); return mulberry32(s) }
 
-    // --- Core tables (race styles aligned to D&D vibes; original + additions) ---
+    // --- Core tables (race styles) ---
     let TABLES = {
       Styles: {
         "Elf":        { start:["ae","e","i","lia","fae","sha","thi","yla","ari","ela"], mid:["ri","na","la","th","si","el","ia","lith","mir","vya"], end:["el","iel","ith","ien","a","ara","ielle","wyn","ion","ria"] },
@@ -223,8 +258,7 @@
       }
     };
 
-    // --- Race presets (clear defaults + flavor) ---
-    // Probabilities are 0..1; sliders for harsh/exotic are 0..100 (converted at use).
+    // Race presets (used for Apply Preset)
     const RACE_PRESETS = {
       "Elf":        { minSyl:2,maxSyl:3, gender:"neutral", aposProb:0.06, diaProb:0.10, harsh:10, exotic:25, raceSuffix:["ion","iel","ith","iel"], allowRaceSuffix:true },
       "Drow":       { minSyl:2,maxSyl:3, gender:"neutral", aposProb:0.15, diaProb:0.20, harsh:35, exotic:55, raceSuffix:["zr","ith","rae","lyn"], allowRaceSuffix:true },
@@ -242,8 +276,8 @@
       "Human (Latin)": { minSyl:2,maxSyl:3, gender:"neutral", aposProb:0.00, diaProb:0.02, harsh:15, exotic:5, raceSuffix:["us","ius","ian","a"], allowRaceSuffix:true }
     };
 
-    // consonant cluster pool for "harshness" injections
-    const HARSH_CLUSTERS = ["kr","gr","dr","br","zz","rk","sk","st","thr","kr","gr","zg"];
+    // consonant clusters for "harshness"
+    const HARSH_CLUSTERS = ["kr","gr","dr","br","zz","rk","sk","st","thr","zg"];
 
     // --- Utilities ---
     function pick(rng, arr){ return arr[Math.floor(rng()*arr.length)] }
@@ -270,8 +304,8 @@
       return s.replace(/^[a-zA-Z]/, l);
     }
 
-    // --- Core generator (now parameterized with flavor knobs + race suffix option) ---
-    function makeName(rng, styleKey, minSyl, maxSyl, gender, allit, opts){
+    // --- Core generator (flavor knobs + race suffix + surname) ---
+    function makeOne(styleKey, minSyl, maxSyl, gender, allit, opts, rng){
       const fallbackStyle = 'Elf';
       const style = TABLES.Styles[styleKey] || TABLES.Styles[fallbackStyle];
       const { aposProb, diaProb, harsh, exotic, useRaceSuffix, raceSuffixList } = opts;
@@ -287,25 +321,20 @@
         } else if(i===sylCount-1){
           parts.push(pick(rng, style.end));
         } else {
-          // harshness: with some probability, inject a consonant cluster instead of a typical mid chunk
           const useHarsh = maybe(rng, Math.min(1, harsh/100));
           parts.push(useHarsh ? pick(rng, HARSH_CLUSTERS) : pick(rng, style.mid));
         }
       }
       let name = parts.join('');
-      // collapse long runs
       name = name.replace(/([aeiou])\1{2,}/gi,'$1$1').replace(/([^aeiou])\1{2,}/gi,'$1$1');
 
-      // Gender suffix (existing behavior)
       const gset = TABLES.GenderSuffix[gender]||[];
       if(gset.length && maybe(rng, gender==='neutral'?0.10:0.55)) name += pick(rng,gset);
 
-      // Optional race-flavored suffix
       if(useRaceSuffix && raceSuffixList && raceSuffixList.length && maybe(rng, 0.35)){
         name += pick(rng, raceSuffixList);
       }
 
-      // Exoticness effects
       const effectiveApos = Math.min(1, aposProb + (exotic/100)*0.10);
       const effectiveDia  = Math.min(1, diaProb  + (exotic/100)*0.20);
 
@@ -316,189 +345,170 @@
       return name.charAt(0).toUpperCase()+name.slice(1);
     }
 
-    function renderMeta({style, count, seedStr, minSyl, maxSyl, gender, allit, harsh, exotic, raceSuffixOn}){
-      const meta = document.getElementById('ng-meta');
-      meta.innerHTML = '';
+    function makeFullName(rng, cfg){
+      const {
+        style, minSyl, maxSyl, gender, allit,
+        harsh, exotic, allowApos, allowDia,
+        raceSuffixOn, raceSuffixList,
+        withSurname, surnameStyle, joiner
+      } = cfg;
+
+      const opts = {
+        aposProb: allowApos ? 0.12 : 0,
+        diaProb:  allowDia  ? 0.08 : 0,
+        harsh, exotic,
+        useRaceSuffix: raceSuffixOn,
+        raceSuffixList
+      };
+
+      const first = makeOne(style, minSyl, maxSyl, gender, allit, opts, rng);
+      if(!withSurname) return first;
+
+      const last = makeOne(surnameStyle || style, 2, 3, "neutral", "", opts, rng);
+      const glue = (joiner || ' ').slice(0, 5);
+      return (first + glue + last).replace(/\s{2,}/g,' ').trim();
+    }
+
+    function renderMeta(meta){
+      const el = document.getElementById('ng-meta');
+      el.innerHTML = '';
       const pills = [
-        `Style: ${style}`,
-        `Count: ${count}`,
-        seedStr ? `Seed: ${seedStr}` : 'Seed: (random)',
-        `Syllables: ${minSyl}-${maxSyl}`,
-        `Gender: ${gender}`,
-        allit ? `Alliteration: ${allit.toUpperCase()}` : '',
-        `Harsh: ${harsh}`,
-        `Exotic: ${exotic}`,
-        raceSuffixOn ? `Race suffix: on` : `Race suffix: off`
+        `Style: ${meta.style}`,
+        `Count: ${meta.count}`,
+        meta.seedStr ? `Seed: ${meta.seedStr}` : 'Seed: (random)',
+        `Syllables: ${meta.minSyl}-${meta.maxSyl}`,
+        `Gender: ${meta.gender}`,
+        meta.allit ? `Alliteration: ${meta.allit.toUpperCase()}` : '',
+        `Harsh: ${meta.harsh}`,
+        `Exotic: ${meta.exotic}`,
+        meta.raceSuffixOn ? `Race suffix: on` : `Race suffix: off`,
+        meta.withSurname ? `Surname: ${meta.surnameStyle} (${meta.joiner||' '})` : ''
       ].filter(Boolean);
       for(const p of pills){
         const span = document.createElement('span');
         span.className = 'ng-pill';
         span.textContent = p;
-        meta.appendChild(span);
+        el.appendChild(span);
       }
     }
 
-    function generate($d){
-      const style = $d('ng-style').value;
-      const count = +$d('ng-count').value || 20;
-      const seedStr = $d('ng-seed').value.trim();
-      const minSyl = +$d('ng-minSyl').value || 2;
-      const maxSyl = +$d('ng-maxSyl').value || 3;
-      const gender = $d('ng-gender').value;
-      const allit = ($d('ng-allit').value||'').slice(0,1);
-
-      // new knobs
-      const harsh = +$d('ng-harsh').value || 0;
-      const exotic = +$d('ng-exotic').value || 0;
-      const useRaceSuffix = $d('ng-raceSuffix').checked;
-
-      // apostrophe/diacritics base (UI checkboxes control base prob presence)
-      const allowApos = $d('ng-apos').checked;
-      const withDia   = $d('ng-diacritics').checked;
-      const baseAposProb = allowApos ? 0.12 : 0.0;
-      const baseDiaProb  = withDia   ? 0.08 : 0.0;
-
-      // pick race suffix list from presets if exists
-      const preset = RACE_PRESETS[style] || null;
-      const raceSuffixList = preset ? (preset.raceSuffix || []) : [];
-
-      const rng = prand(seedStr);
-      const out = document.getElementById('ng-out');
-      out.innerHTML = '';
-      const list = [];
-      for(let i=0;i<Math.min(count, 500);i++){
-        list.push(
-          makeName(
-            rng, style, minSyl, maxSyl, gender, allit,
-            { aposProb: baseAposProb, diaProb: baseDiaProb, harsh, exotic, useRaceSuffix, raceSuffixList }
-          )
-        );
+    // --- Favorites (localStorage) ---
+    const FAV_KEY = 'ng-favs';
+    function getFavs(){ try{ return JSON.parse(localStorage.getItem(FAV_KEY)||'[]'); }catch{ return []; } }
+    function setFavs(arr){ localStorage.setItem(FAV_KEY, JSON.stringify(arr)); }
+    function addFav(n){ const arr = getFavs(); if(!arr.includes(n)){ arr.push(n); setFavs(arr); } renderFavs(); }
+    function removeFav(n){ const arr = getFavs().filter(x=>x!==n); setFavs(arr); renderFavs(); }
+    function renderFavs(){
+      const box = document.getElementById('favList');
+      const favs = getFavs();
+      box.innerHTML = '';
+      if(!favs.length){
+        box.innerHTML = '<div class="text-secondary">No favorites yet. Click ⭐ on a name.</div>';
+        return;
       }
-      list.forEach(n=>{
-        const col = document.createElement('div');
-        col.className = 'col';
-        const tile = document.createElement('div');
-        tile.className = 'ng-tile';
-        tile.textContent = n;
-        col.appendChild(tile);
-        out.appendChild(col);
+      favs.forEach(n=>{
+        const row = document.createElement('div');
+        row.className = 'd-flex align-items-center justify-content-between border rounded px-2 py-1';
+        row.innerHTML = `
+          <span class="me-2 text-truncate">${n}</span>
+          <div class="d-flex gap-1">
+            <button class="btn btn-sm btn-outline-light" title="Copy"><i class="bi bi-clipboard"></i></button>
+            <button class="btn btn-sm btn-outline-danger" title="Remove"><i class="bi bi-x-lg"></i></button>
+          </div>`;
+        row.querySelector('.btn-outline-light').onclick = ()=> navigator.clipboard.writeText(n);
+        row.querySelector('.btn-outline-danger').onclick = ()=> removeFav(n);
+        box.appendChild(row);
       });
-
-      renderMeta({style, count, seedStr, minSyl, maxSyl, gender, allit, harsh, exotic, raceSuffixOn: useRaceSuffix});
-      return list;
     }
 
-    function copyNames(){
-      const items = [...document.querySelectorAll('#ng-out .ng-tile')].map(n=>n.textContent);
-      if(!items.length) return;
-      navigator.clipboard.writeText(items.join('\n'));
+    // --- URL state + session autosave ---
+    function snapshot($d){
+      return {
+        style: $d('ng-style').value,
+        count: +$d('ng-count').value || 20,
+        seedStr: $d('ng-seed').value.trim(),
+        minSyl: +$d('ng-minSyl').value || 2,
+        maxSyl: +$d('ng-maxSyl').value || 3,
+        gender: $d('ng-gender').value,
+        allit: ($d('ng-allit').value||'').slice(0,1),
+        harsh: +$d('ng-harsh').value || 0,
+        exotic: +$d('ng-exotic').value || 0,
+        allowApos: $d('ng-apos').checked,
+        allowDia: $d('ng-diacritics').checked,
+        raceSuffixOn: $d('ng-raceSuffix').checked,
+        withSurname: $d('ng-surname').checked,
+        surnameStyle: $d('ng-surnameStyle').value,
+        joiner: $d('ng-joiner').value
+      };
     }
-    function downloadNames(){
-      const items = [...document.querySelectorAll('#ng-out .ng-tile')].map(n=>n.textContent);
-      if(!items.length) return;
-      const blob = new Blob([items.join('\n')], {type:'text/plain'});
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a'); a.href=url; a.download='names.txt'; a.click();
-      URL.revokeObjectURL(url);
+    function applySnapshot($d, s){
+      if(!s) return;
+      const set = (id, val)=>{ const el=$d(id); if(!el) return; if(el.type==='checkbox') el.checked=!!val; else el.value=(val??el.value); };
+      set('ng-style', s.style);
+      set('ng-count', s.count);
+      set('ng-seed', s.seedStr);
+      set('ng-minSyl', s.minSyl);
+      set('ng-maxSyl', s.maxSyl);
+      set('ng-gender', s.gender);
+      set('ng-allit', s.allit);
+      set('ng-harsh', s.harsh); set('ng-exotic', s.exotic);
+      set('ng-apos', s.allowApos); set('ng-diacritics', s.allowDia);
+      set('ng-raceSuffix', s.raceSuffixOn);
+      set('ng-surname', s.withSurname);
+      set('ng-surnameStyle', s.surnameStyle || s.style);
+      set('ng-joiner', s.joiner || ' ');
+      const h=$d('ng-harsh-val'), x=$d('ng-exotic-val'); if(h) h.textContent=$d('ng-harsh').value; if(x) x.textContent=$d('ng-exotic').value;
+      toggleSurnameRow($d('ng-surname').checked);
     }
-
-    // --- Advanced tables helpers (unchanged except for IDs in markup) ---
-    function validateTablesObject(obj){
-      const errors = [];
-      if (!obj || typeof obj !== 'object') { errors.push('Root is not an object.'); return errors; }
-      if (!obj.Styles || typeof obj.Styles !== 'object') errors.push('Missing "Styles" object.');
-      const styles = obj.Styles || {};
-      for (const [name, spec] of Object.entries(styles)){
-        if (!spec || typeof spec !== 'object'){ errors.push(`Style "${name}" must be an object.`); continue; }
-        ['start','mid','end'].forEach(k=>{
-          if (!Array.isArray(spec[k]) || spec[k].length===0) errors.push(`Style "${name}" missing non-empty array "${k}".`);
-          else if(!spec[k].every(x=>typeof x==='string')) errors.push(`Style "${name}" "${k}" must be strings only.`);
-        });
-      }
-      return errors;
+    function settingsToQS(s){
+      const p = new URLSearchParams({
+        s: s.style, c: s.count, seed: s.seedStr, min: s.minSyl, max: s.maxSyl, g: s.gender, a: s.allit,
+        h: s.harsh, x: s.exotic, apos: +s.allowApos, dia: +s.allowDia, rs: +s.raceSuffixOn,
+        sn: +s.withSurname, ss: s.surnameStyle || '', j: s.joiner || ' '
+      });
+      history.replaceState(null, '', '?'+p.toString());
     }
-
-    function importTables($d, mobileRoot){
-      const raw = $d('ng-import').value.trim();
-      const alertBox = $d('ng-adv-alert');
-      alertBox.innerHTML = '';
-      if(!raw){
-        alertBox.innerHTML = '<div class="alert alert-warning py-2 mb-2">Nothing to import. Paste JSON first.</div>';
-        return;
-      }
+    function qsToSettings(){
+      const p = new URLSearchParams(location.search);
+      if(!p.has('s')) return null;
+      return {
+        style: p.get('s') || 'Elf',
+        count: +(p.get('c')||20),
+        seedStr: p.get('seed')||'',
+        minSyl: +(p.get('min')||2),
+        maxSyl: +(p.get('max')||3),
+        gender: p.get('g')||'neutral',
+        allit: (p.get('a')||'').slice(0,1),
+        harsh: +(p.get('h')||0),
+        exotic: +(p.get('x')||0),
+        allowApos: !!+p.get('apos'),
+        allowDia: !!+p.get('dia'),
+        raceSuffixOn: !!+p.get('rs'),
+        withSurname: !!+p.get('sn'),
+        surnameStyle: p.get('ss')||'',
+        joiner: p.get('j')||' '
+      };
+    }
+    const SESSION_SETTINGS_KEY = 'ng-settings';
+    const SESSION_RESULTS_KEY  = 'ng-results';
+    function saveSession(s, list){
+      localStorage.setItem(SESSION_SETTINGS_KEY, JSON.stringify(s));
+      if(list) localStorage.setItem(SESSION_RESULTS_KEY, JSON.stringify(list));
+    }
+    function loadSession(){
       try{
-        const data = JSON.parse(raw);
-        const errs = validateTablesObject(data);
-        if (errs.length){
-          alertBox.innerHTML = '<div class="alert alert-danger mb-2"><strong>Invalid JSON structure:</strong><ul class="mb-0">' + errs.map(e=>`<li>${e}</li>`).join('') + '</ul></div>';
-          return;
-        }
-        TABLES.Styles = { ...TABLES.Styles, ...data.Styles };
-        populateStyles($d, mobileRoot);
-        alertBox.innerHTML = '<div class="alert alert-success py-2 mb-2">Imported successfully. New styles are now available in the Race Style dropdown.</div>';
-      }catch(e){
-        alertBox.innerHTML = '<div class="alert alert-danger py-2 mb-2">Parse error: ' + e.message + '</div>';
-      }
+        const s = JSON.parse(localStorage.getItem(SESSION_SETTINGS_KEY)||'null');
+        const r = JSON.parse(localStorage.getItem(SESSION_RESULTS_KEY)||'null');
+        return { s, r };
+      }catch{ return { s:null, r:null }; }
     }
 
-    function validateOnly($d){
-      const raw = $d('ng-import').value.trim();
-      const alertBox = $d('ng-adv-alert');
-      alertBox.innerHTML = '';
-      if(!raw){
-        alertBox.innerHTML = '<div class="alert alert-warning py-2 mb-2">Nothing to validate. Paste JSON first.</div>';
-        return;
-      }
-      try{
-        const data = JSON.parse(raw);
-        const errs = validateTablesObject(data);
-        if (errs.length){
-          alertBox.innerHTML = '<div class="alert alert-danger mb-2"><strong>Issues found:</strong><ul class="mb-0">' + errs.map(e=>`<li>${e}</li>`).join('') + '</ul></div>';
-        } else {
-          alertBox.innerHTML = '<div class="alert alert-success py-2 mb-2">Looks good. You can Import safely.</div>';
-        }
-      }catch(e){
-        alertBox.innerHTML = '<div class="alert alert-danger py-2 mb-2">Parse error: ' + e.message + '</div>';
-      }
-    }
-
-    const SAMPLE_ADVANCED = {
-      "Styles": {
-        "Wizard's Study": {
-          "start": ["ar","el","io","ka","the","vor","xan","zea"],
-          "mid":   ["ca","el","io","ith","or","ul","ym","ez"],
-          "end":   ["ion","iel","oth","eus","ar","is","or","em"]
-        },
-        "Bandit Cant": {
-          "start": ["sk","scr","br","kr","dag","cut","scar","shiv"],
-          "mid":   ["a","e","i","ar","ir","ur","ash","rag","sliv"],
-          "end":   ["er","en","ik","ash","in","o","ax","e"]
-        }
-      }
-    };
-
-    function loadExamplePack($d){
-      const ta = $d('ng-import');
-      ta.value = JSON.stringify(SAMPLE_ADVANCED, null, 2);
-      const alertBox = $d('ng-adv-alert');
-      alertBox.innerHTML = '<div class="alert alert-info py-2 mb-2">Example JSON loaded. Click <strong>Validate</strong> and then <strong>Import</strong> to add these styles.</div>';
-      ta.focus();
-    }
-
-    function exportCurrent(){
-      const payload = JSON.stringify({Styles: TABLES.Styles}, null, 2);
-      const blob = new Blob([payload], {type:'application/json'});
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a'); a.href=url; a.download='name-tables.json'; a.click();
-      URL.revokeObjectURL(url);
-    }
-
-    // --- Settings form (one source of truth) ---
-    const settingsFormHTML = `
+    // --- Settings form (single source-of-truth) ---
+    const settingsFormHTML = String.raw`
       <!-- Race & Preset -->
       <div class="mb-3">
         <label for="ng-style" class="form-label">Race Style
-          <i class="bi bi-question-circle help-badge" data-bs-toggle="tooltip" title="Choose the race/culture flavor. Presets below will tune options for this race."></i>
+          <i class="bi bi-question-circle help-badge" data-bs-toggle="tooltip" title="Choose the race/culture flavor. Preset applies recommended defaults."></i>
         </label>
         <div class="input-group">
           <select id="ng-style" class="form-select"></select>
@@ -510,15 +520,11 @@
       <!-- Counts & seed -->
       <div class="row g-2">
         <div class="col-6">
-          <label for="ng-count" class="form-label">Count
-            <i class="bi bi-question-circle help-badge" data-bs-toggle="tooltip" title="How many names to generate (1–200)."></i>
-          </label>
+          <label for="ng-count" class="form-label">Count</label>
           <input id="ng-count" type="number" inputmode="numeric" min="1" max="200" value="20" class="form-control" />
         </div>
         <div class="col-6">
-          <label for="ng-seed" class="form-label">Seed <span class="text-secondary small">(repeatable)</span>
-            <i class="bi bi-question-circle help-badge" data-bs-toggle="tooltip" title="Use any text. Re-using the same seed reproduces the same list with the same settings."></i>
-          </label>
+          <label for="ng-seed" class="form-label">Seed <span class="text-secondary small">(repeatable)</span></label>
           <input id="ng-seed" type="text" placeholder="optional" class="form-control" />
         </div>
       </div>
@@ -526,15 +532,11 @@
       <!-- Syllables -->
       <div class="row g-2 mt-1">
         <div class="col-6">
-          <label for="ng-minSyl" class="form-label">Min syllables
-            <i class="bi bi-question-circle help-badge" data-bs-toggle="tooltip" title="Minimum syllable (chunk) count per name."></i>
-          </label>
+          <label for="ng-minSyl" class="form-label">Min syllables</label>
           <input id="ng-minSyl" type="number" inputmode="numeric" min="1" max="6" value="2" class="form-control" />
         </div>
         <div class="col-6">
-          <label for="ng-maxSyl" class="form-label">Max syllables
-            <i class="bi bi-question-circle help-badge" data-bs-toggle="tooltip" title="Maximum syllable (chunk) count per name."></i>
-          </label>
+          <label for="ng-maxSyl" class="form-label">Max syllables</label>
           <input id="ng-maxSyl" type="number" inputmode="numeric" min="1" max="8" value="3" class="form-control" />
         </div>
       </div>
@@ -542,9 +544,7 @@
       <!-- Gender & Alliteration -->
       <div class="row g-2 mt-1">
         <div class="col-6">
-          <label for="ng-gender" class="form-label">Gender leaning
-            <i class="bi bi-question-circle help-badge" data-bs-toggle="tooltip" title="Optionally append common masculine/feminine endings. Neutral reduces suffix bias."></i>
-          </label>
+          <label for="ng-gender" class="form-label">Gender leaning</label>
           <select id="ng-gender" class="form-select">
             <option value="neutral" selected>Neutral</option>
             <option value="feminine">Feminine</option>
@@ -552,9 +552,7 @@
           </select>
         </div>
         <div class="col-6">
-          <label for="ng-allit" class="form-label">Alliteration
-            <i class="bi bi-question-circle help-badge" data-bs-toggle="tooltip" title="Force the first letter (e.g., R makes all names start with R). Leave blank for random."></i>
-          </label>
+          <label for="ng-allit" class="form-label">Alliteration</label>
           <input id="ng-allit" type="text" maxlength="1" placeholder="e.g. R" class="form-control" />
         </div>
       </div>
@@ -565,41 +563,47 @@
         <div class="row g-2">
           <div class="col-6">
             <label for="ng-harsh" class="form-label d-flex justify-content-between">
-              <span>Harshness</span>
-              <span class="text-secondary"><span id="ng-harsh-val">25</span></span>
+              <span>Harshness</span><span class="text-secondary"><span id="ng-harsh-val">25</span></span>
             </label>
-            <input id="ng-harsh" type="range" class="form-range" min="0" max="100" value="25"
-              title="Higher = more consonant clusters (kr, gr, zz)">
+            <input id="ng-harsh" type="range" class="form-range" min="0" max="100" value="25">
           </div>
           <div class="col-6">
             <label for="ng-exotic" class="form-label d-flex justify-content-between">
-              <span>Exoticness</span>
-              <span class="text-secondary"><span id="ng-exotic-val">20</span></span>
+              <span>Exoticness</span><span class="text-secondary"><span id="ng-exotic-val">20</span></span>
             </label>
-            <input id="ng-exotic" type="range" class="form-range" min="0" max="100" value="20"
-              title="Higher = more apostrophes/diacritics">
+            <input id="ng-exotic" type="range" class="form-range" min="0" max="100" value="20">
           </div>
         </div>
         <div class="form-check mt-2">
           <input class="form-check-input" type="checkbox" id="ng-raceSuffix" checked />
-          <label class="form-check-label" for="ng-raceSuffix">Enable race-flavored suffix
-            <i class="bi bi-question-circle help-badge" data-bs-toggle="tooltip" title="Appends race-typical endings sometimes (e.g., -ion for elves, -gar for dwarves)."></i>
-          </label>
+          <label class="form-check-label" for="ng-raceSuffix">Enable race-flavored suffix</label>
         </div>
       </div>
 
       <!-- Special chars base toggles -->
       <div class="form-check mt-2">
         <input class="form-check-input" type="checkbox" id="ng-apos" checked />
-        <label class="form-check-label" for="ng-apos">Allow apostrophes
-          <i class="bi bi-question-circle help-badge" data-bs-toggle="tooltip" title="Base chance to add an apostrophe. Exoticness raises this further."></i>
-        </label>
+        <label class="form-check-label" for="ng-apos">Allow apostrophes</label>
       </div>
       <div class="form-check">
         <input class="form-check-input" type="checkbox" id="ng-diacritics" />
-        <label class="form-check-label" for="ng-diacritics">Allow diacritics
-          <i class="bi bi-question-circle help-badge" data-bs-toggle="tooltip" title="Base chance to add accented vowels. Exoticness raises this further."></i>
-        </label>
+        <label class="form-check-label" for="ng-diacritics">Allow diacritics</label>
+      </div>
+
+      <!-- Surname options -->
+      <div class="form-check mt-3">
+        <input class="form-check-input" type="checkbox" id="ng-surname" />
+        <label class="form-check-label" for="ng-surname">Add surname (two-part names)</label>
+      </div>
+      <div id="surnameRow" class="row g-2 mt-1" style="display:none;">
+        <div class="col-7">
+          <label for="ng-surnameStyle" class="form-label">Surname style</label>
+          <select id="ng-surnameStyle" class="form-select"></select>
+        </div>
+        <div class="col-5">
+          <label for="ng-joiner" class="form-label">Joiner</label>
+          <input id="ng-joiner" type="text" class="form-control" value=" " placeholder=" , -, &#39; , of ">
+        </div>
       </div>
 
       <!-- Actions -->
@@ -614,197 +618,362 @@
       <details class="mt-3">
         <summary class="text-secondary">Custom Tables (advanced)
           <span class="badge rounded-pill text-bg-secondary ms-2">JSON</span>
-          <i class="bi bi-info-circle help-badge ms-1" data-bs-toggle="tooltip" title="Add/override Styles. Each Style needs start/mid/end arrays of strings."></i>
         </summary>
         <div class="mt-2">
           <div id="ng-adv-alert"></div>
-
-          <div class="accordion mb-3" id="advGuide">
-            <div class="accordion-item bg-dark border-secondary">
-              <h2 class="accordion-header">
-                <button class="accordion-button collapsed bg-dark text-light" type="button" data-bs-toggle="collapse" data-bs-target="#advGuideBody">
-                  Advanced Tables Guide
-                </button>
-              </h2>
-              <div id="advGuideBody" class="accordion-collapse collapse" data-bs-parent="#advGuide">
-                <div class="accordion-body">
-                  <ol class="mb-3">
-                    <li>Create a JSON object with a <code>Styles</code> property.</li>
-                    <li>Each key under <code>Styles</code> is the visible race/style name.</li>
-                    <li>Each entry must have non-empty <code>start</code>, <code>mid</code>, and <code>end</code> arrays of strings.</li>
-                    <li>Click <strong>Validate</strong>, then <strong>Import</strong>. Select it in Race Style and generate.</li>
-                  </ol>
-                  <div class="code-block mb-2"><pre>{
-  "Styles": {
-    "Wizard's Study": {
-      "start": ["ar","el","io","ka","the","vor","xan","zea"],
-      "mid":   ["ca","el","io","ith","or","ul","ym","ez"],
-      "end":   ["ion","iel","oth","eus","ar","is","or","em"]
-    }
-  }
-}</pre></div>
-                  <p class="mb-0 small text-secondary">Keep chunks short and phonetic; the generator stitches them together.</p>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <label class="form-label">Import JSON (styles)
-            <i class="bi bi-question-circle help-badge" data-bs-toggle="tooltip" title='Paste a JSON object containing {"Styles": {...}}. Use Validate before Import.'></i>
-          </label>
-          <textarea id="ng-import" class="form-control form-control-sm font-monospace" rows="8"
+          <div class="code-block mb-2"><pre id="advExample"></pre></div>
+          <label class="form-label">Import JSON (styles)</label>
+          <textarea id="ng-import" class="form-control form-control-sm font-monospace" rows="6"
             placeholder='{"Styles":{"Elf":{"start":["ae","lia"],"mid":["ri","na"],"end":["el","ith"]}}}'></textarea>
-
           <div class="d-flex flex-wrap gap-2 mt-2">
             <button class="btn btn-outline-light btn-sm" id="ng-validateBtn"><i class="bi bi-check2-circle me-1"></i>Validate</button>
             <button class="btn btn-outline-light btn-sm" id="ng-importBtn"><i class="bi bi-upload me-1"></i>Import</button>
             <button class="btn btn-outline-light btn-sm" id="ng-exportBtn"><i class="bi bi-download me-1"></i>Export current</button>
-            <button class="btn btn-outline-info btn-sm" id="ng-loadExample"><i class="bi bi-file-earmark-code me-1"></i>Load example</button>
           </div>
         </div>
       </details>
     `;
 
-    function populateStyles($d, mobileRoot){
-      const sel = $d('ng-style');
-      const current = sel?.value;
+    function populateStyles($, mobileRoot){
+      const sel = $('ng-style');
+      const cur = sel?.value;
       sel.innerHTML = '';
       Object.keys(TABLES.Styles).forEach(k=>{
-        const opt = document.createElement('option');
-        opt.value = k; opt.textContent = k; sel.appendChild(opt);
+        const opt = document.createElement('option'); opt.value=k; opt.textContent=k; sel.appendChild(opt);
       });
-      sel.value = (current && TABLES.Styles[current]) ? current : 'Elf';
+      sel.value = (cur && TABLES.Styles[cur]) ? cur : 'Elf';
 
-      // Mirror desktop → mobile
+      // Surname styles mirror same list
+      const sSel = $('ng-surnameStyle');
+      sSel.innerHTML = sel.innerHTML;
+      sSel.value = sel.value;
+
+      // desktop -> mobile mirror
       const mobileSel = mobileRoot.querySelector('#ng-style');
-      if (mobileSel) {
-        mobileSel.innerHTML = sel.innerHTML;
-        mobileSel.value = sel.value;
-      }
+      if (mobileSel) { mobileSel.innerHTML = sel.innerHTML; mobileSel.value = sel.value; }
+      const mobileSSel = mobileRoot.querySelector('#ng-surnameStyle');
+      if (mobileSSel) { mobileSSel.innerHTML = sSel.innerHTML; mobileSSel.value = sSel.value; }
     }
 
-    function applyRacePreset($d){
-      const style = $d('ng-style').value;
+    // Advanced tables validators
+    function validateTablesObject(obj){
+      const errors = [];
+      if (!obj || typeof obj !== 'object') { errors.push('Root is not an object.'); return errors; }
+      if (!obj.Styles || typeof obj.Styles !== 'object') errors.push('Missing "Styles" object.');
+      const styles = obj.Styles || {};
+      for (const [name, spec] of Object.entries(styles)){
+        if (!spec || typeof spec !== 'object'){ errors.push(`Style "${name}" must be an object.`); continue; }
+        ['start','mid','end'].forEach(k=>{
+          if (!Array.isArray(spec[k]) || spec[k].length===0) errors.push(`Style "${name}" missing non-empty array "${k}".`);
+          else if(!spec[k].every(x=>typeof x==='string')) errors.push(`Style "${name}" "${k}" must be strings only.`);
+        });
+      }
+      return errors;
+    }
+    function importTables($, mobileRoot){
+      const raw = $('ng-import').value.trim();
+      const alertBox = $('ng-adv-alert'); alertBox.innerHTML='';
+      if(!raw){ alertBox.innerHTML = `<div class="alert alert-warning py-2 mb-2">Paste JSON first.</div>`; return; }
+      try{
+        const data = JSON.parse(raw);
+        const errs = validateTablesObject(data);
+        if (errs.length){
+          alertBox.innerHTML = `
+            <div class="alert alert-danger mb-2">
+              <strong>Invalid JSON:</strong>
+              <ul class="mb-0">${errs.map(e => `<li>${e}</li>`).join('')}</ul>
+            </div>`;
+          return;
+        }
+        TABLES.Styles = { ...TABLES.Styles, ...data.Styles };
+        populateStyles($, mobileRoot);
+        alertBox.innerHTML = `<div class="alert alert-success py-2 mb-2">Imported. New styles are available.</div>`;
+      }catch(e){
+        alertBox.innerHTML = `<div class="alert alert-danger py-2 mb-2">Parse error: ${e.message}</div>`;
+      }
+    }
+    function validateOnly($){
+      const raw = $('ng-import').value.trim();
+      const alertBox = $('ng-adv-alert'); alertBox.innerHTML='';
+      if(!raw){ alertBox.innerHTML = `<div class="alert alert-warning py-2 mb-2">Paste JSON first.</div>`; return; }
+      try{
+        const data = JSON.parse(raw);
+        const errs = validateTablesObject(data);
+        alertBox.innerHTML = errs.length
+          ? `<div class="alert alert-danger mb-2"><strong>Issues:</strong><ul class="mb-0">${errs.map(e => `<li>${e}</li>`).join('')}</ul></div>`
+          : `<div class="alert alert-success py-2 mb-2">Looks good.</div>`;
+      }catch(e){
+        alertBox.innerHTML = `<div class="alert alert-danger py-2 mb-2">Parse error: ${e.message}</div>`;
+      }
+    }
+    function exportCurrent(){
+      const payload = JSON.stringify({Styles: TABLES.Styles}, null, 2);
+      const blob = new Blob([payload], {type:'application/json'});
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a'); a.href=url; a.download='name-tables.json'; a.click();
+      URL.revokeObjectURL(url);
+    }
+
+    // --- Rendering ---
+    function renderList(list){
+      const out = document.getElementById('ng-out');
+      out.innerHTML = '';
+      list.forEach(n=>{
+        const col = document.createElement('div');
+        col.className = 'col';
+        const tile = document.createElement('div');
+        tile.className = 'ng-tile';
+        tile.setAttribute('tabindex','0');
+        tile.innerHTML = `
+          <span class="ng-name">${n}</span>
+          <div class="ng-actions d-flex gap-1">
+            <button class="btn btn-sm btn-outline-light" title="Copy" aria-label="Copy name"><i class="bi bi-clipboard"></i></button>
+            <button class="btn btn-sm btn-outline-warning" title="Favorite" aria-label="Favorite name"><i class="bi bi-star"></i></button>
+            <button class="btn btn-sm btn-outline-info" title="Re-roll" aria-label="Reroll name"><i class="bi bi-arrow-repeat"></i></button>
+          </div>
+        `;
+        const nameEl = tile.querySelector('.ng-name');
+        const btnCopy = tile.querySelector('.btn-outline-light');
+        const btnFav  = tile.querySelector('.btn-outline-warning');
+        const btnRer  = tile.querySelector('.btn-outline-info');
+
+        btnCopy.onclick = ()=> navigator.clipboard.writeText(nameEl.textContent);
+        btnFav.onclick  = ()=> addFav(nameEl.textContent);
+        tile.ondblclick = ()=> btnRer.click();
+
+        col.appendChild(tile);
+        out.appendChild(col);
+      });
+    }
+
+    function attachRerollHandlers(cfg, rngSeed){
+      document.querySelectorAll('#ng-out .ng-tile').forEach(tile=>{
+        const nameEl = tile.querySelector('.ng-name');
+        const btnRer = tile.querySelector('.btn-outline-info');
+        btnRer.onclick = ()=>{
+          const r = prand(String(rngSeed) + ':' + Math.random().toString(36).slice(2));
+          const newName = makeFullName(r, cfg);
+          nameEl.textContent = newName;
+        };
+      });
+    }
+
+    // Generate
+    function generate($){
+      const style = $('ng-style').value;
+      const count = +$('ng-count').value || 20;
+      const seedStr = $('ng-seed').value.trim();
+      const minSyl = +$('ng-minSyl').value || 2;
+      const maxSyl = +$('ng-maxSyl').value || 3;
+      const gender = $('ng-gender').value;
+      const allit = ($('ng-allit').value||'').slice(0,1);
+      const harsh = +$('ng-harsh').value || 0;
+      const exotic = +$('ng-exotic').value || 0;
+      const allowApos = $('ng-apos').checked;
+      const allowDia = $('ng-diacritics').checked;
+      const raceSuffixOn = $('ng-raceSuffix').checked;
+      const withSurname = $('ng-surname').checked;
+      const surnameStyle = $('ng-surnameStyle').value || style;
+      const joiner = $('ng-joiner').value || ' ';
+
+      const preset = RACE_PRESETS[style] || null;
+      const raceSuffixList = preset ? (preset.raceSuffix || []) : [];
+
+      const rng = prand(seedStr);
+      const list = [];
+      const cfg = { style, minSyl, maxSyl, gender, allit, harsh, exotic, allowApos, allowDia, raceSuffixOn, raceSuffixList, withSurname, surnameStyle, joiner };
+      for(let i=0;i<Math.min(count, 500);i++){
+        list.push(makeFullName(rng, cfg));
+      }
+
+      renderList(list);
+      renderMeta({style, count, seedStr, minSyl, maxSyl, gender, allit, harsh, exotic, raceSuffixOn, withSurname, surnameStyle, joiner});
+      const snap = snapshot($);
+      saveSession(snap, list); settingsToQS(snap);
+      attachRerollHandlers(cfg, seedStr || 'random');
+      return list;
+    }
+
+    // Copy/download helpers
+    function copyNames(){
+      const items = [...document.querySelectorAll('#ng-out .ng-name')].map(n=>n.textContent);
+      if(!items.length) return;
+      navigator.clipboard.writeText(items.join('\n'));
+    }
+    function downloadNames(){
+      const items = [...document.querySelectorAll('#ng-out .ng-name')].map(n=>n.textContent);
+      if(!items.length) return;
+      const meta = new Date().toISOString();
+      const blob = new Blob([items.join('\n') + '\n'], {type:'text/plain'});
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a'); a.href=url; a.download=`names-${meta}.txt`; a.click();
+      URL.revokeObjectURL(url);
+    }
+
+    // Preset
+    function applyRacePreset($){
+      const style = $('ng-style').value;
       const preset = RACE_PRESETS[style];
       if(!preset) return;
+      $('ng-minSyl').value = preset.minSyl;
+      $('ng-maxSyl').value = preset.maxSyl;
+      $('ng-gender').value = preset.gender;
+      $('ng-harsh').value = preset.harsh; $('ng-harsh-val').textContent = preset.harsh;
+      $('ng-exotic').value = preset.exotic; $('ng-exotic-val').textContent = preset.exotic;
+      $('ng-apos').checked = preset.aposProb > 0;
+      $('ng-diacritics').checked = preset.diaProb > 0;
+      $('ng-raceSuffix').checked = !!preset.allowRaceSuffix;
+      $('ng-surnameStyle').value = style;
+    }
 
-      // set recommended core values
-      $d('ng-minSyl').value = preset.minSyl;
-      $d('ng-maxSyl').value = preset.maxSyl;
-      $d('ng-gender').value = preset.gender;
-
-      // flavor knobs
-      $d('ng-harsh').value = preset.harsh;
-      $d('ng-exotic').value = preset.exotic;
-      $d('ng-harsh-val').textContent = preset.harsh;
-      $d('ng-exotic-val').textContent = preset.exotic;
-
-      // base toggles derived from preset intent
-      $d('ng-apos').checked = preset.aposProb > 0;
-      $d('ng-diacritics').checked = preset.diaProb > 0;
-      $d('ng-raceSuffix').checked = !!preset.allowRaceSuffix;
+    // UI mount / wiring
+    function toggleSurnameRow(show){
+      const row = document.getElementById('surnameRow');
+      row.style.display = show ? '' : 'none';
     }
 
     function mountSettingsForms(){
-      // Inject identical markup into both containers (desktop + mobile)
       const desktopRoot = document.getElementById('settingsCardBody');
       const mobileRoot  = document.getElementById('settingsOffcanvasBody');
       desktopRoot.innerHTML = settingsFormHTML;
       mobileRoot.innerHTML  = settingsFormHTML;
 
-      // Scoped query helpers
-      function q(root, sel){ return root.querySelector(sel); }
-      const $d = (id) => q(desktopRoot, '#' + id);  // DESKTOP is source of truth
-      const $m = (id) => q(mobileRoot,  '#' + id);
+      // Fill JSON example safely (no backticks/quotes issues)
+      const example = {
+        "Styles": {
+          "Wizard's Study": {
+            "start": ["ar","el","io","ka","the","vor","xan","zea"],
+            "mid":   ["ca","el","io","ith","or","ul","ym","ez"],
+            "end":   ["ion","iel","oth","eus","ar","is","or","em"]
+          }
+        }
+      };
+      const ex1 = desktopRoot.querySelector('#advExample');
+      if (ex1) ex1.textContent = JSON.stringify(example, null, 2);
+      const ex2 = mobileRoot.querySelector('#advExample');
+      if (ex2) ex2.textContent = JSON.stringify(example, null, 2);
 
-      // Populate styles initially (desktop only, then mirror)
+      // Scoped helpers
+      const q = (root, sel)=> root.querySelector(sel);
+      const $d = (id)=> q(desktopRoot, '#' + id);
+            const $m = (id)=> q(mobileRoot,  '#' + id);
+
+      // Populate styles into both forms
       populateStyles($d, mobileRoot);
 
-      // Mirror desktop → mobile for all fields initially
-      ['ng-style','ng-count','ng-seed','ng-minSyl','ng-maxSyl','ng-gender','ng-allit','ng-harsh','ng-exotic','ng-apos','ng-diacritics','ng-raceSuffix'].forEach(id=>{
-        const d = $d(id);
-        const m = $m(id);
-        if(!d || !m) return;
-        if (d.type === 'checkbox') m.checked = d.checked;
-        else m.value = d.value;
+      // Mirror desktop → mobile initially
+      [
+        'ng-style','ng-count','ng-seed','ng-minSyl','ng-maxSyl','ng-gender','ng-allit',
+        'ng-harsh','ng-exotic','ng-apos','ng-diacritics','ng-raceSuffix',
+        'ng-surname','ng-surnameStyle','ng-joiner'
+      ].forEach(id=>{
+        const d=$d(id), m=$m(id); if(!d||!m) return;
+        if(d.type==='checkbox'){ m.checked=d.checked; } else { m.value=d.value; }
       });
-      // init live labels for sliders
-      $d('ng-harsh-val').textContent = $d('ng-harsh').value;
-      $d('ng-exotic-val').textContent = $d('ng-exotic').value;
+      if ($d('ng-harsh-val')) $d('ng-harsh-val').textContent = $d('ng-harsh').value;
+      if ($d('ng-exotic-val')) $d('ng-exotic-val').textContent = $d('ng-exotic').value;
 
-      // Sync FROM mobile TO desktop when user triggers actions in offcanvas
+      // Restore from URL or session (URL has priority)
+      const urlState = qsToSettings();
+      if (urlState) {
+        applySnapshot($d, urlState);
+      } else {
+        const { s, r } = loadSession();
+        if (s) applySnapshot($d, s);
+        if (r && Array.isArray(r) && r.length) renderList(r);
+      }
+
+      // Sync FROM mobile → desktop when user interacts in offcanvas
       function syncToDesktop(){
-        ['ng-style','ng-count','ng-seed','ng-minSyl','ng-maxSyl','ng-gender','ng-allit','ng-harsh','ng-exotic','ng-apos','ng-diacritics','ng-raceSuffix'].forEach(id=>{
-          const m = $m(id);
-          const d = $d(id);
-          if(!m || !d) return;
-          if(m.type === 'checkbox'){ d.checked = m.checked; }
-          else { d.value = m.value; }
+        [
+          'ng-style','ng-count','ng-seed','ng-minSyl','ng-maxSyl','ng-gender','ng-allit',
+          'ng-harsh','ng-exotic','ng-apos','ng-diacritics','ng-raceSuffix',
+          'ng-surname','ng-surnameStyle','ng-joiner'
+        ].forEach(id=>{
+          const m=$m(id), d=$d(id); if(!m||!d) return;
+          if(m.type==='checkbox'){ d.checked=m.checked; } else { d.value=m.value; }
         });
-        $d('ng-harsh-val').textContent = $d('ng-harsh').value;
-        $d('ng-exotic-val').textContent = $d('ng-exotic').value;
+        if ($d('ng-harsh-val')) $d('ng-harsh-val').textContent = $d('ng-harsh').value;
+        if ($d('ng-exotic-val')) $d('ng-exotic-val').textContent = $d('ng-exotic').value;
+        toggleSurnameRow($d('ng-surname').checked);
       }
 
-      // Wire shared button handlers for a given root
-      function connect(root){
-        const isMobile = (root === mobileRoot);
-        q(root,'#ng-generate') .addEventListener('click', (e)=>{ e.preventDefault(); if(isMobile) syncToDesktop(); generate($d); });
-        q(root,'#ng-copy')     .addEventListener('click', (e)=>{ e.preventDefault(); copyNames(); });
-        q(root,'#ng-download') .addEventListener('click', (e)=>{ e.preventDefault(); downloadNames(); });
-        q(root,'#ng-clear')    .addEventListener('click', (e)=>{ e.preventDefault(); document.getElementById('ng-out').innerHTML=''; document.getElementById('ng-meta').innerHTML=''; });
+      // Wire a given root's controls
+      function connect(root, isMobile){
+        const $ = (id)=> q(root, '#'+id);
 
-        q(root,'#ng-importBtn').addEventListener('click', (e)=>{ e.preventDefault(); if(isMobile) syncToDesktop(); importTables($d, mobileRoot); });
-        q(root,'#ng-exportBtn').addEventListener('click', (e)=>{ e.preventDefault(); exportCurrent(); });
-        q(root,'#ng-validateBtn').addEventListener('click', (e)=>{ e.preventDefault(); if(isMobile) syncToDesktop(); validateOnly($d); });
-        q(root,'#ng-loadExample').addEventListener('click', (e)=>{ e.preventDefault(); loadExamplePack($d); });
+        // main actions
+        $('ng-generate').addEventListener('click', (e)=>{ e.preventDefault(); if(isMobile) syncToDesktop(); generate($d); });
+        $('ng-copy').addEventListener('click', (e)=>{ e.preventDefault(); copyNames(); });
+        $('ng-download').addEventListener('click', (e)=>{ e.preventDefault(); downloadNames(); });
+        $('ng-clear').addEventListener('click', (e)=>{ e.preventDefault(); document.getElementById('ng-out').innerHTML=''; document.getElementById('ng-meta').innerHTML=''; });
 
-        q(root,'#ng-applyPreset').addEventListener('click', (e)=>{ e.preventDefault(); if(isMobile) syncToDesktop(); applyRacePreset($d); });
+        // advanced: validate/import/export
+        $('ng-validateBtn').addEventListener('click', (e)=>{ e.preventDefault(); if(isMobile) syncToDesktop(); validateOnly($d); });
+        $('ng-importBtn').addEventListener('click', (e)=>{ e.preventDefault(); if(isMobile) syncToDesktop(); importTables($d, mobileRoot); settingsToQS(snapshot($d)); });
+        $('ng-exportBtn').addEventListener('click', (e)=>{ e.preventDefault(); exportCurrent(); });
 
-        // sliders live label
-        const harsh = q(root,'#ng-harsh');
-        const exotic = q(root,'#ng-exotic');
-        const harshVal = q(root,'#ng-harsh-val');
-        const exoticVal = q(root,'#ng-exotic-val');
-        harsh.addEventListener('input', ()=> harshVal.textContent = harsh.value);
-        exotic.addEventListener('input', ()=> exoticVal.textContent = exotic.value);
+        // presets
+        $('ng-applyPreset').addEventListener('click', (e)=>{ e.preventDefault(); if(isMobile) syncToDesktop(); applyRacePreset($d); settingsToQS(snapshot($d)); });
+
+        // sliders live labels
+        const harsh = $('ng-harsh'), exotic = $('ng-exotic');
+        if (harsh) harsh.addEventListener('input', ()=> { const lab = q(desktopRoot, '#ng-harsh-val'); if(lab) lab.textContent = harsh.value; });
+        if (exotic) exotic.addEventListener('input', ()=> { const lab = q(desktopRoot, '#ng-exotic-val'); if(lab) lab.textContent = exotic.value; });
+
+        // surname toggle
+        $('ng-surname').addEventListener('change', ()=> toggleSurnameRow($('ng-surname').checked));
       }
 
-      connect(desktopRoot);
-      connect(mobileRoot);
+      connect(desktopRoot, false);
+      connect(mobileRoot,  true);
 
-      // Extra quick buttons inside Results header for xs
+      // XS quick buttons in Results header
       const genXs = document.getElementById('ng-generate-xs');
       const copyXs = document.getElementById('ng-copy-xs');
       if(genXs){ genXs.addEventListener('click', ()=> generate($d)); }
       if(copyXs){ copyXs.addEventListener('click', ()=> copyNames()); }
 
-      // Keep mobile form mirrored right before showing the offcanvas
+      // Keep mobile form mirrored just before showing the offcanvas
       const offcanvasEl = document.getElementById('settingsOffcanvas');
       if (offcanvasEl) {
         offcanvasEl.addEventListener('show.bs.offcanvas', () => {
-          ['ng-style','ng-count','ng-seed','ng-minSyl','ng-maxSyl','ng-gender','ng-allit','ng-harsh','ng-exotic','ng-apos','ng-diacritics','ng-raceSuffix'].forEach(id=>{
-            const d = $d(id);
-            const m = $m(id);
-            if(!d || !m) return;
-            if (d.type === 'checkbox') m.checked = d.checked;
-            else m.value = d.value;
+          [
+            'ng-style','ng-count','ng-seed','ng-minSyl','ng-maxSyl','ng-gender','ng-allit',
+            'ng-harsh','ng-exotic','ng-apos','ng-diacritics','ng-raceSuffix',
+            'ng-surname','ng-surnameStyle','ng-joiner'
+          ].forEach(id=>{
+            const d=$d(id), m=$m(id); if(!d||!m) return;
+            if(d.type==='checkbox'){ m.checked=d.checked; } else { m.value=d.value; }
           });
-          $m('ng-harsh-val').textContent = $m('ng-harsh').value;
-          $m('ng-exotic-val').textContent = $m('ng-exotic').value;
+          if ($m('ng-harsh-val')) $m('ng-harsh-val').textContent = $m('ng-harsh').value;
+          if ($m('ng-exotic-val')) $m('ng-exotic-val').textContent = $m('ng-exotic').value;
+          toggleSurnameRow($d('ng-surname').checked);
         });
       }
 
-      // Activate tooltips globally (desktop + mobile)
-      const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
-      tooltipTriggerList.forEach(el => new bootstrap.Tooltip(el));
+      // Enable tooltips
+      [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]')).forEach(el => new bootstrap.Tooltip(el));
 
-      // Initial generation
-      generate($d);
+      // Favorites drawer actions
+      renderFavs();
+      const favCopyAll = document.getElementById('favCopyAll');
+      const favClear   = document.getElementById('favClear');
+      if(favCopyAll) favCopyAll.onclick = ()=>{ const favs = getFavs(); if(favs.length) navigator.clipboard.writeText(favs.join('\n')); };
+      if(favClear)   favClear.onclick   = ()=>{ setFavs([]); renderFavs(); };
+
+      // Share buttons
+      const doShare = ()=>{ const s = snapshot($d); settingsToQS(s); navigator.clipboard.writeText(location.href); };
+      const btnShare = document.getElementById('btnShare');
+      const btnShareXS = document.getElementById('btnShareXS');
+      if(btnShare)   btnShare.onclick = doShare;
+      if(btnShareXS) btnShareXS.onclick = doShare;
+
+      // Initial generation if we only restored settings
+      if(!document.querySelector('#ng-out .ng-name')) generate($d);
     }
 
-    document.addEventListener('DOMContentLoaded', () => {
-      mountSettingsForms();
-    });
+    document.addEventListener('DOMContentLoaded', mountSettingsForms);
   })();
   </script>
 </body>
