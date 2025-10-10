@@ -4,10 +4,15 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>The DM's Toolbox: Initiative Tracker</title>
+
+  <!-- Bootstrap + Icons -->
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" crossorigin="anonymous" />
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" />
+  <!-- Custom CSS -->
   <link href="/css/site.css" rel="stylesheet" />
+  <!-- Favicon -->
   <link rel="icon" type="image/png" href="/images/dndFavicon (2).png" />
+
   <style>
     .bgimage{ background:url('images/BGMap.png') no-repeat center center fixed; background-size:cover; }
     .bg-orange{ background-color:#fd7e14 !important; color:#212529 !important; }
@@ -16,46 +21,28 @@
     #saveHistorySelect{ min-width:200px; }
 
     /* Compact status icon row */
-    .status-icon-row{ display:flex; flex-wrap:wrap; gap:.25rem; align-items:center; }
-    .status-chip{ font-size:1rem; line-height:1; }
-    .status-chip[data-remaining]:after{
-      content: attr(data-remaining);
-      display:inline-block; font-size:.7rem; margin-left:.15rem; opacity:.8;
-    }
-    .conc-btn{ border:1px dashed rgba(255,255,255,.3); }
+    .status-icon-row{ display:flex; flex-wrap:wrap; gap:.3rem; align-items:center; }
+    .status-chip{ font-size:1.05rem; line-height:1; user-select:none; }
+    .status-chip[data-remaining]::after{ content: attr(data-remaining); font-size:.7rem; margin-left:.15rem; opacity:.8; }
+    .conc-btn{ border:1px dashed rgba(255,255,255,.35); }
     .conc-on{ border-color:#ffc107; color:#ffc107; }
     .hp-controls .btn{ padding:.1rem .35rem; line-height:1; }
 
-    /* Sticky table header for long lists */
-    table thead th{ position:sticky; top:0; background:#1a1d20; z-index:1; }
+    /* Sticky table header */
+    table thead th{ position:sticky; top:0; background:#161a1d; z-index:1; }
+
+    /* Keep Notes & Effects tidy */
+    .notes-actions{ display:flex; gap:.35rem; align-items:center; }
+    .notes-actions .btn{ padding:.15rem .45rem; }
 
     @media (max-width:576px){
       .btn,.form-control{ padding:.6rem .8rem; font-size:1rem; }
       .table td,.table th{ padding:.6rem .5rem; }
     }
-
-    .notes-cell {
-      display: flex;
-      flex-direction: column;
-      gap: 0.25rem;
-    }
-    .notes-row {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-    }
-    .status-icons {
-      display: flex;
-      gap: 0.25rem;
-      flex-wrap: wrap;
-      font-size: 1rem;
-    }
-    .status-icons span {
-      cursor: default;
-    }
   </style>
 </head>
 <body class="bgimage">
+  <!-- Nav -->
   <nav class="navbar navbar-expand-lg navbar-dark fixed-top text-light" id="mainNav">
     <div class="container-fluid">
       <a class="navbar-brand" href="index.html">
@@ -79,13 +66,15 @@
     </div>
   </nav>
 
+  <!-- Main -->
   <main class="content pt-3">
     <div class="container-fluid text-center backdrop">
       <h1 class="display-1 mb-0">Initiative Tracker</h1>
       <p class="lead">Manage initiative, health, AC, notes, status effects, and combat rounds.</p>
 
+      <!-- Controls row -->
       <div class="row g-3 align-items-center justify-content-center my-2">
-        <div class="col-12 col-lg-7 d-flex flex-wrap gap-2 justify-content-center">
+        <div class="col-12 col-xl-7 d-flex flex-wrap gap-2 justify-content-center">
           <div class="form-check form-switch">
             <input class="form-check-input" type="checkbox" id="autoSaveToggle" checked>
             <label class="form-check-label" for="autoSaveToggle">Auto-Save</label>
@@ -107,15 +96,82 @@
           <button id="export-btn" class="btn btn-outline-warning">Export Session</button>
           <button id="import-btn" class="btn btn-outline-secondary">Import Session</button>
         </div>
-      </div>
 
+        <!-- Saved Characters (templates) -->
+        <div class="col-12 col-xl-5">
+          <div class="accordion" id="savedCharactersAccordion">
+            <div class="accordion-item">
+              <h2 class="accordion-header" id="savedCharactersHeading">
+                <button class="accordion-button collapsed bg-dark text-light" type="button" data-bs-toggle="collapse" data-bs-target="#savedCharactersCollapse" aria-expanded="false" aria-controls="savedCharactersCollapse">
+                  Saved Character Templates (Max: 20)
+                </button>
+              </h2>
+              <div id="savedCharactersCollapse" class="accordion-collapse collapse" aria-labelledby="savedCharactersHeading" data-bs-parent="#savedCharactersAccordion">
+                <div class="accordion-body bg-dark text-light">
+                  <div class="row g-2">
+                    <div class="col-md-3"><input id="save-name" class="form-control" type="text" placeholder="Name" /></div>
+                    <div class="col-md-2"><input id="save-health" class="form-control" type="number" placeholder="Max HP" /></div>
+                    <div class="col-md-2"><input id="save-ac" class="form-control" type="number" placeholder="AC" /></div>
+                    <div class="col-md-3">
+                      <select id="save-type" class="form-select">
+                        <option>PC</option>
+                        <option>Companion</option>
+                        <option>NPC</option>
+                        <option>Enemy</option>
+                      </select>
+                    </div>
+                    <div class="col-md-2"><button id="save-character-btn" class="btn btn-outline-success w-100">Save Template</button></div>
+                  </div>
+
+                  <div class="row g-2 mt-2">
+                    <div class="col-sm-6"><input id="saved-search" class="form-control" type="text" placeholder="Search saved characters..." /></div>
+                    <div class="col-sm-6 d-flex gap-2 justify-content-sm-end">
+                      <select id="saved-type-filter" class="form-select w-auto">
+                        <option value="">All Types</option>
+                        <option>PC</option>
+                        <option>Companion</option>
+                        <option>NPC</option>
+                        <option>Enemy</option>
+                      </select>
+                      <button id="clear-saved-btn" class="btn btn-outline-danger">Clear All</button>
+                    </div>
+                  </div>
+
+                  <div class="row g-2 mt-2">
+                    <div class="col-md-6">
+                      <select id="loadCharacterSelect" class="form-select">
+                        <option disabled selected>Load Saved Character</option>
+                      </select>
+                    </div>
+                    <div class="col-md-6 d-flex gap-2">
+                      <button id="load-to-form-btn" class="btn btn-outline-light w-100">Load to Form</button>
+                      <button id="add-to-tracker-btn" class="btn btn-outline-success w-100">Add to Tracker</button>
+                    </div>
+                  </div>
+
+                  <ul id="saved-characters-list" class="list-group mt-3"></ul>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div><!-- /controls row -->
+
+      <!-- Add row -->
       <form id="initiative-form" class="mb-4">
         <div class="row g-2 justify-content-center">
           <div class="col-12 col-md-3"><input id="character-name" class="form-control" type="text" placeholder="Character Name" required></div>
           <div class="col-6 col-md-2"><input id="initiative-roll" class="form-control" type="number" placeholder="Initiative" required></div>
           <div class="col-6 col-md-2"><input id="character-health" class="form-control" type="number" placeholder="Max HP" required></div>
           <div class="col-6 col-md-2"><input id="character-ac" class="form-control" type="number" placeholder="AC" required></div>
-          <div class="col-6 col-md-2"><input id="character-notes" class="form-control" type="text" placeholder="Notes (optional)"></div>
+          <div class="col-6 col-md-2">
+            <select id="character-type" class="form-select">
+              <option>PC</option>
+              <option>Companion</option>
+              <option>NPC</option>
+              <option>Enemy</option>
+            </select>
+          </div>
           <div class="col-12 col-md-1"><button class="btn btn-outline-success w-100" type="submit">Add</button></div>
         </div>
       </form>
@@ -159,6 +215,7 @@
                 <th></th>
                 <th>Turn</th>
                 <th>Character</th>
+                <th>Type</th>
                 <th>Initiative</th>
                 <th>AC</th>
                 <th>Health</th>
@@ -174,6 +231,7 @@
       <!-- Mobile Cards -->
       <div id="mobile-initiative-order" class="d-block d-md-none"></div>
 
+      <!-- Footer action buttons -->
       <div class="mt-3 d-flex gap-2 justify-content-center flex-wrap">
         <button id="next-turn" class="btn btn-outline-success">Next Turn</button>
         <button id="reset-turns" class="btn btn-outline-danger">Reset Rounds</button>
@@ -208,6 +266,24 @@
             <button id="add-status-btn" class="btn btn-outline-success">Add</button>
           </div>
           <div class="form-text text-secondary">Leave duration blank for indefinite effects. Effects with a duration tick down each new round.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Notes Modal -->
+  <div class="modal fade" id="notesModal" tabindex="-1" aria-labelledby="notesModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+      <div class="modal-content bg-dark text-light">
+        <div class="modal-header">
+          <h5 class="modal-title" id="notesModalLabel">Notes</h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <textarea id="notes-text" class="form-control" rows="8" placeholder="Enter notes..."></textarea>
+        </div>
+        <div class="modal-footer">
+          <button id="notes-save-btn" class="btn btn-success">Save Notes</button>
         </div>
       </div>
     </div>
@@ -251,13 +327,33 @@
     </div>
   </footer>
 
+  <!-- JS -->
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" crossorigin="anonymous"></script>
   <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
-  <script>
-  (()=>{
-    const $ = (id) => document.getElementById(id);
 
-    // ---------- Notes autosave ----------
+  <script>
+  (() => {
+    const $ = id => document.getElementById(id);
+
+    let statusModal = null;
+let notesModal = null;
+
+function initModals() {
+  const statusEl = document.getElementById('statusModal');
+  if (statusEl) statusModal = bootstrap.Modal.getOrCreateInstance(statusEl);
+  const notesEl = document.getElementById('notesModal');
+  if (notesEl) notesModal = bootstrap.Modal.getOrCreateInstance(notesEl);
+}
+
+// If DOM already ready, init immediately; else wait
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', initModals);
+} else {
+  initModals();
+}
+
+
+    // ---------- Session notes ----------
     const notesKey = 'sessionNotes';
     function loadNotes(){ const s = localStorage.getItem(notesKey); if(s) $('session-notes').value = s; }
     function saveNotes(){ localStorage.setItem(notesKey, $('session-notes').value); }
@@ -292,10 +388,24 @@
     let combatRound = 1;
     let autoSaveEnabled = true;
     let diceHistory = [];
-    let modalCharacterIndex = null;
-    const statusModal = new bootstrap.Modal(document.getElementById('statusModal'));
+    let modalCharacterIndex = null; // for both status + notes
 
     // ---------- Persistence ----------
+    function normalizeChar(c){
+      return {
+        name: c.name,
+        type: c.type || 'PC',
+        initiative: +c.initiative || 0,
+        currentHP: +c.currentHP || 0,
+        maxHP: +c.maxHP || 0,
+        ac: (c.ac ?? null),
+        notes: c.notes || '',
+        concentration: !!c.concentration,
+        status: (c.status || []).map(s => typeof s === 'string'
+          ? { name:s, icon:(statusEffects.find(e=>e.name===s)?.icon||'❓') }
+          : { name:s.name, icon:s.icon||(statusEffects.find(e=>e.name===s.name)?.icon||'❓'), remaining:(typeof s.remaining==='number'?s.remaining:undefined) })
+      };
+    }
     function saveState(manual=false){
       const key = manual ? `initiativeTrackerData_${new Date().toISOString()}` : 'initiativeTrackerData';
       const payload = { characters, currentTurn, combatRound, diceHistory };
@@ -307,38 +417,130 @@
       if(!raw) return;
       try{
         const data = JSON.parse(raw);
-        characters = (data.characters||[]).map(c => normalizeChar(c));
+        characters = (data.characters||[]).map(normalizeChar);
         currentTurn = data.currentTurn||0;
         combatRound = data.combatRound||1;
         diceHistory = Array.isArray(data.diceHistory) ? data.diceHistory : [];
       }catch(e){ console.warn('Load failed', e); }
     }
-    function normalizeChar(c){
-      return {
-        name: c.name,
-        initiative: c.initiative|0,
-        currentHP: c.currentHP|0,
-        maxHP: c.maxHP|0,
-        ac: (c.ac ?? null),
-        notes: c.notes||'',
-        concentration: !!c.concentration,
-        status: (c.status||[]).map(s => typeof s==='string'
-          ? { name:s, icon:(statusEffects.find(e=>e.name===s)?.icon||'❓') }
-          : { name:s.name, icon:s.icon||(statusEffects.find(e=>e.name===s.name)?.icon||'❓'), remaining: (s.remaining ?? undefined) })
-      };
+
+    // ---------- Saved character templates ----------
+    const TKEY='savedCharacters';
+    function getSaved(){ try{ return JSON.parse(localStorage.getItem(TKEY)||'[]'); }catch{ return []; } }
+    function setSaved(list){ localStorage.setItem(TKEY, JSON.stringify(list)); }
+    function addSavedTemplate(t){
+      const list = getSaved();
+      if (list.length >= 20) { alert('Max 20 saved characters.'); return false; }
+      const idx = list.findIndex(x=>x.name.toLowerCase()===t.name.toLowerCase());
+      if (idx>=0) list[idx]=t; else list.push(t);
+      setSaved(list);
+      buildSavedUI();
+      return true;
+    }
+    function removeSavedByName(name){
+      const list = getSaved().filter(x=>x.name!==name);
+      setSaved(list); buildSavedUI();
+    }
+    function clearSavedAll(){ localStorage.removeItem(TKEY); buildSavedUI(); }
+
+    function buildSavedUI(){
+      // dropdown
+      const select = $('loadCharacterSelect');
+      select.innerHTML = '<option disabled selected>Load Saved Character</option>';
+      const list = getSaved();
+      list.forEach(c=>{
+        const opt = document.createElement('option');
+        opt.value = c.name; opt.textContent = `${c.name} (${c.type})`;
+        select.appendChild(opt);
+      });
+
+      // searchable list
+      const ul = $('saved-characters-list'); ul.innerHTML='';
+      const q = $('saved-search').value.trim().toLowerCase();
+      const typeFilter = $('saved-type-filter').value;
+      list
+        .filter(c => (!q || c.name.toLowerCase().includes(q)) && (!typeFilter || c.type===typeFilter))
+        .forEach(c=>{
+          const li = document.createElement('li');
+          li.className = 'list-group-item d-flex justify-content-between align-items-center bg-dark text-light border-light';
+          li.innerHTML = `
+            <span><strong>${c.name}</strong> — <em>${c.type}</em> • AC: ${c.ac} • HP: ${c.maxHP}</span>
+            <div class="d-flex gap-2">
+              <button class="btn btn-sm btn-outline-light" data-act="load" data-name="${c.name}">Load</button>
+              <button class="btn btn-sm btn-outline-success" data-act="add" data-name="${c.name}">Add</button>
+              <button class="btn btn-sm btn-outline-danger" data-act="del" data-name="${c.name}">Delete</button>
+            </div>`;
+          ul.appendChild(li);
+        });
+
+      ul.querySelectorAll('button[data-act]').forEach(btn=>{
+        btn.addEventListener('click', ()=>{
+          const name = btn.dataset.name;
+          const c = getSaved().find(x=>x.name===name);
+          if (!c) return;
+          if (btn.dataset.act==='load'){
+            $('character-name').value = c.name;
+            $('initiative-roll').value = c.initiative||0;
+            $('character-health').value = c.maxHP||0;
+            $('character-ac').value = c.ac||0;
+            $('character-type').value = c.type||'PC';
+          } else if (btn.dataset.act==='add'){
+            const nc = normalizeChar({...c, currentHP:c.maxHP});
+            characters.push(nc);
+            maybeSortByInitiative();
+            buildTable();
+          } else if (btn.dataset.act==='del'){
+            removeSavedByName(name);
+          }
+        });
+      });
     }
 
-    // ---------- UI Helpers ----------
-    function hpClass(percent){
-      if (percent <= 0) return 'bg-secondary text-light text-decoration-line-through';
-      if (percent <= 25) return 'bg-danger text-light';
-      if (percent <= 50) return 'bg-warning text-dark';
-      if (percent <= 75) return 'bg-orange text-dark';
-      return 'bg-success text-light';
-    }
-    function maybeSortByInitiative(){
-      if ($('lockOrderToggle')?.checked) return;
-      characters.sort((a,b)=> b.initiative - a.initiative);
+    // Saved template form
+    $('save-character-btn').addEventListener('click', ()=>{
+      const name = $('save-name').value.trim();
+      const maxHP = parseInt($('save-health').value,10);
+      const ac = parseInt($('save-ac').value,10);
+      const type = $('save-type').value;
+      if (!name || isNaN(maxHP) || isNaN(ac)) { alert('Please enter valid Name, Max HP, and AC.'); return; }
+      addSavedTemplate({ name, maxHP, ac, type, initiative:0 });
+      $('save-name').value=''; $('save-health').value=''; $('save-ac').value='';
+    });
+    $('saved-search').addEventListener('input', buildSavedUI);
+    $('saved-type-filter').addEventListener('change', buildSavedUI);
+    $('clear-saved-btn').addEventListener('click', ()=>{
+      if(confirm('Delete ALL saved character templates?')) clearSavedAll();
+    });
+
+    $('loadCharacterSelect').addEventListener('change', function(){
+      const c = getSaved().find(x=>x.name===this.value); if(!c) return;
+      $('character-name').value = c.name;
+      $('initiative-roll').value = c.initiative||0;
+      $('character-health').value = c.maxHP||0;
+      $('character-ac').value = c.ac||0;
+      $('character-type').value = c.type||'PC';
+    });
+    $('load-to-form-btn').addEventListener('click', ()=>{
+      const sel = $('loadCharacterSelect'); if (!sel.value || sel.selectedIndex===0) return alert('Pick a saved character first.');
+      const c = getSaved().find(x=>x.name===sel.value); if(!c) return;
+      $('character-name').value = c.name;
+      $('initiative-roll').value = c.initiative||0;
+      $('character-health').value = c.maxHP||0;
+      $('character-ac').value = c.ac||0;
+      $('character-type').value = c.type||'PC';
+    });
+    $('add-to-tracker-btn').addEventListener('click', ()=>{
+      const sel = $('loadCharacterSelect'); if (!sel.value || sel.selectedIndex===0) return alert('Pick a saved character first.');
+      const c = getSaved().find(x=>x.name===sel.value); if(!c) return;
+      characters.push(normalizeChar({...c, currentHP:c.maxHP}));
+      maybeSortByInitiative(); buildTable();
+    });
+
+    // ---------- Dice ----------
+    function addToHistory(text){
+      diceHistory.unshift({ text, timestamp: new Date().toLocaleTimeString() });
+      buildDiceHistory();
+      if (autoSaveEnabled) saveState();
     }
     function buildDiceHistory(){
       const wrap = $('dice-history-log'); wrap.innerHTML='';
@@ -349,20 +551,46 @@
         wrap.appendChild(div);
       });
     }
-    function addToHistory(text){
-      diceHistory.unshift({ text, timestamp: new Date().toLocaleTimeString() });
-      buildDiceHistory();
-      if (autoSaveEnabled) saveState();
+    document.querySelectorAll('.dice-btn').forEach(btn=>{
+      btn.addEventListener('click', function(){
+        const sides = parseInt(this.dataset.dice,10);
+        const result = Math.floor(Math.random()*sides)+1;
+        const out = `Rolled d${sides}: ${result}`;
+        $('dice-result').textContent = `🎲 ${out}`;
+        addToHistory(out);
+      });
+    });
+    $('roll-custom-dice').addEventListener('click', function(){
+      const input = $('custom-dice-input').value.trim();
+      const m = input.toLowerCase().match(/^(\d*)d(\d+)([+-]\d+)?$/);
+      if(!m) return alert("Invalid format. Use XdY+Z (e.g., 2d6+3)");
+      const num = parseInt(m[1]||'1',10), sides = parseInt(m[2],10), mod = parseInt(m[3]||'0',10);
+      const rolls = Array.from({length:num}, ()=> Math.floor(Math.random()*sides)+1);
+      const total = rolls.reduce((a,b)=>a+b,0) + mod;
+      const modStr = mod ? (mod>0?` + ${mod}`:` - ${Math.abs(mod)}`) : '';
+      const out = `Rolled ${num}d${sides}${modStr}: [${rolls.join(', ')}] = ${total}`;
+      $('dice-result').textContent = `🎲 ${out}`;
+      addToHistory(out);
+    });
+    $('clear-dice-history').addEventListener('click', ()=>{
+      if (confirm("Clear all dice history?")) { diceHistory = []; buildDiceHistory(); if (autoSaveEnabled) saveState(); }
+    });
+
+    // ---------- Helpers ----------
+    function hpClass(percent){
+      if (percent <= 0) return 'bg-secondary text-light text-decoration-line-through';
+      if (percent <= 25) return 'bg-danger text-light';
+      if (percent <= 50) return 'bg-warning text-dark';
+      if (percent <= 75) return 'bg-orange text-dark';
+      return 'bg-success text-light';
     }
+    function maybeSortByInitiative(){ if ($('lockOrderToggle')?.checked) return; characters.sort((a,b)=> b.initiative - a.initiative); }
     function statusTooltipText(c){
       const parts = [];
       if (c.concentration) parts.push('Concentration: ON');
       if (c.status.length){
         parts.push('Effects:');
-        c.status.forEach(s=>{
-          if (typeof s.remaining === 'number') parts.push(`- ${s.name} (${s.remaining})`);
-          else parts.push(`- ${s.name}`);
-        });
+        c.status.forEach(s=> parts.push(`- ${s.name}${typeof s.remaining==='number' ? ` (${s.remaining})` : ''}`));
       }else{
         parts.push('Effects: none');
       }
@@ -378,9 +606,9 @@
       mobileBody.innerHTML = '';
 
       characters.forEach((c,i)=>{
-        const pct = Math.round((c.currentHP / c.maxHP) * 100);
+        const pct = Math.max(0, Math.round((c.currentHP / c.maxHP) * 100));
 
-        // --- Desktop row ---
+        // Desktop row
         const tr = document.createElement('tr');
         if (i === currentTurn) tr.classList.add('active-turn');
         tr.innerHTML = `
@@ -390,9 +618,8 @@
             ${c.name}
             ${c.concentration ? '<span class="ms-1 text-warning" title="Concentration"><i class="bi bi-star-fill"></i></span>' : ''}
           </td>
-          <td>
-            <input type="number" class="form-control form-control-sm init-input" value="${c.initiative}" data-index="${i}" data-commit="init">
-          </td>
+          <td>${c.type}</td>
+          <td><input type="number" class="form-control form-control-sm init-input" value="${c.initiative}" data-index="${i}" data-commit="init"></td>
           <td>${c.ac ?? '-'}</td>
           <td>
             <div class="d-flex align-items-center">
@@ -406,24 +633,19 @@
             </div>
           </td>
           <td>
-            <div class="text-start">
-              <input type="text" class="form-control form-control-sm notes-input mb-1" placeholder="Notes..." value="${c.notes}" data-index="${i}">
-              <div class="d-flex align-items-center justify-content-between">
-                <div class="status-icon-row"
-                  data-bs-toggle="tooltip"
-                  data-bs-placement="top"
-                  title="${statusTooltipText(c)}">
-                  ${c.status.map(s=>{
-                    const rem = (typeof s.remaining==='number') ? ` data-remaining="${s.remaining}"` : '';
-                    return `<span class="status-chip" ${rem} title="${s.name}">${s.icon}</span>`;
-                  }).join('')}
-                </div>
-                <div class="d-flex align-items-center gap-1">
-                  <button class="btn btn-sm conc-btn ${c.concentration?'conc-on':''}" title="Toggle Concentration" data-index="${i}">
-                    <i class="bi ${c.concentration?'bi-star-fill':'bi-star'}"></i>
-                  </button>
-                  <button class="btn btn-sm btn-outline-info status-btn" data-index="${i}" title="Edit Status"><i class="bi bi-emoji-smile"></i></button>
-                </div>
+            <div class="d-flex align-items-center justify-content-between">
+              <div class="status-icon-row" data-bs-toggle="tooltip" data-bs-placement="top" title="${statusTooltipText(c)}">
+                ${c.status.map(s=>{
+                  const rem = (typeof s.remaining==='number') ? ` data-remaining="${s.remaining}"` : '';
+                  return `<span class="status-chip"${rem} title="${s.name}">${s.icon}</span>`;
+                }).join('') || '<span class="text-secondary" style="opacity:.6;">—</span>'}
+              </div>
+              <div class="notes-actions">
+                <button class="btn btn-sm btn-outline-light notes-btn" data-index="${i}" title="Notes"><i class="bi bi-journal-text"></i></button>
+                <button class="btn btn-sm conc-btn ${c.concentration?'conc-on':''}" title="Toggle Concentration" data-index="${i}">
+                  <i class="bi ${c.concentration?'bi-star-fill':'bi-star'}"></i>
+                </button>
+                <button class="btn btn-sm btn-outline-info status-btn" data-index="${i}" title="Edit Status"><i class="bi bi-emoji-smile"></i></button>
               </div>
             </div>
           </td>
@@ -434,15 +656,13 @@
         `;
         tableBody.appendChild(tr);
 
-        // --- Mobile card ---
+        // Mobile card
         const card = document.createElement('div');
-        card.className = 'card mb-2 text-start';
-        if (i === currentTurn) card.classList.add('border-success');
+        card.className = 'card mb-2 text-start '+(i===currentTurn?'border-success':'');
         card.innerHTML = `
           <div class="card-body">
             <h5 class="card-title mb-1">
-              ${c.name}
-              <small class="text-muted">(${c.initiative} Init, AC ${c.ac ?? '-'})</small>
+              ${c.name} <small class="text-muted">(${c.type} • Init ${c.initiative} • AC ${c.ac ?? '-'})</small>
               ${c.concentration ? '<span class="ms-1 text-warning" title="Concentration"><i class="bi bi-star-fill"></i></span>' : ''}
             </h5>
             <div class="mb-1">HP:
@@ -454,20 +674,15 @@
                 <button class="btn btn-outline-light hit-btn" data-delta="5" data-index="${i}">+5</button>
               </div>
             </div>
-            <div class="mb-1">Notes:
-              <input type="text" class="form-control form-control-sm notes-input d-inline-block" style="max-width:100%" value="${c.notes}" data-index="${i}">
-            </div>
             <div class="d-flex align-items-center justify-content-between">
-              <div class="status-icon-row"
-                data-bs-toggle="tooltip"
-                data-bs-placement="top"
-                title="${statusTooltipText(c)}">
+              <div class="status-icon-row" data-bs-toggle="tooltip" title="${statusTooltipText(c)}">
                 ${c.status.map(s=>{
                   const rem = (typeof s.remaining==='number') ? ` data-remaining="${s.remaining}"` : '';
-                  return `<span class="status-chip" ${rem} title="${s.name}">${s.icon}</span>`;
-                }).join('')}
+                  return `<span class="status-chip"${rem} title="${s.name}">${s.icon}</span>`;
+                }).join('') || '<span class="text-secondary" style="opacity:.6;">—</span>'}
               </div>
-              <div class="d-flex align-items-center gap-1">
+              <div class="notes-actions">
+                <button class="btn btn-sm btn-outline-light notes-btn" data-index="${i}" title="Notes"><i class="bi bi-journal-text"></i></button>
                 <button class="btn btn-sm conc-btn ${c.concentration?'conc-on':''}" title="Toggle Concentration" data-index="${i}">
                   <i class="bi ${c.concentration?'bi-star-fill':'bi-star'}"></i>
                 </button>
@@ -485,12 +700,13 @@
         mobileBody.appendChild(card);
       });
 
-      // Tooltips (re-init each build)
+      // Tooltips
       document.querySelectorAll('[data-bs-toggle="tooltip"]').forEach(el => {
-        new bootstrap.Tooltip(el, { trigger: 'hover', html: false });
-      });
+  bootstrap.Tooltip.getOrCreateInstance(el, { trigger: 'hover', html: false });
+});
 
-      // Wire inputs (HP)
+
+      // HP adjust
       document.querySelectorAll('.hit-btn').forEach(b=>{
         b.addEventListener('click', function(){
           const idx = +this.dataset.index;
@@ -504,32 +720,56 @@
         inp.addEventListener('input', function(){
           const idx = +this.dataset.index;
           characters[idx].currentHP = parseInt(this.value,10) || 0;
-          buildTable();
         });
       });
 
-      // Initiative (commit to edit)
+      // Initiative commit (Enter / blur)
       document.querySelectorAll('.init-input[data-commit="init"]').forEach(inp=>{
         let original = inp.value;
         const idx = +inp.dataset.index;
-        function commit(){
-          const val = parseInt(inp.value,10) || 0;
-          characters[idx].initiative = val;
-          maybeSortByInitiative();
-          buildTable();
-        }
+        const commit = ()=>{
+          characters[idx].initiative = parseInt(inp.value,10) || 0;
+          maybeSortByInitiative(); buildTable();
+        };
         inp.addEventListener('keydown', e=>{
-          if (e.key === 'Enter') { e.preventDefault(); commit(); }
-          if (e.key === 'Escape') { inp.value = original; inp.blur(); }
+          if (e.key === 'Enter'){ e.preventDefault(); commit(); }
+          if (e.key === 'Escape'){ inp.value = original; inp.blur(); }
         });
-        inp.addEventListener('focus', ()=> { original = inp.value; });
+        inp.addEventListener('focus', ()=> original = inp.value);
         inp.addEventListener('blur', commit);
       });
 
-      // Notes
-      document.querySelectorAll('.notes-input').forEach(inp=>{
-        inp.addEventListener('input', function(){ characters[this.dataset.index].notes = this.value; if (autoSaveEnabled) saveState(); });
+      // Notes modal open
+      document.querySelectorAll('.notes-btn').forEach(btn=>{
+        btn.addEventListener('click', function(){
+          modalCharacterIndex = +this.dataset.index;
+          const c = characters[modalCharacterIndex];
+          $('notesModalLabel').textContent = `Notes — ${c.name}`;
+          $('notes-text').value = c.notes || '';
+          if (notesModal) {
+  notesModal.show();
+} else {
+  const modalEl = document.getElementById('notesModal');
+  const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
+  modal.show();
+}
+
+        });
       });
+      $('notes-save-btn').onclick = ()=>{
+        if (modalCharacterIndex==null) return;
+        characters[modalCharacterIndex].notes = $('notes-text').value;
+        modalCharacterIndex = null;
+        if (notesModal) {
+  notesModal.hide();
+} else {
+  const modalEl = document.getElementById('notesModal');
+  const modal = bootstrap.Modal.getInstance(modalEl);
+  modal?.hide();
+}
+
+        if (autoSaveEnabled) saveState();
+      };
 
       // Concentration toggle
       document.querySelectorAll('.conc-btn').forEach(btn=>{
@@ -568,20 +808,12 @@
         });
       });
 
-      // Mobile up/down
+      // Mobile move
       document.querySelectorAll('.move-up').forEach(btn=>{
-        btn.addEventListener('click', function(){
-          const i = +this.dataset.index; if (i<=0) return;
-          [characters[i-1], characters[i]] = [characters[i], characters[i-1]];
-          buildTable();
-        });
+        btn.addEventListener('click', function(){ const i = +this.dataset.index; if (i<=0) return; [characters[i-1], characters[i]] = [characters[i], characters[i-1]]; buildTable(); });
       });
       document.querySelectorAll('.move-down').forEach(btn=>{
-        btn.addEventListener('click', function(){
-          const i = +this.dataset.index; if (i>=characters.length-1) return;
-          [characters[i+1], characters[i]] = [characters[i], characters[i+1]];
-          buildTable();
-        });
+        btn.addEventListener('click', function(){ const i = +this.dataset.index; if (i>=characters.length-1) return; [characters[i+1], characters[i]] = [characters[i], characters[i+1]]; buildTable(); });
       });
 
       // Sortable (desktop)
@@ -601,25 +833,28 @@
     // ---------- Status Modal logic ----------
     function openStatusModal(i){
       const c = characters[i];
-      // badges
+
+      // Badges
       const badges = $('status-badges'); badges.innerHTML = '';
       c.status.forEach(s=>{
+        const rem = (typeof s.remaining==='number' && s.remaining>=0) ? ` (${s.remaining})` : '';
         const span = document.createElement('span');
-        const rem = typeof s.remaining==='number' ? ` (${s.remaining})` : '';
         span.className = 'badge bg-secondary px-2 py-1';
         span.innerHTML = `${s.icon} ${s.name}${rem}
           <i class="bi bi-x ms-1 remove-status" data-eff="${s.name}" role="button" title="Remove"></i>`;
         badges.appendChild(span);
       });
       badges.querySelectorAll('.remove-status').forEach(x=>{
-        x.addEventListener('click', function(){
-          const eff = this.dataset.eff;
-          c.status = c.status.filter(ss => ss.name !== eff);
-          openStatusModal(i); // refresh
-        });
-      });
+  x.addEventListener('click', function(){
+    const eff = this.dataset.eff;
+    c.status = c.status.filter(ss => ss.name !== eff);
+    buildTable(); // immediately update UI
+    openStatusModal(i); // refresh modal
+  });
+});
 
-      // dropdown
+
+      // Dropdown
       const list = $('status-dropdown-list'); list.innerHTML = '';
       statusEffects.forEach(effect=>{
         const has = c.status.some(s=> s.name === effect.name);
@@ -642,55 +877,43 @@
         const durVal = parseInt($('status-duration').value,10);
         const base = statusEffects.find(x=>x.name===pendingEffect) || {icon:'❓'};
         const eff = { name: pendingEffect, icon: base.icon };
-        if (!isNaN(durVal) && durVal > 0) eff.remaining = durVal;
+        if (!isNaN(durVal) && durVal >= 0) eff.remaining = durVal;
         c.status.push(eff);
         $('status-duration').value = '';
-        pendingEffect = null;
-        statusModal.hide();
+        const modalEl = document.getElementById('statusModal');
+if (!modalEl) return;
+statusModal = bootstrap.Modal.getOrCreateInstance(modalEl);
+statusModal.show();
+
+
         buildTable();
       };
 
-      statusModal.show();
+      
+      
+      const modalEl = document.getElementById('statusModal');
+if (!modalEl) {
+  console.error('Status modal element missing');
+  return;
+}
+statusModal = bootstrap.Modal.getOrCreateInstance(modalEl);
+statusModal.show();
+
     }
 
     // ---------- Round & durations ----------
     function tickStatusDurationsOnNewRound(){
       characters.forEach(c=>{
-        c.status = (c.status||[]).map(s=>{
-          if (typeof s.remaining === 'number' && s.remaining > 0){
-            return { ...s, remaining: s.remaining - 1 };
-          }
-          return s;
-        }).filter(s=> s.remaining === undefined || s.remaining > 0);
+        c.status = (c.status||[])
+          .map(s=>{
+            if (typeof s.remaining === 'number' && s.remaining > 0){
+              return {...s, remaining: s.remaining - 1};
+            }
+            return s;
+          })
+          .filter(s=> s.remaining === undefined || s.remaining > 0);
       });
     }
-
-    // ---------- Dice ----------
-    document.querySelectorAll('.dice-btn').forEach(btn=>{
-      btn.addEventListener('click', function(){
-        const sides = parseInt(this.dataset.dice,10);
-        const result = Math.floor(Math.random()*sides)+1;
-        const out = `Rolled d${sides}: ${result}`;
-        $('dice-result').textContent = `🎲 ${out}`;
-        addToHistory(out);
-      });
-    });
-    $('roll-custom-dice').addEventListener('click', function(){
-      const input = $('custom-dice-input').value.trim();
-      const m = input.toLowerCase().match(/^(\d*)d(\d+)([+-]\d+)?$/);
-      if(!m) return alert('Invalid format. Use XdY+Z (e.g., 2d6+3)');
-      const num = parseInt(m[1]||'1',10), sides = parseInt(m[2],10), mod = parseInt(m[3]||'0',10);
-      const rolls = Array.from({length:num}, ()=> Math.floor(Math.random()*sides)+1);
-      const total = rolls.reduce((a,b)=>a+b,0) + mod;
-      const modStr = mod ? (mod>0?` + ${mod}`:` - ${Math.abs(mod)}`) : '';
-      const out = `Rolled ${num}d${sides}${modStr}: [${rolls.join(', ')}] = ${total}`;
-      $('dice-result').textContent = `🎲 ${out}`;
-      addToHistory(out);
-    });
-    $('clear-dice-history').addEventListener('click', ()=>{
-      if (!confirm('Clear all dice history?')) return;
-      diceHistory = []; buildDiceHistory(); if (autoSaveEnabled) saveState();
-    });
 
     // ---------- Controls ----------
     $('initiative-form').addEventListener('submit', e=>{
@@ -699,10 +922,10 @@
       const init = parseInt($('initiative-roll').value,10);
       const maxHP = parseInt($('character-health').value,10);
       const ac = parseInt($('character-ac').value,10);
-      const notes = $('character-notes').value.trim();
+      const type = $('character-type').value;
       if(!name || isNaN(init) || isNaN(maxHP) || isNaN(ac)) return;
 
-      characters.push({ name, initiative:init, currentHP:maxHP, maxHP, notes, ac, status:[], concentration:false });
+      characters.push({ name, type, initiative:init, currentHP:maxHP, maxHP, notes:'', ac, status:[], concentration:false });
       maybeSortByInitiative();
       e.target.reset();
       buildTable();
@@ -711,7 +934,6 @@
     $('next-turn').addEventListener('click', ()=>{
       if (!characters.length) return;
       const len = characters.length;
-      let prev = currentTurn;
       let attempts = 0;
       do{
         currentTurn = (currentTurn + 1) % len;
@@ -727,11 +949,17 @@
 
     $('reset-turns').addEventListener('click', ()=>{ currentTurn=0; combatRound=1; buildTable(); });
     $('clear-all').addEventListener('click', ()=>{ characters=[]; currentTurn=0; combatRound=1; buildTable(); });
+    $('clear-storage').addEventListener('click', ()=>{
+      if (!confirm('Clear ALL local saved data (sessions, templates, notes)?')) return;
+      localStorage.clear(); characters=[]; currentTurn=0; combatRound=1;
+      buildSavedUI(); buildTable();
+      alert('All saved data cleared.');
+    });
 
     $('manualSaveBtn').addEventListener('click', ()=>{ saveState(true); alert('Manual save complete.'); });
     $('autoSaveToggle').addEventListener('change', e=>{ autoSaveEnabled = e.target.checked; });
     $('copyOrderBtn').addEventListener('click', ()=>{
-      const out = characters.map((c,i)=> `${i+1}. ${c.name} (Init ${c.initiative})`).join('\n');
+      const out = characters.map((c,i)=> `${i+1}. ${c.name} (${c.type}) — Init ${c.initiative}`).join('\n');
       if (!out) return;
       navigator.clipboard.writeText(out);
     });
@@ -739,18 +967,21 @@
     function updateSaveHistory(){
       const sel = $('saveHistorySelect');
       sel.innerHTML = '<option disabled selected>Load Previous Save</option>';
-      Object.keys(localStorage).filter(k=>k.startsWith('initiativeTrackerData_')).sort().reverse().forEach(key=>{
-        const t = key.replace('initiativeTrackerData_','');
-        const opt = document.createElement('option');
-        opt.value = key; opt.textContent = new Date(t).toLocaleString();
-        sel.appendChild(opt);
-      });
+      Object.keys(localStorage)
+        .filter(k=>k.startsWith('initiativeTrackerData_'))
+        .sort().reverse()
+        .forEach(key=>{
+          const t = key.replace('initiativeTrackerData_','');
+          const opt = document.createElement('option');
+          opt.value = key; opt.textContent = new Date(t).toLocaleString();
+          sel.appendChild(opt);
+        });
     }
     $('saveHistorySelect').addEventListener('change', function(){
       const raw = localStorage.getItem(this.value); if(!raw) return;
       try{
         const data = JSON.parse(raw);
-        characters = (data.characters||[]).map(c=>normalizeChar(c));
+        characters = (data.characters||[]).map(normalizeChar);
         currentTurn = data.currentTurn||0;
         combatRound = data.combatRound||1;
         diceHistory = Array.isArray(data.diceHistory) ? data.diceHistory : [];
@@ -758,9 +989,9 @@
       }catch(e){ alert('Failed to load that save.'); }
     });
 
-    // Export/Import
+    // Export/Import session
     $('export-btn').addEventListener('click', ()=>{
-      const blob = new Blob([JSON.stringify({characters,currentTurn,combatRound,diceHistory}, null, 2)], {type:'application/json'});
+      const blob = new Blob([JSON.stringify({characters,currentTurn,combatRound,diceHistory}, null, 2)], { type:'application/json' });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a'); a.href=url; a.download=`initiativeTracker_${new Date().toISOString()}.json`;
       document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
@@ -772,12 +1003,12 @@
       r.onload = e=>{
         try{
           const d = JSON.parse(e.target.result);
-          characters = (d.characters||[]).map(c=>normalizeChar(c));
+          characters = (d.characters||[]).map(normalizeChar);
           currentTurn = d.currentTurn||0;
           combatRound = d.combatRound||1;
           diceHistory = d.diceHistory||[];
-          buildTable(); alert('Session imported.');
-        }catch(err){ alert('Failed to import session.'); }
+          buildTable(); alert('Session imported successfully.');
+        }catch(err){ alert('Failed to import session. Invalid file.'); }
       };
       r.readAsText(f); this.value='';
     });
@@ -796,6 +1027,7 @@
     // Boot
     loadState();
     updateSaveHistory();
+    buildSavedUI();
     buildTable();
     window.addEventListener('beforeunload', ()=>{ if (autoSaveEnabled) saveState(); });
   })();
