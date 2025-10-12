@@ -61,6 +61,19 @@
       }
     }
 
+    /* --- Added: compact UI for temp HP & death saves --- */
+    .temphp-wrap { display:flex; align-items:center; gap:.25rem; }
+    .temphp-badge { font-size:.75rem; padding:.15rem .35rem; border:1px dashed rgba(255,255,255,.35); border-radius:.35rem; }
+    .temp-btns .btn { padding:.1rem .3rem; line-height:1; }
+
+    .death-saves { display:flex; align-items:center; gap:.35rem; }
+    .ds-pill { font-size:.75rem; padding:.15rem .4rem; border-radius:.5rem; }
+    .ds-pill.success { background:rgba(25,135,84,.15); border:1px solid rgba(25,135,84,.45); }
+    .ds-pill.fail { background:rgba(220,53,69,.15); border:1px solid rgba(220,53,69,.45); }
+    .ds-btns .btn { padding:.1rem .35rem; line-height:1; }
+    .ds-stable { font-size:.75rem; color:#20c997; }
+
+
     /* Faster enter "pop" */
     #rollToast.showing, #rollToast.show { animation: rollPop .24s cubic-bezier(.2,.8,.2,1); }
     @keyframes rollPop {
@@ -289,6 +302,7 @@
       <!-- Footer action buttons -->
       <div class="mt-3 d-flex gap-2 justify-content-center flex-wrap">
         <button id="next-turn" class="btn btn-outline-success">Next Turn</button>
+        <button id="undo-btn" class="btn btn-outline-secondary"><i class="bi bi-arrow-counterclockwise me-1"></i> Undo</button>
         <button id="reset-turns" class="btn btn-outline-danger">Reset Rounds</button>
         <button id="clear-all" class="btn btn-outline-light">Clear All</button>
         <button id="clear-storage" class="btn btn-outline-warning">Clear Saved Data</button>
@@ -296,6 +310,7 @@
           <i class="bi bi-journal-text me-1"></i> Session Notes
         </button>
       </div>
+
     </div>
   </main>
 
@@ -403,15 +418,38 @@
           </h2>
           <div id="helpHP" class="accordion-collapse collapse" data-bs-parent="#helpAccordion">
             <div class="accordion-body">
-              <ul class="mb-2">HP +/-</strong> to apply damage or healing, or type directly into the HP field.</li>
+              <ul class="mb-2">
+                <li>Use <strong>HP +/-</strong> to apply damage or healing, or type directly into the HP field.</li>
+                <li><strong>Temp HP</strong> (THP) appears as a badge next to HP with its own <em>±</em> buttons.
+                  Damage consumes THP first; only leftover damage reduces real HP.</li>
                 <li>Click the <strong>star</strong> <i class="bi bi-star"></i>/<i class="bi bi-star-fill text-warning"></i> to toggle <strong>Concentration</strong>.</li>
-                <li>When a concentrating creature takes damage, the tracker calculates the <strong>Constitution save DC</strong> and reminds you at the end of the round.</li>
+                <li><strong>Concentration checks</strong> only trigger when you take real HP damage (after THP absorption). The tracker totals your real HP damage across the round and reminds you at round end.</li>
+                <li><strong>Healing</strong> above 0 HP automatically resets any death saves and removes <em>Stable</em>.</li>
               </ul>
               <div class="alert alert-info text-light mb-0">
-                <strong>Concentration DC:</strong> Roll <em>d20 + CON mod</em> (+ proficiency if proficient) vs 
-                <strong>DC = max(10, ⌊damage / 2⌋)</strong>.
-                <strong>The DC uses the total damage you took that round.</strong>
+                <strong>Concentration DC:</strong> Roll <em>d20 + CON mod</em> (+ proficiency if proficient)
+                vs <strong>DC = max(10, ⌊damage this round / 2⌋)</strong>.
               </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="accordion-item bg-dark text-light border-secondary">
+          <h2 class="accordion-header">
+            <button class="accordion-button collapsed bg-dark text-light" type="button" data-bs-toggle="collapse" data-bs-target="#helpDeathSaves">
+              Death Saves
+            </button>
+          </h2>
+          <div id="helpDeathSaves" class="accordion-collapse collapse" data-bs-parent="#helpAccordion">
+            <div class="accordion-body">
+              <ul class="mb-2">
+                <li>When a creature drops to 0 HP, a <strong>Death Saves</strong> control appears:
+                  <span class="ds-pill success">S: #</span> and <span class="ds-pill fail">F: #</span>.</li>
+                <li>Use <strong>+S</strong> / <strong>+F</strong> to record successes or fails; use ↺ to reset them.</li>
+                <li>At <strong>3 successes</strong>, the creature becomes <em>Stable</em> (shown as “Stable”).</li>
+                <li><strong>Any healing</strong> that brings the creature above 0 HP clears all death saves and removes <em>Stable</em>.</li>
+              </ul>
+              <p class="small text-secondary mb-0">Rules nuance: This tracker does not auto-apply instant death from massive damage—you can adjudicate that as DM.</p>
             </div>
           </div>
         </div>
@@ -478,6 +516,7 @@
                 <li><strong>Manual Save</strong> creates a timestamped backup you can reload from <em>Load Previous Save</em>.</li>
                 <li><strong>Export</strong> downloads a JSON; <strong>Import</strong> loads a previous session.</li>
                 <li><strong>Persistence:</strong> all data saves locally in your browser (localstorage). No server required.</li>
+                <li><strong>Undo:</strong> the <em>Undo</em> button reverts the most recent change (HP, THP, notes, statuses, reorders, etc.), up to ~50 steps. Undo history isn’t kept after a page reload.</li>
               </ul>
             </div>
           </div>
@@ -495,7 +534,7 @@
                 <li>Edit initiative inline; order re-sorts unless <em>Lock Order</em> is on.</li>
                 <li>Drag rows (grab the ⋮⋮ handle on the left on Desktop) or use up/down (mobile) to reorder.</li>
                 <li><strong>Next Round</strong> advances; a full cycle increments the round and ticks durations.</li>
-                <li>While<strong> Lock Order</strong> is on editiing initiative won't resort.</li>
+                <li>While<strong> Lock Order</strong> is on editing initiative won't resort.</li>
               </ul>
             </div>
           </div>
@@ -577,21 +616,22 @@
     const $ = id => document.getElementById(id);
 
     let statusModal = null;
-let notesModal = null;
+    let notesModal = null;
+    let sortableInstance = null;
 
-function initModals() {
-  const statusEl = document.getElementById('statusModal');
-  if (statusEl) statusModal = bootstrap.Modal.getOrCreateInstance(statusEl);
-  const notesEl = document.getElementById('notesModal');
-  if (notesEl) notesModal = bootstrap.Modal.getOrCreateInstance(notesEl);
-}
+    function initModals() {
+      const statusEl = document.getElementById('statusModal');
+      if (statusEl) statusModal = bootstrap.Modal.getOrCreateInstance(statusEl);
+      const notesEl = document.getElementById('notesModal');
+      if (notesEl) notesModal = bootstrap.Modal.getOrCreateInstance(notesEl);
+    }
 
-// If DOM already ready, init immediately; else wait
-if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', initModals);
-} else {
-  initModals();
-}
+    // If DOM already ready, init immediately; else wait
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', initModals);
+    } else {
+      initModals();
+    }
 
 
     // ---------- Session notes ----------
@@ -630,6 +670,9 @@ if (document.readyState === 'loading') {
     let autoSaveEnabled = true;
     let diceHistory = [];
     let modalCharacterIndex = null; // for both status + notes
+    let undoStack = [];             // <-- Added: simple history stack
+    const UNDO_LIMIT = 50;          // cap memory
+
 
     // ---------- Persistence ----------
     function normalizeChar(c){
@@ -639,9 +682,15 @@ if (document.readyState === 'loading') {
         initiative: +c.initiative || 0,
         currentHP: +c.currentHP || 0,
         maxHP: +c.maxHP || 0,
+        tempHP: +c.tempHP || 0, // <-- Added
         ac: (c.ac ?? null),
         notes: c.notes || '',
         concentration: !!c.concentration,
+        deathSaves: {                 // <-- Added
+          s: Math.min(3, Math.max(0, +(c.deathSaves?.s ?? 0))),
+          f: Math.min(3, Math.max(0, +(c.deathSaves?.f ?? 0))),
+          stable: !!(c.deathSaves?.stable)
+        },
         status: (c.status || []).map(s => typeof s === 'string'
           ? { name:s, icon:(statusEffects.find(e=>e.name===s)?.icon||'❓') }
           : { name:s.name, icon:s.icon||(statusEffects.find(e=>e.name===s.name)?.icon||'❓'), remaining:(typeof s.remaining==='number'?s.remaining:undefined) })
@@ -665,6 +714,25 @@ if (document.readyState === 'loading') {
       }catch(e){ console.warn('Load failed', e); }
     }
 
+    // ---------- Undo ----------
+    function snapshot() {
+      // Deep copy core game state
+      return JSON.parse(JSON.stringify({ characters, currentTurn, combatRound }));
+    }
+    function pushHistory(label='') {
+      undoStack.push({ state: snapshot(), label, ts: Date.now() });
+      if (undoStack.length > UNDO_LIMIT) undoStack.shift();
+    }
+    function undoLast() {
+      const last = undoStack.pop();
+      if (!last) return;
+      const { state } = last;
+      characters = (state.characters || []).map(normalizeChar);
+      currentTurn = state.currentTurn ?? 0;
+      combatRound = state.combatRound ?? 1;
+      buildTable();
+    }
+    
     // ---------- Saved character templates ----------
     const TKEY='savedCharacters';
     function getSaved(){ try{ return JSON.parse(localStorage.getItem(TKEY)||'[]'); }catch{ return []; } }
@@ -858,7 +926,7 @@ if (document.readyState === 'loading') {
     const t = new bootstrap.Toast(toastEl, { autohide: true, delay: 900 });
     t.show();
   }
-  
+
 
   // Quick buttons now use the expression roller too
   document.querySelectorAll('.dice-btn').forEach(btn=>{
@@ -971,15 +1039,37 @@ if (document.readyState === 'loading') {
                 <button class="btn btn-outline-light hit-btn" data-delta="1" data-index="${i}">+1</button>
                 <button class="btn btn-outline-light hit-btn" data-delta="5" data-index="${i}">+5</button>
               </div>
+              <div class="tempHP ms-2 temphp-wrap">
+                <span class="temphp-badge">THP: <span class="temphp-val">${c.tempHP||0}</span></span>
+                <div class="btn-group btn-group-sm temp-btns" role="group">
+                  <button class="btn btn-outline-info temphp-btn" data-index="${i}" data-delta="-1">-1</button>
+                  <button class="btn btn-outline-info temphp-btn" data-index="${i}" data-delta="1">+1</button>
+                </div>
+              </div>
             </div>
           </td>
+
           <td>
-            <div class="d-flex align-items-center justify-content-between">
-              <div class="status-icon-row" data-bs-toggle="tooltip" data-bs-placement="top" title="${statusTooltipText(c)}">
-                ${c.status.map(s=>{
-                  const rem = (typeof s.remaining==='number') ? ` data-remaining="${s.remaining}"` : '';
-                  return `<span class="status-chip"${rem} title="${s.name}">${s.icon}</span>`;
-                }).join('') || '<span class="text-secondary" style="opacity:.6;">—</span>'}
+            <div class="d-flex align-items-center justify-content-between w-100">
+              <div class="d-flex align-items-center gap-2">
+                <div class="status-icon-row" data-bs-toggle="tooltip" data-bs-placement="top" title="${statusTooltipText(c)}">
+                  ${c.status.map(s=>{
+                    const rem = (typeof s.remaining==='number') ? ` data-remaining="${s.remaining}"` : '';
+                    return `<span class="status-chip"${rem} title="${s.name}">${s.icon}</span>`;
+                  }).join('') || '<span class="text-secondary" style="opacity:.6;">—</span>'}
+                </div>
+                ${c.currentHP<=0 ? `
+                  <div class="death-saves" title="Death Saves">
+                    ${c.deathSaves.stable ? `<span class="ds-stable">Stable</span>` : `
+                      <span class="ds-pill success">S: ${c.deathSaves.s}</span>
+                      <span class="ds-pill fail">F: ${c.deathSaves.f}</span>
+                      <div class="btn-group btn-group-sm ds-btns" role="group">
+                        <button class="btn btn-outline-success ds-add" data-index="${i}" data-kind="s">+S</button>
+                        <button class="btn btn-outline-danger ds-add" data-index="${i}" data-kind="f">+F</button>
+                        <button class="btn btn-outline-secondary ds-reset" data-index="${i}" title="Reset">↺</button>
+                      </div>
+                    `}
+                  </div>` : ``}
               </div>
               <div class="notes-actions">
                 <button class="btn btn-sm btn-outline-light notes-btn" data-index="${i}" title="Notes"><i class="bi bi-journal-text"></i></button>
@@ -990,6 +1080,7 @@ if (document.readyState === 'loading') {
               </div>
             </div>
           </td>
+
           <td class="d-flex gap-1">
             <button class="btn btn-sm btn-outline-success duplicate-btn" data-index="${i}" title="Duplicate"><i class="bi bi-files"></i></button>
             <button class="btn btn-sm btn-outline-danger delete-btn" data-index="${i}" title="Delete"><i class="bi bi-trash"></i></button>
@@ -1043,8 +1134,8 @@ if (document.readyState === 'loading') {
 
       // Tooltips
       document.querySelectorAll('[data-bs-toggle="tooltip"]').forEach(el => {
-  bootstrap.Tooltip.getOrCreateInstance(el, { trigger: 'hover', html: false });
-});
+      bootstrap.Tooltip.getOrCreateInstance(el, { trigger: 'hover', html: false });
+      });
 
 
       // HP adjust
@@ -1053,28 +1144,96 @@ if (document.readyState === 'loading') {
           const idx = +this.dataset.index;
           const delta = +this.dataset.delta;
           const c = characters[idx];
-          const oldHP = c.currentHP;
-          c.currentHP = Math.max(0, Math.min(c.maxHP, (c.currentHP|0) + delta));
         
-          // Track damage taken this round
+          pushHistory(`HP ${delta>=0?'+':''}${delta} for ${c.name}`);
+        
           if (delta < 0) {
-            const dmg = Math.abs(Math.min(0, c.currentHP - oldHP));
-            c.damageTakenThisRound = (c.damageTakenThisRound || 0) + dmg;     
+            // Damage: consume temp HP first
+            let dmg = -delta;
+            const usedThp = Math.min(c.tempHP || 0, dmg);
+            c.tempHP = (c.tempHP || 0) - usedThp;
+            dmg -= usedThp;
+            if (dmg > 0) {
+              const oldHP = c.currentHP;
+              c.currentHP = Math.max(0, Math.min(c.maxHP, c.currentHP - dmg));
+              const taken = Math.max(0, oldHP - c.currentHP);
+              c.damageTakenThisRound = (c.damageTakenThisRound || 0) + taken;
+            }
+          } else {
+            // Healing
+            const oldHP = c.currentHP;
+            c.currentHP = Math.max(0, Math.min(c.maxHP, c.currentHP + delta));
+            // Any healing resets death saves & stable
+            if (c.currentHP > 0) c.deathSaves = { s:0, f:0, stable:false };
           }
-        
           buildTable();
         });
       });
 
-      document.querySelectorAll('.health-input').forEach(inp=>{
-        inp.addEventListener('input', function(){
+      document.querySelectorAll('.temphp-btn').forEach(btn=>{
+        btn.addEventListener('click', function(){
           const idx = +this.dataset.index;
-          const newHP = parseInt(this.value, 10) || 0;
+          const d  = +this.dataset.delta;
+          const c  = characters[idx];
+          pushHistory(`TempHP ${d>=0?'+':''}${d} for ${c.name}`);
+          c.tempHP = Math.max(0, (c.tempHP||0) + d);
+          buildTable();
+        });
+      });
+
+      function updateDeathState(c) {
+        // cap and derive "stable" at 3 successes, no auto-death to keep it GM-controlled
+        c.deathSaves.s = Math.min(3, Math.max(0, c.deathSaves.s|0));
+        c.deathSaves.f = Math.min(3, Math.max(0, c.deathSaves.f|0));
+        if (c.deathSaves.s >= 3) { c.deathSaves.stable = true; }
+      }
+
+      document.querySelectorAll('.ds-add').forEach(btn=>{
+        btn.addEventListener('click', function(){
+          const idx = +this.dataset.index;
+          const kind = this.dataset.kind; // 's' or 'f'
+          const c = characters[idx];
+          if (c.currentHP > 0) return; // no DS above 0 HP
+          pushHistory(`Death Save +${kind.toUpperCase()} for ${c.name}`);
+          if (kind === 's') c.deathSaves.s = Math.min(3, (c.deathSaves.s||0) + 1);
+          else c.deathSaves.f = Math.min(3, (c.deathSaves.f||0) + 1);
+          updateDeathState(c);
+          buildTable();
+        });
+      });
+      document.querySelectorAll('.ds-reset').forEach(btn=>{
+        btn.addEventListener('click', function(){
+          const idx = +this.dataset.index;
+          const c = characters[idx];
+          pushHistory(`Death Saves reset for ${c.name}`);
+          c.deathSaves = { s:0, f:0, stable:false };
+          buildTable();
+        });
+      });
+
+
+      document.querySelectorAll('.health-input').forEach(inp=>{
+        let pushed = false;
+        inp.addEventListener('focus', function(){
+          pushed = false;
+          this.dataset._orig = this.value;
+        });
+        inp.addEventListener('blur', function(){
+          const idx = +this.dataset.index;
+          const newHP = Math.max(0, Math.min(characters[idx].maxHP, parseInt(this.value, 10) || 0));
           const oldHP = characters[idx].currentHP;
+          if (!pushed && newHP !== oldHP) pushHistory(`HP set for ${characters[idx].name}`);
           if (newHP < oldHP) {
             characters[idx].damageTakenThisRound = (characters[idx].damageTakenThisRound || 0) + (oldHP - newHP);
+          } else if (newHP > 0) {
+            // Healing resets DS
+            characters[idx].deathSaves = { s:0, f:0, stable:false };
           }
           characters[idx].currentHP = newHP;
+          buildTable();
+        });
+        inp.addEventListener('input', function(){
+          // live typing: do nothing heavy; final commit happens on blur
         });
       });
 
@@ -1083,8 +1242,13 @@ if (document.readyState === 'loading') {
         let original = inp.value;
         const idx = +inp.dataset.index;
         const commit = ()=>{
-          characters[idx].initiative = parseInt(inp.value,10) || 0;
-          maybeSortByInitiative(); buildTable();
+          const newVal = parseInt(inp.value,10) || 0;
+          if (characters[idx].initiative !== newVal) {
+            pushHistory(`Set initiative for ${characters[idx].name}`);
+            characters[idx].initiative = newVal;        // <-- set it
+            maybeSortByInitiative();
+            buildTable();
+          }
         };
         inp.addEventListener('keydown', e=>{
           if (e.key === 'Enter'){ e.preventDefault(); commit(); }
@@ -1102,26 +1266,26 @@ if (document.readyState === 'loading') {
           $('notesModalLabel').textContent = `Notes — ${c.name}`;
           $('notes-text').value = c.notes || '';
           if (notesModal) {
-  notesModal.show();
-} else {
-  const modalEl = document.getElementById('notesModal');
-  const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
-  modal.show();
-}
+            notesModal.show();
+          } else {
+            const modalEl = document.getElementById('notesModal');
+            const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
+            modal.show();
+          }
 
-        });
-      });
-      $('notes-save-btn').onclick = ()=>{
-        if (modalCharacterIndex==null) return;
-        characters[modalCharacterIndex].notes = $('notes-text').value;
-        modalCharacterIndex = null;
-        if (notesModal) {
-  notesModal.hide();
-} else {
-  const modalEl = document.getElementById('notesModal');
-  const modal = bootstrap.Modal.getInstance(modalEl);
-  modal?.hide();
-}
+                  });
+                });
+                $('notes-save-btn').onclick = ()=>{
+                  if (modalCharacterIndex==null) return;
+                  characters[modalCharacterIndex].notes = $('notes-text').value;
+                  modalCharacterIndex = null;
+                  if (notesModal) {
+            notesModal.hide();
+          } else {
+            const modalEl = document.getElementById('notesModal');
+            const modal = bootstrap.Modal.getInstance(modalEl);
+            modal?.hide();
+          }
 
         if (autoSaveEnabled) saveState();
       };
@@ -1130,6 +1294,7 @@ if (document.readyState === 'loading') {
       document.querySelectorAll('.conc-btn').forEach(btn=>{
         btn.addEventListener('click', function(){
           const idx = +this.dataset.index;
+          pushHistory(`Toggle Concentration for ${characters[idx].name}`);
           characters[idx].concentration = !characters[idx].concentration;
           buildTable();
         });
@@ -1147,6 +1312,7 @@ if (document.readyState === 'loading') {
       document.querySelectorAll('.duplicate-btn').forEach(btn=>{
         btn.addEventListener('click', function(){
           const idx = +this.dataset.index;
+          pushHistory(`Duplicate ${characters[idx].name}`);
           const copy = JSON.parse(JSON.stringify(characters[idx]));
           copy.name += ' (copy)';
           characters.splice(idx+1, 0, copy);
@@ -1156,30 +1322,51 @@ if (document.readyState === 'loading') {
       document.querySelectorAll('.delete-btn').forEach(btn=>{
         btn.addEventListener('click', function(){
           const idx = +this.dataset.index;
+          pushHistory(`Delete ${characters[idx].name}`);
           characters.splice(idx,1);
           if (currentTurn >= characters.length) currentTurn = 0;
           if (!characters.length) combatRound = 1;
           buildTable();
         });
       });
-
+      
       // Mobile move
       document.querySelectorAll('.move-up').forEach(btn=>{
-        btn.addEventListener('click', function(){ const i = +this.dataset.index; if (i<=0) return; [characters[i-1], characters[i]] = [characters[i], characters[i-1]]; buildTable(); });
+        btn.addEventListener('click', function(){
+          const i = +this.dataset.index; if (i<=0) return;
+          pushHistory('Reorder (up)');
+          [characters[i-1], characters[i]] = [characters[i], characters[i-1]];
+          buildTable();
+        });
       });
       document.querySelectorAll('.move-down').forEach(btn=>{
-        btn.addEventListener('click', function(){ const i = +this.dataset.index; if (i>=characters.length-1) return; [characters[i+1], characters[i]] = [characters[i], characters[i+1]]; buildTable(); });
-      });
-
-      // Sortable (desktop)
-      new Sortable($('initiative-order'), {
-        handle: '.drag-handle', animation: 150,
-        onEnd: function(evt){
-          const [moved] = characters.splice(evt.oldIndex,1);
-          characters.splice(evt.newIndex,0,moved);
+        btn.addEventListener('click', function(){
+          const i = +this.dataset.index; if (i>=characters.length-1) return;
+          pushHistory('Reorder (down)');
+          [characters[i+1], characters[i]] = [characters[i], characters[i+1]];
           buildTable();
-        }
+        });
       });
+      
+      // Sortable (desktop) — init once, reuse
+      if (!sortableInstance) {
+        const tbodyEl = $('initiative-order');
+        if (tbodyEl) {
+          sortableInstance = new Sortable(tbodyEl, {
+            handle: '.drag-handle',
+            animation: 150,
+            onEnd: function(evt){
+              pushHistory('Reorder (drag)');
+              const [moved] = characters.splice(evt.oldIndex,1);
+              characters.splice(evt.newIndex,0,moved);
+              buildTable();
+            }
+          });
+        }
+      } else {
+        // keep disabled state in sync with "Lock Order"
+        sortableInstance.option('disabled', $('lockOrderToggle')?.checked === true);
+      }
 
       buildDiceHistory();
       if (autoSaveEnabled) saveState();
@@ -1209,9 +1396,10 @@ if (document.readyState === 'loading') {
       badges.querySelectorAll('.remove-status').forEach(x=>{
       x.addEventListener('click', function(){
         const eff = this.dataset.eff;
+        pushHistory(`Remove ${eff} from ${c.name}`);
         c.status = c.status.filter(ss => ss.name !== eff);
-        buildTable(); // immediately update UI
-        openStatusModal(i); // refresh modal
+        buildTable();
+        openStatusModal(i);
       });
     });
 
@@ -1240,13 +1428,13 @@ if (document.readyState === 'loading') {
         const base = statusEffects.find(x=>x.name===pendingEffect) || {icon:'❓'};
         const eff = { name: pendingEffect, icon: base.icon };
         if (!isNaN(durVal) && durVal >= 0) eff.remaining = durVal;
+
+        pushHistory(`Add ${pendingEffect} to ${c.name}`);
         c.status.push(eff);
         $('status-duration').value = '';
-        const modalEl = document.getElementById('statusModal');
-if (!modalEl) return;
-statusModal = bootstrap.Modal.getOrCreateInstance(modalEl);
-statusModal.show();
-
+        // keep modal open
+        statusModal = bootstrap.Modal.getOrCreateInstance(document.getElementById('statusModal'));
+        statusModal.show();
 
         buildTable();
       };
@@ -1307,7 +1495,13 @@ statusModal.show();
       const type = $('character-type').value;
       if(!name || isNaN(init) || isNaN(maxHP) || isNaN(ac)) return;
 
-      characters.push({name, type, initiative:init, currentHP:maxHP, maxHP, notes:'', ac, status:[], concentration:false, damageTakenThisRound: 0});
+      characters.push({
+        name, type, initiative:init,
+        currentHP:maxHP, maxHP, tempHP:0,
+        notes:'', ac, status:[], concentration:false,
+        deathSaves:{ s:0, f:0, stable:false },
+        damageTakenThisRound: 0
+      });
       maybeSortByInitiative();
       e.target.reset();
       buildTable();
@@ -1340,8 +1534,12 @@ statusModal.show();
       alert('All saved data cleared.');
     });
 
+    $('undo-btn').addEventListener('click', undoLast);
     $('manualSaveBtn').addEventListener('click', ()=>{ saveState(true); alert('Manual save complete.'); });
     $('autoSaveToggle').addEventListener('change', e=>{ autoSaveEnabled = e.target.checked; });
+    $('lockOrderToggle').addEventListener('change', e=>{
+      if (sortableInstance) sortableInstance.option('disabled', e.target.checked);
+    });
     $('copyOrderBtn').addEventListener('click', ()=>{
       const out = characters.map((c,i)=> `${i+1}. ${c.name} (${c.type}) — Init ${c.initiative}`).join('\n');
       if (!out) return;
