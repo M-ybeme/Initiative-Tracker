@@ -423,7 +423,7 @@
                 <li><strong>Temp HP</strong> (THP) appears as a badge next to HP with its own <em>±</em> buttons.
                   Damage consumes THP first; only leftover damage reduces real HP.</li>
                 <li>Click the <strong>star</strong> <i class="bi bi-star"></i>/<i class="bi bi-star-fill text-warning"></i> to toggle <strong>Concentration</strong>.</li>
-                <li><strong>Concentration checks</strong> only trigger when you take real HP damage (after THP absorption). The tracker totals your real HP damage across the round and reminds you at round end.</li>
+                <li><strong>Concentration checks</strong> trigger when you take real HP damage (after THP absorption). The tracker totals your real HP damage during a creature’s turn and prompts you at the end of that turn.</li>
                 <li><strong>Healing</strong> above 0 HP automatically resets any death saves and removes <em>Stable</em>.</li>
               </ul>
               <div class="alert alert-info text-light mb-0">
@@ -606,6 +606,23 @@
     <div class="toast-body fs-3 fw-bold text-center"></div>
   </div>
 
+  <div id="concToast"
+       class="toast position-fixed bottom-0 start-50 translate-middle-x"
+       role="dialog" aria-live="assertive" aria-atomic="true"
+       data-bs-autohide="false" style="z-index:1080; min-width: 320px;">
+    <div class="toast-header bg-warning text-dark">
+      <strong class="me-auto">Concentration Check</strong>
+      <small class="text-muted" id="concToastName"></small>
+      <button type="button" class="btn-close ms-2" data-bs-dismiss="toast" aria-label="Close"></button>
+    </div>
+    <div class="toast-body">
+      <div id="concToastMsg" class="mb-2"></div>
+      <div class="d-flex gap-2 justify-content-end">
+        <button id="concPassBtn" class="btn btn-outline-success btn-sm">Pass</button>
+        <button id="concFailBtn" class="btn btn-outline-danger btn-sm">Fail</button>
+      </div>
+    </div>
+  </div>
 
   <!-- JS -->
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" crossorigin="anonymous"></script>
@@ -618,6 +635,9 @@
     let statusModal = null;
     let notesModal = null;
     let sortableInstance = null;
+    let concQueue = [];
+    let concToast = null;
+    let concPromptActive = false;
 
     function initModals() {
       const statusEl = document.getElementById('statusModal');
@@ -625,6 +645,9 @@
       const notesEl = document.getElementById('notesModal');
       if (notesEl) notesModal = bootstrap.Modal.getOrCreateInstance(notesEl);
     }
+
+    const concToastEl = document.getElementById('concToast');
+    if (concToastEl) concToast = bootstrap.Toast.getOrCreateInstance(concToastEl, { autohide: false });
 
     // If DOM already ready, init immediately; else wait
     if (document.readyState === 'loading') {
@@ -1006,6 +1029,56 @@
       return parts.join('\n');
     }
 
+    function enqueueConcentrationPrompt(idx, dmg, dc) {
+      concQueue.push({ idx, dmg, dc });
+      if (!concPromptActive) drainConcentrationQueue();
+    }
+
+    function drainConcentrationQueue() {
+      if (!concQueue.length) { concPromptActive = false; return; }
+      concPromptActive = true;
+    
+      const item = concQueue.shift();
+      const c = characters[item.idx];
+      if (!c) return drainConcentrationQueue(); // character deleted
+    
+      // Fill toast contents
+      document.getElementById('concToastName').textContent = c.name;
+      document.getElementById('concToastMsg').innerHTML =
+        `Took <strong>${item.dmg}</strong> damage this turn. DC = <strong>${item.dc}</strong> (max(10, ⌊damage/2⌋)).`;
+    
+      // Stash the index on buttons for handlers
+      const passBtn = document.getElementById('concPassBtn');
+      const failBtn = document.getElementById('concFailBtn');
+      passBtn.dataset.idx = String(item.idx);
+      failBtn.dataset.idx = String(item.idx);
+    
+      // Show toast
+      concToast.show();
+    }
+
+    // Button handlers (bind once)
+    document.getElementById('concPassBtn')?.addEventListener('click', (e) => {
+      const idx = +e.currentTarget.dataset.idx;
+      const c = characters[idx];
+      if (c) c.concDamagePending = 0;
+      concToast.hide();
+      // allow Bootstrap fade-out then continue
+      setTimeout(() => { drainConcentrationQueue(); }, 120);
+    });
+
+    document.getElementById('concFailBtn')?.addEventListener('click', (e) => {
+      const idx = +e.currentTarget.dataset.idx;
+      const c = characters[idx];
+      if (c) {
+        c.concDamagePending = 0;
+        c.concentration = false;     // auto-break
+      }
+      buildTable();                  // reflect star-off immediately
+      concToast.hide();
+      setTimeout(() => { drainConcentrationQueue(); }, 120);
+    });
+
     // ---------- Build UI ----------
     function buildTable(){
       $('combat-round').textContent = combatRound;
@@ -1157,7 +1230,7 @@
               const oldHP = c.currentHP;
               c.currentHP = Math.max(0, Math.min(c.maxHP, c.currentHP - dmg));
               const taken = Math.max(0, oldHP - c.currentHP);
-              c.damageTakenThisRound = (c.damageTakenThisRound || 0) + taken;
+              c.concDamagePending = (c.concDamagePending || 0) + taken;
             }
           } else {
             // Healing
@@ -1224,7 +1297,7 @@
           const oldHP = characters[idx].currentHP;
           if (!pushed && newHP !== oldHP) pushHistory(`HP set for ${characters[idx].name}`);
           if (newHP < oldHP) {
-            characters[idx].damageTakenThisRound = (characters[idx].damageTakenThisRound || 0) + (oldHP - newHP);
+            characters[idx].concDamagePending = (characters[idx].concDamagePending || 0) + (oldHP - newHP);
           } else if (newHP > 0) {
             // Healing resets DS
             characters[idx].deathSaves = { s:0, f:0, stable:false };
@@ -1465,25 +1538,17 @@ statusModal.show();
       });
     }
 
-    function handleEndOfRoundConcentration() {
-     characters.forEach(c => {
-      if (c.concentration && c.damageTakenThisRound > 0) {
-        const damage = c.damageTakenThisRound;
-        const dc = Math.max(10, Math.floor(damage / 2));
-        alert(`${c.name} took ${damage} damage this round.
-        Concentration Check Required:
-        Roll a d20 + Constitution modifier (+ proficiency if proficient)
-        vs DC ${dc}.
-        \nDC = max(10, half of ${damage})`);
-
-              // Reset damage counter each round
-              c.damageTakenThisRound = 0;
-            } else {
-              c.damageTakenThisRound = 0;
-            }
+    function handleEndOfTurnConcentration() {
+      // Enqueue a toast for every concentrating creature that took real HP damage this turn.
+      characters.forEach((c, idx) => {
+        const dmg = c.concDamagePending || 0;
+        if (c.concentration && dmg > 0) {
+          const dc = Math.max(10, Math.floor(dmg / 2));
+          enqueueConcentrationPrompt(idx, dmg, dc);
+          // IMPORTANT: do NOT zero-out here; we clear on Pass/Fail to avoid losing prompts.
+        }
       });
     }
-
 
     // ---------- Controls ----------
     $('initiative-form').addEventListener('submit', e=>{
@@ -1500,7 +1565,7 @@ statusModal.show();
         currentHP:maxHP, maxHP, tempHP:0,
         notes:'', ac, status:[], concentration:false,
         deathSaves:{ s:0, f:0, stable:false },
-        damageTakenThisRound: 0
+        concDamagePending: 0
       });
       maybeSortByInitiative();
       e.target.reset();
@@ -1510,13 +1575,13 @@ statusModal.show();
     $('next-turn').addEventListener('click', ()=>{
       if (!characters.length) return;
       const len = characters.length;
+      handleEndOfTurnConcentration();
       let attempts = 0;
       do{
         currentTurn = (currentTurn + 1) % len;
         if (currentTurn === 0) {
         combatRound++;
         tickStatusDurationsOnNewRound();
-        handleEndOfRoundConcentration();
       }
 
         attempts++;
