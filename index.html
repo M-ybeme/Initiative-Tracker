@@ -20,6 +20,10 @@
     .active-turn{ border-left:5px solid #1d9e6d !important; color:#f8f9fa !important; font-weight:bold; }
     #saveHistorySelect{ min-width:200px; }
 
+    /* Give help button a subtle glow on dark theme */
+    #helpBtn { box-shadow: 0 0 0.25rem rgba(13,202,240,.65); }
+    #helpBtn:hover { box-shadow: 0 0 0.6rem rgba(13,202,240,.85); }
+
     /* Compact status icon row */
     .status-icon-row{ display:flex; flex-wrap:wrap; gap:.3rem; align-items:center; }
     .status-chip{ font-size:1.05rem; line-height:1; user-select:none; }
@@ -39,6 +43,39 @@
       .btn,.form-control{ padding:.6rem .8rem; font-size:1rem; }
       .table td,.table th{ padding:.6rem .5rem; }
     }
+
+    /* Controls: tidy, evenly spaced layout */
+    .controls-grid{
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: .5rem .75rem;
+      align-items: center;
+    }
+    .controls-grid .form-check { /* switches don't need full width */
+      justify-self: start;
+    }
+    @media (min-width: 1200px){
+      /* on xl+ keep it nice and wide but balanced */
+      .controls-grid{
+        grid-template-columns: repeat(6, 1fr);
+      }
+    }
+
+    /* Faster enter "pop" */
+    #rollToast.showing, #rollToast.show { animation: rollPop .24s cubic-bezier(.2,.8,.2,1); }
+    @keyframes rollPop {
+      0%   { transform: translate(-50%,-50%) scale(.88); opacity:.15; }
+      100% { transform: translate(-50%,-50%) scale(1);   opacity:1; }
+    }
+
+    /* Faster fade-out (Bootstrap uses .fade) */
+    .toast.fade { transition-duration: .14s; }
+
+    /* Respect reduced motion */
+    @media (prefers-reduced-motion: reduce) {
+      #rollToast.showing, #rollToast.show { animation: none; }
+      .toast.fade { transition-duration: 0s; }
+    }
   </style>
 </head>
 <body class="bgimage">
@@ -51,7 +88,7 @@
       </a>
       <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarSupportedContent"
         aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
-        <span class="navbar-toggler-icon"><i class="bi bi-list"></i></span>
+        <span class="navbar-toggler-icon"></i></span>
       </button>
       <div class="collapse navbar-collapse" id="navbarSupportedContent">
         <ul class="navbar-nav me-auto mb-2 mb-lg-0">
@@ -74,28 +111,39 @@
 
       <!-- Controls row -->
       <div class="row g-3 align-items-center justify-content-center my-2">
-        <div class="col-12 col-xl-7 d-flex flex-wrap gap-2 justify-content-center">
-          <div class="form-check form-switch">
-            <input class="form-check-input" type="checkbox" id="autoSaveToggle" checked>
-            <label class="form-check-label" for="autoSaveToggle">Auto-Save</label>
+        <div class="col-12 col-xl-7">
+          <div class="controls-grid">
+            <div class="form-check form-switch">
+              <input class="form-check-input" type="checkbox" id="autoSaveToggle" checked>
+              <label class="form-check-label" for="autoSaveToggle">Auto-Save</label>
+            </div>
+          
+            <div class="form-check form-switch">
+              <input class="form-check-input" type="checkbox" id="lockOrderToggle">
+              <label class="form-check-label" for="lockOrderToggle">Lock Order</label>
+            </div>
+          
+            <button id="manualSaveBtn" class="btn btn-outline-success w-100">Manual Save</button>
+            <button id="copyOrderBtn" class="btn btn-outline-light w-100">Copy Turn Order</button>
+          
+            <select id="saveHistorySelect" class="form-select w-100">
+              <option disabled selected>Load Previous Save</option>
+            </select>
+          
+            <div class="d-none">
+              <input type="file" id="import-file" accept=".json" />
+            </div>
+          
+            <button id="export-btn" class="btn btn-outline-warning w-100">Export Session</button>
+            <button id="import-btn" class="btn btn-outline-secondary w-100">Import Session</button>
+          
+            <button id="helpBtn" class="btn btn-info text-dark w-100" type="button"
+                    data-bs-toggle="offcanvas" data-bs-target="#helpCanvas" aria-controls="helpCanvas">
+              <i class="bi bi-question-circle me-1"></i> Help
+            </button>
           </div>
-
-          <div class="form-check form-switch">
-            <input class="form-check-input" type="checkbox" id="lockOrderToggle">
-            <label class="form-check-label" for="lockOrderToggle">Lock Order</label>
-          </div>
-
-          <button id="manualSaveBtn" class="btn btn-outline-success">Manual Save</button>
-          <button id="copyOrderBtn" class="btn btn-outline-light">Copy Turn Order</button>
-
-          <select id="saveHistorySelect" class="form-select form-select-sm w-auto">
-            <option disabled selected>Load Previous Save</option>
-          </select>
-
-          <input type="file" id="import-file" accept=".json" class="d-none" />
-          <button id="export-btn" class="btn btn-outline-warning">Export Session</button>
-          <button id="import-btn" class="btn btn-outline-secondary">Import Session</button>
         </div>
+
 
         <!-- Saved Characters (templates) -->
         <div class="col-12 col-xl-5">
@@ -188,12 +236,19 @@
           <button class="btn btn-outline-info dice-btn" data-dice="12">Roll d12</button>
           <button class="btn btn-outline-info dice-btn" data-dice="20">Roll d20</button>
           <button class="btn btn-outline-info dice-btn" data-dice="100">Roll d100</button>
+          <button class="btn btn-outline-info" id="roll-adv">Adv (d20)</button>
+          <button class="btn btn-outline-info" id="roll-dis">Dis (d20)</button>
         </div>
         <div class="mt-3">
           <label for="custom-dice-input" class="form-label">Custom Roll:</label>
           <div class="input-group w-auto mx-auto">
-            <input id="custom-dice-input" type="text" class="form-control form-control-sm" placeholder="e.g. 2d6+3">
+            <input id="custom-dice-input" type="text" class="form-control form-control-sm"
+             placeholder="e.g. 2d6+1d4+3, 4d6kh3, adv" aria-label="Custom dice expression">
             <button id="roll-custom-dice" class="btn btn-outline-warning btn-sm">Roll</button>
+          </div>
+          <div class="form-text text-secondary">
+            Supports multi-terms, +/−, keep high/low (kh/kl), and adv/dis.
+            Examples: <code>2d6+1d4+3</code>, <code>4d6kh3</code>, <code>2d20kl1</code>, <code>adv</code>
           </div>
         </div>
         <div class="text-light mt-2" id="dice-result" style="font-size: 1.25rem;"></div>
@@ -306,6 +361,184 @@
     </div>
   </div>
 
+    <!-- Help Offcanvas -->
+  <div class="offcanvas offcanvas-start text-bg-dark" tabindex="-1" id="helpCanvas" aria-labelledby="helpCanvasLabel">
+    <div class="offcanvas-header">
+      <h5 id="helpCanvasLabel" class="mb-0"><i class="bi bi-magic me-2"></i>How to Use</h5>
+      <button type="button" class="btn-close btn-close-white" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+    </div>
+
+    <div class="offcanvas-body">
+      <!-- Alert-Info header (matches help color on other pages) -->
+      <div class="alert alert-info text-light">
+        <strong>Quick Start:</strong> Add characters, set initiative, and click <em>Next Turn</em>. 
+        Use the HP +/- to track damage or healing. Click the <i class="bi bi-star-fill"></i> to toggle Concentration.
+      </div>
+
+      <!-- Help Accordion -->
+      <div class="accordion" id="helpAccordion">
+
+        <div class="accordion-item bg-dark text-light border-secondary">
+          <h2 class="accordion-header">
+            <button class="accordion-button collapsed bg-dark text-light" type="button" data-bs-toggle="collapse" data-bs-target="#helpGettingStarted">
+              Getting Started
+            </button>
+          </h2>
+          <div id="helpGettingStarted" class="accordion-collapse collapse" data-bs-parent="#helpAccordion">
+            <div class="accordion-body">
+              <ol class="mb-0">
+                <li>Fill in <strong>Character Name</strong>, <strong>Initiative</strong>, <strong>Max HP</strong>, and <strong>AC</strong>, then click <em>Add</em>.</li>
+                <li>Repeat for each combatant. The list sorts by initiative unless <em>Lock Order</em> is enabled.</li>
+                <li>Press <strong>Next Turn</strong> to advance through the order; after everyone acts, the <em>Combat Round</em> increases.</li>
+              </ol>
+            </div>
+          </div>
+        </div>
+
+        <div class="accordion-item bg-dark text-light border-secondary">
+          <h2 class="accordion-header">
+            <button class="accordion-button collapsed bg-dark text-light" type="button" data-bs-toggle="collapse" data-bs-target="#helpHP">
+              Health, Damage, & Concentration
+            </button>
+          </h2>
+          <div id="helpHP" class="accordion-collapse collapse" data-bs-parent="#helpAccordion">
+            <div class="accordion-body">
+              <ul class="mb-2">HP +/-</strong> to apply damage or healing, or type directly into the HP field.</li>
+                <li>Click the <strong>star</strong> <i class="bi bi-star"></i>/<i class="bi bi-star-fill text-warning"></i> to toggle <strong>Concentration</strong>.</li>
+                <li>When a concentrating creature takes damage, the tracker calculates the <strong>Constitution save DC</strong> and reminds you at the end of the round.</li>
+              </ul>
+              <div class="alert alert-info text-light mb-0">
+                <strong>Concentration DC:</strong> Roll <em>d20 + CON mod</em> (+ proficiency if proficient) vs 
+                <strong>DC = max(10, ⌊damage / 2⌋)</strong>.
+                <strong>The DC uses the total damage you took that round.</strong>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="accordion-item bg-dark text-light border-secondary">
+          <h2 class="accordion-header">
+            <button class="accordion-button collapsed bg-dark text-light" type="button" data-bs-toggle="collapse" data-bs-target="#helpStatuses">
+              Status Effects & Notes
+            </button>
+          </h2>
+          <div id="helpStatuses" class="accordion-collapse collapse" data-bs-parent="#helpAccordion">
+            <div class="accordion-body">
+              <ul class="mb-0">
+                <li>Click the <strong>smiley</strong> <i class="bi bi-emoji-smile"></i> to add/remove conditions (e.g., Prone, Poisoned).</li>
+                <li>Optionally set a <strong>duration (rounds)</strong>; durations tick down automatically at the start of each new round.</li>
+                <li>Click <strong>Notes</strong> <i class="bi bi-journal-text"></i> to store character-specific reminders.</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+
+        <div class="accordion-item bg-dark text-light border-secondary">
+          <h2 class="accordion-header">
+            <button class="accordion-button collapsed bg-dark text-light" type="button" data-bs-toggle="collapse" data-bs-target="#helpDice">
+              Dice Roller
+            </button>
+          </h2>
+          <div id="helpDice" class="accordion-collapse collapse" data-bs-parent="#helpAccordion">
+            <div class="accordion-body">
+              <ul class="mb-0">
+                <li>Use quick buttons for d4, d6, d8, d10, d12, d20, or d100.</li>
+                <li>Type complex rolls like <code>2d6+1d4+3</code>, <code>4d6kh3</code> (keep highest 3), or <code>2d20kl1</code> (disadvantage). Use <code>adv</code>/<code>dis</code> as shortcuts.</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+
+        <div class="accordion-item bg-dark text-light border-secondary">
+          <h2 class="accordion-header">
+            <button class="accordion-button collapsed bg-dark text-light" type="button" data-bs-toggle="collapse" data-bs-target="#helpTemplates">
+              Saved Character Templates
+            </button>
+          </h2>
+          <div id="helpTemplates" class="accordion-collapse collapse" data-bs-parent="#helpAccordion">
+            <div class="accordion-body">
+              <ul class="mb-0">
+                <li>Save up to 20 frequently used characters with AC/HP/type. Names must be unique; saving an existing name updates it.</li>
+                <li>Search, filter, and quickly <em>Load to Form</em> or <em>Add to Tracker</em>.</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+
+        <div class="accordion-item bg-dark text-light border-secondary">
+          <h2 class="accordion-header">
+            <button class="accordion-button collapsed bg-dark text-light" type="button" data-bs-toggle="collapse" data-bs-target="#helpSaving">
+              Saving, History, Import/Export
+            </button>
+          </h2>
+          <div id="helpSaving" class="accordion-collapse collapse" data-bs-parent="#helpAccordion">
+            <div class="accordion-body">
+              <ul class="mb-0">
+                <li><strong>Auto-Save</strong> keeps your session updated in the browser.</li>
+                <li><strong>Manual Save</strong> creates a timestamped backup you can reload from <em>Load Previous Save</em>.</li>
+                <li><strong>Export</strong> downloads a JSON; <strong>Import</strong> loads a previous session.</li>
+                <li><strong>Persistence:</strong> all data saves locally in your browser (localstorage). No server required.</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+
+        <div class="accordion-item bg-dark text-light border-secondary">
+          <h2 class="accordion-header">
+            <button class="accordion-button collapsed bg-dark text-light" type="button" data-bs-toggle="collapse" data-bs-target="#helpTurns">
+              Initiative, Turn Order & Rounds
+            </button>
+          </h2>
+          <div id="helpTurns" class="accordion-collapse collapse" data-bs-parent="#helpAccordion">
+            <div class="accordion-body">
+              <ul class="mb-0">
+                <li>Edit initiative inline; order re-sorts unless <em>Lock Order</em> is on.</li>
+                <li>Drag rows (grab the ⋮⋮ handle on the left on Desktop) or use up/down (mobile) to reorder.</li>
+                <li><strong>Next Round</strong> advances; a full cycle increments the round and ticks durations.</li>
+                <li>While<strong> Lock Order</strong> is on editiing initiative won't resort.</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+
+        <div class="accordion-item bg-dark text-light border-secondary">
+          <h2 class="accordion-header">
+            <button class="accordion-button collapsed bg-dark text-light" type="button" data-bs-toggle="collapse" data-bs-target="#helpShortcuts">
+              Keyboard Shortcuts
+            </button>
+          </h2>
+          <div id="helpShortcuts" class="accordion-collapse collapse" data-bs-parent="#helpAccordion">
+            <div class="accordion-body">
+              <div class="alert alert-info text-light mb-2">
+                <code>N</code> Next Turn • <code>R</code> Reset Rounds • <code>C</code> Copy Order • 
+                <code>S</code> Manual Save • <code>L</code> Lock Order
+              </div>
+              <p class="mb-0 small text-secondary">Shortcuts are disabled while typing in inputs or textareas.</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="accordion-item bg-dark text-light border-secondary">
+          <h2 class="accordion-header">
+            <button class="accordion-button collapsed bg-dark text-light" type="button" data-bs-toggle="collapse" data-bs-target="#helpNotes">
+              Session Notes
+            </button>
+          </h2>
+          <div id="helpNotes" class="accordion-collapse collapse" data-bs-parent="#helpAccordion">
+            <div class="accordion-body">
+              <ul class="mb-0">
+                <li>Use the <strong>Session Notes</strong> panel (right side) to keep general notes.</li>
+                <li>Notes auto-save; you can also Export/Import plain text.</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+
+      </div><!-- /accordion -->
+    </div><!-- /offcanvas-body -->
+  </div>
+
+
   <footer class="container-fluid mt-5 site-footer" role="contentinfo">
     <div class="row footer-main">
       <div class="col">
@@ -326,6 +559,14 @@
       </div>
     </div>
   </footer>
+
+  <div id="rollToast"
+       class="toast position-fixed top-50 start-50 translate-middle"
+       role="status" aria-live="polite" aria-atomic="true"
+       data-bs-delay="900" style="z-index: 1080;">
+    <div class="toast-body fs-3 fw-bold text-center"></div>
+  </div>
+
 
   <!-- JS -->
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" crossorigin="anonymous"></script>
@@ -536,45 +777,145 @@ if (document.readyState === 'loading') {
       maybeSortByInitiative(); buildTable();
     });
 
-    // ---------- Dice ----------
-    function addToHistory(text){
-      diceHistory.unshift({ text, timestamp: new Date().toLocaleTimeString() });
-      buildDiceHistory();
-      if (autoSaveEnabled) saveState();
+  // ---------- Dice ----------
+  function addToHistory(text){
+    diceHistory.unshift({ text, timestamp: new Date().toLocaleTimeString() });
+    buildDiceHistory();
+    if (autoSaveEnabled) saveState();
+  }
+  function buildDiceHistory(){
+    const wrap = $('dice-history-log'); wrap.innerHTML='';
+    diceHistory.forEach(entry=>{
+      const div = document.createElement('div');
+      div.className = 'border-bottom pb-1 mb-1';
+      div.innerHTML = `<strong>${entry.timestamp}</strong>: ${entry.text}`;
+      wrap.appendChild(div);
+    });
+  }
+
+  // Parser: supports +/- terms, multi-terms, and keep-high/low
+  //  - "2d6+1d4+3", "4d6kh3" (keep highest 3), "2d20kl1" (disadv), "2d20kh1" (adv)
+  //  - Flat modifiers like +3 or -1
+  const termRe = /([+-]?)\s*(?:(\d*)d(\d+)(?:k(h|l)(\d+))?)|([+-]?\d+)/ig;
+
+  function rollDiceExpr(exprRaw) {
+    const expr = exprRaw.replace(/\s+/g,'').toLowerCase();
+    let total = 0, parts = [], match;
+    let any = false;
+
+    // Basic validation – only digits, d, k, h/l, +/-, and letters a/d/v/i/s for "adv/dis" passthrough handling
+    if (!/^[0-9dkhl+\-\sadvini]*$/i.test(expr)) {
+      throw new Error('Invalid characters.');
     }
-    function buildDiceHistory(){
-      const wrap = $('dice-history-log'); wrap.innerHTML='';
-      diceHistory.forEach(entry=>{
-        const div = document.createElement('div');
-        div.className = 'border-bottom pb-1 mb-1';
-        div.innerHTML = `<strong>${entry.timestamp}</strong>: ${entry.text}`;
-        wrap.appendChild(div);
-      });
+
+    while((match = termRe.exec(expr)) !== null){
+      any = true;
+      if (match[6]) { // flat mod
+        const n = parseInt(match[6],10);
+        if (Number.isNaN(n)) continue;
+        total += n;
+        parts.push({type:'mod', n});
+        continue;
+      }
+      const sign = match[1] === '-' ? -1 : 1;
+      const count = parseInt(match[2]||'1',10);
+      const sides = parseInt(match[3],10);
+      const keepDir = match[4]; // 'h' or 'l'
+      const keepN = match[5] ? parseInt(match[5],10) : null;
+
+      if (!sides || count<=0) continue;
+
+      const rolls = Array.from({length:count}, ()=> 1 + Math.floor(Math.random()*sides));
+      let used = rolls.slice();
+
+      if (keepN && keepN > 0 && keepN < rolls.length) {
+        used = rolls.slice().sort((a,b)=>a-b);
+        used = (keepDir === 'h') ? used.slice(-keepN) : used.slice(0, keepN);
+      }
+
+      const subtotal = sign * used.reduce((a,b)=>a+b,0);
+      total += subtotal;
+      parts.push({type:'dice', sign, count, sides, rolls, used, keepDir, keepN, subtotal});
     }
-    document.querySelectorAll('.dice-btn').forEach(btn=>{
-      btn.addEventListener('click', function(){
-        const sides = parseInt(this.dataset.dice,10);
-        const result = Math.floor(Math.random()*sides)+1;
-        const out = `Rolled d${sides}: ${result}`;
-        $('dice-result').textContent = `🎲 ${out}`;
-        addToHistory(out);
-      });
+
+    if (!any) throw new Error('Nothing to roll.');
+    return { total, parts };
+  }
+
+  function formatParts(parts){
+    return parts.map(p=>{
+      if (p.type==='mod') return `${p.n>=0?'+':''}${p.n}`;
+      const head = `${p.sign<0?'-':''}${p.count}d${p.sides}${p.keepN?`k${p.keepDir}${p.keepN}`:''}`;
+      return `${head} [${p.rolls.join(', ')}]${p.keepN?` → kept [${p.used.join(', ')}]`:''}`;
+    }).join(' ');
+  }
+
+  function showRoll(total, detailText){
+    const el = document.querySelector('#rollToast .toast-body');
+    el.innerHTML = `🎲 ${total}<div class="small opacity-75 mt-1">${detailText||''}</div>`;
+    const toastEl = document.getElementById('rollToast');
+    // Ensure autohide + short delay every time
+    const t = new bootstrap.Toast(toastEl, { autohide: true, delay: 900 });
+    t.show();
+  }
+  
+
+  // Quick buttons now use the expression roller too
+  document.querySelectorAll('.dice-btn').forEach(btn=>{
+    btn.addEventListener('click', function(){
+      const sides = parseInt(this.dataset.dice,10);
+      const r = rollDiceExpr(`1d${sides}`);
+      const line = `Rolled 1d${sides}: [${r.parts[0].rolls.join(', ')}] = ${r.total}`;
+      $('dice-result').textContent = `🎲 ${line}`;
+      showRoll(r.total, `1d${sides}`);
+      addToHistory(line);
     });
-    $('roll-custom-dice').addEventListener('click', function(){
-      const input = $('custom-dice-input').value.trim();
-      const m = input.toLowerCase().match(/^(\d*)d(\d+)([+-]\d+)?$/);
-      if(!m) return alert("Invalid format. Use XdY+Z (e.g., 2d6+3)");
-      const num = parseInt(m[1]||'1',10), sides = parseInt(m[2],10), mod = parseInt(m[3]||'0',10);
-      const rolls = Array.from({length:num}, ()=> Math.floor(Math.random()*sides)+1);
-      const total = rolls.reduce((a,b)=>a+b,0) + mod;
-      const modStr = mod ? (mod>0?` + ${mod}`:` - ${Math.abs(mod)}`) : '';
-      const out = `Rolled ${num}d${sides}${modStr}: [${rolls.join(', ')}] = ${total}`;
-      $('dice-result').textContent = `🎲 ${out}`;
-      addToHistory(out);
-    });
-    $('clear-dice-history').addEventListener('click', ()=>{
-      if (confirm("Clear all dice history?")) { diceHistory = []; buildDiceHistory(); if (autoSaveEnabled) saveState(); }
-    });
+  });
+
+  // Advantage / Disadvantage (assume plain d20)
+  $('roll-adv').addEventListener('click', ()=>{
+    const r = rollDiceExpr('2d20kh1');
+    const p = r.parts[0];
+    const line = `Advantage (2d20kh1): [${p.rolls.join(', ')}] → kept [${p.used.join(', ')}] = ${r.total}`;
+    $('dice-result').textContent = `🎲 ${line}`;
+    showRoll(r.total, 'Advantage');
+    addToHistory(line);
+  });
+  $('roll-dis').addEventListener('click', ()=>{
+    const r = rollDiceExpr('2d20kl1');
+    const p = r.parts[0];
+    const line = `Disadvantage (2d20kl1): [${p.rolls.join(', ')}] → kept [${p.used.join(', ')}] = ${r.total}`;
+    $('dice-result').textContent = `🎲 ${line}`;
+    showRoll(r.total, 'Disadvantage');
+    addToHistory(line);
+  });
+
+  // Custom input supports multi-terms & kh/kl
+  $('roll-custom-dice').addEventListener('click', function(){
+    const input = $('custom-dice-input').value.trim();
+    if (!input) return;
+
+    // little sugar: allow "adv" / "dis" as shortcuts
+    let expr = input.toLowerCase();
+    if (expr === 'adv') expr = '2d20kh1';
+    if (expr === 'dis') expr = '2d20kl1';
+
+    try{
+      const r = rollDiceExpr(expr);
+      const details = formatParts(r.parts);
+      const line = `Rolled ${expr}: ${details} = ${r.total}`;
+      $('dice-result').textContent = `🎲 ${line}`;
+      showRoll(r.total, expr);
+      addToHistory(line);
+    }catch(e){
+      alert("Invalid format.\nExamples:\n  2d6+3\n  2d6+1d4+3\n  4d6kh3 (keep highest 3)\n  2d20kl1 (disadvantage)");
+    }
+  });
+
+  $('clear-dice-history').addEventListener('click', ()=>{
+    if (confirm("Clear all dice history?")) { diceHistory = []; buildDiceHistory(); if (autoSaveEnabled) saveState(); }
+  });
+
 
     // ---------- Helpers ----------
     function hpClass(percent){
@@ -707,19 +1048,33 @@ if (document.readyState === 'loading') {
 
 
       // HP adjust
-      document.querySelectorAll('.hit-btn').forEach(b=>{
-        b.addEventListener('click', function(){
+      document.querySelectorAll('.hit-btn').forEach(b => {
+        b.addEventListener('click', function() {
           const idx = +this.dataset.index;
           const delta = +this.dataset.delta;
           const c = characters[idx];
+          const oldHP = c.currentHP;
           c.currentHP = Math.max(0, Math.min(c.maxHP, (c.currentHP|0) + delta));
+        
+          // Track damage taken this round
+          if (delta < 0) {
+            const dmg = Math.abs(Math.min(0, c.currentHP - oldHP));
+            c.damageTakenThisRound = (c.damageTakenThisRound || 0) + dmg;     
+          }
+        
           buildTable();
         });
       });
+
       document.querySelectorAll('.health-input').forEach(inp=>{
         inp.addEventListener('input', function(){
           const idx = +this.dataset.index;
-          characters[idx].currentHP = parseInt(this.value,10) || 0;
+          const newHP = parseInt(this.value, 10) || 0;
+          const oldHP = characters[idx].currentHP;
+          if (newHP < oldHP) {
+            characters[idx].damageTakenThisRound = (characters[idx].damageTakenThisRound || 0) + (oldHP - newHP);
+          }
+          characters[idx].currentHP = newHP;
         });
       });
 
@@ -830,6 +1185,13 @@ if (document.readyState === 'loading') {
       if (autoSaveEnabled) saveState();
     }
 
+    // First-visit helper: show the Help panel once
+    if (!localStorage.getItem('initiativeHelpSeen')) {
+      const el = $('helpCanvas');
+      if (el) bootstrap.Offcanvas.getOrCreateInstance(el).show();
+      localStorage.setItem('initiativeHelpSeen', '1');
+    }
+
     // ---------- Status Modal logic ----------
     function openStatusModal(i){
       const c = characters[i];
@@ -845,13 +1207,13 @@ if (document.readyState === 'loading') {
         badges.appendChild(span);
       });
       badges.querySelectorAll('.remove-status').forEach(x=>{
-  x.addEventListener('click', function(){
-    const eff = this.dataset.eff;
-    c.status = c.status.filter(ss => ss.name !== eff);
-    buildTable(); // immediately update UI
-    openStatusModal(i); // refresh modal
-  });
-});
+      x.addEventListener('click', function(){
+        const eff = this.dataset.eff;
+        c.status = c.status.filter(ss => ss.name !== eff);
+        buildTable(); // immediately update UI
+        openStatusModal(i); // refresh modal
+      });
+    });
 
 
       // Dropdown
@@ -915,6 +1277,26 @@ statusModal.show();
       });
     }
 
+    function handleEndOfRoundConcentration() {
+     characters.forEach(c => {
+      if (c.concentration && c.damageTakenThisRound > 0) {
+        const damage = c.damageTakenThisRound;
+        const dc = Math.max(10, Math.floor(damage / 2));
+        alert(`${c.name} took ${damage} damage this round.
+        Concentration Check Required:
+        Roll a d20 + Constitution modifier (+ proficiency if proficient)
+        vs DC ${dc}.
+        \nDC = max(10, half of ${damage})`);
+
+              // Reset damage counter each round
+              c.damageTakenThisRound = 0;
+            } else {
+              c.damageTakenThisRound = 0;
+            }
+      });
+    }
+
+
     // ---------- Controls ----------
     $('initiative-form').addEventListener('submit', e=>{
       e.preventDefault();
@@ -925,7 +1307,7 @@ statusModal.show();
       const type = $('character-type').value;
       if(!name || isNaN(init) || isNaN(maxHP) || isNaN(ac)) return;
 
-      characters.push({ name, type, initiative:init, currentHP:maxHP, maxHP, notes:'', ac, status:[], concentration:false });
+      characters.push({name, type, initiative:init, currentHP:maxHP, maxHP, notes:'', ac, status:[], concentration:false, damageTakenThisRound: 0});
       maybeSortByInitiative();
       e.target.reset();
       buildTable();
@@ -938,9 +1320,11 @@ statusModal.show();
       do{
         currentTurn = (currentTurn + 1) % len;
         if (currentTurn === 0) {
-          combatRound++;
-          tickStatusDurationsOnNewRound();
-        }
+        combatRound++;
+        tickStatusDurationsOnNewRound();
+        handleEndOfRoundConcentration();
+      }
+
         attempts++;
       }while(characters[currentTurn].currentHP <= 0 && attempts < len);
       buildTable();
