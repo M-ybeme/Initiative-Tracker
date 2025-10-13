@@ -109,6 +109,15 @@
           </div>
         </div>
 
+        <div class="mb-2">
+          <label for="sg-preset" class="form-label">Preset</label>
+          <select id="sg-preset" class="form-select">
+            <!-- populated by JS -->
+          </select>
+          <div class="form-text">Presets select common shop mixes; you can still tweak anything after.</div>
+        </div>
+
+
         <div class="mt-3">
           <div class="d-flex justify-content-between align-items-center">
             <label class="form-label mb-0">Shop Types</label>
@@ -174,6 +183,73 @@ const SETTLEMENT = {
   capital: { price:[0.85,1.20], stock:[10,16],weights:{common:0.45, uncommon:0.40, rare:0.15}, allowRare:'high', uniquePct:40 }
 };
 
+ // ---------- Presets ----------
+  const PRESETS = {
+    core: {
+      label: "Core (common town)",
+      select: [
+        "General Goods","Grocer","Inn/Tavern","Tailor","Cobbler",
+        "Blacksmith (Arms/Armor)","Stables","Carpenter","Farrier",
+        "Fabric Shop","Messenger","Bookshop/Library"
+      ],
+      allowRare: "auto",          // keep settlement-driven rarity
+      uniquePct: null             // null = don't override user/current
+    },
+    adventurer: {
+      label: "Adventurer’s Hub",
+      select: [
+        "Adventuring Gear","Potions & Elixirs","Arcane Scrolls","Divine Scrolls",
+        "Blacksmith (Arms/Armor)","Cartographer","Alchemist/Apothecary",
+        "Stables","General Goods","Bookshop/Library","Magic Items"
+      ],
+      allowRare: "yes",           // encourage rares
+      uniquePct: 30               // tasteful bump
+    },
+    shady: {
+      label: "Shady Bazaar",
+      select: [
+        "Black Market","Pawn Shop","Oddities","Fortune Teller",
+        "Clockwork Repair","Pet Shop","Adventuring Gear"
+      ],
+      allowRare: "yes",
+      uniquePct: 35
+    }
+  };
+
+  // Apply a preset: check the right boxes & (optionally) tweak knobs
+  function applyPreset(key){
+    if(!key || key === "custom") return;
+    const p = PRESETS[key];
+    if(!p) return;
+
+    // select types (only these)
+    document.querySelectorAll("#sg-types input").forEach(i=>{
+      i.checked = p.select.includes(i.dataset.type);
+    });
+
+    // optional knobs (still editable by user)
+    if(p.allowRare) $("sg-allowRare").value = (p.allowRare === "yes" ? "yes" : (p.allowRare === "no" ? "no" : "auto"));
+    if(typeof p.uniquePct === "number") $("sg-uniquePct").value = p.uniquePct;
+  }
+
+  // Utility: populate preset dropdown and keep it in sync
+  function initPresets(){
+    const sel = $("sg-preset");
+    sel.innerHTML = [
+      `<option value="custom" selected>Custom (manual)</option>`,
+      ...Object.entries(PRESETS).map(([k,v])=>`<option value="${k}">${v.label}</option>`)
+    ].join("");
+
+    sel.addEventListener("change", ()=>{
+      applyPreset(sel.value);
+    });
+
+    // If user manually toggles any checkbox, mark preset as "custom"
+    $("sg-types").addEventListener("change", ()=>{
+      $("sg-preset").value = "custom";
+    });
+  }
+
 // ---------- Flavor / Quirk Pools (non-plot) ----------
 const FLAV_ADJ = ["sturdy","well-made","neatly finished","serviceable","balanced","polished","matte","lacquered","rifled","fine-grain","braided","stitched","grooved"];
 const FLAV_MAT = ["oakwood","ashwood","yew","maple","pine","boiled leather","suede","bronze","iron","copper","pewter","tin","linen","wool","canvas","felt","parchment","rag paper","glass"];
@@ -204,7 +280,37 @@ const SHOPS = {
     {n:"Chalk (10 sticks)", d:"Packed in paper.", u:"Marking", sp:2, r:"common"},
     {n:"Waterskin", d:"Seamed leather, cork stop.", u:"Carry water", sp:8, r:"common"},
     {n:"Fishing kit", d:"Line, hooks, corks.", u:"Basic fishing", sp:25, r:"uncommon"},
-    {n:"Lock, simple", d:"Warded tumbler, 2 keys.", u:"Securing", sp:300, r:"uncommon"}
+    {n:"Lock, simple", d:"Warded tumbler, 2 keys.", u:"Securing", sp:300, r:"uncommon"},
+    {n:"Candle (tallow, 12)", d:"Short burn, smokey.", u:"Room light", sp:3, r:"common"},
+    {n:"Candle (beeswax, 6)", d:"Clean burn, mild scent.", u:"Room light", sp:6, r:"common"},
+    {n:"Lantern glass, spare", d:"Fits most hooded types.", u:"Replace cracked pane", sp:8, r:"common"},
+    {n:"Lantern glass, colored (set)", d:"Amber/blue/green.", u:"Signal or mood light", sp:15, r:"uncommon"},
+    {n:"Oil, long-burn (flask)", d:"Slow, steady flame.", u:"Extend lantern time", sp:18, r:"uncommon"},
+    {n:"Oil, scented (flask)", d:"Lavender or pine.", u:"Mask odors", sp:12, r:"common"},
+    {n:"Twine ball (300 ft)", d:"Hemp, light test.", u:"Marking & bundling", sp:4, r:"common"},
+    {n:"Cord (100 ft, thin)", d:"Braided plant fiber.", u:"Rig light loads", sp:8, r:"common"},
+    {n:"Net, casting (small)", d:"Weighted fringe.", u:"Fish in shallows", sp:40, r:"uncommon"},
+    {n:"Bucket, oak", d:"Hooped and tarred.", u:"Carry liquids", sp:6, r:"common"},
+    {n:"Kettle, tin", d:"Wire handle.", u:"Boil water/tea", sp:14, r:"common"},
+    {n:"Ladle & spoon set", d:"Wooden utensils.", u:"Serve & cook", sp:4, r:"common"},
+    {n:"Jar, clay (6) with lids", d:"Wax-seal ready.", u:"Store dry goods", sp:10, r:"common"},
+    {n:"Jug, stoneware", d:"Cork-stoppered.", u:"Transport liquids", sp:7, r:"common"},
+    {n:"Pouch, belt", d:"Toggled flap.", u:"Carry coins/small gear", sp:8, r:"common"},
+    {n:"Straps, leather (pair)", d:"Pre-punched.", u:"Tie down kit", sp:6, r:"common"},
+    {n:"Needle & thread kit", d:"Steel needles, linen.", u:"Field mending", sp:6, r:"common"},
+    {n:"Shears, cloth", d:"Serrated edge.", u:"Cut fabric/cord", sp:16, r:"uncommon"},
+    {n:"Tacks & nails (50)", d:"Mixed sizes.", u:"Quick fasteners", sp:5, r:"common"},
+    {n:"Wooden stakes (10)", d:"Pointed ends.", u:"Tent/line anchors", sp:4, r:"common"},
+    {n:"Broom & brush set", d:"Stiff bristle.", u:"Camp cleanup", sp:5, r:"common"},
+    {n:"Soap, soft (herbal)", d:"Mild lather.", u:"Personal wash", sp:5, r:"common"},
+    {n:"Dye packet (cloth)", d:"Simple hues.", u:"Color garments", sp:12, r:"uncommon"},
+    {n:"Cork stoppers (12)", d:"Assorted sizes.", u:"Seal bottles", sp:3, r:"common"},
+    {n:"Chalk line reel", d:"Twined spool.", u:"Straight marks", sp:10, r:"common"},
+    {n:"Canvas roll (5×5 ft)", d:"Grommeted corners.", u:"Cover/groundsheet", sp:22, r:"uncommon"},
+    {n:"Box, lockable (small)", d:"Hasp & hinge.", u:"Keep trinkets", sp:40, r:"uncommon"},
+    {n:"Scale, pocket", d:"Pan & weights.", u:"Weigh coin/ingots", sp:90, r:"uncommon"},
+    {n:"Hourglass, short", d:"About 10 minutes.", u:"Time tasks", sp:45, r:"uncommon"},
+    {n:"Bell, hand", d:"Clear tone.", u:"Signal/alerts", sp:16, r:"common"}
   ],
 
   // --- Food & Drink ---
@@ -221,7 +327,37 @@ const SHOPS = {
   "Grocer": [
     {n:"Dried beans (1 lb)", d:"Canvas bag.", u:"Meal", sp:3, r:"common"},
     {n:"Dried fruit (packet)", d:"Apple or plum.", u:"Snack", sp:4, r:"common"},
-    {n:"Spice pouch", d:"Pepper, cumin, or herb mix.", u:"Cooking", sp:10, r:"uncommon"}
+    {n:"Spice pouch", d:"Pepper, cumin, or herb mix.", u:"Cooking", sp:10, r:"uncommon"},
+    {n:"Flour (5 lb)", d:"Cloth sack.", u:"Baking staple", sp:6, r:"common"},
+    {n:"Oats (2 lb)", d:"Rolled grain.", u:"Porridge/rations", sp:4, r:"common"},
+    {n:"Rice (2 lb)", d:"Long-grain.", u:"Meal base", sp:5, r:"common"},
+    {n:"Barley (2 lb)", d:"Pearled.", u:"Soups & beer mash", sp:4, r:"common"},
+    {n:"Salt (1 lb)", d:"Coarse crystals.", u:"Preserve/season", sp:5, r:"common"},
+    {n:"Sugar (1 lb)", d:"Cane loaf shards.", u:"Sweeten/tonics", sp:12, r:"uncommon"},
+    {n:"Honey (jar)", d:"Amber, raw comb.", u:"Sweetener/soothe throat", sp:14, r:"uncommon"},
+    {n:"Herb bundle (fresh)", d:"Thyme, parsley, bay.", u:"Cooking", sp:4, r:"common"},
+    {n:"Tea leaves (tin)", d:"Black or green.", u:"Brewed drink", sp:10, r:"uncommon"},
+    {n:"Chicory grounds", d:"Roasted root.", u:"Coffee substitute", sp:6, r:"common"},
+    {n:"Coffee beans (small)", d:"Dark roast.", u:"Strong brew", sp:16, r:"uncommon"},
+    {n:"Vinegar (bottle)", d:"Cider or wine.", u:"Pickling/cooking", sp:6, r:"common"},
+    {n:"Olive oil (flask)", d:"Cold-pressed.", u:"Cooking/lamp fuel", sp:18, r:"uncommon"},
+    {n:"Pickled vegetables (jar)", d:"Carrot, onion, beet.", u:"Rations/side", sp:8, r:"common"},
+    {n:"Dried mushrooms (packet)", d:"Forest mix.", u:"Soup/stew umami", sp:7, r:"common"},
+    {n:"Hard cheese (wedge)", d:"Aged, salty.", u:"Travel staple", sp:10, r:"common"},
+    {n:"Butter (half-lb)", d:"Wrapped in leaf.", u:"Cooking/spread", sp:6, r:"common"},
+    {n:"Nuts (1 lb)", d:"Walnut/almond mix.", u:"Snack/trail mix", sp:12, r:"uncommon"},
+    {n:"Seeds, trail (packet)", d:"Sunflower, pumpkin.", u:"Snack", sp:4, r:"common"},
+    {n:"Smoked fish (strip)", d:"Firm & salty.", u:"Ration/protein", sp:6, r:"common"},
+    {n:"Salt pork (slab)", d:"Cured & ready.", u:"Travel meat", sp:12, r:"uncommon"},
+    {n:"Onions (5)", d:"Paper skins.", u:"Cooking base", sp:3, r:"common"},
+    {n:"Potatoes (5)", d:"Starchy keepers.", u:"Hearty meals", sp:3, r:"common"},
+    {n:"Dried peppers (string)", d:"Hot & smoky.", u:"Spice dishes", sp:7, r:"common"},
+    {n:"Baking spices (tin)", d:"Cinnamon, clove.", u:"Sweets & mulled drinks", sp:14, r:"uncommon"},
+    {n:"Preserves (jar)", d:"Berry jam.", u:"Spread/dessert", sp:10, r:"common"},
+    {n:"Lemon salts (packet)", d:"Citrus crystals.", u:"Flavor/clean fish smell", sp:6, r:"common"},
+    {n:"Yeast cakes (4)", d:"Starter-ready.", u:"Bread brewing", sp:5, r:"common"},
+    {n:"Cured olives (jar)", d:"Brine-packed.", u:"Snack/ garnish", sp:9, r:"common"},
+    {n:"Herbal tonics (2)", d:"Mild bitters.", u:"Aid digestion", sp:8, r:"common"}
   ],
   "Inn/Tavern": [
     {n:"Meal, simple", d:"Bread, stew, drink.", u:"Meal (1 person)", sp:5, r:"common"},
@@ -257,7 +393,35 @@ const SHOPS = {
     {n:"Dagger", d:"Simple crossguard.", u:"Weapon", sp:200, r:"common"},
     {n:"Spear", d:"Ash shaft, leaf head.", u:"Weapon", sp:100, r:"common"},
     {n:"Shield, wooden", d:"Iron boss.", u:"Defense", sp:500, r:"uncommon"},
-    {n:"Helmet, open", d:"Riveted bands.", u:"Armor part", sp:600, r:"uncommon"}
+    {n:"Helmet, open", d:"Riveted bands.", u:"Armor part", sp:600, r:"uncommon"},
+    {n:"Shortsword", d:"Leaf-shaped blade.", u:"Weapon", sp:300, r:"common"},
+    {n:"Longsword", d:"Fuller down the center.", u:"Weapon", sp:450, r:"uncommon"},
+    {n:"Handaxe", d:"Bearded head.", u:"Weapon/utility", sp:180, r:"common"},
+    {n:"Battleaxe", d:"Broad crescent.", u:"Weapon", sp:420, r:"uncommon"},
+    {n:"Warhammer", d:"Square face, spike.", u:"Weapon", sp:380, r:"uncommon"},
+    {n:"Mace", d:"Flanged head.", u:"Weapon", sp:260, r:"common"},
+    {n:"Maul", d:"Two-handed sledge.", u:"Weapon", sp:480, r:"uncommon"},
+    {n:"Pike (12 ft)", d:"Socketed head.", u:"Reach weapon", sp:320, r:"uncommon"},
+    {n:"Halberd", d:"Axe, hook, spike.", u:"Polearm", sp:500, r:"uncommon"},
+    {n:"Glaive", d:"Curved blade.", u:"Polearm", sp:460, r:"uncommon"},
+    {n:"Morningstar", d:"Spiked flanges.", u:"Weapon", sp:360, r:"uncommon"},
+    {n:"Javelins (5)", d:"Straight iron heads.", u:"Thrown weapon", sp:120, r:"common"},
+    {n:"Darts (10)", d:"Needle-steel tips.", u:"Thrown weapon", sp:50, r:"common"},
+    {n:"Arrowheads (20)", d:"Broadhead/bodkin mix.", u:"Ammo crafting", sp:80, r:"common"},
+    {n:"Bolt heads (20)", d:"Square quarrels.", u:"Ammo crafting", sp:90, r:"common"},
+    {n:"Buckler", d:"Bossed center.", u:"Defense", sp:360, r:"uncommon"},
+    {n:"Shield, steel-rimmed", d:"Reinforced edge.", u:"Defense", sp:650, r:"uncommon"},
+    {n:"Chain shirt", d:"Riveted rings.", u:"Armor", sp:1200, r:"uncommon"},
+    {n:"Scale shirt", d:"Lapped plates.", u:"Armor", sp:1000, r:"uncommon"},
+    {n:"Brigandine vest", d:"Hidden rivets.", u:"Armor", sp:1500, r:"rare"},
+    {n:"Gauntlets (pair)", d:"Articulated knuckles.", u:"Armor part", sp:220, r:"uncommon"},
+    {n:"Greaves (pair)", d:"Strapped plates.", u:"Armor part", sp:240, r:"uncommon"},
+    {n:"Gorget", d:"Neck protection.", u:"Armor part", sp:180, r:"uncommon"},
+    {n:"Coif, mail", d:"Hood of rings.", u:"Armor part", sp:300, r:"uncommon"},
+    {n:"Scabbard, leather", d:"Steel chape.", u:"Carry a blade", sp:80, r:"common"},
+    {n:"Strap & buckle set", d:"Armor fittings.", u:"Repair/fit armor", sp:60, r:"common"},
+    {n:"Whetstone, coarse", d:"Open grit.", u:"Edge shaping", sp:3, r:"common"},
+    {n:"Sharpening service", d:"While-you-wait.", u:"Restore edge", sp:12, r:"common"}
   ],
   "Farrier": [
     {n:"Horseshoes (set of 4)", d:"Sized to fit.", u:"Mount care", sp:20, r:"common"},
@@ -289,22 +453,175 @@ const SHOPS = {
 
   // --- Specialty: Adventuring / Magic / Knowledge / Alchemy / Arts ---
   "Adventuring Gear": [
-    {n:"Pitons (10)", d:"Climbing spikes.", u:"Climbing", sp:5, r:"common"},
-    {n:"Grappling hook", d:"Three-prong.", u:"Climbing", sp:20, r:"uncommon"},
-    {n:"Ball bearings (bag)", d:"Hundreds of steel.", u:"Obstacle", sp:10, r:"uncommon"},
-    {n:"Healer’s satchel", d:"Lint, salves, bandage.", u:"Stabilize", sp:150, r:"uncommon"}
+    {n:"Backpack, framed", d:"Stiffened with ash slats.", u:"Carry + organized slots", sp:50, r:"common"},
+    {n:"Bedroll, winter-lined", d:"Wool batting.", u:"Sleep warm outdoors", sp:25, r:"common"},
+    {n:"Blanket, heavy", d:"Thick weave.", u:"Cold nights / patient care", sp:8, r:"common"},
+    {n:"Crowbar", d:"Flattened chisel end.", u:"Leverage & prying", sp:20, r:"common"},
+    {n:"Hammer, climber’s", d:"Point & flat faces.", u:"Set pitons", sp:15, r:"common"},
+    {n:"Piton (10)", d:"Ringed iron spikes.", u:"Climbing anchors", sp:5, r:"common"},
+    {n:"Chalk (20 sticks)", d:"Wax-wrapped.", u:"Marking/maze routes", sp:3, r:"common"},
+    {n:"Tinderbox", d:"Flint, steel, charcloth.", u:"Start fires", sp:6, r:"common"},
+    {n:"Torch bundle (10)", d:"Pitch-soaked heads.", u:"Light (1 hr each)", sp:5, r:"common"},
+    {n:"Rations (7 days)", d:"Hard biscuit & dried meat.", u:"Travel food", sp:35, r:"common"},
+    {n:"Waterskin (2 qt)", d:"Wax-lined.", u:"Carry water", sp:8, r:"common"},
+    {n:"Mess kit", d:"Pan, cup, cutlery.", u:"Cook/eat", sp:6, r:"common"},
+    {n:"Cook’s utensils", d:"Pans, ladle, spice tins.", u:"Camp cooking", sp:40, r:"uncommon"},
+    {n:"Healer’s kit (10 uses)", d:"Bandage, splints, salves.", u:"Stabilize w/o check", sp:150, r:"uncommon"},
+    {n:"Climber’s kit", d:"Pitons, harness, rope.", u:"Secure ascents", sp:250, r:"uncommon"},
+    {n:"Grappling hook, folding", d:"Collapsible tines.", u:"Climb/grab edges", sp:25, r:"uncommon"},
+    {n:"Ball bearings (bag)", d:"Iron shots.", u:"Create slippery area", sp:10, r:"uncommon"},
+    {n:"Hunting trap", d:"Spring jaw.", u:"Snare small/med game", sp:50, r:"uncommon"},
+    {n:"Manacles", d:"Chain & locks.", u:"Restrain captive", sp:200, r:"uncommon"},
+    {n:"Lock, good", d:"Tumbler & 2 keys.", u:"Secure a container", sp:600, r:"rare"},
+    {n:"Mirror, steel", d:"Polished plate.", u:"Peeking corners/signals", sp:50, r:"uncommon"},
+    {n:"Pole (10-ft)", d:"Tapered pine.", u:"Probe/tripwire check", sp:5, r:"common"},
+    {n:"Shovel", d:"D-handle.", u:"Digging/burying", sp:20, r:"common"},
+    {n:"Sledgehammer", d:"Heavy head.", u:"Break objects", sp:40, r:"uncommon"},
+    {n:"Fishing tackle", d:"Line, hooks, bobbers.", u:"Catch fish", sp:25, r:"uncommon"},
+    {n:"Tent, two-person", d:"Treated canvas.", u:"Shelter", sp:200, r:"uncommon"},
+    {n:"Caltrops (bag)", d:"Spiked jacks.", u:"Hinder pursuit", sp:10, r:"uncommon"},
+    {n:"Acid (vial)", d:"Stoppered glass.", u:"Corrode small object", sp:250, r:"rare"},
+    {n:"Alchemist’s fire (flask)", d:"Thick resin.", u:"Ignites & clings", sp:400, r:"rare"},
+    {n:"Antitoxin (vial)", d:"Bitter herbal.", u:"Bolster vs poison", sp:300, r:"uncommon"},
+    {n:"Spyglass (simple)", d:"Ground glass.", u:"See distant targets", sp:2500, r:"rare"},
+    {n:"Signal whistle", d:"Piercing shrill.", u:"Alerts long distance", sp:5, r:"common"},
+    {n:"Ink & quills set", d:"Black/sepia inks.", u:"Write/draw", sp:20, r:"common"},
+    {n:"Parchment (10 sheets)", d:"Fine vellum.", u:"Notes/maps", sp:10, r:"common"},
+    {n:"Sealing wax & stamp", d:"Custom sigil blank.", u:"Seal letters", sp:25, r:"uncommon"},
+    {n:"Lantern, bullseye", d:"Shuttered beam.", u:"Focused light cone", sp:120, r:"common"},
+    {n:"Lantern, hooded (shutter kit)", d:"Extra shutters.", u:"Control spill light", sp:20, r:"common"},
+    {n:"Oil, smokeless (flask)", d:"Refined.", u:"Clean burn", sp:25, r:"uncommon"},
+    {n:"Rope, silk (50 ft)", d:"Tight braid.", u:"Light, strong climbing", sp:100, r:"uncommon"},
+    {n:"Chain (10 ft)", d:"Riveted links.", u:"Heavy securing", sp:50, r:"uncommon"},
+    {n:"Pulley & tackle set", d:"Wood/iron blocks.", u:"Hoisting loads", sp:180, r:"uncommon"},
+    {n:"Goggles, dust", d:"Tight seal.", u:"Sand/wind protection", sp:40, r:"common"},
+    {n:"Bed net (insect)", d:"Fine mesh.", u:"Block biting insects", sp:25, r:"common"},
+    {n:"Waterskin, large (4 qt)", d:"Double stitched.", u:"Carry more water", sp:14, r:"common"},
+    {n:"Barrel, small", d:"Hooped oak.", u:"Bulk storage", sp:60, r:"common"},
+    {n:"Bottle, glass (6)", d:"Corked.", u:"Transport liquids", sp:18, r:"common"},
+    {n:"Pads & splints set", d:"Birch slats.", u:"Field injury care", sp:35, r:"common"},
+    {n:"Herbal poultices (5)", d:"Camphor scent.", u:"Soothe minor wounds", sp:50, r:"uncommon"},
+    {n:"Salve of warmth", d:"Resinous.", u:"Ward mild cold exposure", sp:45, r:"common"},
+    {n:"Clamp-saw", d:"Folded frame.", u:"Quiet wood cutting", sp:40, r:"uncommon"},
+    {n:"Chisel & wedge set", d:"Tempered.", u:"Stone/door work", sp:30, r:"common"},
+    {n:"Hand drill", d:"Twist bit.", u:"Make pilot holes", sp:25, r:"common"},
+    {n:"Tarp, waxed (10×10)", d:"Grommeted corners.", u:"Shelter/cover", sp:60, r:"uncommon"},
+    {n:"Cloak, weatherproof", d:"Waxed canvas.", u:"Rain protection", sp:45, r:"common"},
+    {n:"Boot spikes", d:"Threaded studs.", u:"Ice traction", sp:28, r:"uncommon"},
+    {n:"Snowshoes", d:"Laced frame.", u:"Travel over snow", sp:60, r:"uncommon"},
+    {n:"Climbing gloves", d:"Suede grip.", u:"Safer ascents", sp:22, r:"common"},
+    {n:"Throwing rope spool (100 ft)", d:"Light fiber.", u:"Long throws/anchors", sp:120, r:"uncommon"},
+    {n:"Earplugs (waxed)", d:"Moldable.", u:"Muffle loud sounds", sp:6, r:"common"},
+    {n:"Signal mirror (bright)", d:"Highly polished.", u:"Long-range signals", sp:55, r:"uncommon"},
+    {n:"Messenger’s tube", d:"Sealed brass.", u:"Protect documents", sp:35, r:"common"},
+    {n:"Padlock (good)", d:"Three-pin tumbler.", u:"Secure gear", sp:600, r:"rare"},
+    {n:"Snares, wire (3)", d:"Pre-tied loops.", u:"Small game traps", sp:25, r:"common"},
+    {n:"Spikes, iron (10)", d:"Square-cut.", u:"Jam doors, anchors", sp:20, r:"common"},
+    {n:"Tongs, long", d:"Heat-safe.", u:"Handle hot objects", sp:18, r:"common"},
+    {n:"Fire kit, storm", d:"Spark-rod & tinder.", u:"Light fires in wind", sp:25, r:"uncommon"},
+    {n:"Cooking tripod", d:"Collapsible.", u:"Hang pot over fire", sp:22, r:"common"},
+    {n:"Pan, cast-iron", d:"Seasoned.", u:"Camp cooking", sp:20, r:"common"},
+    {n:"Soap, lye block (3)", d:"Harsh cleaner.", u:"Tough grime", sp:6, r:"common"},
+    {n:"Glue, strong (jar)", d:"Pine pitch.", u:"Repair kit", sp:20, r:"common"},
+    {n:"Gaffer’s tape (cloth roll)", d:"Tacky weave.", u:"Wraps/repairs", sp:12, r:"common"},
+    {n:"Camouflage cloth", d:"Mottled fabric.", u:"Conceal gear", sp:60, r:"uncommon"},
+    {n:"Disguise kit (refills)", d:"Grease paints, hair.", u:"Refresh disguise kit", sp:45, r:"uncommon"},
+    {n:"Healer’s kit (refills)", d:"Gauze, salves.", u:"Restock 10 uses", sp:90, r:"uncommon"},
+    {n:"Mount feed (3 days)", d:"Oats & chaff.", u:"Travel rations for mounts", sp:15, r:"common"},
+    {n:"Saddle, riding", d:"Padded tree.", u:"Comfortable long rides", sp:120, r:"uncommon"},
+    {n:"Saddle bags, large", d:"Reinforced seams.", u:"Extra carry on mount", sp:80, r:"uncommon"},
+    {n:"Tether line & hobble", d:"Leather & iron.", u:"Secure mount", sp:20, r:"common"},
+    {n:"Whetstone, fine", d:"Hard grit.", u:"Keep blades sharp", sp:4, r:"common"},
+    {n:"Toolkit, tinker's (lite)", d:"Picks, files, wire.", u:"Quick field repairs", sp:180, r:"uncommon"},
+    {n:"Toolkit, climber's (refit)", d:"Spare carabiners.", u:"Replace worn pieces", sp:90, r:"uncommon"},
+    {n:"Rope ladder (20 ft)", d:"Hardwood rungs.", u:"Quick climbs", sp:40, r:"uncommon"},
+    {n:"Collapsible pole (10 ft)", d:"Sleeved sections.", u:"Probe spans", sp:55, r:"uncommon"},
+    {n:"Mallet, wooden", d:"Thick head.", u:"Drive stakes/pitons", sp:6, r:"common"},
+    {n:"Door chocks (6)", d:"Wedges of oak.", u:"Hold/quiet doors", sp:5, r:"common"},
+    {n:"Prybar, small", d:"Curved cat’s paw.", u:"Quiet leverage", sp:12, r:"common"},
+    {n:"Rope, tarred (50 ft)", d:"Weather-resistant.", u:"All-weather line", sp:18, r:"uncommon"},
+    {n:"Hook, grapnel (fixed)", d:"Three-tine.", u:"Climb/grab", sp:18, r:"common"},
+    {n:"Ram, portable", d:"Two-person carry.", u:"Breach doors", sp:120, r:"uncommon"},
+    {n:"Wedges, iron (3)", d:"Square splitters.", u:"Force doors/logs", sp:14, r:"common"},
+    {n:"Line thrower spool", d:"Weighted knot.", u:"Cast rope farther", sp:30, r:"uncommon"},
+    {n:"Ration bars (3 days)", d:"Dense, bland.", u:"Emergency food", sp:14, r:"common"},
+    {n:"Waterskin, wineskin", d:"Thick bladder.", u:"Carry spirits/water", sp:10, r:"common"},
+    {n:"Field filter, handpump", d:"Canvas & reed.", u:"Strain silt", sp:45, r:"uncommon"},
+    {n:"Fire paste (tube)", d:"Ignites when spread.", u:"Start damp fires", sp:28, r:"uncommon"},
+    {n:"Spare flint & steel", d:"Wrapped kit.", u:"Backup ignition", sp:5, r:"common"},
+    {n:"Bedroll, summer", d:"Lightweight.", u:"Warm climates", sp:8, r:"common"},
+    {n:"Tent, four-person", d:"Guy lines & pegs.", u:"Group shelter", sp:380, r:"uncommon"},
+    {n:"Ground spikes (12)", d:"Hole & hook.", u:"Tie-downs", sp:12, r:"common"},
+    {n:"Hammer, camp", d:"Flat & puller.", u:"Stake work", sp:14, r:"common"},
+    {n:"Sack, waterproof", d:"Waxed inner.", u:"Keep gear dry", sp:20, r:"uncommon"},
+    {n:"Satchel, oilskin", d:"Roll-top.", u:"Rainproof carry", sp:28, r:"uncommon"},
+    {n:"Canteen, tin (2 qt)", d:"Strapped cap.", u:"Water carry", sp:10, r:"common"},
+    {n:"Cooking spit & hooks", d:"Breakdown frame.", u:"Campfire cooking", sp:16, r:"common"},
+    {n:"Spade, folding", d:"Pinned hinge.", u:"Dig/trench", sp:28, r:"uncommon"},
+    {n:"Hatchet", d:"Belt loop.", u:"Woodcutting/tool", sp:24, r:"common"},
+    {n:"Saw, hand", d:"Crosscut teeth.", u:"Cut spars/planks", sp:26, r:"common"},
+    {n:"Tarp, canvas (8×12)", d:"Reinforced edge.", u:"Shelter/cover", sp:40, r:"common"},
+    {n:"Crampons, strap-on", d:"Iron points.", u:"Ice travel", sp:38, r:"uncommon"},
+    {n:"Gaiters, waxed", d:"Buckle closures.", u:"Mud/snow legs", sp:22, r:"common"},
+    {n:"Hood, muffle", d:"Wool-lined.", u:"Dampen sound/breath", sp:18, r:"common"},
+    {n:"Marker dye (vial)", d:"Bright stain.", u:"Mark doors/trails", sp:12, r:"common"},
+    {n:"Whistle, signal (two-tone)", d:"Dual chamber.", u:"Coded signals", sp:8, r:"common"},
+    {n:"Mirror, shard-safe", d:"Backed leather.", u:"Peek around corners", sp:32, r:"uncommon"},
+    {n:"Sling pouch & stones", d:"Smooth river rock.", u:"Simple ranged shots", sp:6, r:"common"},
+    {n:"Crowfoot (heavy caltrops)", d:"Large tines.", u:"Stop mounts", sp:30, r:"uncommon"},
+    {n:"Rope bridge kit (20 ft)", d:"Planks & lines.", u:"Span small gaps", sp:160, r:"rare"}
   ],
   "Magic Items": [
     {n:"Minor healing draught", d:"Red-tinted cordial.", u:"Restore a bit of vigor", sp:500, r:"uncommon"},
     {n:"Scroll, simple ward", d:"Short protective verse.", u:"One-use ward", sp:450, r:"uncommon"},
     {n:"Charm, clean & dry", d:"Keeps gear fresh.", u:"Keeps item clean", sp:250, r:"uncommon"},
-    {n:"Lamp, ever-wick", d:"Tiny sustained glow.", u:"Dim light source", sp:800, r:"rare"}
+    {n:"Lamp, ever-wick", d:"Tiny sustained glow.", u:"Dim light source", sp:800, r:"rare"},
+    {n:"Coin of Warmth", d:"Always slightly warm.", u:"Hand-warming/comfort", sp:260, r:"uncommon"},
+    {n:"Feather of Soft Landing", d:"Drifts forever.", u:"Negates a short fall once/day", sp:520, r:"uncommon"},
+    {n:"Whetstone, Ever-Sharp", d:"Never wears down.", u:"Restores mundane blade edge", sp:480, r:"uncommon"},
+    {n:"Chalk, Endless stub", d:"Never shortens.", u:"Write/mark unlimited", sp:350, r:"uncommon"},
+    {n:"Cloak Clasp of Dryness", d:"Repels water.", u:"Keeps garment dry in rain", sp:600, r:"uncommon"},
+    {n:"Mote-Jar", d:"Captures a firefly glow.", u:"Thumb-bright lamp (toggle)", sp:550, r:"uncommon"},
+    {n:"Band, Sure Knot", d:"Tiny runes.", u:"Knots can’t slip untied", sp:420, r:"uncommon"},
+    {n:"Tinder-Twig Bundle", d:"Sparks on strike.", u:"Light fires in wind (10 uses)", sp:300, r:"uncommon"},
+    {n:"Boot Tags of Quiet Step", d:"Leather tabs.", u:"Slightly muffles footfalls", sp:750, r:"rare"},
+    {n:"Quill of Fair Script", d:"Steadies hand.", u:"Neat writing, no blot", sp:380, r:"uncommon"},
+    {n:"Seal of Fresh Provisions", d:"Cold rune.", u:"Food in sealed box spoils slower", sp:720, r:"rare"},
+    {n:"Stone of the North", d:"Points home.", u:"Always turns toward a set place", sp:800, r:"rare"},
+    {n:"Lamp, Night-safe", d:"Never tips over lit.", u:"Failsafe lantern charm", sp:520, r:"uncommon"},
+    {n:"Thread of True Color", d:"Glows to match.", u:"Mends without visible seam", sp:450, r:"uncommon"},
+    {n:"Cup of Tepid Comfort", d:"Steam or cool.", u:"Keeps drink pleasantly warm/cool", sp:600, r:"uncommon"},
+    {n:"Charm, Vermin Ward", d:"Carved spider knot.", u:"Keeps insects/rodents at bay (small area)", sp:480, r:"uncommon"},
+    {n:"Mirror of Honest Face (palm)", d:"Silvered shard.", u:"Reveals smudges/disguises faintly", sp:900, r:"rare"},
+    {n:"Pebble of Echo", d:"Hums when dropped.", u:"Repeats last loud sound quietly", sp:360, r:"uncommon"},
+    {n:"Bottle, Self-Corking", d:"Clicks shut.", u:"Won’t spill if knocked", sp:320, r:"uncommon"},
+    {n:"Parchment of Recall (sheet)", d:"Faint glyph border.", u:"Returns to the owner’s pack at dusk", sp:650, r:"rare"}
   ],
   "Bookshop/Library": [
     {n:"Primer, common tongue", d:"Letters & phrases.", u:"Study", sp:100, r:"common"},
     {n:"Bestiary, local", d:"Sketches & notes.", u:"Reference", sp:250, r:"uncommon"},
     {n:"Ledger (blank)", d:"Ruled pages.", u:"Records", sp:60, r:"common"},
-    {n:"Treatise, old customs", d:"Regional law & rites.", u:"Reference", sp:180, r:"uncommon"}
+    {n:"Treatise, old customs", d:"Regional law & rites.", u:"Reference", sp:180, r:"uncommon"},
+    {n:"Almanac, current year", d:"Moons, tides, planting.", u:"Reference", sp:80, r:"common"},
+    {n:"Gazetteer of the Realm", d:"Town & trade notes.", u:"Reference/travel", sp:220, r:"uncommon"},
+    {n:"Atlas, pocket roads", d:"Fold-out plates.", u:"Wayfinding", sp:180, r:"uncommon"},
+    {n:"Chapbook, heroic ballads", d:"Broadside collection.", u:"Culture/perform", sp:30, r:"common"},
+    {n:"Herbal Handbook", d:"Sketches & uses.", u:"Field reference", sp:160, r:"uncommon"},
+    {n:"Scribe’s Kit (basic)", d:"Quills, penknife, sand.", u:"Writing set", sp:70, r:"common"},
+    {n:"Ink (quality) & nibs", d:"Blue-black bottle.", u:"Crisp script", sp:40, r:"common"},
+    {n:"Book repair kit", d:"Paste, tape, cloth.", u:"Mend bindings", sp:90, r:"uncommon"},
+    {n:"Treatise on Monsters, Vol. II", d:"Regional threats.", u:"Reference", sp:260, r:"uncommon"},
+    {n:"Religious Hymnals (set)", d:"Common rites.", u:"Ceremony/music", sp:120, r:"common"},
+    {n:"Ledger (waterproof covers)", d:"Waxed boards.", u:"Durable records", sp:90, r:"uncommon"},
+    {n:"Manual of Etiquette", d:"Courtly protocol.", u:"Social reference", sp:150, r:"uncommon"},
+    {n:"Children’s Primer (illustrated)", d:"Bright letters.", u:"Teach reading", sp:60, r:"common"},
+    {n:"History, Founding of Argaloth", d:"Scholarly edition.", u:"Lore", sp:240, r:"uncommon"},
+    {n:"Best-Selling Romance", d:"Dog-eared already.", u:"Leisure reading", sp:40, r:"common"},
+    {n:"Travel Letters (collected)", d:"Merchant routes.", u:"Rumors & routes", sp:170, r:"uncommon"},
+    {n:"Rhetoric & Logic", d:"Exercises & forms.", u:"Study/scholastic", sp:200, r:"uncommon"},
+    {n:"Calligraphy Set (fine)", d:"Brushes & guides.", u:"Decorative script", sp:180, r:"uncommon"},
+    {n:"Bookmarks, ribbon (6)", d:"Colored silk.", u:"Mark passages", sp:12, r:"common"},
+    {n:"Reading stone (lens)", d:"Mild magnifier.", u:"Aid small text", sp:110, r:"uncommon"}
   ],
   "Cartographer": [
     {n:"Town map (current)", d:"Streets & gates.", u:"Navigation", sp:60, r:"common"},
@@ -315,12 +632,58 @@ const SHOPS = {
     {n:"Antiseptic tincture", d:"Cleans minor wounds.", u:"Sterilize", sp:120, r:"uncommon"},
     {n:"Antidote (common)", d:"Herbal binding agents.", u:"Counter mild toxin", sp:300, r:"uncommon"},
     {n:"Smoke pellet (pair)", d:"Short, dense puff.", u:"Cover/escape", sp:80, r:"uncommon"},
-    {n:"Scented salts", d:"Sharper wakefulness.", u:"Rouse/focus", sp:40, r:"common"}
+    {n:"Scented salts", d:"Sharper wakefulness.", u:"Rouse/focus", sp:40, r:"common"},
+    {n:"Alcohol, high-proof (flask)", d:"Stinging clean.", u:"Disinfect/ignite", sp:20, r:"common"},
+    {n:"Coagulant powder", d:"Astringent herbs.", u:"Slow minor bleeding", sp:35, r:"uncommon"},
+    {n:"Pain salve", d:"Willow & mint.", u:"Ease aches", sp:28, r:"common"},
+    {n:"Poultice kit (6)", d:"Clay tins, wraps.", u:"Reduce swelling", sp:60, r:"uncommon"},
+    {n:"Antiseptic wash (bottle)", d:"Bitter bite.", u:"Clean wounds", sp:30, r:"common"},
+    {n:"Repellent, insect (jar)", d:"Pine/tar base.", u:"Deter biting pests", sp:22, r:"common"},
+    {n:"Deodorizing salts", d:"Citrus & soda.", u:"Mask odors", sp:16, r:"common"},
+    {n:"Smelling salts, strong", d:"Sharp ammonia.", u:"Rouse the woozy", sp:18, r:"common"},
+    {n:"Soporific tea blend", d:"Valerian & hops.", u:"Aid sleep (mild)", sp:20, r:"common"},
+    {n:"Stimulant draught (mild)", d:"Bitter bark.", u:"Fight drowsiness", sp:24, r:"uncommon"},
+    {n:"Charcoal filter pack (3)", d:"Cloth pouches.", u:"Clarify water", sp:18, r:"common"},
+    {n:"Water purifying tablets (10)", d:"Alum & lime.", u:"Make water potable", sp:26, r:"uncommon"},
+    {n:"Disinfectant powder", d:"Borax blend.", u:"Sterilize gear", sp:28, r:"common"},
+    {n:"Binding resin (jar)", d:"Pine pitch, warm.", u:"Seal bandages", sp:22, r:"common"},
+    {n:"Burn cream", d:"Aloe and fat.", u:"Soothe minor burns", sp:26, r:"common"},
+    {n:"Antiemetic syrup", d:"Gingered honey.", u:"Settle stomach", sp:18, r:"common"},
+    {n:"Lice comb & wash", d:"Camphor scent.", u:"Delousing kit", sp:16, r:"common"},
+    {n:"Tooth powder", d:"Salt & herb.", u:"Mouth care", sp:8, r:"common"},
+    {n:"Herbal disinfectant smoke", d:"Slow fumigation.", u:"Clean a small room", sp:32, r:"uncommon"},
+    {n:"Tonic, iron", d:"Mineral-rich.", u:"Ease faintness", sp:20, r:"common"},
+    {n:"Eye wash vial", d:"Sterile saline.", u:"Irritant relief", sp:14, r:"common"},
+    {n:"Suture kit", d:"Hooks, thread, needle.", u:"Close wounds", sp:75, r:"uncommon"},
+    {n:"Tourniquet band", d:"Buckled strap.", u:"Control bleeding", sp:18, r:"common"},
+    {n:"Poisoner’s test paper (5)", d:"Color-change strips.", u:"Detect common toxins", sp:55, r:"uncommon"},
+    {n:"Odor neutral gel", d:"Alum base.", u:"Hide trail/scent", sp:30, r:"uncommon"}
   ],
   "Jeweler": [
     {n:"Ring, brass", d:"Plain band.", u:"Adornment", sp:120, r:"common"},
     {n:"Earrings, copper", d:"Small hoops.", u:"Adornment", sp:160, r:"uncommon"},
-    {n:"Necklace, glass bead", d:"Varied hues.", u:"Adornment", sp:220, r:"uncommon"}
+    {n:"Necklace, glass bead", d:"Varied hues.", u:"Adornment", sp:220, r:"uncommon"},
+    {n:"Ring, iron (blued)", d:"Matte finish.", u:"Adornment", sp:90, r:"common"},
+    {n:"Ring, silver", d:"Polished band.", u:"Adornment", sp:220, r:"uncommon"},
+    {n:"Ring, gold-washed", d:"Thin plating.", u:"Adornment", sp:260, r:"uncommon"},
+    {n:"Band, signet (blank)", d:"Ready for crest.", u:"Seal letters", sp:280, r:"uncommon"},
+    {n:"Pendant, moonstone", d:"Soft glow cabochon.", u:"Adornment", sp:420, r:"uncommon"},
+    {n:"Brooch, filigree silver", d:"Knotwork.", u:"Fasten cloak", sp:300, r:"uncommon"},
+    {n:"Neck chain, fine (18\")", d:"Box link.", u:"Pendant chain", sp:190, r:"common"},
+    {n:"Bracelet, copper links", d:"Hammered finish.", u:"Adornment", sp:140, r:"common"},
+    {n:"Earrings, silver drops", d:"Bell-shaped.", u:"Adornment", sp:260, r:"uncommon"},
+    {n:"Hairpin, jeweled", d:"Glass gems.", u:"Style hair", sp:160, r:"uncommon"},
+    {n:"Locket, photo/miniature", d:"Hinged oval.", u:"Hold keepsake", sp:280, r:"uncommon"},
+    {n:"Cufflinks, brass", d:"Etched corners.", u:"Shirt fasteners", sp:150, r:"uncommon"},
+    {n:"Charm, small gemstone", d:"Cut garnet.", u:"Chain charm", sp:220, r:"uncommon"},
+    {n:"Tiara, simple", d:"Silver wire.", u:"Ceremonial wear", sp:520, r:"rare"},
+    {n:"Circlet, bronze", d:"Leaf motif.", u:"Head adornment", sp:260, r:"uncommon"},
+    {n:"Gem, tiny diamond (chip)", d:"For inlay.", u:"Setting supply", sp:700, r:"rare"},
+    {n:"Gem, cut sapphire (small)", d:"Deep blue.", u:"Setting supply", sp:900, r:"rare"},
+    {n:"Pearls (pair, river)", d:"Cream luster.", u:"Earring set", sp:480, r:"uncommon"},
+    {n:"Engraving service", d:"Letters/sigil.", u:"Personalize jewelry", sp:60, r:"common"},
+    {n:"Resizing service", d:"Same-day basic.", u:"Fit a ring", sp:70, r:"common"},
+    {n:"Appraisal slip", d:"Stamped value.", u:"Insurance/records", sp:80, r:"uncommon"}
   ],
   "Painter/Sculptor": [
     {n:"Pigment set", d:"Earth tones.", u:"Art supplies", sp:140, r:"uncommon"},
@@ -337,12 +700,46 @@ const SHOPS = {
   "Black Market": [
     {n:"Poison, mild", d:"Bitter extract.", u:"Toxin (light)", sp:800, r:"rare"},
     {n:"Lockpicks, slim set", d:"Fold case.", u:"Finesse tools", sp:400, r:"uncommon"},
-    {n:"Stolen trinkets (assort.)", d:"Mixed small goods.", u:"Fencing", sp:200, r:"uncommon"}
+    {n:"Stolen trinkets (assort.)", d:"Mixed small goods.", u:"Fencing", sp:200, r:"uncommon"},
+    {n:"Poison, sleep (dose)", d:"Bitter almond.", u:"Induce short slumber", sp:900, r:"rare"},
+    {n:"Poison, paralytic (dose)", d:"Viscous grey.", u:"Brief muscle lock", sp:1100, r:"rare"},
+    {n:"Toxin, contact (dose)", d:"Oily film.", u:"Harm on touch", sp:1200, r:"rare"},
+    {n:"Smoke bomb, heavy", d:"Pitch-black cloud.", u:"Dense cover, longer", sp:220, r:"uncommon"},
+    {n:"Flash charge", d:"Magnesium flare.", u:"Blind momentarily", sp:260, r:"uncommon"},
+    {n:"Acid, concentrated", d:"Hisses on air.", u:"Rapid corrosion", sp:380, r:"rare"},
+    {n:"Lockpicks, master set", d:"Hardened tips.", u:"Bypass fine locks", sp:700, r:"rare"},
+    {n:"Glass cutter & suction", d:"Quiet entry kit.", u:"Cut panes cleanly", sp:240, r:"uncommon"},
+    {n:"Grapple claws (pair)", d:"Palm hooks.", u:"Climb silently", sp:300, r:"uncommon"},
+    {n:"Garrote wire", d:"Silk-wrapped ends.", u:"Silent takedowns", sp:180, r:"uncommon"},
+    {n:"Footpads, silent", d:"Felted soles.", u:"Muffle footsteps", sp:150, r:"uncommon"},
+    {n:"Cloak with hidden pockets", d:"Secret seams.", u:"Conceal small items", sp:260, r:"uncommon"},
+    {n:"Hollow book safe", d:"Cut pages.", u:"Hide valuables", sp:120, r:"uncommon"},
+    {n:"Signet ring, burner", d:"Soft metal.", u:"Disposable seal", sp:200, r:"uncommon"},
+    {n:"Forgery kit (illicit)", d:"Inks, stamps.", u:"Imitate documents", sp:500, r:"rare"},
+    {n:"Coin scale, discreet", d:"Folds into case.", u:"Detect clipped coin", sp:180, r:"uncommon"},
+    {n:"False-bottom flask", d:"Hidden chamber.", u:"Smuggle liquids", sp:90, r:"uncommon"},
+    {n:"Blackjack (sapper’s sap)", d:"Weighted leather.", u:"Subdue quietly", sp:140, r:"uncommon"},
+    {n:"Tar beads (track-break)", d:"Mask footprints.", u:"Confuse pursuit", sp:120, r:"uncommon"}
   ],
   "Pawn Shop": [
     {n:"Used cookware", d:"Dings & polish.", u:"Household", sp:8, r:"common"},
     {n:"Secondhand cloak", d:"Re-hemmed.", u:"Clothing", sp:12, r:"common"},
-    {n:"Old instrument", d:"Well-tuned.", u:"Music", sp:160, r:"uncommon"}
+    {n:"Old instrument", d:"Well-tuned.", u:"Music", sp:160, r:"uncommon"},
+    {n:"Bent candlesticks (pair)", d:"Brass, tarnished.", u:"Home goods", sp:6, r:"common"},
+    {n:"Mismatched cutlery (set)", d:"Old silvered.", u:"Household", sp:5, r:"common"},
+    {n:"Worn boots", d:"Half-sole left.", u:"Footwear (used)", sp:10, r:"common"},
+    {n:"Secondhand satchel", d:"Scuffed flap.", u:"Carry gear", sp:9, r:"common"},
+    {n:"Chipped buckler", d:"Edge nicks.", u:"Defense (used)", sp:160, r:"uncommon"},
+    {n:"Dented helm", d:"Old crest sanded.", u:"Armor (used)", sp:180, r:"uncommon"},
+    {n:"Dog-eared map", d:"Outdated roads.", u:"Navigation (iffy)", sp:20, r:"common"},
+    {n:"Spyglass, cloudy", d:"Scratched lens.", u:"Long view (imperfect)", sp:280, r:"uncommon"},
+    {n:"Cracked hourglass", d:"Leaky seam.", u:"Rough timing", sp:12, r:"common"},
+    {n:"Tarnished signet ring", d:"Unknown crest.", u:"Curio/bribe", sp:70, r:"uncommon"},
+    {n:"Old ledger (blank pages)", d:"Back half unused.", u:"Records", sp:12, r:"common"},
+    {n:"Travel cloak, patched", d:"Many stitches.", u:"Clothing (used)", sp:8, r:"common"},
+    {n:"Instrument, scuffed lute", d:"Holds tune.", u:"Music (used)", sp:90, r:"uncommon"},
+    {n:"Tool roll, incomplete", d:"Missing pieces.", u:"Light repairs", sp:30, r:"common"},
+    {n:"Coin miscellany (bag)", d:"Foreign & clipped.", u:"Trade curiosity", sp:40, r:"uncommon"}
   ],
   "Clockwork Repair": [
     {n:"Spring repair", d:"Handwatch/toy.", u:"Service", sp:120, r:"uncommon"},
@@ -366,6 +763,176 @@ const SHOPS = {
   ]
 };
 
+SHOPS["Potions & Elixirs"] = [
+  {n:"Potion of Healing (minor)", d:"Ruby cordial with mint bite.", u:"Regain a small amount of HP", sp:500, r:"uncommon"},
+  {n:"Potion of Healing (greater)", d:"Deep carmine, viscous.", u:"Regain a moderate amount of HP", sp:1500, r:"uncommon"},
+  {n:"Potion of Healing (superior)", d:"Glows faintly when shaken.", u:"Regain a large amount of HP", sp:4500, r:"rare"},
+  {n:"Antitoxin Draught", d:"Bitter bark & clove.", u:"Advantage vs common poisons (short duration)", sp:300, r:"uncommon"},
+  {n:"Elixir of Climbing", d:"Amber with suspended grit.", u:"Improved climbing checks", sp:350, r:"uncommon"},
+  {n:"Elixir of Waterbreathing", d:"Sea-salted, faint bubbles.", u:"Breathe water for 1 hour", sp:1200, r:"rare"},
+  {n:"Elixir of Cat’s Reflex", d:"Silver swirl that settles fast.", u:"Boosts agility briefly", sp:900, r:"rare"},
+  {n:"Elixir of Giant’s Vigor (lesser)", d:"Thick ochre.", u:"Brief melee potency", sp:1400, r:"rare"},
+  {n:"Potion of Featherfall", d:"Weightless, wispy.", u:"Slow falling on next drop", sp:600, r:"uncommon"},
+  {n:"Potion of Darkvision", d:"Inky black, tastes of licorice.", u:"See in dim light as day", sp:1200, r:"rare"},
+  {n:"Potion of Invisibility (short)", d:"Crystal-clear; bottle fogs.", u:"Turn invisible briefly", sp:2500, r:"rare"},
+  {n:"Fire Breath Phial", d:"Smolders at the cork.", u:"Exhale small fire cone 1–3 times", sp:950, r:"rare"},
+  {n:"Resistance Tonic (fire)", d:"Spicy heat.", u:"Resist fire briefly", sp:700, r:"uncommon"},
+  {n:"Resistance Tonic (cold)", d:"Arctic bite.", u:"Resist cold briefly", sp:700, r:"uncommon"},
+  {n:"Resistance Tonic (acid)", d:"Acrid tang.", u:"Resist acid briefly", sp:700, r:"uncommon"},
+  {n:"Resistance Tonic (lightning)", d:"Crackles softly.", u:"Resist lightning briefly", sp:700, r:"uncommon"},
+  {n:"Stoneflesh Draft", d:"Grey grit, chalky finish.", u:"Skin hardens; blunt resilience", sp:1600, r:"rare"},
+  {n:"Elixir of Vitality", d:"Herbal warmth.", u:"Cures minor fatigue/poisoned", sp:800, r:"uncommon"},
+  {n:"Potion of Speed (short)", d:"Vibrant yellow, fizzing.", u:"Burst of speed & extra action (short)", sp:2800, r:"rare"},
+  {n:"Night’s Rest Phial", d:"Lavender hue.", u:"Sleep recovers a bit extra", sp:300, r:"common"},
+  {n:"Antiplague Tonic", d:"Camphor & honey.", u:"Bolster vs disease", sp:350, r:"uncommon"},
+  {n:"Iron Stomach Draft", d:"Peppery bite.", u:"Ignore spoiled/strange food ill effects", sp:120, r:"common"},
+  {n:"Potion of Spiderwalk", d:"Viscous, climbs the glass.", u:"Climb walls briefly", sp:1500, r:"rare"},
+  {n:"Elixir of Truth (mild)", d:"Clear, cooling.", u:"Makes lies harder to speak", sp:900, r:"rare"},
+  {n:"Smelling Salts (vial)", d:"Pungent ammonia.", u:"Rouse a stunned/unconscious ally (mild)", sp:90, r:"common"},
+  {n:"Potion of Healing (common brew)", d:"Rosehip and iron tang.", u:"Restore a small amount of HP", sp:500, r:"uncommon"},
+  {n:"Draught of Second Wind", d:"Savory, warming.", u:"Small burst of stamina mid-fight", sp:600, r:"uncommon"},
+  {n:"Scout’s Tonic", d:"Green, grassy nose.", u:"Boost to stealth and perception, brief", sp:750, r:"uncommon"},
+  {n:"Potion of Clarity", d:"Lemon-clear, brisk.", u:"Sharpened focus on skill checks, brief", sp:700, r:"uncommon"},
+  {n:"Potion of Stoneskin (lesser)", d:"Grit settles slow.", u:"Mild resistance to weapon blows", sp:1600, r:"rare"},
+  {n:"Potion of Heroism (short)", d:"Blue fizz.", u:"Minor temp HP + courage", sp:1200, r:"rare"},
+  {n:"Potion of Resistance (force)", d:"Thick, humming.", u:"Resist force damage, brief", sp:900, r:"rare"},
+  {n:"Potion of Resistance (necrotic)", d:"Ashen swirl.", u:"Resist necrotic, brief", sp:900, r:"rare"},
+  {n:"Potion of Resistance (radiant)", d:"Pale glow.", u:"Resist radiant, brief", sp:900, r:"rare"},
+  {n:"Potion of Resistance (thunder)", d:"Foams on pour.", u:"Resist thunder, brief", sp:900, r:"rare"},
+  {n:"Cold Iron Tonic", d:"Metallic finish.", u:"Advantage vs charm/fear (short)", sp:850, r:"rare"},
+  {n:"Hunter’s Elixir", d:"Amber flecks.", u:"Advantage on tracking checks", sp:600, r:"uncommon"},
+  {n:"Silent Step Draught", d:"Barely ripples.", u:"Mutes footfalls (brief stealth boon)", sp:800, r:"rare"},
+  {n:"Potion of Gaseous Form (short)", d:"Mist trapped in glass.", u:"Slip through gaps", sp:2600, r:"rare"},
+  {n:"Potion of Mind Shielding (mild)", d:"Opalescent.", u:"Veils surface thoughts briefly", sp:1400, r:"rare"},
+  {n:"Potion of Read Magic", d:"Ink-tinted.", u:"Understand arcane glyphs briefly", sp:500, r:"uncommon"},
+  {n:"Potion of Comprehend Languages", d:"Layered script scent.", u:"Understand speech text briefly", sp:650, r:"uncommon"},
+  {n:"Elixir of Swimming", d:"Briny; slick mouthfeel.", u:"Swim speed boost", sp:500, r:"uncommon"},
+  {n:"Sea-Legs Philter", d:"Doesn’t slosh.", u:"Ignore ship-/mount-sway penalties", sp:300, r:"common"},
+  {n:"Potion of Fire Resistance (strong)", d:"Embers inside.", u:"Longer fire resistance", sp:1500, r:"rare"},
+  {n:"Potion of Cold Resistance (strong)", d:"Frost clings.", u:"Longer cold resistance", sp:1500, r:"rare"},
+  {n:"Elixir of Evasion", d:"Snaps on tongue.", u:"Slight edge vs area effects", sp:1300, r:"rare"},
+  {n:"Elixir of Fortitude", d:"Root-heavy.", u:"Slight edge vs physical saves", sp:1300, r:"rare"},
+  {n:"Elixir of Will", d:"Bitter bark.", u:"Slight edge vs mental saves", sp:1300, r:"rare"},
+  {n:"Potion of Night Eye", d:"Smoky purple.", u:"Low-light vision improvement", sp:900, r:"rare"},
+  {n:"Potion of Silent Image (bottled)", d:"Shifts in light.", u:"One short-lived minor illusion", sp:700, r:"rare"},
+  {n:"Potion of Blur", d:"Double-vision swirl.", u:"Harder to hit briefly", sp:1700, r:"rare"},
+  {n:"Elixir of Haste (very short)", d:"Stings like nettle.", u:"Brief speed burst", sp:1800, r:"rare"},
+  {n:"Potion of Jumping", d:"Springy mouthfeel.", u:"Greatly increases jump distance", sp:500, r:"uncommon"},
+  {n:"Potion of Animal Friendship", d:"Earthy, sweet.", u:"Soothe a beast briefly", sp:900, r:"rare"},
+  {n:"Potion of Barkskin (lesser)", d:"Leaf sediment.", u:"Slightly toughened hide", sp:1400, r:"rare"},
+  {n:"Wanderer’s Restorative", d:"Herbal citrus.", u:"Remove minor exhaustion (1 level)", sp:1200, r:"rare"},
+  {n:"Potion of Freedom of Movement (short)", d:"Silky glide.", u:"Ignore restraints/terrain (short)", sp:2800, r:"rare"}
+];
+
+SHOPS["Arcane Scrolls"] = [
+  {n:"Spell Scroll (Cantrip): Light", d:"Soft gold seal.", u:"Cast a simple light cantrip once", sp:120, r:"common"},
+  {n:"Spell Scroll (Cantrip): Prestidigitation", d:"Wax flecks.", u:"Minor tricks & cleaning", sp:150, r:"common"},
+  {n:"Spell Scroll (1st): Magic Missile", d:"Precise script.", u:"Guaranteed force bolts", sp:400, r:"uncommon"},
+  {n:"Spell Scroll (1st): Shield", d:"Silver thread.", u:"Reactionary arcane ward", sp:450, r:"uncommon"},
+  {n:"Spell Scroll (1st): Feather Fall", d:"Margin feathers.", u:"Prevent falling harm", sp:400, r:"uncommon"},
+  {n:"Spell Scroll (1st): Detect Magic", d:"Aurum filigree.", u:"Sense magic auras", sp:350, r:"uncommon"},
+  {n:"Spell Scroll (2nd): Invisibility", d:"Faintly translucent vellum.", u:"Turn a creature invisible", sp:1100, r:"rare"},
+  {n:"Spell Scroll (2nd): Misty Step", d:"Violet ink cloud.", u:"Short-range teleport", sp:1000, r:"rare"},
+  {n:"Spell Scroll (2nd): Levitate", d:"Vertical script.", u:"Float a target", sp:900, r:"rare"},
+  {n:"Spell Scroll (2nd): Spider Climb", d:"Sticky wax stamp.", u:"Climb surfaces", sp:900, r:"rare"},
+  {n:"Spell Scroll (3rd): Fireball", d:"Singed edge.", u:"Explosive fire sphere", sp:2200, r:"rare"},
+  {n:"Spell Scroll (3rd): Counterspell", d:"Cross-hatch ward.", u:"Interrupt spellcasting", sp:2400, r:"rare"},
+  {n:"Spell Scroll (3rd): Fly", d:"Feather quill bound.", u:"Grant flight briefly", sp:2200, r:"rare"},
+  {n:"Spell Scroll (3rd): Dispel Magic", d:"Unbinding knot seal.", u:"End ongoing magic", sp:2100, r:"rare"},
+  {n:"Spell Scroll (4th): Greater Invisibility", d:"Vanishing ink.", u:"Sustained invisibility", sp:4200, r:"rare"},
+  {n:"Spell Scroll (4th): Dimension Door", d:"Twin door sigils.", u:"Mid-range teleport", sp:4200, r:"rare"},
+  {n:"Spell Scroll (5th): Wall of Force", d:"Rigid emboss.", u:"Invisible barrier", sp:6800, r:"rare"},
+  {n:"Spell Scroll (5th): Cone of Cold", d:"Frost-rimmed vellum.", u:"Frigid blast", sp:6500, r:"rare"},
+   // Cantrips
+  {n:"Spell Scroll (Cantrip): Mage Hand", d:"Palm glyph in margin.", u:"Spectral hand tricks", sp:140, r:"common"},
+  {n:"Spell Scroll (Cantrip): Minor Illusion", d:"Checker watermark.", u:"Small sound or image", sp:160, r:"common"},
+  {n:"Spell Scroll (Cantrip): Ray of Frost", d:"Frost-kissed edge.", u:"Icy ray", sp:150, r:"common"},
+
+  // 1st-level
+  {n:"Spell Scroll (1st): Alarm", d:"Bell sigil.", u:"Wards an area", sp:380, r:"uncommon"},
+  {n:"Spell Scroll (1st): Detect Magic", d:"Aurum filigree.", u:"Sense auras", sp:350, r:"uncommon"},
+  {n:"Spell Scroll (1st): Identify", d:"Lens sketch.", u:"Discern magical properties", sp:420, r:"uncommon"},
+  {n:"Spell Scroll (1st): Tasha’s Hideous Laughter", d:"Laughing mask seal.", u:"Compel fits of mirth", sp:420, r:"uncommon"},
+  {n:"Spell Scroll (1st): Grease", d:"Oily smear.", u:"Create slick area", sp:380, r:"uncommon"},
+  {n:"Spell Scroll (1st): Fog Cloud", d:"Grey wash.", u:"Create obscuring mist", sp:380, r:"uncommon"},
+
+  // 2nd-level
+  {n:"Spell Scroll (2nd): Mirror Image", d:"Trifold visage.", u:"Illusory duplicates", sp:1100, r:"rare"},
+  {n:"Spell Scroll (2nd): Web", d:"Sticky stamp.", u:"Restraining webs", sp:950, r:"rare"},
+  {n:"Spell Scroll (2nd): See Invisibility", d:"Faint eye watermark.", u:"Perceive the unseen", sp:1200, r:"rare"},
+  {n:"Spell Scroll (2nd): Hold Person", d:"Binding knot.", u:"Paralyze a humanoid", sp:1100, r:"rare"},
+  {n:"Spell Scroll (2nd): Scorching Ray", d:"Singed sigils.", u:"Rays of fire", sp:1000, r:"rare"},
+  {n:"Spell Scroll (2nd): Shatter", d:"Fracture motif.", u:"Thunderous break", sp:1000, r:"rare"},
+
+  // 3rd-level
+  {n:"Spell Scroll (3rd): Haste", d:"Slanted script.", u:"Speed + extra action", sp:2400, r:"rare"},
+  {n:"Spell Scroll (3rd): Hypnotic Pattern", d:"Spiral inks.", u:"Mesmerize a crowd", sp:2300, r:"rare"},
+  {n:"Spell Scroll (3rd): Lightning Bolt", d:"Jagged runes.", u:"Line of lightning", sp:2200, r:"rare"},
+  {n:"Spell Scroll (3rd): Tiny Hut (Leomund’s)", d:"Dome seal.", u:"Stationary shelter", sp:2300, r:"rare"},
+  {n:"Spell Scroll (3rd): Water Breathing", d:"Blue cord.", u:"Group water breathing", sp:2100, r:"rare"},
+  {n:"Spell Scroll (3rd): Phantom Steed", d:"Horseshoe mark.", u:"Conjure fast mount", sp:2000, r:"rare"},
+  {n:"Spell Scroll (3rd): Nondetection", d:"Cross-veiled sigil.", u:"Foils scrying", sp:2100, r:"rare"},
+
+  // 4th-level
+  {n:"Spell Scroll (4th): Banishment", d:"Outer ring seal.", u:"Exile a target", sp:4400, r:"rare"},
+  {n:"Spell Scroll (4th): Polymorph", d:"Morphic margin.", u:"Transform a creature", sp:4400, r:"rare"},
+  {n:"Spell Scroll (4th): Stoneskin", d:"Granite texture.", u:"Resistance vs nonmagical weapons", sp:4600, r:"rare"},
+  {n:"Spell Scroll (4th): Greater Invisibility", d:"Vanishing ink.", u:"Sustained invisibility", sp:4200, r:"rare"},
+  {n:"Spell Scroll (4th): Fabricate", d:"Joinery diagram.", u:"Turn raw into finished goods", sp:4300, r:"rare"},
+
+  // 5th-level
+  {n:"Spell Scroll (5th): Telekinesis", d:"Floating glyphs.", u:"Move objects by will", sp:6800, r:"rare"},
+  {n:"Spell Scroll (5th): Animate Objects", d:"Dotted pathways.", u:"Objects spring to life", sp:6800, r:"rare"},
+  {n:"Spell Scroll (5th): Wall of Stone", d:"Strata lines.", u:"Raise stone barrier", sp:6800, r:"rare"},
+  {n:"Spell Scroll (5th): Passwall", d:"Doorline motif.", u:"Create a passage", sp:6600, r:"rare"},
+  {n:"Spell Scroll (5th): Synaptic Static", d:"Frayed letters.", u:"Psychic detonation", sp:7000, r:"rare"}
+];
+
+SHOPS["Divine Scrolls"] = [
+  {n:"Spell Scroll (Cantrip): Guidance", d:"Green twine.", u:"Small skill boon", sp:120, r:"common"},
+  {n:"Spell Scroll (1st): Cure Wounds", d:"Rose stamp.", u:"Restore HP to a creature", sp:400, r:"uncommon"},
+  {n:"Spell Scroll (1st): Bless", d:"Triple dot seal.", u:"Bolster allies’ attacks & saves", sp:400, r:"uncommon"},
+  {n:"Spell Scroll (1st): Protection from Evil & Good", d:"Twin wards.", u:"Ward against certain creatures", sp:450, r:"uncommon"},
+  {n:"Spell Scroll (2nd): Lesser Restoration", d:"Clean white ribbon.", u:"End one harmful condition", sp:1000, r:"rare"},
+  {n:"Spell Scroll (2nd): Aid", d:"Braided cord.", u:"Increase HP maximum briefly", sp:950, r:"rare"},
+  {n:"Spell Scroll (3rd): Revivify", d:"Golden leaf.", u:"Return a creature moments after death", sp:2600, r:"rare"},
+  {n:"Spell Scroll (3rd): Beacon of Hope", d:"Sunburst seal.", u:"Healing and save advantage", sp:2000, r:"rare"},
+  {n:"Spell Scroll (4th): Death Ward", d:"Bone-white wax.", u:"Prevent a fatal drop once", sp:4200, r:"rare"},
+  {n:"Spell Scroll (5th): Greater Restoration", d:"Heavy parchment.", u:"End severe debilitation", sp:7000, r:"rare"},
+  // Cantrips
+  {n:"Spell Scroll (Cantrip): Thaumaturgy", d:"Bellflower seal.", u:"Minor wonders", sp:120, r:"common"},
+  {n:"Spell Scroll (Cantrip): Spare the Dying", d:"Lily stamp.", u:"Stabilize a creature", sp:140, r:"common"},
+
+  // 1st-level
+  {n:"Spell Scroll (1st): Sanctuary", d:"Halo mark.", u:"Ward a creature from attacks", sp:380, r:"uncommon"},
+  {n:"Spell Scroll (1st): Detect Evil and Good", d:"Six-point ward.", u:"Sense aberrations/fiends/undead", sp:380, r:"uncommon"},
+  {n:"Spell Scroll (1st): Purify Food and Drink", d:"Clear seal.", u:"Cleanse provisions", sp:300, r:"common"},
+  {n:"Spell Scroll (1st): Shield of Faith", d:"Linked rings.", u:"Shimmering defense", sp:420, r:"uncommon"},
+
+  // 2nd-level
+  {n:"Spell Scroll (2nd): Silence", d:"Blank circle.", u:"No sound within area", sp:1000, r:"rare"},
+  {n:"Spell Scroll (2nd): Spiritual Weapon", d:"Blade motif.", u:"Summon floating weapon", sp:1100, r:"rare"},
+  {n:"Spell Scroll (2nd): Gentle Repose", d:"White ribbon.", u:"Prevents decay/undeath", sp:900, r:"rare"},
+  {n:"Spell Scroll (2nd): Prayer of Healing", d:"Sunburst margins.", u:"Group healing out of combat", sp:1000, r:"rare"},
+
+  // 3rd-level
+  {n:"Spell Scroll (3rd): Remove Curse", d:"Broken chain.", u:"Lift a curse", sp:2100, r:"rare"},
+  {n:"Spell Scroll (3rd): Spirit Guardians", d:"Haloed figures.", u:"Protective divine spirits", sp:2500, r:"rare"},
+  {n:"Spell Scroll (3rd): Daylight", d:"Radiant seal.", u:"Bright light sphere", sp:2000, r:"rare"},
+  {n:"Spell Scroll (3rd): Mass Healing Word", d:"Chord notation.", u:"Rally multiple allies", sp:2100, r:"rare"},
+
+  // 4th-level
+  {n:"Spell Scroll (4th): Banishment", d:"Outer ring.", u:"Exile a foe", sp:4300, r:"rare"},
+  {n:"Spell Scroll (4th): Guardian of Faith", d:"Tower motif.", u:"Stationary divine sentinel", sp:4200, r:"rare"},
+  {n:"Spell Scroll (4th): Freedom of Movement", d:"Unbound knot.", u:"Ignore restraints", sp:4200, r:"rare"},
+
+  // 5th-level
+  {n:"Spell Scroll (5th): Dispel Evil and Good", d:"Cleansing seal.", u:"Breaks enchantments, banishes", sp:6800, r:"rare"},
+  {n:"Spell Scroll (5th): Mass Cure Wounds", d:"Wide arc sun.", u:"Heal several allies", sp:6800, r:"rare"},
+  {n:"Spell Scroll (5th): Hallow", d:"Consecrated wax.", u:"Sanctify a site", sp:7200, r:"rare"}
+];
+
+
 // ---------- Build type checkboxes ----------
 (function(){
   const wrap = $("sg-types");
@@ -384,18 +951,28 @@ const SHOPS = {
 function pick(rng, arr){ return arr[Math.floor(rng()*arr.length)] }
 function within(rng, [a,b]){ return a + rng()*(b-a) }
 function choiceByRarity(rng, items, weights, allowRare){
-  const pool = items.filter(it=>{
-    if(it.r==='rare' && allowRare==='no') return false;
-    if(it.r==='rare' && allowRare==='auto') return Math.random()<0.00001; // never used; stub
-    return true;
-  });
-  // Weighted pick
-  const w = pool.map(it => it.r==='common'?weights.common : it.r==='uncommon'?weights.uncommon : weights.rare);
+  // Map gating to a per-pick chance for 'rare' entering the pool
+  const rareGate = (allowRare==='no') ? 0
+                 : (allowRare==='auto') ? 0.02
+                 : (allowRare==='low') ? 0.03
+                 : (allowRare==='mid') ? 0.08
+                 : (allowRare==='high') ? 0.15
+                 : 0.05; // sane fallback
+
+  const pool = items.filter(it => it.r !== 'rare' || rng() < rareGate);
+  // Fallback if we accidentally eliminated all items
+  const safePool = pool.length ? pool : items.filter(it => it.r !== 'rare');
+  const usePool  = safePool.length ? safePool : items;
+
+  const w = usePool.map(it => it.r==='common' ? weights.common
+                             : it.r==='uncommon' ? weights.uncommon
+                             : weights.rare);
   const total = w.reduce((a,b)=>a+b,0);
   let r = rng()*total;
-  for(let i=0;i<pool.length;i++){ if((r-=w[i])<=0) return pool[i]; }
-  return pool[pool.length-1];
+  for(let i=0;i<usePool.length;i++){ if((r-=w[i])<=0) return usePool[i]; }
+  return usePool[usePool.length-1];
 }
+
 function formatPrice(sp){
   if(sp>=10){ const gp = sp/10; return (gp%1? gp.toFixed(1): gp.toFixed(0))+" gp"; }
   return sp+" sp";
@@ -421,7 +998,7 @@ function generate(){
   const settlement = $("sg-settlement").value;
   const itemsPerShop = Math.max(5, Math.min(20, +$("sg-itemsPerShop").value||9));
 
-  // Unique chance default by settlement if left as number; user can override
+  // Unique chance (user override or settlement default)
   const uniquePct = Math.max(0, Math.min(100, +$("sg-uniquePct").value||SETTLEMENT[settlement].uniquePct));
   const allowRareSel = $("sg-allowRare").value;
   const selected = [...document.querySelectorAll("#sg-types input:checked")].map(x=>x.dataset.type);
@@ -429,23 +1006,51 @@ function generate(){
 
   // meta pills
   const meta = $("sg-meta"); meta.innerHTML="";
-  [["Settlement", settlement],[ "Items/shop", itemsPerShop ],["Unique chance", uniquePct+"%"],["Shop types", selected.length],["Seed", seed||"(random)"]]
-    .forEach(([k,v])=>{ const sp=document.createElement("span"); sp.className="sg-pill"; sp.textContent=`${k}: ${v}`; meta.appendChild(sp); });
+  const presetOpt = $("sg-preset") ? $("sg-preset").value : "custom";
+  const presetLabel = (presetOpt !== "custom") ? PRESETS[presetOpt].label : "Custom";
+  [
+    ["Preset", presetLabel],
+    ["Settlement", settlement],
+    ["Items/shop", itemsPerShop],
+    ["Unique chance", uniquePct+"%"],
+    ["Shop types", selected.length],
+    ["Seed", seed||"(random)"]
+  ].forEach(([k,v])=>{
+    const sp=document.createElement("span");
+    sp.className="sg-pill";
+    sp.textContent=`${k}: ${v}`;
+    meta.appendChild(sp);
+  });
+
 
   const out = $("sg-out"); out.innerHTML="";
 
+  // map UI select → gating token for choiceByRarity (expects 'no'|'auto'|'low'|'mid'|'high')
+  const allowToken = (t)=>(
+    t==='auto' ? SETTLEMENT[settlement].allowRare
+    : t==='yes' ? 'high'
+    : 'no'
+  );
+
   selected.forEach(type=>{
+    // One consistent markup per shop for realism
+    const [pmin,pmax] = SETTLEMENT[settlement].price;
+    const shopMarkup = within(rng, [pmin,pmax]); // e.g., 0.95–1.15 in towns
+    const markupPct = Math.round((shopMarkup-1)*100);
+
     const shop = document.createElement("div");
     shop.className = "sg-shopcard";
     shop.innerHTML = `
       <div class="p-2 border-bottom border-secondary d-flex justify-content-between align-items-center">
         <div class="fw-semibold"><i class="bi bi-shop"></i> ${type}</div>
-        <div class="text-secondary small">Settlement: ${settlement}</div>
+        <div class="text-secondary small" aria-label="Shop context">
+          Settlement: ${settlement} • Markup: ${markupPct>=0?'+':''}${markupPct}%
+        </div>
       </div>
       <div class="p-2">
         <div class="table-responsive">
           <table class="sg-tbl">
-            <thead><tr><th style="width:26%">Item</th><th style="width:44%">Description</th><th style="width:15%">Use</th><th style="width:15%">Price</th></tr></thead>
+            <thead><tr><th scope="col" style="width:26%">Item</th><th scope="col" style="width:44%">Description</th><th scope="col" style="width:15%">Use</th><th scope="col" style="width:15%">Price</th></tr></thead>
             <tbody></tbody>
           </table>
         </div>
@@ -453,37 +1058,58 @@ function generate(){
       </div>`;
     out.appendChild(shop);
 
-    const tbody = shop.querySelector("tbody");
+    const tbody   = shop.querySelector("tbody");
     const uniqBox = shop.querySelector(".sg-uniq");
 
-    const items = SHOPS[type];
+    const items   = SHOPS[type];
     const weights = SETTLEMENT[settlement].weights;
 
-    const seen = new Set();
-    let tries = 0;
-    while(seen.size < itemsPerShop && tries++ < itemsPerShop*50){
-      const allowRare = (allowRareSel==='auto' ? (SETTLEMENT[settlement].allowRare) : (allowRareSel==='yes'?'high':'no'));
-      const it = choiceByRarity(rng, items, weights, allowRareSel);
-      const key = it.n+"|"+it.r;
-      if(seen.has(key)) continue;
-      seen.add(key);
+    const seenKeys   = new Set();
+    const listedNames= new Set();
+    let tries = 0, rowsHtml = "";
 
-      const sp = priceWithSettlement(rng, it.sp * (it.r==='rare'? (settlement==='village'?1.6:settlement==='town'?1.3:1.15): 1), settlement);
+    // Guard: avoid long spins if pool is tiny after rare gating
+    const maxTries = Math.min(itemsPerShop, items.length) * 20;
+
+    while (listedNames.size < itemsPerShop && tries++ < maxTries){
+      const allowRare = allowToken(allowRareSel);
+      const it = choiceByRarity(rng, items, weights, allowRare);
+      const key = it.n+"|"+it.r;
+      if(seenKeys.has(key)) continue;
+      seenKeys.add(key);
+
+      // Extra surcharge on rares varies by settlement (previous behavior), then apply shop markup
+      const rareAdj = (it.r==='rare')
+        ? (settlement==='village'?1.6 : settlement==='town'?1.3 : 1.15)
+        : 1;
+      const sp = Math.max(1, Math.round(it.sp * rareAdj * shopMarkup));
+
       const d = decorateDesc(rng, it.d);
-      const tr = document.createElement("tr");
-      tr.innerHTML = `
-        <td data-label="Item">${it.n}${it.r==='rare'?' <span class="badge text-bg-danger ms-1">rare</span>': it.r==='uncommon'?' <span class="badge text-bg-warning text-dark ms-1">uncommon</span>':''}</td>
-        <td data-label="Description">${d}</td>
-        <td data-label="Use">${it.u}</td>
-        <td data-label="Price">${formatPrice(sp)}</td>`;
-      tbody.appendChild(tr);
+      const badge = it.r==='rare'
+        ? ' <span class="badge text-bg-danger ms-1">rare</span>'
+        : it.r==='uncommon'
+        ? ' <span class="badge text-bg-warning text-dark ms-1">uncommon</span>'
+        : '';
+
+      rowsHtml += `
+        <tr>
+          <td data-label="Item">${it.n}${badge}</td>
+          <td data-label="Description">${d}</td>
+          <td data-label="Use">${it.u}</td>
+          <td data-label="Price">${formatPrice(sp)}</td>
+        </tr>`;
+
+      listedNames.add(it.n);
     }
 
-    // Unique item chance
-    if(rng()*100 < uniquePct){
-      const base = pick(rng, items);
-      const sp = priceWithSettlement(rng, Math.round(base.sp*1.35), settlement);
-      uniqBox.textContent = `Unique Stock: ${base.n} — ${uniqueLine(rng)} (${formatPrice(sp)})`;
+    tbody.innerHTML = rowsHtml;
+
+    // Unique item (guaranteed not to duplicate a listed item)
+    if (rng()*100 < uniquePct){
+      let base, guard=0;
+      do { base = pick(rng, items); } while (listedNames.has(base.n) && guard++ < 50);
+      const usp = Math.max(1, Math.round(base.sp * 1.35 * shopMarkup));
+      uniqBox.textContent = `Unique Stock: ${base.n} — ${uniqueLine(rng)} (${formatPrice(usp)})`;
     }
   });
 }
@@ -515,6 +1141,7 @@ function downloadOut(){
 
 // Wire up
 document.addEventListener("DOMContentLoaded", ()=>{
+  initPresets();
   $("sg-generate").addEventListener("click", generate);
   $("sg-copy").addEventListener("click", copyOut);
   $("sg-download").addEventListener("click", downloadOut);
@@ -529,6 +1156,7 @@ document.addEventListener("DOMContentLoaded", ()=>{
     const [min,max] = SETTLEMENT[s].stock;
     $("sg-itemsPerShop").value = Math.round((min+max)/2);
   });
+
   // First run
   generate();
 });
