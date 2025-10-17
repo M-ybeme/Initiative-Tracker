@@ -225,8 +225,13 @@
 
   <!-- Generator script -->
   <script>
-  (() => {
-    // --- Seeded RNG (Mulberry32) ---
+ (() => {
+  // Keep current config/seed for delegated rerolls
+  let CURRENT_CFG = null;
+  let CURRENT_SEED = 'random';
+
+  // --- Seeded RNG (Mulberry32) ---
+
     function hashString(str){let h=1779033703^str.length;for(let i=0;i<str.length;i++){h=Math.imul(h^str.charCodeAt(i),3432918353);h=h<<13|h>>>19;}return (h>>>0)>>>0}
     function mulberry32(a){return function(){let t=a+=0x6D2B79F5;t=Math.imul(t^t>>>15,t|1);t^=t+Math.imul(t^t>>>7,t|61);return ((t^t>>>14)>>>0)/4294967296}}
     function prand(seedStr){const s = seedStr? hashString(seedStr) : Math.floor(Math.random()*2**32); return mulberry32(s) }
@@ -719,40 +724,17 @@
       list.forEach(n=>{
         const col = document.createElement('div');
         col.className = 'col';
-        const tile = document.createElement('div');
-        tile.className = 'ng-tile';
-        tile.setAttribute('tabindex','0');
-        tile.innerHTML = `
-          <span class="ng-name">${n}</span>
-          <div class="ng-actions d-flex gap-1">
-            <button class="btn btn-sm btn-outline-light" title="Copy" aria-label="Copy name"><i class="bi bi-clipboard"></i></button>
-            <button class="btn btn-sm btn-outline-warning" title="Favorite" aria-label="Favorite name"><i class="bi bi-star"></i></button>
-            <button class="btn btn-sm btn-outline-info" title="Re-roll" aria-label="Reroll name"><i class="bi bi-arrow-repeat"></i></button>
+        col.innerHTML = `
+          <div class="ng-tile" tabindex="0">
+            <span class="ng-name">${n}</span>
+            <div class="ng-actions d-flex gap-1">
+              <button class="btn btn-sm btn-outline-light" title="Copy" aria-label="Copy name"><i class="bi bi-clipboard"></i></button>
+              <button class="btn btn-sm btn-outline-warning" title="Favorite" aria-label="Favorite name"><i class="bi bi-star"></i></button>
+              <button class="btn btn-sm btn-outline-info" title="Re-roll" aria-label="Reroll name"><i class="bi bi-arrow-repeat"></i></button>
+            </div>
           </div>
         `;
-        const nameEl = tile.querySelector('.ng-name');
-        const btnCopy = tile.querySelector('.btn-outline-light');
-        const btnFav  = tile.querySelector('.btn-outline-warning');
-        const btnRer  = tile.querySelector('.btn-outline-info');
-
-        btnCopy.onclick = ()=> navigator.clipboard.writeText(nameEl.textContent);
-        btnFav.onclick  = ()=> addFav(nameEl.textContent);
-        tile.ondblclick = ()=> btnRer.click();
-
-        col.appendChild(tile);
         out.appendChild(col);
-      });
-    }
-
-    function attachRerollHandlers(cfg, rngSeed){
-      document.querySelectorAll('#ng-out .ng-tile').forEach(tile=>{
-        const nameEl = tile.querySelector('.ng-name');
-        const btnRer = tile.querySelector('.btn-outline-info');
-        btnRer.onclick = ()=>{
-          const r = prand(String(rngSeed) + ':' + Math.random().toString(36).slice(2));
-          const newName = makeFullName(r, cfg);
-          nameEl.textContent = newName;
-        };
       });
     }
 
@@ -780,16 +762,17 @@
       const rng = prand(seedStr);
       const list = [];
       const cfg = { style, minSyl, maxSyl, gender, allit, harsh, exotic, allowApos, allowDia, raceSuffixOn, raceSuffixList, withSurname, surnameStyle, joiner };
-      for(let i=0;i<Math.min(count, 500);i++){
-        list.push(makeFullName(rng, cfg));
-      }
+        CURRENT_CFG  = cfg;                     // <-- keep for rerolls
+        CURRENT_SEED = seedStr || 'random';     // <--
 
-      renderList(list);
-      renderMeta({style, count, seedStr, minSyl, maxSyl, gender, allit, harsh, exotic, raceSuffixOn, withSurname, surnameStyle, joiner});
-      const snap = snapshot($);
-      saveSession(snap, list); settingsToQS(snap);
-      attachRerollHandlers(cfg, seedStr || 'random');
-      return list;
+        for(let i=0;i<Math.min(count, 500);i++){
+          list.push(makeFullName(rng, cfg));
+        }
+        renderList(list);
+        renderMeta({style, count, seedStr, minSyl, maxSyl, gender, allit, harsh, exotic, raceSuffixOn, withSurname, surnameStyle, joiner});
+        const snap = snapshot($);
+        saveSession(snap, list); settingsToQS(snap);
+        return list;
     }
 
     // Copy/download helpers
@@ -878,7 +861,12 @@
       } else {
         const { s, r } = loadSession();
         if (s) applySnapshot($d, s);
-        if (r && Array.isArray(r) && r.length) renderList(r);
+        if (r && Array.isArray(r) && r.length) {
+          renderList(r);
+          // keep buttons working after restore
+          CURRENT_CFG  = snapshot($d);
+          CURRENT_SEED = (CURRENT_CFG && CURRENT_CFG.seedStr) ? CURRENT_CFG.seedStr : 'random';
+        }
       }
 
       // Sync FROM mobile → desktop when user interacts in offcanvas
@@ -971,8 +959,46 @@
       if(!document.querySelector('#ng-out .ng-name')) generate($d);
     }
 
+    // Event delegation for tile buttons (copy, favorite, reroll, dblclick)
+    document.addEventListener('DOMContentLoaded', () => {
+      const out = document.getElementById('ng-out');
+      if (!out) return;
+    
+      out.addEventListener('click', (e) => {
+        const btn  = e.target.closest('button');
+        const tile = e.target.closest('.ng-tile');
+        if (!btn || !tile) return;
+      
+        const nameEl = tile.querySelector('.ng-name');
+        if (!nameEl) return;
+      
+        if (btn.classList.contains('btn-outline-light')) {
+          navigator.clipboard?.writeText(nameEl.textContent).catch(()=>{});
+          return;
+        }
+        if (btn.classList.contains('btn-outline-warning')) {
+          addFav(nameEl.textContent);
+          return;
+        }
+        if (btn.classList.contains('btn-outline-info')) {
+          if (!CURRENT_CFG) return; // safety
+          const r = prand(String(CURRENT_SEED) + ':' + Math.random().toString(36).slice(2));
+          nameEl.textContent = makeFullName(r, CURRENT_CFG);
+          return;
+        }
+      });
+    
+      out.addEventListener('dblclick', (e)=>{
+        const tile = e.target.closest('.ng-tile');
+        if(!tile) return;
+        const rer = tile.querySelector('.btn-outline-info');
+        rer?.click();
+      });
+    });
+    
     document.addEventListener('DOMContentLoaded', mountSettingsForms);
   })();
+
   </script>
 </body>
 </html>
