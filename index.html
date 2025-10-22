@@ -44,22 +44,23 @@
       .table td,.table th{ padding:.6rem .5rem; }
     }
 
-    /* Controls: tidy, evenly spaced layout */
-    .controls-grid{
+    .controls-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-      gap: .5rem .75rem;
+      gap: 0.5rem 0.75rem;
       align-items: center;
+      grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+      justify-content: center;
+      max-width: 900px;
+      margin-inline: auto;
     }
-    .controls-grid .form-check { /* switches don't need full width */
-      justify-self: start;
-    }
+
+    /* On XL and up you can allow a little growth if you like
     @media (min-width: 1200px){
-      /* on xl+ keep it nice and wide but balanced */
       .controls-grid{
-        grid-template-columns: repeat(6, 1fr);
+        grid-template-columns: repeat(auto-fit, minmax(220px, 260px));
+        justify-content:center;
       }
-    }
+    } */
 
     /* --- Added: compact UI for temp HP & death saves --- */
     .temphp-wrap { display:flex; align-items:center; gap:.25rem; }
@@ -89,6 +90,12 @@
       #rollToast.showing, #rollToast.show { animation: none; }
       .toast.fade { transition-duration: 0s; }
     }
+
+    /* Dark theme subtle border accents by type */
+    tr[data-type="PC"]        { border-left: 4px solid rgba(13,202,240,.6); } /* info/cyan */
+    tr[data-type="Companion"] { border-left: 4px solid rgba(25,135,84,.6); }  /* success/green */
+    tr[data-type="NPC"]       { border-left: 4px solid rgba(255,193,7,.6); }  /* warning/yellow */
+    tr[data-type="Enemy"]     { border-left: 4px solid rgba(220,53,69,.7); }  /* danger/red */
   </style>
 </head>
 <body class="bgimage">
@@ -149,73 +156,22 @@
           
             <button id="export-btn" class="btn btn-outline-warning w-100">Export Session</button>
             <button id="import-btn" class="btn btn-outline-secondary w-100">Import Session</button>
+
+            <button class="btn btn-outline-light w-100"
+                    data-bs-toggle="modal" data-bs-target="#savedCharsModal">
+                    <div class="text-light">
+                      Saved Character Templates
+                    </div>
+            </button>
           
             <button id="helpBtn" class="btn btn-info text-dark w-100" type="button"
                     data-bs-toggle="offcanvas" data-bs-target="#helpCanvas" aria-controls="helpCanvas">
               <i class="bi bi-question-circle me-1"></i> Help
             </button>
+
           </div>
         </div>
 
-
-        <!-- Saved Characters (templates) -->
-        <div class="col-12 col-xl-5">
-          <div class="accordion" id="savedCharactersAccordion">
-            <div class="accordion-item">
-              <h2 class="accordion-header" id="savedCharactersHeading">
-                <button class="accordion-button collapsed bg-dark text-light" type="button" data-bs-toggle="collapse" data-bs-target="#savedCharactersCollapse" aria-expanded="false" aria-controls="savedCharactersCollapse">
-                  Saved Character Templates (Max: 20)
-                </button>
-              </h2>
-              <div id="savedCharactersCollapse" class="accordion-collapse collapse" aria-labelledby="savedCharactersHeading" data-bs-parent="#savedCharactersAccordion">
-                <div class="accordion-body bg-dark text-light">
-                  <div class="row g-2">
-                    <div class="col-md-3"><input id="save-name" class="form-control" type="text" placeholder="Name" /></div>
-                    <div class="col-md-2"><input id="save-health" class="form-control" type="number" placeholder="Max HP" /></div>
-                    <div class="col-md-2"><input id="save-ac" class="form-control" type="number" placeholder="AC" /></div>
-                    <div class="col-md-3">
-                      <select id="save-type" class="form-select">
-                        <option>PC</option>
-                        <option>Companion</option>
-                        <option>NPC</option>
-                        <option>Enemy</option>
-                      </select>
-                    </div>
-                    <div class="col-md-2"><button id="save-character-btn" class="btn btn-outline-success w-100">Save Template</button></div>
-                  </div>
-
-                  <div class="row g-2 mt-2">
-                    <div class="col-sm-6"><input id="saved-search" class="form-control" type="text" placeholder="Search saved characters..." /></div>
-                    <div class="col-sm-6 d-flex gap-2 justify-content-sm-end">
-                      <select id="saved-type-filter" class="form-select w-auto">
-                        <option value="">All Types</option>
-                        <option>PC</option>
-                        <option>Companion</option>
-                        <option>NPC</option>
-                        <option>Enemy</option>
-                      </select>
-                      <button id="clear-saved-btn" class="btn btn-outline-danger">Clear All</button>
-                    </div>
-                  </div>
-
-                  <div class="row g-2 mt-2">
-                    <div class="col-md-6">
-                      <select id="loadCharacterSelect" class="form-select">
-                        <option disabled selected>Load Saved Character</option>
-                      </select>
-                    </div>
-                    <div class="col-md-6 d-flex gap-2">
-                      <button id="load-to-form-btn" class="btn btn-outline-light w-100">Load to Form</button>
-                      <button id="add-to-tracker-btn" class="btn btn-outline-success w-100">Add to Tracker</button>
-                    </div>
-                  </div>
-
-                  <ul id="saved-characters-list" class="list-group mt-3"></ul>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
       </div><!-- /controls row -->
 
       <!-- Add row -->
@@ -376,6 +332,73 @@
     </div>
   </div>
 
+  <!-- Saved Characters Modal -->
+  <div class="modal fade" id="savedCharsModal" tabindex="-1" aria-labelledby="savedCharsModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-xl">
+      <div class="modal-content bg-dark text-light">
+        <div class="modal-header">
+          <h5 class="modal-title" id="savedCharsModalLabel">
+            Saved Character Templates (Max: <span id="savedMaxLabel">200</span>)
+          </h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+
+        <div class="modal-body">
+          <div class="row g-2">
+            <div class="col-md-3"><input id="save-name" class="form-control" type="text" placeholder="Name" /></div>
+            <div class="col-md-2"><input id="save-health" class="form-control" type="number" placeholder="Max HP" /></div>
+            <div class="col-md-2"><input id="save-ac" class="form-control" type="number" placeholder="AC" /></div>
+            <div class="col-md-3">
+              <select id="save-type" class="form-select">
+                <option>PC</option>
+                <option>Companion</option>
+                <option>NPC</option>
+                <option>Enemy</option>
+              </select>
+            </div>
+            <div class="col-md-2">
+              <button id="save-character-btn" class="btn btn-outline-success w-100">Save Template</button>
+            </div>
+          </div>
+
+          <div class="row g-2 mt-2">
+            <div class="col-sm-6">
+              <input id="saved-search" class="form-control" type="text" placeholder="Search saved characters..." />
+            </div>
+            <div class="col-sm-6 d-flex gap-2 justify-content-sm-end">
+              <select id="saved-type-filter" class="form-select w-auto">
+                <option value="">All Types</option>
+                <option>PC</option>
+                <option>Companion</option>
+                <option>NPC</option>
+                <option>Enemy</option>
+              </select>
+              <button id="clear-saved-btn" class="btn btn-outline-danger">Clear All</button>
+            </div>
+          </div>
+
+          <div class="row g-2 mt-2">
+            <div class="col-md-6">
+              <select id="loadCharacterSelect" class="form-select">
+                <option disabled selected>Load Saved Character</option>
+              </select>
+            </div>
+            <div class="col-md-6 d-flex gap-2">
+              <button id="load-to-form-btn" class="btn btn-outline-light w-100">Load to Form</button>
+              <button id="add-to-tracker-btn" class="btn btn-outline-success w-100">Add to Tracker</button>
+            </div>
+          </div>
+
+          <ul id="saved-characters-list" class="list-group mt-3"></ul>
+        </div>
+
+        <div class="modal-footer">
+          <button class="btn btn-outline-secondary" data-bs-dismiss="modal">Close</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
     <!-- Help Offcanvas -->
   <div class="offcanvas offcanvas-start text-bg-dark" tabindex="-1" id="helpCanvas" aria-labelledby="helpCanvasLabel">
     <div class="offcanvas-header">
@@ -488,15 +511,17 @@
         </div>
 
         <div class="accordion-item bg-dark text-light border-secondary">
-          <h2 class="accordion-header">
-            <button class="accordion-button collapsed bg-dark text-light" type="button" data-bs-toggle="collapse" data-bs-target="#helpTemplates">
+          <h2 class="accordion-header" id="helpTemplatesHeader">
+            <button class="accordion-button collapsed bg-dark text-light" type="button"
+                    data-bs-toggle="collapse" data-bs-target="#helpTemplates"
+                    aria-expanded="false" aria-controls="helpTemplates">
               Saved Character Templates
             </button>
           </h2>
           <div id="helpTemplates" class="accordion-collapse collapse" data-bs-parent="#helpAccordion">
             <div class="accordion-body">
               <ul class="mb-0">
-                <li>Save up to 20 frequently used characters with AC/HP/type. Names must be unique; saving an existing name updates it.</li>
+                <li>Save up to <strong>200</strong> frequently used characters with AC/HP/type. Names must be unique; saving an existing name updates it.</li>
                 <li>Search, filter, and quickly <em>Load to Form</em> or <em>Add to Tracker</em>.</li>
               </ul>
             </div>
@@ -758,11 +783,24 @@
     
     // ---------- Saved character templates ----------
     const TKEY='savedCharacters';
+    const MAX_SAVED = 200;
+    const _lbl1 = document.getElementById('savedMaxLabel');
+      if (_lbl1) _lbl1.textContent = MAX_SAVED;
+
+    // optional safety check
+    (function ensureMaxLabelSync(){
+      const el = document.getElementById('savedMaxLabel');
+      if (el && el.textContent !== String(MAX_SAVED)) el.textContent = MAX_SAVED;
+    })();  
+
     function getSaved(){ try{ return JSON.parse(localStorage.getItem(TKEY)||'[]'); }catch{ return []; } }
     function setSaved(list){ localStorage.setItem(TKEY, JSON.stringify(list)); }
     function addSavedTemplate(t){
       const list = getSaved();
-      if (list.length >= 20) { alert('Max 20 saved characters.'); return false; }
+      if (list.length >= MAX_SAVED) { 
+        alert(`Max ${MAX_SAVED} saved characters.`);
+        return false; 
+      }
       const idx = list.findIndex(x=>x.name.toLowerCase()===t.name.toLowerCase());
       if (idx>=0) list[idx]=t; else list.push(t);
       setSaved(list);
@@ -1092,6 +1130,7 @@
 
         // Desktop row
         const tr = document.createElement('tr');
+        tr.dataset.type = c.type;
         if (i === currentTurn) tr.classList.add('active-turn');
         tr.innerHTML = `
           <td class="drag-handle"><i class="bi bi-grip-vertical"></i></td>
