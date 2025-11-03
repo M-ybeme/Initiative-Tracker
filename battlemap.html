@@ -1,0 +1,732 @@
+<!DOCTYPE html>
+<html lang="en" data-bs-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>The DM's Toolbox: Battle Map</title>
+
+  <!-- Vendor CSS -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" crossorigin="anonymous" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.8.3/font/bootstrap-icons.css" />
+
+  <!-- Site CSS -->
+  <link href="/css/site.css" rel="stylesheet" />
+
+  <!-- Favicon -->
+  <link rel="icon" type="image/png" href="/images/dndFavicon (2).png" />
+
+  <!-- Vendor JS -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" crossorigin="anonymous"></script>
+
+  <style>
+    html, body { height: 100%; background: #0b0f14; }
+    body { margin: 0; color: #e6f1ff; }
+    :root { --bg:#0b0f14; --panel:#0f1620; --ink:#e6f1ff; --muted:#8fa3bf; --accent:#8bd3ff; --line:#1b2430; }
+
+    .map-wrap { position: fixed; inset: 56px 0 0 0; display: grid; grid-template-columns: 320px 1fr; gap: 12px; padding: 12px; background: var(--bg); }
+    @media (max-width: 992px){ .map-wrap { grid-template-columns: 1fr; } }
+
+    .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 12px; overflow: auto; }
+    .panel h2 { margin: 0 0 8px; font-size: 16px; letter-spacing: .3px; }
+    .group { border: 1px solid var(--line); border-radius: 12px; padding: 10px; margin-bottom: 12px; }
+    .group h3 { margin: 0 0 8px; font-size: 13px; color: var(--muted); font-weight: 600; }
+    label { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 8px; margin: 6px 0; font-size: 13px; color: var(--ink); }
+    input[type="number"], input[type="text"], input[type="color"], select { background: #0a111a; border: 1px solid var(--line); color: var(--ink); padding: 6px 8px; border-radius: 8px; font-size: 13px; }
+    input[type="file"] { font-size: 12px; }
+    button { background: #0a111a; color: var(--ink); border: 1px solid var(--line); padding: 8px 10px; border-radius: 10px; cursor: pointer; font-size: 13px; }
+    button:hover { border-color: #283345; }
+    .row-inline { display:flex; gap:8px; align-items:center; flex-wrap: wrap; }
+    .muted { color: var(--muted); font-size: 12px; }
+
+    .canvas-panel { display:flex; flex-direction: column; min-height: 0; }
+    .bar { padding: 8px 10px; display:flex; align-items:center; gap:8px; border: 1px solid var(--line); border-radius: 12px; background: #0c131d; margin-bottom: 12px; }
+    .bar span { font-size:12px; color: var(--muted); }
+    .canvas-wrap { position: relative; flex: 1 1 auto; min-height: 0; }
+    canvas { display:block; width: 100%; height: 100%; background: #0a0f16; border: 1px solid var(--line); border-radius: 12px; cursor: grab; }
+    canvas.dragging { cursor: grabbing; }
+    .hint { position:absolute; right:10px; bottom:10px; background:#0f1620cc; padding:8px 10px; border:1px solid var(--line); border-radius:10px; font-size:12px; color:var(--muted); }
+    .token-list { display:flex; flex-wrap: wrap; gap:6px; }
+    .pill { border:1px solid var(--line); padding:4px 8px; border-radius:999px; font-size:12px; background:#0a111a; }
+
+    footer.site-footer { margin-top: 0 !important; }
+  </style>
+</head>
+<body>
+  <nav class="navbar navbar-expand-lg navbar-dark fixed-top" style="background:#0f1620;border-bottom:1px solid var(--line)" id="mainNav">
+    <div class="container-fluid">
+      <a class="navbar-brand" href="index.html">
+        <img src="/images/dndFavicon (2).png" height="32" width="32" alt="App Logo" class="d-inline-block me-1" />
+        The DM Toolbox
+      </a>
+      <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+        <span class="navbar-toggler-icon"></span>
+      </button>
+      <div class="collapse navbar-collapse" id="navbarSupportedContent">
+        <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+          <li class="nav-item"><a class="nav-link" href="index.html">Initiative</a></li>
+          <li class="nav-item"><a class="nav-link" href="name.html">Name Gen</a></li>
+          <li class="nav-item"><a class="nav-link" href="loot.html">Loot Gen</a></li>
+          <li class="nav-item"><a class="nav-link" href="shop.html">Shop Gen</a></li>
+          <li class="nav-item"><a class="nav-link" href="npc.html">NPC Gen</a></li>
+          <li class="nav-item"><a class="nav-link" href="tav.html">Tavern/Inn Gen</a></li>
+          <li class="nav-item"><a class="nav-link active" aria-current="page" href="tav.html">Tavern/Inn Gen</a></li>
+        </ul>
+      </div>
+    </div>
+  </nav>
+
+  <div class="map-wrap">
+    <aside class="panel">
+      <h2>Battle Map Controls</h2>
+
+      <div class="group">
+        <h3>1) Map</h3>
+        <label>Upload Map <input id="mapFile" type="file" accept="image/*" /></label>
+        <label>Base Scale (px per cell) <input id="gridSize" type="number" min="4" max="256" value="50" /></label>
+        <label>Units per cell <input id="unitsPerCell" type="number" min="1" value="5" /></label>
+        <label>Grid Color <input id="gridColor" type="color" value="#6aa5ff" /></label>
+        <label>Grid Opacity <input id="gridAlpha" type="number" min="0" max="1" step="0.05" value="0.35" /></label>
+        <label>Show Grid <input id="showGrid" type="checkbox" checked /></label>
+        <div class="row-inline">
+          <button id="centerMap">Center</button>
+          <button id="fitMap">Fit</button>
+          <button id="clearMap">Clear</button>
+        </div>
+        <hr class="text-secondary"/>
+        <h3>Map Transform</h3>
+        <label>Map Scale (%) <input id="mapScale" type="number" min="10" max="400" step="1" value="100" /></label>
+        <label>Map Offset X (px) <input id="mapOffsetX" type="number" step="1" value="0" /></label>
+        <label>Map Offset Y (px) <input id="mapOffsetY" type="number" step="1" value="0" /></label>
+        <div class="row-inline">
+          <button id="resetMapTransform">Reset Map Transform</button>
+        </div>
+        <hr class="text-secondary"/>
+        <h3>Grid Alignment</h3>
+        <label>Grid Origin X (px) <input id="gridOffsetX" type="number" step="1" value="0" /></label>
+        <label>Grid Origin Y (px) <input id="gridOffsetY" type="number" step="1" value="0" /></label>
+        <div class="row-inline">
+          <button id="pickGridOrigin">Pick Origin on Map</button>
+          <button id="snapOriginToMap">Align to Clicked Intersection</button>
+        </div>
+        <label>Calibrate: cells between clicks <input id="calibCells" type="number" min="1" step="1" value="10" /></label>
+        <div class="row-inline">
+          <button id="startCalibrate">Start Calibration</button>
+          <span class="muted" id="calibStatus"></span>
+        </div>
+        <div class="muted">Use calibration when the image has a printed grid or unknown DPI: click two intersections N cells apart.</div>
+        <div class="muted">Wheel to zoom. Middle-drag or hold <kbd>Space</kbd> + drag to pan.</div>
+      </div>
+
+      <div class="group">
+        <h3>2) Tokens</h3>
+        <label>Upload Token Image <input id="tokenFile" type="file" accept="image/*" /></label>
+        <label>Name <input id="tokenName" type="text" placeholder="Goblin A" /></label>
+        <div class="row-inline">
+          <button id="addToken">Add Token</button>
+          <button id="deleteSelected">Delete Selected</button>
+        </div>
+
+        <hr class="text-secondary"/>
+        <h3>Presets</h3>
+        <label>Choose Preset
+          <select id="tokenPreset" style="min-width:220px">
+            <option value="">— select a token —</option>
+          </select>
+        </label>
+        <div class="row-inline">
+          <button id="addPreset">Add Selected Preset</button>
+        </div>
+
+        <label>Snap to Grid <input id="snap" type="checkbox" checked /></label>
+        <label>Token Size (cells) <input id="tokenCells" type="number" min="0.5" step="0.5" value="1" /></label>
+        <div class="token-list" id="tokenList"></div>
+      </div>
+
+      <div class="group">
+        <h3>3) Session</h3>
+        <div class="row-inline">
+          <button id="exportJson">Export JSON</button>
+          <input id="importJsonFile" type="file" accept="application/json" />
+        </div>
+        <div class="row-inline">
+          <button id="resetAll" title="Clear map and tokens">Reset</button>
+        </div>
+        <div class="muted">State saves to localStorage automatically.</div>
+      </div>
+
+      <div class="group">
+        <h3>Shortcuts</h3>
+        <div class="muted">Space+Drag: Pan • Mouse Wheel: Zoom at cursor • Click token: Select • Drag: Move • Delete: Remove selected</div>
+      </div>
+    </aside>
+
+    <section class="canvas-panel">
+      <div class="bar">
+        <button id="toggleFog">Fog: Off</button>
+        <button id="fogReveal" disabled>Reveal</button>
+        <button id="fogCover" disabled>Cover</button>
+        <label class="ms-2">Brush
+          <input id="fogBrush" type="number" min="5" max="400" step="5" value="80" style="width:90px" disabled>
+        </label>
+        <button id="fogClear" disabled>Clear Fog</button>
+        <span id="status" class="ms-2">Ready</span>
+      </div>
+      <div class="canvas-wrap">
+        <canvas id="stage" width="1920" height="1080"></canvas>
+      </div>
+    </section>
+  </div>
+
+  <footer class="container-fluid site-footer" role="contentinfo" style="background:#0f1620;border-top:1px solid var(--line);position:fixed;left:0;right:0;bottom:0;display:none"></footer>
+
+<script>
+(function(){
+  // --- Built-in manifest (matches your filenames). If /images/tokenManifest.json exists, it will override this.
+  const DEFAULT_MANIFEST = {
+    players: [
+      { name: 'Artificer',    src: '/images/playerTokens/PlayerArtificerToken.png' },
+      { name: 'Barbarian',    src: '/images/playerTokens/PlayerBarbarianToken.png' },
+      { name: 'Bard',         src: '/images/playerTokens/PlayerBardToken.png' },
+      { name: 'Blood Hunter', src: '/images/playerTokens/PlayerBloodHunterToken.png' },
+      { name: 'Cleric',       src: '/images/playerTokens/PlayerClericToken.png' },
+      { name: 'Druid',        src: '/images/playerTokens/PlayerDruidToken.png' },
+      { name: 'Fighter',      src: '/images/playerTokens/PlayerFighterToken.png' },
+      { name: 'Monk',         src: '/images/playerTokens/PlayerMonkToken.png' },
+      { name: 'Paladin',      src: '/images/playerTokens/PlayerPaladinToken.png' },
+      { name: 'Ranger',       src: '/images/playerTokens/PlayerRangerToken.png' },
+      { name: 'Rogue',        src: '/images/playerTokens/PlayerRogueToken.png' },
+      { name: 'Sorcerer',     src: '/images/playerTokens/PlayerSorcererToken.png' },
+      { name: 'Warlock',      src: '/images/playerTokens/PlayerWarlockToken.png' },
+      { name: 'Wizard',       src: '/images/playerTokens/PlayerWizardToken.png' }
+    ],
+    enemies: [
+      { name: 'Aberration',   src: '/images/enemyTokens/EnemyAberationToken.png' },
+      { name: 'Beast',        src: '/images/enemyTokens/EnemyBeastToken.png' },
+      { name: 'Celestial',    src: '/images/enemyTokens/EnemyCelestialToken.png' },
+      { name: 'Construct',    src: '/images/enemyTokens/EnemyConstructToken.png' },
+      { name: 'Dragon',       src: '/images/enemyTokens/EnemyDragonToken.png' },
+      { name: 'Elemental',    src: '/images/enemyTokens/EnemyElementalToken.png' },
+      { name: 'Fey',          src: '/images/enemyTokens/EnemyFeyToken.png' },
+      { name: 'Fiend',        src: '/images/enemyTokens/EnemyFiendToken.png' },
+      { name: 'Giant',        src: '/images/enemyTokens/EnemyGiantToken.png' },
+      { name: 'Humanoid',     src: '/images/enemyTokens/EnemyHumanoidToken.png' },
+      { name: 'Monstrosity',  src: '/images/enemyTokens/EnemyMonstrosityToken.png' },
+      { name: 'Ooze',         src: '/images/enemyTokens/EnemyOozeToken.png' },
+      { name: 'Plant',        src: '/images/enemyTokens/EnemyPlantToken.png' },
+      { name: 'Undead',       src: '/images/enemyTokens/EnemyUndeadToken.png' }
+    ]
+  };
+
+  async function loadTokenManifest(){
+    try {
+      const res = await fetch('/images/tokenManifest.json', { cache: 'no-store' });
+      if (res.ok) return await res.json();
+    } catch (_) {}
+    return DEFAULT_MANIFEST;
+  }
+
+  function buildPresetDropdown(manifest){
+    tokenPresetEl.innerHTML = '<option value="">— select a token —</option>';
+    const addGroup = (label, list) => {
+      const og = document.createElement('optgroup');
+      og.label = label;
+      (list || []).forEach(it => {
+        const opt = document.createElement('option');
+        opt.value = it.src;
+        opt.dataset.name = it.name;
+        opt.textContent = it.name;
+        og.appendChild(opt);
+      });
+      tokenPresetEl.appendChild(og);
+    };
+    addGroup('Players', manifest.players);
+    addGroup('Enemies', manifest.enemies);
+  }
+
+  const imageCache = new Map();
+  function getCachedImage(src){
+    if(imageCache.has(src)) return Promise.resolve(imageCache.get(src));
+    return loadImage(src).then(img=>{ imageCache.set(src,img); return img; });
+  }
+
+  /** @typedef {{ id:string, name:string, imgSrc:string, img:HTMLImageElement|null, x:number, y:number, w:number, h:number, selected?:boolean }} Token */
+
+  const canvas = document.getElementById('stage');
+  const ctx = canvas.getContext('2d', { alpha: false });
+  const DPR = Math.max(1, window.devicePixelRatio || 1);
+
+  function resizeCanvas(){
+    const rect = canvas.getBoundingClientRect();
+    canvas.width = Math.round(rect.width * DPR);
+    canvas.height = Math.round(rect.height * DPR);
+  }
+  new ResizeObserver(resizeCanvas).observe(canvas);
+  resizeCanvas();
+
+  const statusEl = document.getElementById('status');
+  const tokenListEl = document.getElementById('tokenList');
+  const tokenPresetEl = document.getElementById('tokenPreset');
+
+  const state = {
+    map: { imgSrc: '', img: null, w: 0, h: 0 },
+    mapTransform: { scale: 1, x: 0, y: 0 },
+    grid: { size: 50, unitsPerCell: 5, color: '#6aa5ff', alpha: 0.35, show: true, offsetX: 0, offsetY: 0 },
+    view: { x: 0, y: 0, scale: 1 },
+    tokens: /** @type{Token[]} */([]),
+    ui: { dragMode: 'none', dragId: null, dragOffset:{x:0,y:0}, spaceDown:false, tool: 'none', calib:{p1:null,p2:null} }
+  };
+
+  // --- Fog of War layer (world-space bitmap)
+  const fog = document.createElement('canvas');
+  const fctx = fog.getContext('2d', { alpha:true });
+  const fogState = { enabled:false, brush:80, mode:'reveal', painting:false };
+
+  function setFogUI(enabled) {
+    document.getElementById('toggleFog').textContent = enabled ? 'Fog: On' : 'Fog: Off';
+    ['fogReveal','fogCover','fogBrush','fogClear'].forEach(id=>{
+      document.getElementById(id).disabled = !enabled;
+    });
+    document.getElementById('fogReveal').classList.toggle('active', enabled && fogState.mode==='reveal');
+    document.getElementById('fogCover').classList.toggle('active', enabled && fogState.mode==='cover');
+  }
+
+  function ensureFogSize() {
+    const W = state.map?.w || 4096;
+    const H = state.map?.h || 4096;
+    if (fog.width !== W || fog.height !== H) {
+      fog.width = W; fog.height = H;
+      if (fogState.enabled) {
+        fctx.globalCompositeOperation = 'source-over';
+        fctx.fillStyle = 'rgba(0,0,0,1)';
+        fctx.fillRect(0,0,fog.width,fog.height);
+      } else {
+        fctx.clearRect(0,0,fog.width,fog.height);
+      }
+    }
+  }
+
+  function fogDot(wx, wy) {
+    const r = fogState.brush * (state.grid.size/50) * 0.5; // modest scale with grid
+    if (fogState.mode === 'reveal') {
+      fctx.globalCompositeOperation = 'destination-out'; // erase (reveal)
+      fctx.beginPath(); fctx.arc(wx, wy, r, 0, Math.PI*2); fctx.fill();
+    } else {
+      fctx.globalCompositeOperation = 'source-over'; // paint black (cover)
+      fctx.fillStyle = 'rgba(0,0,0,1)';
+      fctx.beginPath(); fctx.arc(wx, wy, r, 0, Math.PI*2); fctx.fill();
+    }
+  }
+
+  const STORAGE_KEY = 'dmtoolbox.battlemap.mvp.v1';
+  function save(){
+    const payload = {
+      map: { imgSrc: state.map.imgSrc, w: state.map.w, h: state.map.h },
+      mapTransform: state.mapTransform,
+      grid: state.grid,
+      view: state.view,
+      tokens: state.tokens.map(t=>({ id:t.id, name:t.name, imgSrc:t.imgSrc, x:t.x, y:t.y, w:t.w, h:t.h }))
+      // Note: fog bitmap not persisted in this MVP to keep payload small.
+    };
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
+  }
+  function load(){
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if(!raw) return;
+    try{
+      const data = JSON.parse(raw);
+      Object.assign(state.grid, data.grid||{});
+      Object.assign(state.view, data.view||{});
+      Object.assign(state.mapTransform, data.mapTransform||{});
+      state.tokens = (data.tokens||[]).map(t=>({ ...t, img:null, selected:false }));
+      if(data.map?.imgSrc){
+        loadImage(data.map.imgSrc).then(img=>{
+          state.map = { imgSrc: data.map.imgSrc, img, w: img.naturalWidth, h: img.naturalHeight };
+          ensureFogSize();
+          fitMap();
+        });
+      }
+      state.tokens.forEach(t=>{ loadImage(t.imgSrc).then(img=> t.img = img); });
+    }catch(e){ console.warn('Load failed', e); }
+  }
+
+  function loadImage(src){ return new Promise((res, rej)=>{ const img = new Image(); img.onload=()=>res(img); img.onerror=rej; img.src=src; }); }
+  function worldToScreen(x,y){ return { x: (x*state.view.scale + state.view.x), y: (y*state.view.scale + state.view.y) }; }
+  function screenToWorld(x,y){ return { x: (x - state.view.x)/state.view.scale, y: (y - state.view.y)/state.view.scale }; }
+  function setStatus(text){ statusEl.textContent = text; }
+
+  function draw(){
+    const { width:W, height:H } = canvas;
+    ctx.setTransform(1,0,0,1,0,0);
+    ctx.fillStyle = '#091018';
+    ctx.fillRect(0,0,W,H);
+
+    ctx.setTransform(state.view.scale, 0, 0, state.view.scale, state.view.x, state.view.y);
+
+    if(state.map.img){
+      ctx.save();
+      ctx.translate(state.mapTransform.x, state.mapTransform.y);
+      ctx.scale(state.mapTransform.scale, state.mapTransform.scale);
+      ctx.drawImage(state.map.img, 0, 0);
+      ctx.restore();
+    }
+
+    if(state.grid.show){ drawGrid(); }
+
+    for(const t of state.tokens){
+      if(t.img){ ctx.drawImage(t.img, t.x, t.y, t.w, t.h); }
+      if(t.selected){
+        ctx.lineWidth = 2/state.view.scale;
+        ctx.strokeStyle = 'rgba(255,255,255,0.9)';
+        ctx.strokeRect(t.x, t.y, t.w, t.h);
+      }
+    }
+
+    // Fog renders last in world space
+    if (fogState.enabled) {
+      ctx.drawImage(fog, 0, 0);
+    }
+
+    ctx.setTransform(1,0,0,1,0,0);
+    requestAnimationFrame(draw);
+  }
+
+  function drawGrid(){
+    const { size, color, alpha, offsetX, offsetY } = state.grid;
+    const { width:W, height:H } = canvas;
+    ctx.save();
+    ctx.globalAlpha = alpha;
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 1 / state.view.scale;
+
+    const topLeft = screenToWorld(0,0);
+    const botRight = screenToWorld(W,H);
+
+    const xStart = Math.floor((topLeft.x - offsetX) / size) * size + offsetX;
+    const xEnd = Math.ceil((botRight.x - offsetX) / size) * size + offsetX;
+    const yStart = Math.floor((topLeft.y - offsetY) / size) * size + offsetY;
+    const yEnd = Math.ceil((botRight.y - offsetY) / size) * size + offsetY;
+
+    ctx.beginPath();
+    for(let x=xStart; x<=xEnd; x+=size){ ctx.moveTo(x, yStart); ctx.lineTo(x, yEnd); }
+    for(let y=yStart; y<=yEnd; y+=size){ ctx.moveTo(xStart, y); ctx.lineTo(xEnd, y); }
+    ctx.stroke();
+
+    ctx.lineWidth = 2 / state.view.scale;
+    ctx.beginPath();
+    const major = size * 5;
+    const xMStart = Math.floor((topLeft.x - offsetX) / major) * major + offsetX;
+    const xMEnd = Math.ceil((botRight.x - offsetX) / major) * major + offsetX;
+    const yMStart = Math.floor((topLeft.y - offsetY) / major) * major + offsetY;
+    const yMEnd = Math.ceil((botRight.y - offsetY) / major) * major + offsetY;
+    for(let x=xMStart; x<=xMEnd; x+=major){ ctx.moveTo(x, yStart); ctx.lineTo(x, yEnd); }
+    for(let y=yMStart; y<=yMEnd; y+=major){ ctx.moveTo(xStart, y); ctx.lineTo(xEnd, y); }
+    ctx.stroke();
+
+    ctx.restore();
+  }
+
+  function centerMap(){
+    if(!state.map.img) return;
+    const { width:W, height:H } = canvas;
+    state.view.x = (W - state.map.w*state.view.scale)/2;
+    state.view.y = (H - state.map.h*state.view.scale)/2;
+    setStatus('Centered'); save();
+  }
+  function fitMap(){
+    if(!state.map.img) return;
+    const { width:W, height:H } = canvas;
+    const sx = W / state.map.w; const sy = H / state.map.h;
+    state.view.scale = Math.min(sx, sy) * 0.95;
+    centerMap();
+  }
+
+  function hitToken(wx, wy){
+    for(let i=state.tokens.length-1; i>=0; i--){
+      const t = state.tokens[i];
+      if(wx >= t.x && wx <= t.x + t.w && wy >= t.y && wy <= t.y + t.h){ return t; }
+    }
+    return null;
+  }
+
+  let isPointerDown = false; let pointerId = null; let last = { x:0, y:0 };
+
+  canvas.addEventListener('pointerdown', (e)=>{
+    canvas.setPointerCapture(e.pointerId);
+    pointerId = e.pointerId; isPointerDown = true; last = { x:e.clientX, y:e.clientY };
+
+    const rect = canvas.getBoundingClientRect();
+    const sx = (e.clientX - rect.left) * DPR; const sy = (e.clientY - rect.top) * DPR;
+    const wpt = screenToWorld(sx, sy);
+
+    // Fog paint takes precedence
+    if (fogState.enabled && (fogState.mode === 'reveal' || fogState.mode === 'cover')) {
+      fogState.painting = true;
+      fogDot(wpt.x, wpt.y);
+      return;
+    }
+
+    // Tools (calibrate/origin)
+    if(state.ui.tool === 'calibrate'){
+      if(!state.ui.calib.p1){ state.ui.calib.p1 = {x:wpt.x, y:wpt.y}; calibStatusEl.textContent = 'Click second intersection'; }
+      else {
+        state.ui.calib.p2 = {x:wpt.x, y:wpt.y};
+        const dx = state.ui.calib.p2.x - state.ui.calib.p1.x; const dy = state.ui.calib.p2.y - state.ui.calib.p1.y;
+        const dist = Math.hypot(dx, dy);
+        const cells = Math.max(1, parseFloat(calibCellsEl.value)||10);
+        const newSize = dist / cells;
+        state.grid.size = clamp(newSize, 4, 256);
+        state.grid.offsetX = state.grid.offsetX + (state.ui.calib.p1.x - Math.round((state.ui.calib.p1.x - state.grid.offsetX)/state.grid.size)*state.grid.size);
+        state.grid.offsetY = state.grid.offsetY + (state.ui.calib.p1.y - Math.round((state.ui.calib.p1.y - state.grid.offsetY)/state.grid.size)*state.grid.size);
+        gridOffsetXEl.value = Math.round(state.grid.offsetX);
+        gridOffsetYEl.value = Math.round(state.grid.offsetY);
+        state.ui.tool = 'none'; calibStatusEl.textContent = `Calibrated: ${state.grid.size.toFixed(2)} px/cell`; save();
+      }
+      return;
+    }
+    if(state.ui.tool === 'pickOrigin'){
+      state.grid.offsetX = wpt.x; state.grid.offsetY = wpt.y;
+      gridOffsetXEl.value = Math.round(state.grid.offsetX);
+      gridOffsetYEl.value = Math.round(state.grid.offsetY);
+      state.ui.tool = 'none'; calibStatusEl.textContent = 'Origin set'; save(); return;
+    }
+    if(state.ui.tool === 'snapOrigin'){
+      const size = state.grid.size;
+      state.grid.offsetX = wpt.x - Math.round(wpt.x/size)*size;
+      state.grid.offsetY = wpt.y - Math.round(wpt.y/size)*size;
+      gridOffsetXEl.value = Math.round(state.grid.offsetX);
+      gridOffsetYEl.value = Math.round(state.grid.offsetY);
+      state.ui.tool = 'none'; calibStatusEl.textContent = 'Aligned to clicked intersection'; save(); return;
+    }
+
+    const token = hitToken(wpt.x, wpt.y);
+    const panMode = state.ui.spaceDown || e.button === 1;
+
+    if(!panMode && token){
+      state.tokens.forEach(t=> t.selected = false);
+      token.selected = true;
+      state.ui.dragMode = 'token';
+      state.ui.dragId = token.id;
+      state.ui.dragOffset = { x: wpt.x - token.x, y: wpt.y - token.y };
+      setStatus(`Dragging ${token.name||'token'}`);
+    } else {
+      state.tokens.forEach(t=> t.selected = false);
+      state.ui.dragMode = 'pan';
+      setStatus('Panning');
+    }
+    updateTokenList();
+  });
+
+  canvas.addEventListener('pointermove', (e)=>{
+    if(!isPointerDown || e.pointerId !== pointerId) return;
+    const rect = canvas.getBoundingClientRect();
+    const sx = (e.clientX - rect.left) * DPR; const sy = (e.clientY - rect.top) * DPR;
+    const wpt = screenToWorld(sx, sy);
+
+    if (fogState.enabled && fogState.painting) {
+      fogDot(wpt.x, wpt.y);
+      return;
+    }
+
+    if(state.ui.dragMode === 'token' && state.ui.dragId){
+      const t = state.tokens.find(t=> t.id === state.ui.dragId);
+      if(t){ t.x = wpt.x - state.ui.dragOffset.x; t.y = wpt.y - state.ui.dragOffset.y; }
+    }
+    if(state.ui.dragMode === 'pan'){
+      const dx = (e.clientX - last.x) * DPR; const dy = (e.clientY - last.y) * DPR;
+      state.view.x += dx; state.view.y += dy;
+      last = { x:e.clientX, y:e.clientY };
+    }
+  });
+
+  window.addEventListener('pointerup', (e)=>{
+    if(e.pointerId !== pointerId) return;
+    isPointerDown = false; pointerId = null;
+    canvas.releasePointerCapture(e.pointerId);
+
+    if (fogState.painting) {
+      fogState.painting = false;
+      save();
+      return;
+    }
+
+    if(state.ui.dragMode === 'token' && state.ui.dragId){
+      const t = state.tokens.find(t=> t.id === state.ui.dragId);
+      if(t && document.getElementById('snap').checked){
+        const s = state.grid.size;
+        t.x = Math.round(t.x / s) * s;
+        t.y = Math.round(t.y / s) * s;
+      }
+    }
+    state.ui.dragMode = 'none'; state.ui.dragId = null; save(); setStatus('Ready');
+  });
+
+  canvas.addEventListener('wheel', (e)=>{
+    e.preventDefault();
+    const rect = canvas.getBoundingClientRect();
+    const sx = (e.clientX - rect.left) * DPR; const sy = (e.clientY - rect.top) * DPR;
+
+    const before = screenToWorld(sx, sy);
+    const factor = Math.exp(-e.deltaY * 0.0015);
+    const newScale = clamp(state.view.scale * factor, 0.1, 8);
+    state.view.scale = newScale;
+    const after = screenToWorld(sx, sy);
+
+    state.view.x += (after.x - before.x) * state.view.scale;
+    state.view.y += (after.y - before.y) * state.view.scale;
+  }, { passive:false });
+
+  window.addEventListener('keydown', (e)=>{
+    if(e.code === 'Space') { state.ui.spaceDown = true; canvas.classList.add('dragging'); }
+    if(e.key === 'Delete' || e.key === 'Backspace') deleteSelected();
+  });
+  window.addEventListener('keyup', (e)=>{
+    if(e.code === 'Space'){ state.ui.spaceDown = false; canvas.classList.remove('dragging'); }
+  });
+
+  document.getElementById('mapFile').addEventListener('change', async (e)=>{
+    const file = e.target.files?.[0]; if(!file) return;
+    const dataUrl = await fileToDataUrl(file);
+    const img = await loadImage(dataUrl);
+    state.map = { imgSrc:dataUrl, img, w: img.naturalWidth, h: img.naturalHeight };
+    ensureFogSize();
+    fitMap(); save();
+  });
+  document.getElementById('gridSize').addEventListener('input', (e)=>{ state.grid.size = clamp(parseFloat(e.target.value)||50, 4, 256); save(); });
+  document.getElementById('unitsPerCell').addEventListener('input', (e)=>{ state.grid.unitsPerCell = Math.max(1, parseFloat(e.target.value)||5); save(); });
+  document.getElementById('gridColor').addEventListener('input', (e)=>{ state.grid.color = e.target.value; save(); });
+  document.getElementById('gridAlpha').addEventListener('input', (e)=>{ state.grid.alpha = clamp(parseFloat(e.target.value)||0.35, 0, 1); save(); });
+  document.getElementById('showGrid').addEventListener('change', (e)=>{ state.grid.show = e.target.checked; save(); });
+
+  const mapScaleEl = document.getElementById('mapScale');
+  const mapOffsetXEl = document.getElementById('mapOffsetX');
+  const mapOffsetYEl = document.getElementById('mapOffsetY');
+  mapScaleEl.addEventListener('input', (e)=>{ state.mapTransform.scale = clamp((parseFloat(e.target.value)||100)/100, 0.1, 4); save(); });
+  mapOffsetXEl.addEventListener('input', (e)=>{ state.mapTransform.x = parseFloat(e.target.value)||0; save(); });
+  mapOffsetYEl.addEventListener('input', (e)=>{ state.mapTransform.y = parseFloat(e.target.value)||0; save(); });
+  document.getElementById('resetMapTransform').addEventListener('click', ()=>{
+    state.mapTransform = { scale:1, x:0, y:0 }; mapScaleEl.value = 100; mapOffsetXEl.value = 0; mapOffsetYEl.value = 0; save();
+  });
+
+  const gridOffsetXEl = document.getElementById('gridOffsetX');
+  const gridOffsetYEl = document.getElementById('gridOffsetY');
+  gridOffsetXEl.addEventListener('input', (e)=>{ state.grid.offsetX = parseFloat(e.target.value)||0; save(); });
+  gridOffsetYEl.addEventListener('input', (e)=>{ state.grid.offsetY = parseFloat(e.target.value)||0; save(); });
+
+  const calibCellsEl = document.getElementById('calibCells');
+  const calibStatusEl = document.getElementById('calibStatus');
+  document.getElementById('startCalibrate').addEventListener('click', ()=>{
+    state.ui.tool = 'calibrate'; state.ui.calib = { p1:null, p2:null }; calibStatusEl.textContent = 'Click first grid intersection';
+  });
+  document.getElementById('pickGridOrigin').addEventListener('click', ()=>{
+    state.ui.tool = 'pickOrigin'; calibStatusEl.textContent = 'Click the grid intersection to become (0,0)';
+  });
+  document.getElementById('snapOriginToMap').addEventListener('click', ()=>{
+    state.ui.tool = 'snapOrigin'; calibStatusEl.textContent = 'Click a grid intersection on the map';
+  });
+
+  document.getElementById('centerMap').addEventListener('click', centerMap);
+  document.getElementById('fitMap').addEventListener('click', fitMap);
+  document.getElementById('clearMap').addEventListener('click', ()=>{ state.map = { imgSrc:'', img:null, w:0, h:0 }; ensureFogSize(); save(); });
+
+  document.getElementById('addToken').addEventListener('click', addTokenFromInputs);
+  document.getElementById('deleteSelected').addEventListener('click', deleteSelected);
+
+  // Fog controls
+  document.getElementById('toggleFog').addEventListener('click', ()=>{
+    fogState.enabled = !fogState.enabled;
+    ensureFogSize();
+    setFogUI(fogState.enabled);
+    setStatus(fogState.enabled ? 'Fog enabled' : 'Fog disabled');
+  });
+  document.getElementById('fogReveal').addEventListener('click', ()=>{ fogState.mode='reveal'; setFogUI(true); });
+  document.getElementById('fogCover').addEventListener('click', ()=>{ fogState.mode='cover'; setFogUI(true); });
+  document.getElementById('fogBrush').addEventListener('input', (e)=>{ fogState.brush = Math.max(5, Math.min(400, parseFloat(e.target.value)||80)); });
+  document.getElementById('fogClear').addEventListener('click', ()=>{ fctx.clearRect(0,0,fog.width,fog.height); });
+
+  // Presets
+  document.getElementById('addPreset').addEventListener('click', addTokenFromPreset);
+  loadTokenManifest().then(buildPresetDropdown);
+
+  // Reset-all
+  document.getElementById('resetAll').addEventListener('click', ()=>{
+    localStorage.removeItem(STORAGE_KEY);
+    Object.assign(state, {
+      map: { imgSrc:'', img:null, w:0, h:0 },
+      mapTransform: { scale:1, x:0, y:0 },
+      grid: { size:50, unitsPerCell:5, color:'#6aa5ff', alpha:0.35, show:true, offsetX:0, offsetY:0 },
+      view: { x:0, y:0, scale:1 },
+      tokens: []
+    });
+    fctx.clearRect(0,0,fog.width,fog.height);
+    updateTokenList();
+    setStatus('Session reset');
+  });
+
+  function addTokenFromInputs(){
+    const fileInput = document.getElementById('tokenFile');
+    const nameInput = document.getElementById('tokenName');
+    const cells = parseFloat(document.getElementById('tokenCells').value) || 1;
+    const file = fileInput.files?.[0];
+    if(!file){ alert('Choose a token image first, or use the Presets section.'); return; }
+    fileToDataUrl(file).then(src=> loadImage(src).then(img=>{
+      placeToken(nameInput.value || file.name, src, img, cells);
+    }));
+  }
+
+  function addTokenFromPreset(){
+    const opt = tokenPresetEl.options[tokenPresetEl.selectedIndex];
+    const src = opt?.value || '';
+    const name = opt?.dataset?.name || opt?.textContent || '';
+    if(!src){ alert('Select a preset token first.'); return; }
+    const cells = parseFloat(document.getElementById('tokenCells').value) || 1;
+    getCachedImage(src).then(img=> placeToken(name, src, img, cells));
+  }
+
+  function placeToken(name, src, img, cells){
+    const size = state.grid.size * cells;
+    const center = screenToWorld(canvas.width/2, canvas.height/2);
+    const token = {
+      id: 't_'+Math.random().toString(36).slice(2,9),
+      name: name || 'Token',
+      imgSrc: src,
+      img,
+      x: center.x - size/2,
+      y: center.y - size/2,
+      w: size,
+      h: size,
+      selected: true
+    };
+    state.tokens.forEach(t=> t.selected=false);
+    state.tokens.push(token);
+    updateTokenList(); save();
+    setStatus(`Added ${token.name}`);
+  }
+
+  function deleteSelected(){
+    const before = state.tokens.length;
+    state.tokens = state.tokens.filter(t=> !t.selected);
+    if(state.tokens.length !== before){ updateTokenList(); save(); setStatus('Deleted selected tokens'); }
+  }
+
+  function updateTokenList(){
+    tokenListEl.innerHTML = '';
+    for(const t of state.tokens){
+      const el = document.createElement('button');
+      el.className = 'pill';
+      el.textContent = t.name || t.id;
+      if(t.selected) el.style.outline = '2px solid var(--accent)';
+      el.addEventListener('click', ()=>{ state.tokens.forEach(x=>x.selected=false); t.selected=true; save(); updateTokenList(); });
+      tokenListEl.appendChild(el);
+    }
+  }
+
+  function fileToDataUrl(file){ return new Promise((res,rej)=>{ const r = new FileReader(); r.onload=()=>res(r.result); r.onerror=rej; r.readAsDataURL(file); }); }
+  function clamp(v,min,max){ return Math.max(min, Math.min(max, v)); }
+
+  load();
+  updateTokenList();
+  requestAnimationFrame(draw);
+})();
+</script>
+</body>
+</html>
