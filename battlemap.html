@@ -44,11 +44,13 @@
     .canvas-wrap { position: relative; flex: 1 1 auto; min-height: 0; }
     canvas { display:block; width: 100%; height: 100%; background: #0a0f16; border: 1px solid var(--line); border-radius: 12px; cursor: grab; }
     canvas.dragging { cursor: grabbing; }
-    .hint { position:absolute; right:10px; bottom:10px; background:#0f1620cc; padding:8px 10px; border:1px solid var(--line); border-radius:10px; font-size:12px; color:var(--muted); }
     .token-list { display:flex; flex-wrap: wrap; gap:6px; }
     .pill { border:1px solid var(--line); padding:4px 8px; border-radius:999px; font-size:12px; background:#0a111a; }
 
-    footer.site-footer { margin-top: 0 !important; }
+    .context-menu { position:absolute; background:#0f1620; border:1px solid var(--line); border-radius:8px; padding:6px; z-index:1000; display:none; min-width:160px; }
+    .context-menu button { width:100%; text-align:left; padding:6px 8px; border-radius:6px; }
+
+    .measure-label { position:absolute; background:#0f1620; border:1px solid var(--line); border-radius:6px; padding:2px 6px; font-size:12px; color:var(--ink); transform:translate(-50%, -150%); pointer-events:none; }
   </style>
 </head>
 <body>
@@ -56,7 +58,7 @@
     <div class="container-fluid">
       <a class="navbar-brand" href="index.html">
         <img src="/images/dndFavicon (2).png" height="32" width="32" alt="App Logo" class="d-inline-block me-1" />
-        The DM Toolbox
+        The DM's Toolbox
       </a>
       <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
         <span class="navbar-toggler-icon"></span>
@@ -65,11 +67,11 @@
         <ul class="navbar-nav me-auto mb-2 mb-lg-0">
           <li class="nav-item"><a class="nav-link" href="index.html">Initiative</a></li>
           <li class="nav-item"><a class="nav-link" href="name.html">Name Gen</a></li>
-          <li class="nav-item"><a class="nav-link" href="loot.html">Loot Gen</a></li>
+          <li class="nav-item"><a class="nav-link" href="loot.html">Loot Gen</a></li> 
           <li class="nav-item"><a class="nav-link" href="shop.html">Shop Gen</a></li>
           <li class="nav-item"><a class="nav-link" href="npc.html">NPC Gen</a></li>
           <li class="nav-item"><a class="nav-link" href="tav.html">Tavern/Inn Gen</a></li>
-          <li class="nav-item"><a class="nav-link active" aria-current="page" href="tav.html">Battle Map</a></li>
+          <li class="nav-item"><a class="nav-link active" aria-current="page" href="battlemap.html">Battle Map</a></li>
           <li class="nav-item"><a class="nav-link" href="encounterbuilder.html">Encounter Builder</a></li>
         </ul>
       </div>
@@ -157,7 +159,7 @@
 
       <div class="group">
         <h3>Shortcuts</h3>
-        <div class="muted">Space+Drag: Pan • Mouse Wheel: Zoom at cursor • Click token: Select • Drag: Move • Delete: Remove selected</div>
+        <div class="muted">Space+Drag: Pan • Wheel: Zoom • <strong>Shift+Drag: Paint Fog</strong> • Alt+Drag: Measure • R: Rotate • +/-: Resize • [ ]: Send/Bring • Esc: Clear selection • Del: Delete</div>
       </div>
     </aside>
 
@@ -174,6 +176,14 @@
       </div>
       <div class="canvas-wrap">
         <canvas id="stage" width="1920" height="1080"></canvas>
+        <div id="measureLabel" class="measure-label" style="display:none;">0 ft</div>
+        <div id="ctxMenu" class="context-menu">
+          <button data-cmd="rename">Rename</button>
+          <button data-cmd="duplicate">Duplicate</button>
+          <button data-cmd="bring">Bring Forward</button>
+          <button data-cmd="send">Send Backward</button>
+          <button data-cmd="delete">Delete</button>
+        </div>
       </div>
     </section>
   </div>
@@ -182,7 +192,7 @@
 
 <script>
 (function(){
-  // --- Built-in manifest (matches your filenames). If /images/tokenManifest.json exists, it will override this.
+  // --- Built-in manifest; /images/tokenManifest.json (if present) overrides.
   const DEFAULT_MANIFEST = {
     players: [
       { name: 'Artificer',    src: '/images/playerTokens/PlayerArtificerToken.png' },
@@ -250,7 +260,7 @@
     return loadImage(src).then(img=>{ imageCache.set(src,img); return img; });
   }
 
-  /** @typedef {{ id:string, name:string, imgSrc:string, img:HTMLImageElement|null, x:number, y:number, w:number, h:number, selected?:boolean }} Token */
+  /** @typedef {{ id:string, name:string, imgSrc:string, img:HTMLImageElement|null, x:number, y:number, w:number, h:number, rot:number, selected?:boolean }} Token */
 
   const canvas = document.getElementById('stage');
   const ctx = canvas.getContext('2d', { alpha: false });
@@ -258,8 +268,12 @@
 
   function resizeCanvas(){
     const rect = canvas.getBoundingClientRect();
-    canvas.width = Math.round(rect.width * DPR);
-    canvas.height = Math.round(rect.height * DPR);
+    const W = Math.max(200, Math.round(rect.width * DPR));
+    const H = Math.max(200, Math.round(rect.height * DPR));
+    if (canvas.width !== W || canvas.height !== H) {
+      canvas.width = W;
+      canvas.height = H;
+    }
   }
   new ResizeObserver(resizeCanvas).observe(canvas);
   resizeCanvas();
@@ -267,17 +281,20 @@
   const statusEl = document.getElementById('status');
   const tokenListEl = document.getElementById('tokenList');
   const tokenPresetEl = document.getElementById('tokenPreset');
+  const ctxMenu = document.getElementById('ctxMenu');
+  const measureLabel = document.getElementById('measureLabel');
 
+  // --- State
   const state = {
     map: { imgSrc: '', img: null, w: 0, h: 0 },
-    mapTransform: { scale: 1, x: 0, y: 0 },
+    mapTransform: { scale: 1, x: 0, y: 0 }, // image->world transform
     grid: { size: 50, unitsPerCell: 5, color: '#6aa5ff', alpha: 0.35, show: true, offsetX: 0, offsetY: 0 },
-    view: { x: 0, y: 0, scale: 1 },
+    view: { x: 0, y: 0, scale: 1 },         // world->screen
     tokens: /** @type{Token[]} */([]),
-    ui: { dragMode: 'none', dragId: null, dragOffset:{x:0,y:0}, spaceDown:false, tool: 'none', calib:{p1:null,p2:null} }
+    ui: { dragMode: 'none', dragId: null, dragOffset:{x:0,y:0}, spaceDown:false, tool: 'none', calib:{p1:null,p2:null}, measuring:false, measureStart:null }
   };
 
-  // --- Fog of War layer (world-space bitmap)
+  // --- Fog of War layer (image-space bitmap, aligns with map image)
   const fog = document.createElement('canvas');
   const fctx = fog.getContext('2d', { alpha:true });
   const fogState = { enabled:false, brush:80, mode:'reveal', painting:false };
@@ -292,43 +309,44 @@
   }
 
   function ensureFogSize() {
-    const W = state.map?.w || 4096;
-    const H = state.map?.h || 4096;
+    const W = state.map?.w || 0;
+    const H = state.map?.h || 0;
+    if (!W || !H) { fog.width = 1; fog.height = 1; return; }
     if (fog.width !== W || fog.height !== H) {
+      // preserve existing if possible
+      const old = document.createElement('canvas');
+      old.width = fog.width; old.height = fog.height;
+      old.getContext('2d').drawImage(fog,0,0);
       fog.width = W; fog.height = H;
-      if (fogState.enabled) {
-        fctx.globalCompositeOperation = 'source-over';
-        fctx.fillStyle = 'rgba(0,0,0,1)';
-        fctx.fillRect(0,0,fog.width,fog.height);
-      } else {
-        fctx.clearRect(0,0,fog.width,fog.height);
-      }
+      fctx.clearRect(0,0,fog.width,fog.height);
+      fctx.drawImage(old,0,0);
     }
   }
 
-  function fogDot(wx, wy) {
-    const r = fogState.brush * (state.grid.size/50) * 0.5; // modest scale with grid
-    if (fogState.mode === 'reveal') {
-      fctx.globalCompositeOperation = 'destination-out'; // erase (reveal)
-      fctx.beginPath(); fctx.arc(wx, wy, r, 0, Math.PI*2); fctx.fill();
-    } else {
-      fctx.globalCompositeOperation = 'source-over'; // paint black (cover)
-      fctx.fillStyle = 'rgba(0,0,0,1)';
-      fctx.beginPath(); fctx.arc(wx, wy, r, 0, Math.PI*2); fctx.fill();
-    }
+  // image<->world<->screen conversions
+  function imageToWorld(ix, iy){
+    const s = state.mapTransform.scale;
+    return { x: ix * s + state.mapTransform.x, y: iy * s + state.mapTransform.y };
   }
+  function worldToImage(wx, wy){
+    const s = state.mapTransform.scale || 1;
+    return { x: (wx - state.mapTransform.x) / s, y: (wy - state.mapTransform.y) / s };
+  }
+  function worldToScreen(x,y){ return { x: (x*state.view.scale + state.view.x), y: (y*state.view.scale + state.view.y) }; }
+  function screenToWorld(x,y){ return { x: (x - state.view.x)/state.view.scale, y: (y - state.view.y)/state.view.scale }; }
 
-  const STORAGE_KEY = 'dmtoolbox.battlemap.mvp.v1';
+  const STORAGE_KEY = 'dmtoolbox.battlemap.mvp.v3';
   function save(){
+    const fogData = fogState.enabled && fog.width > 1 ? tryCanvasToDataURL(fog) : null;
     const payload = {
       map: { imgSrc: state.map.imgSrc, w: state.map.w, h: state.map.h },
       mapTransform: state.mapTransform,
       grid: state.grid,
       view: state.view,
-      tokens: state.tokens.map(t=>({ id:t.id, name:t.name, imgSrc:t.imgSrc, x:t.x, y:t.y, w:t.w, h:t.h }))
-      // Note: fog bitmap not persisted in this MVP to keep payload small.
+      tokens: state.tokens.map(t=>({ id:t.id, name:t.name, imgSrc:t.imgSrc, x:t.x, y:t.y, w:t.w, h:t.h, rot:t.rot })),
+      fog: fogData
     };
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
+    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(payload)); } catch {}
   }
   function load(){
     const raw = localStorage.getItem(STORAGE_KEY);
@@ -338,11 +356,12 @@
       Object.assign(state.grid, data.grid||{});
       Object.assign(state.view, data.view||{});
       Object.assign(state.mapTransform, data.mapTransform||{});
-      state.tokens = (data.tokens||[]).map(t=>({ ...t, img:null, selected:false }));
+      state.tokens = (data.tokens||[]).map(t=>({ ...t, img:null, selected:false, rot:typeof t.rot==='number'?t.rot:0 }));
       if(data.map?.imgSrc){
         loadImage(data.map.imgSrc).then(img=>{
           state.map = { imgSrc: data.map.imgSrc, img, w: img.naturalWidth, h: img.naturalHeight };
           ensureFogSize();
+          if(data.fog){ drawDataUrlToCanvas(data.fog, fog); }
           fitMap();
         });
       }
@@ -351,8 +370,12 @@
   }
 
   function loadImage(src){ return new Promise((res, rej)=>{ const img = new Image(); img.onload=()=>res(img); img.onerror=rej; img.src=src; }); }
-  function worldToScreen(x,y){ return { x: (x*state.view.scale + state.view.x), y: (y*state.view.scale + state.view.y) }; }
-  function screenToWorld(x,y){ return { x: (x - state.view.x)/state.view.scale, y: (y - state.view.y)/state.view.scale }; }
+  function tryCanvasToDataURL(cnv){
+    try { return cnv.toDataURL('image/webp', 0.85); } catch { try { return cnv.toDataURL('image/png'); } catch { return null; } }
+  }
+  function drawDataUrlToCanvas(url, cnv){
+    return new Promise((resolve)=>{ const img=new Image(); img.onload=()=>{ const ct=cnv.getContext('2d'); ct.clearRect(0,0,cnv.width,cnv.height); ct.drawImage(img,0,0); resolve(); }; img.src=url; });
+  }
   function setStatus(text){ statusEl.textContent = text; }
 
   function draw(){
@@ -361,30 +384,71 @@
     ctx.fillStyle = '#091018';
     ctx.fillRect(0,0,W,H);
 
+    // world->screen
     ctx.setTransform(state.view.scale, 0, 0, state.view.scale, state.view.x, state.view.y);
 
+    // Map image (image->world)
     if(state.map.img){
       ctx.save();
       ctx.translate(state.mapTransform.x, state.mapTransform.y);
       ctx.scale(state.mapTransform.scale, state.mapTransform.scale);
       ctx.drawImage(state.map.img, 0, 0);
+      // Fog in image-space over the map
+      if (fogState.enabled && fog.width > 1 && fog.height > 1) {
+        ctx.drawImage(fog, 0, 0);
+      }
       ctx.restore();
     }
 
+    // Grid (world-space)
     if(state.grid.show){ drawGrid(); }
 
+    // Tokens
     for(const t of state.tokens){
-      if(t.img){ ctx.drawImage(t.img, t.x, t.y, t.w, t.h); }
-      if(t.selected){
-        ctx.lineWidth = 2/state.view.scale;
-        ctx.strokeStyle = 'rgba(255,255,255,0.9)';
-        ctx.strokeRect(t.x, t.y, t.w, t.h);
+      if(t.img){
+        ctx.save();
+        const cx = t.x + t.w/2;
+        const cy = t.y + t.h/2;
+        ctx.translate(cx, cy);
+        if (t.rot) ctx.rotate(t.rot);
+        ctx.drawImage(t.img, -t.w/2, -t.h/2, t.w, t.h);
+        if(t.selected){
+          ctx.lineWidth = 2/state.view.scale;
+          ctx.strokeStyle = 'rgba(255,255,255,0.9)';
+          ctx.strokeRect(-t.w/2, -t.h/2, t.w, t.h);
+        }
+        ctx.restore();
       }
     }
 
-    // Fog renders last in world space
-    if (fogState.enabled) {
-      ctx.drawImage(fog, 0, 0);
+    // Measuring overlay
+    if (state.ui.measuring && state.ui.measureStart) {
+      const mp = state.ui.measureStart;
+      const rect = canvas.getBoundingClientRect();
+      const mx = (mouseScreen.x - rect.left) * DPR;
+      const my = (mouseScreen.y - rect.top) * DPR;
+      const mWorld = screenToWorld(mx, my);
+      const dx = mWorld.x - mp.x;
+      const dy = mWorld.y - mp.y;
+      const distPx = Math.hypot(dx, dy);
+      const cells = distPx / state.grid.size;
+      const units = cells * state.grid.unitsPerCell;
+      ctx.save();
+      ctx.lineWidth = 2 / state.view.scale;
+      ctx.strokeStyle = '#8bd3ff';
+      ctx.beginPath();
+      ctx.moveTo(mp.x, mp.y);
+      ctx.lineTo(mWorld.x, mWorld.y);
+      ctx.stroke();
+      ctx.restore();
+      // label
+      const mid = worldToScreen((mp.x + mWorld.x)/2, (mp.y + mWorld.y)/2);
+      measureLabel.style.left = mid.x + 'px';
+      measureLabel.style.top = mid.y + 'px';
+      measureLabel.textContent = `${Math.round(units)} ft (${cells.toFixed(2)} cells)`;
+      measureLabel.style.display = 'block';
+    } else {
+      measureLabel.style.display = 'none';
     }
 
     ctx.setTransform(1,0,0,1,0,0);
@@ -394,6 +458,7 @@
   function drawGrid(){
     const { size, color, alpha, offsetX, offsetY } = state.grid;
     const { width:W, height:H } = canvas;
+
     ctx.save();
     ctx.globalAlpha = alpha;
     ctx.strokeStyle = color;
@@ -412,6 +477,7 @@
     for(let y=yStart; y<=yEnd; y+=size){ ctx.moveTo(xStart, y); ctx.lineTo(xEnd, y); }
     ctx.stroke();
 
+    // Major lines every 5 cells
     ctx.lineWidth = 2 / state.view.scale;
     ctx.beginPath();
     const major = size * 5;
@@ -422,7 +488,6 @@
     for(let x=xMStart; x<=xMEnd; x+=major){ ctx.moveTo(x, yStart); ctx.lineTo(x, yEnd); }
     for(let y=yMStart; y<=yMEnd; y+=major){ ctx.moveTo(xStart, y); ctx.lineTo(xEnd, y); }
     ctx.stroke();
-
     ctx.restore();
   }
 
@@ -436,20 +501,35 @@
   function fitMap(){
     if(!state.map.img) return;
     const { width:W, height:H } = canvas;
-    const sx = W / state.map.w; const sy = H / state.map.h;
+    const sx = W / Math.max(1,state.map.w);
+    const sy = H / Math.max(1,state.map.h);
     state.view.scale = Math.min(sx, sy) * 0.95;
     centerMap();
   }
 
   function hitToken(wx, wy){
+    // consider rotation by inverse transform
     for(let i=state.tokens.length-1; i>=0; i--){
       const t = state.tokens[i];
-      if(wx >= t.x && wx <= t.x + t.w && wy >= t.y && wy <= t.y + t.h){ return t; }
+      const cx = t.x + t.w/2;
+      const cy = t.y + t.h/2;
+      const dx = wx - cx, dy = wy - cy;
+      const c = Math.cos(-(t.rot||0)), s = Math.sin(-(t.rot||0));
+      const rx = dx*c - dy*s, ry = dx*s + dy*c;
+      if(Math.abs(rx) <= t.w/2 && Math.abs(ry) <= t.h/2){ return t; }
     }
     return null;
   }
 
-  let isPointerDown = false; let pointerId = null; let last = { x:0, y:0 };
+  let isPointerDown = false, pointerId = null, last = { x:0, y:0 };
+  let mouseScreen = { x:0, y:0 };
+
+  // === Fog: paint only when Shift is held ===
+  function wantsFogPaint(ev){
+    return fogState.enabled
+      && (fogState.mode === 'reveal' || fogState.mode === 'cover')
+      && ev.shiftKey;
+  }
 
   canvas.addEventListener('pointerdown', (e)=>{
     canvas.setPointerCapture(e.pointerId);
@@ -459,10 +539,17 @@
     const sx = (e.clientX - rect.left) * DPR; const sy = (e.clientY - rect.top) * DPR;
     const wpt = screenToWorld(sx, sy);
 
-    // Fog paint takes precedence
-    if (fogState.enabled && (fogState.mode === 'reveal' || fogState.mode === 'cover')) {
+    // measuring tool (Alt held)
+    if (state.ui.measuring) {
+      state.ui.measureStart = wpt;
+      return;
+    }
+
+    // Fog paint starts only if Shift is held
+    if (wantsFogPaint(e)) {
       fogState.painting = true;
-      fogDot(wpt.x, wpt.y);
+      const ip = worldToImage(wpt.x, wpt.y);
+      fogDot(ix=ip.x, iy=ip.y);
       return;
     }
 
@@ -508,25 +595,34 @@
       state.ui.dragMode = 'token';
       state.ui.dragId = token.id;
       state.ui.dragOffset = { x: wpt.x - token.x, y: wpt.y - token.y };
+      hideMenu();
       setStatus(`Dragging ${token.name||'token'}`);
+      updateTokenList();
     } else {
       state.tokens.forEach(t=> t.selected = false);
       state.ui.dragMode = 'pan';
+      hideMenu();
       setStatus('Panning');
+      updateTokenList();
     }
-    updateTokenList();
   });
 
   canvas.addEventListener('pointermove', (e)=>{
+    mouseScreen = { x:e.clientX, y:e.clientY };
     if(!isPointerDown || e.pointerId !== pointerId) return;
+
     const rect = canvas.getBoundingClientRect();
     const sx = (e.clientX - rect.left) * DPR; const sy = (e.clientY - rect.top) * DPR;
     const wpt = screenToWorld(sx, sy);
 
-    if (fogState.enabled && fogState.painting) {
-      fogDot(wpt.x, wpt.y);
+    // Continue fog paint only if we are in painting mode
+    if (fogState.painting) {
+      const ip = worldToImage(wpt.x, wpt.y);
+      fogDot(ip.x, ip.y);
       return;
     }
+
+    if(state.ui.measuring) return; // drawing handled in render
 
     if(state.ui.dragMode === 'token' && state.ui.dragId){
       const t = state.tokens.find(t=> t.id === state.ui.dragId);
@@ -547,6 +643,12 @@
     if (fogState.painting) {
       fogState.painting = false;
       save();
+      return;
+    }
+
+    if(state.ui.measuring){
+      state.ui.measuring = false;
+      state.ui.measureStart = null;
       return;
     }
 
@@ -576,12 +678,61 @@
     state.view.y += (after.y - before.y) * state.view.scale;
   }, { passive:false });
 
+  // Context menu (right-click)
+  canvas.addEventListener('contextmenu', (e)=>{
+    e.preventDefault();
+    const rect = canvas.getBoundingClientRect();
+    const sx = (e.clientX - rect.left) * DPR; const sy = (e.clientY - rect.top) * DPR;
+    const wpt = screenToWorld(sx, sy);
+    const token = hitToken(wpt.x, wpt.y);
+    if (!token) { hideMenu(); return; }
+    state.tokens.forEach(t=> t.selected = false);
+    token.selected = true; updateTokenList();
+    showMenu(e.clientX, e.clientY);
+  });
+  document.addEventListener('click', (e)=>{ if (!ctxMenu.contains(e.target)) hideMenu(); });
+  function showMenu(x,y){ ctxMenu.style.left = x+'px'; ctxMenu.style.top = y+'px'; ctxMenu.style.display='block'; }
+  function hideMenu(){ ctxMenu.style.display='none'; }
+
+  ctxMenu.addEventListener('click', (e)=>{
+    const cmd = e.target.dataset.cmd;
+    const t = state.tokens.find(x=>x.selected);
+    if(!t) return;
+    if (cmd==='rename'){
+      const name = prompt('Token name:', t.name || '');
+      if (name!==null) t.name = name.trim();
+    } else if (cmd==='duplicate'){
+      const copy = { ...t, id:'t_'+Math.random().toString(36).slice(2,9), x:t.x+10, y:t.y+10, selected:true };
+      state.tokens.forEach(x=>x.selected=false);
+      state.tokens.push(copy);
+    } else if (cmd==='bring'){
+      const i = state.tokens.indexOf(t); if(i>=0){ state.tokens.splice(i,1); state.tokens.push(t); }
+    } else if (cmd==='send'){
+      const i = state.tokens.indexOf(t); if(i>=0){ state.tokens.splice(i,1); state.tokens.unshift(t); }
+    } else if (cmd==='delete'){
+      state.tokens = state.tokens.filter(x=>!x.selected);
+    }
+    hideMenu(); updateTokenList(); save();
+  });
+
   window.addEventListener('keydown', (e)=>{
     if(e.code === 'Space') { state.ui.spaceDown = true; canvas.classList.add('dragging'); }
-    if(e.key === 'Delete' || e.key === 'Backspace') deleteSelected();
+    if(e.key === 'Delete' || e.key === 'Backspace') { deleteSelected(); }
+    if(e.key === 'Escape'){ state.tokens.forEach(t=> t.selected = false); updateTokenList(); hideMenu(); }
+    if(e.altKey){ state.ui.measuring = true; }
+    const t = state.tokens.find(x=>x.selected);
+    if(!t) return;
+    if(e.key === 'r' || e.key === 'R'){ t.rot = (t.rot||0) + (Math.PI/12); save(); }
+    if(e.key === '+'){ t.w*=1.1; t.h*=1.1; save(); }
+    if(e.key === '-'){ t.w*=0.9; t.h*=0.9; save(); }
+    if(e.key === '['){ const i=state.tokens.indexOf(t); if(i>0){ state.tokens.splice(i,1); state.tokens.splice(i-1,0,t); save(); } }
+    if(e.key === ']'){ const i=state.tokens.indexOf(t); if(i>=0 && i<state.tokens.length-1){ state.tokens.splice(i,1); state.tokens.splice(i+1,0,t); save(); } }
   });
   window.addEventListener('keyup', (e)=>{
     if(e.code === 'Space'){ state.ui.spaceDown = false; canvas.classList.remove('dragging'); }
+    if(!e.altKey && state.ui.measuring){ state.ui.measuring = false; state.ui.measureStart = null; }
+    // If Shift released mid-stroke, stop fog painting
+    if(!e.shiftKey && fogState.painting){ fogState.painting = false; save(); }
   });
 
   document.getElementById('mapFile').addEventListener('change', async (e)=>{
@@ -590,6 +741,10 @@
     const img = await loadImage(dataUrl);
     state.map = { imgSrc:dataUrl, img, w: img.naturalWidth, h: img.naturalHeight };
     ensureFogSize();
+    // reset map transform when new image loads
+    state.mapTransform = { scale:1, x:0, y:0 };
+    mapScaleInput.value = 100; mapOffsetXInput.value = 0; mapOffsetYInput.value = 0;
+    fctx.clearRect(0,0,fog.width,fog.height);
     fitMap(); save();
   });
   document.getElementById('gridSize').addEventListener('input', (e)=>{ state.grid.size = clamp(parseFloat(e.target.value)||50, 4, 256); save(); });
@@ -598,16 +753,18 @@
   document.getElementById('gridAlpha').addEventListener('input', (e)=>{ state.grid.alpha = clamp(parseFloat(e.target.value)||0.35, 0, 1); save(); });
   document.getElementById('showGrid').addEventListener('change', (e)=>{ state.grid.show = e.target.checked; save(); });
 
-  const mapScaleEl = document.getElementById('mapScale');
-  const mapOffsetXEl = document.getElementById('mapOffsetX');
-  const mapOffsetYEl = document.getElementById('mapOffsetY');
-  mapScaleEl.addEventListener('input', (e)=>{ state.mapTransform.scale = clamp((parseFloat(e.target.value)||100)/100, 0.1, 4); save(); });
-  mapOffsetXEl.addEventListener('input', (e)=>{ state.mapTransform.x = parseFloat(e.target.value)||0; save(); });
-  mapOffsetYEl.addEventListener('input', (e)=>{ state.mapTransform.y = parseFloat(e.target.value)||0; save(); });
+  // Map transform inputs (unique names to avoid redeclare)
+  const mapScaleInput  = document.getElementById('mapScale');
+  const mapOffsetXInput = document.getElementById('mapOffsetX');
+  const mapOffsetYInput = document.getElementById('mapOffsetY');
+  mapScaleInput.addEventListener('input', (e)=>{ state.mapTransform.scale = clamp((parseFloat(e.target.value)||100)/100, 0.1, 4); save(); });
+  mapOffsetXInput.addEventListener('input', (e)=>{ state.mapTransform.x = parseFloat(e.target.value)||0; save(); });
+  mapOffsetYInput.addEventListener('input', (e)=>{ state.mapTransform.y = parseFloat(e.target.value)||0; save(); });
   document.getElementById('resetMapTransform').addEventListener('click', ()=>{
-    state.mapTransform = { scale:1, x:0, y:0 }; mapScaleEl.value = 100; mapOffsetXEl.value = 0; mapOffsetYEl.value = 0; save();
+    state.mapTransform = { scale:1, x:0, y:0 }; mapScaleInput.value = 100; mapOffsetXInput.value = 0; mapOffsetYInput.value = 0; save();
   });
 
+  // Grid alignment inputs (unique names)
   const gridOffsetXEl = document.getElementById('gridOffsetX');
   const gridOffsetYEl = document.getElementById('gridOffsetY');
   gridOffsetXEl.addEventListener('input', (e)=>{ state.grid.offsetX = parseFloat(e.target.value)||0; save(); });
@@ -627,26 +784,71 @@
 
   document.getElementById('centerMap').addEventListener('click', centerMap);
   document.getElementById('fitMap').addEventListener('click', fitMap);
-  document.getElementById('clearMap').addEventListener('click', ()=>{ state.map = { imgSrc:'', img:null, w:0, h:0 }; ensureFogSize(); save(); });
+  document.getElementById('clearMap').addEventListener('click', ()=>{
+    state.map = { imgSrc:'', img:null, w:0, h:0 };
+    ensureFogSize();
+    save();
+  });
 
+  // Token actions
   document.getElementById('addToken').addEventListener('click', addTokenFromInputs);
   document.getElementById('deleteSelected').addEventListener('click', deleteSelected);
 
   // Fog controls
   document.getElementById('toggleFog').addEventListener('click', ()=>{
     fogState.enabled = !fogState.enabled;
-    ensureFogSize();
     setFogUI(fogState.enabled);
+    if (fogState.enabled) ensureFogSize();
     setStatus(fogState.enabled ? 'Fog enabled' : 'Fog disabled');
+    save();
   });
   document.getElementById('fogReveal').addEventListener('click', ()=>{ fogState.mode='reveal'; setFogUI(true); });
   document.getElementById('fogCover').addEventListener('click', ()=>{ fogState.mode='cover'; setFogUI(true); });
   document.getElementById('fogBrush').addEventListener('input', (e)=>{ fogState.brush = Math.max(5, Math.min(400, parseFloat(e.target.value)||80)); });
-  document.getElementById('fogClear').addEventListener('click', ()=>{ fctx.clearRect(0,0,fog.width,fog.height); });
+  document.getElementById('fogClear').addEventListener('click', ()=>{ fctx.clearRect(0,0,fog.width,fog.height); save(); });
 
   // Presets
   document.getElementById('addPreset').addEventListener('click', addTokenFromPreset);
   loadTokenManifest().then(buildPresetDropdown);
+
+  // Export / Import
+  document.getElementById('exportJson').addEventListener('click', ()=>{
+    const payload = localStorage.getItem(STORAGE_KEY) || JSON.stringify({});
+    const blob = new Blob([payload], {type:'application/json'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a'); a.href = url; a.download = `battlemap_${new Date().toISOString()}.json`;
+    document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
+  });
+  document.getElementById('importJsonFile').addEventListener('change', async (e)=>{
+    const file = e.target.files?.[0]; if(!file) return;
+    try {
+      const text = await file.text();
+      const data = JSON.parse(text);
+      // restore core state
+      Object.assign(state.grid, data.grid||{});
+      Object.assign(state.view, data.view||{});
+      Object.assign(state.mapTransform, data.mapTransform||{});
+      state.tokens = (data.tokens||[]).map(t=>({ ...t, img:null, selected:false, rot:typeof t.rot==='number'?t.rot:0 }));
+      if (data.map?.imgSrc) {
+        const img = await loadImage(data.map.imgSrc);
+        state.map = { imgSrc: data.map.imgSrc, img, w: img.naturalWidth, h: img.naturalHeight };
+        ensureFogSize();
+      } else {
+        state.map = { imgSrc:'', img:null, w:0, h:0 };
+        ensureFogSize();
+      }
+      // fog
+      fctx.clearRect(0,0,fog.width,fog.height);
+      if (data.fog) await drawDataUrlToCanvas(data.fog, fog);
+      // load token images
+      await Promise.all(state.tokens.map(async t=>{ t.img = await loadImage(t.imgSrc); }));
+      save();
+      setStatus('Session imported');
+    } catch(err) {
+      console.warn(err);
+      alert('Import failed: invalid or incompatible file.');
+    }
+  });
 
   // Reset-all
   document.getElementById('resetAll').addEventListener('click', ()=>{
@@ -656,12 +858,26 @@
       mapTransform: { scale:1, x:0, y:0 },
       grid: { size:50, unitsPerCell:5, color:'#6aa5ff', alpha:0.35, show:true, offsetX:0, offsetY:0 },
       view: { x:0, y:0, scale:1 },
-      tokens: []
+      tokens: [],
+      ui: { dragMode: 'none', dragId: null, dragOffset:{x:0,y:0}, spaceDown:false, tool:'none', calib:{p1:null,p2:null}, measuring:false, measureStart:null }
     });
     fctx.clearRect(0,0,fog.width,fog.height);
     updateTokenList();
     setStatus('Session reset');
   });
+
+  function fogDot(ix, iy) {
+    const r = fogState.brush * 0.5; // base brush in image px
+    if (!fog.width || !fog.height) return;
+    if (fogState.mode === 'reveal') {
+      fctx.globalCompositeOperation = 'destination-out'; // erase (reveal)
+      fctx.beginPath(); fctx.arc(ix, iy, r, 0, Math.PI*2); fctx.fill();
+    } else {
+      fctx.globalCompositeOperation = 'source-over'; // paint black (cover)
+      fctx.fillStyle = 'rgba(0,0,0,1)';
+      fctx.beginPath(); fctx.arc(ix, iy, r, 0, Math.PI*2); fctx.fill();
+    }
+  }
 
   function addTokenFromInputs(){
     const fileInput = document.getElementById('tokenFile');
@@ -673,7 +889,6 @@
       placeToken(nameInput.value || file.name, src, img, cells);
     }));
   }
-
   function addTokenFromPreset(){
     const opt = tokenPresetEl.options[tokenPresetEl.selectedIndex];
     const src = opt?.value || '';
@@ -682,7 +897,6 @@
     const cells = parseFloat(document.getElementById('tokenCells').value) || 1;
     getCachedImage(src).then(img=> placeToken(name, src, img, cells));
   }
-
   function placeToken(name, src, img, cells){
     const size = state.grid.size * cells;
     const center = screenToWorld(canvas.width/2, canvas.height/2);
@@ -695,6 +909,7 @@
       y: center.y - size/2,
       w: size,
       h: size,
+      rot: 0,
       selected: true
     };
     state.tokens.forEach(t=> t.selected=false);
@@ -724,6 +939,7 @@
   function fileToDataUrl(file){ return new Promise((res,rej)=>{ const r = new FileReader(); r.onload=()=>res(r.result); r.onerror=rej; r.readAsDataURL(file); }); }
   function clamp(v,min,max){ return Math.max(min, Math.min(max, v)); }
 
+  // Boot
   load();
   updateTokenList();
   requestAnimationFrame(draw);
