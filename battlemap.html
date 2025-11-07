@@ -19,30 +19,67 @@
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" crossorigin="anonymous"></script>
 
   <style>
-    html, body { height: 100%; background: #0b0f14; }
-    body { margin: 0; color: #e6f1ff; }
-    :root { --bg:#0b0f14; --panel:#0f1620; --ink:#e6f1ff; --muted:#8fa3bf; --accent:#8bd3ff; --line:#1b2430; }
+    :root {
+      --bg:#0b0f14; --panel:#0f1620; --ink:#e6f1ff; --muted:#8fa3bf;
+      --accent:#8bd3ff; --line:#1b2430; --nav:56px;
+    }
+    html, body { height: 100%; background: var(--bg); }
+    body { margin: 0; color: var(--ink); padding-top: var(--nav); }
+    .navbar { height: var(--nav); background:#0f1620; border-bottom:1px solid var(--line) }
 
-    .map-wrap { position: fixed; inset: 56px 0 0 0; display: grid; grid-template-columns: 320px 1fr; gap: 12px; padding: 12px; background: var(--bg); }
-    @media (max-width: 992px){ .map-wrap { grid-template-columns: 1fr; } }
+    /* Layout */
+    .map-wrap{
+      min-height: calc(100dvh - var(--nav));
+      display: flex;
+      gap: 12px;
+      padding: 12px;
+      background: var(--bg);
+      overflow-x: hidden; /* kill horizontal page scroll */
+    }
+
+    /* Offcanvas controls: drawer on mobile, static column on lg+ */
+    #controlsDrawer.offcanvas-lg { width: 340px; max-width: 40vw; }
+    @media (min-width: 992px){
+      #controlsDrawer.offcanvas-lg{
+        position: static;
+        transform: none !important;
+        visibility: visible !important;
+        background: transparent;
+        border: none;
+      }
+      #controlsDrawer .offcanvas-header { display: none !important; }
+      #controlsDrawer .offcanvas-body { padding: 0 !important; }
+    }
+
+    /* Make controls wider on mobile */
+    @media (max-width: 991.98px) {
+      #controlsDrawer.offcanvas-lg {
+        width: 90vw;       /* take up most of the viewport width */
+        max-width: 480px;  /* optional cap for tablets */
+      }
+    }
 
     .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 12px; overflow: auto; }
     .panel h2 { margin: 0 0 8px; font-size: 16px; letter-spacing: .3px; }
-    .group { border: 1px solid var(--line); border-radius: 12px; padding: 10px; margin-bottom: 12px; }
     .group h3 { margin: 0 0 8px; font-size: 13px; color: var(--muted); font-weight: 600; }
     label { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 8px; margin: 6px 0; font-size: 13px; color: var(--ink); }
-    input[type="number"], input[type="text"], input[type="color"], select { background: #0a111a; border: 1px solid var(--line); color: var(--ink); padding: 6px 8px; border-radius: 8px; font-size: 13px; }
+    input[type="number"], input[type="text"], input[type="color"], select {
+      background: #0a111a; border: 1px solid var(--line); color: var(--ink);
+      padding: 6px 8px; border-radius: 8px; font-size: 13px;
+    }
     input[type="file"] { font-size: 12px; }
     button { background: #0a111a; color: var(--ink); border: 1px solid var(--line); padding: 8px 10px; border-radius: 10px; cursor: pointer; font-size: 13px; }
     button:hover { border-color: #283345; }
     .row-inline { display:flex; gap:8px; align-items:center; flex-wrap: wrap; }
     .muted { color: var(--muted); font-size: 12px; }
 
-    .canvas-panel { display:flex; flex-direction: column; min-height: 0; }
-    .bar { padding: 8px 10px; display:flex; align-items:center; gap:8px; border: 1px solid var(--line); border-radius: 12px; background: #0c131d; margin-bottom: 12px; }
+    .canvas-panel { flex: 1 1 auto; min-width: 0; display:flex; flex-direction: column; min-height: 0; }
+    .bar { padding: 8px 10px; display:flex; align-items:center; gap:8px; border: 1px solid var(--line); border-radius: 12px; background: #0c131d; margin-bottom: 12px; overflow-x: auto; -webkit-overflow-scrolling: touch; flex-wrap: wrap; }
     .bar span { font-size:12px; color: var(--muted); }
+    .bar .active { outline: 2px solid var(--accent); }
+
     .canvas-wrap { position: relative; flex: 1 1 auto; min-height: 0; }
-    canvas { display:block; width: 100%; height: 100%; background: #0a0f16; border: 1px solid var(--line); border-radius: 12px; cursor: grab; }
+    canvas { display:block; width: 100%; height: 100%; background: #0a0f16; border: 1px solid var(--line); border-radius: 12px; cursor: grab; touch-action: none; }
     canvas.dragging { cursor: grabbing; }
     .token-list { display:flex; flex-wrap: wrap; gap:6px; }
     .pill { border:1px solid var(--line); padding:4px 8px; border-radius:999px; font-size:12px; background:#0a111a; }
@@ -51,23 +88,42 @@
     .context-menu button { width:100%; text-align:left; padding:6px 8px; border-radius:6px; }
 
     .measure-label { position:absolute; background:#0f1620; border:1px solid var(--line); border-radius:6px; padding:2px 6px; font-size:12px; color:var(--ink); transform:translate(-50%, -150%); pointer-events:none; }
+
+    /* Mobile touch targets */
+    @media (max-width: 991.98px){
+      input, select, button { min-height: 44px; }
+      label { grid-template-columns: 1fr; gap: 4px; }
+      .row-inline { gap: 6px; }
+    }
   </style>
 </head>
 <body>
-  <nav class="navbar navbar-expand-lg navbar-dark fixed-top" style="background:#0f1620;border-bottom:1px solid var(--line)" id="mainNav">
+  <nav class="navbar navbar-expand-lg navbar-dark fixed-top" id="mainNav">
     <div class="container-fluid">
       <a class="navbar-brand" href="index.html">
         <img src="/images/dndFavicon (2).png" height="32" width="32" alt="App Logo" class="d-inline-block me-1" />
         The DM's Toolbox
       </a>
-      <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+
+      <!-- Mobile Controls button -->
+      <button class="btn btn-outline-light d-lg-none ms-auto"
+              type="button"
+              data-bs-toggle="offcanvas"
+              data-bs-target="#controlsDrawer"
+              aria-controls="controlsDrawer">
+        <i class="bi bi-sliders"></i> Controls
+      </button>
+
+      <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarSupportedContent"
+              aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
         <span class="navbar-toggler-icon"></span>
       </button>
+
       <div class="collapse navbar-collapse" id="navbarSupportedContent">
-        <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+        <ul class="navbar-nav ms-auto ms-lg-3 mb-2 mb-lg-0">
           <li class="nav-item"><a class="nav-link" href="index.html">Initiative</a></li>
           <li class="nav-item"><a class="nav-link" href="name.html">Name Gen</a></li>
-          <li class="nav-item"><a class="nav-link" href="loot.html">Loot Gen</a></li> 
+          <li class="nav-item"><a class="nav-link" href="loot.html">Loot Gen</a></li>
           <li class="nav-item"><a class="nav-link" href="shop.html">Shop Gen</a></li>
           <li class="nav-item"><a class="nav-link" href="npc.html">NPC Gen</a></li>
           <li class="nav-item"><a class="nav-link" href="tav.html">Tavern/Inn Gen</a></li>
@@ -79,90 +135,162 @@
   </nav>
 
   <div class="map-wrap">
-    <aside class="panel">
-      <h2>Battle Map Controls</h2>
-
-      <div class="group">
-        <h3>1) Map</h3>
-        <label>Upload Map <input id="mapFile" type="file" accept="image/*" /></label>
-        <label>Base Scale (px per cell) <input id="gridSize" type="number" min="4" max="256" value="50" /></label>
-        <label>Units per cell <input id="unitsPerCell" type="number" min="1" value="5" /></label>
-        <label>Grid Color <input id="gridColor" type="color" value="#6aa5ff" /></label>
-        <label>Grid Opacity <input id="gridAlpha" type="number" min="0" max="1" step="0.05" value="0.35" /></label>
-        <label>Show Grid <input id="showGrid" type="checkbox" checked /></label>
-        <div class="row-inline">
-          <button id="centerMap">Center</button>
-          <button id="fitMap">Fit</button>
-          <button id="clearMap">Clear</button>
-        </div>
-        <hr class="text-secondary"/>
-        <h3>Map Transform</h3>
-        <label>Map Scale (%) <input id="mapScale" type="number" min="10" max="400" step="1" value="100" /></label>
-        <label>Map Offset X (px) <input id="mapOffsetX" type="number" step="1" value="0" /></label>
-        <label>Map Offset Y (px) <input id="mapOffsetY" type="number" step="1" value="0" /></label>
-        <div class="row-inline">
-          <button id="resetMapTransform">Reset Map Transform</button>
-        </div>
-        <hr class="text-secondary"/>
-        <h3>Grid Alignment</h3>
-        <label>Grid Origin X (px) <input id="gridOffsetX" type="number" step="1" value="0" /></label>
-        <label>Grid Origin Y (px) <input id="gridOffsetY" type="number" step="1" value="0" /></label>
-        <div class="row-inline">
-          <button id="pickGridOrigin">Pick Origin on Map</button>
-          <button id="snapOriginToMap">Align to Clicked Intersection</button>
-        </div>
-        <label>Calibrate: cells between clicks <input id="calibCells" type="number" min="1" step="1" value="10" /></label>
-        <div class="row-inline">
-          <button id="startCalibrate">Start Calibration</button>
-          <span class="muted" id="calibStatus"></span>
-        </div>
-        <div class="muted">Use calibration when the image has a printed grid or unknown DPI: click two intersections N cells apart.</div>
-        <div class="muted">Wheel to zoom. Middle-drag or hold <kbd>Space</kbd> + drag to pan.</div>
+    <!-- Controls: offcanvas on <lg, static column on ≥lg -->
+    <aside id="controlsDrawer"
+           class="offcanvas offcanvas-lg offcanvas-start panel"
+           tabindex="-1"
+           aria-labelledby="controlsLabel"
+           data-bs-scroll="true"
+           data-bs-backdrop="false">
+      <div class="offcanvas-header d-lg-none">
+        <h5 id="controlsLabel" class="m-0">Battle Map Controls</h5>
+        <button type="button" class="btn-close btn-close-white"
+        data-bs-dismiss="offcanvas" aria-label="Close"></button>
       </div>
 
-      <div class="group">
-        <h3>2) Tokens</h3>
-        <label>Upload Token Image <input id="tokenFile" type="file" accept="image/*" /></label>
-        <label>Name <input id="tokenName" type="text" placeholder="Goblin A" /></label>
-        <div class="row-inline">
-          <button id="addToken">Add Token</button>
-          <button id="deleteSelected">Delete Selected</button>
-        </div>
+      <div class="offcanvas-body p-2 p-lg-0">
 
-        <hr class="text-secondary"/>
-        <h3>Presets</h3>
-        <label>Choose Preset
-          <select id="tokenPreset" style="min-width:220px">
-            <option value="">— select a token —</option>
-          </select>
-        </label>
-        <div class="row-inline">
-          <button id="addPreset">Add Selected Preset</button>
-        </div>
+        <!-- DESKTOP/LARGE: Accordion groups -->
+        <div class="accordion" id="bmAccordion">
 
-        <label>Snap to Grid <input id="snap" type="checkbox" checked /></label>
-        <label>Token Size (cells) <input id="tokenCells" type="number" min="0.5" step="0.5" value="1" /></label>
-        <div class="token-list" id="tokenList"></div>
-      </div>
+          <!-- Map & Grid -->
+          <div class="accordion-item">
+            <h2 class="accordion-header" id="accMapHdr">
+              <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#accMap" aria-expanded="true">
+                1) Map & Grid
+              </button>
+            </h2>
+            <div id="accMap" class="accordion-collapse collapse show" data-bs-parent="#bmAccordion">
+              <div class="accordion-body">
+                <div class="group">
+                  <h3>Map</h3>
+                  <label>Upload Map <input id="mapFile" type="file" accept="image/*" /></label>
+                  <label>Base Scale (px per cell) <input id="gridSize" type="number" min="4" max="256" value="50" /></label>
+                  <label>Units per cell <input id="unitsPerCell" type="number" min="1" value="5" /></label>
+                  <label>Grid Color <input id="gridColor" type="color" value="#6aa5ff" /></label>
+                  <label>Grid Opacity <input id="gridAlpha" type="number" min="0" max="1" step="0.05" value="0.35" /></label>
+                  <label>Show Grid <input id="showGrid" type="checkbox" checked /></label>
+                  <div class="row-inline">
+                    <button id="centerMap">Center</button>
+                    <button id="fitMap">Fit</button>
+                    <button id="clearMap">Clear</button>
+                  </div>
+                </div>
+                <hr class="text-secondary"/>
+                <div class="group">
+                  <h3>Map Transform</h3>
+                  <label>Map Scale (%) <input id="mapScale" type="number" min="10" max="400" step="1" value="100" /></label>
+                  <label>Map Offset X (px) <input id="mapOffsetX" type="number" step="1" value="0" /></label>
+                  <label>Map Offset Y (px) <input id="mapOffsetY" type="number" step="1" value="0" /></label>
+                  <div class="row-inline">
+                    <button id="resetMapTransform">Reset Map Transform</button>
+                  </div>
+                </div>
+                <hr class="text-secondary"/>
+                <div class="group">
+                  <h3>Grid Alignment</h3>
+                  <label>Grid Origin X (px) <input id="gridOffsetX" type="number" step="1" value="0" /></label>
+                  <label>Grid Origin Y (px) <input id="gridOffsetY" type="number" step="1" value="0" /></label>
+                  <div class="row-inline">
+                    <button id="pickGridOrigin">Pick Origin on Map</button>
+                    <button id="snapOriginToMap">Align to Clicked Intersection</button>
+                  </div>
+                  <label>Calibrate: cells between clicks <input id="calibCells" type="number" min="1" step="1" value="10" /></label>
+                  <div class="row-inline">
+                    <button id="startCalibrate">Start Calibration</button>
+                    <span class="muted" id="calibStatus"></span>
+                  </div>
+                  <div class="muted">Use calibration when the image has a printed grid or unknown DPI: click two intersections N cells apart.</div>
+                  <div class="muted">Wheel to zoom. Middle-drag or hold <kbd>Space</kbd> + drag to pan.</div>
+                </div>
+              </div>
+            </div>
+          </div>
 
-      <div class="group">
-        <h3>3) Session</h3>
-        <div class="row-inline">
-          <button id="exportJson">Export JSON</button>
-          <input id="importJsonFile" type="file" accept="application/json" />
-        </div>
-        <div class="row-inline">
-          <button id="resetAll" title="Clear map and tokens">Reset</button>
-        </div>
-        <div class="muted">State saves to localStorage automatically.</div>
-      </div>
+          <!-- Tokens & Presets -->
+          <div class="accordion-item">
+            <h2 class="accordion-header" id="accTokensHdr">
+              <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#accTokens">
+                2) Tokens & Presets
+              </button>
+            </h2>
+            <div id="accTokens" class="accordion-collapse collapse" data-bs-parent="#bmAccordion">
+              <div class="accordion-body">
+                <div class="group">
+                  <h3>Tokens</h3>
+                  <label>Upload Token Image <input id="tokenFile" type="file" accept="image/*" /></label>
+                  <label>Name <input id="tokenName" type="text" placeholder="Goblin A" /></label>
+                  <div class="row-inline">
+                    <button id="addToken">Add Token</button>
+                    <button id="deleteSelected">Delete Selected</button>
+                  </div>
+                  <label>Snap to Grid <input id="snap" type="checkbox" checked /></label>
+                  <label>Token Size (cells) <input id="tokenCells" type="number" min="0.5" step="0.5" value="1" /></label>
+                </div>
 
-      <div class="group">
-        <h3>Shortcuts</h3>
-        <div class="muted">Space+Drag: Pan • Wheel: Zoom • <strong>Shift+Drag: Paint Fog</strong> • Alt+Drag: Measure • R: Rotate • +/-: Resize • [ ]: Send/Bring • Esc: Clear selection • Del: Delete</div>
+                <hr class="text-secondary"/>
+                <div class="group">
+                  <h3>Presets</h3>
+                  <label>Choose Preset
+                    <select id="tokenPreset" style="min-width:220px">
+                      <option value="">— select a token —</option>
+                    </select>
+                  </label>
+                  <div class="row-inline">
+                    <button id="addPreset">Add Selected Preset</button>
+                  </div>
+                  <div class="token-list" id="tokenList"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Session -->
+          <div class="accordion-item">
+            <h2 class="accordion-header" id="accSessionHdr">
+              <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#accSession">
+                3) Session
+              </button>
+            </h2>
+            <div id="accSession" class="accordion-collapse collapse" data-bs-parent="#bmAccordion">
+              <div class="accordion-body">
+                <div class="group">
+                  <div class="row-inline">
+                    <button id="exportJson">Export JSON</button>
+                    <input id="importJsonFile" type="file" accept="application/json" />
+                  </div>
+                  <div class="row-inline">
+                    <button id="resetAll" title="Clear map and tokens">Reset</button>
+                  </div>
+                  <div class="muted">State saves to localStorage automatically.</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Shortcuts -->
+          <div class="accordion-item">
+            <h2 class="accordion-header" id="accShortHdr">
+              <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#accShort">
+                Shortcuts
+              </button>
+            </h2>
+            <div id="accShort" class="accordion-collapse collapse" data-bs-parent="#bmAccordion">
+              <div class="accordion-body">
+                <div class="muted">
+                  Space+Drag: Pan • Wheel: Zoom • <strong>Brush Mode: Paint Fog</strong> (or Shift+Drag on desktop)
+                  • Measure: toggle button (or Alt on desktop) • R: Rotate • +/-: Resize • [ ]: Send/Bring • Esc: Clear selection • Del: Delete
+                </div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+        <!-- /accordion -->
       </div>
     </aside>
 
+    <!-- Canvas column -->
     <section class="canvas-panel">
       <div class="bar">
         <button id="toggleFog">Fog: Off</button>
@@ -172,8 +300,14 @@
           <input id="fogBrush" type="number" min="5" max="400" step="5" value="80" style="width:90px" disabled>
         </label>
         <button id="fogClear" disabled>Clear Fog</button>
+
+        <!-- NEW: Mobile-friendly mode toggles -->
+        <button id="fogBrushMode" aria-pressed="false" title="Toggle brush mode for touch/mobile">Brush Mode</button>
+        <button id="measureToggle" aria-pressed="false" title="Toggle measure mode (mobile-friendly)">Measure</button>
+
         <span id="status" class="ms-2">Ready</span>
       </div>
+
       <div class="canvas-wrap">
         <canvas id="stage" width="1920" height="1080"></canvas>
         <div id="measureLabel" class="measure-label" style="display:none;">0 ft</div>
@@ -188,7 +322,8 @@
     </section>
   </div>
 
-  <footer class="container-fluid site-footer" role="contentinfo" style="background:#0f1620;border-top:1px solid var(--line);position:fixed;left:0;right:0;bottom:0;display:none"></footer>
+  <footer class="container-fluid site-footer" role="contentinfo"
+          style="background:#0f1620;border-top:1px solid var(--line);position:fixed;left:0;right:0;bottom:0;display:none"></footer>
 
 <script>
 (function(){
@@ -229,11 +364,7 @@
   };
 
   async function loadTokenManifest(){
-    try {
-      const res = await fetch('/images/tokenManifest.json', { cache: 'no-store' });
-      if (res.ok) return await res.json();
-    } catch (_) {}
-    return DEFAULT_MANIFEST;
+    return Promise.resolve(DEFAULT_MANIFEST);
   }
 
   function buildPresetDropdown(manifest){
@@ -291,7 +422,14 @@
     grid: { size: 50, unitsPerCell: 5, color: '#6aa5ff', alpha: 0.35, show: true, offsetX: 0, offsetY: 0 },
     view: { x: 0, y: 0, scale: 1 },         // world->screen
     tokens: /** @type{Token[]} */([]),
-    ui: { dragMode: 'none', dragId: null, dragOffset:{x:0,y:0}, spaceDown:false, tool: 'none', calib:{p1:null,p2:null}, measuring:false, measureStart:null }
+    ui: {
+      dragMode: 'none', dragId: null, dragOffset:{x:0,y:0},
+      spaceDown:false, tool: 'none',
+      calib:{p1:null,p2:null},
+      measuring:false, measureStart:null,
+      brushMode:false,        // NEW: mobile fog brush
+      measureToggle:false     // NEW: mobile measure
+    }
   };
 
   // --- Fog of War layer (image-space bitmap, aligns with map image)
@@ -486,7 +624,7 @@
     const yMStart = Math.floor((topLeft.y - offsetY) / major) * major + offsetY;
     const yMEnd = Math.ceil((botRight.y - offsetY) / major) * major + offsetY;
     for(let x=xMStart; x<=xMEnd; x+=major){ ctx.moveTo(x, yStart); ctx.lineTo(x, yEnd); }
-    for(let y=yMStart; y<=yMEnd; y+=major){ ctx.moveTo(xStart, y); ctx.lineTo(xEnd, y); }
+    for(let y=yMStart; y<=yEnd; y+=major){ ctx.moveTo(xStart, y); ctx.lineTo(xEnd, y); }
     ctx.stroke();
     ctx.restore();
   }
@@ -524,11 +662,11 @@
   let isPointerDown = false, pointerId = null, last = { x:0, y:0 };
   let mouseScreen = { x:0, y:0 };
 
-  // === Fog: paint only when Shift is held ===
+  // Decide whether to paint fog (desktop: Shift, mobile: Brush Mode)
   function wantsFogPaint(ev){
     return fogState.enabled
       && (fogState.mode === 'reveal' || fogState.mode === 'cover')
-      && ev.shiftKey;
+      && (ev.shiftKey || state.ui.brushMode);
   }
 
   canvas.addEventListener('pointerdown', (e)=>{
@@ -539,17 +677,18 @@
     const sx = (e.clientX - rect.left) * DPR; const sy = (e.clientY - rect.top) * DPR;
     const wpt = screenToWorld(sx, sy);
 
-    // measuring tool (Alt held)
-    if (state.ui.measuring) {
+    // Mobile/Toggle measuring
+    if (state.ui.measureToggle || state.ui.measuring) {
+      state.ui.measuring = true;
       state.ui.measureStart = wpt;
       return;
     }
 
-    // Fog paint starts only if Shift is held
+    // Fog paint starts if Shift OR BrushMode
     if (wantsFogPaint(e)) {
       fogState.painting = true;
       const ip = worldToImage(wpt.x, wpt.y);
-      fogDot(ix=ip.x, iy=ip.y);
+      fogDot(ip.x, ip.y);
       return;
     }
 
@@ -615,14 +754,14 @@
     const sx = (e.clientX - rect.left) * DPR; const sy = (e.clientY - rect.top) * DPR;
     const wpt = screenToWorld(sx, sy);
 
-    // Continue fog paint only if we are in painting mode
+    // Continue fog paint only if painting
     if (fogState.painting) {
       const ip = worldToImage(wpt.x, wpt.y);
       fogDot(ip.x, ip.y);
       return;
     }
 
-    if(state.ui.measuring) return; // drawing handled in render
+    if(state.ui.measuring) return; // render handles the line
 
     if(state.ui.dragMode === 'token' && state.ui.dragId){
       const t = state.tokens.find(t=> t.id === state.ui.dragId);
@@ -638,7 +777,7 @@
   window.addEventListener('pointerup', (e)=>{
     if(e.pointerId !== pointerId) return;
     isPointerDown = false; pointerId = null;
-    canvas.releasePointerCapture(e.pointerId);
+    try { canvas.releasePointerCapture(e.pointerId); } catch {}
 
     if (fogState.painting) {
       fogState.painting = false;
@@ -647,8 +786,11 @@
     }
 
     if(state.ui.measuring){
-      state.ui.measuring = false;
-      state.ui.measureStart = null;
+      // If toggle is on, keep measuring until toggled off; otherwise end now.
+      if(!state.ui.measureToggle){
+        state.ui.measuring = false;
+        state.ui.measureStart = null;
+      }
       return;
     }
 
@@ -730,9 +872,13 @@
   });
   window.addEventListener('keyup', (e)=>{
     if(e.code === 'Space'){ state.ui.spaceDown = false; canvas.classList.remove('dragging'); }
-    if(!e.altKey && state.ui.measuring){ state.ui.measuring = false; state.ui.measureStart = null; }
-    // If Shift released mid-stroke, stop fog painting
-    if(!e.shiftKey && fogState.painting){ fogState.painting = false; save(); }
+    if(!e.altKey && state.ui.measuring && !state.ui.measureToggle){
+      state.ui.measuring = false; state.ui.measureStart = null;
+    }
+    // If Shift released mid-stroke and Brush Mode is OFF, stop fog painting
+    if(!e.shiftKey && fogState.painting && !state.ui.brushMode){
+      fogState.painting = false; save();
+    }
   });
 
   document.getElementById('mapFile').addEventListener('change', async (e)=>{
@@ -807,6 +953,24 @@
   document.getElementById('fogBrush').addEventListener('input', (e)=>{ fogState.brush = Math.max(5, Math.min(400, parseFloat(e.target.value)||80)); });
   document.getElementById('fogClear').addEventListener('click', ()=>{ fctx.clearRect(0,0,fog.width,fog.height); save(); });
 
+  // NEW: Brush Mode / Measure toggles (mobile-friendly)
+  const fogBrushModeBtn = document.getElementById('fogBrushMode');
+  fogBrushModeBtn.addEventListener('click', (e)=>{
+    state.ui.brushMode = !state.ui.brushMode;
+    e.currentTarget.classList.toggle('active', state.ui.brushMode);
+    e.currentTarget.setAttribute('aria-pressed', String(state.ui.brushMode));
+    setStatus(state.ui.brushMode ? 'Brush mode ON' : 'Brush mode OFF');
+  });
+  const measureToggleBtn = document.getElementById('measureToggle');
+  measureToggleBtn.addEventListener('click', (e)=>{
+    state.ui.measureToggle = !state.ui.measureToggle;
+    e.currentTarget.classList.toggle('active', state.ui.measureToggle);
+    e.currentTarget.setAttribute('aria-pressed', String(state.ui.measureToggle));
+    state.ui.measuring = state.ui.measureToggle;
+    if(!state.ui.measureToggle){ state.ui.measureStart = null; }
+    setStatus(state.ui.measureToggle ? 'Measure mode ON' : 'Measure mode OFF');
+  });
+
   // Presets
   document.getElementById('addPreset').addEventListener('click', addTokenFromPreset);
   loadTokenManifest().then(buildPresetDropdown);
@@ -859,7 +1023,13 @@
       grid: { size:50, unitsPerCell:5, color:'#6aa5ff', alpha:0.35, show:true, offsetX:0, offsetY:0 },
       view: { x:0, y:0, scale:1 },
       tokens: [],
-      ui: { dragMode: 'none', dragId: null, dragOffset:{x:0,y:0}, spaceDown:false, tool:'none', calib:{p1:null,p2:null}, measuring:false, measureStart:null }
+      ui: {
+        dragMode: 'none', dragId: null, dragOffset:{x:0,y:0},
+        spaceDown:false, tool:'none',
+        calib:{p1:null,p2:null},
+        measuring:false, measureStart:null,
+        brushMode:false, measureToggle:false
+      }
     });
     fctx.clearRect(0,0,fog.width,fog.height);
     updateTokenList();
@@ -939,7 +1109,41 @@
   function fileToDataUrl(file){ return new Promise((res,rej)=>{ const r = new FileReader(); r.onload=()=>res(r.result); r.onerror=rej; r.readAsDataURL(file); }); }
   function clamp(v,min,max){ return Math.max(min, Math.min(max, v)); }
 
+  // ---- Long-press context menu for touch ----
+  let lpTimer = null;
+  canvas.addEventListener('pointerdown', (e) => {
+    if (e.pointerType === 'touch') {
+      const startX = e.clientX, startY = e.clientY;
+      lpTimer = setTimeout(() => {
+        const rect = canvas.getBoundingClientRect();
+        const sx = (startX - rect.left) * DPR, sy = (startY - rect.top) * DPR;
+        const wpt = screenToWorld(sx, sy);
+        const token = hitToken(wpt.x, wpt.y);
+        if (token) {
+          state.tokens.forEach(t=> t.selected=false);
+          token.selected = true; updateTokenList();
+          showMenu(startX, startY);
+        }
+      }, 500);
+    }
+  }, { passive: true });
+
+  ['pointermove','pointerup','pointercancel'].forEach(ev =>
+    canvas.addEventListener(ev, () => { if (lpTimer) { clearTimeout(lpTimer); lpTimer = null; } }, { passive: true })
+  );
+
+  // Prevent browser gestures from stealing interaction on canvas while dragging
+  canvas.addEventListener('touchmove', (e) => {
+    if (state.ui.dragMode !== 'none' || fogState.painting) e.preventDefault();
+  }, { passive: false });
+
   // Boot
+  // Hook brush/measure buttons initial state to UI
+  document.getElementById('fogBrushMode').classList.toggle('active', state.ui.brushMode);
+  document.getElementById('fogBrushMode').setAttribute('aria-pressed', String(state.ui.brushMode));
+  document.getElementById('measureToggle').classList.toggle('active', state.ui.measureToggle);
+  document.getElementById('measureToggle').setAttribute('aria-pressed', String(state.ui.measureToggle));
+
   load();
   updateTokenList();
   requestAnimationFrame(draw);
