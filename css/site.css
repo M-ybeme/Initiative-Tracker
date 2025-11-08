@@ -5,6 +5,8 @@
   --mdm-secondary-color: #e2c957;
   --mdm-highlight-color: #6fcbc6;
   --mdm-nav-toggler-glow: #e2c957;
+  --mdm-primary-opaque: #65390c;
+  --mdm-nav-surface: #2b1a08;
 }
 
 /* Sticky footer setup */
@@ -111,7 +113,7 @@ main.content {
 
 /* Navbar overrides */
 #mainNav {
-  background: var(--mdm-primary-color);
+  background: var(--mdm-primary-opaque);
   --bs-navbar-toggler-icon-bg: url("data:image/svg+xml,%3csvg viewBox='0 0 30 30' xmlns='http://www.w3.org/2000/svg'%3e%3cpath stroke='rgba(226,201,87,1)' stroke-width='2' stroke-linecap='round' d='M4 7h22M4 15h22M4 23h22'/%3e%3c/svg%3e");
 }
 #mainNav button {
@@ -122,6 +124,38 @@ main.content {
 }
 .navbar-toggler {
   color: var(--mdm-nav-toggler-glow) !important;
+}
+
+@media (max-width: 991.98px) {
+  /* The expanded hamburger panel */
+  #mainNav .navbar-collapse.collapse.show {
+    background: var(--mdm-nav-surface) !important;  /* opaque */
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+    box-shadow: 0 10px 24px rgba(0,0,0,.35);
+    border: 1px solid rgba(255,255,255,.06);
+  }
+
+  /* Keep the top bar itself opaque as well */
+  #mainNav {
+    background: var(--mdm-primary-opaque) !important;
+  }
+
+  /* Readable links + nicer touch targets */
+  #mainNav .nav-link {
+    color: #f8f9fa !important;
+    padding: .6rem 1rem;
+  }
+
+  /* Light separators between items to reduce the “blob” look */
+  #mainNav .navbar-collapse .nav-item + .nav-item {
+    border-top: 1px solid rgba(255,255,255,.08);
+  }
+
+  /* Optional: subtle hover */
+  #mainNav .nav-link:hover {
+    background: rgba(255,255,255,.06);
+  }
 }
 
 /* Checklist styling */
