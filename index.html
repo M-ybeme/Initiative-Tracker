@@ -165,9 +165,9 @@
             <button id="export-btn" class="btn btn-outline-warning w-100">Export Session</button>
             <button id="import-btn" class="btn btn-outline-secondary w-100">Import Session</button>
 
-            <button class="btn btn-outline-light w-100"
+            <button class="btn btn-outline-success w-100"
                     data-bs-toggle="modal" data-bs-target="#savedCharsModal">
-                    <div class="text-light">
+                    <div class="">
                       Saved Character Templates
                     </div>
             </button>
@@ -1233,6 +1233,41 @@
       setTimeout(() => { drainConcentrationQueue(); }, 120);
     });
 
+    function safeHpPercent(c){
+      // MaxHP can be 0 (e.g., lair actions, traps, narrative tokens)
+      if (!Number.isFinite(c.maxHP) || c.maxHP <= 0) return 0;
+      const p = Math.round((c.currentHP / c.maxHP) * 100);
+      return Number.isFinite(p) ? Math.max(0, Math.min(100, p)) : 0;
+    }
+
+    function escapeRegExp(str){ return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); }
+
+    function baseNameOf(name){
+      // strip " (copy)" and a trailing integer like " 2"
+      return name.replace(/\s*\(copy\)$/i,'').replace(/\s+\d+$/,'').trim();
+    }
+
+    function nextNumberedName(base){
+      // Find the max used numeric suffix for this base; next will be max+1 (or 2 if only the base exists)
+      let maxNum = 1; // base alone counts as "1"
+      const re = new RegExp('^' + escapeRegExp(base) + '\\s+(\\d+)$', 'i');
+    
+      characters.forEach(c => {
+        const nm = (c.name || '').trim();
+        if (nm.toLowerCase() === base.toLowerCase()) {
+          maxNum = Math.max(maxNum, 1);
+          return;
+        }
+        const m = nm.match(re);
+        if (m) {
+          const n = parseInt(m[1], 10);
+          if (!Number.isNaN(n)) maxNum = Math.max(maxNum, n);
+        }
+      });
+    
+      return `${base} ${maxNum + 1}`;
+    }
+
     // ---------- Build UI ----------
     function buildTable(){
       $('combat-round').textContent = combatRound;
@@ -1242,7 +1277,8 @@
       mobileBody.innerHTML = '';
 
       characters.forEach((c,i)=>{
-        const pct = Math.max(0, Math.round((c.currentHP / c.maxHP) * 100));
+        // const pct = Math.max(0, Math.round((c.currentHP / c.maxHP) * 100));
+        const pct = safeHpPercent(c);
 
         // Desktop row
         const tr = document.createElement('tr');
@@ -1252,7 +1288,8 @@
           <td class="drag-handle"><i class="bi bi-grip-vertical"></i></td>
           <td>${i===currentTurn ? '<i class="bi bi-caret-right-fill"></i>' : ''}</td>
           <td class="${pct<=0 ? 'text-decoration-line-through' : ''}">
-            ${c.name}
+            <input type="text" class="form-control form-control-sm name-input"
+                   value="${c.name}" data-index="${i}" />
             ${c.concentration ? '<span class="ms-1 text-warning" title="Concentration"><i class="bi bi-star-fill"></i></span>' : ''}
           </td>
           <td>${c.type}</td>
@@ -1321,8 +1358,10 @@
         card.className = 'card mb-2 text-start '+(i===currentTurn?'border-success':'');
         card.innerHTML = `
           <div class="card-body">
-            <h5 class="card-title mb-1">
-              ${c.name} <small class="text-muted">(${c.type} • Init ${c.initiative} • AC ${c.ac ?? '-'})</small>
+            <h5 class="card-title mb-1 d-flex align-items-center gap-2 flex-wrap">
+              <input type="text" class="form-control form-control-sm name-input"
+                     style="max-width: 240px" value="${c.name}" data-index="${i}">
+              <small class="text-muted">(${c.type} • Init ${c.initiative} • AC ${c.ac ?? '-'})</small>
               ${c.concentration ? '<span class="ms-1 text-warning" title="Concentration"><i class="bi bi-star-fill"></i></span>' : ''}
             </h5>
             <div class="mb-1">HP:
@@ -1538,10 +1577,14 @@
       document.querySelectorAll('.duplicate-btn').forEach(btn=>{
         btn.addEventListener('click', function(){
           const idx = +this.dataset.index;
-          pushHistory(`Duplicate ${characters[idx].name}`);
-          const copy = JSON.parse(JSON.stringify(characters[idx]));
-          copy.name += ' (copy)';
-          characters.splice(idx+1, 0, copy);
+          const src = characters[idx];
+          pushHistory(`Duplicate ${src.name}`);
+        
+          const copy = JSON.parse(JSON.stringify(src));
+          const base = baseNameOf(src.name);
+          copy.name = nextNumberedName(base);
+        
+          characters.splice(idx + 1, 0, copy);
           buildTable();
         });
       });
@@ -1597,6 +1640,30 @@
       buildDiceHistory();
       if (autoSaveEnabled) saveState();
     }
+
+    // Name inline edit (Enter/Escape/blur)
+    document.querySelectorAll('.name-input').forEach(inp => {
+      const idx = +inp.dataset.index;
+      let original = inp.value;
+    
+      const commit = () => {
+        const v = (inp.value || '').trim();
+        if (v && v !== characters[idx].name) {
+          pushHistory(`Rename ${characters[idx].name} → ${v}`);
+          characters[idx].name = v;
+          buildTable();
+        } else {
+          inp.value = characters[idx].name; // normalize spacing
+        }
+      };
+    
+      inp.addEventListener('focus', () => original = inp.value);
+      inp.addEventListener('keydown', e => {
+        if (e.key === 'Enter') { e.preventDefault(); commit(); }
+        if (e.key === 'Escape') { inp.value = original; inp.blur(); }
+      });
+      inp.addEventListener('blur', commit);
+    });
 
     // First-visit helper: show the Help panel once
     if (!localStorage.getItem('initiativeHelpSeen')) {
