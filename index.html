@@ -15,7 +15,10 @@
   <script src="/js/site.js"></script>
 
   <style>
-    .bgimage{ background:url('images/BGMap.png') no-repeat center center fixed; background-size:cover; }
+    .bgimage {
+      background:url('/images/BGMap.png') no-repeat center center fixed;
+      background-size:cover;
+    }
     .bg-orange{ background-color:#fd7e14 !important; color:#212529 !important; }
     .drag-handle{ cursor:move; }
     .active-turn{ border-left:5px solid #1d9e6d !important; color:#f8f9fa !important; font-weight:bold; }
@@ -34,7 +37,7 @@
     .hp-controls .btn{ padding:.1rem .35rem; line-height:1; }
 
     /* Sticky table header */
-    table thead th{ position:sticky; top:0; background:#161a1d; z-index:1; }
+    table thead th{ position:sticky; top:0; background:#161a1d; z-index:2; }
 
     /* Keep Notes & Effects tidy */
     .notes-actions{ display:flex; gap:.35rem; align-items:center; }
@@ -112,9 +115,10 @@
         <img src="/images/dndFavicon (2).png" height="40" width="40" alt="App Logo" class="d-inline-block" />
         The DM's Toolbox
       </a>
-      <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarSupportedContent"
-        aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
-        <span class="navbar-toggler-icon"></i></span>
+      <button class="navbar-toggler" type="button" data-bs-toggle="collapse"
+        data-bs-target="#navbarSupportedContent" aria-controls="navbarSupportedContent"
+        aria-expanded="false" aria-label="Toggle navigation">
+        <span class="navbar-toggler-icon"></span>
       </button>
       <div class="collapse navbar-collapse" id="navbarSupportedContent">
         <ul class="navbar-nav me-auto mb-2 mb-lg-0">
@@ -191,9 +195,9 @@
       <form id="initiative-form" class="mb-4">
         <div class="row g-2 justify-content-center">
           <div class="col-12 col-md-3"><input id="character-name" class="form-control" type="text" placeholder="Character Name" required></div>
-          <div class="col-6 col-md-2"><input id="initiative-roll" class="form-control" type="number" placeholder="Initiative" required></div>
-          <div class="col-6 col-md-2"><input id="character-health" class="form-control" type="number" placeholder="Max HP" required></div>
-          <div class="col-6 col-md-2"><input id="character-ac" class="form-control" type="number" placeholder="AC" required></div>
+          <div class="col-6 col-md-2"><input id="initiative-roll" class="form-control" type="number" placeholder="Initiative"></div>
+          <div class="col-6 col-md-2"><input id="character-health" class="form-control" type="number" placeholder="Max HP"></div>
+          <div class="col-6 col-md-2"><input id="character-ac" class="form-control" type="number" placeholder="AC"></div>
           <div class="col-6 col-md-2">
             <select id="character-type" class="form-select">
               <option>PC</option>
@@ -617,31 +621,30 @@
 
 
   <footer class="container-fluid mt-5 site-footer" role="contentinfo">
-    <div class="row footer-main">
-      <div class="col">
-        <div class="container">
-          <div class="row align-items-center">
-            <div class="col-12 col-md-4 text-md-start text-center order-last order-md-first">
-              &copy; 2025 Maybeme | The DM’s Toolbox
-            </div>
-            <div class="col-12 col-md-4 text-center">
-              <img src="/images/White logo - no background.png" height="50" alt="logo">
-            </div>
-            <div class="col-12 col-md-4 d-flex justify-content-center justify-content-md-end">
-              <a href="https://www.linkedin.com/in/marlo-mayberry-930ab9b7/" class="socialicons" target="_blank" rel="noopener">
-                <i class="bi bi-linkedin p-2"></i>
-              </a>
-              <a href="https://github.com/M-ybeme" class="socialicons" target="_blank" rel="noopener">
-                <i class="bi bi-github p-2"></i>
-              </a>
-              <a href="https://ko-fi.com/maybemestoolbox"
-                 class="socialicons d-flex align-items-center ms-2"
-                 target="_blank" rel="noopener"
-                 title="Support The DM’s Toolbox on Ko-fi">
-                <i class="bi bi-cup-hot p-2"></i>
-                <span class="d-none d-md-inline small fw-semibold">Support</span>
-              </a>
-            </div>
+    <div class="footer-main py-3">
+      <div class="container">
+        <div class="row align-items-center text-center text-md-start">
+          <!-- Left: Copyright -->
+          <div class="col-12 col-md-4 mb-2 mb-md-0 text-md-start text-center">
+            <small class="text-muted">&copy; 2025 Maybeme | The DM’s Toolbox</small>
+          </div>
+
+          <!-- Center: Logo -->
+          <div class="col-12 col-md-4 text-center mb-2 mb-md-0">
+            <img src="/images/White logo - no background.png" height="40" alt="Logo" class="footer-logo">
+          </div>
+
+          <!-- Right: Social Links -->
+          <div class="col-12 col-md-4 d-flex justify-content-center justify-content-md-end align-items-center gap-2">
+            <a href="https://www.linkedin.com/in/marlo-mayberry-930ab9b7/" class="socialicons" target="_blank" rel="noopener" aria-label="LinkedIn">
+              <i class="bi bi-linkedin"></i>
+            </a>
+            <a href="https://github.com/M-ybeme" class="socialicons" target="_blank" rel="noopener" aria-label="GitHub">
+              <i class="bi bi-github"></i>
+            </a>
+            <a href="https://ko-fi.com/maybemestoolbox" class="socialicons d-flex align-items-center" target="_blank" rel="noopener" title="Support The DM’s Toolbox on Ko-fi">
+              <i class="bi bi-cup-hot"></i>
+            </a>
           </div>
         </div>
       </div>
@@ -815,7 +818,7 @@
         const normalizeFromBuilder = (c) => ({
           name: c.name ?? 'Unknown',
           type: c.type ?? 'Enemy',
-          initiative: Number(c.initiative || 1), // force non-zero default
+          initiative: Number(c.initiative || 0), // force non-zero default
           currentHP: Number(c.currentHP ?? c.maxHP ?? 1),
           maxHP:     Number(c.maxHP     ?? c.currentHP ?? 1),
           tempHP:    Number(c.tempHP ?? 0),
@@ -839,18 +842,29 @@
     }
 
     // ---------- Persistence ----------
+
+    function elevateMaxHp(c){
+      if (Number.isFinite(c.currentHP) && c.currentHP > (c.maxHP || 0)) {
+        c.maxHP = c.currentHP;      
+      }
+    }
+
     function normalizeChar(c){
+      const cur = +c.currentHP || 0;
+      const max = +c.maxHP || 0;
+      const fixedMax = Math.max(max, cur); 
+
       return {
         name: c.name,
         type: c.type || 'PC',
         initiative: +c.initiative || 0,
-        currentHP: +c.currentHP || 0,
-        maxHP: +c.maxHP || 0,
-        tempHP: +c.tempHP || 0, // <-- Added
+        currentHP: cur,
+        maxHP: fixedMax,                 
+        tempHP: +c.tempHP || 0,
         ac: (c.ac ?? null),
         notes: c.notes || '',
         concentration: !!c.concentration,
-        deathSaves: {                 // <-- Added
+        deathSaves: {
           s: Math.min(3, Math.max(0, +(c.deathSaves?.s ?? 0))),
           f: Math.min(3, Math.max(0, +(c.deathSaves?.f ?? 0))),
           stable: !!(c.deathSaves?.stable)
@@ -1164,7 +1178,7 @@
 
     // ---------- Helpers ----------
     function hpClass(percent){
-      if (percent <= 0) return 'bg-secondary text-light text-decoration-line-through';
+      if (percent <= 0) return 'bg-secondary text-light'; 
       if (percent <= 25) return 'bg-danger text-light';
       if (percent <= 50) return 'bg-warning text-dark';
       if (percent <= 75) return 'bg-orange text-dark';
@@ -1279,6 +1293,7 @@
       characters.forEach((c,i)=>{
         // const pct = Math.max(0, Math.round((c.currentHP / c.maxHP) * 100));
         const pct = safeHpPercent(c);
+        const isDowned = (c.maxHP > 0 && c.currentHP <= 0);
 
         // Desktop row
         const tr = document.createElement('tr');
@@ -1287,7 +1302,7 @@
         tr.innerHTML = `
           <td class="drag-handle"><i class="bi bi-grip-vertical"></i></td>
           <td>${i===currentTurn ? '<i class="bi bi-caret-right-fill"></i>' : ''}</td>
-          <td class="${pct<=0 ? 'text-decoration-line-through' : ''}">
+          <td class="${isDowned ? 'text-decoration-line-through' : ''}">
             <input type="text" class="form-control form-control-sm name-input"
                    value="${c.name}" data-index="${i}" />
             ${c.concentration ? '<span class="ms-1 text-warning" title="Concentration"><i class="bi bi-star-fill"></i></span>' : ''}
@@ -1323,18 +1338,18 @@
                     return `<span class="status-chip"${rem} title="${s.name}">${s.icon}</span>`;
                   }).join('') || '<span class="text-secondary" style="opacity:.6;">—</span>'}
                 </div>
-                ${c.currentHP<=0 ? `
-                  <div class="death-saves" title="Death Saves">
-                    ${c.deathSaves.stable ? `<span class="ds-stable">Stable</span>` : `
-                      <span class="ds-pill success">S: ${c.deathSaves.s}</span>
-                      <span class="ds-pill fail">F: ${c.deathSaves.f}</span>
-                      <div class="btn-group btn-group-sm ds-btns" role="group">
-                        <button class="btn btn-outline-success ds-add" data-index="${i}" data-kind="s">+S</button>
-                        <button class="btn btn-outline-danger ds-add" data-index="${i}" data-kind="f">+F</button>
-                        <button class="btn btn-outline-secondary ds-reset" data-index="${i}" title="Reset">↺</button>
-                      </div>
-                    `}
-                  </div>` : ``}
+                ${isDowned ? `
+                <div class="death-saves" title="Death Saves">
+                  ${c.deathSaves.stable ? `<span class="ds-stable">Stable</span>` : `
+                    <span class="ds-pill success">S: ${c.deathSaves.s}</span>
+                    <span class="ds-pill fail">F: ${c.deathSaves.f}</span>
+                    <div class="btn-group btn-group-sm ds-btns" role="group">
+                      <button class="btn btn-outline-success ds-add" data-index="${i}" data-kind="s">+S</button>
+                      <button class="btn btn-outline-danger ds-add" data-index="${i}" data-kind="f">+F</button>
+                      <button class="btn btn-outline-secondary ds-reset" data-index="${i}" title="Reset">↺</button>
+                    </div>
+                  `}
+                </div>` : ``}
               </div>
               <div class="notes-actions">
                 <button class="btn btn-sm btn-outline-light notes-btn" data-index="${i}" title="Notes"><i class="bi bi-journal-text"></i></button>
@@ -1429,9 +1444,10 @@
           } else {
             // Healing
             const oldHP = c.currentHP;
-            c.currentHP = Math.max(0, Math.min(c.maxHP, c.currentHP + delta));
+            c.currentHP = Math.max(0, c.currentHP + delta);
             // Any healing resets death saves & stable
             if (c.currentHP > 0) c.deathSaves = { s:0, f:0, stable:false };
+            elevateMaxHp(c);
           }
           buildTable();
         });
@@ -1456,11 +1472,12 @@
       }
 
       document.querySelectorAll('.ds-add').forEach(btn=>{
-        btn.addEventListener('click', function(){
-          const idx = +this.dataset.index;
-          const kind = this.dataset.kind; // 's' or 'f'
-          const c = characters[idx];
-          if (c.currentHP > 0) return; // no DS above 0 HP
+      btn.addEventListener('click', function(){
+      const idx = +this.dataset.index;
+      const kind = this.dataset.kind; // 's' or 'f'
+      const c = characters[idx];
+      const isDowned = (c.maxHP > 0 && c.currentHP <= 0);
+        if (!isDowned) return; // only when actually downed
           pushHistory(`Death Save +${kind.toUpperCase()} for ${c.name}`);
           if (kind === 's') c.deathSaves.s = Math.min(3, (c.deathSaves.s||0) + 1);
           else c.deathSaves.f = Math.min(3, (c.deathSaves.f||0) + 1);
@@ -1487,7 +1504,7 @@
         });
         inp.addEventListener('blur', function(){
           const idx = +this.dataset.index;
-          const newHP = Math.max(0, Math.min(characters[idx].maxHP, parseInt(this.value, 10) || 0));
+          const newHP = Math.max(0, parseInt(this.value, 10) || 0); 
           const oldHP = characters[idx].currentHP;
           if (!pushed && newHP !== oldHP) pushHistory(`HP set for ${characters[idx].name}`);
           if (newHP < oldHP) {
@@ -1497,6 +1514,7 @@
             characters[idx].deathSaves = { s:0, f:0, stable:false };
           }
           characters[idx].currentHP = newHP;
+          elevateMaxHp(characters[idx]); 
           buildTable();
         });
         inp.addEventListener('input', function(){
@@ -1641,11 +1659,10 @@
       if (autoSaveEnabled) saveState();
     }
 
-    // Name inline edit (Enter/Escape/blur)
+    // Name inline edit — now re-attached each render
     document.querySelectorAll('.name-input').forEach(inp => {
       const idx = +inp.dataset.index;
       let original = inp.value;
-    
       const commit = () => {
         const v = (inp.value || '').trim();
         if (v && v !== characters[idx].name) {
@@ -1653,10 +1670,9 @@
           characters[idx].name = v;
           buildTable();
         } else {
-          inp.value = characters[idx].name; // normalize spacing
+          inp.value = characters[idx].name;
         }
       };
-    
       inp.addEventListener('focus', () => original = inp.value);
       inp.addEventListener('keydown', e => {
         if (e.key === 'Enter') { e.preventDefault(); commit(); }
@@ -1772,20 +1788,39 @@
     // ---------- Controls ----------
     $('initiative-form').addEventListener('submit', e=>{
       e.preventDefault();
-      const name = $('character-name').value.trim();
-      const init = parseInt($('initiative-roll').value,10);
-      const maxHP = parseInt($('character-health').value,10);
-      const ac = parseInt($('character-ac').value,10);
-      const type = $('character-type').value;
-      if(!name || isNaN(init) || isNaN(maxHP) || isNaN(ac)) return;
+      const name  = $('character-name').value.trim();
 
+      // Default blank or invalid numbers to 0
+      const safeNum = v => {
+        const n = parseInt(v.trim(), 10);
+        return isNaN(n) ? 0 : n;
+      };
+    
+      const init = safeNum($('initiative-roll').value);
+      const maxHP = safeNum($('character-health').value);
+      const ac = safeNum($('character-ac').value);
+      const type = $('character-type').value;
+    
+      // Only name is required now
+      if (!name) return;
+    
       characters.push({
-        name, type, initiative:init,
-        currentHP:maxHP, maxHP, tempHP:0,
-        notes:'', ac, status:[], concentration:false,
-        deathSaves:{ s:0, f:0, stable:false },
+        name,
+        type,
+        initiative: init,
+        currentHP: maxHP,
+        maxHP,
+        tempHP: 0,
+        notes: '',
+        ac,
+        status: [],
+        concentration: false,
+        deathSaves: { s:0, f:0, stable:false },
         concDamagePending: 0
       });
+
+      elevateMaxHp(characters[characters.length - 1]);
+    
       maybeSortByInitiative();
       e.target.reset();
       buildTable();
@@ -1799,14 +1834,13 @@
       do{
         currentTurn = (currentTurn + 1) % len;
         if (currentTurn === 0) {
-        combatRound++;
-        tickStatusDurationsOnNewRound();
-      }
-
+          combatRound++;
+          tickStatusDurationsOnNewRound();
+        }
         attempts++;
-      }while(characters[currentTurn].currentHP <= 0 && attempts < len);
-      buildTable();
-      document.querySelector('.active-turn')?.scrollIntoView({ block:'nearest' });
+      } while ((characters[currentTurn].maxHP > 0 && characters[currentTurn].currentHP <= 0) && attempts < len);
+    
+      buildTable();  
     });
 
     $('reset-turns').addEventListener('click', ()=>{ currentTurn=0; combatRound=1; buildTable(); });
