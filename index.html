@@ -105,6 +105,76 @@
     #rulesContainer .accordion-button { background:#1a1f24; color:#f8f9fa; }
     #rulesContainer .accordion-item   { border-color:#2b3238; }
     #rulesContainer .badge            { font-weight:500; }
+
+    /* --- Player View layout: hide DM chrome, clean table --- */
+
+    /* Hide DM-only controls but leave the Player View toggle */
+    body.player-view #lockOrderToggle,
+    body.player-view #manualSaveBtn,
+    body.player-view #copyOrderBtn,
+    body.player-view #saveHistorySelect,
+    body.player-view #export-btn,
+    body.player-view #import-btn,
+    body.player-view [data-bs-target="#savedCharsModal"],
+    body.player-view [data-bs-target="#rulesModal"],
+    body.player-view #helpBtn {
+      display: none !important;
+    }
+
+    /* Hide dice roller block completely */
+    body.player-view .my-4.text-light {
+      display: none !important;
+    }
+
+    /* Hide the Actions column (header + cells) */
+    body.player-view table thead th:last-child,
+    body.player-view table tbody td:last-child {
+      display: none !important;
+    }
+
+    /* Scoreboard-style table in player view */
+    body.player-view .table-responsive {
+      max-width: 1000px;
+      margin: 1.5rem auto 0 auto;
+    }
+
+    body.player-view table thead th,
+    body.player-view table tbody td {
+      font-size: 1.05rem;
+      padding: 0.6rem 0.9rem;
+    }
+
+    /* Give the active-turn row more pop on the TV */
+    body.player-view tr.active-turn {
+      box-shadow: 0 0 12px rgba(0,0,0,0.75);
+      transform: scale(1.01);
+      transition: transform 120ms ease-out, box-shadow 120ms ease-out;
+    }
+
+    /* Make inline inputs look like plain text on the TV */
+    body.player-view .name-input,
+    body.player-view .init-input {
+      background: transparent !important;
+      border: none !important;
+      box-shadow: none !important;
+    }
+
+    body.player-view .name-input {
+      padding-left: 0;
+    }
+
+    /* Player View banner toggle */
+    body.player-view #playerViewBanner {
+      display: block !important;
+    }
+
+    /* Player view: hide HP numbers but keep the colored bar */
+    body.player-view td:nth-child(7) .health-input,
+    body.player-view .card .health-input {
+      color: transparent !important;
+      text-shadow: none !important;
+      caret-color: transparent;   /* no blinking caret on the TV */
+    }
   </style>
 </head>
 <body class="bgimage">
@@ -138,8 +208,12 @@
   <!-- Main -->
   <main class="content pt-3">
     <div class="container-fluid text-center backdrop">
-      <h1 class="display-1 mb-0">Initiative Tracker</h1>
+            <h1 class="display-1 mb-0">Initiative Tracker</h1>
       <p class="lead">Manage initiative, health, AC, notes, status effects, and combat rounds.</p>
+      <p id="playerViewBanner" class="text-info fw-semibold d-none">
+        Player View: sensitive info hidden
+      </p>
+
 
       <!-- Controls row -->
       <div class="row g-3 align-items-center justify-content-center my-2">
@@ -180,7 +254,12 @@
                     data-bs-toggle="modal" data-bs-target="#rulesModal">
               <i class="bi bi-journal-bookmark me-1"></i> Rules / Spells
             </button>
-          
+
+            <div class="form-check form-switch">
+              <input class="form-check-input" type="checkbox" id="playerViewToggle">
+              <label class="form-check-label" for="playerViewToggle">Player View</label>
+            </div>
+
             <button id="helpBtn" class="btn btn-info text-dark w-100" type="button"
                     data-bs-toggle="offcanvas" data-bs-target="#helpCanvas" aria-controls="helpCanvas">
               <i class="bi bi-question-circle me-1"></i> Help
@@ -751,6 +830,7 @@
     let concQueue = [];
     let concToast = null;
     let concPromptActive = false;
+    let playerView = false;
 
     function initModals() {
       const statusEl = document.getElementById('statusModal');
@@ -1185,6 +1265,7 @@
       return 'bg-success text-light';
     }
     function maybeSortByInitiative(){ if ($('lockOrderToggle')?.checked) return; characters.sort((a,b)=> b.initiative - a.initiative); }
+    
     function statusTooltipText(c){
       const parts = [];
       if (c.concentration) parts.push('Concentration: ON');
@@ -1857,6 +1938,10 @@
     $('autoSaveToggle').addEventListener('change', e=>{ autoSaveEnabled = e.target.checked; });
     $('lockOrderToggle').addEventListener('change', e=>{
       if (sortableInstance) sortableInstance.option('disabled', e.target.checked);
+    });
+    $('playerViewToggle').addEventListener('change', e => {
+      playerView = e.target.checked;
+      document.body.classList.toggle('player-view', playerView);
     });
     $('copyOrderBtn').addEventListener('click', ()=>{
       const out = characters.map((c,i)=> `${i+1}. ${c.name} (${c.type}) — Init ${c.initiative}`).join('\n');
