@@ -21,7 +21,6 @@
     }
     .bg-orange{ background-color:#fd7e14 !important; color:#212529 !important; }
     .drag-handle{ cursor:move; }
-    .active-turn{ border-left:5px solid #1d9e6d !important; color:#f8f9fa !important; font-weight:bold; }
     #saveHistorySelect{ min-width:200px; }
 
     /* Give help button a subtle glow on dark theme */
@@ -133,8 +132,9 @@
 
     /* Scoreboard-style table in player view */
     body.player-view .table-responsive {
-      max-width: 1000px;
-      margin: 1.5rem auto 0 auto;
+      max-width: none;                 
+      width: min(1400px, 95vw);        
+      margin: 1.5rem auto 0;           
     }
 
     body.player-view table thead th,
@@ -145,9 +145,46 @@
 
     /* Give the active-turn row more pop on the TV */
     body.player-view tr.active-turn {
-      box-shadow: 0 0 12px rgba(0,0,0,0.75);
-      transform: scale(1.01);
-      transition: transform 120ms ease-out, box-shadow 120ms ease-out;
+      background: rgba(29, 158, 109, 0.32) !important;
+      box-shadow: 0 0 32px rgba(29, 158, 109, 0.9),
+                  inset 0 0 12px rgba(29, 158, 109, 0.5);
+      transform: scale(1.015);
+    }
+
+    /* --- Active turn: icon + row styling --- */
+
+    /* Base caret size for ALL rows */
+    .table td:nth-child(2) i.bi-caret-right-fill {
+      font-size: 1.3rem;
+      vertical-align: middle;
+    }
+    
+    /* Active-row caret: brighter and pulsing, no layout shift */
+    tr.active-turn td:nth-child(2) i.bi-caret-right-fill {
+      display: inline-block;
+      color: #1dff94 !important;
+      filter: drop-shadow(0 0 4px rgba(29,255,148,0.8));
+      transform: scale(1.15);
+      animation: pulseTurnArrow 1.6s ease-in-out infinite;
+    }
+    
+    @keyframes pulseTurnArrow {
+      0%   { transform: scale(1); opacity: 0.9; }
+      50%  { transform: scale(1.15); opacity: 1; }
+      100% { transform: scale(1); opacity: 0.9; }
+    }
+    
+    /* Active row text + subtle highlight */
+    tr.active-turn td {
+      font-weight: 700 !important;
+      color: #eafff4 !important;
+    }
+    
+    /* Emphasize the Character column on the active row */
+    tr.active-turn td:nth-child(3) {
+      background: linear-gradient(90deg, rgba(29,158,109,0.35), rgba(29,158,109,0));
+      border-radius: 6px;
+      padding-left: 10px !important;
     }
 
     /* Make inline inputs look like plain text on the TV */
