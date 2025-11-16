@@ -109,7 +109,6 @@
     /* --- Player View layout: hide DM chrome, clean table --- */
 
     /* Hide DM-only controls but leave the Player View toggle */
-    body.player-view #lockOrderToggle,
     body.player-view #manualSaveBtn,
     body.player-view #copyOrderBtn,
     body.player-view #saveHistorySelect,
@@ -174,6 +173,21 @@
       color: transparent !important;
       text-shadow: none !important;
       caret-color: transparent;   /* no blinking caret on the TV */
+    }
+
+    .conc-chip {
+      color: #ffc107;
+      border-radius: 999px;
+      border: 1px solid rgba(255, 193, 7, 0.8);
+      padding: 0.1rem 0.4rem;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .conc-chip i {
+      font-size: 0.9rem;
+      line-height: 1;
     }
   </style>
 </head>
@@ -495,208 +509,251 @@
     </div>
   </div>
 
-    <!-- Help Offcanvas -->
-  <div class="offcanvas offcanvas-start text-bg-dark" tabindex="-1" id="helpCanvas" aria-labelledby="helpCanvasLabel">
-    <div class="offcanvas-header">
-      <h5 id="helpCanvasLabel" class="mb-0"><i class="bi bi-magic me-2"></i>How to Use</h5>
-      <button type="button" class="btn-close btn-close-white" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+<!-- Help Offcanvas -->
+<div class="offcanvas offcanvas-start text-bg-dark" tabindex="-1" id="helpCanvas" aria-labelledby="helpCanvasLabel">
+  <div class="offcanvas-header">
+    <h5 id="helpCanvasLabel" class="mb-0"><i class="bi bi-magic me-2"></i>How to Use</h5>
+    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+  </div>
+
+  <div class="offcanvas-body">
+    <!-- Alert-Info header (matches help color on other pages) -->
+    <div class="alert alert-info text-light">
+      <strong>Quick Start:</strong> Add at least a name, hit <em>Add</em>, then click <em>Next Turn</em>.
+      Use the HP +/- to track damage or healing. Click the <i class="bi bi-star-fill"></i> to toggle Concentration.
     </div>
 
-    <div class="offcanvas-body">
-      <!-- Alert-Info header (matches help color on other pages) -->
-      <div class="alert alert-info text-light">
-        <strong>Quick Start:</strong> Add characters, set initiative, and click <em>Next Turn</em>. 
-        Use the HP +/- to track damage or healing. Click the <i class="bi bi-star-fill"></i> to toggle Concentration.
+    <!-- Help Accordion -->
+    <div class="accordion" id="helpAccordion">
+
+      <div class="accordion-item bg-dark text-light border-secondary">
+        <h2 class="accordion-header">
+          <button class="accordion-button collapsed bg-dark text-light" type="button" data-bs-toggle="collapse" data-bs-target="#helpGettingStarted">
+            Getting Started
+          </button>
+        </h2>
+        <div id="helpGettingStarted" class="accordion-collapse collapse" data-bs-parent="#helpAccordion">
+          <div class="accordion-body">
+            <ol class="mb-0">
+              <li>Enter at least a <strong>Character Name</strong>. <strong>Initiative</strong>, <strong>Max HP</strong>, and <strong>AC</strong> are optional (blank values default to 0).</li>
+              <li>Repeat for each combatant. The list sorts by initiative unless <em>Lock Order</em> is enabled.</li>
+              <li>Press <strong>Next Turn</strong> to advance through the order; after everyone acts, the <em>Combat Round</em> increases.</li>
+            </ol>
+          </div>
+        </div>
       </div>
 
-      <!-- Help Accordion -->
-      <div class="accordion" id="helpAccordion">
-
-        <div class="accordion-item bg-dark text-light border-secondary">
-          <h2 class="accordion-header">
-            <button class="accordion-button collapsed bg-dark text-light" type="button" data-bs-toggle="collapse" data-bs-target="#helpGettingStarted">
-              Getting Started
-            </button>
-          </h2>
-          <div id="helpGettingStarted" class="accordion-collapse collapse" data-bs-parent="#helpAccordion">
-            <div class="accordion-body">
-              <ol class="mb-0">
-                <li>Fill in <strong>Character Name</strong>, <strong>Initiative</strong>, <strong>Max HP</strong>, and <strong>AC</strong>, then click <em>Add</em>.</li>
-                <li>Repeat for each combatant. The list sorts by initiative unless <em>Lock Order</em> is enabled.</li>
-                <li>Press <strong>Next Turn</strong> to advance through the order; after everyone acts, the <em>Combat Round</em> increases.</li>
-              </ol>
-            </div>
-          </div>
-        </div>
-
-        <div class="accordion-item bg-dark text-light border-secondary">
-          <h2 class="accordion-header">
-            <button class="accordion-button collapsed bg-dark text-light" type="button" data-bs-toggle="collapse" data-bs-target="#helpHP">
-              Health, Damage, & Concentration
-            </button>
-          </h2>
-          <div id="helpHP" class="accordion-collapse collapse" data-bs-parent="#helpAccordion">
-            <div class="accordion-body">
-              <ul class="mb-2">
-                <li>Use <strong>HP +/-</strong> to apply damage or healing, or type directly into the HP field.</li>
-                <li><strong>Temp HP</strong> (THP) appears as a badge next to HP with its own <em>±</em> buttons.
+      <div class="accordion-item bg-dark text-light border-secondary">
+        <h2 class="accordion-header">
+          <button class="accordion-button collapsed bg-dark text-light" type="button" data-bs-toggle="collapse" data-bs-target="#helpHP">
+            Health, Damage, & Concentration
+          </button>
+        </h2>
+        <div id="helpHP" class="accordion-collapse collapse" data-bs-parent="#helpAccordion">
+          <div class="accordion-body">
+            <ul class="mb-2">
+              <li>Use <strong>HP +/-</strong> to apply damage or healing, or type directly into the HP field.</li>
+              <li><strong>Temp HP</strong> (THP) appears as a badge next to HP with its own <em>±</em> buttons.
                   Damage consumes THP first; only leftover damage reduces real HP.</li>
-                <li>Click the <strong>star</strong> <i class="bi bi-star"></i>/<i class="bi bi-star-fill text-warning"></i> to toggle <strong>Concentration</strong>.</li>
-                <li><strong>Concentration checks</strong> trigger when you take real HP damage (after THP absorption). The tracker totals your real HP damage during a creature’s turn and prompts you at the end of that turn.</li>
-                <li><strong>Healing</strong> above 0 HP automatically resets any death saves and removes <em>Stable</em>.</li>
-              </ul>
-              <div class="alert alert-info text-light mb-0">
-                <strong>Concentration DC:</strong> Roll <em>d20 + CON mod</em> (+ proficiency if proficient)
-                vs <strong>DC = max(10, ⌊damage this round / 2⌋)</strong>.
-              </div>
+              <li>Click the <strong>star</strong> <i class="bi bi-star"></i>/<i class="bi bi-star-fill text-warning"></i> to toggle <strong>Concentration</strong>.</li>
+              <li><strong>Concentration checks</strong> track the total real HP damage a creature takes during its turn and prompt you at the end of that turn with the correct DC.</li>
+              <li><strong>Healing</strong> above 0 HP automatically resets any death saves and removes <em>Stable</em>.</li>
+            </ul>
+            <div class="alert alert-info text-light mb-0">
+              <strong>Concentration DC:</strong> Roll <em>d20 + CON mod</em> (+ proficiency if proficient)
+              vs <strong>DC = max(10, ⌊damage this turn / 2⌋)</strong>.
             </div>
           </div>
         </div>
+      </div>
 
-        <div class="accordion-item bg-dark text-light border-secondary">
-          <h2 class="accordion-header">
-            <button class="accordion-button collapsed bg-dark text-light" type="button" data-bs-toggle="collapse" data-bs-target="#helpDeathSaves">
-              Death Saves
-            </button>
-          </h2>
-          <div id="helpDeathSaves" class="accordion-collapse collapse" data-bs-parent="#helpAccordion">
-            <div class="accordion-body">
-              <ul class="mb-2">
-                <li>When a creature drops to 0 HP, a <strong>Death Saves</strong> control appears:
+      <div class="accordion-item bg-dark text-light border-secondary">
+        <h2 class="accordion-header">
+          <button class="accordion-button collapsed bg-dark text-light" type="button" data-bs-toggle="collapse" data-bs-target="#helpDeathSaves">
+            Death Saves
+          </button>
+        </h2>
+        <div id="helpDeathSaves" class="accordion-collapse collapse" data-bs-parent="#helpAccordion">
+          <div class="accordion-body">
+            <ul class="mb-2">
+              <li>When a creature drops to 0 HP, a <strong>Death Saves</strong> control appears:
                   <span class="ds-pill success">S: #</span> and <span class="ds-pill fail">F: #</span>.</li>
-                <li>Use <strong>+S</strong> / <strong>+F</strong> to record successes or fails; use ↺ to reset them.</li>
-                <li>At <strong>3 successes</strong>, the creature becomes <em>Stable</em> (shown as “Stable”).</li>
-                <li><strong>Any healing</strong> that brings the creature above 0 HP clears all death saves and removes <em>Stable</em>.</li>
-              </ul>
-              <p class="small text-secondary mb-0">Rules nuance: This tracker does not auto-apply instant death from massive damage—you can adjudicate that as DM.</p>
-            </div>
+              <li>Use <strong>+S</strong> / <strong>+F</strong> to record successes or fails; use ↺ to reset them.</li>
+              <li>At <strong>3 successes</strong>, the creature becomes <em>Stable</em> (shown as “Stable”).</li>
+              <li><strong>Any healing</strong> that brings the creature above 0 HP clears all death saves and removes <em>Stable</em>.</li>
+            </ul>
+            <p class="small text-secondary mb-0">Note: the tracker does not auto-apply instant death from massive damage; handle that manually as DM.</p>
           </div>
         </div>
+      </div>
 
-        <div class="accordion-item bg-dark text-light border-secondary">
-          <h2 class="accordion-header">
-            <button class="accordion-button collapsed bg-dark text-light" type="button" data-bs-toggle="collapse" data-bs-target="#helpStatuses">
-              Status Effects & Notes
-            </button>
-          </h2>
-          <div id="helpStatuses" class="accordion-collapse collapse" data-bs-parent="#helpAccordion">
-            <div class="accordion-body">
-              <ul class="mb-0">
-                <li>Click the <strong>smiley</strong> <i class="bi bi-emoji-smile"></i> to add/remove conditions (e.g., Prone, Poisoned).</li>
-                <li>Optionally set a <strong>duration (rounds)</strong>; durations tick down automatically at the start of each new round.</li>
-                <li>Click <strong>Notes</strong> <i class="bi bi-journal-text"></i> to store character-specific reminders.</li>
-              </ul>
-            </div>
+      <div class="accordion-item bg-dark text-light border-secondary">
+        <h2 class="accordion-header">
+          <button class="accordion-button collapsed bg-dark text-light" type="button" data-bs-toggle="collapse" data-bs-target="#helpStatuses">
+            Status Effects & Notes
+          </button>
+        </h2>
+        <div id="helpStatuses" class="accordion-collapse collapse" data-bs-parent="#helpAccordion">
+          <div class="accordion-body">
+            <ul class="mb-0">
+              <li>Click the <strong>smiley</strong> <i class="bi bi-emoji-smile"></i> to add/remove conditions (e.g., Prone, Poisoned) with optional <strong>duration (rounds)</strong>.</li>
+              <li>Durations tick down automatically at the start of each new round; expired effects are removed.</li>
+              <li>Click <strong>Notes</strong> <i class="bi bi-journal-text"></i> to store character-specific reminders.</li>
+            </ul>
           </div>
         </div>
+      </div>
 
-        <div class="accordion-item bg-dark text-light border-secondary">
-          <h2 class="accordion-header">
-            <button class="accordion-button collapsed bg-dark text-light" type="button" data-bs-toggle="collapse" data-bs-target="#helpDice">
-              Dice Roller
-            </button>
-          </h2>
-          <div id="helpDice" class="accordion-collapse collapse" data-bs-parent="#helpAccordion">
-            <div class="accordion-body">
-              <ul class="mb-0">
-                <li>Use quick buttons for d4, d6, d8, d10, d12, d20, or d100.</li>
-                <li>Type complex rolls like <code>2d6+1d4+3</code>, <code>4d6kh3</code> (keep highest 3), or <code>2d20kl1</code> (disadvantage). Use <code>adv</code>/<code>dis</code> as shortcuts.</li>
-              </ul>
-            </div>
+      <div class="accordion-item bg-dark text-light border-secondary">
+        <h2 class="accordion-header">
+          <button class="accordion-button collapsed bg-dark text-light" type="button" data-bs-toggle="collapse" data-bs-target="#helpDice">
+            Dice Roller
+          </button>
+        </h2>
+        <div id="helpDice" class="accordion-collapse collapse" data-bs-parent="#helpAccordion">
+          <div class="accordion-body">
+            <ul class="mb-0">
+              <li>Use quick buttons for d4, d6, d8, d10, d12, d20, or d100.</li>
+              <li>Use the custom box for complex rolls like <code>2d6+1d4+3</code>, <code>4d6kh3</code> (keep highest 3), or <code>2d20kl1</code> (disadvantage).</li>
+              <li>Shortcuts: <code>adv</code> = 2d20 keep highest 1, <code>dis</code> = 2d20 keep lowest 1.</li>
+              <li>All rolls show a toast with the result and log into the roll history panel.</li>
+            </ul>
           </div>
         </div>
+      </div>
 
-        <div class="accordion-item bg-dark text-light border-secondary">
-          <h2 class="accordion-header" id="helpTemplatesHeader">
-            <button class="accordion-button collapsed bg-dark text-light" type="button"
-                    data-bs-toggle="collapse" data-bs-target="#helpTemplates"
-                    aria-expanded="false" aria-controls="helpTemplates">
-              Saved Character Templates
-            </button>
-          </h2>
-          <div id="helpTemplates" class="accordion-collapse collapse" data-bs-parent="#helpAccordion">
-            <div class="accordion-body">
-              <ul class="mb-0">
-                <li>Save up to <strong>200</strong> frequently used characters with AC/HP/type. Names must be unique; saving an existing name updates it.</li>
-                <li>Search, filter, and quickly <em>Load to Form</em> or <em>Add to Tracker</em>.</li>
-              </ul>
-            </div>
+      <div class="accordion-item bg-dark text-light border-secondary">
+        <h2 class="accordion-header" id="helpTemplatesHeader">
+          <button class="accordion-button collapsed bg-dark text-light" type="button"
+                  data-bs-toggle="collapse" data-bs-target="#helpTemplates"
+                  aria-expanded="false" aria-controls="helpTemplates">
+            Saved Character Templates
+          </button>
+        </h2>
+        <div id="helpTemplates" class="accordion-collapse collapse" data-bs-parent="#helpAccordion">
+          <div class="accordion-body">
+            <ul class="mb-0">
+              <li>Save up to <strong>200</strong> frequently used characters with AC/HP/type. Names must be unique; saving an existing name updates it.</li>
+              <li>Search, filter by type, and quickly <em>Load to Form</em> or <em>Add to Tracker</em>.</li>
+              <li>Use <strong>Clear All</strong> in the Saved Characters modal if you want to wipe just the templates (without touching the active encounter).</li>
+            </ul>
           </div>
         </div>
+      </div>
 
-        <div class="accordion-item bg-dark text-light border-secondary">
-          <h2 class="accordion-header">
-            <button class="accordion-button collapsed bg-dark text-light" type="button" data-bs-toggle="collapse" data-bs-target="#helpSaving">
-              Saving, History, Import/Export
-            </button>
-          </h2>
-          <div id="helpSaving" class="accordion-collapse collapse" data-bs-parent="#helpAccordion">
-            <div class="accordion-body">
-              <ul class="mb-0">
-                <li><strong>Auto-Save</strong> keeps your session updated in the browser.</li>
-                <li><strong>Manual Save</strong> creates a timestamped backup you can reload from <em>Load Previous Save</em>.</li>
-                <li><strong>Export</strong> downloads a JSON; <strong>Import</strong> loads a previous session.</li>
-                <li><strong>Persistence:</strong> all data saves locally in your browser (localstorage). No server required.</li>
-                <li><strong>Undo:</strong> the <em>Undo</em> button reverts the most recent change (HP, THP, notes, statuses, reorders, etc.), up to ~50 steps. Undo history isn’t kept after a page reload.</li>
-              </ul>
-            </div>
+      <div class="accordion-item bg-dark text-light border-secondary">
+        <h2 class="accordion-header">
+          <button class="accordion-button collapsed bg-dark text-light" type="button" data-bs-toggle="collapse" data-bs-target="#helpSaving">
+            Saving, History, Import/Export
+          </button>
+        </h2>
+        <div id="helpSaving" class="accordion-collapse collapse" data-bs-parent="#helpAccordion">
+          <div class="accordion-body">
+            <ul class="mb-0">
+              <li><strong>Auto-Save</strong> keeps your current session in sync as you edit.</li>
+              <li><strong>Manual Save</strong> creates a timestamped backup you can reload from <em>Load Previous Save</em>.</li>
+              <li><strong>Export Session</strong> downloads a JSON; <strong>Import Session</strong> loads a previous file.</li>
+              <li><strong>Undo</strong> rolls back the most recent HP / THP change, notes edit, status tweak, reorder, etc. (about 50 steps; history is not kept after a page reload).</li>
+              <li><strong>Clear Saved Data</strong> wipes everything stored locally for this tool: sessions, templates, and session notes.</li>
+              <li><strong>Cross-tab sync:</strong> if you have this page open in multiple tabs or windows, changes in one will automatically sync to the others.</li>
+              <li><strong>From Encounter Builder:</strong> if you send an encounter from the Encounter Builder, the next time you open the tracker it will replace the current session with that built encounter.</li>
+            </ul>
           </div>
         </div>
+      </div>
 
-        <div class="accordion-item bg-dark text-light border-secondary">
-          <h2 class="accordion-header">
-            <button class="accordion-button collapsed bg-dark text-light" type="button" data-bs-toggle="collapse" data-bs-target="#helpTurns">
-              Initiative, Turn Order & Rounds
-            </button>
-          </h2>
-          <div id="helpTurns" class="accordion-collapse collapse" data-bs-parent="#helpAccordion">
-            <div class="accordion-body">
-              <ul class="mb-0">
-                <li>Edit initiative inline; order re-sorts unless <em>Lock Order</em> is on.</li>
-                <li>Drag rows (grab the ⋮⋮ handle on the left on Desktop) or use up/down (mobile) to reorder.</li>
-                <li><strong>Next Round</strong> advances; a full cycle increments the round and ticks durations.</li>
-                <li>While<strong> Lock Order</strong> is on editing initiative won't resort.</li>
-              </ul>
-            </div>
+      <div class="accordion-item bg-dark text-light border-secondary">
+        <h2 class="accordion-header">
+          <button class="accordion-button collapsed bg-dark text-light" type="button" data-bs-toggle="collapse" data-bs-target="#helpTurns">
+            Initiative, Turn Order & Rounds
+          </button>
+        </h2>
+        <div id="helpTurns" class="accordion-collapse collapse" data-bs-parent="#helpAccordion">
+          <div class="accordion-body">
+            <ul class="mb-0">
+              <li>Edit initiative inline; order re-sorts unless <em>Lock Order</em> is on.</li>
+              <li>Drag rows (grab the ⋮⋮ handle on the left on Desktop) or use up/down (mobile) to reorder.</li>
+              <li><strong>Next Turn</strong> advances through the order; when you wrap around to the first creature, the round counter increases and status durations tick down.</li>
+              <li>While <strong>Lock Order</strong> is on, editing initiative values won’t re-sort the list and drag-reordering is disabled.</li>
+            </ul>
           </div>
         </div>
+      </div>
 
-        <div class="accordion-item bg-dark text-light border-secondary">
-          <h2 class="accordion-header">
-            <button class="accordion-button collapsed bg-dark text-light" type="button" data-bs-toggle="collapse" data-bs-target="#helpShortcuts">
-              Keyboard Shortcuts
-            </button>
-          </h2>
-          <div id="helpShortcuts" class="accordion-collapse collapse" data-bs-parent="#helpAccordion">
-            <div class="accordion-body">
-              <div class="alert alert-info text-light mb-2">
-                <code>N</code> Next Turn • <code>R</code> Reset Rounds • <code>C</code> Copy Order • 
-                <code>S</code> Manual Save • <code>L</code> Lock Order
-              </div>
-              <p class="mb-0 small text-secondary">Shortcuts are disabled while typing in inputs or textareas.</p>
-            </div>
+      <div class="accordion-item bg-dark text-light border-secondary">
+        <h2 class="accordion-header">
+          <button class="accordion-button collapsed bg-dark text-light" type="button" data-bs-toggle="collapse" data-bs-target="#helpPlayerView">
+            Player View / Second Screen
+          </button>
+        </h2>
+        <div id="helpPlayerView" class="accordion-collapse collapse" data-bs-parent="#helpAccordion">
+          <div class="accordion-body">
+            <ul class="mb-0">
+              <li>Use the <strong>Player View</strong> toggle to hide sensitive info (HP numbers, actions, dice roller, DM controls) and show a cleaner “scoreboard”.</li>
+              <li>For a TV or second monitor: open this page in a second window, turn on <strong>Player View</strong> there, and leave it off in your main DM window.</li>
+              <li>Both windows stay in sync automatically via the built-in cross-tab syncing: advancing turns or editing HP on the DM side updates the Player View.</li>
+              <li>Lock Order still works in Player View; you can toggle it from either window.</li>
+            </ul>
           </div>
         </div>
+      </div>
 
-        <div class="accordion-item bg-dark text-light border-secondary">
-          <h2 class="accordion-header">
-            <button class="accordion-button collapsed bg-dark text-light" type="button" data-bs-toggle="collapse" data-bs-target="#helpNotes">
-              Session Notes
-            </button>
-          </h2>
-          <div id="helpNotes" class="accordion-collapse collapse" data-bs-parent="#helpAccordion">
-            <div class="accordion-body">
-              <ul class="mb-0">
-                <li>Use the <strong>Session Notes</strong> panel (right side) to keep general notes.</li>
-                <li>Notes auto-save; you can also Export/Import plain text.</li>
-              </ul>
-            </div>
+      <div class="accordion-item bg-dark text-light border-secondary">
+        <h2 class="accordion-header">
+          <button class="accordion-button collapsed bg-dark text-light" type="button" data-bs-toggle="collapse" data-bs-target="#helpRulesSpells">
+            Rules & Spells Reference
+          </button>
+        </h2>
+        <div id="helpRulesSpells" class="accordion-collapse collapse" data-bs-parent="#helpAccordion">
+          <div class="accordion-body">
+            <ul class="mb-0">
+              <li>Use the <strong>Rules / Spells</strong> button above the tracker to open a side modal with quick rules summaries and SRD-safe spell overviews.</li>
+              <li>The <strong>Rules</strong> tab groups short, searchable rules entries by category (movement, actions, conditions, etc.).</li>
+              <li>The <strong>Spells</strong> tab lets you filter by name, class, level, school, and concentration, with quick casting details and a plain-language description.</li>
+              <li>Nothing is pulled from any paid rulebook; these are summaries you can pair with your own notes.</li>
+            </ul>
           </div>
         </div>
+      </div>
 
-      </div><!-- /accordion -->
-    </div><!-- /offcanvas-body -->
-  </div>
+      <div class="accordion-item bg-dark text-light border-secondary">
+        <h2 class="accordion-header">
+          <button class="accordion-button collapsed bg-dark text-light" type="button" data-bs-toggle="collapse" data-bs-target="#helpShortcuts">
+            Keyboard Shortcuts
+          </button>
+        </h2>
+        <div id="helpShortcuts" class="accordion-collapse collapse" data-bs-parent="#helpAccordion">
+          <div class="accordion-body">
+            <div class="alert alert-info text-light mb-2">
+              <code>N</code> Next Turn • <code>R</code> Reset Rounds • <code>C</code> Copy Order •
+              <code>S</code> Manual Save • <code>L</code> Lock Order
+            </div>
+            <p class="mb-0 small text-secondary">Shortcuts are disabled while typing in inputs or textareas.</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="accordion-item bg-dark text-light border-secondary">
+        <h2 class="accordion-header">
+          <button class="accordion-button collapsed bg-dark text-light" type="button" data-bs-toggle="collapse" data-bs-target="#helpNotes">
+            Session Notes
+          </button>
+        </h2>
+        <div id="helpNotes" class="accordion-collapse collapse" data-bs-parent="#helpAccordion">
+          <div class="accordion-body">
+            <ul class="mb-0">
+              <li>Use the <strong>Session Notes</strong> panel (right side) to keep general notes for the whole session.</li>
+              <li>Notes auto-save locally as you type; you can also Export/Import them as plain text.</li>
+              <li>Clearing Saved Data will also clear these notes, so export them first if you want a backup.</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /accordion -->
+  </div><!-- /offcanvas-body -->
+</div>
+
 
 
   <footer class="container-fluid mt-5 site-footer" role="contentinfo">
@@ -1363,6 +1420,27 @@
       return `${base} ${maxNum + 1}`;
     }
 
+    function renderStatusHtml(c) {
+      const concChip = c.concentration
+        ? `<span class="status-chip conc-chip" title="Concentration">
+             <i class="bi bi-star-fill"></i>
+           </span>`
+        : '';
+         
+      const effectChips = c.status.map(s => {
+        const rem = (typeof s.remaining === 'number')
+          ? ` data-remaining="${s.remaining}"`
+          : '';
+        return `<span class="status-chip"${rem} title="${s.name}">${s.icon}</span>`;
+      }).join('');
+    
+      if (!concChip && !effectChips) {
+        return '<span class="text-secondary" style="opacity:.6;">—</span>';
+      }
+    
+      return concChip + effectChips;
+    }
+
     // ---------- Build UI ----------
     function buildTable(){
       $('combat-round').textContent = combatRound;
@@ -1386,7 +1464,6 @@
           <td class="${isDowned ? 'text-decoration-line-through' : ''}">
             <input type="text" class="form-control form-control-sm name-input"
                    value="${c.name}" data-index="${i}" />
-            ${c.concentration ? '<span class="ms-1 text-warning" title="Concentration"><i class="bi bi-star-fill"></i></span>' : ''}
           </td>
           <td>${c.type}</td>
           <td><input type="number" class="form-control form-control-sm init-input" value="${c.initiative}" data-index="${i}" data-commit="init"></td>
@@ -1414,10 +1491,7 @@
             <div class="d-flex align-items-center justify-content-between w-100">
               <div class="d-flex align-items-center gap-2">
                 <div class="status-icon-row" data-bs-toggle="tooltip" data-bs-placement="top" title="${statusTooltipText(c)}">
-                  ${c.status.map(s=>{
-                    const rem = (typeof s.remaining==='number') ? ` data-remaining="${s.remaining}"` : '';
-                    return `<span class="status-chip"${rem} title="${s.name}">${s.icon}</span>`;
-                  }).join('') || '<span class="text-secondary" style="opacity:.6;">—</span>'}
+                  ${renderStatusHtml(c)}
                 </div>
                 ${isDowned ? `
                 <div class="death-saves" title="Death Saves">
@@ -2016,6 +2090,19 @@
     buildSavedUI();
     buildTable();
     window.addEventListener('beforeunload', ()=>{ if (autoSaveEnabled) saveState(); });
+
+    // Cross-tab sync: when another tab updates localStorage, reload state here
+    window.addEventListener('storage', (e) => {
+      // Only care about the main auto-save key
+      if (e.key === 'initiativeTrackerData') {
+        try {
+          loadState();
+          buildTable();
+        } catch (err) {
+          console.error('Failed to sync state from storage event:', err);
+        }
+      }
+    });
   })();
 
   /* ---------- RULES DATA (concise, SRD-safe) ---------- */
