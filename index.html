@@ -109,6 +109,7 @@
 
     /* Hide DM-only controls but leave the Player View toggle */
     body.player-view #manualSaveBtn,
+    
     body.player-view #copyOrderBtn,
     body.player-view #saveHistorySelect,
     body.player-view #export-btn,
@@ -135,6 +136,12 @@
       max-width: none;                 
       width: min(1400px, 95vw);        
       margin: 1.5rem auto 0;           
+    }
+
+    /* Hide AC (header + cell) in Player View */
+    body.player-view table thead th:nth-child(6),
+    body.player-view table tbody td:nth-child(6) {
+      display: none !important;
     }
 
     body.player-view table thead th,
