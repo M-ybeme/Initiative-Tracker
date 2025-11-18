@@ -57,14 +57,6 @@
       margin-inline: auto;
     }
 
-    /* On XL and up you can allow a little growth if you like
-    @media (min-width: 1200px){
-      .controls-grid{
-        grid-template-columns: repeat(auto-fit, minmax(220px, 260px));
-        justify-content:center;
-      }
-    } */
-
     /* --- Added: compact UI for temp HP & death saves --- */
     .temphp-wrap { display:flex; align-items:center; gap:.25rem; }
     .temphp-badge { font-size:.75rem; padding:.15rem .35rem; border:1px dashed rgba(255,255,255,.35); border-radius:.35rem; }
@@ -125,49 +117,41 @@
       display: none !important;
     }
 
-    /* Hide the Actions column (header + cells) */
-    body.player-view table thead th:last-child,
-    body.player-view table tbody td:last-child {
+    /* Hide the Actions column (header + cells) in Player View */
+    body.player-view table thead .col-actions,
+    body.player-view table tbody .col-actions {
       display: none !important;
-    }
-
-    /* Scoreboard-style table in player view */
-    body.player-view .table-responsive {
-      max-width: none;                 
-      width: min(1400px, 95vw);        
-      margin: 1.5rem auto 0;           
     }
 
     /* Hide AC (header + cell) in Player View */
-    body.player-view table thead th:nth-child(6),
-    body.player-view table tbody td:nth-child(6) {
+    body.player-view table thead .col-ac,
+    body.player-view table tbody .col-ac {
       display: none !important;
     }
 
-    body.player-view table thead th,
-    body.player-view table tbody td {
-      font-size: 1.05rem;
-      padding: 0.6rem 0.9rem;
+    /* Player view: hide HP numbers but keep the colored bar */
+    body.player-view .col-health .health-input,
+    body.player-view .card .health-input {
+      color: transparent !important;
+      text-shadow: none !important;
+      caret-color: transparent;   /* no blinking caret on the TV */
     }
 
-    /* Give the active-turn row more pop on the TV */
-    body.player-view tr.active-turn {
-      background: rgba(29, 158, 109, 0.32) !important;
-      box-shadow: 0 0 32px rgba(29, 158, 109, 0.9),
-                  inset 0 0 12px rgba(29, 158, 109, 0.5);
-      transform: scale(1.015);
+    /* Player View: hide AC portion of mobile summary, keep type/init */
+    body.player-view .meta-ac {
+      display: none !important;
     }
 
     /* --- Active turn: icon + row styling --- */
 
     /* Base caret size for ALL rows */
-    .table td:nth-child(2) i.bi-caret-right-fill {
+    .table td.col-turn i.bi-caret-right-fill {
       font-size: 1.3rem;
       vertical-align: middle;
     }
-    
+
     /* Active-row caret: brighter and pulsing, no layout shift */
-    tr.active-turn td:nth-child(2) i.bi-caret-right-fill {
+    tr.active-turn td.col-turn i.bi-caret-right-fill {
       display: inline-block;
       color: #1dff94 !important;
       filter: drop-shadow(0 0 4px rgba(29,255,148,0.8));
@@ -390,15 +374,15 @@
           <table class="table table-striped text-light align-middle">
             <thead>
               <tr>
-                <th></th>
-                <th>Turn</th>
-                <th>Character</th>
-                <th>Type</th>
-                <th>Initiative</th>
-                <th>AC</th>
-                <th>Health</th>
-                <th>Notes & Effects</th>
-                <th>Actions</th>
+                <th class="col-drag"></th>
+                <th class="col-turn">Turn</th>
+                <th class="col-name">Character</th>
+                <th class="col-type">Type</th>
+                <th class="col-init">Initiative</th>
+                <th class="col-ac">AC</th>
+                <th class="col-health">Health</th>
+                <th class="col-notes">Notes & Effects</th>
+                <th class="col-actions">Actions</th>
               </tr>
             </thead>
             <tbody id="initiative-order"></tbody>
@@ -1365,7 +1349,18 @@
       if (percent <= 75) return 'bg-orange text-dark';
       return 'bg-success text-light';
     }
-    function maybeSortByInitiative(){ if ($('lockOrderToggle')?.checked) return; characters.sort((a,b)=> b.initiative - a.initiative); }
+    function maybeSortByInitiative() {
+      if ($('lockOrderToggle')?.checked) return;
+
+      const active = characters[currentTurn] || null;  // remember who is active
+
+      characters.sort((a, b) => b.initiative - a.initiative);
+
+      if (active) {
+        const idx = characters.indexOf(active);
+        currentTurn = (idx === -1) ? 0 : idx;
+      }
+    }
     
     function statusTooltipText(c){
       const parts = [];
@@ -1503,16 +1498,16 @@
         tr.dataset.type = c.type;
         if (i === currentTurn) tr.classList.add('active-turn');
         tr.innerHTML = `
-          <td class="drag-handle"><i class="bi bi-grip-vertical"></i></td>
-          <td>${i===currentTurn ? '<i class="bi bi-caret-right-fill"></i>' : ''}</td>
+          <td class="drag-handle col-drag"><i class="bi bi-grip-vertical"></i></td>
+          <td class="col-turn">${i===currentTurn ? '<i class="bi bi-caret-right-fill"></i>' : ''}</td>
           <td class="${isDowned ? 'text-decoration-line-through' : ''}">
             <input type="text" class="form-control form-control-sm name-input"
                    value="${c.name}" data-index="${i}" />
           </td>
           <td>${c.type}</td>
           <td><input type="number" class="form-control form-control-sm init-input" value="${c.initiative}" data-index="${i}" data-commit="init"></td>
-          <td>${c.ac ?? '-'}</td>
-          <td>
+          <td class="col-ac">${c.ac ?? '-'}</td>
+          <td class="col-health">
             <div class="d-flex align-items-center">
               <input type="number" class="form-control form-control-sm health-input ${hpClass(pct)}" value="${c.currentHP}" data-index="${i}" style="max-width:6rem">
               <div class="btn-group btn-group-sm ms-1 hp-controls" role="group">
@@ -1560,7 +1555,7 @@
             </div>
           </td>
 
-          <td class="d-flex gap-1">
+          <td class="d-flex gap-1 col-actions">
             <button class="btn btn-sm btn-outline-success duplicate-btn" data-index="${i}" title="Duplicate"><i class="bi bi-files"></i></button>
             <button class="btn btn-sm btn-outline-danger delete-btn" data-index="${i}" title="Delete"><i class="bi bi-trash"></i></button>
           </td>
@@ -1575,7 +1570,10 @@
             <h5 class="card-title mb-1 d-flex align-items-center gap-2 flex-wrap">
               <input type="text" class="form-control form-control-sm name-input"
                      style="max-width: 240px" value="${c.name}" data-index="${i}">
-              <small class="text-muted">(${c.type} • Init ${c.initiative} • AC ${c.ac ?? '-'})</small>
+              <small class="text-muted">
+                (<span class="meta-type-init">${c.type} • Init ${c.initiative}</span>
+                 <span class="meta-ac"> • AC ${c.ac ?? '-'}</span>)
+              </small>
               ${c.concentration ? '<span class="ms-1 text-warning" title="Concentration"><i class="bi bi-star-fill"></i></span>' : ''}
             </h5>
             <div class="mb-1">HP:
@@ -1694,6 +1692,27 @@
         });
       });
 
+          // Name inline edit — now re-attached each render
+      document.querySelectorAll('.name-input').forEach(inp => {
+        const idx = +inp.dataset.index;
+        let original = inp.value;
+        const commit = () => {
+          const v = (inp.value || '').trim();
+          if (v && v !== characters[idx].name) {
+            pushHistory(`Rename ${characters[idx].name} → ${v}`);
+            characters[idx].name = v;
+            buildTable();
+          } else {
+            inp.value = characters[idx].name;
+          }
+        };
+        inp.addEventListener('focus', () => original = inp.value);
+        inp.addEventListener('keydown', e => {
+          if (e.key === 'Enter') { e.preventDefault(); commit(); }
+          if (e.key === 'Escape') { inp.value = original; inp.blur(); }
+        });
+        inp.addEventListener('blur', commit);
+      });
 
       document.querySelectorAll('.health-input').forEach(inp=>{
         let pushed = false;
@@ -1805,31 +1824,67 @@
           buildTable();
         });
       });
-      document.querySelectorAll('.delete-btn').forEach(btn=>{
-        btn.addEventListener('click', function(){
-          const idx = +this.dataset.index;
-          pushHistory(`Delete ${characters[idx].name}`);
-          characters.splice(idx,1);
+      document.querySelectorAll('.delete-btn').forEach(btn => {
+      btn.addEventListener('click', function () {
+        const idx = +this.dataset.index;
+        pushHistory(`Delete ${characters[idx].name}`);
+      
+        const deletingActive = (idx === currentTurn);
+      
+        characters.splice(idx, 1);
+      
+        if (!characters.length) {
+          currentTurn = 0;
+          combatRound = 1;
+        } else if (deletingActive) {
+          // keep pointer on "next" creature, or wrap
           if (currentTurn >= characters.length) currentTurn = 0;
-          if (!characters.length) combatRound = 1;
-          buildTable();
-        });
+        } else if (idx < currentTurn) {
+          // list shrank before the active index
+          currentTurn = Math.max(0, currentTurn - 1);
+        }
+      
+        buildTable();
       });
+    });
       
       // Mobile move
-      document.querySelectorAll('.move-up').forEach(btn=>{
-        btn.addEventListener('click', function(){
-          const i = +this.dataset.index; if (i<=0) return;
+      document.querySelectorAll('.move-up').forEach(btn => {
+        btn.addEventListener('click', function () {
+          const i = +this.dataset.index;
+          if (i <= 0) return;
+        
           pushHistory('Reorder (up)');
-          [characters[i-1], characters[i]] = [characters[i], characters[i-1]];
+        
+          [characters[i - 1], characters[i]] = [characters[i], characters[i - 1]];
+        
+          // Adjust active index
+          if (currentTurn === i) {
+            currentTurn = i - 1;
+          } else if (currentTurn === i - 1) {
+            currentTurn = i;
+          }
+        
           buildTable();
         });
       });
-      document.querySelectorAll('.move-down').forEach(btn=>{
-        btn.addEventListener('click', function(){
-          const i = +this.dataset.index; if (i>=characters.length-1) return;
+
+      document.querySelectorAll('.move-down').forEach(btn => {
+        btn.addEventListener('click', function () {
+          const i = +this.dataset.index;
+          if (i >= characters.length - 1) return;
+        
           pushHistory('Reorder (down)');
-          [characters[i+1], characters[i]] = [characters[i], characters[i+1]];
+        
+          [characters[i + 1], characters[i]] = [characters[i], characters[i + 1]];
+        
+          // Adjust active index
+          if (currentTurn === i) {
+            currentTurn = i + 1;
+          } else if (currentTurn === i + 1) {
+            currentTurn = i;
+          }
+        
           buildTable();
         });
       });
@@ -1841,10 +1896,26 @@
           sortableInstance = new Sortable(tbodyEl, {
             handle: '.drag-handle',
             animation: 150,
-            onEnd: function(evt){
+            onEnd: function (evt) {
               pushHistory('Reorder (drag)');
-              const [moved] = characters.splice(evt.oldIndex,1);
-              characters.splice(evt.newIndex,0,moved);
+            
+              const oldIndex = evt.oldIndex;
+              const newIndex = evt.newIndex;
+            
+              const [moved] = characters.splice(oldIndex, 1);
+              characters.splice(newIndex, 0, moved);
+            
+              // Keep active creature with its row
+              if (currentTurn === oldIndex) {
+                currentTurn = newIndex;
+              } else if (oldIndex < newIndex) {
+                // moved down; everything between shifts up one
+                if (currentTurn > oldIndex && currentTurn <= newIndex) currentTurn--;
+              } else if (oldIndex > newIndex) {
+                // moved up; everything between shifts down one
+                if (currentTurn >= newIndex && currentTurn < oldIndex) currentTurn++;
+              }
+            
               buildTable();
             }
           });
@@ -1857,28 +1928,6 @@
       buildDiceHistory();
       if (autoSaveEnabled) saveState();
     }
-
-    // Name inline edit — now re-attached each render
-    document.querySelectorAll('.name-input').forEach(inp => {
-      const idx = +inp.dataset.index;
-      let original = inp.value;
-      const commit = () => {
-        const v = (inp.value || '').trim();
-        if (v && v !== characters[idx].name) {
-          pushHistory(`Rename ${characters[idx].name} → ${v}`);
-          characters[idx].name = v;
-          buildTable();
-        } else {
-          inp.value = characters[idx].name;
-        }
-      };
-      inp.addEventListener('focus', () => original = inp.value);
-      inp.addEventListener('keydown', e => {
-        if (e.key === 'Enter') { e.preventDefault(); commit(); }
-        if (e.key === 'Escape') { inp.value = original; inp.blur(); }
-      });
-      inp.addEventListener('blur', commit);
-    });
 
     // First-visit helper: show the Help panel once
     if (!localStorage.getItem('initiativeHelpSeen')) {
@@ -2044,11 +2093,34 @@
 
     $('reset-turns').addEventListener('click', ()=>{ currentTurn=0; combatRound=1; buildTable(); });
     $('clear-all').addEventListener('click', ()=>{ characters=[]; currentTurn=0; combatRound=1; buildTable(); });
-    $('clear-storage').addEventListener('click', ()=>{
-      if (!confirm('Clear ALL local saved data (sessions, templates, notes)?')) return;
-      localStorage.clear(); characters=[]; currentTurn=0; combatRound=1;
-      buildSavedUI(); buildTable();
-      alert('All saved data cleared.');
+    $('clear-storage').addEventListener('click', () => {
+      if (!confirm('Clear ALL saved data for the Initiative Tracker (sessions, templates, notes)?')) return;
+
+      // Main auto-save state
+      localStorage.removeItem('initiativeTrackerData');
+
+      // Session notes
+      localStorage.removeItem('sessionNotes');
+
+      // Saved character templates
+      localStorage.removeItem(TKEY); // TKEY === 'savedCharacters'
+
+      // Manual session snapshots
+      Object.keys(localStorage)
+        .filter(k => k.startsWith('initiativeTrackerData_'))
+        .forEach(k => localStorage.removeItem(k));
+
+      // Optional: clear any pending Encounter Builder handoffs
+      localStorage.removeItem('dmtools.pendingImport');
+
+      characters = [];
+      currentTurn = 0;
+      combatRound = 1;
+
+      buildSavedUI();
+      buildTable();
+
+      alert('All Initiative Tracker data cleared.');
     });
 
     $('undo-btn').addEventListener('click', undoLast);
