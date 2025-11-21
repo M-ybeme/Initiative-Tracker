@@ -165,7 +165,7 @@
                 <div class="group">
                   <h3>Map</h3>
                   <label>Upload Map <input id="mapFile" type="file" accept="image/*" /></label>
-                  <label>Base Scale (px per cell) <input id="gridSize" type="number" min="4" max="256" value="50" /></label>
+                  <label>Base Scale (px per cell) <input id="gridSize" type="number" min="4" max="256" value="140" /></label>
                   <label>Units per cell <input id="unitsPerCell" type="number" min="1" value="5" /></label>
                   <label>Grid Color <input id="gridColor" type="color" value="#6aa5ff" /></label>
                   <label>Grid Opacity <input id="gridAlpha" type="number" min="0" max="1" step="0.05" value="0.35" /></label>
@@ -474,37 +474,85 @@
   function screenToWorld(x,y){ return { x: (x - state.view.x)/state.view.scale, y: (y - state.view.y)/state.view.scale }; }
 
   const STORAGE_KEY = 'dmtoolbox.battlemap.mvp.v3';
-  function save(){
-    const fogData = fogState.enabled && fog.width > 1 ? tryCanvasToDataURL(fog) : null;
-    const payload = {
-      map: { imgSrc: state.map.imgSrc, w: state.map.w, h: state.map.h },
-      mapTransform: state.mapTransform,
-      grid: state.grid,
-      view: state.view,
-      tokens: state.tokens.map(t=>({ id:t.id, name:t.name, imgSrc:t.imgSrc, x:t.x, y:t.y, w:t.w, h:t.h, rot:t.rot })),
-      fog: fogData
-    };
-    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(payload)); } catch {}
+function save(){
+  // Always capture the fog canvas if it exists, regardless of enabled flag
+  const fogData = (fog.width > 1 && fog.height > 1) ? tryCanvasToDataURL(fog) : null;
+
+  const payload = {
+    map: { imgSrc: state.map.imgSrc, w: state.map.w, h: state.map.h },
+    mapTransform: state.mapTransform,
+    grid: state.grid,
+    view: state.view,
+    tokens: state.tokens.map(t => ({
+      id: t.id,
+      name: t.name,
+      imgSrc: t.imgSrc,
+      x: t.x,
+      y: t.y,
+      w: t.w,
+      h: t.h,
+      rot: t.rot,
+      selected: !!t.selected     
+    })),
+    fog: fogData,
+    fogState: {               
+      enabled: fogState.enabled,
+      mode: fogState.mode,
+      brush: fogState.brush
+    }
+  };
+
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(payload)); } catch {}
   }
   function load(){
     const raw = localStorage.getItem(STORAGE_KEY);
-    if(!raw) return;
-    try{
+    if (!raw) return;
+
+    try {
       const data = JSON.parse(raw);
-      Object.assign(state.grid, data.grid||{});
-      Object.assign(state.view, data.view||{});
-      Object.assign(state.mapTransform, data.mapTransform||{});
-      state.tokens = (data.tokens||[]).map(t=>({ ...t, img:null, selected:false, rot:typeof t.rot==='number'?t.rot:0 }));
-      if(data.map?.imgSrc){
-        loadImage(data.map.imgSrc).then(img=>{
-          state.map = { imgSrc: data.map.imgSrc, img, w: img.naturalWidth, h: img.naturalHeight };
+
+      Object.assign(state.grid, data.grid || {});
+      Object.assign(state.view, data.view || {});
+      Object.assign(state.mapTransform, data.mapTransform || {});
+
+      state.tokens = (data.tokens || []).map(t => ({
+        ...t,
+        img: null,
+        selected: !!t.selected,
+        rot: typeof t.rot === 'number' ? t.rot : 0
+      }));
+
+      // Restore fog settings if present (backward-compatible)
+      if (data.fogState) {
+        fogState.enabled = !!data.fogState.enabled;
+        fogState.mode = data.fogState.mode || fogState.mode;
+        fogState.brush = typeof data.fogState.brush === 'number'
+          ? data.fogState.brush
+          : fogState.brush;
+        setFogUI(fogState.enabled);
+        document.getElementById('fogBrush').value = fogState.brush;
+      }
+
+      if (data.map?.imgSrc) {
+        loadImage(data.map.imgSrc).then(img => {
+          state.map = {
+            imgSrc: data.map.imgSrc,
+            img,
+            w: img.naturalWidth,
+            h: img.naturalHeight
+          };
           ensureFogSize();
-          if(data.fog){ drawDataUrlToCanvas(data.fog, fog); }
-          fitMap();
+          if (data.fog) { drawDataUrlToCanvas(data.fog, fog); }
+          // IMPORTANT: do NOT call fitMap(); keep saved view/pan/zoom
         });
       }
-      state.tokens.forEach(t=>{ loadImage(t.imgSrc).then(img=> t.img = img); });
-    }catch(e){ console.warn('Load failed', e); }
+
+      state.tokens.forEach(t => {
+        loadImage(t.imgSrc).then(img => (t.img = img));
+      });
+    } catch (e) {
+      console.warn('Load failed', e);
+    }
   }
 
   function loadImage(src){ return new Promise((res, rej)=>{ const img = new Image(); img.onload=()=>res(img); img.onerror=rej; img.src=src; }); }
@@ -662,6 +710,12 @@
   let isPointerDown = false, pointerId = null, last = { x:0, y:0 };
   let mouseScreen = { x:0, y:0 };
 
+    // Pinch zoom state
+  const activePointers = new Map();
+  let pinchStartDistance = null;
+  let pinchStartScale = null;
+  let pinchCenter = null; // world-space point to zoom around
+
   // Decide whether to paint fog (desktop: Shift, mobile: Brush Mode)
   function wantsFogPaint(ev){
     return fogState.enabled
@@ -671,10 +725,43 @@
 
   canvas.addEventListener('pointerdown', (e)=>{
     canvas.setPointerCapture(e.pointerId);
-    pointerId = e.pointerId; isPointerDown = true; last = { x:e.clientX, y:e.clientY };
+
+    // Track all active pointers for pinch
+    activePointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+
+    // If we now have 2 fingers down, start pinch mode
+    if (activePointers.size === 2) {
+      const [p1, p2] = [...activePointers.values()];
+      pinchStartDistance = Math.hypot(p2.x - p1.x, p2.y - p1.y);
+      pinchStartScale = state.view.scale;
+
+      // Compute world-space center of the pinch
+      const rect = canvas.getBoundingClientRect();
+      const centerClientX = (p1.x + p2.x) / 2;
+      const centerClientY = (p1.y + p2.y) / 2;
+      const sx = (centerClientX - rect.left) * DPR;
+      const sy = (centerClientY - rect.top) * DPR;
+      pinchCenter = screenToWorld(sx, sy);
+
+      // Cancel any token drag / pan in progress
+      state.ui.dragMode = 'none';
+      state.ui.dragId = null;
+      fogState.painting = false;
+
+      // Do NOT start normal single-pointer behavior when pinch begins
+      isPointerDown = false;
+      pointerId = null;
+      return;
+    }
+
+    // Normal single-pointer setup
+    pointerId = e.pointerId;
+    isPointerDown = true;
+    last = { x:e.clientX, y:e.clientY };
 
     const rect = canvas.getBoundingClientRect();
-    const sx = (e.clientX - rect.left) * DPR; const sy = (e.clientY - rect.top) * DPR;
+    const sx = (e.clientX - rect.left) * DPR;
+    const sy = (e.clientY - rect.top) * DPR;
     const wpt = screenToWorld(sx, sy);
 
     // Mobile/Toggle measuring
@@ -746,12 +833,39 @@
     }
   });
 
-  canvas.addEventListener('pointermove', (e)=>{
+    canvas.addEventListener('pointermove', (e)=>{
     mouseScreen = { x:e.clientX, y:e.clientY };
+
+    // Update position of this pointer if it's part of a pinch
+    if (activePointers.has(e.pointerId)) {
+      activePointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    }
+
+    // If we have 2 pointers and pinch is active, handle pinch zoom
+    if (activePointers.size === 2 && pinchStartDistance) {
+      e.preventDefault(); // stop browser gestures
+
+      const [p1, p2] = [...activePointers.values()];
+      const dist = Math.hypot(p2.x - p1.x, p2.y - p1.y) || 1;
+      const factor = dist / pinchStartDistance;
+      const newScale = clamp(pinchStartScale * factor, 0.1, 8);
+
+      // Keep pinchCenter under the same screen position
+      const before = worldToScreen(pinchCenter.x, pinchCenter.y);
+      state.view.scale = newScale;
+      const after = worldToScreen(pinchCenter.x, pinchCenter.y);
+      state.view.x += (before.x - after.x);
+      state.view.y += (before.y - after.y);
+
+      return; // don't run the normal drag/pan logic
+    }
+
+    // Normal single-pointer logic
     if(!isPointerDown || e.pointerId !== pointerId) return;
 
     const rect = canvas.getBoundingClientRect();
-    const sx = (e.clientX - rect.left) * DPR; const sy = (e.clientY - rect.top) * DPR;
+    const sx = (e.clientX - rect.left) * DPR;
+    const sy = (e.clientY - rect.top) * DPR;
     const wpt = screenToWorld(sx, sy);
 
     // Continue fog paint only if painting
@@ -768,16 +882,29 @@
       if(t){ t.x = wpt.x - state.ui.dragOffset.x; t.y = wpt.y - state.ui.dragOffset.y; }
     }
     if(state.ui.dragMode === 'pan'){
-      const dx = (e.clientX - last.x) * DPR; const dy = (e.clientY - last.y) * DPR;
-      state.view.x += dx; state.view.y += dy;
+      const dx = (e.clientX - last.x) * DPR;
+      const dy = (e.clientY - last.y) * DPR;
+      state.view.x += dx;
+      state.view.y += dy;
       last = { x:e.clientX, y:e.clientY };
     }
   });
 
-  window.addEventListener('pointerup', (e)=>{
-    if(e.pointerId !== pointerId) return;
-    isPointerDown = false; pointerId = null;
-    try { canvas.releasePointerCapture(e.pointerId); } catch {}
+
+    window.addEventListener('pointerup', (e)=>{
+    // Remove from activePointers (for pinch tracking)
+    activePointers.delete(e.pointerId);
+    if (activePointers.size < 2) {
+      pinchStartDistance = null;
+      pinchStartScale = null;
+      pinchCenter = null;
+    }
+
+    if(e.pointerId === pointerId){
+      isPointerDown = false;
+      pointerId = null;
+      try { canvas.releasePointerCapture(e.pointerId); } catch {}
+    }
 
     if (fogState.painting) {
       fogState.painting = false;
@@ -802,8 +929,36 @@
         t.y = Math.round(t.y / s) * s;
       }
     }
-    state.ui.dragMode = 'none'; state.ui.dragId = null; save(); setStatus('Ready');
+    state.ui.dragMode = 'none';
+    state.ui.dragId = null;
+    save();
+    setStatus('Ready');
   });
+
+    window.addEventListener('pointercancel', (e)=>{
+    activePointers.delete(e.pointerId);
+    if (activePointers.size < 2) {
+      pinchStartDistance = null;
+      pinchStartScale = null;
+      pinchCenter = null;
+    }
+
+    if(e.pointerId === pointerId){
+      isPointerDown = false;
+      pointerId = null;
+      try { canvas.releasePointerCapture(e.pointerId); } catch {}
+    }
+
+    if (fogState.painting) {
+      fogState.painting = false;
+      save();
+    }
+
+    state.ui.dragMode = 'none';
+    state.ui.dragId = null;
+    setStatus('Ready');
+  });
+
 
   canvas.addEventListener('wheel', (e)=>{
     e.preventDefault();
@@ -992,7 +1147,24 @@
       Object.assign(state.grid, data.grid||{});
       Object.assign(state.view, data.view||{});
       Object.assign(state.mapTransform, data.mapTransform||{});
-      state.tokens = (data.tokens||[]).map(t=>({ ...t, img:null, selected:false, rot:typeof t.rot==='number'?t.rot:0 }));
+      state.tokens = (data.tokens || []).map(t => ({
+        ...t,
+        img: null,
+        selected: !!t.selected,
+        rot: typeof t.rot === 'number' ? t.rot : 0
+      }));
+
+      // Restore fog settings if present
+      if (data.fogState) {
+        fogState.enabled = !!data.fogState.enabled;
+        fogState.mode = data.fogState.mode || fogState.mode;
+        fogState.brush = typeof data.fogState.brush === 'number'
+          ? data.fogState.brush
+          : fogState.brush;
+        setFogUI(fogState.enabled);
+        document.getElementById('fogBrush').value = fogState.brush;
+      }
+
       if (data.map?.imgSrc) {
         const img = await loadImage(data.map.imgSrc);
         state.map = { imgSrc: data.map.imgSrc, img, w: img.naturalWidth, h: img.naturalHeight };
@@ -1001,11 +1173,16 @@
         state.map = { imgSrc:'', img:null, w:0, h:0 };
         ensureFogSize();
       }
-      // fog
+
+      // fog bitmap
       fctx.clearRect(0,0,fog.width,fog.height);
       if (data.fog) await drawDataUrlToCanvas(data.fog, fog);
+
       // load token images
-      await Promise.all(state.tokens.map(async t=>{ t.img = await loadImage(t.imgSrc); }));
+      await Promise.all(state.tokens.map(async t => {
+        t.img = await loadImage(t.imgSrc);
+      }));
+
       save();
       setStatus('Session imported');
     } catch(err) {
@@ -1017,6 +1194,7 @@
   // Reset-all
   document.getElementById('resetAll').addEventListener('click', ()=>{
     localStorage.removeItem(STORAGE_KEY);
+    
     Object.assign(state, {
       map: { imgSrc:'', img:null, w:0, h:0 },
       mapTransform: { scale:1, x:0, y:0 },
@@ -1031,7 +1209,14 @@
         brushMode:false, measureToggle:false
       }
     });
+  
+    // Reset fog state + bitmap
+    fogState.enabled = false;
+    fogState.mode = 'reveal';
+    fogState.brush = 80;
+    setFogUI(false);
     fctx.clearRect(0,0,fog.width,fog.height);
+  
     updateTokenList();
     setStatus('Session reset');
   });
