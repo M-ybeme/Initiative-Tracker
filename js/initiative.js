@@ -8,7 +8,16 @@ const statusEffects = [
 ];
 
 (() => {
-  const $ = id => document.getElementById(id);
+    const $ = id => document.getElementById(id);
+
+  // --- NEW: unique ID generator for characters ---
+  let _charIdCounter = 0;
+  function createCharId() {
+    if (window.crypto?.randomUUID) return crypto.randomUUID();
+    _charIdCounter++;
+    return `char-${Date.now()}-${_charIdCounter}`;
+  }
+  
   let statusModal = null;
   let notesModal = null;
   let sortableInstance = null;
@@ -70,10 +79,12 @@ const statusEffects = [
     
       if (!data || data.mode !== 'replace' || !Array.isArray(data.characters)) return;
     
-      const normalizeFromBuilder = (c) => ({
+            const normalizeFromBuilder = (c) => normalizeChar({
+        // pass through to normalizeChar so IDs and shapes are consistent
+        id: c.id,  // if builder ever sends one, keep it; otherwise normalizeChar will create it
         name: c.name ?? 'Unknown',
         type: c.type ?? 'Enemy',
-        initiative: Number(c.initiative || 0), // force non-zero default
+        initiative: Number(c.initiative || 0),
         currentHP: Number(c.currentHP ?? c.maxHP ?? 1),
         maxHP:     Number(c.maxHP     ?? c.currentHP ?? 1),
         tempHP:    Number(c.tempHP ?? 0),
@@ -81,7 +92,8 @@ const statusEffects = [
         notes: c.notes ?? '',
         concentration: !!c.concentration,
         deathSaves: c.deathSaves ?? { s:0, f:0, stable:false },
-        status: Array.isArray(c.status) ? c.status : []
+        status: Array.isArray(c.status) ? c.status : [],
+        concDamagePending: 0
       });
     
       characters   = data.characters.map(normalizeFromBuilder);
@@ -101,16 +113,20 @@ const statusEffects = [
       c.maxHP = c.currentHP;      
     }
   }
-  function normalizeChar(c){
+    function normalizeChar(c){
     const cur = +c.currentHP || 0;
     const max = +c.maxHP || 0;
     const fixedMax = Math.max(max, cur); 
+
     return {
+      // NEW: ensure every character has a stable unique id
+      id: c.id || createCharId(),
+
       name: c.name,
       type: c.type || 'PC',
       initiative: +c.initiative || 0,
       currentHP: cur,
-      maxHP: fixedMax,                 
+      maxHP: fixedMax,
       tempHP: +c.tempHP || 0,
       ac: (c.ac ?? null),
       notes: c.notes || '',
@@ -120,9 +136,17 @@ const statusEffects = [
         f: Math.min(3, Math.max(0, +(c.deathSaves?.f ?? 0))),
         stable: !!(c.deathSaves?.stable)
       },
-      status: (c.status || []).map(s => typeof s === 'string'
-        ? { name:s, icon:(statusEffects.find(e=>e.name===s)?.icon||'❓') }
-        : { name:s.name, icon:s.icon||(statusEffects.find(e=>e.name===s.name)?.icon||'❓'), remaining:(typeof s.remaining==='number'?s.remaining:undefined) })
+      status: (c.status || []).map(s =>
+        typeof s === 'string'
+          ? { name: s, icon: (statusEffects.find(e => e.name === s)?.icon || '❓') }
+          : {
+              name: s.name,
+              icon: s.icon || (statusEffects.find(e => e.name === s.name)?.icon || '❓'),
+              remaining: (typeof s.remaining === 'number' ? s.remaining : undefined)
+            }
+      ),
+      // keep any existing concDamagePending if present
+      concDamagePending: +c.concDamagePending || 0
     };
   }
   function saveState(manual=false){
@@ -272,11 +296,22 @@ const statusEffects = [
     $('character-ac').value = c.ac||0;
     $('character-type').value = c.type||'PC';
   });
-  $('add-to-tracker-btn').addEventListener('click', ()=>{
-    const sel = $('loadCharacterSelect'); if (!sel.value || sel.selectedIndex===0) return alert('Pick a saved character first.');
-    const c = getSaved().find(x=>x.name===sel.value); if(!c) return;
-    characters.push(normalizeChar({...c, currentHP:c.maxHP}));
-    maybeSortByInitiative(); buildTable();
+    $('add-to-tracker-btn').addEventListener('click', ()=>{
+    const sel = $('loadCharacterSelect');
+    if (!sel.value || sel.selectedIndex === 0) return alert('Pick a saved character first.');
+    const c = getSaved().find(x => x.name === sel.value);
+    if (!c) return;
+
+    const raw = {
+      ...c,
+      id: createCharId(),   
+      currentHP: c.maxHP,
+      concDamagePending: 0
+    };
+
+    characters.push(normalizeChar(raw));
+    maybeSortByInitiative();
+    buildTable();
   });
 // ---------- Dice ----------
 function addToHistory(text){
@@ -547,7 +582,7 @@ $('clear-dice-history').addEventListener('click', ()=>{
                  value="${c.name}" data-index="${i}" />
         </td>
         <td>${c.type}</td>
-        <td><input type="number" class="form-control form-control-sm init-input" value="${c.initiative}" data-index="${i}" data-commit="init"></td>
+        <td><input type="number"class="form-control form-control-sm init-input"value="${c.initiative}"data-id="${c.id}"data-commit="init"></td>
         <td class="col-ac">${c.ac ?? '-'}</td>
         <td class="col-health">
           <div class="d-flex align-items-center">
@@ -771,14 +806,22 @@ $('clear-dice-history').addEventListener('click', ()=>{
       });
     });
     // Initiative commit (Enter / blur)
-    document.querySelectorAll('.init-input[data-commit="init"]').forEach(inp=>{
+        document.querySelectorAll('.init-input[data-commit="init"]').forEach(inp=>{
       let original = inp.value;
-      const idx = +inp.dataset.index;
+
       const commit = ()=>{
-        const newVal = parseInt(inp.value,10) || 0;
-        if (characters[idx].initiative !== newVal) {
-          pushHistory(`Set initiative for ${characters[idx].name}`);
-          characters[idx].initiative = newVal;        // <-- set it
+        const id = inp.dataset.id;
+        const newVal = parseInt(inp.value, 10) || 0;
+
+        const char = characters.find(ch => ch.id === id);
+        if (!char) {
+          inp.value = original;
+          return;
+        }
+
+        if (char.initiative !== newVal) {
+          pushHistory(`Set initiative for ${char.name}`);
+          char.initiative = newVal;
           maybeSortByInitiative();
           buildTable();
         }
@@ -835,18 +878,30 @@ $('clear-dice-history').addEventListener('click', ()=>{
         openStatusModal(modalCharacterIndex);
       });
     });
-    // Duplicate/Delete
+        // Duplicate/Delete
     document.querySelectorAll('.duplicate-btn').forEach(btn=>{
       btn.addEventListener('click', function(){
         const idx = +this.dataset.index;
         const src = characters[idx];
+        if (!src) return;
+
         pushHistory(`Duplicate ${src.name}`);
-      
+
+        // Deep clone to avoid shared nested objects
         const copy = JSON.parse(JSON.stringify(src));
-        const base = baseNameOf(src.name);
+
+        // NEW: give the duplicate a *new* ID so it is never confused with the original
+        copy.id = createCharId();
+
+        // NEW: give it a clean name like "Goblin 2", "Goblin 3", etc.
+        const base = baseNameOf(src.name || 'Unnamed');
         copy.name = nextNumberedName(base);
-      
-        characters.splice(idx + 1, 0, copy);
+
+        // Optional but sensible: reset per-creature transient stuff
+        copy.concDamagePending = 0;
+        copy.deathSaves = { s: 0, f: 0, stable: false };
+
+        characters.splice(idx + 1, 0, normalizeChar(copy));
         buildTable();
       });
     });
@@ -1045,24 +1100,23 @@ $('clear-dice-history').addEventListener('click', ()=>{
     });
   }
   // ---------- Controls ----------
-  $('initiative-form').addEventListener('submit', e=>{
+    $('initiative-form').addEventListener('submit', e=>{
     e.preventDefault();
     const name  = $('character-name').value.trim();
-    // Default blank or invalid numbers to 0
     const safeNum = v => {
-      const n = parseInt(v.trim(), 10);
+      const n = parseInt(String(v).trim(), 10);
       return isNaN(n) ? 0 : n;
     };
   
-    const init = safeNum($('initiative-roll').value);
+    const init  = safeNum($('initiative-roll').value);
     const maxHP = safeNum($('character-health').value);
-    const ac = safeNum($('character-ac').value);
-    const type = $('character-type').value;
+    const ac    = safeNum($('character-ac').value);
+    const type  = $('character-type').value;
   
-    // Only name is required now
     if (!name) return;
   
-    characters.push({
+    const rawChar = {
+      id: createCharId(), 
       name,
       type,
       initiative: init,
@@ -1075,7 +1129,9 @@ $('clear-dice-history').addEventListener('click', ()=>{
       concentration: false,
       deathSaves: { s:0, f:0, stable:false },
       concDamagePending: 0
-    });
+    };
+  
+    characters.push(normalizeChar(rawChar));
     elevateMaxHp(characters[characters.length - 1]);
   
     maybeSortByInitiative();
