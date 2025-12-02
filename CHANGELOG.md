@@ -5,6 +5,43 @@ This project follows **Semantic Versioning**.
 
 ---
 
+## **1.5.2 — 2025-11-29**
+
+### **Character Sheet Page + Initiative Integration**
+
+This release adds the new **Characters** utility and completes end-to-end integration with the Initiative Tracker.
+
+#### **New Features**
+
+* Added full **Character Sheet Manager** (`characters.html`):
+
+  * Create, edit, and delete stored characters.
+  * Portrait upload, URL portraits, and drag-to-reposition + zoom controls.
+  * Full spell list support with tag/class filtering and custom spell creation.
+  * LocalStorage-based persistence with automatic field normalization.
+
+* Added **Send to Initiative Tracker**:
+
+  * Characters now export directly into the running combat.
+  * Export uses `mode: "append"` and does **not** overwrite existing combat state.
+  * Includes validation for Name / AC / HP before export.
+  * Supports portrait settings, notes, and stat fields.
+
+#### **Quality of Life**
+
+* Updated top-level toolbar to include a consistent “Send to Tracker” button style.
+* Added error handling for malformed portraits and corrupted JSON imports.
+* Improved spell normalization to align with global spell library.
+* Ensured character IDs remain unique across imports/exports.
+
+#### **Internal**
+
+* Added shared build metadata to Characters page.
+* Updated localStorage schema guards to avoid legacy data crashes.
+* Minor UI alignment corrections across the Characters page.
+
+---
+
 ## **1.5.0 — 2025-11-25**
 
 ### Refactor, Stability, Licensing, and Version Tracking

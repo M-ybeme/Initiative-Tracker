@@ -64,24 +64,22 @@ const statusEffects = [
   let combatRound = 1;
   let autoSaveEnabled = true;
   let diceHistory = [];
-  let modalCharacterIndex = null; // for both status + notes
-  let undoStack = [];             // <-- Added: simple history stack
-  const UNDO_LIMIT = 50;          // cap memory
-  // ----- Encounter Builder handoff (one-click replace) -----
-  let importedFromBuilder = false;
+  let modalCharacterIndex = null; 
+  let undoStack = [];             
+  const UNDO_LIMIT = 50;          
+  // ----- Cross-page handoff (append or replace) -----
   function tryRehydrateFromBuilder(){
     try {
       const raw = localStorage.getItem('dmtools.pendingImport');
       if (!raw) return;
-    
+
       const data = JSON.parse(raw);
       localStorage.removeItem('dmtools.pendingImport');
-    
-      if (!data || data.mode !== 'replace' || !Array.isArray(data.characters)) return;
-    
-            const normalizeFromBuilder = (c) => normalizeChar({
-        // pass through to normalizeChar so IDs and shapes are consistent
-        id: c.id,  // if builder ever sends one, keep it; otherwise normalizeChar will create it
+
+      if (!data || !Array.isArray(data.characters)) return;
+
+      const normalizeFromBuilder = (c) => normalizeChar({
+        id: c.id,  
         name: c.name ?? 'Unknown',
         type: c.type ?? 'Enemy',
         initiative: Number(c.initiative || 0),
@@ -95,14 +93,37 @@ const statusEffects = [
         status: Array.isArray(c.status) ? c.status : [],
         concDamagePending: 0
       });
-    
-      characters   = data.characters.map(normalizeFromBuilder);
-      currentTurn  = Number(data.currentTurn ?? 0);
-      combatRound  = Number(data.combatRound ?? 1);
-      diceHistory  = Array.isArray(data.diceHistory) ? data.diceHistory : [];
-    
-      importedFromBuilder = true;
-      console.info('Session replaced from Encounter Builder.');
+
+      const importedChars = data.characters.map(normalizeFromBuilder);
+
+      if (data.mode === 'replace') {
+        // Explicit full replace (only when the sender really wants that)
+        characters   = importedChars;
+        currentTurn  = Number(data.currentTurn ?? 0);
+        combatRound  = Number(data.combatRound ?? 1);
+        diceHistory  = Array.isArray(data.diceHistory) ? data.diceHistory : [];
+        console.info(`Session replaced from external page (${importedChars.length} characters).`);
+      } else {
+        // DEFAULT: append into whatever is already in the tracker
+        const hadNone = characters.length === 0;
+
+        characters.push(...importedChars);
+
+        // If the tracker was empty, allow sender's turn/round to seed it.
+        if (hadNone) {
+          if (typeof data.currentTurn === 'number') {
+            currentTurn = Number(data.currentTurn);
+          }
+          if (typeof data.combatRound === 'number') {
+            combatRound = Number(data.combatRound);
+          }
+          if (Array.isArray(data.diceHistory) && !diceHistory.length) {
+            diceHistory = data.diceHistory;
+          }
+        }
+
+        console.info(`Appended ${importedChars.length} characters from external page (mode: ${data.mode || 'append-default'}).`);
+      }
     } catch (e) {
       console.error('Auto-import from builder failed:', e);
     }
@@ -1249,9 +1270,9 @@ $('clear-dice-history').addEventListener('click', ()=>{
     else if (e.key==='s') $('manualSaveBtn').click();
     else if (e.key==='l') $('lockOrderToggle').click();
   });
- // Boot
-  tryRehydrateFromBuilder();
-  if (!importedFromBuilder) loadState();
+  // Boot
+  loadState();               // 1) restore whatever was there
+  tryRehydrateFromBuilder(); // 2) append / replace from other pages as needed
   updateSaveHistory();
   buildSavedUI();
   buildTable();

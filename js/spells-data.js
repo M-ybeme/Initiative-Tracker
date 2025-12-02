@@ -3004,3 +3004,5 @@
     body: "You create a magical zone that compels honesty. Creatures within a 15-foot radius must make a Charisma saving throw or be unable to speak deliberate lies while in the area. You know whether each creature succeeds or fails its save."
   }
   ];
+
+  window.SPELLS_DATA = SPELLS_DATA;
