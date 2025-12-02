@@ -1,164 +1,195 @@
-# Changelog
+Changelog
+All notable changes to The DM's Toolbox are documented here.
+The format is based on Keep a Changelog,
+and this project adheres to Semantic Versioning.
 
-All notable changes to **The DM’s Toolbox** are documented here.
-This project follows **Semantic Versioning**.
+1.5.3 - 2025-11-29
+Character Manager + Full Integration
+Added
 
----
+Character Manager (characters.html) with full character sheet system
+Portrait system with upload, URL input, and zoom/pan framing editor
+Spell list support with tag/class filtering and custom spell builder
+Send to Initiative Tracker button with one-click export
+DM-specific fields: party role, story hooks, at-the-table reminders, secrets
+Tabbed interface: Action Notes, Spells, Inventory, Features, Background, Notes
+Passive scores (Perception, Investigation, Insight) with special senses notes
+Multi-character management with dropdown selector
+Import/Export individual characters or full roster as JSON
 
-## **1.5.2 — 2025-11-29**
+Changed
 
-### **Character Sheet Page + Initiative Integration**
+Export mode now uses mode: "append" to preserve existing combat state
+Portrait editor modal with improved drag-to-reposition controls
+Updated top-level toolbar for consistent "Send to Tracker" button style
 
-This release adds the new **Characters** utility and completes end-to-end integration with the Initiative Tracker.
+Fixed
 
-#### **New Features**
+Error handling for malformed portraits and corrupted JSON imports
+Spell normalization to align with global spell library
+Character ID uniqueness across imports/exports
+UI alignment corrections across Characters page
 
-* Added full **Character Sheet Manager** (`characters.html`):
 
-  * Create, edit, and delete stored characters.
-  * Portrait upload, URL portraits, and drag-to-reposition + zoom controls.
-  * Full spell list support with tag/class filtering and custom spell creation.
-  * LocalStorage-based persistence with automatic field normalization.
+1.5.0 - 2025-11-25
+Stability & Version Tracking
+Added
 
-* Added **Send to Initiative Tracker**:
+Unique character ID generation to prevent accidental cross-updates
+Console build stamps to all pages for version tracking
+MIT License and repository metadata
+Load guards to improve page stability
 
-  * Characters now export directly into the running combat.
-  * Export uses `mode: "append"` and does **not** overwrite existing combat state.
-  * Includes validation for Name / AC / HP before export.
-  * Supports portrait settings, notes, and stat fields.
+Changed
 
-#### **Quality of Life**
+Refactored initiative.js and extracted rules/spells into dedicated data files
+Improved active-turn behavior to persist through sorting, reordering, and manual list updates
+Updated active turn styling for improved clarity on both DM and Player View
 
-* Updated top-level toolbar to include a consistent “Send to Tracker” button style.
-* Added error handling for malformed portraits and corrupted JSON imports.
-* Improved spell normalization to align with global spell library.
-* Ensured character IDs remain unique across imports/exports.
+Fixed
 
-#### **Internal**
+Player View security: AC column now reliably hidden
+Sensitive data properly suppressed across all modes
+Cross-page sync issues for Player View toggle and shared state
+Multiple minor UI polish issues across initiative and battlemap pages
 
-* Added shared build metadata to Characters page.
-* Updated localStorage schema guards to avoid legacy data crashes.
-* Minor UI alignment corrections across the Characters page.
 
----
+1.4.0 - 2025-11-03 to 2025-11-21
+Battle Map & Encounter Builder
+Added
 
-## **1.5.0 — 2025-11-25**
+Battle Map MVP (battlemap.html)
 
-### Refactor, Stability, Licensing, and Version Tracking
+Token placement system with drag-and-drop
+Fog-of-war with reveal/cover modes
+Scale controls and map state saving to LocalStorage
+Pinch-zoom and mobile interaction support
 
-* Refactored `initiative.js` and extracted rules/spells into dedicated data files.
-* Added load guards to improve page stability and avoid null reference failures.
-* Implemented unique character ID generation to prevent accidental cross-updates between duplicated characters.
-* Improved Player View security:
 
-  * AC column now reliably hidden.
-  * Sensitive data properly suppressed across all modes.
-* Overhauled active-turn behavior so the active creature persists through sorting, reordering, and manual list updates.
-* Updated active turn styling for improved clarity on both DM and Player View.
-* Fixed cross-page sync issues for Player View toggle and shared state.
-* Added console build stamp to all pages for version tracking.
-* Added project licensing and repository metadata.
-* Multiple minor fixes and UI polish across initiative and battlemap pages.
+Encounter Builder (encounterbuilder.html)
 
----
+Quick encounter assembly
+Export directly to Initiative Tracker
 
-## **1.4.0 — 2025-11-03 → 2025-11-21**
 
-### Battle Map MVP, Encounter Builder, Mobile Improvements
+Ko-fi footer link and UI integration
+Editable character names with smart duplicate numbering (Goblin, Goblin 2, etc.)
 
-* Added **Battle Map MVP**:
+Changed
 
-  * Token placement system.
-  * Fog, scale, and map state saving to LocalStorage.
-  * Pinch-zoom and mobile interaction fixes.
-* Added **Encounter Builder** with export-to-initiative support.
-* Added Ko-fi footer link and UI integration.
-* Updated navigation bar and improved consistency across pages.
-* Multiple upgrades to initiative and battle map pages.
-* Improved mobile layout and fixed nav button logic.
-* Addressed 0 HP / AC / Initiative logic edge cases.
-* Editable names and improved duplicate naming (`Goblin`, `Goblin 2`, etc.).
-* Updated footer and global UI elements.
+Updated navigation bar for consistency across pages
+Improved mobile layout and responsiveness
+Multiple upgrades to initiative and battle map pages
 
----
+Fixed
 
-## **1.3.0 — 2025-10-22 → 2025-10-30**
+0 HP / AC / Initiative logic edge cases
+Mobile nav button logic
+Various UI and layout issues
 
-### Rules & Spells Integration, Saved Characters Modal, UI Polish
 
-* Added `site.js` and centralized shared page logic.
-* Integrated **Spells** and **Rules** into the Initiative Tracker.
-* Added Saved Characters modal for better storage management.
-* Improved character type color-coding and styling.
-* Removed old accordion layout and polished initiative UI.
-* Centered control buttons and refined layout flow.
-* Fixed name generator button issues.
-* Minor bug fixes across Shop Generator and name generator pages.
+1.3.0 - 2025-10-22 to 2025-10-30
+Spells & Rules Integration
+Added
 
----
+Spells and Rules reference integrated into Initiative Tracker
+Saved Characters modal for better storage management
+Character type color-coding for visual distinction
+site.js for centralized shared page logic
 
-## **1.2.0 — 2025-10-10 → 2025-10-16**
+Changed
 
-### Major Initiative Tracker Overhaul
+Removed old accordion layout
+Polished initiative UI with centered control buttons
+Refined overall layout flow
 
-* Added:
+Fixed
 
-  * Temp HP Undo
-  * Death Saves logic
-  * Improved Concentration checks (now triggers correctly during the turn, not end of round)
-* Added dice roller upgrades and help menu refinements.
-* Improved mobile nav behavior and fixed hamburger menu bugs.
-* Continued updates to name generator and initiative features.
+Name generator button issues
+Minor bugs in Shop Generator and name generator pages
 
----
 
-## **1.1.0 — 2025-09-03 → 2025-10-09**
+1.2.0 - 2025-10-10 to 2025-10-16
+Death Saves & Temp HP
+Added
 
-### Generators Expansion + Initiative Upgrades
+Death Saves tracking system
+Temp HP Undo support
+Dice roller upgrades
+Help menu refinements
 
-* Added generator tools globally across multiple pages.
-* Improved name generator inputs and outputs for clarity and consistency.
-* Added loot updates including bundles and preset controls.
-* Continued initiative tracker evolution:
+Changed
 
-  * Editable fields
-  * Mobile-friendly improvements
-  * Ongoing layout corrections
-* Updated footer and global styling.
+Improved Concentration checks (now triggers correctly during the turn, not end of round)
+Enhanced mobile navigation behavior
 
----
+Fixed
 
-## **1.0.0 — 2025-08-27 → 2025-09-02**
+Hamburger menu bugs
+Various mobile navigation issues
 
-### Initial Public Release
 
-* Project created and deployed.
-* Added first wave of pages:
+1.1.0 - 2025-09-03 to 2025-10-09
+Generators Expansion
+Added
 
-  * Name generator
-  * Basic loot generator
-  * Early shop generator
-* Initial global layout and navbar.
-* Set foundation for initiative tracker integration.
-* Established file structure and Netlify auto-deploy pipeline.
+Generator tools globally across multiple pages
+Loot bundles and preset controls
+Improved name generator inputs and outputs
 
----
+Changed
 
-## **0.9.0 — (Legacy Project) — 2025-02 → 2025-10**
+Enhanced initiative tracker with editable fields
+Mobile-friendly improvements across tools
+Updated footer and global styling
 
-### Original Initiative Tracker + Wiki Project (Pre-Toolbox)
+Fixed
 
-* Added early Initiative Tracker prototype.
-* Added Session Notes with save/load support.
-* Import/export features and mobile card sorting fixes.
-* Added saved characters and mobile-friendly character management.
-* Added concentration logic, dice rolls, and UI improvements.
-* Bug fixes (delete character, hamburger menu, turn progression).
-* Navbar unification across pages.
-* Served as foundation for Toolbox 1.0 rewrite.
+Ongoing layout corrections across initiative tracker
+Various generator consistency issues
 
----
 
-## **Unreleased**
+1.0.0 - 2025-08-27 to 2025-09-02
+Initial Release
+Added
 
-Reserved for future development.
+Name Generator (name.html)
+Loot Generator (loot.html)
+Shop Generator (shop.html)
+Initial global layout and navbar
+Foundation for initiative tracker integration
+Netlify auto-deploy pipeline
+
+Changed
+
+Established project file structure
+
+
+0.9.0 - 2025-02 to 2025-10
+Legacy Project (Pre-Toolbox)
+Note: This represents the original Initiative Tracker + Wiki project that served as the foundation for The DM's Toolbox 1.0 rewrite.
+Added
+
+Early Initiative Tracker prototype
+Session Notes with save/load support
+Import/export features
+Saved characters and mobile-friendly character management
+Concentration logic and dice rolls
+Mobile card sorting
+
+Fixed
+
+Delete character bugs
+Hamburger menu issues
+Turn progression bugs
+Navbar unification across pages
+
+
+Legend
+
+Added for new features
+Changed for changes in existing functionality
+Deprecated for soon-to-be removed features
+Removed for now removed features
+Fixed for any bug fixes
+Security for vulnerability fixes

@@ -104,39 +104,66 @@ body.player-view .card .health-input {
 body.player-view .meta-ac {
   display: none !important;
 }
-/* --- Active turn: icon + row styling --- */
-/* Base caret size for ALL rows */
+/* --- Active turn: icon + row styling (contained in row) --- */
+
+/* Keep the caret cell a consistent width for all rows */
+.col-turn {
+  width: 2.5rem;
+}
+
+/* Base caret: dim on non-active rows so the active one stands out */
 .table td.col-turn i.bi-caret-right-fill {
   font-size: 1.3rem;
   vertical-align: middle;
+  opacity: 0.25;
 }
-/* Active-row caret: brighter and pulsing, no layout shift */
+
+/* Active row: stronger background, but only inside the cells */
+tr.active-turn td {
+  position: relative;
+  font-weight: 700 !important;
+  color: #f4fff9 !important;
+  background: linear-gradient(
+    90deg,
+    rgba(29, 255, 148, 0.18),
+    rgba(29, 255, 148, 0.03)
+  );
+  box-shadow: inset 0 0 0 1px rgba(29, 255, 148, 0.22);
+}
+
+/* Slight extra emphasis on the Character cell only */
+tr.active-turn td:nth-child(3) {
+  background: linear-gradient(
+    90deg,
+    rgba(29, 158, 109, 0.22),
+    rgba(29, 158, 109, 0)
+  );
+}
+
+/* Active-row caret: bright, pulsing arrow, but no extra band */
 tr.active-turn td.col-turn i.bi-caret-right-fill {
   display: inline-block;
+  opacity: 1;
   color: #1dff94 !important;
-  filter: drop-shadow(0 0 4px rgba(29,255,148,0.8));
+  filter: drop-shadow(0 0 4px rgba(29, 255, 148, 0.85));
   transform: scale(1.15);
   animation: pulseTurnArrow 1.6s ease-in-out infinite;
 }
 
 @keyframes pulseTurnArrow {
-  0%   { transform: scale(1); opacity: 0.9; }
-  50%  { transform: scale(1.15); opacity: 1; }
-  100% { transform: scale(1); opacity: 0.9; }
+  0%   { transform: scale(1);    opacity: 0.9; }
+  50%  { transform: scale(1.18); opacity: 1;   }
+  100% { transform: scale(1);    opacity: 0.9; }
 }
 
-/* Active row text + subtle highlight */
-tr.active-turn td {
-  font-weight: 700 !important;
-  color: #eafff4 !important;
+/* Mobile card active-turn outline */
+@media (max-width: 768px) {
+  .initiative-card.active-turn {
+    border: 2px solid rgba(29, 255, 148, 0.65) !important;
+    box-shadow: 0 0 6px rgba(29, 255, 148, 0.4);
+  }
 }
 
-/* Emphasize the Character column on the active row */
-tr.active-turn td:nth-child(3) {
-  background: linear-gradient(90deg, rgba(29,158,109,0.35), rgba(29,158,109,0));
-  border-radius: 6px;
-  padding-left: 10px !important;
-}
 /* Make inline inputs look like plain text on the TV */
 body.player-view .name-input,
 body.player-view .init-input {
