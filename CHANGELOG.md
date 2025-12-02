@@ -3,7 +3,7 @@ All notable changes to The DM's Toolbox are documented here.
 The format is based on Keep a Changelog,
 and this project adheres to Semantic Versioning.
 
-1.5.3 - 2025-11-29
+1.5.4 - 2025-11-29
 Character Manager + Full Integration
 Added
 
@@ -16,6 +16,7 @@ Tabbed interface: Action Notes, Spells, Inventory, Features, Background, Notes
 Passive scores (Perception, Investigation, Insight) with special senses notes
 Multi-character management with dropdown selector
 Import/Export individual characters or full roster as JSON
+Implemented full auto-calculation for abilities, saves, skills, and passive perception across the character sheet.
 
 Changed
 
