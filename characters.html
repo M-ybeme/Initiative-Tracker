@@ -296,8 +296,116 @@
                            placeholder="Blessed, Hexed, etc." />
                   </div>
                 </div>
+
+                <!-- Condition Toggles -->
+                <div class="mt-3">
+                  <label class="form-label small">Quick Conditions</label>
+                  <div class="d-flex flex-wrap gap-1" id="conditionToggles">
+                    <!-- Common D&D 5e conditions -->
+                    <button type="button" class="btn btn-sm btn-outline-secondary condition-btn" data-condition="Blinded">Blinded</button>
+                    <button type="button" class="btn btn-sm btn-outline-secondary condition-btn" data-condition="Charmed">Charmed</button>
+                    <button type="button" class="btn btn-sm btn-outline-secondary condition-btn" data-condition="Deafened">Deafened</button>
+                    <button type="button" class="btn btn-sm btn-outline-secondary condition-btn" data-condition="Frightened">Frightened</button>
+                    <button type="button" class="btn btn-sm btn-outline-secondary condition-btn" data-condition="Grappled">Grappled</button>
+                    <button type="button" class="btn btn-sm btn-outline-secondary condition-btn" data-condition="Incapacitated">Incapacitated</button>
+                    <button type="button" class="btn btn-sm btn-outline-secondary condition-btn" data-condition="Invisible">Invisible</button>
+                    <button type="button" class="btn btn-sm btn-outline-secondary condition-btn" data-condition="Paralyzed">Paralyzed</button>
+                    <button type="button" class="btn btn-sm btn-outline-secondary condition-btn" data-condition="Petrified">Petrified</button>
+                    <button type="button" class="btn btn-sm btn-outline-secondary condition-btn" data-condition="Poisoned">Poisoned</button>
+                    <button type="button" class="btn btn-sm btn-outline-secondary condition-btn" data-condition="Prone">Prone</button>
+                    <button type="button" class="btn btn-sm btn-outline-secondary condition-btn" data-condition="Restrained">Restrained</button>
+                    <button type="button" class="btn btn-sm btn-outline-secondary condition-btn" data-condition="Stunned">Stunned</button>
+                    <button type="button" class="btn btn-sm btn-outline-secondary condition-btn" data-condition="Unconscious">Unconscious</button>
+                    <button type="button" class="btn btn-sm btn-outline-info condition-btn" data-condition="Concentrating">Concentrating</button>
+                    <button type="button" class="btn btn-sm btn-outline-success condition-btn" data-condition="Blessed">Blessed</button>
+                    <button type="button" class="btn btn-sm btn-outline-warning condition-btn" data-condition="Hexed">Hexed</button>
+                  </div>
+                </div>
               </div>
             </div>
+
+            <!-- Currency -->
+            <div class="card bg-dark border-secondary mb-3">
+              <div class="card-header border-secondary">
+                <strong>Currency</strong>
+              </div>
+              <div class="card-body">
+                <div class="row g-2">
+                  <div class="col">
+                    <label for="currencyCP" class="form-label small">CP</label>
+                    <input type="number" id="currencyCP" class="form-control form-control-sm text-center" min="0" placeholder="0" />
+                  </div>
+                  <div class="col">
+                    <label for="currencySP" class="form-label small">SP</label>
+                    <input type="number" id="currencySP" class="form-control form-control-sm text-center" min="0" placeholder="0" />
+                  </div>
+                  <div class="col">
+                    <label for="currencyEP" class="form-label small">EP</label>
+                    <input type="number" id="currencyEP" class="form-control form-control-sm text-center" min="0" placeholder="0" />
+                  </div>
+                  <div class="col">
+                    <label for="currencyGP" class="form-label small">GP</label>
+                    <input type="number" id="currencyGP" class="form-control form-control-sm text-center" min="0" placeholder="0" />
+                  </div>
+                  <div class="col">
+                    <label for="currencyPP" class="form-label small">PP</label>
+                    <input type="number" id="currencyPP" class="form-control form-control-sm text-center" min="0" placeholder="0" />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Death Saves & Exhaustion -->
+            <div class="card bg-dark border-secondary mb-3">
+              <div class="card-header border-secondary">
+                <strong>Death Saves & Exhaustion</strong>
+              </div>
+              <div class="card-body">
+                <div class="row g-3">
+                  <div class="col-12 col-md-6">
+                    <label class="form-label small">Death Saves</label>
+                    <div class="d-flex flex-column gap-2">
+                      <div class="d-flex align-items-center gap-2">
+                        <span class="text-success small" style="min-width: 70px;">Successes:</span>
+                        <div class="form-check form-check-inline mb-0">
+                          <input class="form-check-input" type="checkbox" id="deathSaveSuccess1" />
+                        </div>
+                        <div class="form-check form-check-inline mb-0">
+                          <input class="form-check-input" type="checkbox" id="deathSaveSuccess2" />
+                        </div>
+                        <div class="form-check form-check-inline mb-0">
+                          <input class="form-check-input" type="checkbox" id="deathSaveSuccess3" />
+                        </div>
+                      </div>
+                      <div class="d-flex align-items-center gap-2">
+                        <span class="text-danger small" style="min-width: 70px;">Failures:</span>
+                        <div class="form-check form-check-inline mb-0">
+                          <input class="form-check-input" type="checkbox" id="deathSaveFailure1" />
+                        </div>
+                        <div class="form-check form-check-inline mb-0">
+                          <input class="form-check-input" type="checkbox" id="deathSaveFailure2" />
+                        </div>
+                        <div class="form-check form-check-inline mb-0">
+                          <input class="form-check-input" type="checkbox" id="deathSaveFailure3" />
+                        </div>
+                      </div>
+                      <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="deathSaveStable" />
+                        <label class="form-check-label small" for="deathSaveStable">Stable</label>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="col-12 col-md-6">
+                    <label for="exhaustionLevel" class="form-label small">Exhaustion Level</label>
+                    <input type="number" id="exhaustionLevel" class="form-control form-control-sm" min="0" max="10" placeholder="0" />
+                    <small class="text-muted d-block mt-1">
+                      <span id="exhaustionDescription">0 = No exhaustion</span>
+                    </small>
+                  </div>
+                </div>
+              </div>
+            </div>
+
             <div class="card bg-dark border-secondary mb-3" id="section-resources">
               <div class="card-header border-secondary d-flex justify-content-between align-items-center">
                 <strong>Resources &amp; Rests</strong>
@@ -947,6 +1055,22 @@
                        id="detail-actions-pane"
                        role="tabpanel"
                        aria-labelledby="detail-actions-tab">
+
+                    <!-- Attacks Section -->
+                    <div class="mb-3">
+                      <div class="d-flex justify-content-between align-items-center mb-2">
+                        <label class="form-label mb-0 fw-bold">Attacks & Actions</label>
+                        <button type="button" class="btn btn-sm btn-success" id="addAttackBtn">
+                          <i class="bi bi-plus-circle me-1"></i>Add Attack
+                        </button>
+                      </div>
+                      <div id="attacksList" class="list-group list-group-flush small">
+                        <!-- Populated by JS -->
+                      </div>
+                    </div>
+
+                    <hr class="border-secondary my-3" />
+
                     <label for="charTableNotes" class="form-label">At-the-Table Reminders</label>
                     <textarea id="charTableNotes" rows="4" class="form-control form-control-sm"
                               placeholder="Short, brutal notes: what they want right now, likely actions, roleplay voice, conflicts, etc."></textarea>
@@ -1003,6 +1127,29 @@
                            id="spells-list-pane"
                            role="tabpanel"
                            aria-labelledby="spells-list-tab">
+
+                        <!-- Spellcasting Ability & Derived Stats -->
+                        <div class="mb-3 p-2 border border-secondary rounded bg-dark bg-opacity-50">
+                          <div class="row g-2 align-items-end">
+                            <div class="col-12 col-md-4">
+                              <label for="spellcastingAbility" class="form-label small mb-1">Spellcasting Ability</label>
+                              <select id="spellcastingAbility" class="form-select form-select-sm">
+                                <option value="">None</option>
+                                <option value="int">Intelligence</option>
+                                <option value="wis">Wisdom</option>
+                                <option value="cha">Charisma</option>
+                              </select>
+                            </div>
+                            <div class="col-6 col-md-4">
+                              <label class="form-label small mb-1">Spell Save DC</label>
+                              <div class="form-control form-control-sm text-center bg-secondary bg-opacity-25" id="spellSaveDC">—</div>
+                            </div>
+                            <div class="col-6 col-md-4">
+                              <label class="form-label small mb-1">Spell Attack Bonus</label>
+                              <div class="form-control form-control-sm text-center bg-secondary bg-opacity-25" id="spellAttackBonus">—</div>
+                            </div>
+                          </div>
+                        </div>
 
                         <!-- NEW: Spell Slots + Pact Slots -->
                         <div class="mb-3">
@@ -1434,6 +1581,76 @@
       </div>
     </div>
   </footer>
+
+  <!-- Attack Editor Modal -->
+  <div class="modal fade" id="attackModal" tabindex="-1" aria-labelledby="attackModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content bg-dark text-light border-secondary">
+        <div class="modal-header border-secondary">
+          <h5 class="modal-title" id="attackModalLabel">Add/Edit Attack</h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <input type="hidden" id="attackEditIndex" value="" />
+
+          <div class="mb-3">
+            <label for="attackName" class="form-label">Attack Name</label>
+            <input type="text" class="form-control form-control-sm" id="attackName" placeholder="Longsword, Fire Bolt, Unarmed Strike..." />
+          </div>
+
+          <div class="row g-2 mb-3">
+            <div class="col-6">
+              <label for="attackType" class="form-label">Attack Type</label>
+              <select class="form-select form-select-sm" id="attackType">
+                <option value="melee-weapon">Melee Weapon Attack</option>
+                <option value="ranged-weapon">Ranged Weapon Attack</option>
+                <option value="melee-spell">Melee Spell Attack</option>
+                <option value="ranged-spell">Ranged Spell Attack</option>
+                <option value="save">Saving Throw</option>
+                <option value="other">Other</option>
+              </select>
+            </div>
+            <div class="col-6">
+              <label for="attackRange" class="form-label">Range</label>
+              <input type="text" class="form-control form-control-sm" id="attackRange" placeholder="5 ft, 30/120 ft..." />
+            </div>
+          </div>
+
+          <div class="row g-2 mb-3">
+            <div class="col-6">
+              <label for="attackBonus" class="form-label">Attack Bonus</label>
+              <input type="text" class="form-control form-control-sm" id="attackBonus" placeholder="+5, +8..." />
+            </div>
+            <div class="col-6">
+              <label for="attackSaveDC" class="form-label">Save DC (if applicable)</label>
+              <input type="text" class="form-control form-control-sm" id="attackSaveDC" placeholder="DC 15, DC 18..." />
+            </div>
+          </div>
+
+          <div class="mb-3">
+            <label for="attackDamage" class="form-label">Damage</label>
+            <input type="text" class="form-control form-control-sm" id="attackDamage" placeholder="1d8+3 slashing, 2d6 fire..." />
+          </div>
+
+          <div class="mb-3">
+            <label for="attackDamage2" class="form-label">Additional Damage (optional)</label>
+            <input type="text" class="form-control form-control-sm" id="attackDamage2" placeholder="1d6 poison, 2d6 sneak attack..." />
+          </div>
+
+          <div class="mb-3">
+            <label for="attackProperties" class="form-label">Properties / Notes</label>
+            <textarea class="form-control form-control-sm" id="attackProperties" rows="2" placeholder="Versatile (1d10), reach, finesse, magical..."></textarea>
+          </div>
+        </div>
+        <div class="modal-footer border-secondary">
+          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button type="button" class="btn btn-success" id="saveAttackBtn">
+            <i class="bi bi-check2-circle me-1"></i>Save Attack
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
 
   <!-- Portrait Editing Modal -->
   <div class="modal fade" id="portraitModal" tabindex="-1" aria-labelledby="portraitModalLabel" aria-hidden="true">

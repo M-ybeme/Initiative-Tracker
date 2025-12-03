@@ -8,48 +8,16 @@
         const value = parseInt(el.value, 10);
         return Number.isFinite(value) ? value : fallback;
       }
-      
-      // Standard 5e modifier from ability score
-      function abilityModFromScore(score) {
-        if (!Number.isFinite(score)) return 0;
-        return Math.floor((score - 10) / 2);
-      }
-      
-      function getAbilityScore(id) {
-        return getNumber(id, 10);
-      }
-      
-      function getAbilityMods() {
-        const str = abilityModFromScore(getAbilityScore('statStr'));
-        const dex = abilityModFromScore(getAbilityScore('statDex'));
-        const con = abilityModFromScore(getAbilityScore('statCon'));
-        const int_ = abilityModFromScore(getAbilityScore('statInt'));
-        const wis = abilityModFromScore(getAbilityScore('statWis'));
-        const cha = abilityModFromScore(getAbilityScore('statCha'));
-      
-        return { str, dex, con, int: int_, wis, cha };
-      }
-      
-      // 5e PB from level
-      function getProficiencyBonus() {
-        const levelRaw = getNumber('charLevel', 1);
-        const level = Math.max(1, levelRaw);
-        const pb = 2 + Math.floor((level - 1) / 4);
-      
-        const pbSpan = $('charProficiencyBonusDisplay');
-        if (pbSpan) {
-          pbSpan.textContent = pb >= 0 ? `+${pb}` : `${pb}`;
-        }
-        return pb;
-      }
 
       // ---------- Auto-calculation helpers ----------
+      // Standard 5e modifier from ability score
       function getAbilityModFromScore(score) {
         const n = typeof score === 'number' ? score : Number(score);
         if (!Number.isFinite(n)) return 0;
         return Math.floor((n - 10) / 2);
       }
-      
+
+      // 5e proficiency bonus from level
       function getProficiencyBonusFromLevel(level) {
         const lv = Number(level) || 1;
         if (lv >= 17) return 6;
@@ -59,23 +27,6 @@
         return 2;
       }
 
-      function recalcAbilityMods() {
-        const mods = getAbilityMods();
-          
-        const setMod = (id, value) => {
-          const el = $(id);
-          if (!el) return;
-          el.value = value >= 0 ? `+${value}` : `${value}`;
-        };
-      
-        setMod('modStr', mods.str);
-        setMod('modDex', mods.dex);
-        setMod('modCon', mods.con);
-        setMod('modInt', mods.int);
-        setMod('modWis', mods.wis);
-        setMod('modCha', mods.cha);
-      }
-      
       // Update derived values on the *character object*
       function recalcDerivedOnCharacter(char) {
         if (!char) return;
@@ -113,7 +64,7 @@
       function recalcDerivedFromForm() {
         const levelInput = $('charLevel');
         const level = levelInput ? Number(levelInput.value || '') || 1 : 1;
-      
+
         const scores = {
           str: Number($('statStr')?.value || '') || 0,
           dex: Number($('statDex')?.value || '') || 0,
@@ -122,7 +73,7 @@
           wis: Number($('statWis')?.value || '') || 0,
           cha: Number($('statCha')?.value || '') || 0
         };
-      
+
         const mods = {
           str: getAbilityModFromScore(scores.str),
           dex: getAbilityModFromScore(scores.dex),
@@ -131,18 +82,19 @@
           wis: getAbilityModFromScore(scores.wis),
           cha: getAbilityModFromScore(scores.cha)
         };
-      
+
         if ($('modStr')) $('modStr').value = mods.str;
         if ($('modDex')) $('modDex').value = mods.dex;
         if ($('modCon')) $('modCon').value = mods.con;
         if ($('modInt')) $('modInt').value = mods.int;
         if ($('modWis')) $('modWis').value = mods.wis;
         if ($('modCha')) $('modCha').value = mods.cha;
-      
+
+        // Update proficiency bonus display
         const pb = getProficiencyBonusFromLevel(level);
         const pbSpan = $('charProficiencyBonusDisplay');
         if (pbSpan) pbSpan.textContent = (pb >= 0 ? '+' : '') + pb;
-      
+
         // Keep Perception in sync with either the skill bonus or WIS mod
         let perceptionBonus = 0;
         const skillPercepEl = $('skillPerceptionBonus');
@@ -154,11 +106,6 @@
         }
         const passive = 10 + (perceptionBonus || 0);
         if ($('charPassivePerception')) $('charPassivePerception').value = passive;
-
-        // NEW: keep saves, skills, and other passives roughly in sync
-        recalcSavesFromForm(true);
-        recalcSkillsFromForm(true);
-        recalcPassivesFromForm();
       }
 
             // ---------- Auto-calc for saves and skills ----------
@@ -319,6 +266,7 @@
       let currentCharacterId = null;
       let editingPortrait = null; // { type, data, settings }
       let currentSpellList = [];
+      let currentAttackList = [];
 
       // ---------- Spells data + helpers ----------
       const RAW_SPELLS = (window.SPELLS_DATA || window.SPELLS || []);
@@ -773,6 +721,259 @@
         clearSpellSearchResults();
       }
 
+      // ---------- Attack management ----------
+
+      function syncAttackListFromCharacter(char) {
+        currentAttackList = Array.isArray(char?.attacks) ? [...char.attacks] : [];
+        renderAttackList();
+      }
+
+      function renderAttackList() {
+        const listEl = $('attacksList');
+        if (!listEl) return;
+        listEl.innerHTML = '';
+
+        if (!currentAttackList.length) {
+          const li = document.createElement('li');
+          li.className = 'list-group-item bg-transparent text-muted small';
+          li.textContent = 'No attacks added yet.';
+          listEl.appendChild(li);
+          return;
+        }
+
+        currentAttackList.forEach((attack, index) => {
+          const li = document.createElement('li');
+          li.className = 'list-group-item bg-transparent small border-secondary';
+
+          const attackTypeLabel = {
+            'melee-weapon': 'Melee Weapon Attack',
+            'ranged-weapon': 'Ranged Weapon Attack',
+            'melee-spell': 'Melee Spell Attack',
+            'ranged-spell': 'Ranged Spell Attack',
+            'save': 'Saving Throw',
+            'other': 'Other'
+          }[attack.type] || attack.type;
+
+          // Build the attack info display
+          let attackInfo = `<span class="text-muted">${attackTypeLabel}</span>`;
+          if (attack.range) attackInfo += ` · <span class="text-muted">${attack.range}</span>`;
+
+          let hitInfo = '';
+          if (attack.bonus) {
+            hitInfo += `<span class="badge bg-primary bg-opacity-75 me-1">${attack.bonus} to hit</span>`;
+          }
+          if (attack.saveDC) {
+            hitInfo += `<span class="badge bg-warning bg-opacity-75 me-1">${attack.saveDC}</span>`;
+          }
+
+          let damageInfo = '';
+          if (attack.damage) {
+            damageInfo += `<span class="text-info">${attack.damage}</span>`;
+          }
+          if (attack.damage2) {
+            damageInfo += ` + <span class="text-info">${attack.damage2}</span>`;
+          }
+
+          li.innerHTML = `
+            <div class="d-flex justify-content-between align-items-start">
+              <div class="flex-grow-1">
+                <div class="mb-1">
+                  <strong>${attack.name || 'Unnamed Attack'}</strong>
+                </div>
+                <div class="small mb-1">${attackInfo}</div>
+                ${hitInfo ? `<div class="mb-1">${hitInfo}</div>` : ''}
+                ${damageInfo ? `<div class="mb-1">${damageInfo}</div>` : ''}
+                ${attack.properties ? `<div class="small text-muted">${attack.properties}</div>` : ''}
+              </div>
+              <div class="d-flex gap-1 ms-2">
+                <button type="button" class="btn btn-sm btn-outline-light" data-attack-edit="${index}">
+                  <i class="bi bi-pencil"></i>
+                </button>
+                <button type="button" class="btn btn-sm btn-outline-danger" data-attack-delete="${index}">
+                  <i class="bi bi-trash"></i>
+                </button>
+              </div>
+            </div>
+          `;
+
+          listEl.appendChild(li);
+        });
+      }
+
+      function openAttackModal(editIndex = null) {
+        const modal = bootstrap.Modal.getOrCreateInstance($('attackModal'));
+        const editIndexEl = $('attackEditIndex');
+
+        // Clear form
+        $('attackName').value = '';
+        $('attackType').value = 'melee-weapon';
+        $('attackRange').value = '';
+        $('attackBonus').value = '';
+        $('attackSaveDC').value = '';
+        $('attackDamage').value = '';
+        $('attackDamage2').value = '';
+        $('attackProperties').value = '';
+
+        if (editIndex !== null && currentAttackList[editIndex]) {
+          // Editing existing attack
+          const attack = currentAttackList[editIndex];
+          editIndexEl.value = editIndex;
+          $('attackName').value = attack.name || '';
+          $('attackType').value = attack.type || 'melee-weapon';
+          $('attackRange').value = attack.range || '';
+          $('attackBonus').value = attack.bonus || '';
+          $('attackSaveDC').value = attack.saveDC || '';
+          $('attackDamage').value = attack.damage || '';
+          $('attackDamage2').value = attack.damage2 || '';
+          $('attackProperties').value = attack.properties || '';
+          $('attackModalLabel').textContent = 'Edit Attack';
+        } else {
+          // Adding new attack
+          editIndexEl.value = '';
+          $('attackModalLabel').textContent = 'Add Attack';
+        }
+
+        modal.show();
+      }
+
+      function saveAttackFromModal() {
+        const editIndex = $('attackEditIndex').value;
+        const attack = {
+          name: ($('attackName').value || '').trim(),
+          type: $('attackType').value || 'melee-weapon',
+          range: ($('attackRange').value || '').trim(),
+          bonus: ($('attackBonus').value || '').trim(),
+          saveDC: ($('attackSaveDC').value || '').trim(),
+          damage: ($('attackDamage').value || '').trim(),
+          damage2: ($('attackDamage2').value || '').trim(),
+          properties: ($('attackProperties').value || '').trim()
+        };
+
+        if (!attack.name) {
+          alert('Attack must have a name.');
+          return;
+        }
+
+        if (editIndex !== '' && editIndex !== null) {
+          // Edit existing
+          const idx = parseInt(editIndex, 10);
+          if (idx >= 0 && idx < currentAttackList.length) {
+            currentAttackList[idx] = attack;
+          }
+        } else {
+          // Add new
+          currentAttackList.push(attack);
+        }
+
+        renderAttackList();
+        bootstrap.Modal.getOrCreateInstance($('attackModal')).hide();
+      }
+
+      function deleteAttack(index) {
+        if (index < 0 || index >= currentAttackList.length) return;
+        const attack = currentAttackList[index];
+        if (!confirm(`Delete attack "${attack.name || 'Unnamed Attack'}"?`)) return;
+        currentAttackList.splice(index, 1);
+        renderAttackList();
+      }
+
+      // ---------- Exhaustion helper ----------
+      function updateExhaustionDescription() {
+        const input = $('exhaustionLevel');
+        const desc = $('exhaustionDescription');
+        if (!input || !desc) return;
+
+        let level = parseInt(input.value || '0', 10);
+
+        // Validate and clamp level to 0-10
+        if (isNaN(level) || level < 0) {
+          level = 0;
+          input.value = 0;
+        } else if (level > 10) {
+          level = 10;
+          input.value = 10;
+        }
+
+        const descriptions = [
+          '0 = No exhaustion',
+          '1 = Disadvantage on ability checks',
+          '2 = Speed halved',
+          '3 = Disadvantage on attacks & saves',
+          '4 = HP maximum halved',
+          '5 = Speed reduced to 0',
+          '6 = Death'
+        ];
+
+        // OneD&D extends to 10
+        if (level > 6 && level <= 10) {
+          desc.textContent = `${level} = Severe exhaustion (OneD&D)`;
+        } else if (level >= 0 && level <= 6) {
+          desc.textContent = descriptions[level] || '';
+        } else {
+          desc.textContent = '';
+        }
+      }
+
+      // ---------- Condition toggles ----------
+      function syncConditionsToField() {
+        const toggles = document.querySelectorAll('.condition-btn');
+        const active = [];
+        toggles.forEach(btn => {
+          if (btn.classList.contains('active')) {
+            active.push(btn.getAttribute('data-condition'));
+          }
+        });
+        const field = $('charConditions');
+        if (field) field.value = active.join(', ');
+      }
+
+      function syncConditionsFromField() {
+        const field = $('charConditions');
+        if (!field) return;
+        const conditionsStr = (field.value || '').toLowerCase();
+        const toggles = document.querySelectorAll('.condition-btn');
+        toggles.forEach(btn => {
+          const condition = btn.getAttribute('data-condition').toLowerCase();
+          if (conditionsStr.includes(condition)) {
+            btn.classList.add('active');
+          } else {
+            btn.classList.remove('active');
+          }
+        });
+      }
+
+      // ---------- Spell DC / Attack calculation ----------
+      function updateSpellDCAndAttack() {
+        const abilitySelect = $('spellcastingAbility');
+        const dcEl = $('spellSaveDC');
+        const attackEl = $('spellAttackBonus');
+        if (!abilitySelect || !dcEl || !attackEl) return;
+
+        const ability = abilitySelect.value;
+        if (!ability) {
+          dcEl.textContent = '—';
+          attackEl.textContent = '—';
+          return;
+        }
+
+        const levelInput = $('charLevel');
+        const level = levelInput ? Number(levelInput.value || '') || 1 : 1;
+        const pb = getProficiencyBonusFromLevel(level);
+
+        const scores = {
+          int: Number($('statInt')?.value || '') || 0,
+          wis: Number($('statWis')?.value || '') || 0,
+          cha: Number($('statCha')?.value || '') || 0
+        };
+
+        const abilMod = getAbilityModFromScore(scores[ability] || 0);
+        const dc = 8 + pb + abilMod;
+        const attack = pb + abilMod;
+
+        dcEl.textContent = `DC ${dc}`;
+        attackEl.textContent = attack >= 0 ? `+${attack}` : `${attack}`;
+      }
+
       // ---------- Fill form ----------
       function fillFormFromCharacter(char) {
           if (!char) return;
@@ -795,7 +996,33 @@
           $('charSpeed').value = char.speed || '';
           $('charInitMod').value = char.initMod ?? '';
           $('charConditions').value = char.conditions || '';
-            
+
+          // Currency
+          const currency = char.currency || {};
+          $('currencyCP').value = currency.cp ?? 0;
+          $('currencySP').value = currency.sp ?? 0;
+          $('currencyEP').value = currency.ep ?? 0;
+          $('currencyGP').value = currency.gp ?? 0;
+          $('currencyPP').value = currency.pp ?? 0;
+
+          // Death saves
+          const ds = char.deathSaves || {};
+          $('deathSaveSuccess1').checked = (ds.successes >= 1);
+          $('deathSaveSuccess2').checked = (ds.successes >= 2);
+          $('deathSaveSuccess3').checked = (ds.successes >= 3);
+          $('deathSaveFailure1').checked = (ds.failures >= 1);
+          $('deathSaveFailure2').checked = (ds.failures >= 2);
+          $('deathSaveFailure3').checked = (ds.failures >= 3);
+          $('deathSaveStable').checked = !!ds.stable;
+
+          // Exhaustion
+          $('exhaustionLevel').value = char.exhaustion ?? '';
+          updateExhaustionDescription();
+
+          // Spellcasting ability
+          $('spellcastingAbility').value = char.spellcastingAbility || '';
+          updateSpellDCAndAttack();
+
           const stats = char.stats || {};
           $('statStr').value = stats.str ?? '';
           $('statDex').value = stats.dex ?? '';
@@ -908,6 +1135,8 @@
           $('pactUsed').value  = pact.used ?? '';
 
           syncSpellListFromCharacter(char);
+          syncAttackListFromCharacter(char);
+          syncConditionsFromField();
           updatePortraitPreview(char);
           setLastUpdatedText(char);
           updateSpellSlotsDisplay();
@@ -934,6 +1163,13 @@
           initMod: '',
           passivePerception: '',
           conditions: '',
+
+          // Currency
+          currency: { cp: 0, sp: 0, ep: 0, gp: 0, pp: 0 },
+
+          // Death saves & exhaustion
+          deathSaves: { successes: 0, failures: 0, stable: false },
+          exhaustion: 0,
 
           // Core stats
           stats: { str: '', dex: '', con: '', int: '', wis: '', cha: '' },
@@ -994,12 +1230,14 @@
           features: '',
           spells: '',
           spellList: [],
+          attacks: [],
           inventory: '',
           notes: '',
           tableNotes: '',
           extraNotes: '',
 
            // Spellcasting resources
+          spellcastingAbility: '',
           spellSlots: {
             1: { max: '', used: '' },
             2: { max: '', used: '' },
@@ -1044,9 +1282,9 @@
           const getVal = (id) => ($(id)?.value ?? '').trim();
           const getNum = (id) => {
             const v = getVal(id);
-            if (v === '') return '';
+            if (v === '') return 0;
             const n = Number(v);
-            return isNaN(n) ? '' : n;
+            return isNaN(n) ? 0 : n;
           };
       
           char.name = getVal('charName') || 'Unnamed Character';
@@ -1064,7 +1302,30 @@
           char.speed = getVal('charSpeed');
           char.initMod = getNum('charInitMod');
           char.conditions = getVal('charConditions');
-      
+
+          // Currency
+          char.currency = {
+            cp: getNum('currencyCP'),
+            sp: getNum('currencySP'),
+            ep: getNum('currencyEP'),
+            gp: getNum('currencyGP'),
+            pp: getNum('currencyPP')
+          };
+
+          // Death saves - count checked boxes
+          const countChecked = (ids) => ids.reduce((sum, id) => sum + ($(id)?.checked ? 1 : 0), 0);
+          char.deathSaves = {
+            successes: countChecked(['deathSaveSuccess1', 'deathSaveSuccess2', 'deathSaveSuccess3']),
+            failures: countChecked(['deathSaveFailure1', 'deathSaveFailure2', 'deathSaveFailure3']),
+            stable: !!$('deathSaveStable')?.checked
+          };
+
+          // Exhaustion
+          char.exhaustion = getNum('exhaustionLevel');
+
+          // Spellcasting ability
+          char.spellcastingAbility = $('spellcastingAbility')?.value || '';
+
           char.stats = {
             str: getNum('statStr'),
             dex: getNum('statDex'),
@@ -1074,6 +1335,7 @@
             cha: getNum('statCha')
           };
       
+          // Saving throws
           const saveMap = ['Str','Dex','Con','Int','Wis','Cha'];
           char.savingThrows = char.savingThrows || {};
           saveMap.forEach(abbr => {
@@ -1081,25 +1343,22 @@
             const profEl = $('save' + abbr + 'Prof');
             const bonusEl = $('save' + abbr + 'Bonus');
             const prof = profEl ? !!profEl.checked : false;
-            let bonusVal = bonusEl ? bonusEl.value : '';
-            let bonus = bonusVal === '' ? '' : Number(bonusVal);
-            if (isNaN(bonus)) bonus = '';
+            const bonusVal = bonusEl?.value.trim() || '';
+            const bonus = bonusVal === '' ? '' : (isNaN(Number(bonusVal)) ? '' : Number(bonusVal));
             if (!char.savingThrows[key]) char.savingThrows[key] = { prof: false, bonus: '' };
             char.savingThrows[key].prof = prof;
             char.savingThrows[key].bonus = bonus;
           });
           char.saveNotes = getVal('saveNotes');
-      
+
+          // Skills
           char.skills = char.skills || {};
           function readSkill(idBase, key) {
             const profEl = $(idBase + 'Prof');
             const bonusEl = $(idBase + 'Bonus');
             const prof = profEl ? !!profEl.checked : false;
-            let bonus = bonusEl ? bonusEl.value : '';
-            if (bonus !== '') {
-              const n = Number(bonus);
-              bonus = isNaN(n) ? '' : n;
-            }
+            const bonusVal = bonusEl?.value.trim() || '';
+            const bonus = bonusVal === '' ? '' : (isNaN(Number(bonusVal)) ? '' : Number(bonusVal));
             char.skills[key] = { prof, bonus };
           }
           readSkill('skillAcrobatics', 'acrobatics');
@@ -1176,6 +1435,7 @@
               .map(sp => normalizeSpellEntry(sp))
               .filter(Boolean)
           : [];
+          char.attacks = Array.isArray(currentAttackList) ? [...currentAttackList] : [];
           char.inventory = getVal('charInventory');
           char.notes = getVal('charNotes');
           char.tableNotes = getVal('charTableNotes');
@@ -1260,6 +1520,11 @@
               c.spellList = Array.isArray(c.spellList)
                 ? Array.from(new Set(c.spellList.filter(Boolean)))
                 : [];
+              c.attacks = Array.isArray(c.attacks) ? c.attacks : [];
+              c.currency = c.currency || base.currency;
+              c.deathSaves = c.deathSaves || base.deathSaves;
+              c.exhaustion = c.exhaustion ?? 0;
+              c.spellcastingAbility = c.spellcastingAbility || '';
               c.portraitSettings = c.portraitSettings || base.portraitSettings;
               if (typeof c.extraNotes !== 'string') c.extraNotes = '';
 
@@ -1751,11 +2016,79 @@
           });
         }
         for (let lvl = 1; lvl <= 9; lvl++) {
-            const maxEl = $(`slots${lvl}Max`); 
+            const maxEl = $(`slots${lvl}Max`);
             if (maxEl){
                 maxEl.addEventListener('input', updateSpellSlotsDisplay);
             }
         }
+
+        // Attack events
+        const addAttackBtn = $('addAttackBtn');
+        const saveAttackBtn = $('saveAttackBtn');
+        const attacksListEl = $('attacksList');
+
+        if (addAttackBtn) {
+          addAttackBtn.addEventListener('click', () => openAttackModal());
+        }
+
+        if (saveAttackBtn) {
+          saveAttackBtn.addEventListener('click', saveAttackFromModal);
+        }
+
+        if (attacksListEl) {
+          attacksListEl.addEventListener('click', e => {
+            // Edit attack
+            const editBtn = e.target.closest('button[data-attack-edit]');
+            if (editBtn) {
+              const index = parseInt(editBtn.getAttribute('data-attack-edit'), 10);
+              openAttackModal(index);
+              return;
+            }
+
+            // Delete attack
+            const deleteBtn = e.target.closest('button[data-attack-delete]');
+            if (deleteBtn) {
+              const index = parseInt(deleteBtn.getAttribute('data-attack-delete'), 10);
+              deleteAttack(index);
+            }
+          });
+        }
+
+        // Exhaustion description
+        const exhaustionInput = $('exhaustionLevel');
+        if (exhaustionInput) {
+          exhaustionInput.addEventListener('input', updateExhaustionDescription);
+        }
+
+        // Condition toggles
+        const conditionToggles = document.querySelectorAll('.condition-btn');
+        conditionToggles.forEach(btn => {
+          btn.addEventListener('click', e => {
+            e.preventDefault();
+            btn.classList.toggle('active');
+            syncConditionsToField();
+          });
+        });
+
+        // Sync conditions field back to toggles when manually edited
+        const conditionsField = $('charConditions');
+        if (conditionsField) {
+          conditionsField.addEventListener('blur', syncConditionsFromField);
+        }
+
+        // Spellcasting ability & derived stats
+        const spellAbilitySelect = $('spellcastingAbility');
+        if (spellAbilitySelect) {
+          spellAbilitySelect.addEventListener('change', updateSpellDCAndAttack);
+        }
+
+        // Update spell DC/attack when stats or level change
+        ['statInt', 'statWis', 'statCha', 'charLevel'].forEach(id => {
+          const el = $(id);
+          if (el) {
+            el.addEventListener('input', updateSpellDCAndAttack);
+          }
+        });
       }
 
       // ---------- Init ----------
@@ -1768,11 +2101,20 @@
           c.savingThrows = c.savingThrows || base.savingThrows;
           c.skills = c.skills || base.skills;
           c.senses = c.senses || base.senses;
-        
+
           // NEW: ensure spell slots / pact slots exist on old characters
           c.spellSlots = c.spellSlots || base.spellSlots;
           c.pactSlots  = c.pactSlots  || base.pactSlots;
-        
+
+          // NEW: ensure attacks array exists on old characters
+          c.attacks = Array.isArray(c.attacks) ? c.attacks : [];
+
+          // NEW: ensure currency/death saves/exhaustion exist
+          c.currency = c.currency || base.currency;
+          c.deathSaves = c.deathSaves || base.deathSaves;
+          c.exhaustion = c.exhaustion ?? 0;
+          c.spellcastingAbility = c.spellcastingAbility || '';
+
           // existing spellList upgrade...
           if (Array.isArray(c.spellList)) {
             let upgraded = c.spellList.map(entry => normalizeSpellEntry(entry)).filter(Boolean);

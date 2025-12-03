@@ -1,7 +1,7 @@
 const DM_TOOLBOX_BUILD = {
     name: "The DM's Toolbox",
-    version: "1.5.4",
-    buildTime: "2025-12-29T18:00:00Z",
+    version: "1.5.5",
+    buildTime: new Date().toISOString(),
     author: "Maybeme"
 };
 

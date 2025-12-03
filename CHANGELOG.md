@@ -3,6 +3,32 @@ All notable changes to The DM's Toolbox are documented here.
 The format is based on Keep a Changelog,
 and this project adheres to Semantic Versioning.
 
+1.5.5 - 2025-12-03  
+Character Sheet Refinements & Spell/Attack Systems
+
+Added
+
+- Full spell slot tracking for levels 1–9 plus pact slot tracking, including long rest reset behavior.
+- Attack list management with a modal editor for weapon attacks, spell attacks, save-based abilities, and custom damage strings.
+- Short/Long Rest helpers that restore HP, temp HP, resources, and spell slots (including pact slots) according to rest type.
+- Exhaustion tracker with rules text for each level (including extended OneD&D levels).
+- Condition toggle buttons backed by a synced text field for quick at-a-glance status management.
+
+Changed
+
+- Character spell lists now persist normalized spell objects (name, level, school, tags, classes, body, prepared) instead of plain strings.
+- Spell search upgraded to use the global spell library with matching across name/title, school, body text, tags, and classes, returning the top 25 results.
+- Prepared status for spells is now first-class on the spell objects and reflected directly in the character’s saved data.
+- “Send to Initiative Tracker” from the Characters page now stages a dmtools.pendingImport payload using mode: "append" to preserve the existing initiative list while adding the selected PC.
+- Spell slot rows auto-expand based on the highest level with available slots, keeping the UI compact at low levels and revealing higher-level rows as needed.
+
+Fixed
+
+- Legacy character imports now backfill missing structures (spellSlots, pactSlots, attacks, currency, deathSaves, exhaustion, portraitSettings) to align with the new character model.
+- Passive scores (Perception, Investigation, Insight) stay in sync with ability scores, proficiency bonus, and skill bonuses when stats or proficiencies change.
+- Save and skill bonuses recalculate correctly when fields are cleared, preventing stale or inconsistent modifiers.
+- Spell list normalization correctly deduplicates entries by name (case-insensitive) and safely upgrades legacy string-only spell lists.
+
 1.5.4 - 2025-11-29
 Character Manager + Full Integration
 Added
