@@ -1000,23 +1000,223 @@
                     
                         <!-- Spell List tab -->
                         <div class="tab-pane fade"
-                             id="spells-list-pane"
-                             role="tabpanel"
-                             aria-labelledby="spells-list-tab">
-                    
-                          <div class="mb-2">
-                            <div class="input-group input-group-sm mb-2">
-                              <span class="input-group-text"><i class="bi bi-search"></i></span>
-                              <input type="text"
-                                     class="form-control"
-                                     id="spellSearchInput"
-                                     placeholder="Search spell name, tag, or class..."
-                                     autocomplete="off" />
-                            </div>
-                            <div id="spellSearchResults" class="list-group list-group-flush small"></div>
-                          </div>
+                           id="spells-list-pane"
+                           role="tabpanel"
+                           aria-labelledby="spells-list-tab">
 
-                                                   <!-- Custom / homebrew spell entry -->
+                        <!-- NEW: Spell Slots + Pact Slots -->
+                        <div class="mb-3">
+                          <label class="form-label small">Spell Slots</label>
+                          <div class="table-responsive">
+                            <table class="table table-sm table-dark align-middle mb-2">
+                              <thead class="small text-muted">
+                                <tr>
+                                  <th style="width:4rem;">Level</th>
+                                  <th style="width:5rem;">Max</th>
+                                  <th style="width:5rem;">Used</th>
+                                  <th style="width:auto">Actions</th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                <tr>
+                                  <td>1st</td>
+                                  <td><input id="slots1Max"  type="number" class="form-control form-control-sm text-center" min="0" /></td>
+                                  <td><input id="slots1Used" type="number" class="form-control form-control-sm text-center" min="0" /></td>
+                                  <td> <!-- NEW CELL -->
+                                    <div class="btn-group btn-group-sm">
+                                      <button class="btn btn-outline-success btn-sm" data-action="use-slot" data-level="1">
+                                        <i class="bi bi-dash-circle"></i>
+                                      </button>
+                                      <button class="btn btn-outline-info btn-sm" data-action="regain-slot" data-level="1">
+                                        <i class="bi bi-plus-circle"></i>
+                                      </button>
+                                      <button class="btn btn-outline-secondary btn-sm" data-action="reset-slot" data-level="1">
+                                        <i class="bi bi-arrow-clockwise"></i>
+                                      </button>
+                                    </div>
+                                  </td>
+                                </tr>
+                                <tr>
+                                  <td>2nd</td>
+                                  <td><input id="slots2Max"  type="number" class="form-control form-control-sm text-center" min="0" /></td>
+                                  <td><input id="slots2Used" type="number" class="form-control form-control-sm text-center" min="0" /></td>
+                                  <td> 
+                                    <div class="btn-group btn-group-sm">
+                                      <button class="btn btn-outline-success btn-sm" data-action="use-slot" data-level="2">
+                                        <i class="bi bi-dash-circle"></i>
+                                      </button>
+                                      <button class="btn btn-outline-info btn-sm" data-action="regain-slot" data-level="2">
+                                        <i class="bi bi-plus-circle"></i>
+                                      </button>
+                                      <button class="btn btn-outline-secondary btn-sm" data-action="reset-slot" data-level="2">
+                                        <i class="bi bi-arrow-clockwise"></i>
+                                      </button>
+                                    </div>
+                                  </td>
+                                </tr>
+                                <tr>
+                                  <td>3rd</td>
+                                  <td><input id="slots3Max"  type="number" class="form-control form-control-sm text-center" min="0" /></td>
+                                  <td><input id="slots3Used" type="number" class="form-control form-control-sm text-center" min="0" /></td>
+                                  <td>
+                                    <div class="btn-group btn-group-sm">
+                                      <button class="btn btn-outline-success btn-sm" data-action="use-slot" data-level="3">
+                                        <i class="bi bi-dash-circle"></i>
+                                      </button>
+                                      <button class="btn btn-outline-info btn-sm" data-action="regain-slot" data-level="3">
+                                        <i class="bi bi-plus-circle"></i>
+                                      </button>
+                                      <button class="btn btn-outline-secondary btn-sm" data-action="reset-slot" data-level="3">
+                                        <i class="bi bi-arrow-clockwise"></i>
+                                      </button>
+                                    </div>
+                                  </td>
+                                </tr>
+                                <tr>
+                                  <td>4th</td>
+                                  <td><input id="slots4Max"  type="number" class="form-control form-control-sm text-center" min="0" /></td>
+                                  <td><input id="slots4Used" type="number" class="form-control form-control-sm text-center" min="0" /></td>
+                                  <td>
+                                    <div class="btn-group btn-group-sm">
+                                      <button class="btn btn-outline-success btn-sm" data-action="use-slot" data-level="4">
+                                        <i class="bi bi-dash-circle"></i>
+                                      </button>
+                                      <button class="btn btn-outline-info btn-sm" data-action="regain-slot" data-level="4">
+                                        <i class="bi bi-plus-circle"></i>
+                                      </button>
+                                      <button class="btn btn-outline-secondary btn-sm" data-action="reset-slot" data-level="4">
+                                        <i class="bi bi-arrow-clockwise"></i>
+                                      </button>
+                                    </div>
+                                  </td>
+                                </tr>
+                                <tr>
+                                  <td>5th</td>
+                                  <td><input id="slots5Max"  type="number" class="form-control form-control-sm text-center" min="0" /></td>
+                                  <td><input id="slots5Used" type="number" class="form-control form-control-sm text-center" min="0" /></td>
+                                  <td>
+                                    <div class="btn-group btn-group-sm">
+                                      <button class="btn btn-outline-success btn-sm" data-action="use-slot" data-level="5">
+                                        <i class="bi bi-dash-circle"></i>
+                                      </button>
+                                      <button class="btn btn-outline-info btn-sm" data-action="regain-slot" data-level="5">
+                                        <i class="bi bi-plus-circle"></i>
+                                      </button>
+                                      <button class="btn btn-outline-secondary btn-sm" data-action="reset-slot" data-level="5">
+                                        <i class="bi bi-arrow-clockwise"></i>
+                                      </button>
+                                    </div>
+                                  </td>
+                                </tr>
+                                <tr>
+                                  <td>6th</td>
+                                  <td><input id="slots6Max"  type="number" class="form-control form-control-sm text-center" min="0" /></td>
+                                  <td><input id="slots6Used" type="number" class="form-control form-control-sm text-center" min="0" /></td>
+                                  <td>
+                                    <div class="btn-group btn-group-sm">
+                                      <button class="btn btn-outline-success btn-sm" data-action="use-slot" data-level="6">
+                                        <i class="bi bi-dash-circle"></i>
+                                      </button>
+                                      <button class="btn btn-outline-info btn-sm" data-action="regain-slot" data-level="6">
+                                        <i class="bi bi-plus-circle"></i>
+                                      </button>
+                                      <button class="btn btn-outline-secondary btn-sm" data-action="reset-slot" data-level="6">
+                                        <i class="bi bi-arrow-clockwise"></i>
+                                      </button>
+                                    </div>
+                                  </td>
+                                </tr>
+                                <tr>
+                                  <td>7th</td>
+                                  <td><input id="slots7Max"  type="number" class="form-control form-control-sm text-center" min="0" /></td>
+                                  <td><input id="slots7Used" type="number" class="form-control form-control-sm text-center" min="0" /></td>
+                                  <td>
+                                    <div class="btn-group btn-group-sm">
+                                      <button class="btn btn-outline-success btn-sm" data-action="use-slot" data-level="7">
+                                        <i class="bi bi-dash-circle"></i>
+                                      </button>
+                                      <button class="btn btn-outline-info btn-sm" data-action="regain-slot" data-level="7">
+                                        <i class="bi bi-plus-circle"></i>
+                                      </button>
+                                      <button class="btn btn-outline-secondary btn-sm" data-action="reset-slot" data-level="7">
+                                        <i class="bi bi-arrow-clockwise"></i>
+                                      </button>
+                                    </div>
+                                  </td>
+                                </tr>
+                                <tr>
+                                  <td>8th</td>
+                                  <td><input id="slots8Max"  type="number" class="form-control form-control-sm text-center" min="0" /></td>
+                                  <td><input id="slots8Used" type="number" class="form-control form-control-sm text-center" min="0" /></td>
+                                  <td>
+                                    <div class="btn-group btn-group-sm">
+                                      <button class="btn btn-outline-success btn-sm" data-action="use-slot" data-level="8">
+                                        <i class="bi bi-dash-circle"></i>
+                                      </button>
+                                      <button class="btn btn-outline-info btn-sm" data-action="regain-slot" data-level="8">
+                                        <i class="bi bi-plus-circle"></i>
+                                      </button>
+                                      <button class="btn btn-outline-secondary btn-sm" data-action="reset-slot" data-level="8">
+                                        <i class="bi bi-arrow-clockwise"></i>
+                                      </button>
+                                    </div>
+                                  </td>
+                                </tr>
+                                <tr>
+                                  <td>9th</td>
+                                  <td><input id="slots9Max"  type="number" class="form-control form-control-sm text-center" min="0" /></td>
+                                  <td><input id="slots9Used" type="number" class="form-control form-control-sm text-center" min="0" /></td>
+                                  <td>
+                                    <div class="btn-group btn-group-sm">
+                                      <button class="btn btn-outline-success btn-sm" data-action="use-slot" data-level="9">
+                                        <i class="bi bi-dash-circle"></i>
+                                      </button>
+                                      <button class="btn btn-outline-info btn-sm" data-action="regain-slot" data-level="9">
+                                        <i class="bi bi-plus-circle"></i>
+                                      </button>
+                                      <button class="btn btn-outline-secondary btn-sm" data-action="reset-slot" data-level="9">
+                                        <i class="bi bi-arrow-clockwise"></i>
+                                      </button>
+                                    </div>
+                                  </td>
+                                </tr>
+                              </tbody>
+                            </table>
+                          </div>
+                        
+                          <div class="row g-2 align-items-end small">
+                            <div class="col-4">
+                              <label for="pactLevel" class="form-label mb-1">Pact Slot Level</label>
+                              <input id="pactLevel" type="number" min="1" max="9"
+                                     class="form-control form-control-sm text-center" />
+                            </div>
+                            <div class="col-4">
+                              <label for="pactMax" class="form-label mb-1">Pact Slots</label>
+                              <input id="pactMax" type="number" min="0"
+                                     class="form-control form-control-sm text-center" />
+                            </div>
+                            <div class="col-4">
+                              <label for="pactUsed" class="form-label mb-1">Used</label>
+                              <input id="pactUsed" type="number" min="0"
+                                     class="form-control form-control-sm text-center" />
+                            </div>
+                          </div>
+                        </div>
+                      
+                        <!-- Existing search + results stay unchanged below this -->
+                        <div class="mb-2">
+                          <div class="input-group input-group-sm mb-2">
+                            <span class="input-group-text"><i class="bi bi-search"></i></span>
+                            <input type="text"
+                                   class="form-control"
+                                   id="spellSearchInput"
+                                   placeholder="Search spell name, tag, or class..."
+                                   autocomplete="off" />
+                          </div>
+                          <div id="spellSearchResults" class="list-group list-group-flush small"></div>
+                        </div>
+
+                          <!-- Custom / homebrew spell entry -->
                           <div class="mb-3">
                             <button class="btn btn-sm btn-outline-success mb-2"
                                     type="button"
@@ -1141,7 +1341,6 @@
                               <!-- Populated by JS -->
                             </ul>
                           </div>
-                      
                         </div>
                       </div>
                     </div>

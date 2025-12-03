@@ -525,7 +525,7 @@
         }
       }
 
-            // ---------- Spells helpers ----------
+      // ---------- Spells helpers ----------
 
       function parseCommaList(val) {
         return (val || '')
@@ -576,7 +576,8 @@
             classes: [],
             body: '',
             tags: [],
-            source: 'custom'
+            source: 'custom',
+            prepared: false
           };
         }
 
@@ -604,7 +605,8 @@
           classes: Array.isArray(merged.classes) ? merged.classes : [],
           body: merged.body || '',
           tags: Array.isArray(merged.tags) ? merged.tags : [],
-          source: merged.source || (fromLib ? 'builtin' : 'custom')
+          source: merged.source || (fromLib ? 'builtin' : 'custom'),
+          prepared: !!(spellLike.prepared ?? merged.prepared)
         };
       }
 
@@ -644,7 +646,7 @@
         currentSpellList.forEach(spell => {
           const li = document.createElement('li');
           li.className = 'list-group-item bg-transparent small';
-
+                
           const title = spell.title || spell.name || 'Unknown spell';
           const levelText = spell.level === 0 ? 'Cantrip' : `Level ${spell.level ?? 0}`;
           const schoolText = spell.school || '';
@@ -653,18 +655,19 @@
             schoolText,
             spell.concentration ? 'Concentration' : null
           ].filter(Boolean).join(' · ');
-
+        
           const bodyText = (spell.body || '').trim();
           const preview = bodyText.length > 160 ? bodyText.slice(0, 160) + '…' : bodyText;
-
+          const prepared = !!spell.prepared;
+        
           li.innerHTML = `
             <div class="d-flex justify-content-between align-items-start">
               <div class="me-2">
-                <div><strong>${title}</strong></div>
-                ${metaLine
-                  ? `<div class="text-muted">${metaLine}</div>`
-                  : ''
-                }
+                <div>
+                  <strong>${title}</strong>
+                  ${prepared ? '<span class="badge bg-success bg-opacity-75 ms-1">Prepared</span>' : ''}
+                </div>
+                ${metaLine ? `<div class="text-muted">${metaLine}</div>` : ''}
                 <div class="small">
                   <span class="text-muted">Cast:</span> ${spell.casting_time || '—'} |
                   <span class="text-muted">Range:</span> ${spell.range || '—'} |
@@ -689,18 +692,49 @@
                   : ''
                 }
               </div>
-              <div class="ms-2">
+              <div class="ms-2 d-flex flex-column align-items-end gap-1">
+                <div class="form-check form-check-sm">
+                  <input class="form-check-input spell-prepared-toggle"
+                         type="checkbox"
+                         data-spell-name="${spell.name}"
+                         ${prepared ? 'checked' : ''} />
+                  <label class="form-check-label small">Prep</label>
+                </div>
                 <button type="button"
                         class="btn btn-sm btn-outline-light"
-                        data-spell-name="${spell.name}">
+                        data-spell-remove="${spell.name}">
                   <i class="bi bi-x"></i>
                 </button>
               </div>
             </div>
           `;
-
+            
           listEl.appendChild(li);
         });
+      }
+
+      function updateSpellSlotsDisplay() {
+        // Find the highest level with a max value > 0
+        let highestLevel = 0;
+        for (let lvl = 1; lvl <= 9; lvl++) {
+          const maxEl = $(`slots${lvl}Max`);
+          const maxVal = parseInt(maxEl?.value) || 0;
+          if (maxVal > 0) {
+            highestLevel = lvl;
+          }
+        }
+        
+        // Show all rows up to (highestLevel + 1), but always show at least row 1
+        const maxVisibleLevel = Math.min(highestLevel + 1, 9);
+        const minVisibleLevel = Math.max(maxVisibleLevel, 1);
+        
+        for (let lvl = 1; lvl <= 9; lvl++) {
+          const maxEl = $(`slots${lvl}Max`);
+          const row = maxEl?.closest('tr');
+          if (row) {
+            row.style.display = lvl <= minVisibleLevel ? '' : 'none';
+          }
+        }
       }
 
       function clearSpellSearchResults() {
@@ -856,14 +890,31 @@
           $('charExtraNotes').value = char.extraNotes || '';
       
           $('portraitUrl').value = char.portraitType === 'url' ? (char.portraitData || '') : '';
-      
+
+          // Spell slots
+          const slots = char.spellSlots || {};
+          for (let lvl = 1; lvl <= 9; lvl++) {
+            const row = slots[lvl] || {};
+            const maxEl  = $(`slots${lvl}Max`);
+            const usedEl = $(`slots${lvl}Used`);
+            if (maxEl)  maxEl.value  = row.max ?? '';
+            if (usedEl) usedEl.value = row.used ?? '';
+          }
+          
+          // Pact slots
+          const pact = char.pactSlots || {};
+          $('pactLevel').value = pact.level ?? '';
+          $('pactMax').value   = pact.max ?? '';
+          $('pactUsed').value  = pact.used ?? '';
+
           syncSpellListFromCharacter(char);
           updatePortraitPreview(char);
           setLastUpdatedText(char);
+          updateSpellSlotsDisplay();
         }
 
       // ---------- Create / Save / Delete ----------
-            function newCharacterTemplate() {
+      function newCharacterTemplate() {
         return {
           id: 'char-' + Date.now() + '-' + Math.floor(Math.random() * 100000),
           name: 'New Character',
@@ -947,6 +998,24 @@
           notes: '',
           tableNotes: '',
           extraNotes: '',
+
+           // Spellcasting resources
+          spellSlots: {
+            1: { max: '', used: '' },
+            2: { max: '', used: '' },
+            3: { max: '', used: '' },
+            4: { max: '', used: '' },
+            5: { max: '', used: '' },
+            6: { max: '', used: '' },
+            7: { max: '', used: '' },
+            8: { max: '', used: '' },
+            9: { max: '', used: '' }
+          },
+          pactSlots: {
+            level: '',
+            max: '',
+            used: ''
+          },
 
           // Portrait
           portraitType: null,
@@ -1065,30 +1134,48 @@
           char.hitDiceRemaining = getVal('charHitDiceRemaining');
 
           char.resources = {
-            res1: {
-              name: getVal('res1Name'),
-              current: getNum('res1Current'),
-              max: getNum('res1Max')
-            },
-            res2: {
-              name: getVal('res2Name'),
-              current: getNum('res2Current'),
-              max: getNum('res2Max')
-            },
-            res3: {
-              name: getVal('res3Name'),
-              current: getNum('res3Current'),
-              max: getNum('res3Max')
-            }
+          res1: {
+            name: getVal('res1Name'),
+            current: getNum('res1Current'),
+            max: getNum('res1Max')
+          },
+          res2: {
+            name: getVal('res2Name'),
+            current: getNum('res2Current'),
+            max: getNum('res2Max')
+          },
+          res3: {
+            name: getVal('res3Name'),
+            current: getNum('res3Current'),
+            max: getNum('res3Max')
+          }
+        };
+        
+        // NEW: spell slots 1–9
+        char.spellSlots = char.spellSlots || {};
+        for (let lvl = 1; lvl <= 9; lvl++) {
+          const maxId  = `slots${lvl}Max`;
+          const usedId = `slots${lvl}Used`;
+          char.spellSlots[lvl] = {
+            max:  getNum(maxId),
+            used: getNum(usedId)
           };
-      
-          char.features = getVal('charFeatures');
-          char.spells = getVal('charSpells');
-          char.spellList = Array.isArray(currentSpellList)
-            ? currentSpellList
-                .map(sp => normalizeSpellEntry(sp))
-                .filter(Boolean)
-            : [];
+        }
+        
+        // NEW: pact slots
+        char.pactSlots = {
+          level: getNum('pactLevel'),
+          max:   getNum('pactMax'),
+          used:  getNum('pactUsed')
+        };
+        
+        char.features = getVal('charFeatures');
+        char.spells = getVal('charSpells');
+        char.spellList = Array.isArray(currentSpellList)
+          ? currentSpellList
+              .map(sp => normalizeSpellEntry(sp))
+              .filter(Boolean)
+          : [];
           char.inventory = getVal('charInventory');
           char.notes = getVal('charNotes');
           char.tableNotes = getVal('charTableNotes');
@@ -1316,21 +1403,21 @@
         const tempHpEl = $('charTempHP');
         if (curHpEl) curHpEl.value = maxHp || 0;
         if (tempHpEl) tempHpEl.value = 0;
-
+          
         // Hit dice: Remaining = Total
         const hdTotalEl = $('charHitDice');
         const hdRemainEl = $('charHitDiceRemaining');
         if (hdTotalEl && hdRemainEl && hdTotalEl.value.trim() !== '') {
           hdRemainEl.value = hdTotalEl.value;
         }
-
+      
         // Generic resources: set current = max where max is present
         const pairs = [
           { cur: 'res1Current', max: 'res1Max' },
           { cur: 'res2Current', max: 'res2Max' },
           { cur: 'res3Current', max: 'res3Max' }
         ];
-
+      
         pairs.forEach(p => {
           const curEl = $(p.cur);
           const maxEl = $(p.max);
@@ -1338,6 +1425,17 @@
           const maxVal = maxEl.value.trim();
           if (maxVal !== '') curEl.value = maxVal;
         });
+      
+        // NEW: reset spell slots (used -> 0)
+        for (let lvl = 1; lvl <= 9; lvl++) {
+          const usedEl = $(`slots${lvl}Used`);
+          if (usedEl) usedEl.value = 0;
+        }
+      
+        // NEW: pact slots – RAW they reset on short rest,
+        // but long rest can also safely set used = 0.
+        const pactUsedEl = $('pactUsed');
+        if (pactUsedEl) pactUsedEl.value = 0;
       }
 
       // ---------- Events ----------
@@ -1583,10 +1681,27 @@
         }
         if (characterSpellListEl) {
           characterSpellListEl.addEventListener('click', e => {
-            const btn = e.target.closest('button[data-spell-name]');
-            if (!btn) return;
-            const name = btn.getAttribute('data-spell-name');
-            removeSpellFromCurrentList(name);
+            // Toggle prepared
+            const prepToggle = e.target.closest('.spell-prepared-toggle');
+            if (prepToggle) {
+              const name = prepToggle.getAttribute('data-spell-name');
+              const key = (name || '').toLowerCase();
+              currentSpellList = currentSpellList.map(spell => {
+                if ((spell.name || '').toLowerCase() === key) {
+                  return { ...spell, prepared: prepToggle.checked };
+                }
+                return spell;
+              });
+              renderCharacterSpellList();
+              return;
+            }
+        
+            // Remove spell
+            const removeBtn = e.target.closest('button[data-spell-remove]');
+            if (removeBtn) {
+              const name = removeBtn.getAttribute('data-spell-remove');
+              removeSpellFromCurrentList(name);
+            }
           });
         }
         function buildCustomSpellFromForm() {
@@ -1635,37 +1750,49 @@
             clearCustomSpellForm();
           });
         }
+        for (let lvl = 1; lvl <= 9; lvl++) {
+            const maxEl = $(`slots${lvl}Max`); 
+            if (maxEl){
+                maxEl.addEventListener('input', updateSpellSlotsDisplay);
+            }
+        }
       }
 
       // ---------- Init ----------
       function init() {
-          characters = loadCharactersFromStorage();
-          characters.forEach(c => {
-            const base = newCharacterTemplate();
-            c.stats = c.stats || base.stats;
-            c.statMods = c.statMods || base.statMods;
-            c.savingThrows = c.savingThrows || base.savingThrows;
-            c.skills = c.skills || base.skills;
-            c.senses = c.senses || base.senses;
-            if (Array.isArray(c.spellList)) {
-              let upgraded = c.spellList.map(entry => normalizeSpellEntry(entry)).filter(Boolean);
-              const seen = new Set();
-              upgraded = upgraded.filter(spell => {
-                const key = (spell.name || '').toLowerCase();
-                if (!key || seen.has(key)) return false;
-                seen.add(key);
-                return true;
-              });
-              c.spellList = upgraded;
-            } else {
-              c.spellList = [];
-            }
-            c.portraitSettings = c.portraitSettings || base.portraitSettings;
-            if (typeof c.extraNotes !== 'string') c.extraNotes = '';
+        characters = loadCharactersFromStorage();
+        characters.forEach(c => {
+          const base = newCharacterTemplate();
+          c.stats = c.stats || base.stats;
+          c.statMods = c.statMods || base.statMods;
+          c.savingThrows = c.savingThrows || base.savingThrows;
+          c.skills = c.skills || base.skills;
+          c.senses = c.senses || base.senses;
         
-            // Make sure derived fields are up to date for existing data
-            recalcDerivedOnCharacter(c);
-          });
+          // NEW: ensure spell slots / pact slots exist on old characters
+          c.spellSlots = c.spellSlots || base.spellSlots;
+          c.pactSlots  = c.pactSlots  || base.pactSlots;
+        
+          // existing spellList upgrade...
+          if (Array.isArray(c.spellList)) {
+            let upgraded = c.spellList.map(entry => normalizeSpellEntry(entry)).filter(Boolean);
+            const seen = new Set();
+            upgraded = upgraded.filter(spell => {
+              const key = (spell.name || '').toLowerCase();
+              if (!key || seen.has(key)) return false;
+              seen.add(key);
+              return true;
+            });
+            c.spellList = upgraded;
+          } else {
+            c.spellList = [];
+          }
+      
+          c.portraitSettings = c.portraitSettings || base.portraitSettings;
+          if (typeof c.extraNotes !== 'string') c.extraNotes = '';
+      
+          recalcDerivedOnCharacter(c);
+        });
       
           if (!characters.length) {
             createNewCharacter();
@@ -1675,6 +1802,7 @@
             fillFormFromCharacter(getCurrentCharacter());
           }
           attachEventHandlers();
+          updateSpellSlotsDisplay();
         }
       if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', init);
