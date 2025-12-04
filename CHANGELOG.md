@@ -3,7 +3,46 @@ All notable changes to The DM's Toolbox are documented here.
 The format is based on Keep a Changelog,
 and this project adheres to Semantic Versioning.
 
-1.5.5 - 2025-12-03  
+1.5.6 - 2025-12-03
+Player-Facing Features & Interactive Character Sheets
+
+Added
+
+- **Comprehensive Dice Roller System**
+  - Full dice notation parsing (d20, d4-d12, d100) with modifier support
+  - Advantage/disadvantage rolls with visual display of both dice
+  - Critical hit and fumble detection (natural 20s and 1s)
+  - Roll history panel showing last 50 rolls with timestamps and descriptions
+- **Interactive Roll Buttons**
+  - Skill rolls: All 18 skills have roll buttons (Shift=advantage, Ctrl=disadvantage)
+  - Save rolls: All 6 saving throws have roll buttons with advantage/disadvantage support
+  - Attack rolls: Auto-roll to-hit and damage with one click
+  - Death save rolls: Automatic tracking with nat 1/20 special handling
+- **Combat Features**
+  - HP adjustment buttons (Heal, Damage, Temp HP, Max HP) with quick presets
+  - Inspiration checkbox in Combat Snapshot
+  - Concentration tracker with automatic DC calculation (max(10, damage/2))
+  - Death save automation (nat 20 = regain 1 HP, nat 1 = 2 failures)
+- **Skill System Enhancements**
+  - Expertise support (double proficiency) for all skills
+  - Expertise auto-enables proficiency when checked
+  - All passive scores (Perception, Investigation, Insight) now save/load correctly
+
+Changed
+
+- Roll history displays in a sticky panel with timestamps and clear visual formatting
+- Concentration DC automatically prompts on damage taken while concentrating
+- Expertise checkboxes added to all 18 skill rows in the skills table
+- Saving throws UI updated to pill-style layout with integrated roll buttons
+- Event handling uses delegation for better performance (single listener for all roll buttons)
+
+Fixed
+
+- Passive Perception, Investigation, and Insight now properly save and restore on character load
+- All new fields (inspiration, concentration, expertise) persist correctly in character data
+- Character save/load now includes all player-facing combat features
+
+1.5.5 - 2025-12-03
 Character Sheet Refinements & Spell/Attack Systems
 
 Added
@@ -18,8 +57,8 @@ Changed
 
 - Character spell lists now persist normalized spell objects (name, level, school, tags, classes, body, prepared) instead of plain strings.
 - Spell search upgraded to use the global spell library with matching across name/title, school, body text, tags, and classes, returning the top 25 results.
-- Prepared status for spells is now first-class on the spell objects and reflected directly in the character’s saved data.
-- “Send to Initiative Tracker” from the Characters page now stages a dmtools.pendingImport payload using mode: "append" to preserve the existing initiative list while adding the selected PC.
+- Prepared status for spells is now first-class on the spell objects and reflected directly in the character's saved data.
+- "Send to Initiative Tracker" from the Characters page now stages a dmtools.pendingImport payload using mode: "append" to preserve the existing initiative list while adding the selected PC.
 - Spell slot rows auto-expand based on the highest level with available slots, keeping the UI compact at low levels and revealing higher-level rows as needed.
 
 Fixed

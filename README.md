@@ -62,25 +62,40 @@ Party level configuration
 Use case: Build an encounter with 6 Goblins + 1 Bugbear, click "Send to Tracker"—combat ready in 30 seconds.
 
 👤 Character Manager
-DM-focused character sheets with portraits and spell management
+Full-featured character sheets for both DM prep and player use
 
-Full character sheet (stats, saves, skills, HP, AC)
-Portrait system with zoom/pan framing editor
-Spell management with tag/class filtering and custom spell builder
-DM-specific fields:
+**Character Sheet Features:**
+- Full character sheet (stats, saves, skills, HP, AC)
+- Portrait system with zoom/pan framing editor
+- Spell management with tag/class filtering and custom spell builder
+- Attack list with modal editor (weapon/spell attacks, damage rolls)
+- Spell slot tracking (levels 1-9 + pact slots) with long rest reset
+- Expertise support (double proficiency for skills)
 
-Party role / table notes
-Story hooks & secrets
-At-the-table reminders
+**Player-Facing Features:**
+- Interactive dice roller with advantage/disadvantage support
+- Roll buttons for all skills, saves, and attacks
+- Roll history panel (last 50 rolls with timestamps)
+- HP adjustment buttons (Heal, Damage, Temp HP, Max HP)
+- Inspiration and Concentration tracking
+- Death save automation (nat 20/1 special handling)
+- Automatic concentration DC calculation on damage
 
+**DM-Specific Fields:**
+- Party role / table notes
+- Story hooks & secrets
+- At-the-table reminders
 
-Tabbed interface (Actions, Spells, Inventory, Features, Background)
-Passive scores (Perception, Investigation, Insight)
-One-click export to Initiative Tracker
-Import/export JSON (backup or share)
-Multi-character management with dropdown selector
+**Additional Features:**
+- Tabbed interface (Actions, Spells, Inventory, Features, Background)
+- Passive scores (Perception, Investigation, Insight)
+- One-click export to Initiative Tracker
+- Import/export JSON (backup or share)
+- Multi-character management with dropdown selector
 
-Use case: Track the party as a DM—quick reference for passive Perception, spell lists, and story hooks. Export all 4 PCs to Initiative Tracker before combat.
+**Use cases:**
+- **DM Mode:** Track the party—quick reference for passive Perception, spell lists, and story hooks. Export all 4 PCs to Initiative Tracker before combat.
+- **Player Mode:** Use as your character sheet during a one-shot or campaign. Click dice buttons to roll skills/saves/attacks, track HP/resources, manage spell slots.
 
 🏪 Shop Generator
 Settlement-based economy with comprehensive inventories
@@ -281,14 +296,24 @@ Generators: Use seeded RNG for reproducibility
 📜 Changelog
 Full version history: CHANGELOG.md
 Recent Highlights
-v1.5.3 (2025-11-29) — Character Manager + Full Integration
+v1.5.6 (2025-12-03) — Player-Facing Features & Interactive Sheets
 
-✨ Character Manager with portraits, spells, and DM notes
-✨ Send to Initiative Tracker from Character Manager
-⚡ Portrait zoom/pan editor with drag-to-reposition
-🎨 Spell list support with custom spell creation
-🔧 Export uses mode: "append" to preserve existing combat
-🐛 Error handling for malformed portraits and JSON imports
+🎲 Comprehensive dice roller with advantage/disadvantage support
+🎯 Interactive roll buttons for all skills, saves, and attacks
+📜 Roll history panel showing last 50 rolls with timestamps
+⚔️ HP adjustment buttons and combat feature tracking
+✨ Expertise support (double proficiency) for all skills
+🎭 Inspiration and Concentration tracking with auto-DC calculation
+💀 Death save automation (nat 20 = regain 1 HP, nat 1 = 2 failures)
+🐛 Fixed passive scores (Perception/Investigation/Insight) save/load
+
+v1.5.5 (2025-12-03) — Character Sheet Refinements
+
+🔮 Full spell slot tracking (levels 1-9 + pact slots) with long rest reset
+⚔️ Attack list management with modal editor
+🛌 Short/Long Rest helpers with automatic resource restoration
+💀 Exhaustion tracker with OneD&D extended levels
+🎯 Condition toggle buttons for quick status management
 
 v1.5.0 (2025-11-25) — Stability & Version Tracking
 
@@ -446,4 +471,4 @@ Changelog: CHANGELOG.md
 
 
 Built with ❤️ for DMs who wing it.
-Last updated: 2025-12-02
+Last updated: 2025-12-03

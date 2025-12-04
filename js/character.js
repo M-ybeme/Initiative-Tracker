@@ -9,6 +9,354 @@
         return Number.isFinite(value) ? value : fallback;
       }
 
+      // ---------- Dice Roller Utility ----------
+      let rollHistory = [];
+      const MAX_ROLL_HISTORY = 50;
+
+      function rollDie(sides) {
+        return Math.floor(Math.random() * sides) + 1;
+      }
+
+      function parseDiceNotation(notation) {
+        // Parse notation like "2d6+3" or "1d20" or "d8+2"
+        const match = notation.trim().match(/^(\d*)d(\d+)([+-]\d+)?$/i);
+        if (!match) return null;
+
+        const count = match[1] ? parseInt(match[1], 10) : 1;
+        const sides = parseInt(match[2], 10);
+        const modifier = match[3] ? parseInt(match[3], 10) : 0;
+
+        return { count, sides, modifier };
+      }
+
+      function rollDice(notation, description = '') {
+        const parsed = parseDiceNotation(notation);
+        if (!parsed) {
+          console.error('Invalid dice notation:', notation);
+          return null;
+        }
+
+        const { count, sides, modifier } = parsed;
+        const rolls = [];
+        let total = 0;
+
+        for (let i = 0; i < count; i++) {
+          const roll = rollDie(sides);
+          rolls.push(roll);
+          total += roll;
+        }
+
+        total += modifier;
+
+        const result = {
+          notation,
+          description,
+          rolls,
+          modifier,
+          total,
+          timestamp: new Date().toISOString(),
+          isCritical: sides === 20 && rolls.includes(20),
+          isFumble: sides === 20 && rolls.includes(1)
+        };
+
+        addToRollHistory(result);
+        return result;
+      }
+
+      function rollWithAdvantage(bonus = 0, description = '') {
+        const roll1 = rollDie(20);
+        const roll2 = rollDie(20);
+        const chosen = Math.max(roll1, roll2);
+        const total = chosen + bonus;
+
+        const result = {
+          notation: '2d20 (advantage)',
+          description,
+          rolls: [roll1, roll2],
+          chosen,
+          modifier: bonus,
+          total,
+          timestamp: new Date().toISOString(),
+          isCritical: chosen === 20,
+          isFumble: chosen === 1,
+          isAdvantage: true
+        };
+
+        addToRollHistory(result);
+        return result;
+      }
+
+      function rollWithDisadvantage(bonus = 0, description = '') {
+        const roll1 = rollDie(20);
+        const roll2 = rollDie(20);
+        const chosen = Math.min(roll1, roll2);
+        const total = chosen + bonus;
+
+        const result = {
+          notation: '2d20 (disadvantage)',
+          description,
+          rolls: [roll1, roll2],
+          chosen,
+          modifier: bonus,
+          total,
+          timestamp: new Date().toISOString(),
+          isCritical: chosen === 20,
+          isFumble: chosen === 1,
+          isDisadvantage: true
+        };
+
+        addToRollHistory(result);
+        return result;
+      }
+
+      function addToRollHistory(result) {
+        rollHistory.unshift(result);
+        if (rollHistory.length > MAX_ROLL_HISTORY) {
+          rollHistory = rollHistory.slice(0, MAX_ROLL_HISTORY);
+        }
+        renderRollHistory();
+      }
+
+      function renderRollHistory() {
+        const container = $('rollHistoryList');
+        if (!container) return;
+
+        container.innerHTML = '';
+
+        if (!rollHistory.length) {
+          const empty = document.createElement('div');
+          empty.className = 'text-muted small text-center py-2';
+          empty.textContent = 'No rolls yet';
+          container.appendChild(empty);
+          return;
+        }
+
+        rollHistory.forEach((roll, index) => {
+          const div = document.createElement('div');
+          div.className = 'roll-history-item p-2 border-bottom border-secondary';
+
+          let resultClass = '';
+          if (roll.isCritical) resultClass = 'text-success fw-bold';
+          else if (roll.isFumble) resultClass = 'text-danger fw-bold';
+
+          let rollDisplay = '';
+          if (roll.isAdvantage || roll.isDisadvantage) {
+            const unchosen = roll.rolls.find(r => r !== roll.chosen);
+            rollDisplay = `[${roll.rolls[0]}, ${roll.rolls[1]}] → <span class="${resultClass}">${roll.chosen}</span>`;
+          } else {
+            rollDisplay = roll.rolls.length > 1
+              ? `[${roll.rolls.join(', ')}]`
+              : `<span class="${resultClass}">${roll.rolls[0]}</span>`;
+          }
+
+          const modDisplay = roll.modifier !== 0
+            ? ` ${roll.modifier >= 0 ? '+' : ''}${roll.modifier}`
+            : '';
+
+          div.innerHTML = `
+            <div class="d-flex justify-content-between align-items-start">
+              <div class="flex-grow-1">
+                ${roll.description ? `<div class="small fw-bold">${roll.description}</div>` : ''}
+                <div class="small text-muted">${roll.notation}${modDisplay}</div>
+                <div class="small">${rollDisplay}${modDisplay ? ` = <span class="${resultClass}">${roll.total}</span>` : ''}</div>
+              </div>
+              <div class="text-end">
+                <div class="badge ${roll.isCritical ? 'bg-success' : roll.isFumble ? 'bg-danger' : 'bg-secondary'}">${roll.total}</div>
+                <div class="text-muted" style="font-size: 0.65rem;">${new Date(roll.timestamp).toLocaleTimeString()}</div>
+              </div>
+            </div>
+          `;
+
+          container.appendChild(div);
+        });
+      }
+
+      function clearRollHistory() {
+        rollHistory = [];
+        renderRollHistory();
+      }
+
+      // ---------- Player Action Functions ----------
+
+      function rollSkillCheck(skillKey, rollType = 'normal') {
+        const skill = SKILL_CONFIGS.find(s => s.key === skillKey);
+        if (!skill) return;
+
+        const bonusEl = $(skill.bonusId);
+        const bonus = bonusEl ? (Number(bonusEl.value) || 0) : 0;
+
+        let result;
+        if (rollType === 'advantage') {
+          result = rollWithAdvantage(bonus, `${skill.name} Check`);
+        } else if (rollType === 'disadvantage') {
+          result = rollWithDisadvantage(bonus, `${skill.name} Check`);
+        } else {
+          result = rollDice(`1d20${bonus >= 0 ? '+' : ''}${bonus}`, `${skill.name} Check`);
+        }
+
+        return result;
+      }
+
+      function rollSavingThrow(ability, rollType = 'normal') {
+        const abilityNames = { str: 'Strength', dex: 'Dexterity', con: 'Constitution', int: 'Intelligence', wis: 'Wisdom', cha: 'Charisma' };
+        const save = SAVE_CONFIGS.find(s => s.ability === ability);
+        if (!save) return;
+
+        const bonusEl = $(save.bonusId);
+        const bonus = bonusEl ? (Number(bonusEl.value) || 0) : 0;
+
+        let result;
+        if (rollType === 'advantage') {
+          result = rollWithAdvantage(bonus, `${abilityNames[ability]} Save`);
+        } else if (rollType === 'disadvantage') {
+          result = rollWithDisadvantage(bonus, `${abilityNames[ability]} Save`);
+        } else {
+          result = rollDice(`1d20${bonus >= 0 ? '+' : ''}${bonus}`, `${abilityNames[ability]} Save`);
+        }
+
+        return result;
+      }
+
+      function rollAttack(attackIndex) {
+        if (attackIndex < 0 || attackIndex >= currentAttackList.length) return;
+        const attack = currentAttackList[attackIndex];
+
+        // Roll to hit
+        const bonusMatch = (attack.bonus || '').match(/([+-]?\d+)/);
+        const toHitBonus = bonusMatch ? parseInt(bonusMatch[1], 10) : 0;
+
+        const hitResult = rollDice(`1d20${toHitBonus >= 0 ? '+' : ''}${toHitBonus}`, `${attack.name} - To Hit`);
+
+        // Auto-roll damage if hit
+        if (attack.damage) {
+          const damageResult = rollDice(attack.damage, `${attack.name} - Damage`);
+
+          if (attack.damage2) {
+            rollDice(attack.damage2, `${attack.name} - Extra Damage`);
+          }
+        }
+
+        return hitResult;
+      }
+
+      function rollDeathSave() {
+        const result = rollDice('1d20', 'Death Save');
+
+        // Automatically update death saves based on roll
+        const roll = result.rolls[0];
+
+        if (roll === 20) {
+          // Natural 20: regain 1 HP and stabilize
+          const currentHPEl = $('charCurrentHP');
+          if (currentHPEl) currentHPEl.value = 1;
+
+          // Clear death saves
+          ['deathSaveSuccess1', 'deathSaveSuccess2', 'deathSaveSuccess3',
+           'deathSaveFailure1', 'deathSaveFailure2', 'deathSaveFailure3'].forEach(id => {
+            const el = $(id);
+            if (el) el.checked = false;
+          });
+          $('deathSaveStable').checked = true;
+
+          addToRollHistory({
+            notation: 'Auto',
+            description: 'Critical Success! Regained 1 HP',
+            rolls: [],
+            modifier: 0,
+            total: 0,
+            timestamp: new Date().toISOString()
+          });
+        } else if (roll === 1) {
+          // Natural 1: two failures
+          addDeathSaveFailures(2);
+        } else if (roll >= 10) {
+          // Success
+          addDeathSaveSuccess();
+        } else {
+          // Failure
+          addDeathSaveFailures(1);
+        }
+
+        return result;
+      }
+
+      function addDeathSaveSuccess() {
+        const checkboxes = ['deathSaveSuccess1', 'deathSaveSuccess2', 'deathSaveSuccess3'];
+        for (const id of checkboxes) {
+          const el = $(id);
+          if (el && !el.checked) {
+            el.checked = true;
+            break;
+          }
+        }
+      }
+
+      function addDeathSaveFailures(count = 1) {
+        const checkboxes = ['deathSaveFailure1', 'deathSaveFailure2', 'deathSaveFailure3'];
+        let added = 0;
+        for (const id of checkboxes) {
+          if (added >= count) break;
+          const el = $(id);
+          if (el && !el.checked) {
+            el.checked = true;
+            added++;
+          }
+        }
+      }
+
+      function adjustHP(type) {
+        const currentHPEl = $('charCurrentHP');
+        const maxHPEl = $('charMaxHP');
+        const tempHPEl = $('charTempHP');
+
+        if (!currentHPEl) return;
+
+        const currentHP = Number(currentHPEl.value) || 0;
+        const maxHP = Number(maxHPEl?.value) || 0;
+        const tempHP = Number(tempHPEl?.value) || 0;
+
+        if (type === 'heal') {
+          const amount = prompt('Heal how many HP?', '');
+          if (amount === null) return;
+          const healAmount = Number(amount) || 0;
+          currentHPEl.value = Math.min(currentHP + healAmount, maxHP);
+        } else if (type === 'damage') {
+          const amount = prompt('Take how much damage?', '');
+          if (amount === null) return;
+          let damageAmount = Number(amount) || 0;
+
+          // Apply temp HP first
+          if (tempHP > 0) {
+            if (damageAmount <= tempHP) {
+              tempHPEl.value = tempHP - damageAmount;
+              damageAmount = 0;
+            } else {
+              damageAmount -= tempHP;
+              tempHPEl.value = 0;
+            }
+          }
+
+          // Apply remaining damage to current HP
+          if (damageAmount > 0) {
+            currentHPEl.value = Math.max(0, currentHP - damageAmount);
+          }
+
+          // Check concentration
+          if ($('charConcentrating')?.checked) {
+            const concentrationDC = Math.max(10, Math.floor(Number(amount) / 2));
+            alert(`Concentration Check Required!\n\nDC: ${concentrationDC}\n(Half damage, minimum 10)\n\nRoll a Constitution save.`);
+          }
+        } else if (type === 'temp') {
+          const amount = prompt('Set temporary HP to:', '');
+          if (amount === null) return;
+          const tempAmount = Number(amount) || 0;
+          // Temp HP doesn't stack, you take the higher
+          tempHPEl.value = Math.max(tempAmount, tempHP);
+        } else if (type === 'max') {
+          currentHPEl.value = maxHP;
+        }
+      }
+
       // ---------- Auto-calculation helpers ----------
       // Standard 5e modifier from ability score
       function getAbilityModFromScore(score) {
@@ -157,24 +505,24 @@
       }
 
       const SKILL_CONFIGS = [
-        { ability: 'dex', profId: 'skillAcrobaticsProf',     bonusId: 'skillAcrobaticsBonus' },
-        { ability: 'wis', profId: 'skillAnimalHandlingProf', bonusId: 'skillAnimalHandlingBonus' },
-        { ability: 'int', profId: 'skillArcanaProf',         bonusId: 'skillArcanaBonus' },
-        { ability: 'str', profId: 'skillAthleticsProf',      bonusId: 'skillAthleticsBonus' },
-        { ability: 'cha', profId: 'skillDeceptionProf',      bonusId: 'skillDeceptionBonus' },
-        { ability: 'int', profId: 'skillHistoryProf',        bonusId: 'skillHistoryBonus' },
-        { ability: 'wis', profId: 'skillInsightProf',        bonusId: 'skillInsightBonus' },
-        { ability: 'cha', profId: 'skillIntimidationProf',   bonusId: 'skillIntimidationBonus' },
-        { ability: 'int', profId: 'skillInvestigationProf',  bonusId: 'skillInvestigationBonus' },
-        { ability: 'wis', profId: 'skillMedicineProf',       bonusId: 'skillMedicineBonus' },
-        { ability: 'int', profId: 'skillNatureProf',         bonusId: 'skillNatureBonus' },
-        { ability: 'wis', profId: 'skillPerceptionProf',     bonusId: 'skillPerceptionBonus' },
-        { ability: 'cha', profId: 'skillPerformanceProf',    bonusId: 'skillPerformanceBonus' },
-        { ability: 'cha', profId: 'skillPersuasionProf',     bonusId: 'skillPersuasionBonus' },
-        { ability: 'int', profId: 'skillReligionProf',       bonusId: 'skillReligionBonus' },
-        { ability: 'dex', profId: 'skillSleightOfHandProf',  bonusId: 'skillSleightOfHandBonus' },
-        { ability: 'dex', profId: 'skillStealthProf',        bonusId: 'skillStealthBonus' },
-        { ability: 'wis', profId: 'skillSurvivalProf',       bonusId: 'skillSurvivalBonus' }
+        { ability: 'dex', profId: 'skillAcrobaticsProf',     expId: 'skillAcrobaticsExp',     bonusId: 'skillAcrobaticsBonus',     name: 'Acrobatics', key: 'acrobatics' },
+        { ability: 'wis', profId: 'skillAnimalHandlingProf', expId: 'skillAnimalHandlingExp', bonusId: 'skillAnimalHandlingBonus', name: 'Animal Handling', key: 'animalHandling' },
+        { ability: 'int', profId: 'skillArcanaProf',         expId: 'skillArcanaExp',         bonusId: 'skillArcanaBonus',         name: 'Arcana', key: 'arcana' },
+        { ability: 'str', profId: 'skillAthleticsProf',      expId: 'skillAthleticsExp',      bonusId: 'skillAthleticsBonus',      name: 'Athletics', key: 'athletics' },
+        { ability: 'cha', profId: 'skillDeceptionProf',      expId: 'skillDeceptionExp',      bonusId: 'skillDeceptionBonus',      name: 'Deception', key: 'deception' },
+        { ability: 'int', profId: 'skillHistoryProf',        expId: 'skillHistoryExp',        bonusId: 'skillHistoryBonus',        name: 'History', key: 'history' },
+        { ability: 'wis', profId: 'skillInsightProf',        expId: 'skillInsightExp',        bonusId: 'skillInsightBonus',        name: 'Insight', key: 'insight' },
+        { ability: 'cha', profId: 'skillIntimidationProf',   expId: 'skillIntimidationExp',   bonusId: 'skillIntimidationBonus',   name: 'Intimidation', key: 'intimidation' },
+        { ability: 'int', profId: 'skillInvestigationProf',  expId: 'skillInvestigationExp',  bonusId: 'skillInvestigationBonus',  name: 'Investigation', key: 'investigation' },
+        { ability: 'wis', profId: 'skillMedicineProf',       expId: 'skillMedicineExp',       bonusId: 'skillMedicineBonus',       name: 'Medicine', key: 'medicine' },
+        { ability: 'int', profId: 'skillNatureProf',         expId: 'skillNatureExp',         bonusId: 'skillNatureBonus',         name: 'Nature', key: 'nature' },
+        { ability: 'wis', profId: 'skillPerceptionProf',     expId: 'skillPerceptionExp',     bonusId: 'skillPerceptionBonus',     name: 'Perception', key: 'perception' },
+        { ability: 'cha', profId: 'skillPerformanceProf',    expId: 'skillPerformanceExp',    bonusId: 'skillPerformanceBonus',    name: 'Performance', key: 'performance' },
+        { ability: 'cha', profId: 'skillPersuasionProf',     expId: 'skillPersuasionExp',     bonusId: 'skillPersuasionBonus',     name: 'Persuasion', key: 'persuasion' },
+        { ability: 'int', profId: 'skillReligionProf',       expId: 'skillReligionExp',       bonusId: 'skillReligionBonus',       name: 'Religion', key: 'religion' },
+        { ability: 'dex', profId: 'skillSleightOfHandProf',  expId: 'skillSleightOfHandExp',  bonusId: 'skillSleightOfHandBonus',  name: 'Sleight of Hand', key: 'sleightOfHand' },
+        { ability: 'dex', profId: 'skillStealthProf',        expId: 'skillStealthExp',        bonusId: 'skillStealthBonus',        name: 'Stealth', key: 'stealth' },
+        { ability: 'wis', profId: 'skillSurvivalProf',       expId: 'skillSurvivalExp',       bonusId: 'skillSurvivalBonus',       name: 'Survival', key: 'survival' }
       ];
 
       function recalcSkillsFromForm(autoOnlyWhenEmpty = true) {
@@ -202,13 +550,22 @@
 
         SKILL_CONFIGS.forEach(cfg => {
           const profEl = $(cfg.profId);
+          const expEl = $(cfg.expId);
           const bonusEl = $(cfg.bonusId);
           if (!bonusEl) return;
 
           if (autoOnlyWhenEmpty && bonusEl.value.trim() !== '') return;
 
           const abilMod = mods[cfg.ability] || 0;
-          const prof = profEl && profEl.checked ? pb : 0;
+          const isProf = profEl && profEl.checked;
+          const isExp = expEl && expEl.checked;
+
+          // Expertise = double proficiency, but only if proficient
+          let prof = 0;
+          if (isProf) {
+            prof = isExp ? (pb * 2) : pb;
+          }
+
           const total = abilMod + prof;
           bonusEl.value = total >= 0 ? `+${total}` : `${total}`;
         });
@@ -779,6 +1136,9 @@
               <div class="flex-grow-1">
                 <div class="mb-1">
                   <strong>${attack.name || 'Unnamed Attack'}</strong>
+                  <button type="button" class="btn btn-sm btn-success ms-2" data-attack-roll="${index}" title="Roll attack">
+                    <i class="bi bi-dice-5"></i> Roll
+                  </button>
                 </div>
                 <div class="small mb-1">${attackInfo}</div>
                 ${hitInfo ? `<div class="mb-1">${hitInfo}</div>` : ''}
@@ -996,6 +1356,9 @@
           $('charSpeed').value = char.speed || '';
           $('charInitMod').value = char.initMod ?? '';
           $('charConditions').value = char.conditions || '';
+          $('charInspiration').checked = !!char.inspiration;
+          $('charConcentrating').checked = !!char.concentrating;
+          $('charConcentrationSpell').value = char.concentrationSpell || '';
 
           // Currency
           const currency = char.currency || {};
@@ -1054,8 +1417,10 @@
           function setSkill(idBase, key) {
             const s = skills[key] || {};
             const profEl = $(idBase + 'Prof');
+            const expEl = $(idBase + 'Exp');
             const bonusEl = $(idBase + 'Bonus');
             if (profEl) profEl.checked = !!s.prof;
+            if (expEl) expEl.checked = !!s.exp;
             if (bonusEl) bonusEl.value = s.bonus ?? '';
           }
           setSkill('skillAcrobatics', 'acrobatics');
@@ -1078,7 +1443,14 @@
           setSkill('skillSurvival', 'survival');
       
           $('skillsNotes').value = char.skillsNotes || '';
-      
+
+          // Senses (passive perception, investigation, insight)
+          const senses = char.senses || {};
+          $('charPassivePerception').value = senses.passivePerception ?? '';
+          $('charPassiveInvestigation').value = senses.passiveInvestigation ?? '';
+          $('charPassiveInsight').value = senses.passiveInsight ?? '';
+          $('sensesNotes').value = senses.notes || '';
+
           // Resources & rests
           $('charHitDice').value = char.hitDice || '';
           $('charHitDiceRemaining').value = char.hitDiceRemaining || '';
@@ -1163,6 +1535,9 @@
           initMod: '',
           passivePerception: '',
           conditions: '',
+          inspiration: false,
+          concentrating: false,
+          concentrationSpell: '',
 
           // Currency
           currency: { cp: 0, sp: 0, ep: 0, gp: 0, pp: 0 },
@@ -1188,24 +1563,24 @@
 
           // Skills
           skills: {
-            acrobatics: { prof: false, bonus: '' },
-            animalHandling: { prof: false, bonus: '' },
-            arcana: { prof: false, bonus: '' },
-            athletics: { prof: false, bonus: '' },
-            deception: { prof: false, bonus: '' },
-            history: { prof: false, bonus: '' },
-            insight: { prof: false, bonus: '' },
-            intimidation: { prof: false, bonus: '' },
-            investigation: { prof: false, bonus: '' },
-            medicine: { prof: false, bonus: '' },
-            nature: { prof: false, bonus: '' },
-            perception: { prof: false, bonus: '' },
-            performance: { prof: false, bonus: '' },
-            persuasion: { prof: false, bonus: '' },
-            religion: { prof: false, bonus: '' },
-            sleightOfHand: { prof: false, bonus: '' },
-            stealth: { prof: false, bonus: '' },
-            survival: { prof: false, bonus: '' }
+            acrobatics: { prof: false, exp: false, bonus: '' },
+            animalHandling: { prof: false, exp: false, bonus: '' },
+            arcana: { prof: false, exp: false, bonus: '' },
+            athletics: { prof: false, exp: false, bonus: '' },
+            deception: { prof: false, exp: false, bonus: '' },
+            history: { prof: false, exp: false, bonus: '' },
+            insight: { prof: false, exp: false, bonus: '' },
+            intimidation: { prof: false, exp: false, bonus: '' },
+            investigation: { prof: false, exp: false, bonus: '' },
+            medicine: { prof: false, exp: false, bonus: '' },
+            nature: { prof: false, exp: false, bonus: '' },
+            perception: { prof: false, exp: false, bonus: '' },
+            performance: { prof: false, exp: false, bonus: '' },
+            persuasion: { prof: false, exp: false, bonus: '' },
+            religion: { prof: false, exp: false, bonus: '' },
+            sleightOfHand: { prof: false, exp: false, bonus: '' },
+            stealth: { prof: false, exp: false, bonus: '' },
+            survival: { prof: false, exp: false, bonus: '' }
           },
           skillsNotes: '',
 
@@ -1302,6 +1677,9 @@
           char.speed = getVal('charSpeed');
           char.initMod = getNum('charInitMod');
           char.conditions = getVal('charConditions');
+          char.inspiration = !!$('charInspiration')?.checked;
+          char.concentrating = !!$('charConcentrating')?.checked;
+          char.concentrationSpell = getVal('charConcentrationSpell');
 
           // Currency
           char.currency = {
@@ -1355,11 +1733,13 @@
           char.skills = char.skills || {};
           function readSkill(idBase, key) {
             const profEl = $(idBase + 'Prof');
+            const expEl = $(idBase + 'Exp');
             const bonusEl = $(idBase + 'Bonus');
             const prof = profEl ? !!profEl.checked : false;
+            const exp = expEl ? !!expEl.checked : false;
             const bonusVal = bonusEl?.value.trim() || '';
             const bonus = bonusVal === '' ? '' : (isNaN(Number(bonusVal)) ? '' : Number(bonusVal));
-            char.skills[key] = { prof, bonus };
+            char.skills[key] = { prof, exp, bonus };
           }
           readSkill('skillAcrobatics', 'acrobatics');
           readSkill('skillAnimalHandling', 'animalHandling');
@@ -1383,7 +1763,7 @@
           char.skillsNotes = getVal('skillsNotes');
       
           char.senses = char.senses || {};
-          // Passive Perception is derived; do NOT read from DOM here
+          char.senses.passivePerception = getNum('charPassivePerception');
           char.senses.passiveInvestigation = getNum('charPassiveInvestigation');
           char.senses.passiveInsight = getNum('charPassiveInsight');
           char.senses.notes = getVal('sensesNotes');
@@ -2087,6 +2467,67 @@
           const el = $(id);
           if (el) {
             el.addEventListener('input', updateSpellDCAndAttack);
+          }
+        });
+
+        // ---------- NEW: Interactive roll & action handlers ----------
+
+        // Roll history clear button
+        const clearHistoryBtn = $('clearHistoryBtn');
+        if (clearHistoryBtn) {
+          clearHistoryBtn.addEventListener('click', clearRollHistory);
+        }
+
+        // HP adjustment buttons
+        document.addEventListener('click', e => {
+          const hpBtn = e.target.closest('[data-hp-adjust]');
+          if (hpBtn) {
+            const type = hpBtn.getAttribute('data-hp-adjust');
+            adjustHP(type);
+          }
+
+          // Skill roll buttons
+          const skillBtn = e.target.closest('[data-skill-roll]');
+          if (skillBtn) {
+            const skillKey = skillBtn.getAttribute('data-skill-roll');
+            const rollType = e.shiftKey ? 'advantage' : (e.ctrlKey ? 'disadvantage' : 'normal');
+            rollSkillCheck(skillKey, rollType);
+          }
+
+          // Save roll buttons
+          const saveBtn = e.target.closest('[data-save-roll]');
+          if (saveBtn) {
+            const ability = saveBtn.getAttribute('data-save-roll');
+            const rollType = e.shiftKey ? 'advantage' : (e.ctrlKey ? 'disadvantage' : 'normal');
+            rollSavingThrow(ability, rollType);
+          }
+
+          // Attack roll buttons
+          const attackBtn = e.target.closest('[data-attack-roll]');
+          if (attackBtn) {
+            const index = parseInt(attackBtn.getAttribute('data-attack-roll'), 10);
+            rollAttack(index);
+          }
+
+          // Death save roll button
+          const deathSaveBtn = e.target.closest('#rollDeathSaveBtn');
+          if (deathSaveBtn) {
+            rollDeathSave();
+          }
+        });
+
+        // Expertise checkbox auto-enables proficiency
+        SKILL_CONFIGS.forEach(cfg => {
+          const expEl = $(cfg.expId);
+          const profEl = $(cfg.profId);
+          if (expEl && profEl) {
+            expEl.addEventListener('change', () => {
+              if (expEl.checked && !profEl.checked) {
+                profEl.checked = true;
+              }
+              recalcSkillsFromForm(false);
+              recalcPassivesFromForm();
+            });
           }
         });
       }

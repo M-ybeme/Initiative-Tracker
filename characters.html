@@ -264,7 +264,7 @@
                            class="form-control form-control-sm text-center"
                            min="0" />
                   </div>
-                  <div class="col-4 col-md-4">
+                  <div class="col-12 col-md-4">
                     <label for="charTempHP" class="form-label small">Temp HP</label>
                     <input type="number"
                            id="charTempHP"
@@ -273,7 +273,27 @@
                   </div>
                 </div>
 
-                <div class="row g-2">
+                <!-- HP Adjustment Buttons -->
+                <div class="row g-2 mb-2">
+                  <div class="col-12">
+                    <div class="btn-group w-100" role="group" aria-label="HP adjustments">
+                      <button type="button" class="btn btn-sm btn-success" data-hp-adjust="heal">
+                        <i class="bi bi-plus-circle"></i> Heal
+                      </button>
+                      <button type="button" class="btn btn-sm btn-danger" data-hp-adjust="damage">
+                        <i class="bi bi-dash-circle"></i> Damage
+                      </button>
+                      <button type="button" class="btn btn-sm btn-info" data-hp-adjust="temp">
+                        <i class="bi bi-shield-plus"></i> Temp HP
+                      </button>
+                      <button type="button" class="btn btn-sm btn-warning" data-hp-adjust="max">
+                        <i class="bi bi-arrow-up"></i> Max
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="row g-2 mb-2">
                   <div class="col-6 col-md-4">
                     <label for="charSpeed" class="form-label small">Speed</label>
                     <input type="text"
@@ -294,6 +314,33 @@
                            id="charConditions"
                            class="form-control form-control-sm"
                            placeholder="Blessed, Hexed, etc." />
+                  </div>
+                </div>
+
+                <!-- Inspiration & Concentration -->
+                <div class="row g-2">
+                  <div class="col-6 col-md-4">
+                    <div class="form-check form-switch">
+                      <input class="form-check-input" type="checkbox" id="charInspiration" />
+                      <label class="form-check-label small" for="charInspiration">
+                        <i class="bi bi-star-fill text-warning"></i> Inspiration
+                      </label>
+                    </div>
+                  </div>
+                  <div class="col-6 col-md-8">
+                    <div class="d-flex align-items-center gap-2">
+                      <div class="form-check form-switch">
+                        <input class="form-check-input" type="checkbox" id="charConcentrating" />
+                        <label class="form-check-label small" for="charConcentrating">
+                          <i class="bi bi-lightning-fill text-info"></i> Concentrating
+                        </label>
+                      </div>
+                      <input type="text"
+                             id="charConcentrationSpell"
+                             class="form-control form-control-sm"
+                             placeholder="Spell name"
+                             style="max-width: 150px;" />
+                    </div>
                   </div>
                 </div>
 
@@ -363,7 +410,12 @@
               <div class="card-body">
                 <div class="row g-3">
                   <div class="col-12 col-md-6">
-                    <label class="form-label small">Death Saves</label>
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                      <label class="form-label small mb-0">Death Saves</label>
+                      <button type="button" class="btn btn-sm btn-danger" id="rollDeathSaveBtn">
+                        <i class="bi bi-dice-5"></i> Roll Death Save
+                      </button>
+                    </div>
                     <div class="d-flex flex-column gap-2">
                       <div class="d-flex align-items-center gap-2">
                         <span class="text-success small" style="min-width: 70px;">Successes:</span>
@@ -602,6 +654,7 @@
             <div class="card bg-dark border-secondary mb-3">
               <div class="card-header border-secondary d-flex justify-content-between align-items-center">
                 <strong>Saving Throws</strong>
+                <small class="text-muted">Shift+Click = Advantage, Ctrl+Click = Disadvantage</small>
               </div>
               <div class="card-body">
                 <div class="row g-2">
@@ -613,6 +666,9 @@
                       </div>
                       <label for="saveStrBonus" class="fw-bold small">STR</label>
                       <input type="number" id="saveStrBonus" class="form-control form-control-sm text-center" placeholder="0" />
+                      <button type="button" class="btn btn-sm btn-outline-light p-0 px-1" data-save-roll="str" title="Roll STR save">
+                        <i class="bi bi-dice-5"></i>
+                      </button>
                     </div>
                   </div>
                   <!-- DEX save -->
@@ -623,6 +679,9 @@
                       </div>
                       <label for="saveDexBonus" class="fw-bold small">DEX</label>
                       <input type="number" id="saveDexBonus" class="form-control form-control-sm text-center" placeholder="0" />
+                      <button type="button" class="btn btn-sm btn-outline-light p-0 px-1" data-save-roll="dex" title="Roll DEX save">
+                        <i class="bi bi-dice-5"></i>
+                      </button>
                     </div>
                   </div>
                   <!-- CON save -->
@@ -633,6 +692,9 @@
                       </div>
                       <label for="saveConBonus" class="fw-bold small">CON</label>
                       <input type="number" id="saveConBonus" class="form-control form-control-sm text-center" placeholder="0" />
+                      <button type="button" class="btn btn-sm btn-outline-light p-0 px-1" data-save-roll="con" title="Roll CON save">
+                        <i class="bi bi-dice-5"></i>
+                      </button>
                     </div>
                   </div>
                   <!-- INT save -->
@@ -643,6 +705,9 @@
                       </div>
                       <label for="saveIntBonus" class="fw-bold small">INT</label>
                       <input type="number" id="saveIntBonus" class="form-control form-control-sm text-center" placeholder="0" />
+                      <button type="button" class="btn btn-sm btn-outline-light p-0 px-1" data-save-roll="int" title="Roll INT save">
+                        <i class="bi bi-dice-5"></i>
+                      </button>
                     </div>
                   </div>
                   <!-- WIS save -->
@@ -653,6 +718,9 @@
                       </div>
                       <label for="saveWisBonus" class="fw-bold small">WIS</label>
                       <input type="number" id="saveWisBonus" class="form-control form-control-sm text-center" placeholder="0" />
+                      <button type="button" class="btn btn-sm btn-outline-light p-0 px-1" data-save-roll="wis" title="Roll WIS save">
+                        <i class="bi bi-dice-5"></i>
+                      </button>
                     </div>
                   </div>
                   <!-- CHA save -->
@@ -663,6 +731,9 @@
                       </div>
                       <label for="saveChaBonus" class="fw-bold small">CHA</label>
                       <input type="number" id="saveChaBonus" class="form-control form-control-sm text-center" placeholder="0" />
+                      <button type="button" class="btn btn-sm btn-outline-light p-0 px-1" data-save-roll="cha" title="Roll CHA save">
+                        <i class="bi bi-dice-5"></i>
+                      </button>
                     </div>
                   </div>
                 </div>
@@ -679,6 +750,7 @@
             <div class="card bg-dark border-secondary mb-3">
               <div class="card-header border-secondary d-flex justify-content-between align-items-center">
                 <strong>Skills</strong>
+                <small class="text-muted">Exp = Expertise (×2 Prof) | Shift/Ctrl for Adv/Dis</small>
               </div>
               <div class="card-body">
                 <div class="table-responsive">
@@ -686,9 +758,11 @@
                     <thead>
                       <tr class="text-muted small">
                         <th scope="col" style="width:2rem;">Prof</th>
+                        <th scope="col" style="width:2rem;">Exp</th>
                         <th scope="col" style="width:3rem;">Mod</th>
                         <th scope="col">Skill</th>
                         <th scope="col" style="width:4rem;" class="text-center">Bonus</th>
+                        <th scope="col" style="width:3rem;"></th>
                       </tr>
                     </thead>
                     <tbody>
@@ -696,182 +770,327 @@
                         <td class="text-center">
                           <input type="checkbox" id="skillAcrobaticsProf" class="form-check-input" />
                         </td>
+                        <td class="text-center">
+                          <input type="checkbox" id="skillAcrobaticsExp" class="form-check-input" title="Expertise (double proficiency)" />
+                        </td>
                         <td>DEX</td>
                         <td>Acr<span class="d-none d-md-inline">obatics</span></td>
                         <td class="text-center">
                           <input type="number" id="skillAcrobaticsBonus" class="form-control form-control-sm text-center" />
+                        </td>
+                        <td class="text-center">
+                          <button type="button" class="btn btn-sm btn-outline-light" data-skill-roll="acrobatics" title="Roll Acrobatics">
+                            <i class="bi bi-dice-5"></i>
+                          </button>
                         </td>
                       </tr>
                       <tr>
                         <td class="text-center">
                           <input type="checkbox" id="skillAnimalHandlingProf" class="form-check-input" />
                         </td>
+                        <td class="text-center">
+                          <input type="checkbox" id="skillAnimalHandlingExp" class="form-check-input" title="Expertise (double proficiency)" />
+                        </td>
                         <td>WIS</td>
                         <td>Animal Handling</td>
                         <td class="text-center">
                           <input type="number" id="skillAnimalHandlingBonus" class="form-control form-control-sm text-center" />
+                        </td>
+                        <td class="text-center">
+                          <button type="button" class="btn btn-sm btn-outline-light" data-skill-roll="animalHandling" title="Roll Animal Handling">
+                            <i class="bi bi-dice-5"></i>
+                          </button>
                         </td>
                       </tr>
                       <tr>
                         <td class="text-center">
                           <input type="checkbox" id="skillArcanaProf" class="form-check-input" />
                         </td>
+                        <td class="text-center">
+                          <input type="checkbox" id="skillArcanaExp" class="form-check-input" title="Expertise (double proficiency)" />
+                        </td>
                         <td>INT</td>
                         <td>Arcana</td>
                         <td class="text-center">
                           <input type="number" id="skillArcanaBonus" class="form-control form-control-sm text-center" />
+                        </td>
+                        <td class="text-center">
+                          <button type="button" class="btn btn-sm btn-outline-light" data-skill-roll="arcana" title="Roll Arcana">
+                            <i class="bi bi-dice-5"></i>
+                          </button>
                         </td>
                       </tr>
                       <tr>
                         <td class="text-center">
                           <input type="checkbox" id="skillAthleticsProf" class="form-check-input" />
                         </td>
+                        <td class="text-center">
+                          <input type="checkbox" id="skillAthleticsExp" class="form-check-input" title="Expertise (double proficiency)" />
+                        </td>
                         <td>STR</td>
                         <td>Athletics</td>
                         <td class="text-center">
                           <input type="number" id="skillAthleticsBonus" class="form-control form-control-sm text-center" />
+                        </td>
+                        <td class="text-center">
+                          <button type="button" class="btn btn-sm btn-outline-light" data-skill-roll="athletics" title="Roll Athletics">
+                            <i class="bi bi-dice-5"></i>
+                          </button>
                         </td>
                       </tr>
                       <tr>
                         <td class="text-center">
                           <input type="checkbox" id="skillDeceptionProf" class="form-check-input" />
                         </td>
+                        <td class="text-center">
+                          <input type="checkbox" id="skillDeceptionExp" class="form-check-input" title="Expertise (double proficiency)" />
+                        </td>
                         <td>CHA</td>
                         <td>Deception</td>
                         <td class="text-center">
                           <input type="number" id="skillDeceptionBonus" class="form-control form-control-sm text-center" />
+                        </td>
+                        <td class="text-center">
+                          <button type="button" class="btn btn-sm btn-outline-light" data-skill-roll="deception" title="Roll Deception">
+                            <i class="bi bi-dice-5"></i>
+                          </button>
                         </td>
                       </tr>
                       <tr>
                         <td class="text-center">
                           <input type="checkbox" id="skillHistoryProf" class="form-check-input" />
                         </td>
+                        <td class="text-center">
+                          <input type="checkbox" id="skillHistoryExp" class="form-check-input" title="Expertise (double proficiency)" />
+                        </td>
                         <td>INT</td>
                         <td>History</td>
                         <td class="text-center">
                           <input type="number" id="skillHistoryBonus" class="form-control form-control-sm text-center" />
+                        </td>
+                        <td class="text-center">
+                          <button type="button" class="btn btn-sm btn-outline-light" data-skill-roll="history" title="Roll History">
+                            <i class="bi bi-dice-5"></i>
+                          </button>
                         </td>
                       </tr>
                       <tr>
                         <td class="text-center">
                           <input type="checkbox" id="skillInsightProf" class="form-check-input" />
                         </td>
+                        <td class="text-center">
+                          <input type="checkbox" id="skillInsightExp" class="form-check-input" title="Expertise (double proficiency)" />
+                        </td>
                         <td>WIS</td>
                         <td>Insight</td>
                         <td class="text-center">
                           <input type="number" id="skillInsightBonus" class="form-control form-control-sm text-center" />
+                        </td>
+                        <td class="text-center">
+                          <button type="button" class="btn btn-sm btn-outline-light" data-skill-roll="insight" title="Roll Insight">
+                            <i class="bi bi-dice-5"></i>
+                          </button>
                         </td>
                       </tr>
                       <tr>
                         <td class="text-center">
                           <input type="checkbox" id="skillIntimidationProf" class="form-check-input" />
                         </td>
+                        <td class="text-center">
+                          <input type="checkbox" id="skillIntimidationExp" class="form-check-input" title="Expertise (double proficiency)" />
+                        </td>
                         <td>CHA</td>
                         <td>Intimidation</td>
                         <td class="text-center">
                           <input type="number" id="skillIntimidationBonus" class="form-control form-control-sm text-center" />
+                        </td>
+                        <td class="text-center">
+                          <button type="button" class="btn btn-sm btn-outline-light" data-skill-roll="intimidation" title="Roll Intimidation">
+                            <i class="bi bi-dice-5"></i>
+                          </button>
                         </td>
                       </tr>
                       <tr>
                         <td class="text-center">
                           <input type="checkbox" id="skillInvestigationProf" class="form-check-input" />
                         </td>
+                        <td class="text-center">
+                          <input type="checkbox" id="skillInvestigationExp" class="form-check-input" title="Expertise (double proficiency)" />
+                        </td>
                         <td>INT</td>
                         <td>Investigation</td>
                         <td class="text-center">
                           <input type="number" id="skillInvestigationBonus" class="form-control form-control-sm text-center" />
+                        </td>
+                        <td class="text-center">
+                          <button type="button" class="btn btn-sm btn-outline-light" data-skill-roll="investigation" title="Roll Investigation">
+                            <i class="bi bi-dice-5"></i>
+                          </button>
                         </td>
                       </tr>
                       <tr>
                         <td class="text-center">
                           <input type="checkbox" id="skillMedicineProf" class="form-check-input" />
                         </td>
+                        <td class="text-center">
+                          <input type="checkbox" id="skillMedicineExp" class="form-check-input" title="Expertise (double proficiency)" />
+                        </td>
                         <td>WIS</td>
                         <td>Medicine</td>
                         <td class="text-center">
                           <input type="number" id="skillMedicineBonus" class="form-control form-control-sm text-center" />
+                        </td>
+                        <td class="text-center">
+                          <button type="button" class="btn btn-sm btn-outline-light" data-skill-roll="medicine" title="Roll Medicine">
+                            <i class="bi bi-dice-5"></i>
+                          </button>
                         </td>
                       </tr>
                       <tr>
                         <td class="text-center">
                           <input type="checkbox" id="skillNatureProf" class="form-check-input" />
                         </td>
+                        <td class="text-center">
+                          <input type="checkbox" id="skillNatureExp" class="form-check-input" title="Expertise (double proficiency)" />
+                        </td>
                         <td>INT</td>
                         <td>Nature</td>
                         <td class="text-center">
                           <input type="number" id="skillNatureBonus" class="form-control form-control-sm text-center" />
+                        </td>
+                        <td class="text-center">
+                          <button type="button" class="btn btn-sm btn-outline-light" data-skill-roll="nature" title="Roll Nature">
+                            <i class="bi bi-dice-5"></i>
+                          </button>
                         </td>
                       </tr>
                       <tr>
                         <td class="text-center">
                           <input type="checkbox" id="skillPerceptionProf" class="form-check-input" />
                         </td>
+                        <td class="text-center">
+                          <input type="checkbox" id="skillPerceptionExp" class="form-check-input" title="Expertise (double proficiency)" />
+                        </td>
                         <td>WIS</td>
                         <td>Perception</td>
                         <td class="text-center">
                           <input type="number" id="skillPerceptionBonus" class="form-control form-control-sm text-center" />
+                        </td>
+                        <td class="text-center">
+                          <button type="button" class="btn btn-sm btn-outline-light" data-skill-roll="perception" title="Roll Perception">
+                            <i class="bi bi-dice-5"></i>
+                          </button>
                         </td>
                       </tr>
                       <tr>
                         <td class="text-center">
                           <input type="checkbox" id="skillPerformanceProf" class="form-check-input" />
                         </td>
+                        <td class="text-center">
+                          <input type="checkbox" id="skillPerformanceExp" class="form-check-input" title="Expertise (double proficiency)" />
+                        </td>
                         <td>CHA</td>
                         <td>Performance</td>
                         <td class="text-center">
                           <input type="number" id="skillPerformanceBonus" class="form-control form-control-sm text-center" />
+                        </td>
+                        <td class="text-center">
+                          <button type="button" class="btn btn-sm btn-outline-light" data-skill-roll="performance" title="Roll Performance">
+                            <i class="bi bi-dice-5"></i>
+                          </button>
                         </td>
                       </tr>
                       <tr>
                         <td class="text-center">
                           <input type="checkbox" id="skillPersuasionProf" class="form-check-input" />
                         </td>
+                        <td class="text-center">
+                          <input type="checkbox" id="skillPersuasionExp" class="form-check-input" title="Expertise (double proficiency)" />
+                        </td>
                         <td>CHA</td>
                         <td>Persuasion</td>
                         <td class="text-center">
                           <input type="number" id="skillPersuasionBonus" class="form-control form-control-sm text-center" />
+                        </td>
+                        <td class="text-center">
+                          <button type="button" class="btn btn-sm btn-outline-light" data-skill-roll="persuasion" title="Roll Persuasion">
+                            <i class="bi bi-dice-5"></i>
+                          </button>
                         </td>
                       </tr>
                       <tr>
                         <td class="text-center">
                           <input type="checkbox" id="skillReligionProf" class="form-check-input" />
                         </td>
+                        <td class="text-center">
+                          <input type="checkbox" id="skillReligionExp" class="form-check-input" title="Expertise (double proficiency)" />
+                        </td>
                         <td>INT</td>
                         <td>Religion</td>
                         <td class="text-center">
                           <input type="number" id="skillReligionBonus" class="form-control form-control-sm text-center" />
+                        </td>
+                        <td class="text-center">
+                          <button type="button" class="btn btn-sm btn-outline-light" data-skill-roll="religion" title="Roll Religion">
+                            <i class="bi bi-dice-5"></i>
+                          </button>
                         </td>
                       </tr>
                       <tr>
                         <td class="text-center">
                           <input type="checkbox" id="skillSleightOfHandProf" class="form-check-input" />
                         </td>
+                        <td class="text-center">
+                          <input type="checkbox" id="skillSleightOfHandExp" class="form-check-input" title="Expertise (double proficiency)" />
+                        </td>
                         <td>DEX</td>
                         <td>Sleight of Hand</td>
                         <td class="text-center">
                           <input type="number" id="skillSleightOfHandBonus" class="form-control form-control-sm text-center" />
+                        </td>
+                        <td class="text-center">
+                          <button type="button" class="btn btn-sm btn-outline-light" data-skill-roll="sleightOfHand" title="Roll Sleight of Hand">
+                            <i class="bi bi-dice-5"></i>
+                          </button>
                         </td>
                       </tr>
                       <tr>
                         <td class="text-center">
                           <input type="checkbox" id="skillStealthProf" class="form-check-input" />
                         </td>
+                        <td class="text-center">
+                          <input type="checkbox" id="skillStealthExp" class="form-check-input" title="Expertise (double proficiency)" />
+                        </td>
                         <td>DEX</td>
                         <td>Stealth</td>
                         <td class="text-center">
                           <input type="number" id="skillStealthBonus" class="form-control form-control-sm text-center" />
+                        </td>
+                        <td class="text-center">
+                          <button type="button" class="btn btn-sm btn-outline-light" data-skill-roll="stealth" title="Roll Stealth">
+                            <i class="bi bi-dice-5"></i>
+                          </button>
                         </td>
                       </tr>
                       <tr>
                         <td class="text-center">
                           <input type="checkbox" id="skillSurvivalProf" class="form-check-input" />
                         </td>
+                        <td class="text-center">
+                          <input type="checkbox" id="skillSurvivalExp" class="form-check-input" title="Expertise (double proficiency)" />
+                        </td>
                         <td>WIS</td>
                         <td>Survival</td>
                         <td class="text-center">
                           <input type="number" id="skillSurvivalBonus" class="form-control form-control-sm text-center" />
                         </td>
+                        <td class="text-center">
+                          <button type="button" class="btn btn-sm btn-outline-light" data-skill-roll="survival" title="Roll Survival">
+                            <i class="bi bi-dice-5"></i>
+                          </button>
+                        </td>
                       </tr>
+
                     </tbody>
                   </table>
                 </div>
@@ -884,6 +1103,21 @@
 
           <!-- RIGHT COLUMN -->
           <div class="col-12 col-lg-4">
+            <!-- Roll History Panel (Sticky) -->
+            <div class="card bg-dark border-secondary mb-3 sticky-top" style="top: 70px;">
+              <div class="card-header border-secondary d-flex justify-content-between align-items-center">
+                <strong><i class="bi bi-dice-5 me-1"></i>Roll History</strong>
+                <button type="button" class="btn btn-sm btn-outline-danger" id="clearHistoryBtn">
+                  <i class="bi bi-trash"></i>
+                </button>
+              </div>
+              <div class="card-body p-0" style="max-height: 400px; overflow-y: auto;">
+                <div id="rollHistoryList">
+                  <!-- Populated by JS -->
+                </div>
+              </div>
+            </div>
+
             <!-- Portrait (preview only, edits via modal) -->
             <div class="card bg-dark border-secondary mb-3">
               <div class="card-header border-secondary d-flex justify-content-between align-items-center">
