@@ -71,20 +71,40 @@
     }
 
     .save-pill {
-      border-radius: 999px;
+      border-radius: 0.5rem;
       border: 1px solid rgba(255,255,255,0.2);
-      padding: 0.25rem 0.6rem;
+      padding: 0.5rem 0.6rem;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .save-pill .save-pill-top {
       display: flex;
       align-items: center;
-      gap: 0.25rem;
+      gap: 0.4rem;
+      width: 100%;
+      justify-content: center;
     }
 
     .save-pill label {
       margin-bottom: 0;
+      min-width: 35px;
+      font-weight: bold;
     }
 
     .save-pill input[type="number"] {
       max-width: 3.5rem;
+      min-width: 3.5rem;
+    }
+
+    .save-pill .btn-group {
+      width: 100%;
+    }
+
+    .save-pill .btn-group button {
+      flex: 1;
     }
   </style>
 </head>
@@ -662,11 +682,13 @@
                   <!-- STR save -->
                   <div class="col-6 col-md-4 col-lg-2">
                     <div class="save-pill">
-                      <div class="form-check mb-0">
-                        <input class="form-check-input" type="checkbox" id="saveStrProf" />
+                      <div class="save-pill-top">
+                        <div class="form-check mb-0">
+                          <input class="form-check-input" type="checkbox" id="saveStrProf" />
+                        </div>
+                        <label for="saveStrBonus" class="fw-bold small">STR</label>
+                        <input type="number" id="saveStrBonus" class="form-control form-control-sm text-center" placeholder="0" />
                       </div>
-                      <label for="saveStrBonus" class="fw-bold small">STR</label>
-                      <input type="number" id="saveStrBonus" class="form-control form-control-sm text-center" placeholder="0" />
                       <div class="btn-group btn-group-sm" role="group">
                         <button type="button" class="btn btn-success p-0 px-1" data-save-roll="str" data-roll-type="advantage" title="Roll STR save with Advantage">
                           <i class="bi bi-dice-5"></i>
@@ -683,11 +705,13 @@
                   <!-- DEX save -->
                   <div class="col-6 col-md-4 col-lg-2">
                     <div class="save-pill">
-                      <div class="form-check mb-0">
-                        <input class="form-check-input" type="checkbox" id="saveDexProf" />
+                      <div class="save-pill-top">
+                        <div class="form-check mb-0">
+                          <input class="form-check-input" type="checkbox" id="saveDexProf" />
+                        </div>
+                        <label for="saveDexBonus" class="fw-bold small">DEX</label>
+                        <input type="number" id="saveDexBonus" class="form-control form-control-sm text-center" placeholder="0" />
                       </div>
-                      <label for="saveDexBonus" class="fw-bold small">DEX</label>
-                      <input type="number" id="saveDexBonus" class="form-control form-control-sm text-center" placeholder="0" />
                       <div class="btn-group btn-group-sm" role="group">
                         <button type="button" class="btn btn-success p-0 px-1" data-save-roll="dex" data-roll-type="advantage" title="Roll DEX save with Advantage">
                           <i class="bi bi-dice-5"></i>
@@ -704,11 +728,13 @@
                   <!-- CON save -->
                   <div class="col-6 col-md-4 col-lg-2">
                     <div class="save-pill">
-                      <div class="form-check mb-0">
-                        <input class="form-check-input" type="checkbox" id="saveConProf" />
+                      <div class="save-pill-top">
+                        <div class="form-check mb-0">
+                          <input class="form-check-input" type="checkbox" id="saveConProf" />
+                        </div>
+                        <label for="saveConBonus" class="fw-bold small">CON</label>
+                        <input type="number" id="saveConBonus" class="form-control form-control-sm text-center" placeholder="0" />
                       </div>
-                      <label for="saveConBonus" class="fw-bold small">CON</label>
-                      <input type="number" id="saveConBonus" class="form-control form-control-sm text-center" placeholder="0" />
                       <div class="btn-group btn-group-sm" role="group">
                         <button type="button" class="btn btn-success p-0 px-1" data-save-roll="con" data-roll-type="advantage" title="Roll CON save with Advantage">
                           <i class="bi bi-dice-5"></i>
@@ -725,11 +751,13 @@
                   <!-- INT save -->
                   <div class="col-6 col-md-4 col-lg-2">
                     <div class="save-pill">
-                      <div class="form-check mb-0">
-                        <input class="form-check-input" type="checkbox" id="saveIntProf" />
+                      <div class="save-pill-top">
+                        <div class="form-check mb-0">
+                          <input class="form-check-input" type="checkbox" id="saveIntProf" />
+                        </div>
+                        <label for="saveIntBonus" class="fw-bold small">INT</label>
+                        <input type="number" id="saveIntBonus" class="form-control form-control-sm text-center" placeholder="0" />
                       </div>
-                      <label for="saveIntBonus" class="fw-bold small">INT</label>
-                      <input type="number" id="saveIntBonus" class="form-control form-control-sm text-center" placeholder="0" />
                       <div class="btn-group btn-group-sm" role="group">
                         <button type="button" class="btn btn-success p-0 px-1" data-save-roll="int" data-roll-type="advantage" title="Roll INT save with Advantage">
                           <i class="bi bi-dice-5"></i>
@@ -746,11 +774,13 @@
                   <!-- WIS save -->
                   <div class="col-6 col-md-4 col-lg-2">
                     <div class="save-pill">
-                      <div class="form-check mb-0">
-                        <input class="form-check-input" type="checkbox" id="saveWisProf" />
+                      <div class="save-pill-top">
+                        <div class="form-check mb-0">
+                          <input class="form-check-input" type="checkbox" id="saveWisProf" />
+                        </div>
+                        <label for="saveWisBonus" class="fw-bold small">WIS</label>
+                        <input type="number" id="saveWisBonus" class="form-control form-control-sm text-center" placeholder="0" />
                       </div>
-                      <label for="saveWisBonus" class="fw-bold small">WIS</label>
-                      <input type="number" id="saveWisBonus" class="form-control form-control-sm text-center" placeholder="0" />
                       <div class="btn-group btn-group-sm" role="group">
                         <button type="button" class="btn btn-success p-0 px-1" data-save-roll="wis" data-roll-type="advantage" title="Roll WIS save with Advantage">
                           <i class="bi bi-dice-5"></i>
@@ -767,11 +797,13 @@
                   <!-- CHA save -->
                   <div class="col-6 col-md-4 col-lg-2">
                     <div class="save-pill">
-                      <div class="form-check mb-0">
-                        <input class="form-check-input" type="checkbox" id="saveChaProf" />
+                      <div class="save-pill-top">
+                        <div class="form-check mb-0">
+                          <input class="form-check-input" type="checkbox" id="saveChaProf" />
+                        </div>
+                        <label for="saveChaBonus" class="fw-bold small">CHA</label>
+                        <input type="number" id="saveChaBonus" class="form-control form-control-sm text-center" placeholder="0" />
                       </div>
-                      <label for="saveChaBonus" class="fw-bold small">CHA</label>
-                      <input type="number" id="saveChaBonus" class="form-control form-control-sm text-center" placeholder="0" />
                       <div class="btn-group btn-group-sm" role="group">
                         <button type="button" class="btn btn-success p-0 px-1" data-save-roll="cha" data-roll-type="advantage" title="Roll CHA save with Advantage">
                           <i class="bi bi-dice-5"></i>

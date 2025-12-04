@@ -14,6 +14,7 @@ Fixed
 - **Wizard Integration** - Fixed undefined function error in Character Creation Wizard
   - Changed `recalcAbilityModsFromForm()` to correct function name `recalcDerivedFromForm()`
   - Wizard now properly calculates ability modifiers and derived stats
+- **Save Throws Pill** - Fixed the tight spcing to allow for all items to be vieable in column form
 
 1.6.1 - 2025-12-04
 Advantage/Disadvantage Button Improvements
