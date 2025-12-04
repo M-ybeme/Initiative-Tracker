@@ -3,6 +3,35 @@ All notable changes to The DM's Toolbox are documented here.
 The format is based on Keep a Changelog,
 and this project adheres to Semantic Versioning.
 
+1.6.1 - 2025-12-04
+Advantage/Disadvantage Button Improvements
+
+Added
+
+- **Explicit Advantage/Disadvantage Buttons**
+  - All skill rolls now have three-button layout: Green (Advantage) / White (Normal) / Red (Disadvantage)
+  - All saving throw rolls now have three-button layout with same color scheme
+  - No longer need to remember keyboard shortcuts (Shift/Ctrl) to roll with advantage/disadvantage
+  - Buttons display dice icons with clear visual distinction
+- **Mobile Optimization for Roll Buttons**
+  - Button groups stay compact and don't wrap on mobile devices
+  - Touch-friendly sizing with appropriate padding for small screens
+  - Responsive font sizes (0.75rem on mobile, normal on desktop)
+  - Save-pill containers allow flex-wrap for better mobile layout
+
+Changed
+
+- Roll button event handlers now prioritize `data-roll-type` attribute over keyboard modifiers
+- Keyboard shortcuts (Shift=advantage, Ctrl=disadvantage) still work as fallback
+- Skills table and saving throws UI updated with btn-group containers
+- Mobile CSS enhanced to handle new three-button groups elegantly
+
+Fixed
+
+- Roll buttons maintain proper spacing and alignment on all screen sizes
+- Button groups in save-pills and skill table cells display correctly on mobile
+- Touch targets remain accessible (38x38px minimum) even with three buttons
+
 1.6.0 - 2025-12-04
 Enhanced Attack & Damage Roll System
 

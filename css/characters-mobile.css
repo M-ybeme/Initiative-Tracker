@@ -123,6 +123,7 @@
   .save-pill {
     padding: 0.4rem;
     font-size: 0.85rem;
+    flex-wrap: wrap;
   }
 
   .save-pill label {
@@ -134,8 +135,13 @@
     font-size: 0.85rem;
   }
 
+  .save-pill .btn-group {
+    flex-wrap: nowrap;
+  }
+
   .save-pill button {
     padding: 0.15rem 0.3rem !important;
+    font-size: 0.75rem;
   }
 
   /* === SKILLS TABLE === */
@@ -158,8 +164,13 @@
     padding: 0.25rem;
   }
 
+  .table .btn-group {
+    flex-wrap: nowrap;
+  }
+
   .table .btn-sm {
-    padding: 0.15rem 0.4rem;
+    padding: 0.15rem 0.3rem;
+    font-size: 0.75rem;
   }
 
   /* === HP & COMBAT === */

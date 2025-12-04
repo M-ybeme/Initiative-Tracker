@@ -2694,7 +2694,11 @@
           const skillBtn = e.target.closest('[data-skill-roll]');
           if (skillBtn) {
             const skillKey = skillBtn.getAttribute('data-skill-roll');
-            const rollType = e.shiftKey ? 'advantage' : (e.ctrlKey ? 'disadvantage' : 'normal');
+            // Use data-roll-type attribute if present, otherwise fall back to keyboard modifiers
+            let rollType = skillBtn.getAttribute('data-roll-type');
+            if (!rollType) {
+              rollType = e.shiftKey ? 'advantage' : (e.ctrlKey ? 'disadvantage' : 'normal');
+            }
             rollSkillCheck(skillKey, rollType);
           }
 
@@ -2702,7 +2706,11 @@
           const saveBtn = e.target.closest('[data-save-roll]');
           if (saveBtn) {
             const ability = saveBtn.getAttribute('data-save-roll');
-            const rollType = e.shiftKey ? 'advantage' : (e.ctrlKey ? 'disadvantage' : 'normal');
+            // Use data-roll-type attribute if present, otherwise fall back to keyboard modifiers
+            let rollType = saveBtn.getAttribute('data-roll-type');
+            if (!rollType) {
+              rollType = e.shiftKey ? 'advantage' : (e.ctrlKey ? 'disadvantage' : 'normal');
+            }
             rollSavingThrow(ability, rollType);
           }
 
