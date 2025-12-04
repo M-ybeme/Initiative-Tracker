@@ -1,6 +1,6 @@
 const DM_TOOLBOX_BUILD = {
     name: "The DM's Toolbox",
-    version: "1.6.2",
+    version: "1.6.3",
     buildTime: new Date().toISOString(),
     author: "Maybeme"
 };

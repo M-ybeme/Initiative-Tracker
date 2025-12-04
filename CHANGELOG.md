@@ -3,6 +3,16 @@ All notable changes to The DM's Toolbox are documented here.
 The format is based on Keep a Changelog,
 and this project adheres to Semantic Versioning.
 
+1.6.3 - 2025-12-04
+Initiative Roller Addition
+
+Added
+
+- **Initiative Roll Button** - Added dice button next to Initiative Modifier field in Combat Snapshot
+  - Rolls 1d20 + Initiative Modifier with character's name in roll description
+  - Result appears in Roll History panel for easy reference
+  - Button integrated into input group for clean UI layout
+
 1.6.2 - 2025-12-04
 Character Save Bug Fixes
 

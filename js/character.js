@@ -437,6 +437,17 @@
         }
       }
 
+      function rollInitiative() {
+        const char = getCurrentCharacter();
+        const charName = char?.name || 'Character';
+
+        const initModEl = $('charInitMod');
+        const initMod = initModEl ? (Number(initModEl.value) || 0) : 0;
+
+        const result = rollDice(`1d20${initMod >= 0 ? '+' : ''}${initMod}`, `${charName} - Initiative`);
+        return result;
+      }
+
       // ---------- Auto-calculation helpers ----------
       // Standard 5e modifier from ability score
       function getAbilityModFromScore(score) {
@@ -2749,6 +2760,12 @@
           const deathSaveBtn = e.target.closest('#rollDeathSaveBtn');
           if (deathSaveBtn) {
             rollDeathSave();
+          }
+
+          // Initiative roll button
+          const initiativeBtn = e.target.closest('#rollInitiativeBtn');
+          if (initiativeBtn) {
+            rollInitiative();
           }
         });
 

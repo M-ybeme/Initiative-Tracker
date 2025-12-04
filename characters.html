@@ -324,10 +324,18 @@
                   </div>
                   <div class="col-6 col-md-4">
                     <label for="charInitMod" class="form-label small">Initiative Mod</label>
-                    <input type="number"
-                           id="charInitMod"
-                           class="form-control form-control-sm text-center"
-                           placeholder="0" />
+                    <div class="input-group input-group-sm">
+                      <input type="number"
+                             id="charInitMod"
+                             class="form-control form-control-sm text-center"
+                             placeholder="0" />
+                      <button type="button"
+                              class="btn btn-outline-light"
+                              id="rollInitiativeBtn"
+                              title="Roll Initiative">
+                        <i class="bi bi-dice-5"></i>
+                      </button>
+                    </div>
                   </div>
                   <div class="col-12 col-md-4">
                     <label for="charConditions" class="form-label small">Active Conditions</label>
