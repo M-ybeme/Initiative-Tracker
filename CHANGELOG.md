@@ -3,6 +3,41 @@ All notable changes to The DM's Toolbox are documented here.
 The format is based on Keep a Changelog,
 and this project adheres to Semantic Versioning.
 
+1.7.0 - 2025-12-04
+IndexedDB Storage Implementation
+
+Added
+
+- **IndexedDB Storage System** - Replaced localStorage with IndexedDB for dramatically increased storage capacity
+  - Character portraits and battle map images now use IndexedDB (50MB-1GB+ capacity vs 5-10MB localStorage limit)
+  - Automatic migration from localStorage to IndexedDB on first load
+  - Maintains localStorage backup when possible for dual storage redundancy
+  - New `js/indexed-db-storage.js` module with centralized storage management
+  - Real-time storage quota monitoring in character manager UI
+- **Import Fallback Logic** - Smart error handling when importing large character files
+  - When storage quota exceeded, prompts user to import without portraits
+  - User can choose to proceed without images or cancel the import
+  - Prevents data loss from quota errors during character import
+- **Battle Map IndexedDB Integration** - Battle map sessions now use IndexedDB storage
+  - Single session storage with automatic migration from localStorage
+  - Supports large fog-of-war canvas images without quota issues
+  - Backward compatible with existing localStorage battle map data
+
+Changed
+
+- Character manager now displays IndexedDB quota usage with color-coded warnings
+- Storage operations converted to async/await pattern for better error handling
+- Version bumped to 1.7.0 to reflect major storage architecture change
+- Console logging improved with detailed migration status messages
+
+Fixed
+
+- **Storage Quota Exceeded Errors** - Large portrait images no longer cause "QuotaExceededError"
+  - Root cause: Base64-encoded portrait images exceeded localStorage 5-10MB limit
+  - Solution: IndexedDB provides 50MB-1GB+ capacity for storing image data
+- Characters with large portraits can now be saved and imported successfully
+- Battle map fog-of-war data no longer risks quota errors on complex maps
+
 1.6.3 - 2025-12-04
 Initiative Roller Addition
 

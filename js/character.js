@@ -1,5 +1,6 @@
 (function () {
       const STORAGE_KEY = 'dmtoolboxCharactersV1';
+      const USE_INDEXED_DB = IndexedDBStorage && IndexedDBStorage.isSupported();
       const $ = (id) => document.getElementById(id);
 
       function getNumber(id, fallback = 0) {
@@ -831,22 +832,150 @@
       }
 
       // ---------- Storage ----------
-      function loadCharactersFromStorage() {
+      async function loadCharactersFromStorage() {
+        // Use IndexedDB if available
+        if (USE_INDEXED_DB) {
+          try {
+            // Try to load from IndexedDB first
+            let characters = await IndexedDBStorage.loadCharacters();
+
+            // If empty, try migrating from localStorage
+            if (characters.length === 0) {
+              characters = await IndexedDBStorage.migrateFromLocalStorage(STORAGE_KEY);
+            }
+
+            return characters;
+          } catch (error) {
+            console.error('❌ IndexedDB failed, falling back to localStorage:', error);
+            return loadFromLocalStorageFallback();
+          }
+        }
+
+        // Fallback to localStorage
+        return loadFromLocalStorageFallback();
+      }
+
+      function loadFromLocalStorageFallback() {
         try {
           const raw = localStorage.getItem(STORAGE_KEY);
-          if (!raw) return [];
+          if (!raw) {
+            console.log('ℹ No saved characters found in localStorage');
+            return [];
+          }
           const parsed = JSON.parse(raw);
-          if (!Array.isArray(parsed)) return [];
+          if (!Array.isArray(parsed)) {
+            console.warn('⚠ Invalid character data in localStorage (not an array)');
+            return [];
+          }
+          console.log('✓ Loaded', parsed.length, 'character(s) from localStorage');
           return parsed;
-        } catch {
+        } catch (error) {
+          console.error('❌ Failed to load characters from localStorage:', error);
           return [];
         }
       }
-      function saveCharactersToStorage() {
+
+      async function saveCharactersToStorage() {
+        // Use IndexedDB if available
+        if (USE_INDEXED_DB) {
+          try {
+            const sizeInBytes = new Blob([JSON.stringify(characters)]).size;
+            const sizeInMB = (sizeInBytes / (1024 * 1024)).toFixed(2);
+            console.log(`Attempting to save ${characters.length} character(s) to IndexedDB - Size: ${sizeInMB} MB`);
+
+            await IndexedDBStorage.saveCharacters(characters);
+            console.log('✓ Characters saved to IndexedDB successfully');
+
+            // Also save to localStorage as backup (if size allows)
+            try {
+              localStorage.setItem(STORAGE_KEY, JSON.stringify(characters));
+              console.log('✓ Backup saved to localStorage');
+            } catch (e) {
+              console.log('ℹ localStorage backup skipped (quota exceeded, but IndexedDB save succeeded)');
+            }
+
+            return;
+          } catch (error) {
+            console.error('❌ IndexedDB save failed, trying localStorage:', error);
+            // Fall through to localStorage
+          }
+        }
+
+        // Fallback to localStorage (or if IndexedDB not available)
         try {
-          localStorage.setItem(STORAGE_KEY, JSON.stringify(characters));
-        } catch { }
+          const jsonData = JSON.stringify(characters);
+          const sizeInBytes = new Blob([jsonData]).size;
+          const sizeInMB = (sizeInBytes / (1024 * 1024)).toFixed(2);
+
+          console.log(`Attempting to save ${characters.length} character(s) to localStorage - Size: ${sizeInMB} MB`);
+
+          localStorage.setItem(STORAGE_KEY, jsonData);
+          console.log('✓ Characters saved to localStorage successfully');
+        } catch (error) {
+          console.error('❌ Failed to save characters to localStorage:', error);
+
+          // Check if it's a quota error
+          if (error.name === 'QuotaExceededError' || error.message.includes('quota')) {
+            const sizeInBytes = new Blob([JSON.stringify(characters)]).size;
+            const sizeInMB = (sizeInBytes / (1024 * 1024)).toFixed(2);
+
+            alert(
+              '⚠️ Storage Quota Exceeded!\n\n' +
+              `Your character data (${sizeInMB} MB) is too large for localStorage.\n\n` +
+              'This is usually caused by portrait images.\n\n' +
+              'Solutions:\n' +
+              '1. Remove portrait images from some characters\n' +
+              '2. Use smaller portrait images (compress them first)\n' +
+              '3. Export your characters as backup and clear portraits\n' +
+              '4. Refresh the page - IndexedDB may work better\n\n' +
+              'Your changes were NOT saved!'
+            );
+          } else {
+            alert('Warning: Unable to save characters.\n\nError: ' + error.message);
+          }
+        }
       }
+
+      // ---------- Storage Diagnostics ----------
+      function getCharacterStorageSize(char) {
+        const sizeInBytes = new Blob([JSON.stringify(char)]).size;
+        return sizeInBytes;
+      }
+
+      function diagnoseStorageUsage() {
+        console.log('\n📊 Character Storage Diagnostics:');
+        console.log('═'.repeat(60));
+
+        let totalSize = 0;
+        characters.forEach((char, index) => {
+          const size = getCharacterStorageSize(char);
+          const sizeKB = (size / 1024).toFixed(2);
+          const hasPortrait = char.portraitData ? '🖼️' : '  ';
+          totalSize += size;
+
+          console.log(`${index + 1}. ${hasPortrait} ${char.name || 'Unnamed'}: ${sizeKB} KB`);
+        });
+
+        const totalMB = (totalSize / (1024 * 1024)).toFixed(2);
+        console.log('═'.repeat(60));
+        console.log(`Total: ${totalMB} MB (localStorage limit: ~5-10 MB)`);
+
+        // Find largest characters
+        const sorted = characters
+          .map((char, index) => ({ char, index, size: getCharacterStorageSize(char) }))
+          .sort((a, b) => b.size - a.size);
+
+        console.log('\n🔝 Top 3 Largest Characters:');
+        sorted.slice(0, 3).forEach((item, rank) => {
+          const sizeKB = (item.size / 1024).toFixed(2);
+          console.log(`${rank + 1}. ${item.char.name || 'Unnamed'}: ${sizeKB} KB`);
+        });
+
+        console.log('\n💡 Tip: Remove portraits from large characters to free up space.\n');
+      }
+
+      // Make diagnostic function available globally for manual testing
+      window.diagnoseCharacterStorage = diagnoseStorageUsage;
 
       // ---------- Helpers ----------
       function renderCharacterSelect() {
@@ -889,6 +1018,51 @@
           return;
         }
         el.textContent = `Last saved: ${d.toLocaleString()}`;
+      }
+
+      async function updateStorageUsageDisplay() {
+        const el = $('storageUsageValue');
+        if (!el) return;
+
+        const totalSize = characters.reduce((sum, char) => sum + getCharacterStorageSize(char), 0);
+        const sizeInMB = (totalSize / (1024 * 1024)).toFixed(2);
+
+        // Try to get real quota info from IndexedDB
+        if (USE_INDEXED_DB) {
+          try {
+            const storageInfo = await IndexedDBStorage.getStorageInfo();
+            if (storageInfo) {
+              const percentUsed = parseFloat(storageInfo.percentUsed);
+              let colorClass = 'text-success';
+              if (percentUsed > 80) colorClass = 'text-danger';
+              else if (percentUsed > 60) colorClass = 'text-warning';
+
+              el.innerHTML = `Storage (IndexedDB): <span class="${colorClass}">${sizeInMB} MB / ${storageInfo.quotaMB} MB (${percentUsed}%)</span>`;
+
+              if (percentUsed > 80) {
+                el.innerHTML += ` <a href="#" onclick="diagnoseCharacterStorage(); return false;" class="text-warning" title="Click to see which characters are using the most space">⚠️ Near Limit</a>`;
+              }
+              return;
+            }
+          } catch (error) {
+            console.warn('Could not get storage estimate:', error);
+          }
+        }
+
+        // Fallback for localStorage or if quota API not available
+        const quotaLimit = 5; // Conservative estimate for localStorage
+        const percentUsed = ((totalSize / (quotaLimit * 1024 * 1024)) * 100).toFixed(0);
+
+        let colorClass = 'text-success';
+        if (percentUsed > 80) colorClass = 'text-danger';
+        else if (percentUsed > 60) colorClass = 'text-warning';
+
+        const storageType = USE_INDEXED_DB ? 'IndexedDB' : 'localStorage';
+        el.innerHTML = `Storage (${storageType}): <span class="${colorClass}">${sizeInMB} MB / ~${quotaLimit} MB (${percentUsed}%)</span>`;
+
+        if (percentUsed > 80) {
+          el.innerHTML += ` <a href="#" onclick="diagnoseCharacterStorage(); return false;" class="text-warning" title="Click to see which characters are using the most space">⚠️ Near Limit</a>`;
+        }
       }
       function ensurePortraitSettings(char) {
         if (!char.portraitSettings) {
@@ -1674,6 +1848,7 @@
           updatePortraitPreview(char);
           setLastUpdatedText(char);
           updateSpellSlotsDisplay();
+          updateStorageUsageDisplay();
         }
 
       // ---------- Wizard Integration ----------
@@ -2047,10 +2222,11 @@
           recalcDerivedOnCharacter(char);
 
           char.lastUpdated = new Date().toISOString();
-      
+
           saveCharactersToStorage();
           renderCharacterSelect();
           setLastUpdatedText(char);
+          updateStorageUsageDisplay();
         }
       function deleteCurrentCharacter() {
         const char = getCurrentCharacter();
@@ -2098,15 +2274,17 @@
         document.body.removeChild(a);
         URL.revokeObjectURL(url);
       }
-      function importCharactersFromFile(file) {
+      async function importCharactersFromFile(file) {
         if (!file) return;
         const reader = new FileReader();
-        reader.onload = function (e) {
+        reader.onload = async function (e) {
           try {
             const text = e.target.result;
             const parsed = JSON.parse(text);
             const imported = Array.isArray(parsed) ? parsed : [parsed];
             if (!imported.length) return;
+
+            const tempCharacters = [];
 
             imported.forEach(cRaw => {
               if (!cRaw) return;
@@ -2130,15 +2308,63 @@
               c.portraitSettings = c.portraitSettings || base.portraitSettings;
               if (typeof c.extraNotes !== 'string') c.extraNotes = '';
 
-              characters.push(c);
-              currentCharacterId = c.id;
+              tempCharacters.push(c);
             });
 
-            saveCharactersToStorage();
-            renderCharacterSelect();
-            fillFormFromCharacter(getCurrentCharacter());
-          } catch {
-            alert('Import failed: invalid JSON format.');
+            // Try to save with portraits first
+            const originalCharacters = [...characters];
+            tempCharacters.forEach(c => characters.push(c));
+
+            try {
+              await saveCharactersToStorage();
+              // Success! Update UI
+              currentCharacterId = tempCharacters[tempCharacters.length - 1].id;
+              renderCharacterSelect();
+              fillFormFromCharacter(getCurrentCharacter());
+              alert(`Successfully imported ${tempCharacters.length} character(s)!`);
+            } catch (error) {
+              // Check if it's a quota error
+              if (error.name === 'QuotaExceededError' || error.message.includes('quota')) {
+                // Restore original characters
+                characters = originalCharacters;
+
+                const choice = confirm(
+                  '⚠️ Storage Quota Exceeded!\n\n' +
+                  'The imported character(s) have large portrait images that exceed storage capacity.\n\n' +
+                  'Would you like to import WITHOUT the portraits?\n\n' +
+                  'Click OK to import without portraits, or Cancel to abort.'
+                );
+
+                if (choice) {
+                  // Remove portraits and try again
+                  tempCharacters.forEach(c => {
+                    c.portraitType = null;
+                    c.portraitData = null;
+                    c.portraitSettings = { scale: 1, offsetX: 0, offsetY: 0 };
+                    characters.push(c);
+                  });
+
+                  try {
+                    await saveCharactersToStorage();
+                    currentCharacterId = tempCharacters[tempCharacters.length - 1].id;
+                    renderCharacterSelect();
+                    fillFormFromCharacter(getCurrentCharacter());
+                    alert(`Successfully imported ${tempCharacters.length} character(s) without portraits!`);
+                  } catch (retryError) {
+                    characters = originalCharacters;
+                    alert('Import failed even without portraits. Your storage may be full.\n\nTry deleting some characters first.');
+                  }
+                } else {
+                  alert('Import cancelled.');
+                }
+              } else {
+                characters = originalCharacters;
+                throw error;
+              }
+            }
+          } catch (error) {
+            console.error('Import error:', error);
+            alert('Import failed: ' + (error.message || 'invalid JSON format'));
           }
         };
         reader.readAsText(file);
@@ -2308,6 +2534,8 @@
       // ---------- Events ----------
       function attachEventHandlers() {
         $('characterSelect').addEventListener('change', e => {
+          // Auto-save current character before switching
+          saveCurrentCharacter();
           const id = e.target.value;
           currentCharacterId = id || null;
           fillFormFromCharacter(getCurrentCharacter());
@@ -2783,11 +3011,43 @@
             });
           }
         });
+
+        // Auto-save when leaving the page or navigating away
+        window.addEventListener('beforeunload', () => {
+          saveCurrentCharacter();
+        });
+
+        // Also save on pagehide (more reliable than beforeunload on mobile)
+        window.addEventListener('pagehide', () => {
+          saveCurrentCharacter();
+        });
+
+        // Intercept all internal navigation links to save before navigating
+        document.addEventListener('click', (e) => {
+          const link = e.target.closest('a[href]');
+          if (link && link.href && !link.href.startsWith('javascript:') && !link.target) {
+            // Save before navigating to internal links
+            const currentUrl = new URL(window.location.href);
+            const linkUrl = new URL(link.href, window.location.href);
+
+            // Only intercept same-origin links
+            if (currentUrl.origin === linkUrl.origin) {
+              saveCurrentCharacter();
+            }
+          }
+        }, true); // Use capture phase to ensure we run before navigation
+
+        // Periodic auto-save every 30 seconds as a backup
+        setInterval(() => {
+          if (currentCharacterId) {
+            saveCurrentCharacter();
+          }
+        }, 30000); // 30 seconds
       }
 
       // ---------- Init ----------
-      function init() {
-        characters = loadCharactersFromStorage();
+      async function init() {
+        characters = await loadCharactersFromStorage();
         characters.forEach(c => {
           const base = newCharacterTemplate();
           c.stats = c.stats || base.stats;

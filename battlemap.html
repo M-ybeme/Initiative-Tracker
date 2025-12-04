@@ -18,6 +18,7 @@
   <!-- Vendor JS -->
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" crossorigin="anonymous"></script>
   <script src="/js/site.js"></script>
+  <script src="/js/indexed-db-storage.js"></script>
 
   <style>
     :root {
@@ -477,43 +478,95 @@
   function screenToWorld(x,y){ return { x: (x - state.view.x)/state.view.scale, y: (y - state.view.y)/state.view.scale }; }
 
   const STORAGE_KEY = 'dmtoolbox.battlemap.mvp.v3';
-function save(){
-  // Always capture the fog canvas if it exists, regardless of enabled flag
-  const fogData = (fog.width > 1 && fog.height > 1) ? tryCanvasToDataURL(fog) : null;
+  const USE_INDEXED_DB = IndexedDBStorage && IndexedDBStorage.isSupported();
 
-  const payload = {
-    map: { imgSrc: state.map.imgSrc, w: state.map.w, h: state.map.h },
-    mapTransform: state.mapTransform,
-    grid: state.grid,
-    view: state.view,
-    tokens: state.tokens.map(t => ({
-      id: t.id,
-      name: t.name,
-      imgSrc: t.imgSrc,
-      x: t.x,
-      y: t.y,
-      w: t.w,
-      h: t.h,
-      rot: t.rot,
-      selected: !!t.selected     
-    })),
-    fog: fogData,
-    fogState: {               
-      enabled: fogState.enabled,
-      mode: fogState.mode,
-      brush: fogState.brush
+  async function save(){
+    // Always capture the fog canvas if it exists, regardless of enabled flag
+    const fogData = (fog.width > 1 && fog.height > 1) ? tryCanvasToDataURL(fog) : null;
+
+    const payload = {
+      map: { imgSrc: state.map.imgSrc, w: state.map.w, h: state.map.h },
+      mapTransform: state.mapTransform,
+      grid: state.grid,
+      view: state.view,
+      tokens: state.tokens.map(t => ({
+        id: t.id,
+        name: t.name,
+        imgSrc: t.imgSrc,
+        x: t.x,
+        y: t.y,
+        w: t.w,
+        h: t.h,
+        rot: t.rot,
+        selected: !!t.selected
+      })),
+      fog: fogData,
+      fogState: {
+        enabled: fogState.enabled,
+        mode: fogState.mode,
+        brush: fogState.brush
+      }
+    };
+
+    if (USE_INDEXED_DB) {
+      try {
+        await IndexedDBStorage.saveBattleMap(payload);
+        // Also save to localStorage as backup (if size allows)
+        try {
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
+        } catch (e) {
+          console.log('ℹ localStorage backup skipped (quota exceeded, but IndexedDB save succeeded)');
+        }
+        return;
+      } catch (error) {
+        console.error('❌ IndexedDB save failed, trying localStorage fallback:', error);
+      }
     }
-  };
 
-  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(payload)); } catch {}
+    // Fallback to localStorage
+    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(payload)); } catch {}
   }
-  function load(){
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return;
+  async function load(){
+    let data = null;
+
+    if (USE_INDEXED_DB) {
+      try {
+        data = await IndexedDBStorage.loadBattleMap();
+        if (data) {
+          console.log('✓ Loaded battle map from IndexedDB');
+        } else {
+          // Try migration from localStorage
+          console.log('🔄 Checking for localStorage data to migrate...');
+          const raw = localStorage.getItem(STORAGE_KEY);
+          if (raw) {
+            data = JSON.parse(raw);
+            console.log('🔄 Migrating battle map from localStorage to IndexedDB...');
+            await IndexedDBStorage.saveBattleMap(data);
+            console.log('✓ Migration successful! Battle map is now in IndexedDB');
+            localStorage.setItem(STORAGE_KEY + '_migrated', 'true');
+          }
+        }
+      } catch (error) {
+        console.error('❌ IndexedDB load failed, trying localStorage fallback:', error);
+        // Fall through to localStorage fallback below
+      }
+    }
+
+    // Fallback to localStorage if IndexedDB didn't work
+    if (!data) {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (!raw) return;
+      try {
+        data = JSON.parse(raw);
+      } catch (e) {
+        console.warn('❌ localStorage load failed', e);
+        return;
+      }
+    }
+
+    if (!data) return;
 
     try {
-      const data = JSON.parse(raw);
-
       Object.assign(state.grid, data.grid || {});
       Object.assign(state.view, data.view || {});
       Object.assign(state.mapTransform, data.mapTransform || {});
@@ -554,7 +607,7 @@ function save(){
         loadImage(t.imgSrc).then(img => (t.img = img));
       });
     } catch (e) {
-      console.warn('Load failed', e);
+      console.warn('❌ Load failed', e);
     }
   }
 
