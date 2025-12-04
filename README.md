@@ -73,13 +73,15 @@ Full-featured character sheets for both DM prep and player use
 - Expertise support (double proficiency for skills)
 
 **Player-Facing Features:**
+- **Character Creation Wizard** - 7-step guided walkthrough for new players
 - Interactive dice roller with advantage/disadvantage support
 - Roll buttons for all skills, saves, and attacks
-- Roll history panel (last 50 rolls with timestamps)
+- Roll history panel (last 50 rolls with timestamps, collapsible on mobile)
 - HP adjustment buttons (Heal, Damage, Temp HP, Max HP)
 - Inspiration and Concentration tracking
 - Death save automation (nat 20/1 special handling)
 - Automatic concentration DC calculation on damage
+- **Mobile-Responsive** - Optimized for phones, tablets, and desktop
 
 **DM-Specific Fields:**
 - Party role / table notes
@@ -296,6 +298,17 @@ Generators: Use seeded RNG for reproducibility
 📜 Changelog
 Full version history: CHANGELOG.md
 Recent Highlights
+v1.5.7 (2025-12-03) — Character Creation Wizard & Mobile Optimization
+
+🧙 Character Creation Wizard with 7-step guided walkthrough
+🎲 Interactive ability score roller (4d6 drop lowest)
+📚 Race/class selection with beginner-friendly descriptions
+📱 Full mobile-responsive design for phones and tablets
+👆 Touch-optimized buttons (38x38px minimum)
+📏 Collapsible roll history on mobile to save space
+🖨️ Print-friendly character sheets
+🔄 Adaptive layout for portrait/landscape mobile
+
 v1.5.6 (2025-12-03) — Player-Facing Features & Interactive Sheets
 
 🎲 Comprehensive dice roller with advantage/disadvantage support

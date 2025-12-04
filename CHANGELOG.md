@@ -3,6 +3,47 @@ All notable changes to The DM's Toolbox are documented here.
 The format is based on Keep a Changelog,
 and this project adheres to Semantic Versioning.
 
+1.5.7 - 2025-12-03
+Character Creation Wizard & Mobile Optimization
+
+Added
+
+- **Character Creation Wizard**
+  - 7-step guided walkthrough for creating D&D 5e characters
+  - Interactive 4d6-drop-lowest ability score roller with visual dice display
+  - Race selection with descriptions and ability bonuses (9 races)
+  - Class selection with descriptions and hit die info (12 classes)
+  - Beginner-friendly tips for ability score assignment by class
+  - Skill proficiency guidance and alignment selection
+  - Auto-populates character sheet with all entered data
+  - Optional - can skip wizard for blank character sheet
+- **Mobile-Responsive Design**
+  - Comprehensive mobile CSS for phones (<768px), tablets (768-991px), and desktop
+  - Collapsible roll history panel on mobile (tap header to expand/collapse)
+  - Horizontal scrolling tabs with touch-friendly navigation
+  - Touch-optimized buttons (38x38px minimum for all interactive elements)
+  - Compact portrait (200px on mobile, 250px on tablet, 320px on desktop)
+  - Landscape mobile optimizations for better horizontal space usage
+  - Print-friendly styles (hides buttons/navigation, clean B&W layout)
+  - Adaptive font sizes and spacing based on screen size
+
+Changed
+
+- Roll history starts collapsed on mobile screens to save vertical space
+- Portrait heights scale responsively (200px/250px/320px by breakpoint)
+- Tab navigation uses horizontal scroll on mobile instead of wrapping
+- Form inputs and tables use smaller fonts on mobile (0.85rem)
+- Touch devices get larger checkboxes (20-26px) for easier tapping
+- Button groups automatically compress text and padding on small screens
+- New character button now prompts user to choose wizard or blank sheet
+
+Fixed
+
+- Roll history panel no longer interferes with mobile scrolling
+- All interactive elements meet minimum 38x38px touch target size
+- Wizard modal properly scales to 95% width on small screens
+- Window resize correctly toggles roll history collapse state
+
 1.5.6 - 2025-12-03
 Player-Facing Features & Interactive Character Sheets
 

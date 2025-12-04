@@ -9,6 +9,7 @@
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" />
   <!-- Custom CSS -->
   <link href="/css/site.css" rel="stylesheet" />
+  <link href="/css/characters-mobile.css" rel="stylesheet" />
   <!-- Dev Icons -->
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/devicons/devicon@v2.15.1/devicon.min.css" />
   <!-- Favicon -->
@@ -1104,12 +1105,14 @@
           <!-- RIGHT COLUMN -->
           <div class="col-12 col-lg-4">
             <!-- Roll History Panel (Sticky) -->
-            <div class="card bg-dark border-secondary mb-3 sticky-top" style="top: 70px;">
-              <div class="card-header border-secondary d-flex justify-content-between align-items-center">
+            <div class="card bg-dark border-secondary mb-3 sticky-top" id="rollHistoryPanel" style="top: 70px;">
+              <div class="card-header border-secondary d-flex justify-content-between align-items-center" id="rollHistoryHeader" style="cursor: pointer;">
                 <strong><i class="bi bi-dice-5 me-1"></i>Roll History</strong>
-                <button type="button" class="btn btn-sm btn-outline-danger" id="clearHistoryBtn">
-                  <i class="bi bi-trash"></i>
-                </button>
+                <div>
+                  <button type="button" class="btn btn-sm btn-outline-danger" id="clearHistoryBtn">
+                    <i class="bi bi-trash"></i>
+                  </button>
+                </div>
               </div>
               <div class="card-body p-0" style="max-height: 400px; overflow-y: auto;">
                 <div id="rollHistoryList">
@@ -1921,7 +1924,26 @@
     </div>
   </div>
 
+  <!-- Character Creation Wizard Modal -->
+  <div class="modal fade" id="characterCreationModal" tabindex="-1" aria-labelledby="characterCreationModalLabel" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
+    <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+      <div class="modal-content bg-dark text-light">
+        <div class="modal-header border-secondary">
+          <h5 class="modal-title" id="wizardTitle">Character Creation Wizard</h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body" id="wizardBody">
+          <!-- Wizard content populated by JS -->
+        </div>
+        <div class="modal-footer border-secondary d-flex justify-content-between" id="wizardFooter">
+          <!-- Wizard buttons populated by JS -->
+        </div>
+      </div>
+    </div>
+  </div>
+
   <script src="/js/spells-data.js"></script>
+  <script src="/js/character-creation-wizard.js"></script>
   <script src="/js/character.js"></script>
 </body>
 </html>

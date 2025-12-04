@@ -1514,6 +1514,38 @@
           updateSpellSlotsDisplay();
         }
 
+      // ---------- Wizard Integration ----------
+      // This function is called by the character creation wizard to populate the form
+      function fillFormFromWizardData(wizardData) {
+        // Fill in basic info
+        if (wizardData.name) $('charName').value = wizardData.name;
+        if (wizardData.playerName) $('playerName').value = wizardData.playerName;
+        if (wizardData.race) $('charRace').value = wizardData.race;
+        if (wizardData.class) $('charClass').value = wizardData.class;
+        if (wizardData.level) $('charLevel').value = wizardData.level;
+        if (wizardData.alignment) $('charAlignment').value = wizardData.alignment;
+
+        // Fill in ability scores
+        if (wizardData.str) $('statStr').value = wizardData.str;
+        if (wizardData.dex) $('statDex').value = wizardData.dex;
+        if (wizardData.con) $('statCon').value = wizardData.con;
+        if (wizardData.int) $('statInt').value = wizardData.int;
+        if (wizardData.wis) $('statWis').value = wizardData.wis;
+        if (wizardData.cha) $('statCha').value = wizardData.cha;
+
+        // Trigger recalculation of derived values
+        recalcAbilityModsFromForm();
+        recalcSavesFromForm(false);
+        recalcSkillsFromForm(false);
+        recalcPassivesFromForm();
+
+        // Save the character
+        saveCurrentCharacter();
+      }
+
+      // Make the function globally accessible for the wizard
+      window.fillFormFromWizardData = fillFormFromWizardData;
+
       // ---------- Create / Save / Delete ----------
       function newCharacterTemplate() {
         return {
@@ -1639,12 +1671,33 @@
         };
       }
       function createNewCharacter() {
-        const newChar = newCharacterTemplate();
-        characters.push(newChar);
-        currentCharacterId = newChar.id;
-        renderCharacterSelect();
-        fillFormFromCharacter(newChar);
-        saveCharactersToStorage();
+        // Ask user if they want to use the wizard
+        const useWizard = confirm(
+          "Would you like to use the Character Creation Wizard?\n\n" +
+          "The wizard will guide you step-by-step through creating a new D&D character.\n\n" +
+          "Click OK to use the wizard, or Cancel to create a blank character sheet."
+        );
+
+        if (useWizard && typeof CharacterCreationWizard !== 'undefined') {
+          // Create new character first, then open wizard
+          const newChar = newCharacterTemplate();
+          characters.push(newChar);
+          currentCharacterId = newChar.id;
+          renderCharacterSelect();
+          fillFormFromCharacter(newChar);
+          saveCharactersToStorage();
+
+          // Open the wizard
+          CharacterCreationWizard.open();
+        } else {
+          // Create blank character normally
+          const newChar = newCharacterTemplate();
+          characters.push(newChar);
+          currentCharacterId = newChar.id;
+          renderCharacterSelect();
+          fillFormFromCharacter(newChar);
+          saveCharactersToStorage();
+        }
       }
       function saveCurrentCharacter() {
           let char = getCurrentCharacter();
@@ -2586,7 +2639,43 @@
           }
           attachEventHandlers();
           updateSpellSlotsDisplay();
+          initMobileFeatures();
         }
+
+      // ---------- Mobile Features ----------
+      function initMobileFeatures() {
+        // Make roll history collapsible on mobile by tapping header
+        const rollHistoryHeader = document.getElementById('rollHistoryHeader');
+        const rollHistoryPanel = document.getElementById('rollHistoryPanel');
+
+        if (rollHistoryHeader && rollHistoryPanel) {
+          rollHistoryHeader.addEventListener('click', (e) => {
+            // Don't toggle if clicking the clear button
+            if (e.target.closest('#clearHistoryBtn')) {
+              return;
+            }
+
+            // Only collapse on mobile screens
+            if (window.innerWidth < 768) {
+              rollHistoryPanel.classList.toggle('collapsed');
+            }
+          });
+
+          // Start collapsed on mobile if screen is small
+          if (window.innerWidth < 768) {
+            rollHistoryPanel.classList.add('collapsed');
+          }
+
+          // Re-check on window resize
+          window.addEventListener('resize', () => {
+            if (window.innerWidth >= 768) {
+              // Remove collapsed class on larger screens
+              rollHistoryPanel.classList.remove('collapsed');
+            }
+          });
+        }
+      }
+
       if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', init);
       } else {
