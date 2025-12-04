@@ -716,6 +716,7 @@
       let editingPortrait = null; // { type, data, settings }
       let currentSpellList = [];
       let currentAttackList = [];
+      let isLoadingCharacter = false; // Flag to prevent saves during character load
 
       // ---------- Spells data + helpers ----------
       const RAW_SPELLS = (window.SPELLS_DATA || window.SPELLS || []);
@@ -881,59 +882,62 @@
           try {
             const sizeInBytes = new Blob([JSON.stringify(characters)]).size;
             const sizeInMB = (sizeInBytes / (1024 * 1024)).toFixed(2);
-            console.log(`Attempting to save ${characters.length} character(s) to IndexedDB - Size: ${sizeInMB} MB`);
+            console.log(`Saving ${characters.length} character(s) to IndexedDB - Size: ${sizeInMB} MB`);
 
             await IndexedDBStorage.saveCharacters(characters);
             console.log('✓ Characters saved to IndexedDB successfully');
 
-            // Also save to localStorage as backup (if size allows)
-            try {
-              localStorage.setItem(STORAGE_KEY, JSON.stringify(characters));
-              console.log('✓ Backup saved to localStorage');
-            } catch (e) {
-              console.log('ℹ localStorage backup skipped (quota exceeded, but IndexedDB save succeeded)');
-            }
+            // NO localStorage backup - images are too large for localStorage
+            // IndexedDB is the primary and only storage for character data with portraits
 
             return;
           } catch (error) {
-            console.error('❌ IndexedDB save failed, trying localStorage:', error);
-            // Fall through to localStorage
+            console.error('❌ IndexedDB save failed:', error);
+
+            // Check if it's a quota error
+            if (error.name === 'QuotaExceededError' || error.message?.includes('quota')) {
+              const sizeInBytes = new Blob([JSON.stringify(characters)]).size;
+              const sizeInMB = (sizeInBytes / (1024 * 1024)).toFixed(2);
+
+              alert(
+                '⚠️ Storage Quota Exceeded!\n\n' +
+                `Your character data (${sizeInMB} MB) exceeds browser storage limits.\n\n` +
+                'This is usually caused by portrait images.\n\n' +
+                'Solutions:\n' +
+                '1. Remove portrait images from some characters\n' +
+                '2. Use smaller portrait images (compress them first)\n' +
+                '3. Export your characters as backup\n' +
+                '4. Delete unused characters\n\n' +
+                'Your changes were NOT saved!'
+              );
+            } else {
+              alert(
+                '⚠️ Failed to save characters!\n\n' +
+                'Error: ' + (error.message || 'Unknown error') + '\n\n' +
+                'Possible causes:\n' +
+                '- Private browsing mode\n' +
+                '- Browser storage disabled\n' +
+                '- Storage quota exceeded\n\n' +
+                'Export your characters as backup!'
+              );
+            }
+
+            throw error; // Re-throw to prevent silent failures
           }
         }
 
-        // Fallback to localStorage (or if IndexedDB not available)
-        try {
-          const jsonData = JSON.stringify(characters);
-          const sizeInBytes = new Blob([jsonData]).size;
-          const sizeInMB = (sizeInBytes / (1024 * 1024)).toFixed(2);
-
-          console.log(`Attempting to save ${characters.length} character(s) to localStorage - Size: ${sizeInMB} MB`);
-
-          localStorage.setItem(STORAGE_KEY, jsonData);
-          console.log('✓ Characters saved to localStorage successfully');
-        } catch (error) {
-          console.error('❌ Failed to save characters to localStorage:', error);
-
-          // Check if it's a quota error
-          if (error.name === 'QuotaExceededError' || error.message.includes('quota')) {
-            const sizeInBytes = new Blob([JSON.stringify(characters)]).size;
-            const sizeInMB = (sizeInBytes / (1024 * 1024)).toFixed(2);
-
-            alert(
-              '⚠️ Storage Quota Exceeded!\n\n' +
-              `Your character data (${sizeInMB} MB) is too large for localStorage.\n\n` +
-              'This is usually caused by portrait images.\n\n' +
-              'Solutions:\n' +
-              '1. Remove portrait images from some characters\n' +
-              '2. Use smaller portrait images (compress them first)\n' +
-              '3. Export your characters as backup and clear portraits\n' +
-              '4. Refresh the page - IndexedDB may work better\n\n' +
-              'Your changes were NOT saved!'
-            );
-          } else {
-            alert('Warning: Unable to save characters.\n\nError: ' + error.message);
-          }
-        }
+        // If IndexedDB is not available, we can't store characters with images
+        console.error('❌ IndexedDB not available - cannot save characters');
+        alert(
+          '⚠️ IndexedDB Not Available!\n\n' +
+          'Your browser does not support IndexedDB or it is disabled.\n\n' +
+          'Character data with images cannot be saved.\n\n' +
+          'Please:\n' +
+          '- Enable IndexedDB in browser settings\n' +
+          '- Exit private browsing mode\n' +
+          '- Use a modern browser (Chrome, Firefox, Edge, Safari)'
+        );
+        throw new Error('IndexedDB not available');
       }
 
       // ---------- Storage Diagnostics ----------
@@ -958,7 +962,7 @@
 
         const totalMB = (totalSize / (1024 * 1024)).toFixed(2);
         console.log('═'.repeat(60));
-        console.log(`Total: ${totalMB} MB (localStorage limit: ~5-10 MB)`);
+        console.log(`Total: ${totalMB} MB (stored in IndexedDB)`);
 
         // Find largest characters
         const sorted = characters
@@ -1049,20 +1053,10 @@
           }
         }
 
-        // Fallback for localStorage or if quota API not available
-        const quotaLimit = 5; // Conservative estimate for localStorage
-        const percentUsed = ((totalSize / (quotaLimit * 1024 * 1024)) * 100).toFixed(0);
-
-        let colorClass = 'text-success';
-        if (percentUsed > 80) colorClass = 'text-danger';
-        else if (percentUsed > 60) colorClass = 'text-warning';
-
-        const storageType = USE_INDEXED_DB ? 'IndexedDB' : 'localStorage';
-        el.innerHTML = `Storage (${storageType}): <span class="${colorClass}">${sizeInMB} MB / ~${quotaLimit} MB (${percentUsed}%)</span>`;
-
-        if (percentUsed > 80) {
-          el.innerHTML += ` <a href="#" onclick="diagnoseCharacterStorage(); return false;" class="text-warning" title="Click to see which characters are using the most space">⚠️ Near Limit</a>`;
-        }
+        // Fallback if quota API not available
+        // Just show the size without percentage since we don't know the limit
+        el.innerHTML = `Storage (IndexedDB): <span class="text-info">${sizeInMB} MB</span>`;
+        el.innerHTML += ` <a href="#" onclick="diagnoseCharacterStorage(); return false;" class="text-muted small" title="Click to see storage breakdown">(details)</a>`;
       }
       function ensurePortraitSettings(char) {
         if (!char.portraitSettings) {
@@ -1673,7 +1667,10 @@
       // ---------- Fill form ----------
       function fillFormFromCharacter(char) {
           if (!char) return;
-            
+
+          // Set flag to prevent auto-saves while loading
+          isLoadingCharacter = true;
+
           // Ensure derived values are in sync with stored scores/skills
           recalcDerivedOnCharacter(char);
             
@@ -1849,11 +1846,19 @@
           setLastUpdatedText(char);
           updateSpellSlotsDisplay();
           updateStorageUsageDisplay();
+
+          // Clear loading flag after a small delay to allow all event handlers to settle
+          setTimeout(() => {
+            isLoadingCharacter = false;
+          }, 100);
         }
 
       // ---------- Wizard Integration ----------
       // This function is called by the character creation wizard to populate the form
       function fillFormFromWizardData(wizardData) {
+        // Set loading flag to prevent auto-saves during form population
+        isLoadingCharacter = true;
+
         // Fill in basic info
         if (wizardData.name) $('charName').value = wizardData.name;
         if (wizardData.playerName) $('playerName').value = wizardData.playerName;
@@ -1876,8 +1881,12 @@
         recalcSkillsFromForm(false);
         recalcPassivesFromForm();
 
-        // Save the character
-        saveCurrentCharacter();
+        // Clear loading flag after a short delay
+        setTimeout(() => {
+          isLoadingCharacter = false;
+          // NOW save the character once
+          saveCurrentCharacter();
+        }, 100);
       }
 
       // Make the function globally accessible for the wizard
@@ -2037,6 +2046,11 @@
         }
       }
       function saveCurrentCharacter() {
+          // Don't save if we're in the middle of loading a character
+          if (isLoadingCharacter) {
+            return;
+          }
+
           let char = getCurrentCharacter();
           if (!char) {
             createNewCharacter();
@@ -2533,13 +2547,28 @@
 
       // ---------- Events ----------
       function attachEventHandlers() {
-        $('characterSelect').addEventListener('change', e => {
-          // Auto-save current character before switching
-          saveCurrentCharacter();
-          const id = e.target.value;
-          currentCharacterId = id || null;
-          fillFormFromCharacter(getCurrentCharacter());
-        });
+        const characterSelect = $('characterSelect');
+        if (characterSelect) {
+          characterSelect.addEventListener('change', e => {
+            const newId = e.target.value;
+
+            // Only switch if actually changing to a different character
+            if (newId && newId !== currentCharacterId) {
+              console.log(`Switching from character ${currentCharacterId} to ${newId}`);
+
+              // Save current character before switching (if not loading)
+              if (!isLoadingCharacter) {
+                saveCurrentCharacter();
+              }
+
+              // Switch to new character
+              currentCharacterId = newId;
+              fillFormFromCharacter(getCurrentCharacter());
+            }
+          });
+        } else {
+          console.error('❌ Character select dropdown not found!');
+        }
         $('newCharacterBtn').addEventListener('click', createNewCharacter);
         $('saveCharacterBtn').addEventListener('click', saveCurrentCharacter);
         $('deleteCharacterBtn').addEventListener('click', deleteCurrentCharacter);
@@ -3013,11 +3042,7 @@
         });
 
         // Auto-save when leaving the page or navigating away
-        window.addEventListener('beforeunload', () => {
-          saveCurrentCharacter();
-        });
-
-        // Also save on pagehide (more reliable than beforeunload on mobile)
+        // Use pagehide as it's more reliable than beforeunload (especially on mobile)
         window.addEventListener('pagehide', () => {
           saveCurrentCharacter();
         });

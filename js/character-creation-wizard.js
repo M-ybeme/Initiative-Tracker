@@ -106,7 +106,14 @@ const CharacterCreationWizard = (function() {
         const raceSelect = document.getElementById('wizardRace');
         const raceDesc = document.getElementById('raceDescription');
         if (raceSelect && raceDesc) {
-          raceSelect.addEventListener('change', (e) => {
+          // Remove any existing listener to prevent memory leaks and duplicate handlers
+          const oldListener = raceSelect._raceChangeHandler;
+          if (oldListener) {
+            raceSelect.removeEventListener('change', oldListener);
+          }
+
+          // Create new handler and store reference for later removal
+          const newHandler = (e) => {
             const descriptions = {
               'Human': 'Humans are the most adaptable and ambitious people. They get +1 to all ability scores.',
               'Elf': 'Elves are magical people of otherworldly grace. They have keen senses and a deep connection to nature.',
@@ -124,7 +131,10 @@ const CharacterCreationWizard = (function() {
             } else {
               raceDesc.style.display = 'none';
             }
-          });
+          };
+
+          raceSelect._raceChangeHandler = newHandler;
+          raceSelect.addEventListener('change', newHandler);
         }
       }
     },
@@ -176,7 +186,14 @@ const CharacterCreationWizard = (function() {
         const hitDieInfo = document.getElementById('classHitDie');
 
         if (classSelect && classDesc && hitDieInfo) {
-          classSelect.addEventListener('change', (e) => {
+          // Remove any existing listener to prevent memory leaks and duplicate handlers
+          const oldListener = classSelect._classChangeHandler;
+          if (oldListener) {
+            classSelect.removeEventListener('change', oldListener);
+          }
+
+          // Create new handler and store reference for later removal
+          const newHandler = (e) => {
             const descriptions = {
               'Fighter': 'Fighters are masters of martial combat. They excel with weapons and armor. Great for beginners!',
               'Barbarian': 'Barbarians channel their rage into devastating attacks. They have high HP and can take lots of damage.',
@@ -208,7 +225,10 @@ const CharacterCreationWizard = (function() {
               classDesc.style.display = 'none';
               hitDieInfo.style.display = 'none';
             }
-          });
+          };
+
+          classSelect._classChangeHandler = newHandler;
+          classSelect.addEventListener('change', newHandler);
         }
       }
     },
@@ -295,7 +315,14 @@ const CharacterCreationWizard = (function() {
       onShow: () => {
         const rollBtn = document.getElementById('rollAbilitiesBtn');
         if (rollBtn) {
-          rollBtn.addEventListener('click', () => {
+          // Remove any existing listener to prevent memory leaks and duplicate handlers
+          const oldListener = rollBtn._rollClickHandler;
+          if (oldListener) {
+            rollBtn.removeEventListener('click', oldListener);
+          }
+
+          // Create new handler and store reference for later removal
+          const newHandler = () => {
             const rolls = [];
             for (let i = 0; i < 6; i++) {
               const dice = [
@@ -322,7 +349,10 @@ const CharacterCreationWizard = (function() {
             }
 
             document.getElementById('abilityRolls').style.display = 'block';
-          });
+          };
+
+          rollBtn._rollClickHandler = newHandler;
+          rollBtn.addEventListener('click', newHandler);
         }
       }
     },

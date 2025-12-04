@@ -3,6 +3,17 @@ All notable changes to The DM's Toolbox are documented here.
 The format is based on Keep a Changelog,
 and this project adheres to Semantic Versioning.
 
+1.7.1 - 2025-12-04
+Character Wizard Memory Leak Fix
+
+Fixed
+
+- **Memory Leak in Character Creation Wizard** - Event listeners no longer accumulate on repeated wizard navigation
+  - Root cause: `onShow` callbacks attached new event listeners every time a step was displayed without removing old ones
+  - Affected race selection, class selection, and ability score rolling handlers
+  - Solution: Store listener references on elements and remove old listeners before attaching new ones
+  - Prevents multiple handler executions and memory bloat when navigating back/forward through wizard
+
 1.7.0 - 2025-12-04
 IndexedDB Storage Implementation
 
