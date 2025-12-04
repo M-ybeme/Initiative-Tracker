@@ -3,6 +3,18 @@ All notable changes to The DM's Toolbox are documented here.
 The format is based on Keep a Changelog,
 and this project adheres to Semantic Versioning.
 
+1.6.2 - 2025-12-04
+Character Save Bug Fixes
+
+Fixed
+
+- **Portrait Data Persistence** - Character portraits now properly save when clicking "Save Character" button
+  - Previously, uploaded portraits would be lost on save due to missing preservation logic
+  - Portrait data (`portraitType`, `portraitData`, `portraitSettings`) now explicitly preserved during save
+- **Wizard Integration** - Fixed undefined function error in Character Creation Wizard
+  - Changed `recalcAbilityModsFromForm()` to correct function name `recalcDerivedFromForm()`
+  - Wizard now properly calculates ability modifiers and derived stats
+
 1.6.1 - 2025-12-04
 Advantage/Disadvantage Button Improvements
 

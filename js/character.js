@@ -1685,7 +1685,7 @@
         if (wizardData.cha) $('statCha').value = wizardData.cha;
 
         // Trigger recalculation of derived values
-        recalcAbilityModsFromForm();
+        recalcDerivedFromForm();
         recalcSavesFromForm(false);
         recalcSkillsFromForm(false);
         recalcPassivesFromForm();
@@ -2024,10 +2024,17 @@
           char.notes = getVal('charNotes');
           char.tableNotes = getVal('charTableNotes');
           char.extraNotes = getVal('charExtraNotes');
-      
+
+          // Portrait data - preserve existing portrait data (don't overwrite with form fields)
+          // The portrait is managed through the portrait modal, not the main form
+          // So we just ensure the fields exist, but don't overwrite them here
+          if (!char.portraitType) char.portraitType = null;
+          if (!char.portraitData) char.portraitData = null;
+          if (!char.portraitSettings) char.portraitSettings = { scale: 1, offsetX: 0, offsetY: 0 };
+
           // Recalculate derived fields (mods, PB, passivePerception) based on the updated data
           recalcDerivedOnCharacter(char);
-      
+
           char.lastUpdated = new Date().toISOString();
       
           saveCharactersToStorage();
