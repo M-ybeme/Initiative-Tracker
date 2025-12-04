@@ -3,6 +3,41 @@ All notable changes to The DM's Toolbox are documented here.
 The format is based on Keep a Changelog,
 and this project adheres to Semantic Versioning.
 
+1.6.0 - 2025-12-04
+Enhanced Attack & Damage Roll System
+
+Added
+
+- **Separate Damage Roll Controls**
+  - Independent roll buttons for to-hit and damage (no more auto-rolling damage)
+  - Primary damage and secondary damage can be rolled separately
+  - Color-coded button groups: Green (Advantage/Crit) / White (Normal) / Red (Disadvantage/Half)
+- **Damage Type Labels**
+  - Attack modal now includes separate fields for damage type (slashing, radiant, fire, etc.)
+  - Primary damage type and secondary damage type fields
+  - Damage types appear in roll history for clear identification
+- **Advanced Damage Options**
+  - Critical hit button doubles dice (not modifiers) for accurate 5e crit damage
+  - Half damage button for resistance (automatically halves total and adds to roll history)
+  - Separate controls for situational damage (Divine Smite, Sneak Attack, etc.)
+- **Attack Roll Enhancements**
+  - Three-button attack system: Advantage / Normal / Disadvantage
+  - Visual feedback with green/white/red color coding
+  - Helpful UI hint: "Green = Advantage/Crit · White = Normal · Red = Disadvantage/Half"
+
+Changed
+
+- Attack rolls no longer automatically roll damage - must be triggered separately
+- Attack modal UI reorganized with dice notation separated from damage type
+- Roll history now displays damage type labels (e.g., "Longsword - slashing (CRIT!)")
+- Button layout updated to show three separate action rows per attack (To Hit / Primary Damage / Extra Damage)
+
+Fixed
+
+- Players can now choose when to apply situational damage like smites
+- Critical hit damage properly doubles dice count without doubling static modifiers
+- Resistance/half damage properly rounds down and tracks in roll history
+
 1.5.7 - 2025-12-03
 Character Creation Wizard & Mobile Optimization
 

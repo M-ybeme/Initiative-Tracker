@@ -1296,7 +1296,10 @@
                     <!-- Attacks Section -->
                     <div class="mb-3">
                       <div class="d-flex justify-content-between align-items-center mb-2">
-                        <label class="form-label mb-0 fw-bold">Attacks & Actions</label>
+                        <div>
+                          <label class="form-label mb-0 fw-bold">Attacks & Actions</label>
+                          <div class="text-muted small">Green = Advantage/Crit · White = Normal · Red = Disadvantage/Half</div>
+                        </div>
                         <button type="button" class="btn btn-sm btn-success" id="addAttackBtn">
                           <i class="bi bi-plus-circle me-1"></i>Add Attack
                         </button>
@@ -1865,13 +1868,31 @@
           </div>
 
           <div class="mb-3">
-            <label for="attackDamage" class="form-label">Damage</label>
-            <input type="text" class="form-control form-control-sm" id="attackDamage" placeholder="1d8+3 slashing, 2d6 fire..." />
+            <label class="form-label">Primary Damage</label>
+            <div class="row g-2">
+              <div class="col-7">
+                <input type="text" class="form-control form-control-sm" id="attackDamage" placeholder="1d8+3" />
+                <div class="form-text small">Dice notation (e.g., 1d8+3)</div>
+              </div>
+              <div class="col-5">
+                <input type="text" class="form-control form-control-sm" id="attackDamageType" placeholder="slashing" />
+                <div class="form-text small">Damage type</div>
+              </div>
+            </div>
           </div>
 
           <div class="mb-3">
-            <label for="attackDamage2" class="form-label">Additional Damage (optional)</label>
-            <input type="text" class="form-control form-control-sm" id="attackDamage2" placeholder="1d6 poison, 2d6 sneak attack..." />
+            <label class="form-label">Additional Damage (optional)</label>
+            <div class="row g-2">
+              <div class="col-7">
+                <input type="text" class="form-control form-control-sm" id="attackDamage2" placeholder="2d6" />
+                <div class="form-text small">Dice notation (e.g., 2d6)</div>
+              </div>
+              <div class="col-5">
+                <input type="text" class="form-control form-control-sm" id="attackDamageType2" placeholder="radiant" />
+                <div class="form-text small">Damage type</div>
+              </div>
+            </div>
           </div>
 
           <div class="mb-3">

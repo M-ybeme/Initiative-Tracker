@@ -217,7 +217,7 @@
         return result;
       }
 
-      function rollAttack(attackIndex) {
+      function rollAttack(attackIndex, rollType = 'normal') {
         if (attackIndex < 0 || attackIndex >= currentAttackList.length) return;
         const attack = currentAttackList[attackIndex];
 
@@ -225,18 +225,98 @@
         const bonusMatch = (attack.bonus || '').match(/([+-]?\d+)/);
         const toHitBonus = bonusMatch ? parseInt(bonusMatch[1], 10) : 0;
 
-        const hitResult = rollDice(`1d20${toHitBonus >= 0 ? '+' : ''}${toHitBonus}`, `${attack.name} - To Hit`);
-
-        // Auto-roll damage if hit
-        if (attack.damage) {
-          const damageResult = rollDice(attack.damage, `${attack.name} - Damage`);
-
-          if (attack.damage2) {
-            rollDice(attack.damage2, `${attack.name} - Extra Damage`);
-          }
+        let hitResult;
+        if (rollType === 'advantage') {
+          hitResult = rollWithAdvantage(toHitBonus, `${attack.name} - To Hit`);
+        } else if (rollType === 'disadvantage') {
+          hitResult = rollWithDisadvantage(toHitBonus, `${attack.name} - To Hit`);
+        } else {
+          hitResult = rollDice(`1d20${toHitBonus >= 0 ? '+' : ''}${toHitBonus}`, `${attack.name} - To Hit`);
         }
 
         return hitResult;
+      }
+
+      function rollAttackDamage(attackIndex, rollType = 'normal') {
+        if (attackIndex < 0 || attackIndex >= currentAttackList.length) return;
+        const attack = currentAttackList[attackIndex];
+        if (!attack.damage) return;
+
+        const damageType = attack.damageType || 'Damage';
+        const description = `${attack.name} - ${damageType}`;
+
+        if (rollType === 'critical') {
+          // Critical hit: double the dice (not the modifier)
+          const parsed = parseDiceNotation(attack.damage);
+          if (!parsed) {
+            console.error('Invalid dice notation:', attack.damage);
+            return null;
+          }
+
+          const { count, sides, modifier } = parsed;
+          const critCount = count * 2;
+          const critNotation = `${critCount}d${sides}${modifier >= 0 ? '+' : ''}${modifier}`;
+          return rollDice(critNotation, `${description} (CRIT!)`);
+        } else if (rollType === 'half') {
+          // Half damage (resistance)
+          const result = rollDice(attack.damage, description);
+          if (result) {
+            const halfTotal = Math.floor(result.total / 2);
+            addToRollHistory({
+              notation: 'Resistance',
+              description: `${description} (Halved)`,
+              rolls: [],
+              modifier: 0,
+              total: halfTotal,
+              timestamp: new Date().toISOString()
+            });
+          }
+          return result;
+        } else {
+          // Normal damage
+          return rollDice(attack.damage, description);
+        }
+      }
+
+      function rollAttackDamage2(attackIndex, rollType = 'normal') {
+        if (attackIndex < 0 || attackIndex >= currentAttackList.length) return;
+        const attack = currentAttackList[attackIndex];
+        if (!attack.damage2) return;
+
+        const damageType = attack.damageType2 || 'Extra Damage';
+        const description = `${attack.name} - ${damageType}`;
+
+        if (rollType === 'critical') {
+          // Critical hit: double the dice (not the modifier)
+          const parsed = parseDiceNotation(attack.damage2);
+          if (!parsed) {
+            console.error('Invalid dice notation:', attack.damage2);
+            return null;
+          }
+
+          const { count, sides, modifier } = parsed;
+          const critCount = count * 2;
+          const critNotation = `${critCount}d${sides}${modifier >= 0 ? '+' : ''}${modifier}`;
+          return rollDice(critNotation, `${description} (CRIT!)`);
+        } else if (rollType === 'half') {
+          // Half damage (resistance)
+          const result = rollDice(attack.damage2, description);
+          if (result) {
+            const halfTotal = Math.floor(result.total / 2);
+            addToRollHistory({
+              notation: 'Resistance',
+              description: `${description} (Halved)`,
+              rolls: [],
+              modifier: 0,
+              total: halfTotal,
+              timestamp: new Date().toISOString()
+            });
+          }
+          return result;
+        } else {
+          // Normal damage
+          return rollDice(attack.damage2, description);
+        }
       }
 
       function rollDeathSave() {
@@ -1125,10 +1205,77 @@
 
           let damageInfo = '';
           if (attack.damage) {
-            damageInfo += `<span class="text-info">${attack.damage}</span>`;
+            const dmgType = attack.damageType ? ` ${attack.damageType}` : '';
+            damageInfo += `<span class="text-info">${attack.damage}${dmgType}</span>`;
           }
           if (attack.damage2) {
-            damageInfo += ` + <span class="text-info">${attack.damage2}</span>`;
+            const dmgType2 = attack.damageType2 ? ` ${attack.damageType2}` : '';
+            damageInfo += ` + <span class="text-info">${attack.damage2}${dmgType2}</span>`;
+          }
+
+          // Build roll buttons
+          let rollButtons = '';
+
+          // To Hit buttons (if attack has a bonus)
+          if (attack.bonus) {
+            rollButtons += `
+              <div class="mb-1">
+                <span class="text-muted small me-1">To Hit:</span>
+                <div class="btn-group btn-group-sm" role="group">
+                  <button type="button" class="btn btn-success" data-attack-roll="${index}" data-roll-type="advantage" title="Attack with Advantage">
+                    <i class="bi bi-dice-5"></i>
+                  </button>
+                  <button type="button" class="btn btn-outline-light" data-attack-roll="${index}" data-roll-type="normal" title="Normal Attack">
+                    <i class="bi bi-dice-5"></i>
+                  </button>
+                  <button type="button" class="btn btn-danger" data-attack-roll="${index}" data-roll-type="disadvantage" title="Attack with Disadvantage">
+                    <i class="bi bi-dice-5"></i>
+                  </button>
+                </div>
+              </div>
+            `;
+          }
+
+          // Primary Damage buttons
+          if (attack.damage) {
+            const damageLabel = attack.damageType ? attack.damageType : 'Damage';
+            rollButtons += `
+              <div class="mb-1">
+                <span class="text-muted small me-1">${damageLabel}:</span>
+                <div class="btn-group btn-group-sm" role="group">
+                  <button type="button" class="btn btn-success" data-damage-roll="${index}" data-roll-type="critical" title="Critical Hit (double dice)">
+                    <i class="bi bi-heart-fill"></i>
+                  </button>
+                  <button type="button" class="btn btn-outline-light" data-damage-roll="${index}" data-roll-type="normal" title="Normal Damage">
+                    <i class="bi bi-heart-fill"></i>
+                  </button>
+                  <button type="button" class="btn btn-danger" data-damage-roll="${index}" data-roll-type="half" title="Half Damage (resistance)">
+                    <i class="bi bi-heart-fill"></i>
+                  </button>
+                </div>
+              </div>
+            `;
+          }
+
+          // Additional Damage buttons
+          if (attack.damage2) {
+            const damage2Label = attack.damageType2 ? attack.damageType2 : 'Extra';
+            rollButtons += `
+              <div class="mb-1">
+                <span class="text-muted small me-1">${damage2Label}:</span>
+                <div class="btn-group btn-group-sm" role="group">
+                  <button type="button" class="btn btn-success" data-damage2-roll="${index}" data-roll-type="critical" title="Critical Hit (double dice)">
+                    <i class="bi bi-heart-fill"></i>
+                  </button>
+                  <button type="button" class="btn btn-outline-light" data-damage2-roll="${index}" data-roll-type="normal" title="Normal Damage">
+                    <i class="bi bi-heart-fill"></i>
+                  </button>
+                  <button type="button" class="btn btn-danger" data-damage2-roll="${index}" data-roll-type="half" title="Half Damage (resistance)">
+                    <i class="bi bi-heart-fill"></i>
+                  </button>
+                </div>
+              </div>
+            `;
           }
 
           li.innerHTML = `
@@ -1136,16 +1283,14 @@
               <div class="flex-grow-1">
                 <div class="mb-1">
                   <strong>${attack.name || 'Unnamed Attack'}</strong>
-                  <button type="button" class="btn btn-sm btn-success ms-2" data-attack-roll="${index}" title="Roll attack">
-                    <i class="bi bi-dice-5"></i> Roll
-                  </button>
                 </div>
                 <div class="small mb-1">${attackInfo}</div>
                 ${hitInfo ? `<div class="mb-1">${hitInfo}</div>` : ''}
                 ${damageInfo ? `<div class="mb-1">${damageInfo}</div>` : ''}
-                ${attack.properties ? `<div class="small text-muted">${attack.properties}</div>` : ''}
+                ${rollButtons}
+                ${attack.properties ? `<div class="small text-muted mt-1">${attack.properties}</div>` : ''}
               </div>
-              <div class="d-flex gap-1 ms-2">
+              <div class="d-flex flex-column gap-1 ms-2">
                 <button type="button" class="btn btn-sm btn-outline-light" data-attack-edit="${index}">
                   <i class="bi bi-pencil"></i>
                 </button>
@@ -1171,7 +1316,9 @@
         $('attackBonus').value = '';
         $('attackSaveDC').value = '';
         $('attackDamage').value = '';
+        $('attackDamageType').value = '';
         $('attackDamage2').value = '';
+        $('attackDamageType2').value = '';
         $('attackProperties').value = '';
 
         if (editIndex !== null && currentAttackList[editIndex]) {
@@ -1184,7 +1331,9 @@
           $('attackBonus').value = attack.bonus || '';
           $('attackSaveDC').value = attack.saveDC || '';
           $('attackDamage').value = attack.damage || '';
+          $('attackDamageType').value = attack.damageType || '';
           $('attackDamage2').value = attack.damage2 || '';
+          $('attackDamageType2').value = attack.damageType2 || '';
           $('attackProperties').value = attack.properties || '';
           $('attackModalLabel').textContent = 'Edit Attack';
         } else {
@@ -1205,7 +1354,9 @@
           bonus: ($('attackBonus').value || '').trim(),
           saveDC: ($('attackSaveDC').value || '').trim(),
           damage: ($('attackDamage').value || '').trim(),
+          damageType: ($('attackDamageType').value || '').trim(),
           damage2: ($('attackDamage2').value || '').trim(),
+          damageType2: ($('attackDamageType2').value || '').trim(),
           properties: ($('attackProperties').value || '').trim()
         };
 
@@ -2555,11 +2706,28 @@
             rollSavingThrow(ability, rollType);
           }
 
-          // Attack roll buttons
+          // Attack roll buttons (to hit)
           const attackBtn = e.target.closest('[data-attack-roll]');
           if (attackBtn) {
             const index = parseInt(attackBtn.getAttribute('data-attack-roll'), 10);
-            rollAttack(index);
+            const rollType = attackBtn.getAttribute('data-roll-type') || 'normal';
+            rollAttack(index, rollType);
+          }
+
+          // Primary damage roll buttons
+          const damageBtn = e.target.closest('[data-damage-roll]');
+          if (damageBtn) {
+            const index = parseInt(damageBtn.getAttribute('data-damage-roll'), 10);
+            const rollType = damageBtn.getAttribute('data-roll-type') || 'normal';
+            rollAttackDamage(index, rollType);
+          }
+
+          // Secondary damage roll buttons
+          const damage2Btn = e.target.closest('[data-damage2-roll]');
+          if (damage2Btn) {
+            const index = parseInt(damage2Btn.getAttribute('data-damage2-roll'), 10);
+            const rollType = damage2Btn.getAttribute('data-roll-type') || 'normal';
+            rollAttackDamage2(index, rollType);
           }
 
           // Death save roll button
