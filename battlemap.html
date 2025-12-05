@@ -260,13 +260,16 @@
               <div class="accordion-body">
                 <div class="group">
                   <div class="row-inline">
+                    <button id="saveSession">Save Session</button>
                     <button id="exportJson">Export JSON</button>
+                  </div>
+                  <div class="row-inline">
                     <input id="importJsonFile" type="file" accept="application/json" />
                   </div>
                   <div class="row-inline">
                     <button id="resetAll" title="Clear map and tokens">Reset</button>
                   </div>
-                  <div class="muted">State saves to localStorage automatically.</div>
+                  <div class="muted">Click "Save Session" to save your progress. Session auto-loads on page refresh.</div>
                 </div>
               </div>
             </div>
@@ -289,6 +292,134 @@
             </div>
           </div>
 
+          <!-- Help -->
+          <div class="accordion-item">
+            <h2 class="accordion-header" id="accHelpHdr">
+              <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#accHelp">
+                Help
+              </button>
+            </h2>
+            <div id="accHelp" class="accordion-collapse collapse" data-bs-parent="#bmAccordion">
+              <div class="accordion-body">
+                <div class="group">
+                  <h3>Getting Started</h3>
+                  <div class="muted" style="line-height: 1.5;">
+                    1. Upload a battle map image<br>
+                    2. Adjust grid size to match your map<br>
+                    3. Use calibration if your map has a printed grid<br>
+                    4. Add tokens from presets or upload custom images<br>
+                    5. Enable fog of war and start revealing areas
+                  </div>
+                </div>
+
+                <hr class="text-secondary"/>
+                <div class="group">
+                  <h3>Navigation</h3>
+                  <div class="muted" style="line-height: 1.5;">
+                    <strong>Pan:</strong> Space+Drag or Middle Mouse Button<br>
+                    <strong>Zoom:</strong> Mouse Wheel<br>
+                    <strong>Pinch Zoom:</strong> Two fingers on touchscreen<br>
+                    <strong>Center/Fit:</strong> Use buttons in Map & Grid section
+                  </div>
+                </div>
+
+                <hr class="text-secondary"/>
+                <div class="group">
+                  <h3>Tokens</h3>
+                  <div class="muted" style="line-height: 1.5;">
+                    <strong>Add:</strong> Choose preset or upload image, then click "Add Token"<br>
+                    <strong>Move:</strong> Click and drag<br>
+                    <strong>Rotate:</strong> Select token, press R<br>
+                    <strong>Resize:</strong> Select token, press +/- keys<br>
+                    <strong>Delete:</strong> Select token, press Delete/Backspace<br>
+                    <strong>Right-click:</strong> Context menu (rename, duplicate, etc.)<br>
+                    <strong>Snap to Grid:</strong> Enable checkbox for auto-alignment
+                  </div>
+                </div>
+
+                <hr class="text-secondary"/>
+                <div class="group">
+                  <h3>Fog of War</h3>
+                  <div class="muted" style="line-height: 1.5;">
+                    <strong>Enable:</strong> Click "Fog: Off" to turn on<br>
+                    <strong>Reveal Mode:</strong> Erase fog to show areas<br>
+                    <strong>Cover Mode:</strong> Paint fog to hide areas<br>
+                    <strong>Brush:</strong> Shift+Drag (desktop) or "Brush Mode" button (mobile)<br>
+                    <strong>Brush Size:</strong> Adjust with Brush input field<br>
+                    <strong>Clear All:</strong> Removes all fog and shapes
+                  </div>
+                </div>
+
+                <hr class="text-secondary"/>
+                <div class="group">
+                  <h3>Fog Shapes</h3>
+                  <div class="muted" style="line-height: 1.5;">
+                    <strong>Types:</strong> Rectangle, Square, Circle<br>
+                    <strong>Modes:</strong> Reveal (shows map) or Cover (hides with color)<br>
+                    <strong>Color:</strong> Pick any color (default: black for fog effect)<br>
+                    <strong>Size:</strong> Set in grid cells (1-20) before adding<br>
+                    <strong>Add:</strong> Configure settings, click "Add Shape"<br>
+                    <strong>Move:</strong> Click and drag shape interior<br>
+                    <strong>Resize (Keyboard):</strong> Select shape, press +/- keys<br>
+                    <strong>Resize (Mouse):</strong> Drag corner or edge handles on rectangles/squares<br>
+                    <strong>Delete:</strong> Select shape, press Delete or click "Delete Shape"<br>
+                    <strong>Visibility:</strong> Shapes render on top of tokens<br>
+                    <strong>Saving:</strong> Use Ctrl+S or "Save Session" button<br>
+                    <em>Shapes are perfect for quickly covering/revealing large areas without painting!</em>
+                  </div>
+                </div>
+
+                <hr class="text-secondary"/>
+                <div class="group">
+                  <h3>Measurement</h3>
+                  <div class="muted" style="line-height: 1.5;">
+                    <strong>Desktop:</strong> Hold Alt, click and drag<br>
+                    <strong>Mobile:</strong> Toggle "Measure" button<br>
+                    Shows distance in feet and grid cells
+                  </div>
+                </div>
+
+                <hr class="text-secondary"/>
+                <div class="group">
+                  <h3>Grid Calibration</h3>
+                  <div class="muted" style="line-height: 1.5;">
+                    <strong>When to use:</strong> Your map has a printed grid<br>
+                    <strong>How:</strong> Enter number of cells, click "Start Calibration"<br>
+                    Click two grid intersections that distance apart<br>
+                    <strong>Grid Origin:</strong> Set (0,0) point for alignment<br>
+                    <strong>Snap to Map:</strong> Align grid to clicked intersection
+                  </div>
+                </div>
+
+                <hr class="text-secondary"/>
+                <div class="group">
+                  <h3>Saving & Loading</h3>
+                  <div class="muted" style="line-height: 1.5;">
+                    <strong>Manual Save:</strong> Click "Save Session" or press Ctrl+S<br>
+                    <strong>When to Save:</strong> After placing tokens, shapes, or adjusting fog<br>
+                    <strong>Export JSON:</strong> Download your session as file<br>
+                    <strong>Import JSON:</strong> Load a saved session file<br>
+                    <strong>Reset:</strong> Clear everything and start fresh<br>
+                    <em>Note: Manual saves prevent slowdown during grid adjustments!</em>
+                  </div>
+                </div>
+
+                <hr class="text-secondary"/>
+                <div class="group">
+                  <h3>Tips & Tricks</h3>
+                  <div class="muted" style="line-height: 1.5;">
+                    • Use black fog shapes to match fog of war perfectly<br>
+                    • Use colored shapes to mark special zones (traps, auras, etc.)<br>
+                    • Combine brush and shapes for precise fog control<br>
+                    • Export your session before major changes<br>
+                    • Grid size affects token and shape sizing<br>
+                    • On mobile: Use toggle buttons for brush/measure modes
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
         </div>
         <!-- /accordion -->
       </div>
@@ -304,6 +435,23 @@
           <input id="fogBrush" type="number" min="5" max="400" step="5" value="80" style="width:90px" disabled>
         </label>
         <button id="fogClear" disabled>Clear Fog</button>
+
+        <!-- NEW: Fog shape controls -->
+        <label class="ms-2">Shape
+          <select id="fogShapeType" style="width:110px" disabled>
+            <option value="rect">Rectangle</option>
+            <option value="square">Square</option>
+            <option value="circle">Circle</option>
+          </select>
+        </label>
+        <label class="ms-2">Color
+          <input id="fogShapeColor" type="color" value="#000000" disabled />
+        </label>
+        <label class="ms-2">Size (cells)
+          <input id="fogShapeSize" type="number" min="1" max="20" step="0.5" value="3" style="width:90px" disabled>
+        </label>
+        <button id="addFogShape" disabled>Add Shape</button>
+        <button id="deleteFogShape" disabled>Delete Shape</button>
 
         <!-- NEW: Mobile-friendly mode toggles -->
         <button id="fogBrushMode" aria-pressed="false" title="Toggle brush mode for touch/mobile">Brush Mode</button>
@@ -432,18 +580,22 @@
       calib:{p1:null,p2:null},
       measuring:false, measureStart:null,
       brushMode:false,        // NEW: mobile fog brush
-      measureToggle:false     // NEW: mobile measure
+      measureToggle:false,     // NEW: mobile measure
+      fogShapeDragId: null    // NEW: dragging fog shape
     }
   };
 
   // --- Fog of War layer (image-space bitmap, aligns with map image)
   const fog = document.createElement('canvas');
   const fctx = fog.getContext('2d', { alpha:true });
-  const fogState = { enabled:false, brush:80, mode:'reveal', painting:false };
+  const fogState = { enabled:false, brush:80, mode:'reveal', painting:false, shapeType:'rect', shapeColor:'#000000', shapeSize:3 };
+
+  /** @typedef {{ id:string, type:'rect'|'circle', x:number, y:number, w?:number, h?:number, r?:number, mode:'reveal'|'cover', color:string, selected?:boolean }} FogShape */
+  const fogShapes = /** @type{FogShape[]} */([]);
 
   function setFogUI(enabled) {
     document.getElementById('toggleFog').textContent = enabled ? 'Fog: On' : 'Fog: Off';
-    ['fogReveal','fogCover','fogBrush','fogClear'].forEach(id=>{
+    ['fogReveal','fogCover','fogBrush','fogClear','fogShapeType','fogShapeColor','fogShapeSize','addFogShape','deleteFogShape'].forEach(id=>{
       document.getElementById(id).disabled = !enabled;
     });
     document.getElementById('fogReveal').classList.toggle('active', enabled && fogState.mode==='reveal');
@@ -504,8 +656,23 @@
       fogState: {
         enabled: fogState.enabled,
         mode: fogState.mode,
-        brush: fogState.brush
-      }
+        brush: fogState.brush,
+        shapeType: fogState.shapeType,
+        shapeColor: fogState.shapeColor,
+        shapeSize: fogState.shapeSize
+      },
+      fogShapes: fogShapes.map(s => ({
+        id: s.id,
+        type: s.type,
+        x: s.x,
+        y: s.y,
+        w: s.w,
+        h: s.h,
+        r: s.r,
+        mode: s.mode,
+        color: s.color,
+        selected: !!s.selected
+      }))
     };
 
     if (USE_INDEXED_DB) {
@@ -585,8 +752,33 @@
         fogState.brush = typeof data.fogState.brush === 'number'
           ? data.fogState.brush
           : fogState.brush;
+        fogState.shapeType = data.fogState.shapeType || fogState.shapeType;
+        fogState.shapeColor = data.fogState.shapeColor || fogState.shapeColor;
+        fogState.shapeSize = typeof data.fogState.shapeSize === 'number'
+          ? data.fogState.shapeSize
+          : fogState.shapeSize;
         setFogUI(fogState.enabled);
         document.getElementById('fogBrush').value = fogState.brush;
+        document.getElementById('fogShapeType').value = fogState.shapeType;
+        document.getElementById('fogShapeColor').value = fogState.shapeColor;
+        document.getElementById('fogShapeSize').value = fogState.shapeSize;
+      }
+
+      // Restore fog shapes if present
+      if (data.fogShapes) {
+        fogShapes.length = 0;
+        fogShapes.push(...data.fogShapes.map(s => ({
+          id: s.id,
+          type: s.type,
+          x: s.x,
+          y: s.y,
+          w: s.w,
+          h: s.h,
+          r: s.r,
+          mode: s.mode,
+          color: s.color || '#000000',
+          selected: !!s.selected
+        })));
       }
 
       if (data.map?.imgSrc) {
@@ -598,9 +790,17 @@
             h: img.naturalHeight
           };
           ensureFogSize();
-          if (data.fog) { drawDataUrlToCanvas(data.fog, fog); }
+          if (data.fog) {
+            drawDataUrlToCanvas(data.fog, fog);
+          } else {
+            // No saved fog bitmap, render shapes if present
+            renderFogShapes();
+          }
           // IMPORTANT: do NOT call fitMap(); keep saved view/pan/zoom
         });
+      } else {
+        // No map, but render fog shapes if present
+        renderFogShapes();
       }
 
       state.tokens.forEach(t => {
@@ -661,6 +861,12 @@
         }
         ctx.restore();
       }
+    }
+
+    // Fog shapes (drawn after tokens so they appear on top)
+    if(fogState.enabled){
+      drawFogShapes();
+      drawFogShapeOutlines();
     }
 
     // Measuring overlay
@@ -738,7 +944,7 @@
     const { width:W, height:H } = canvas;
     state.view.x = (W - state.map.w*state.view.scale)/2;
     state.view.y = (H - state.map.h*state.view.scale)/2;
-    setStatus('Centered'); save();
+    setStatus('Centered');
   }
   function fitMap(){
     if(!state.map.img) return;
@@ -759,6 +965,67 @@
       const c = Math.cos(-(t.rot||0)), s = Math.sin(-(t.rot||0));
       const rx = dx*c - dy*s, ry = dx*s + dy*c;
       if(Math.abs(rx) <= t.w/2 && Math.abs(ry) <= t.h/2){ return t; }
+    }
+    return null;
+  }
+
+  function hitFogShape(wx, wy){
+    // Convert world coords to image coords
+    const ip = worldToImage(wx, wy);
+
+    // Check shapes in reverse order (top to bottom)
+    for(let i = fogShapes.length - 1; i >= 0; i--){
+      const shape = fogShapes[i];
+
+      if(shape.type === 'rect'){
+        if(ip.x >= shape.x && ip.x <= shape.x + shape.w &&
+           ip.y >= shape.y && ip.y <= shape.y + shape.h){
+          return shape;
+        }
+      } else if(shape.type === 'circle'){
+        const cx = shape.x + shape.r;
+        const cy = shape.y + shape.r;
+        const dist = Math.hypot(ip.x - cx, ip.y - cy);
+        if(dist <= shape.r){
+          return shape;
+        }
+      }
+    }
+    return null;
+  }
+
+  /**
+   * Check if world coordinates hit a resize handle of a fog shape
+   * Returns: {shape, handle} where handle is: 'nw', 'ne', 'sw', 'se', 'n', 's', 'e', 'w', or null
+   */
+  function hitFogShapeHandle(wx, wy){
+    const ip = worldToImage(wx, wy);
+    const handleSize = 10 / state.view.scale / state.mapTransform.scale; // Handle size in image space
+
+    // Check shapes in reverse order (only check rectangles, not circles)
+    for(let i = fogShapes.length - 1; i >= 0; i--){
+      const shape = fogShapes[i];
+
+      if(shape.type === 'rect'){
+        const x1 = shape.x;
+        const y1 = shape.y;
+        const x2 = shape.x + shape.w;
+        const y2 = shape.y + shape.h;
+        const centerX = (x1 + x2) / 2;
+        const centerY = (y1 + y2) / 2;
+
+        // Check corner handles first
+        if(Math.hypot(ip.x - x1, ip.y - y1) <= handleSize) return {shape, handle: 'nw'};
+        if(Math.hypot(ip.x - x2, ip.y - y1) <= handleSize) return {shape, handle: 'ne'};
+        if(Math.hypot(ip.x - x1, ip.y - y2) <= handleSize) return {shape, handle: 'sw'};
+        if(Math.hypot(ip.x - x2, ip.y - y2) <= handleSize) return {shape, handle: 'se'};
+
+        // Check edge handles
+        if(Math.abs(ip.x - centerX) <= handleSize && Math.abs(ip.y - y1) <= handleSize) return {shape, handle: 'n'};
+        if(Math.abs(ip.x - centerX) <= handleSize && Math.abs(ip.y - y2) <= handleSize) return {shape, handle: 's'};
+        if(Math.abs(ip.y - centerY) <= handleSize && Math.abs(ip.x - x1) <= handleSize) return {shape, handle: 'w'};
+        if(Math.abs(ip.y - centerY) <= handleSize && Math.abs(ip.x - x2) <= handleSize) return {shape, handle: 'e'};
+      }
     }
     return null;
   }
@@ -849,7 +1116,7 @@
         state.grid.offsetY = state.grid.offsetY + (state.ui.calib.p1.y - Math.round((state.ui.calib.p1.y - state.grid.offsetY)/state.grid.size)*state.grid.size);
         gridOffsetXEl.value = Math.round(state.grid.offsetX);
         gridOffsetYEl.value = Math.round(state.grid.offsetY);
-        state.ui.tool = 'none'; calibStatusEl.textContent = `Calibrated: ${state.grid.size.toFixed(2)} px/cell`; save();
+        state.ui.tool = 'none'; calibStatusEl.textContent = `Calibrated: ${state.grid.size.toFixed(2)} px/cell`;
       }
       return;
     }
@@ -857,7 +1124,7 @@
       state.grid.offsetX = wpt.x; state.grid.offsetY = wpt.y;
       gridOffsetXEl.value = Math.round(state.grid.offsetX);
       gridOffsetYEl.value = Math.round(state.grid.offsetY);
-      state.ui.tool = 'none'; calibStatusEl.textContent = 'Origin set'; save(); return;
+      state.ui.tool = 'none'; calibStatusEl.textContent = 'Origin set'; return;
     }
     if(state.ui.tool === 'snapOrigin'){
       const size = state.grid.size;
@@ -865,14 +1132,44 @@
       state.grid.offsetY = wpt.y - Math.round(wpt.y/size)*size;
       gridOffsetXEl.value = Math.round(state.grid.offsetX);
       gridOffsetYEl.value = Math.round(state.grid.offsetY);
-      state.ui.tool = 'none'; calibStatusEl.textContent = 'Aligned to clicked intersection'; save(); return;
+      state.ui.tool = 'none'; calibStatusEl.textContent = 'Aligned to clicked intersection'; return;
     }
 
-    const token = hitToken(wpt.x, wpt.y);
+    // Check for fog shape handle hit first (if fog enabled and not in pan mode)
     const panMode = state.ui.spaceDown || e.button === 1;
+    const handleHit = fogState.enabled && !panMode ? hitFogShapeHandle(wpt.x, wpt.y) : null;
+    const fogShape = !handleHit && fogState.enabled && !panMode ? hitFogShape(wpt.x, wpt.y) : null;
+    const token = hitToken(wpt.x, wpt.y);
 
-    if(!panMode && token){
+    if(!panMode && handleHit){
+      // Resize handle interaction
+      const {shape, handle} = handleHit;
+      fogShapes.forEach(s=> s.selected = false);
       state.tokens.forEach(t=> t.selected = false);
+      shape.selected = true;
+      state.ui.dragMode = 'fogShapeResize';
+      state.ui.fogShapeDragId = shape.id;
+      state.ui.resizeHandle = handle;
+      state.ui.resizeStart = worldToImage(wpt.x, wpt.y);
+      state.ui.originalShape = {x: shape.x, y: shape.y, w: shape.w, h: shape.h};
+      hideMenu();
+      setStatus(`Resizing fog shape (${handle})`);
+      updateTokenList();
+    } else if(!panMode && fogShape){
+      // Fog shape interaction takes priority when fog is enabled
+      fogShapes.forEach(s=> s.selected = false);
+      state.tokens.forEach(t=> t.selected = false);
+      fogShape.selected = true;
+      state.ui.dragMode = 'fogShape';
+      state.ui.fogShapeDragId = fogShape.id;
+      const ip = worldToImage(wpt.x, wpt.y);
+      state.ui.dragOffset = { x: ip.x - fogShape.x, y: ip.y - fogShape.y };
+      hideMenu();
+      setStatus(`Dragging fog shape`);
+      updateTokenList();
+    } else if(!panMode && token){
+      state.tokens.forEach(t=> t.selected = false);
+      fogShapes.forEach(s=> s.selected = false);
       token.selected = true;
       state.ui.dragMode = 'token';
       state.ui.dragId = token.id;
@@ -882,6 +1179,7 @@
       updateTokenList();
     } else {
       state.tokens.forEach(t=> t.selected = false);
+      fogShapes.forEach(s=> s.selected = false);
       state.ui.dragMode = 'pan';
       hideMenu();
       setStatus('Panning');
@@ -933,6 +1231,53 @@
 
     if(state.ui.measuring) return; // render handles the line
 
+    if(state.ui.dragMode === 'fogShapeResize' && state.ui.fogShapeDragId){
+      const shape = fogShapes.find(s=> s.id === state.ui.fogShapeDragId);
+      if(shape && shape.type === 'rect'){
+        const ip = worldToImage(wpt.x, wpt.y);
+        const handle = state.ui.resizeHandle;
+        const orig = state.ui.originalShape;
+        const delta = {x: ip.x - state.ui.resizeStart.x, y: ip.y - state.ui.resizeStart.y};
+
+        // Apply resize based on which handle is being dragged
+        if(handle.includes('n')){ // North handles
+          shape.y = orig.y + delta.y;
+          shape.h = orig.h - delta.y;
+        }
+        if(handle.includes('s')){ // South handles
+          shape.h = orig.h + delta.y;
+        }
+        if(handle.includes('w')){ // West handles
+          shape.x = orig.x + delta.x;
+          shape.w = orig.w - delta.x;
+        }
+        if(handle.includes('e')){ // East handles
+          shape.w = orig.w + delta.x;
+        }
+
+        // Ensure minimum size
+        const minSize = 10;
+        if(shape.w < minSize){
+          if(handle.includes('w')) shape.x = orig.x + orig.w - minSize;
+          shape.w = minSize;
+        }
+        if(shape.h < minSize){
+          if(handle.includes('n')) shape.y = orig.y + orig.h - minSize;
+          shape.h = minSize;
+        }
+
+        renderFogShapes(); // Re-render fog canvas
+      }
+    }
+    if(state.ui.dragMode === 'fogShape' && state.ui.fogShapeDragId){
+      const shape = fogShapes.find(s=> s.id === state.ui.fogShapeDragId);
+      if(shape){
+        const ip = worldToImage(wpt.x, wpt.y);
+        shape.x = ip.x - state.ui.dragOffset.x;
+        shape.y = ip.y - state.ui.dragOffset.y;
+        renderFogShapes(); // Re-render fog canvas
+      }
+    }
     if(state.ui.dragMode === 'token' && state.ui.dragId){
       const t = state.tokens.find(t=> t.id === state.ui.dragId);
       if(t){ t.x = wpt.x - state.ui.dragOffset.x; t.y = wpt.y - state.ui.dragOffset.y; }
@@ -964,7 +1309,6 @@
 
     if (fogState.painting) {
       fogState.painting = false;
-      save();
       return;
     }
 
@@ -985,9 +1329,16 @@
         t.y = Math.round(t.y / s) * s;
       }
     }
+    if(state.ui.dragMode === 'fogShape' || state.ui.dragMode === 'fogShapeResize'){
+      // Fog shape dragging/resizing completed, save changes
+      renderFogShapes();
+    }
     state.ui.dragMode = 'none';
     state.ui.dragId = null;
-    save();
+    state.ui.fogShapeDragId = null;
+    state.ui.resizeHandle = null;
+    state.ui.resizeStart = null;
+    state.ui.originalShape = null;
     setStatus('Ready');
   });
 
@@ -1007,7 +1358,6 @@
 
     if (fogState.painting) {
       fogState.painting = false;
-      save();
     }
 
     state.ui.dragMode = 'none';
@@ -1065,21 +1415,56 @@
     } else if (cmd==='delete'){
       state.tokens = state.tokens.filter(x=>!x.selected);
     }
-    hideMenu(); updateTokenList(); save();
+    hideMenu(); updateTokenList();
   });
 
   window.addEventListener('keydown', (e)=>{
     if(e.code === 'Space') { state.ui.spaceDown = true; canvas.classList.add('dragging'); }
-    if(e.key === 'Delete' || e.key === 'Backspace') { deleteSelected(); }
-    if(e.key === 'Escape'){ state.tokens.forEach(t=> t.selected = false); updateTokenList(); hideMenu(); }
+    if(e.key === 'Delete' || e.key === 'Backspace') {
+      deleteSelected();
+      deleteSelectedFogShapes();
+    }
+    if(e.key === 'Escape'){
+      state.tokens.forEach(t=> t.selected = false);
+      fogShapes.forEach(s=> s.selected = false);
+      updateTokenList();
+      hideMenu();
+    }
     if(e.altKey){ state.ui.measuring = true; }
+
+    // Handle fog shape resizing
+    const fs = fogShapes.find(x=>x.selected);
+    if(fs){
+      if(e.key === '+' || e.key === '='){
+        if(fs.type === 'rect'){
+          fs.w *= 1.1;
+          fs.h *= 1.1;
+        } else if(fs.type === 'circle'){
+          fs.r *= 1.1;
+        }
+        renderFogShapes();
+        return;
+      }
+      if(e.key === '-' || e.key === '_'){
+        if(fs.type === 'rect'){
+          fs.w *= 0.9;
+          fs.h *= 0.9;
+        } else if(fs.type === 'circle'){
+          fs.r *= 0.9;
+        }
+        renderFogShapes();
+        return;
+      }
+    }
+
+    // Handle token operations
     const t = state.tokens.find(x=>x.selected);
     if(!t) return;
-    if(e.key === 'r' || e.key === 'R'){ t.rot = (t.rot||0) + (Math.PI/12); save(); }
-    if(e.key === '+'){ t.w*=1.1; t.h*=1.1; save(); }
-    if(e.key === '-'){ t.w*=0.9; t.h*=0.9; save(); }
-    if(e.key === '['){ const i=state.tokens.indexOf(t); if(i>0){ state.tokens.splice(i,1); state.tokens.splice(i-1,0,t); save(); } }
-    if(e.key === ']'){ const i=state.tokens.indexOf(t); if(i>=0 && i<state.tokens.length-1){ state.tokens.splice(i,1); state.tokens.splice(i+1,0,t); save(); } }
+    if(e.key === 'r' || e.key === 'R'){ t.rot = (t.rot||0) + (Math.PI/12); }
+    if(e.key === '+'){ t.w*=1.1; t.h*=1.1; }
+    if(e.key === '-'){ t.w*=0.9; t.h*=0.9; }
+    if(e.key === '['){ const i=state.tokens.indexOf(t); if(i>0){ state.tokens.splice(i,1); state.tokens.splice(i-1,0,t); } }
+    if(e.key === ']'){ const i=state.tokens.indexOf(t); if(i>=0 && i<state.tokens.length-1){ state.tokens.splice(i,1); state.tokens.splice(i+1,0,t); } }
   });
   window.addEventListener('keyup', (e)=>{
     if(e.code === 'Space'){ state.ui.spaceDown = false; canvas.classList.remove('dragging'); }
@@ -1088,7 +1473,7 @@
     }
     // If Shift released mid-stroke and Brush Mode is OFF, stop fog painting
     if(!e.shiftKey && fogState.painting && !state.ui.brushMode){
-      fogState.painting = false; save();
+      fogState.painting = false;
     }
   });
 
@@ -1104,28 +1489,28 @@
     fctx.clearRect(0,0,fog.width,fog.height);
     fitMap(); save();
   });
-  document.getElementById('gridSize').addEventListener('input', (e)=>{ state.grid.size = clamp(parseFloat(e.target.value)||50, 4, 256); save(); });
-  document.getElementById('unitsPerCell').addEventListener('input', (e)=>{ state.grid.unitsPerCell = Math.max(1, parseFloat(e.target.value)||5); save(); });
-  document.getElementById('gridColor').addEventListener('input', (e)=>{ state.grid.color = e.target.value; save(); });
-  document.getElementById('gridAlpha').addEventListener('input', (e)=>{ state.grid.alpha = clamp(parseFloat(e.target.value)||0.35, 0, 1); save(); });
-  document.getElementById('showGrid').addEventListener('change', (e)=>{ state.grid.show = e.target.checked; save(); });
+  document.getElementById('gridSize').addEventListener('input', (e)=>{ state.grid.size = clamp(parseFloat(e.target.value)||50, 4, 256); });
+  document.getElementById('unitsPerCell').addEventListener('input', (e)=>{ state.grid.unitsPerCell = Math.max(1, parseFloat(e.target.value)||5); });
+  document.getElementById('gridColor').addEventListener('input', (e)=>{ state.grid.color = e.target.value; });
+  document.getElementById('gridAlpha').addEventListener('input', (e)=>{ state.grid.alpha = clamp(parseFloat(e.target.value)||0.35, 0, 1); });
+  document.getElementById('showGrid').addEventListener('change', (e)=>{ state.grid.show = e.target.checked; });
 
   // Map transform inputs (unique names to avoid redeclare)
   const mapScaleInput  = document.getElementById('mapScale');
   const mapOffsetXInput = document.getElementById('mapOffsetX');
   const mapOffsetYInput = document.getElementById('mapOffsetY');
-  mapScaleInput.addEventListener('input', (e)=>{ state.mapTransform.scale = clamp((parseFloat(e.target.value)||100)/100, 0.1, 4); save(); });
-  mapOffsetXInput.addEventListener('input', (e)=>{ state.mapTransform.x = parseFloat(e.target.value)||0; save(); });
-  mapOffsetYInput.addEventListener('input', (e)=>{ state.mapTransform.y = parseFloat(e.target.value)||0; save(); });
+  mapScaleInput.addEventListener('input', (e)=>{ state.mapTransform.scale = clamp((parseFloat(e.target.value)||100)/100, 0.1, 4); });
+  mapOffsetXInput.addEventListener('input', (e)=>{ state.mapTransform.x = parseFloat(e.target.value)||0; });
+  mapOffsetYInput.addEventListener('input', (e)=>{ state.mapTransform.y = parseFloat(e.target.value)||0; });
   document.getElementById('resetMapTransform').addEventListener('click', ()=>{
-    state.mapTransform = { scale:1, x:0, y:0 }; mapScaleInput.value = 100; mapOffsetXInput.value = 0; mapOffsetYInput.value = 0; save();
+    state.mapTransform = { scale:1, x:0, y:0 }; mapScaleInput.value = 100; mapOffsetXInput.value = 0; mapOffsetYInput.value = 0;
   });
 
   // Grid alignment inputs (unique names)
   const gridOffsetXEl = document.getElementById('gridOffsetX');
   const gridOffsetYEl = document.getElementById('gridOffsetY');
-  gridOffsetXEl.addEventListener('input', (e)=>{ state.grid.offsetX = parseFloat(e.target.value)||0; save(); });
-  gridOffsetYEl.addEventListener('input', (e)=>{ state.grid.offsetY = parseFloat(e.target.value)||0; save(); });
+  gridOffsetXEl.addEventListener('input', (e)=>{ state.grid.offsetX = parseFloat(e.target.value)||0; });
+  gridOffsetYEl.addEventListener('input', (e)=>{ state.grid.offsetY = parseFloat(e.target.value)||0; });
 
   const calibCellsEl = document.getElementById('calibCells');
   const calibStatusEl = document.getElementById('calibStatus');
@@ -1162,7 +1547,20 @@
   document.getElementById('fogReveal').addEventListener('click', ()=>{ fogState.mode='reveal'; setFogUI(true); });
   document.getElementById('fogCover').addEventListener('click', ()=>{ fogState.mode='cover'; setFogUI(true); });
   document.getElementById('fogBrush').addEventListener('input', (e)=>{ fogState.brush = Math.max(5, Math.min(400, parseFloat(e.target.value)||80)); });
-  document.getElementById('fogClear').addEventListener('click', ()=>{ fctx.clearRect(0,0,fog.width,fog.height); save(); });
+  document.getElementById('fogClear').addEventListener('click', ()=>{
+    fctx.clearRect(0,0,fog.width,fog.height);
+    fogShapes.length = 0;
+    save();
+  });
+
+  // Fog shape controls
+  document.getElementById('fogShapeType').addEventListener('change', (e)=>{ fogState.shapeType = e.target.value; });
+  document.getElementById('fogShapeColor').addEventListener('input', (e)=>{ fogState.shapeColor = e.target.value; });
+  document.getElementById('fogShapeSize').addEventListener('input', (e)=>{ fogState.shapeSize = parseFloat(e.target.value) || 3; });
+  document.getElementById('addFogShape').addEventListener('click', addFogShape);
+  document.getElementById('deleteFogShape').addEventListener('click', ()=>{
+    deleteSelectedFogShapes();
+  });
 
   // NEW: Brush Mode / Measure toggles (mobile-friendly)
   const fogBrushModeBtn = document.getElementById('fogBrushMode');
@@ -1217,8 +1615,33 @@
         fogState.brush = typeof data.fogState.brush === 'number'
           ? data.fogState.brush
           : fogState.brush;
+        fogState.shapeType = data.fogState.shapeType || fogState.shapeType;
+        fogState.shapeColor = data.fogState.shapeColor || fogState.shapeColor;
+        fogState.shapeSize = typeof data.fogState.shapeSize === 'number'
+          ? data.fogState.shapeSize
+          : fogState.shapeSize;
         setFogUI(fogState.enabled);
         document.getElementById('fogBrush').value = fogState.brush;
+        document.getElementById('fogShapeType').value = fogState.shapeType;
+        document.getElementById('fogShapeColor').value = fogState.shapeColor;
+        document.getElementById('fogShapeSize').value = fogState.shapeSize;
+      }
+
+      // Restore fog shapes if present
+      if (data.fogShapes) {
+        fogShapes.length = 0;
+        fogShapes.push(...data.fogShapes.map(s => ({
+          id: s.id,
+          type: s.type,
+          x: s.x,
+          y: s.y,
+          w: s.w,
+          h: s.h,
+          r: s.r,
+          mode: s.mode,
+          color: s.color || '#000000',
+          selected: !!s.selected
+        })));
       }
 
       if (data.map?.imgSrc) {
@@ -1232,7 +1655,12 @@
 
       // fog bitmap
       fctx.clearRect(0,0,fog.width,fog.height);
-      if (data.fog) await drawDataUrlToCanvas(data.fog, fog);
+      if (data.fog) {
+        await drawDataUrlToCanvas(data.fog, fog);
+      } else {
+        // No saved fog bitmap, render shapes if present
+        renderFogShapes();
+      }
 
       // load token images
       await Promise.all(state.tokens.map(async t => {
@@ -1247,10 +1675,25 @@
     }
   });
 
+  // Save Session button
+  document.getElementById('saveSession').addEventListener('click', ()=>{
+    save();
+    setStatus('Session saved!');
+  });
+
+  // Keyboard shortcut: Ctrl+S to save
+  window.addEventListener('keydown', (e)=>{
+    if((e.ctrlKey || e.metaKey) && e.key === 's'){
+      e.preventDefault();
+      save();
+      setStatus('Session saved!');
+    }
+  });
+
   // Reset-all
   document.getElementById('resetAll').addEventListener('click', ()=>{
     localStorage.removeItem(STORAGE_KEY);
-    
+
     Object.assign(state, {
       map: { imgSrc:'', img:null, w:0, h:0 },
       mapTransform: { scale:1, x:0, y:0 },
@@ -1262,17 +1705,22 @@
         spaceDown:false, tool:'none',
         calib:{p1:null,p2:null},
         measuring:false, measureStart:null,
-        brushMode:false, measureToggle:false
+        brushMode:false, measureToggle:false,
+        fogShapeDragId: null
       }
     });
-  
-    // Reset fog state + bitmap
+
+    // Reset fog state + bitmap + shapes
     fogState.enabled = false;
     fogState.mode = 'reveal';
     fogState.brush = 80;
+    fogState.shapeType = 'rect';
+    fogState.shapeColor = '#000000';
+    fogState.shapeSize = 3;
+    fogShapes.length = 0;
     setFogUI(false);
     fctx.clearRect(0,0,fog.width,fog.height);
-  
+
     updateTokenList();
     setStatus('Session reset');
   });
@@ -1287,6 +1735,108 @@
       fctx.globalCompositeOperation = 'source-over'; // paint black (cover)
       fctx.fillStyle = 'rgba(0,0,0,1)';
       fctx.beginPath(); fctx.arc(ix, iy, r, 0, Math.PI*2); fctx.fill();
+    }
+  }
+
+  function renderFogShapes() {
+    if (!fog.width || !fog.height) return;
+    // Clear and redraw all fog shapes
+    fctx.clearRect(0, 0, fog.width, fog.height);
+
+    for (const shape of fogShapes) {
+      if (shape.mode === 'reveal') {
+        fctx.globalCompositeOperation = 'destination-out'; // erase (reveal)
+      } else {
+        fctx.globalCompositeOperation = 'source-over'; // paint with color (cover)
+        fctx.fillStyle = shape.color || '#000000';
+      }
+
+      if (shape.type === 'rect') {
+        fctx.fillRect(shape.x, shape.y, shape.w, shape.h);
+      } else if (shape.type === 'circle') {
+        fctx.beginPath();
+        fctx.arc(shape.x + shape.r, shape.y + shape.r, shape.r, 0, Math.PI * 2);
+        fctx.fill();
+      }
+    }
+
+    // Reset composite operation
+    fctx.globalCompositeOperation = 'source-over';
+  }
+
+  function drawFogShapes() {
+    // Draw filled fog shapes in world space (on top of everything)
+    for (const shape of fogShapes) {
+      const worldPos = imageToWorld(shape.x, shape.y);
+
+      ctx.save();
+
+      // Set fill style based on mode
+      if (shape.mode === 'cover') {
+        ctx.fillStyle = shape.color || '#000000';
+      } else {
+        // For 'reveal' mode, draw a semi-transparent overlay to show the reveal area
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.1)';
+      }
+
+      if (shape.type === 'rect') {
+        const worldW = shape.w * state.mapTransform.scale;
+        const worldH = shape.h * state.mapTransform.scale;
+        ctx.fillRect(worldPos.x, worldPos.y, worldW, worldH);
+      } else if (shape.type === 'circle') {
+        const worldR = shape.r * state.mapTransform.scale;
+        const centerWorld = imageToWorld(shape.x + shape.r, shape.y + shape.r);
+        ctx.beginPath();
+        ctx.arc(centerWorld.x, centerWorld.y, worldR, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      ctx.restore();
+    }
+  }
+
+  function drawFogShapeOutlines() {
+    // Draw outlines for fog shapes in world space (for selection feedback)
+    for (const shape of fogShapes) {
+      const worldPos = imageToWorld(shape.x, shape.y);
+
+      ctx.save();
+      ctx.strokeStyle = shape.selected ? '#8bd3ff' : 'rgba(138, 211, 255, 0.4)';
+      ctx.lineWidth = 2 / state.view.scale;
+      ctx.setLineDash([5 / state.view.scale, 5 / state.view.scale]);
+
+      if (shape.type === 'rect') {
+        const worldW = shape.w * state.mapTransform.scale;
+        const worldH = shape.h * state.mapTransform.scale;
+        ctx.strokeRect(worldPos.x, worldPos.y, worldW, worldH);
+
+        // Draw resize handles if selected
+        if (shape.selected) {
+          ctx.setLineDash([]);
+          ctx.fillStyle = '#8bd3ff';
+          const handleSize = 8 / state.view.scale;
+
+          // Corner handles
+          ctx.fillRect(worldPos.x - handleSize/2, worldPos.y - handleSize/2, handleSize, handleSize); // NW
+          ctx.fillRect(worldPos.x + worldW - handleSize/2, worldPos.y - handleSize/2, handleSize, handleSize); // NE
+          ctx.fillRect(worldPos.x - handleSize/2, worldPos.y + worldH - handleSize/2, handleSize, handleSize); // SW
+          ctx.fillRect(worldPos.x + worldW - handleSize/2, worldPos.y + worldH - handleSize/2, handleSize, handleSize); // SE
+
+          // Edge handles
+          ctx.fillRect(worldPos.x + worldW/2 - handleSize/2, worldPos.y - handleSize/2, handleSize, handleSize); // N
+          ctx.fillRect(worldPos.x + worldW/2 - handleSize/2, worldPos.y + worldH - handleSize/2, handleSize, handleSize); // S
+          ctx.fillRect(worldPos.x - handleSize/2, worldPos.y + worldH/2 - handleSize/2, handleSize, handleSize); // W
+          ctx.fillRect(worldPos.x + worldW - handleSize/2, worldPos.y + worldH/2 - handleSize/2, handleSize, handleSize); // E
+        }
+      } else if (shape.type === 'circle') {
+        const worldR = shape.r * state.mapTransform.scale;
+        const centerWorld = imageToWorld(shape.x + shape.r, shape.y + shape.r);
+        ctx.beginPath();
+        ctx.arc(centerWorld.x, centerWorld.y, worldR, 0, Math.PI * 2);
+        ctx.stroke();
+      }
+
+      ctx.restore();
     }
   }
 
@@ -1332,7 +1882,82 @@
   function deleteSelected(){
     const before = state.tokens.length;
     state.tokens = state.tokens.filter(t=> !t.selected);
-    if(state.tokens.length !== before){ updateTokenList(); save(); setStatus('Deleted selected tokens'); }
+    if(state.tokens.length !== before){ updateTokenList(); setStatus('Deleted selected tokens'); }
+  }
+
+  function deleteSelectedFogShapes(){
+    const before = fogShapes.length;
+    const newShapes = fogShapes.filter(s=> !s.selected);
+    if(newShapes.length !== before){
+      fogShapes.length = 0;
+      fogShapes.push(...newShapes);
+      renderFogShapes();
+      setStatus('Deleted selected fog shapes');
+    }
+  }
+
+  function addFogShape(){
+    if(!state.map.img){ alert('Please load a map first.'); return; }
+    ensureFogSize();
+
+    const shapeType = document.getElementById('fogShapeType').value;
+    const shapeColor = document.getElementById('fogShapeColor').value;
+    const shapeSizeCells = parseFloat(document.getElementById('fogShapeSize').value) || 3;
+    const gridSize = state.grid.size;
+
+    // Size based on user input in grid cells, converted to image-space
+    const defaultSize = gridSize * shapeSizeCells / state.mapTransform.scale;
+
+    // Place at center of viewport in image-space
+    const center = screenToWorld(canvas.width/2, canvas.height/2);
+    const imgCenter = worldToImage(center.x, center.y);
+
+    let shape;
+    if(shapeType === 'square'){
+      shape = {
+        id: 'fs_' + Math.random().toString(36).slice(2,9),
+        type: 'rect',
+        x: imgCenter.x - defaultSize/2,
+        y: imgCenter.y - defaultSize/2,
+        w: defaultSize,
+        h: defaultSize,
+        mode: fogState.mode,
+        color: shapeColor,
+        selected: true
+      };
+    } else if(shapeType === 'rect'){
+      shape = {
+        id: 'fs_' + Math.random().toString(36).slice(2,9),
+        type: 'rect',
+        x: imgCenter.x - defaultSize,
+        y: imgCenter.y - defaultSize/2,
+        w: defaultSize * 2,
+        h: defaultSize,
+        mode: fogState.mode,
+        color: shapeColor,
+        selected: true
+      };
+    } else if(shapeType === 'circle'){
+      shape = {
+        id: 'fs_' + Math.random().toString(36).slice(2,9),
+        type: 'circle',
+        x: imgCenter.x - defaultSize/2,
+        y: imgCenter.y - defaultSize/2,
+        r: defaultSize/2,
+        mode: fogState.mode,
+        color: shapeColor,
+        selected: true
+      };
+    }
+
+    if(shape){
+      fogShapes.forEach(s=> s.selected = false);
+      state.tokens.forEach(t=> t.selected = false);
+      fogShapes.push(shape);
+      renderFogShapes();
+      save();
+      setStatus(`Added ${shapeType} fog shape`);
+    }
   }
 
   function updateTokenList(){
@@ -1342,7 +1967,7 @@
       el.className = 'pill';
       el.textContent = t.name || t.id;
       if(t.selected) el.style.outline = '2px solid var(--accent)';
-      el.addEventListener('click', ()=>{ state.tokens.forEach(x=>x.selected=false); t.selected=true; save(); updateTokenList(); });
+      el.addEventListener('click', ()=>{ state.tokens.forEach(x=>x.selected=false); t.selected=true; updateTokenList(); });
       tokenListEl.appendChild(el);
     }
   }

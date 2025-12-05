@@ -3,6 +3,45 @@ All notable changes to The DM's Toolbox are documented here.
 The format is based on Keep a Changelog,
 and this project adheres to Semantic Versioning.
 
+1.8.0 - 2025-12-05
+Battle Map Fog Shapes Enhancement
+
+Added
+
+- **Interactive Resize Handles for Fog Shapes** - Rectangles and squares now have 8 drag handles (4 corners + 4 edges)
+  - Click and drag corner handles to resize diagonally
+  - Click and drag edge handles to resize horizontally or vertically
+  - Minimum size constraints prevent shapes from becoming too small
+  - Visual handles (8px blue squares) appear when shape is selected
+- **Improved Fog Shape Rendering** - Shapes now render on top of tokens for better visibility
+  - Previously shapes were only visible as outlines
+  - New `drawFogShapes()` function renders filled shapes in world-space
+  - Cover mode shapes display with selected color
+  - Reveal mode shapes show as semi-transparent overlays
+- **Manual Save System** - Replaced auto-save with manual saving to prevent performance issues
+  - New "Save Session" button in Session accordion
+  - Ctrl+S keyboard shortcut for quick saving
+  - Saves no longer triggered on every grid adjustment or token movement
+  - Prevents slowdown during continuous operations like dragging or fog painting
+  - Auto-save retained for major discrete operations (loading maps, importing, etc.)
+
+Changed
+
+- Fog shapes now render after tokens in the draw order
+- Help section updated with detailed fog shapes documentation
+- Saving & Loading help section updated to reflect manual save system
+- Version bumped to 1.8.0 for fog shapes feature enhancements
+
+Fixed
+
+- **Fog Shapes Visibility Issue** - Fog shapes now properly render on top layer instead of only showing outlines
+  - Root cause: Shapes rendered to fog canvas (image-space) which drew underneath grid/tokens
+  - Solution: Render filled shapes directly on main canvas in world-space after tokens
+- **Performance During Grid Adjustments** - Removed excessive save() calls that caused slowdown
+  - Eliminated auto-save from grid size, offset, color, and alpha adjustments
+  - Removed auto-save from token/shape dragging operations
+  - Removed auto-save from continuous fog painting
+
 1.7.1 - 2025-12-04
 Character Wizard Memory Leak Fix
 
