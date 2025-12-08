@@ -5,7 +5,7 @@ and this project adheres to Semantic Versioning.
 
 
 
-1.9.0 - 2025-12-05
+1.8.1 - 2025-12-05
 Complete D&D 5e Spell Database Expansion
 
 Added
