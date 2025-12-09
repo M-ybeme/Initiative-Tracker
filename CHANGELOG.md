@@ -5,6 +5,24 @@ and this project adheres to Semantic Versioning.
 
 
 
+1.8.3 - 2025-12-08
+Battle Map Enhancement: Persistent Measurement Tools & Token Features
+
+Added
+- **Token Enhancement Features**
+  - **Token labels** - Toggle persistent name labels above tokens
+  - **HP tracking** - Visual HP bars with set/damage/heal/clear options
+  - **Status conditions** - Add multiple status effects (Poisoned, Stunned, etc.) displayed above tokens
+  - **Aura effects** - Customizable radius circles around tokens with adjustable color
+  - **Vision cones** - Directional vision arcs with adjustable angle and range
+  - **Compact context menu** - Streamlined 9-item menu with intelligent positioning
+  - **Full persistence** - All token features save/load with the map
+
+Changed
+
+- Context menu now uses fixed positioning with overflow detection for better mobile support
+- Token rendering optimized with three-pass system (auras → tokens → overlays) to prevent flickering
+
 1.8.1 - 2025-12-05
 Complete D&D 5e Spell Database Expansion
 

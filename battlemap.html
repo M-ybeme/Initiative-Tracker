@@ -86,8 +86,8 @@
     .token-list { display:flex; flex-wrap: wrap; gap:6px; }
     .pill { border:1px solid var(--line); padding:4px 8px; border-radius:999px; font-size:12px; background:#0a111a; }
 
-    .context-menu { position:absolute; background:#0f1620; border:1px solid var(--line); border-radius:8px; padding:6px; z-index:1000; display:none; min-width:160px; }
-    .context-menu button { width:100%; text-align:left; padding:6px 8px; border-radius:6px; }
+    .context-menu { position:fixed; background:#0f1620; border:1px solid var(--line); border-radius:8px; padding:4px; z-index:1000; display:none; min-width:150px; max-height:80vh; overflow-y:auto; box-shadow: 0 4px 12px rgba(0,0,0,0.5); }
+    .context-menu button { width:100%; text-align:left; padding:5px 8px; border-radius:6px; font-size:13px; }
 
     .measure-label { position:absolute; background:#0f1620; border:1px solid var(--line); border-radius:6px; padding:2px 6px; font-size:12px; color:var(--ink); transform:translate(-50%, -150%); pointer-events:none; }
 
@@ -464,11 +464,15 @@
         <canvas id="stage" width="1920" height="1080"></canvas>
         <div id="measureLabel" class="measure-label" style="display:none;">0 ft</div>
         <div id="ctxMenu" class="context-menu">
-          <button data-cmd="rename">Rename</button>
-          <button data-cmd="duplicate">Duplicate</button>
-          <button data-cmd="bring">Bring Forward</button>
-          <button data-cmd="send">Send Backward</button>
-          <button data-cmd="delete">Delete</button>
+          <button data-cmd="rename">✏️ Rename</button>
+          <button data-cmd="toggleLabel">🏷️ Label</button>
+          <button data-cmd="setHp">❤️ HP</button>
+          <button data-cmd="addStatus">🔶 Status</button>
+          <button data-cmd="setAura">⭕ Aura</button>
+          <button data-cmd="setVision">👁️ Vision</button>
+          <hr style="margin:2px 0;border:none;border-top:1px solid var(--line)">
+          <button data-cmd="duplicate">📋 Duplicate</button>
+          <button data-cmd="delete">🗑️ Delete</button>
         </div>
       </div>
     </section>
@@ -543,7 +547,7 @@
     return loadImage(src).then(img=>{ imageCache.set(src,img); return img; });
   }
 
-  /** @typedef {{ id:string, name:string, imgSrc:string, img:HTMLImageElement|null, x:number, y:number, w:number, h:number, rot:number, selected?:boolean }} Token */
+  /** @typedef {{ id:string, name:string, imgSrc:string, img:HTMLImageElement|null, x:number, y:number, w:number, h:number, rot:number, selected?:boolean, hp?:number, maxHp?:number, showLabel?:boolean, statusConditions?:string[], aura?:{radius:number, color:string}, visionCone?:{angle:number, range:number, color:string} }} Token */
 
   const canvas = document.getElementById('stage');
   const ctx = canvas.getContext('2d', { alpha: false });
@@ -650,7 +654,13 @@
         w: t.w,
         h: t.h,
         rot: t.rot,
-        selected: !!t.selected
+        selected: !!t.selected,
+        hp: t.hp,
+        maxHp: t.maxHp,
+        showLabel: t.showLabel,
+        statusConditions: t.statusConditions,
+        aura: t.aura,
+        visionCone: t.visionCone
       })),
       fog: fogData,
       fogState: {
@@ -845,7 +855,50 @@
     // Grid (world-space)
     if(state.grid.show){ drawGrid(); }
 
-    // Tokens
+    // Tokens - auras and vision cones first (behind tokens)
+    for(const t of state.tokens){
+      if(!t.img) continue;
+      const cx = t.x + t.w/2;
+      const cy = t.y + t.h/2;
+
+      // Aura
+      if(t.aura && t.aura.radius > 0){
+        ctx.save();
+        ctx.globalAlpha = 0.2;
+        ctx.fillStyle = t.aura.color || '#8bd3ff';
+        ctx.beginPath();
+        ctx.arc(cx, cy, t.aura.radius * state.grid.size, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.globalAlpha = 0.6;
+        ctx.strokeStyle = t.aura.color || '#8bd3ff';
+        ctx.lineWidth = 2/state.view.scale;
+        ctx.stroke();
+        ctx.restore();
+      }
+
+      // Vision cone
+      if(t.visionCone && t.visionCone.range > 0){
+        ctx.save();
+        ctx.globalAlpha = 0.15;
+        ctx.fillStyle = t.visionCone.color || '#ffff88';
+        ctx.beginPath();
+        const angleRad = (t.visionCone.angle || 90) * Math.PI / 180;
+        const range = t.visionCone.range * state.grid.size;
+        const startAngle = (t.rot || 0) - angleRad / 2;
+        const endAngle = (t.rot || 0) + angleRad / 2;
+        ctx.moveTo(cx, cy);
+        ctx.arc(cx, cy, range, startAngle, endAngle);
+        ctx.closePath();
+        ctx.fill();
+        ctx.globalAlpha = 0.4;
+        ctx.strokeStyle = t.visionCone.color || '#ffff88';
+        ctx.lineWidth = 2/state.view.scale;
+        ctx.stroke();
+        ctx.restore();
+      }
+    }
+
+    // Tokens - main images
     for(const t of state.tokens){
       if(t.img){
         ctx.save();
@@ -861,6 +914,68 @@
         }
         ctx.restore();
       }
+    }
+
+    // Tokens - overlays (HP, status, labels) - rendered unrotated on top
+    for(const t of state.tokens){
+      if(!t.img) continue;
+      const cx = t.x + t.w/2;
+      const cy = t.y + t.h/2;
+
+      ctx.save();
+      ctx.translate(cx, cy);
+
+      // HP Bar
+      if(t.maxHp && t.maxHp > 0){
+        const barY = t.h/2 + 4/state.view.scale;
+        const hpPct = Math.max(0, Math.min(1, (t.hp || 0) / t.maxHp));
+
+        ctx.fillStyle = 'rgba(0,0,0,0.7)';
+        ctx.fillRect(-t.w/2, barY, t.w, 6/state.view.scale);
+
+        ctx.fillStyle = hpPct > 0.5 ? '#4ade80' : hpPct > 0.25 ? '#fbbf24' : '#ef4444';
+        ctx.fillRect(-t.w/2, barY, t.w * hpPct, 6/state.view.scale);
+
+        ctx.strokeStyle = 'rgba(255,255,255,0.5)';
+        ctx.lineWidth = 1/state.view.scale;
+        ctx.strokeRect(-t.w/2, barY, t.w, 6/state.view.scale);
+      }
+
+      // Status & Label - batch text rendering
+      const hasStatus = t.statusConditions && t.statusConditions.length > 0;
+      const hasLabel = t.showLabel && t.name;
+
+      if(hasStatus || hasLabel){
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        let yOffset = -t.h/2 - 8/state.view.scale;
+
+        // Label
+        if(hasLabel){
+          ctx.font = `bold ${11/state.view.scale}px sans-serif`;
+          const pad = 3/state.view.scale;
+          ctx.fillStyle = 'rgba(0,0,0,0.8)';
+          const lw = ctx.measureText(t.name).width;
+          ctx.fillRect(-lw/2-pad, yOffset-8/state.view.scale, lw+pad*2, 16/state.view.scale);
+          ctx.fillStyle = '#8bd3ff';
+          ctx.fillText(t.name, 0, yOffset);
+          yOffset -= 16/state.view.scale;
+        }
+
+        // Status
+        if(hasStatus){
+          const statusTxt = t.statusConditions.join(', ');
+          ctx.font = `${9/state.view.scale}px sans-serif`;
+          const pad = 3/state.view.scale;
+          ctx.fillStyle = 'rgba(0,0,0,0.8)';
+          const sw = ctx.measureText(statusTxt).width;
+          ctx.fillRect(-sw/2-pad, yOffset-6/state.view.scale, sw+pad*2, 12/state.view.scale);
+          ctx.fillStyle = '#fbbf24';
+          ctx.fillText(statusTxt, 0, yOffset);
+        }
+      }
+
+      ctx.restore();
     }
 
     // Fog shapes (drawn after tokens so they appear on top)
@@ -1387,6 +1502,7 @@
     const rect = canvas.getBoundingClientRect();
     const sx = (e.clientX - rect.left) * DPR; const sy = (e.clientY - rect.top) * DPR;
     const wpt = screenToWorld(sx, sy);
+
     const token = hitToken(wpt.x, wpt.y);
     if (!token) { hideMenu(); return; }
     state.tokens.forEach(t=> t.selected = false);
@@ -1394,7 +1510,36 @@
     showMenu(e.clientX, e.clientY);
   });
   document.addEventListener('click', (e)=>{ if (!ctxMenu.contains(e.target)) hideMenu(); });
-  function showMenu(x,y){ ctxMenu.style.left = x+'px'; ctxMenu.style.top = y+'px'; ctxMenu.style.display='block'; }
+  function showMenu(x,y){
+    ctxMenu.style.display='block';
+
+    // Get menu dimensions
+    const menuRect = ctxMenu.getBoundingClientRect();
+    const viewportWidth = window.innerWidth;
+    const viewportHeight = window.innerHeight;
+
+    let left = x;
+    let top = y;
+
+    // Adjust if menu goes off right edge
+    if (left + menuRect.width > viewportWidth) {
+      left = viewportWidth - menuRect.width - 10;
+    }
+
+    // Adjust if menu goes off bottom - open upward
+    if (top + menuRect.height > viewportHeight) {
+      top = y - menuRect.height;
+      if (top < 0) {
+        top = Math.max(10, viewportHeight - menuRect.height - 10);
+      }
+    }
+
+    left = Math.max(10, left);
+    top = Math.max(10, top);
+
+    ctxMenu.style.left = left+'px';
+    ctxMenu.style.top = top+'px';
+  }
   function hideMenu(){ ctxMenu.style.display='none'; }
 
   ctxMenu.addEventListener('click', (e)=>{
@@ -1404,8 +1549,67 @@
     if (cmd==='rename'){
       const name = prompt('Token name:', t.name || '');
       if (name!==null) t.name = name.trim();
+    } else if (cmd==='toggleLabel'){
+      t.showLabel = !t.showLabel;
+    } else if (cmd==='setHp'){
+      const choice = prompt('HP: [S]et max/current, [D]amage, [H]eal, [C]lear', 'S').toUpperCase();
+      if (choice === 'S') {
+        const hp = prompt('Current HP:', t.hp || '');
+        const maxHp = prompt('Max HP:', t.maxHp || '');
+        if (hp !== null) t.hp = parseInt(hp) || 0;
+        if (maxHp !== null) t.maxHp = parseInt(maxHp) || 0;
+      } else if (choice === 'D') {
+        const dmg = prompt('Damage amount:', '');
+        if (dmg !== null) t.hp = Math.max(0, (t.hp || 0) - (parseInt(dmg) || 0));
+      } else if (choice === 'H') {
+        const heal = prompt('Heal amount:', '');
+        if (heal !== null) t.hp = Math.min((t.maxHp || 0), (t.hp || 0) + (parseInt(heal) || 0));
+      } else if (choice === 'C') {
+        t.hp = 0; t.maxHp = 0;
+      }
+    } else if (cmd==='addStatus'){
+      const choice = prompt('Status: [A]dd, [C]lear', 'A').toUpperCase();
+      if (choice === 'A') {
+        const status = prompt('Status condition (e.g., Poisoned, Stunned):', '');
+        if (status !== null && status.trim()) {
+          if (!t.statusConditions) t.statusConditions = [];
+          t.statusConditions.push(status.trim());
+        }
+      } else if (choice === 'C') {
+        t.statusConditions = [];
+      }
+    } else if (cmd==='setAura'){
+      const radius = prompt('Aura radius (in cells, 0 to remove):', t.aura?.radius || '');
+      if (radius !== null) {
+        const r = parseFloat(radius) || 0;
+        if (r <= 0) {
+          delete t.aura;
+        } else {
+          const color = prompt('Aura color (hex, e.g., #ff0000):', t.aura?.color || '#8bd3ff');
+          t.aura = { radius: r, color: color || '#8bd3ff' };
+        }
+      }
+    } else if (cmd==='setVision'){
+      const range = prompt('Vision range (in cells, 0 to remove):', t.visionCone?.range || '');
+      if (range !== null) {
+        const r = parseFloat(range) || 0;
+        if (r <= 0) {
+          delete t.visionCone;
+        } else {
+          const angle = prompt('Vision angle (degrees, e.g., 90):', t.visionCone?.angle || '90');
+          const color = prompt('Vision color (hex):', t.visionCone?.color || '#ffff88');
+          t.visionCone = {
+            range: r,
+            angle: parseFloat(angle) || 90,
+            color: color || '#ffff88'
+          };
+        }
+      }
     } else if (cmd==='duplicate'){
       const copy = { ...t, id:'t_'+Math.random().toString(36).slice(2,9), x:t.x+10, y:t.y+10, selected:true };
+      if(t.statusConditions) copy.statusConditions = [...t.statusConditions];
+      if(t.aura) copy.aura = {...t.aura};
+      if(t.visionCone) copy.visionCone = {...t.visionCone};
       state.tokens.forEach(x=>x.selected=false);
       state.tokens.push(copy);
     } else if (cmd==='bring'){
