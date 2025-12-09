@@ -5,6 +5,92 @@ and this project adheres to Semantic Versioning.
 
 
 
+1.8.4 - 2025-12-08
+Loot Generator: Complete Feature Overhaul
+
+Added
+
+- **Hoard vs. Individual Loot Distinction**
+  - Toggle between "Hoard" (large treasure piles) and "Individual" (pocket loot) modes
+  - Individual loot generates ~10% of items/budget for single-creature drops
+  - Automatic scaling adjustments based on loot type selection
+
+- **Mundane Adventuring Items Category** (20 new items)
+  - Essential gear: 50 ft. rope, torches (bundle of 5), bedroll, rations (1 week)
+  - Light sources: candles (10), tinderbox, lantern (hooded), oil flask
+  - Tools: grappling hook, crowbar, 10 ft. pole, chalk (10), iron spikes (10)
+  - Camping: tent (2-person), backpack, shovel
+  - Tactical: caltrops (bag of 20), chain (10 feet), fishing tackle, signal whistle
+  - All items include proper weight, cost ranges, and condition descriptors
+
+- **Monster-Specific Loot Templates** (9 monster types)
+  - **Dragon**: Favors gems (2.0x), coins (1.8x), magic items; flavor: "scorched edges", "melted slightly"
+  - **Lich**: Books (1.8x), gems (1.4x), magic (1.6x); flavor: "necromantic runes", "bone-white"
+  - **Vampire**: Gems (1.6x), clothing (1.5x), coins (1.4x); flavor: "blood-stained", "aristocratic"
+  - **Beholder**: Gems (1.7x), curios (1.5x), magic (1.8x); flavor: "alien geometry", "prismatic"
+  - **Giant**: Food (1.5x), trade goods (1.4x), mundane items (1.3x); flavor: "oversized", "massive scale"
+  - **Demon/Devil**: Gems (1.5x), magic (1.7x), curios (1.4x); flavor: "sulfurous", "infernal script"
+  - **Fey Noble**: Curios (1.8x), gems (1.5x), magic (1.6x); flavor: "rainbow-hued", "moonlit"
+  - **Aberration**: Curios (1.6x), writing (1.4x), magic (1.5x); flavor: "otherworldly", "mind-bending"
+  - **Undead Horde**: Coins (1.3x), gems (1.2x), clothing (1.2x); flavor: "grave-touched", "centuries-old"
+  - Monster type selection overrides hoard template for thematic consistency
+
+- **Custom Loot Table Import System**
+  - Import custom JSON loot tables via file picker
+  - Tables can define custom categories, templates, and generation rules
+  - Dropdown selector for active custom table
+  - JSON format requires `name` field with optional `categories` and `template` objects
+  - Multiple custom tables can be loaded in same session
+
+- **Save/Load Preset System**
+  - Save all current settings with custom preset name
+  - Presets stored in browser localStorage for persistence
+  - Saves: mode, loot type, count, budget, monster/template, all toggles, category selections
+  - Load presets from dropdown selector with one click
+  - Preset list auto-populates on page load
+
+Changed
+
+- Category weights system updated to include "Mundane Adventuring Items" (0.6 base weight)
+- Template resolution now prioritizes monster type over hoard template
+- Individual loot type applies 90% reduction to item count and budget
+- UI reorganized with monster type selector above hoard template
+- Custom table selection integrated into main settings panel
+
+Encounter Builder: Stat Block Preview System
+
+Added
+
+- **Hover Tooltips on Monster Search**
+  - Rich stat block previews appear when hovering over any monster in search results
+  - Shows complete combat information: AC, HP, Speed, CR
+  - Displays all special abilities with full descriptions
+  - Shows all actions with attack bonuses (+X to hit), save DCs, and damage dice
+  - Includes reactions and legendary actions with descriptions
+  - Smart positioning prevents tooltips from going off-screen
+  - Tooltips styled with dark theme and color-coded sections
+
+- **Expandable Stat Blocks in Encounter Roster**
+  - "Show Details" button for each monster in the encounter roster
+  - Quick action preview shows first 3 actions (e.g., "⚡ Multiattack, Bite, Claw")
+  - Expandable section reveals complete stat block with organized sections
+  - Attack information highlighted in blue: attack bonus, save DC, damage
+  - All sections color-coded: Special Abilities, Actions, Reactions, Legendary Actions
+  - Speed information displayed in expanded view
+
+- **Enhanced SRD API Data Extraction**
+  - Now fetches and displays special_abilities (Legendary Resistance, etc.)
+  - Extracts legendary_actions for end-of-turn abilities
+  - Includes reactions (Shield, Parry, etc.)
+  - All data persists when monsters added to roster
+
+Changed
+
+- Monster search results now include preview-trigger class for hover functionality
+- Roster display enhanced with action summary line showing top 3 actions
+- Attack descriptions now show damage type and dice notation prominently
+- Encounter Builder truly useful for combat prep with full stat visibility
+
 1.8.3 - 2025-12-08
 Battle Map Enhancement: Persistent Measurement Tools & Token Features
 

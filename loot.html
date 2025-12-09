@@ -92,6 +92,24 @@
                 <div class="form-hint mt-1">Presets adjust budget/caps/usefulness. You can still tweak below.</div>
               </div>
 
+              <!-- Monster Type -->
+              <div class="mb-2">
+                <label for="lg-monster" class="form-label">Monster Type (Optional)</label>
+                <select id="lg-monster" class="form-select">
+                  <option value="none">None (use hoard template below)</option>
+                  <option value="dragon">Dragon</option>
+                  <option value="lich">Lich</option>
+                  <option value="vampire">Vampire</option>
+                  <option value="beholder">Beholder</option>
+                  <option value="giant">Giant</option>
+                  <option value="demon">Demon/Devil</option>
+                  <option value="fey">Fey Noble</option>
+                  <option value="aberration">Aberration</option>
+                  <option value="undead">Undead Horde</option>
+                </select>
+                <div class="form-hint mt-1">Overrides hoard template with monster-specific loot.</div>
+              </div>
+
               <!-- Hoard Template -->
               <div class="mb-2">
                 <label for="lg-template" class="form-label">Hoard Template</label>
@@ -102,9 +120,21 @@
                   <option value="noble">Noble vault</option>
                   <option value="goblin">Goblin den</option>
                   <option value="ship">Ship cargo</option>
-                  <option value="wizard">Wizard’s study</option>
+                  <option value="wizard">Wizard's study</option>
                 </select>
                 <div class="form-hint mt-1">Biases categories, bundles, and flavor.</div>
+              </div>
+
+              <!-- Loot Type -->
+              <div class="mb-2">
+                <label class="form-label d-block">Loot Type</label>
+                <div class="btn-group w-100" role="group" aria-label="Loot Type">
+                  <input type="radio" class="btn-check" name="lg-loot-type" id="lg-loot-hoard" value="hoard" checked>
+                  <label class="btn btn-outline-light" for="lg-loot-hoard">Hoard</label>
+                  <input type="radio" class="btn-check" name="lg-loot-type" id="lg-loot-individual" value="individual">
+                  <label class="btn btn-outline-light" for="lg-loot-individual">Individual</label>
+                </div>
+                <div class="form-hint mt-1">Hoard: large treasure piles. Individual: pocket loot from single creatures.</div>
               </div>
 
               <!-- Mode -->
@@ -176,6 +206,31 @@
               <div class="form-check">
                 <input class="form-check-input" type="checkbox" id="lg-tags" checked>
                 <label class="form-check-label" for="lg-tags">Show tags</label>
+              </div>
+
+              <!-- Custom Loot Table -->
+              <div class="mt-2">
+                <label class="form-label d-flex justify-content-between align-items-center">
+                  Custom Loot Tables
+                  <button class="btn btn-sm btn-outline-light" id="lg-import-custom"><i class="bi bi-upload me-1"></i>Import JSON</button>
+                </label>
+                <select id="lg-custom-table" class="form-select">
+                  <option value="">None (use standard tables)</option>
+                </select>
+                <div class="form-hint mt-1">Import custom loot tables in JSON format.</div>
+              </div>
+
+              <!-- Save/Load Presets -->
+              <div class="mt-2">
+                <label class="form-label">Save/Load Preset</label>
+                <div class="input-group">
+                  <input type="text" id="lg-preset-name" class="form-control" placeholder="Preset name...">
+                  <button class="btn btn-outline-success" id="lg-save-preset"><i class="bi bi-save me-1"></i>Save</button>
+                  <button class="btn btn-outline-info" id="lg-load-preset"><i class="bi bi-folder-open me-1"></i>Load</button>
+                </div>
+                <select id="lg-saved-presets" class="form-select mt-1">
+                  <option value="">-- Select a saved preset --</option>
+                </select>
               </div>
 
               <div class="d-grid d-sm-flex gap-2 mt-3">
@@ -436,6 +491,35 @@ const CATS={
     }
   },
 
+  "Mundane Adventuring Items":{
+    base:[
+      {n:"50 ft. hempen rope",mat:"cloth",w:10.0,sp:[10,30]},
+      {n:"torches (bundle of 5)",mat:"wood",w:5.0,sp:[5,15]},
+      {n:"bedroll",mat:"cloth",w:7.0,sp:[10,30]},
+      {n:"rations (1 week)",mat:"cloth",w:10.0,sp:[35,70]},
+      {n:"candles (10)",mat:"cloth",w:0.5,sp:[1,5]},
+      {n:"tinderbox",mat:"metal",w:1.0,sp:[5,15]},
+      {n:"grappling hook",mat:"metal",w:4.0,sp:[20,60]},
+      {n:"crowbar",mat:"metal",w:5.0,sp:[20,60]},
+      {n:"10 ft. pole",mat:"wood",w:7.0,sp:[5,15]},
+      {n:"chalk (10 pieces)",mat:"stone",w:0.2,sp:[1,5]},
+      {n:"iron spikes (10)",mat:"metal",w:5.0,sp:[10,30]},
+      {n:"lantern (hooded)",mat:"metal",w:2.0,sp:[50,150]},
+      {n:"oil flask",mat:"glass",w:1.0,sp:[1,10]},
+      {n:"shovel",mat:"metal",w:5.0,sp:[20,60]},
+      {n:"tent (2-person)",mat:"cloth",w:20.0,sp:[20,60]},
+      {n:"backpack",mat:"cloth",w:5.0,sp:[20,60]},
+      {n:"caltrops (bag of 20)",mat:"metal",w:2.0,sp:[10,30]},
+      {n:"chain (10 feet)",mat:"metal",w:10.0,sp:[50,150]},
+      {n:"fishing tackle",mat:"cloth",w:4.0,sp:[10,30]},
+      {n:"signal whistle",mat:"metal",w:0.1,sp:[5,15]}
+    ],
+    make:(rng,b)=>{
+      const m=pick(rng,MATERIALS[b.mat]); const cond=rng()<0.5?pick(rng,COND):"standard";
+      return [`${cond} ${m} ${b.n}`, tags("mundane","gear","common"), false]
+    }
+  },
+
   // --- Minor Magic (gated by toggle) ---
   "Minor Magic":{
     base:[
@@ -491,6 +575,55 @@ const TEMPLATE = {
     catMult:{ "Writing & Games":1.25,"Toolkits & Supplies":1.2,"Adventuring Gear of Note":1.1,"Gems & Art":1.05 },
     bundleBias:{ smuggler:0.15, merchant:0.2, hunter:0.05 },
     flavor:["ink-splattered","annotated margin","arcane diagram stamps","scent of ozone"]
+  }
+};
+
+// ---------- Monster-specific loot templates ----------
+const MONSTER_TEMPLATES = {
+  dragon:{
+    catMult:{ "Gems & Art":2.0,"Coins & Purses":1.8,"Trade Goods":1.3,"Adventuring Gear of Note":1.2,"Minor Magic":1.5 },
+    bundleBias:{ merchant:0.3, smuggler:0.05, hunter:0.05 },
+    flavor:["scorched edges","melted slightly","gleaming","ancient","partially fused"]
+  },
+  lich:{
+    catMult:{ "Writing & Games":1.8,"Toolkits & Supplies":1.5,"Gems & Art":1.4,"Minor Magic":1.6,"Curios & Charms":1.3 },
+    bundleBias:{ smuggler:0.2, merchant:0.15, hunter:0.05 },
+    flavor:["necromantic runes","bone-white","desiccated","ancient parchment","death-touched"]
+  },
+  vampire:{
+    catMult:{ "Gems & Art":1.6,"Clothing & Wearables":1.5,"Coins & Purses":1.4,"Trade Goods":1.3,"Minor Magic":1.2 },
+    bundleBias:{ merchant:0.35, smuggler:0.15, hunter:0.05 },
+    flavor:["blood-stained","velvet-lined","aristocratic","night-black","crimson accents"]
+  },
+  beholder:{
+    catMult:{ "Gems & Art":1.7,"Curios & Charms":1.5,"Minor Magic":1.8,"Writing & Games":1.2,"Toolkits & Supplies":1.3 },
+    bundleBias:{ smuggler:0.25, merchant:0.2, hunter:0.1 },
+    flavor:["alien geometry","faintly humming","prismatic","eye-shaped motif","arcane resonance"]
+  },
+  giant:{
+    catMult:{ "Food & Provisions":1.5,"Bags & Containers":1.3,"Trade Goods":1.4,"Coins & Purses":1.2,"Mundane Adventuring Items":1.3 },
+    bundleBias:{ hunter:0.4, merchant:0.25, smuggler:0.1 },
+    flavor:["oversized","crudely fashioned","massive scale","boulder-sized","primitive"]
+  },
+  demon:{
+    catMult:{ "Gems & Art":1.5,"Minor Magic":1.7,"Curios & Charms":1.4,"Coins & Purses":1.3 },
+    bundleBias:{ smuggler:0.3, merchant:0.15, hunter:0.1 },
+    flavor:["sulfurous","infernal script","smoldering","cursed-looking","abyssal"]
+  },
+  fey:{
+    catMult:{ "Curios & Charms":1.8,"Gems & Art":1.5,"Clothing & Wearables":1.4,"Minor Magic":1.6,"Food & Provisions":1.3 },
+    bundleBias:{ merchant:0.2, smuggler:0.15, hunter:0.2 },
+    flavor:["rainbow-hued","gossamer","moonlit","star-kissed","enchanted shimmer"]
+  },
+  aberration:{
+    catMult:{ "Curios & Charms":1.6,"Writing & Games":1.4,"Minor Magic":1.5,"Gems & Art":1.2 },
+    bundleBias:{ smuggler:0.3, merchant:0.1, hunter:0.15 },
+    flavor:["otherworldly","non-euclidean","pulsating","mind-bending","eldritch"]
+  },
+  undead:{
+    catMult:{ "Coins & Purses":1.3,"Gems & Art":1.2,"Clothing & Wearables":1.2,"Mundane Adventuring Items":1.1 },
+    bundleBias:{ merchant:0.2, hunter:0.15, smuggler:0.15 },
+    flavor:["grave-touched","musty","decayed","tomb-sealed","centuries-old"]
   }
 };
 
@@ -616,6 +749,7 @@ function categoryWeights(selectedCats,usefulness01,templateKey,magicOn){
     "Coins & Purses": 0.6,
     "Clothing & Wearables": 0.4, "Tools & Utensils": 0.5, "Household & Table": 0.35,
     "Writing & Games": 0.45, "Food & Provisions": 0.35, "Curios & Charms": 0.3, "Bags & Containers": 0.5,
+    "Mundane Adventuring Items": 0.6,
     "Minor Magic": magicOn ? 0.35 : 0.0
   };
   const flavorBoost = 1 - usefulness01;
@@ -800,18 +934,54 @@ function currentSelectedCats(){
   return [...document.querySelectorAll("#lg-cats input:checked")].map(x=>x.dataset.cat);
 }
 
+// Custom loot tables storage
+let customLootTables = {};
+
 function doGenerate(){
   const seed=$("lg-seed").value.trim(); const rng=prand(seed);
   const mode=document.querySelector('input[name="lg-mode"]:checked').value;
+  const lootType=document.querySelector('input[name="lg-loot-type"]:checked').value;
   const count=clamp(+$("lg-count").value||50,1,5000);
   const minSp=Math.max(0,+$("lg-min").value||0);
   const maxGp=Math.max(1,+$("lg-max").value||25); const maxSp=maxGp*10;
   const targetGp=Math.max(1,+$("lg-budget").value||150); const targetSp=gpToSp(targetGp);
   const usefulness01 = Math.max(0,Math.min(1,(+$("lg-use").value||50)/100));
-  const templateKey = $("lg-template").value || "none";
+  const monsterType = $("lg-monster").value || "none";
+  let templateKey = $("lg-template").value || "none";
+  const customTableKey = $("lg-custom-table").value || "";
   const magicOn = $("lg-magic").checked;
 
-  const selectedCats=currentSelectedCats();
+  // Monster type overrides template
+  if(monsterType !== "none"){
+    templateKey = monsterType;
+    // Merge MONSTER_TEMPLATES with TEMPLATE for compatibility
+    if(MONSTER_TEMPLATES[monsterType] && !TEMPLATE[monsterType]){
+      TEMPLATE[monsterType] = MONSTER_TEMPLATES[monsterType];
+    }
+  }
+
+  // Apply individual loot type adjustments
+  let adjustedCount = count;
+  let adjustedBudget = targetSp;
+  if(lootType === "individual"){
+    adjustedCount = Math.max(1, Math.floor(count / 10));
+    adjustedBudget = Math.floor(targetSp / 10);
+  }
+
+  let selectedCats=currentSelectedCats();
+
+  // Use custom loot table if selected
+  if(customTableKey && customLootTables[customTableKey]){
+    const customTable = customLootTables[customTableKey];
+    if(customTable.categories){
+      selectedCats = customTable.categories;
+    }
+    if(customTable.template){
+      TEMPLATE[customTableKey] = customTable.template;
+      templateKey = customTableKey;
+    }
+  }
+
   if(!selectedCats.length){ alert("Select at least one category."); return; }
 
   const wantWeight=$("lg-weight").checked, wantTags=$("lg-tags").checked;
@@ -819,14 +989,124 @@ function doGenerate(){
   let list=[];
   if(mode==="budget"){
     list=generateToBudget(rng,selectedCats,{
-      targetSp, softCount: count, minSp, maxSp, usefulness01, templateKey, magicOn
+      targetSp: adjustedBudget, softCount: adjustedCount, minSp, maxSp, usefulness01, templateKey, magicOn
     });
   }else{
     list=generateCount(rng,selectedCats,{
-      count, minSp, maxSp, usefulness01, templateKey, magicOn
+      count: adjustedCount, minSp, maxSp, usefulness01, templateKey, magicOn
     });
   }
   renderList(list,wantWeight,wantTags);
+}
+
+// Save/Load Preset functionality
+function savePreset(){
+  const name = $("lg-preset-name").value.trim();
+  if(!name){ alert("Enter a preset name."); return; }
+
+  const preset = {
+    mode: document.querySelector('input[name="lg-mode"]:checked').value,
+    lootType: document.querySelector('input[name="lg-loot-type"]:checked').value,
+    count: $("lg-count").value,
+    seed: $("lg-seed").value,
+    min: $("lg-min").value,
+    max: $("lg-max").value,
+    budget: $("lg-budget").value,
+    usefulness: $("lg-use").value,
+    monster: $("lg-monster").value,
+    template: $("lg-template").value,
+    magic: $("lg-magic").checked,
+    weight: $("lg-weight").checked,
+    tags: $("lg-tags").checked,
+    categories: currentSelectedCats()
+  };
+
+  const presets = JSON.parse(localStorage.getItem("lootPresets") || "{}");
+  presets[name] = preset;
+  localStorage.setItem("lootPresets", JSON.stringify(presets));
+  loadPresetList();
+  alert(`Preset "${name}" saved!`);
+}
+
+function loadPreset(){
+  const name = $("lg-saved-presets").value;
+  if(!name){ alert("Select a preset to load."); return; }
+
+  const presets = JSON.parse(localStorage.getItem("lootPresets") || "{}");
+  const preset = presets[name];
+  if(!preset){ alert("Preset not found."); return; }
+
+  // Apply preset values
+  if(preset.mode === "count") $("lg-mode-count").checked = true;
+  else $("lg-mode-budget").checked = true;
+
+  if(preset.lootType === "hoard") $("lg-loot-hoard").checked = true;
+  else $("lg-loot-individual").checked = true;
+
+  $("lg-count").value = preset.count || 50;
+  $("lg-seed").value = preset.seed || "";
+  $("lg-min").value = preset.min || 1;
+  $("lg-max").value = preset.max || 25;
+  $("lg-budget").value = preset.budget || 150;
+  $("lg-use").value = preset.usefulness || 50;
+  $("lg-monster").value = preset.monster || "none";
+  $("lg-template").value = preset.template || "none";
+  $("lg-magic").checked = preset.magic || false;
+  $("lg-weight").checked = preset.weight !== false;
+  $("lg-tags").checked = preset.tags !== false;
+
+  // Restore categories
+  document.querySelectorAll("#lg-cats input").forEach(cb => {
+    cb.checked = preset.categories?.includes(cb.dataset.cat) || false;
+  });
+
+  alert(`Preset "${name}" loaded!`);
+}
+
+function loadPresetList(){
+  const presets = JSON.parse(localStorage.getItem("lootPresets") || "{}");
+  const select = $("lg-saved-presets");
+  select.innerHTML = '<option value="">-- Select a saved preset --</option>';
+  for(const name in presets){
+    const opt = document.createElement("option");
+    opt.value = name;
+    opt.textContent = name;
+    select.appendChild(opt);
+  }
+}
+
+// Import custom loot table
+function importCustomTable(){
+  const input = document.createElement("input");
+  input.type = "file";
+  input.accept = ".json";
+  input.onchange = (e) => {
+    const file = e.target.files[0];
+    if(!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (evt) => {
+      try{
+        const data = JSON.parse(evt.target.result);
+        if(!data.name){ alert("Custom loot table must have a 'name' field."); return; }
+
+        customLootTables[data.name] = data;
+
+        const select = $("lg-custom-table");
+        const opt = document.createElement("option");
+        opt.value = data.name;
+        opt.textContent = data.name;
+        select.appendChild(opt);
+        select.value = data.name;
+
+        alert(`Custom loot table "${data.name}" imported!`);
+      }catch(err){
+        alert("Invalid JSON file: " + err.message);
+      }
+    };
+    reader.readAsText(file);
+  };
+  input.click();
 }
 
 document.addEventListener("DOMContentLoaded",()=>{
@@ -838,6 +1118,14 @@ document.addEventListener("DOMContentLoaded",()=>{
   $("lg-preset").addEventListener("change",(e)=>{
     const v=e.target.value; (PRESETS[v]||PRESETS.custom)();
   });
+
+  // New event handlers
+  $("lg-save-preset").addEventListener("click",savePreset);
+  $("lg-load-preset").addEventListener("click",loadPreset);
+  $("lg-import-custom").addEventListener("click",importCustomTable);
+
+  // Load saved presets on startup
+  loadPresetList();
 
   // First run
   doGenerate();

@@ -28,6 +28,103 @@
       font-weight: bold;
     }
     #saveHistorySelect { min-width: 200px; }
+
+    /* Stat Block Tooltips */
+    .monster-preview-trigger:hover {
+      background-color: #495057 !important;
+      transition: background-color 0.2s;
+    }
+
+    .stat-block-preview {
+      position: absolute;
+      z-index: 9999;
+      background: #2d3748;
+      border: 2px solid #4a5568;
+      border-radius: 8px;
+      padding: 12px;
+      min-width: 350px;
+      max-width: 500px;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+      font-size: 0.9rem;
+      line-height: 1.4;
+      pointer-events: none;
+    }
+
+    .stat-block-preview .preview-header {
+      font-weight: bold;
+      font-size: 1.1rem;
+      margin-bottom: 8px;
+      color: #f7fafc;
+      border-bottom: 2px solid #e53e3e;
+      padding-bottom: 4px;
+    }
+
+    .stat-block-preview .preview-subtitle {
+      font-style: italic;
+      color: #cbd5e0;
+      margin-bottom: 8px;
+    }
+
+    .stat-block-preview .stat-line {
+      margin: 4px 0;
+      color: #e2e8f0;
+    }
+
+    .stat-block-preview .stat-label {
+      font-weight: 600;
+      color: #fc8181;
+    }
+
+    .stat-block-preview .action-block {
+      margin: 8px 0;
+      padding: 6px;
+      background: #1a202c;
+      border-radius: 4px;
+      border-left: 3px solid #e53e3e;
+    }
+
+    .stat-block-preview .action-name {
+      font-weight: bold;
+      color: #fc8181;
+      margin-bottom: 2px;
+    }
+
+    .stat-block-preview .action-desc {
+      color: #cbd5e0;
+      font-size: 0.85rem;
+      margin-left: 8px;
+    }
+
+    .stat-block-preview .section-header {
+      font-weight: bold;
+      color: #fc8181;
+      margin-top: 10px;
+      margin-bottom: 4px;
+      text-transform: uppercase;
+      font-size: 0.85rem;
+      letter-spacing: 0.5px;
+    }
+
+    /* Expandable roster details */
+    .roster-expanded {
+      margin-top: 8px;
+      padding: 8px;
+      background: #1a202c;
+      border-radius: 4px;
+      font-size: 0.85rem;
+    }
+
+    .roster-actions {
+      display: grid;
+      gap: 6px;
+    }
+
+    .roster-action-item {
+      padding: 6px;
+      background: #2d3748;
+      border-radius: 3px;
+      border-left: 2px solid #e53e3e;
+    }
   </style>
 </head>
 <body class="bgimage">
@@ -455,9 +552,23 @@
         // keep Multiattack from falsely inflating swings (it has no damage dice)
         attacksPerAction: /multiattack/i.test(a.name) ? undefined : 1
       }));
+      const special_abilities = (m.special_abilities||[]).map(sa=>({
+        name: sa.name,
+        desc: sa.desc || ""
+      }));
+      const legendary_actions = (m.legendary_actions||[]).map(la=>({
+        name: la.name,
+        desc: la.desc || ""
+      }));
+      const reactions = (m.reactions||[]).map(r=>({
+        name: r.name,
+        desc: r.desc || ""
+      }));
       const cr = (typeof m.challenge_rating === 'number') ? m.challenge_rating : Number(m.challenge_rating);
-      return { name:m.name, type:m.type, size:m.size, cr: isNaN(cr)?undefined:cr, ac, hp:m.hit_points||1, speed,
-               actions, notes:'' };
+      return {
+        name:m.name, type:m.type, size:m.size, cr: isNaN(cr)?undefined:cr, ac, hp:m.hit_points||1, speed,
+        actions, special_abilities, legendary_actions, reactions, notes:''
+      };
     }
 
     // meta cache + concurrency-limited enrichment
@@ -467,6 +578,121 @@
       const slim = { cr: metaFull.cr, type: (metaFull.type || '') };
       SRD_META.set(index, slim);
       return slim;
+    }
+
+    // -------------------- Stat Block Preview Tooltip --------------------
+    let currentPreview = null;
+    let previewTimeout = null;
+
+    function createStatBlockPreview(monster) {
+      const div = document.createElement('div');
+      div.className = 'stat-block-preview';
+
+      let html = `
+        <div class="preview-header">${monster.name}</div>
+        <div class="preview-subtitle">${monster.size || ''} ${monster.type || ''}, CR ${monster.cr ?? '—'}</div>
+        <div class="stat-line"><span class="stat-label">AC:</span> ${monster.ac ?? '—'}</div>
+        <div class="stat-line"><span class="stat-label">HP:</span> ${monster.hp ?? '—'}</div>
+        <div class="stat-line"><span class="stat-label">Speed:</span> ${monster.speed || '—'}</div>
+      `;
+
+      // Special Abilities
+      if (monster.special_abilities && monster.special_abilities.length > 0) {
+        html += '<div class="section-header">Special Abilities</div>';
+        monster.special_abilities.forEach(sa => {
+          html += `<div class="action-block">
+            <div class="action-name">${sa.name}</div>
+            <div class="action-desc">${sa.desc}</div>
+          </div>`;
+        });
+      }
+
+      // Actions
+      if (monster.actions && monster.actions.length > 0) {
+        html += '<div class="section-header">Actions</div>';
+        monster.actions.forEach(action => {
+          const attackInfo = [];
+          if (action.toHit !== undefined) attackInfo.push(`+${action.toHit} to hit`);
+          if (action.saveDC !== undefined) attackInfo.push(`DC ${action.saveDC}`);
+          if (action.damage) attackInfo.push(`${action.damage} damage`);
+
+          const attackLine = attackInfo.length > 0 ? ` (${attackInfo.join(', ')})` : '';
+
+          html += `<div class="action-block">
+            <div class="action-name">${action.name}${attackLine}</div>
+            <div class="action-desc">${action.desc}</div>
+          </div>`;
+        });
+      }
+
+      // Reactions
+      if (monster.reactions && monster.reactions.length > 0) {
+        html += '<div class="section-header">Reactions</div>';
+        monster.reactions.forEach(r => {
+          html += `<div class="action-block">
+            <div class="action-name">${r.name}</div>
+            <div class="action-desc">${r.desc}</div>
+          </div>`;
+        });
+      }
+
+      // Legendary Actions
+      if (monster.legendary_actions && monster.legendary_actions.length > 0) {
+        html += '<div class="section-header">Legendary Actions</div>';
+        monster.legendary_actions.forEach(la => {
+          html += `<div class="action-block">
+            <div class="action-name">${la.name}</div>
+            <div class="action-desc">${la.desc}</div>
+          </div>`;
+        });
+      }
+
+      div.innerHTML = html;
+      return div;
+    }
+
+    function showPreview(element, monster) {
+      clearTimeout(previewTimeout);
+      hidePreview();
+
+      currentPreview = createStatBlockPreview(monster);
+      document.body.appendChild(currentPreview);
+
+      // Position the preview
+      const rect = element.getBoundingClientRect();
+      const previewRect = currentPreview.getBoundingClientRect();
+
+      let left = rect.right + 10;
+      let top = rect.top;
+
+      // Adjust if goes off right side
+      if (left + previewRect.width > window.innerWidth) {
+        left = rect.left - previewRect.width - 10;
+      }
+
+      // Adjust if goes off bottom
+      if (top + previewRect.height > window.innerHeight) {
+        top = window.innerHeight - previewRect.height - 10;
+      }
+
+      // Adjust if goes off top
+      if (top < 0) {
+        top = 10;
+      }
+
+      currentPreview.style.left = `${left}px`;
+      currentPreview.style.top = `${top}px`;
+    }
+
+    function hidePreview() {
+      if (currentPreview) {
+        currentPreview.remove();
+        currentPreview = null;
+      }
+    }
+
+    function scheduleHidePreview() {
+      previewTimeout = setTimeout(hidePreview, 200);
     }
     async function mapLimit(items, limit, fn) {
       const ret = new Array(items.length);
@@ -504,9 +730,21 @@
         wrap.innerHTML = '';
         list.slice(0,200).forEach(it=>{
           const a = document.createElement('a');
-          a.href="#"; a.className='list-group-item list-group-item-action bg-dark text-light';
+          a.href="#"; a.className='list-group-item list-group-item-action bg-dark text-light monster-preview-trigger';
           a.textContent = it.name;
+          a.dataset.index = it.index;
           a.onclick = async (e)=>{ e.preventDefault(); addToRoster(await fetchSrdMonster(it.index)); };
+
+          // Add hover preview
+          let hoverMonster = null;
+          a.addEventListener('mouseenter', async function() {
+            if (!hoverMonster) {
+              hoverMonster = await fetchSrdMonster(it.index);
+            }
+            showPreview(this, hoverMonster);
+          });
+          a.addEventListener('mouseleave', scheduleHidePreview);
+
           wrap.appendChild(a);
         });
         if (!wrap.children.length) {
@@ -537,9 +775,21 @@
       wrap.innerHTML = '';
       filtered.slice(0,200).forEach(it=>{
         const a = document.createElement('a');
-        a.href="#"; a.className='list-group-item list-group-item-action bg-dark text-light';
+        a.href="#"; a.className='list-group-item list-group-item-action bg-dark text-light monster-preview-trigger';
         a.textContent = it.name;
+        a.dataset.index = it.index;
         a.onclick = async (e)=>{ e.preventDefault(); addToRoster(await fetchSrdMonster(it.index)); };
+
+        // Add hover preview
+        let hoverMonster = null;
+        a.addEventListener('mouseenter', async function() {
+          if (!hoverMonster) {
+            hoverMonster = await fetchSrdMonster(it.index);
+          }
+          showPreview(this, hoverMonster);
+        });
+        a.addEventListener('mouseleave', scheduleHidePreview);
+
         wrap.appendChild(a);
       });
       if (!wrap.children.length) {
@@ -590,13 +840,27 @@
       roster.forEach((m, idx)=>{
         const li = document.createElement('li');
         li.className='list-group-item bg-dark text-light border-secondary';
+
+        // Build action summary
+        let actionSummary = '';
+        if (m.actions && m.actions.length > 0) {
+          const actionNames = m.actions.slice(0, 3).map(a => a.name).join(', ');
+          const remaining = m.actions.length > 3 ? ` +${m.actions.length - 3} more` : '';
+          actionSummary = `<div class="small text-info mt-1"><i class="bi bi-lightning-charge"></i> ${actionNames}${remaining}</div>`;
+        }
+
         li.innerHTML = `
           <div class="d-flex justify-content-between align-items-start">
-            <div>
+            <div style="flex: 1;">
               <div class="fw-semibold">${m.name} <span class="text-secondary">(${m.type||'—'}${m.size?`, ${m.size}`:''})</span></div>
               <div class="small text-secondary">AC ${m.ac ?? '—'} • HP ${m.hp ?? '—'} • CR ${m.calc?.cr ?? (m.cr ?? '—')}
                 <span class="ms-2">[off ${m.calc?.offCR ?? '—'} / def ${m.calc?.defCR ?? '—'}]</span>
               </div>
+              ${actionSummary}
+              <button class="btn btn-sm btn-link text-warning p-0 mt-1" data-role="toggle" data-i="${idx}">
+                <i class="bi bi-chevron-down"></i> Show Details
+              </button>
+              <div class="roster-expanded" style="display:none;" data-i="${idx}"></div>
             </div>
             <div class="d-flex align-items-center gap-2">
               <input class="form-control form-control-sm" type="number" min="1" value="${m.qty}" style="width:70px" data-role="qty" data-i="${idx}">
@@ -619,6 +883,92 @@
         const i = Number(e.currentTarget.dataset.i);
         const v = Math.max(1, Number(e.currentTarget.value||1));
         roster[i].qty = v; renderSummary();
+      });
+
+      // Wire toggle details buttons
+      ul.querySelectorAll('button[data-role="toggle"]').forEach(btn => btn.onclick = e => {
+        const i = Number(e.currentTarget.dataset.i);
+        const expanded = ul.querySelector(`.roster-expanded[data-i="${i}"]`);
+        const icon = e.currentTarget.querySelector('i');
+
+        if (expanded.style.display === 'none') {
+          // Show details
+          expanded.style.display = 'block';
+          e.currentTarget.innerHTML = '<i class="bi bi-chevron-up"></i> Hide Details';
+
+          // Build detailed view
+          const m = roster[i];
+          let html = '';
+
+          // Special Abilities
+          if (m.special_abilities && m.special_abilities.length > 0) {
+            html += '<div class="fw-bold text-warning mt-2 mb-1">Special Abilities</div>';
+            html += '<div class="roster-actions">';
+            m.special_abilities.forEach(sa => {
+              html += `<div class="roster-action-item">
+                <div class="fw-semibold">${sa.name}</div>
+                <div class="small text-secondary">${sa.desc}</div>
+              </div>`;
+            });
+            html += '</div>';
+          }
+
+          // Actions
+          if (m.actions && m.actions.length > 0) {
+            html += '<div class="fw-bold text-warning mt-2 mb-1">Actions</div>';
+            html += '<div class="roster-actions">';
+            m.actions.forEach(action => {
+              const attackInfo = [];
+              if (action.toHit !== undefined) attackInfo.push(`+${action.toHit} to hit`);
+              if (action.saveDC !== undefined) attackInfo.push(`DC ${action.saveDC}`);
+              if (action.damage) attackInfo.push(`${action.damage} damage`);
+              const attackLine = attackInfo.length > 0 ? ` <span class="text-info">(${attackInfo.join(', ')})</span>` : '';
+
+              html += `<div class="roster-action-item">
+                <div class="fw-semibold">${action.name}${attackLine}</div>
+                <div class="small text-secondary">${action.desc}</div>
+              </div>`;
+            });
+            html += '</div>';
+          }
+
+          // Reactions
+          if (m.reactions && m.reactions.length > 0) {
+            html += '<div class="fw-bold text-warning mt-2 mb-1">Reactions</div>';
+            html += '<div class="roster-actions">';
+            m.reactions.forEach(r => {
+              html += `<div class="roster-action-item">
+                <div class="fw-semibold">${r.name}</div>
+                <div class="small text-secondary">${r.desc}</div>
+              </div>`;
+            });
+            html += '</div>';
+          }
+
+          // Legendary Actions
+          if (m.legendary_actions && m.legendary_actions.length > 0) {
+            html += '<div class="fw-bold text-warning mt-2 mb-1">Legendary Actions</div>';
+            html += '<div class="roster-actions">';
+            m.legendary_actions.forEach(la => {
+              html += `<div class="roster-action-item">
+                <div class="fw-semibold">${la.name}</div>
+                <div class="small text-secondary">${la.desc}</div>
+              </div>`;
+            });
+            html += '</div>';
+          }
+
+          // Speed
+          if (m.speed) {
+            html += `<div class="mt-2"><span class="fw-bold text-warning">Speed:</span> ${m.speed}</div>`;
+          }
+
+          expanded.innerHTML = html || '<div class="text-secondary">No additional details available.</div>';
+        } else {
+          // Hide details
+          expanded.style.display = 'none';
+          e.currentTarget.innerHTML = '<i class="bi bi-chevron-down"></i> Show Details';
+        }
       });
       renderSummary();
       // Drag sort
