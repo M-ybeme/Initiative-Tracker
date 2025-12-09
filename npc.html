@@ -175,6 +175,11 @@ const BUILD = [
   "burly","round-shouldered","sinewy","thickset","petite","imposing","gaunt"
 ];
 
+const HEIGHT = [
+  "very short","short","below average height","average height","above average height","tall","very tall",
+  "unusually tall","compact","towering","diminutive","statuesque"
+];
+
 const HAIR_STYLE = [
   "short-cropped","curly","straight","braided","shaved","shoulder-length","coiled",
   "topknot","undercut","loose waves","ringlets","high bun","messy bun","side-parted",
@@ -266,6 +271,24 @@ const QUIRKS = [
   "logs the weather each day","lines items up by height","repairs broken buckles for fun"
 ];
 
+const SECRETS = [
+  "owes money to a local merchant guild","once witnessed a crime but never reported it","has a hidden stash of silver coins",
+  "secretly practices minor magic","keeps a journal of overheard conversations","is related to minor nobility","fled from another town years ago",
+  "knows the location of a smuggler's cache","has a false identity","once worked for a thieves' guild",
+  "is being blackmailed over a past indiscretion","sends anonymous donations to the local temple","saved a noble's life once",
+  "has a hidden family in another city","knows a secret passage under the town","once served in a war under a false name",
+  "is investigating a local conspiracy","has prophetic dreams they don't share","owes their life to a criminal",
+  "knows who really started the tavern fire","is teaching themselves to read forbidden texts","has a secret lover from a rival family",
+  "witnessed their mentor's mysterious death","keeps a record of corrupt officials","found a treasure map they haven't shared",
+  "is being followed by someone from their past","knows the mayor's dark secret","once stole from the town treasury",
+  "has correspondence with a foreign spy","saved evidence of a merchant's fraud","knows where bodies are buried",
+  "is part of a secret religious sect","has a bounty on their head in another kingdom","discovered their family lineage is fabricated",
+  "knows the real reason the old mill burned","once poisoned someone and got away with it","has a hidden magical item they can't use",
+  "is slowly embezzling from their employer","knows a cure for a rare disease","witnessed a shapeshifter replacing someone",
+  "has maps of secret smuggling routes","is quietly documenting nobles' movements","knows the town was built on cursed ground",
+  "has evidence that could topple a powerful family","once worked as an informant for authorities","knows where a missing person is hiding"
+];
+
 const WANTS = [
   "to make a fair sale","a quiet day of steady work","better tools","news from the road","to impress a supervisor",
   "to trade for supplies","to hire short-term help","to clear a small debt","to finish on time",
@@ -310,6 +333,7 @@ const ROLES = {
 function makeDescription(rng, settlement, mentionRole){
   const role = pick(rng, ROLES[settlement]);
   const age = pick(rng, AGE);
+  const height = pick(rng, HEIGHT);
   const build = pick(rng, BUILD);
   const hair = `${pick(rng, HAIR_STYLE)} ${pick(rng, HAIR_COLOR)} hair`;
   const eyes = `${pick(rng, EYES)} eyes`;
@@ -317,7 +341,7 @@ function makeDescription(rng, settlement, mentionRole){
   const attire = pick(rng, ATTIRE);
   const demeanor = pick(rng, DEMEANOR);
   const roleBit = mentionRole ? ` ${role}` : "";
-  return `A ${age}, ${build}${roleBit} with ${hair}, ${eyes}, and ${feat}. Wears a ${attire}; ${demeanor} manner.`;
+  return `A ${age}, ${height}, ${build}${roleBit} with ${hair}, ${eyes}, and ${feat}. Wears a ${attire}; ${demeanor} manner.`;
 }
 function makeVoice(rng){
   const tempo = pick(rng, VOICE_TEMPO), timbre = pick(rng, VOICE_TIMBRE), pitch = pick(rng, VOICE_PITCH);
@@ -330,6 +354,7 @@ function makeMannerisms(rng){
 function makeQuirk(rng){ return pick(rng, QUIRKS) + "."; }
 function makeWants(rng){ return pickN(rng, WANTS, 2).join("; ") + "."; }
 function makeAvoids(rng){ return pickN(rng, AVOIDS, 2).join("; ") + "."; }
+function makeSecret(rng){ return pick(rng, SECRETS) + "."; }
 
 function generate(){
   const settlement = $("npc-settlement").value;
@@ -352,6 +377,7 @@ function generate(){
     const quirk = makeQuirk(rng);
     const wants = makeWants(rng);
     const avoids = makeAvoids(rng);
+    const secret = makeSecret(rng);
 
     // render card
     const col = document.createElement("div"); col.className = "col";
@@ -363,6 +389,7 @@ function generate(){
       <div class="npc-field"><b>Quirk:</b> ${quirk}</div>
       <div class="npc-field"><b>Wants:</b> ${wants}</div>
       <div class="npc-field"><b>Wants to Avoid:</b> ${avoids}</div>
+      <div class="npc-field"><b>Secret:</b> ${secret}</div>
     `;
     col.appendChild(div); out.appendChild(col);
 
@@ -372,7 +399,8 @@ function generate(){
       `Mannerisms: ${mans}`,
       `Quirk: ${quirk}`,
       `Wants: ${wants}`,
-      `Wants to Avoid: ${avoids}`
+      `Wants to Avoid: ${avoids}`,
+      `Secret: ${secret}`
     ].join("\n"));
   }
   return rows;

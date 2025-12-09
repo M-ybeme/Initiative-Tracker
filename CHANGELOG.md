@@ -5,6 +5,95 @@ and this project adheres to Semantic Versioning.
 
 
 
+1.8.5 - 2025-12-09
+Character Manager: Structured Inventory System
+
+Added
+
+- **Structured Inventory Management**
+  - Replaced simple text field with full inventory table system
+  - Track item name, quantity, weight per item, equipped status, and attunement
+  - Edit and delete buttons for each inventory item
+  - Modal dialog for adding/editing items with validation
+  - Optional notes field for item descriptions
+
+- **Automatic Encumbrance Calculation**
+  - Real-time weight tracking based on D&D 5e rules (STR × 15 carrying capacity)
+  - Visual status indicators: Normal, Encumbered, Heavily Encumbered, Over Capacity
+  - Color-coded badges (green/info/warning/danger) for quick reference
+  - Displays total weight, carrying capacity, and encumbrance status
+  - Auto-updates when strength score changes or inventory is modified
+
+- **Inventory Display Features**
+  - Equipped items shown with filled check icon, unequipped with empty circle
+  - Attuned items marked with filled star icon, non-attuned with empty star
+  - Total weight calculated per item (quantity × weight per item)
+  - Responsive table layout with clear column headers
+
+Changed
+
+- Character data structure updated to include `inventoryItems` array (legacy `inventory` text field preserved for backward compatibility)
+- Character load/save functions integrated with new inventory system
+- Null-safe handling of legacy inventory field for characters without structured inventory
+
+NPC Generator: Enhanced Physical Descriptions & Secrets
+
+Added
+
+- **Height Field to Physical Descriptions**
+  - 12 height variations: very short, short, below average, average, above average, tall, very tall, unusually tall, compact, towering, diminutive, statuesque
+  - Integrated into NPC description generation
+  - Descriptions now include: age, height, build, hair, eyes, distinguishing features, attire, demeanor
+
+- **NPC Secrets System** (42 unique secrets)
+  - One secret automatically generated per NPC
+  - Categories: Financial (debts, hidden wealth), Criminal connections (thieves' guild, blackmail), Hidden knowledge (secret passages, conspiracies, cures), Identity secrets (false identity, hidden family, nobility), Dark past (witnessed crimes, poisoning, theft)
+  - Examples: "knows the location of a smuggler's cache", "is being blackmailed over a past indiscretion", "witnessed a shapeshifter replacing someone"
+  - Secrets displayed in NPC cards and included in exports
+
+Changed
+
+- NPC descriptions enhanced from 2-element format (age, build) to 3-element format (age, height, build)
+- NPC card structure updated to include Secret field
+- Copy/download exports now include secret information
+
+Note
+
+- Voice and mannerism features were already implemented with comprehensive details (tempo, timbre, pitch, accent, delivery, and 2 mannerisms per NPC)
+
+Shop Generator: Shopkeeper NPCs & Stock Management
+
+Added
+
+- **Auto-Generated Shopkeeper NPCs**
+  - Name generation with 4 name pools: generic (20 names), exotic (10 names), humble (10 names), scholarly (5 titled names)
+  - Personality system with 3 types weighted by probability:
+    - **Fitting (70%)**: Perfect for their role (e.g., blacksmith: "gruff and practical", "has burn scars")
+    - **Ironic (20%)**: Hilariously contradictory (e.g., blacksmith: "squeamish about violence despite making weapons")
+    - **Wrong Field (10%)**: Clearly in wrong profession (e.g., blacksmith: "wanted to be a baker, makes weapon-shaped bread on the side")
+  - 10+ shop types with 4 unique personality traits per type per category
+  - Shopkeeper name and personality displayed prominently in each shop card
+
+- **Limited Stock Quantities**
+  - Stock amounts vary by item rarity and settlement size
+  - **Rare items**: 1-3 in stock (always limited regardless of settlement)
+  - **Uncommon items**: Settlement stock range (village: 5-8, town: 7-12, capital: 10-16)
+  - **Common items**: Settlement range + 50% bonus for greater availability
+  - Stock quantity displayed in dedicated table column
+
+- **Settlement Size Affects Inventory**
+  - Village: 5-8 base stock, higher prices (10-35% markup), scarcer rare items
+  - Town: 7-12 base stock, balanced prices (−5% to +15%), moderate rare availability
+  - Capital: 10-16 base stock, lower prices (−15% to +20%), broader rare selection
+  - Stock ranges applied based on settlement selection in generator settings
+
+Changed
+
+- Shop card layout reorganized: header, shopkeeper section, then inventory table
+- Table columns updated: Item (24%), Description (38%), Use (13%), Stock (12%), Price (13%)
+- Copy/download functions updated to include shopkeeper information and stock quantities
+- Export format: `Shopkeeper: [Name] - [Personality]` followed by item table with stock
+
 1.8.4 - 2025-12-08
 Loot Generator: Complete Feature Overhaul
 

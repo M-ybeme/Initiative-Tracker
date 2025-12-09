@@ -1567,6 +1567,190 @@
         renderAttackList();
       }
 
+      // ---------- Inventory management ----------
+      let currentInventoryList = [];
+
+      function syncInventoryFromCharacter(char) {
+        // Support both old string format and new structured format
+        if (Array.isArray(char?.inventoryItems)) {
+          currentInventoryList = [...char.inventoryItems];
+        } else {
+          currentInventoryList = [];
+        }
+        renderInventoryTable();
+        updateEncumbrance();
+      }
+
+      function renderInventoryTable() {
+        const tbody = $('inventoryTableBody');
+        if (!tbody) return;
+        tbody.innerHTML = '';
+
+        if (!currentInventoryList.length) {
+          const tr = document.createElement('tr');
+          tr.className = 'text-muted';
+          tr.innerHTML = `<td colspan="7" class="text-center py-3"><small>No items yet. Click "Add Item" to start building your inventory.</small></td>`;
+          tbody.appendChild(tr);
+          return;
+        }
+
+        currentInventoryList.forEach((item, index) => {
+          const tr = document.createElement('tr');
+          tr.className = 'align-middle';
+
+          const quantity = parseInt(item.quantity) || 1;
+          const weight = parseFloat(item.weight) || 0;
+          const totalWeight = quantity * weight;
+
+          tr.innerHTML = `
+            <td>
+              <strong>${item.name || 'Unnamed Item'}</strong>
+              ${item.notes ? `<br><small class="text-muted">${item.notes}</small>` : ''}
+            </td>
+            <td class="text-center">${quantity}</td>
+            <td class="text-center">${weight.toFixed(1)}</td>
+            <td class="text-center">
+              ${item.equipped ? '<i class="bi bi-check-circle-fill text-success"></i>' : '<i class="bi bi-circle text-muted"></i>'}
+            </td>
+            <td class="text-center">
+              ${item.attuned ? '<i class="bi bi-star-fill text-warning"></i>' : '<i class="bi bi-star text-muted"></i>'}
+            </td>
+            <td class="text-center"><strong>${totalWeight.toFixed(1)} lb</strong></td>
+            <td class="text-center">
+              <button type="button" class="btn btn-sm btn-outline-primary" data-inventory-edit="${index}" title="Edit Item">
+                <i class="bi bi-pencil"></i>
+              </button>
+              <button type="button" class="btn btn-sm btn-outline-danger" data-inventory-delete="${index}" title="Delete Item">
+                <i class="bi bi-trash"></i>
+              </button>
+            </td>
+          `;
+
+          tbody.appendChild(tr);
+        });
+      }
+
+      function updateEncumbrance() {
+        // Calculate total weight
+        let totalWeight = 0;
+        currentInventoryList.forEach(item => {
+          const quantity = parseInt(item.quantity) || 1;
+          const weight = parseFloat(item.weight) || 0;
+          totalWeight += quantity * weight;
+        });
+
+        // Get strength score for carrying capacity
+        const char = getCurrentCharacter();
+        const strScore = char ? (parseInt(char.str) || 10) : 10;
+        const carryingCapacity = strScore * 15; // Standard D&D 5e rule
+        const heavyLoad = strScore * 10;
+        const pushDragLift = carryingCapacity * 2;
+
+        // Update display
+        const totalWeightEl = $('totalWeight');
+        const carryingCapacityEl = $('carryingCapacity');
+        const encumbranceStatusEl = $('encumbranceStatus');
+
+        if (totalWeightEl) {
+          totalWeightEl.textContent = `${totalWeight.toFixed(1)} lb`;
+        }
+
+        if (carryingCapacityEl) {
+          carryingCapacityEl.textContent = `${carryingCapacity} lb`;
+        }
+
+        if (encumbranceStatusEl) {
+          let statusBadge = '';
+          if (totalWeight > carryingCapacity) {
+            statusBadge = '<span class="badge bg-danger">Over Capacity!</span>';
+          } else if (totalWeight > heavyLoad) {
+            statusBadge = '<span class="badge bg-warning">Heavily Encumbered</span>';
+          } else if (totalWeight > heavyLoad * 0.66) {
+            statusBadge = '<span class="badge bg-info">Encumbered</span>';
+          } else {
+            statusBadge = '<span class="badge bg-success">Normal</span>';
+          }
+          encumbranceStatusEl.innerHTML = statusBadge;
+        }
+      }
+
+      function openInventoryItemModal(index = null) {
+        const modal = new bootstrap.Modal($('inventoryItemModal'));
+        const editIndexInput = $('inventoryItemEditIndex');
+
+        // Clear or populate form
+        if (index !== null && currentInventoryList[index]) {
+          const item = currentInventoryList[index];
+          editIndexInput.value = index;
+          $('inventoryItemName').value = item.name || '';
+          $('inventoryItemQuantity').value = item.quantity || 1;
+          $('inventoryItemWeight').value = item.weight || 0;
+          $('inventoryItemEquipped').checked = !!item.equipped;
+          $('inventoryItemAttuned').checked = !!item.attuned;
+          $('inventoryItemNotes').value = item.notes || '';
+          $('inventoryItemModalLabel').textContent = 'Edit Item';
+        } else {
+          editIndexInput.value = '';
+          $('inventoryItemName').value = '';
+          $('inventoryItemQuantity').value = 1;
+          $('inventoryItemWeight').value = 0;
+          $('inventoryItemEquipped').checked = false;
+          $('inventoryItemAttuned').checked = false;
+          $('inventoryItemNotes').value = '';
+          $('inventoryItemModalLabel').textContent = 'Add Item';
+        }
+
+        modal.show();
+      }
+
+      function saveInventoryItem() {
+        const editIndex = $('inventoryItemEditIndex').value;
+        const name = $('inventoryItemName').value.trim();
+        const quantity = parseInt($('inventoryItemQuantity').value) || 1;
+        const weight = parseFloat($('inventoryItemWeight').value) || 0;
+        const equipped = $('inventoryItemEquipped').checked;
+        const attuned = $('inventoryItemAttuned').checked;
+        const notes = $('inventoryItemNotes').value.trim();
+
+        if (!name) {
+          alert('Please enter an item name.');
+          return;
+        }
+
+        const item = {
+          name,
+          quantity,
+          weight,
+          equipped,
+          attuned,
+          notes
+        };
+
+        if (editIndex !== '') {
+          // Edit existing item
+          const idx = parseInt(editIndex);
+          if (idx >= 0 && idx < currentInventoryList.length) {
+            currentInventoryList[idx] = item;
+          }
+        } else {
+          // Add new item
+          currentInventoryList.push(item);
+        }
+
+        renderInventoryTable();
+        updateEncumbrance();
+        bootstrap.Modal.getInstance($('inventoryItemModal')).hide();
+      }
+
+      function deleteInventoryItem(index) {
+        if (index < 0 || index >= currentInventoryList.length) return;
+        const item = currentInventoryList[index];
+        if (!confirm(`Delete "${item.name || 'Unnamed Item'}"?`)) return;
+        currentInventoryList.splice(index, 1);
+        renderInventoryTable();
+        updateEncumbrance();
+      }
+
       // ---------- Exhaustion helper ----------
       function updateExhaustionDescription() {
         const input = $('exhaustionLevel');
@@ -1816,7 +2000,9 @@
       
           $('charFeatures').value = char.features || '';
           $('charSpells').value = char.spells || '';
-          $('charInventory').value = char.inventory || '';
+          // Legacy inventory field (may not exist if using new structured inventory)
+          const charInventoryEl = $('charInventory');
+          if (charInventoryEl) charInventoryEl.value = char.inventory || '';
           $('charNotes').value = char.notes || '';
           $('charTableNotes').value = char.tableNotes || '';
           $('charExtraNotes').value = char.extraNotes || '';
@@ -1841,6 +2027,7 @@
 
           syncSpellListFromCharacter(char);
           syncAttackListFromCharacter(char);
+          syncInventoryFromCharacter(char);
           syncConditionsFromField();
           updatePortraitPreview(char);
           setLastUpdatedText(char);
@@ -1984,7 +2171,8 @@
           spells: '',
           spellList: [],
           attacks: [],
-          inventory: '',
+          inventory: '', // Legacy text field (kept for backward compatibility)
+          inventoryItems: [], // New structured inventory
           notes: '',
           tableNotes: '',
           extraNotes: '',
@@ -2220,7 +2408,8 @@
               .filter(Boolean)
           : [];
           char.attacks = Array.isArray(currentAttackList) ? [...currentAttackList] : [];
-          char.inventory = getVal('charInventory');
+          char.inventoryItems = Array.isArray(currentInventoryList) ? [...currentInventoryList] : [];
+          char.inventory = getVal('charInventory'); // Keep legacy field for backward compatibility
           char.notes = getVal('charNotes');
           char.tableNotes = getVal('charTableNotes');
           char.extraNotes = getVal('charExtraNotes');
@@ -2910,6 +3099,46 @@
               const index = parseInt(deleteBtn.getAttribute('data-attack-delete'), 10);
               deleteAttack(index);
             }
+          });
+        }
+
+        // Inventory management handlers
+        const addInventoryItemBtn = $('addInventoryItemBtn');
+        const saveInventoryItemBtn = $('saveInventoryItemBtn');
+        const inventoryTableBody = $('inventoryTableBody');
+
+        if (addInventoryItemBtn) {
+          addInventoryItemBtn.addEventListener('click', () => openInventoryItemModal());
+        }
+
+        if (saveInventoryItemBtn) {
+          saveInventoryItemBtn.addEventListener('click', saveInventoryItem);
+        }
+
+        if (inventoryTableBody) {
+          inventoryTableBody.addEventListener('click', e => {
+            // Edit inventory item
+            const editBtn = e.target.closest('button[data-inventory-edit]');
+            if (editBtn) {
+              const index = parseInt(editBtn.getAttribute('data-inventory-edit'), 10);
+              openInventoryItemModal(index);
+              return;
+            }
+
+            // Delete inventory item
+            const deleteBtn = e.target.closest('button[data-inventory-delete]');
+            if (deleteBtn) {
+              const index = parseInt(deleteBtn.getAttribute('data-inventory-delete'), 10);
+              deleteInventoryItem(index);
+            }
+          });
+        }
+
+        // Update encumbrance when strength changes
+        const statStrEl = $('statStr');
+        if (statStrEl) {
+          statStrEl.addEventListener('input', () => {
+            updateEncumbrance();
           });
         }
 

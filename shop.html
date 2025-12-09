@@ -260,6 +260,53 @@ const SETTLEMENT = {
     });
   }
 
+// ---------- Shopkeeper Name & Personality ----------
+const SHOPKEEPER_NAMES = {
+  generic: ["Aldric","Mara","Torin","Elise","Gareth","Nessa","Orin","Lyra","Bram","Celia","Doran","Fenna","Gregor","Hilde","Ivan","Jora","Kael","Leta","Merrick","Nina"],
+  exotic: ["Zephyra","Corvax","Silvain","Meridia","Thalion","Vexara","Quentis","Lunara","Draven","Isolde"],
+  humble: ["Tom","Bessie","Jack","Molly","Ben","Annie","Will","Rose","Sam","Nell"],
+  scholarly: ["Professor Aldwin","Magistra Thalia","Archivist Quill","Scholar Pemberton","Sage Mirelle"]
+};
+
+const SHOPKEEPER_PERSONALITY = {
+  fitting: {
+    "Blacksmith (Arms/Armor)": ["gruff and practical","muscular with soot-stained hands","speaks in clipped, efficient sentences","has burn scars and a no-nonsense attitude"],
+    "Potions & Elixirs": ["speaks in a dreamy, distracted manner","has stained fingers from herb work","constantly tasting and smelling mixtures","obsessed with precise measurements"],
+    "Bookshop/Library": ["wears reading spectacles on a chain","speaks in hushed, reverent tones","knows every book's location by heart","gets excited about rare editions"],
+    "Tailor": ["has pins stuck in their collar","measures people with their eyes habitually","speaks of fabrics with genuine passion","always impeccably dressed"],
+    "General Goods": ["friendly and chatty","knows everyone's business","remembers what each customer usually buys","has a knack for finding exactly what you need"],
+    "Alchemist/Apothecary": ["mutters chemical formulas under their breath","has faint chemical burns on hands","obsessed with cataloging ingredients","speaks in technical jargon"],
+    "Magic Items": ["eyes gleam with arcane knowledge","fingers crackle with residual magic","speaks in riddles about enchantments","protective of their wares"],
+    "Arcane Scrolls": ["robed in deep blue or purple","speaks of magic theory constantly","has ink-stained fingers","quotes ancient wizards"],
+    "Divine Scrolls": ["wears holy symbol prominently","blesses customers habitually","speaks of divine will","calm and serene demeanor"],
+    "Inn/Tavern": ["jovial and welcoming","smells of cooking and ale","knows all the local gossip","treats regulars like family"],
+    "Stables": ["smells of hay and horse","speaks gently to animals","covered in dust and horsehair","practical and down-to-earth"],
+    "Cobbler": ["hunched from years of work","speaks while working their awl","proud of their craft","judges people by their shoes"],
+    "Carpenter": ["wood shavings in their hair","smells of fresh sawdust","strong hands, careful eye","speaks of grain and joints"],
+    "default": ["knowledgeable about their trade","takes pride in their work","efficient and professional","fair in their dealings"]
+  },
+  ironic: {
+    "Blacksmith (Arms/Armor)": ["delicate and refined, speaks of beauty in brutality","squeamish about violence despite making weapons","obsessed with decorative flourishes over function","has never actually used a weapon"],
+    "Potions & Elixirs": ["terrified of getting sick","refuses to taste their own products","allergic to common herbs","keeps meticulous records but can't remember recipes"],
+    "Bookshop/Library": ["barely literate, inherited the shop","judges books by their covers","can't remember titles, only colors of spines","hates reading, loves collecting"],
+    "Tailor": ["dresses terribly, claims it's 'avant-garde'","colorblind but insists on choosing fabrics","can't sew a straight line, hires others","allergic to most fabrics"],
+    "General Goods": ["forgetful, can't find anything","hates small talk despite running a social hub","terrible at inventory, always out of stock","dislikes people, inherited family business"],
+    "Alchemist/Apothecary": ["clumsy, constantly breaking beakers","has no sense of smell","follows recipes by rote without understanding","superstitious about 'bad luck' ingredients"],
+    "Magic Items": ["completely non-magical, can't sense enchantments","relies entirely on a catalog from previous owner","terrified of magic but makes a living from it","sells items based on how shiny they are"],
+    "default": ["clearly doesn't enjoy their work","inherited the business reluctantly","would rather be doing anything else","secretly dreams of a different career"]
+  },
+  wrongField: {
+    "Blacksmith (Arms/Armor)": ["wanted to be a baker, makes weapon-shaped bread on the side","trained as a musician, hums while hammering","former scholar who failed at magic, took up smithing in frustration","aspiring artist who treats each blade as a sculpture"],
+    "Potions & Elixirs": ["trained chef who treats potions like recipes","former adventurer who got tired of buying overpriced healing","wannabe wizard who couldn't master real spells","herbalist who stumbled into potion-making by accident"],
+    "Bookshop/Library": ["failed bard who writes terrible poetry in the margins","former soldier organizing books like military ranks","retired thief who now 'legally acquires' rare books","inventor who keeps engineering diagrams mixed with books"],
+    "Tailor": ["former armor smith who got bored with metal","wannabe painter who uses fabric instead of canvas","ex-sailor who only knows how to patch sails","accountant who treats sewing like mathematics"],
+    "General Goods": ["overqualified wizard slumming as shopkeeper","former noble who lost their fortune","retired assassin in witness protection","bored adventurer who settled down"],
+    "Alchemist/Apothecary": ["former poisoner who went legitimate","cook who thought alchemy would be similar","failed healer turned ingredient supplier","herbalist who can't stand blood"],
+    "Magic Items": ["con artist selling 'genuine' magic items","former thief fencing magical goods","wizard who was expelled and selling their old homework","collector who accidentally opened a shop"],
+    "default": ["clearly overqualified for this job","seems out of place but competent","has an interesting backstory if you ask","makes the best of an odd situation"]
+  }
+};
+
 // ---------- Flavor / Quirk Pools (non-plot) ----------
 const FLAV_ADJ = ["sturdy","well-made","neatly finished","serviceable","balanced","polished","matte","lacquered","rifled","fine-grain","braided","stitched","grooved"];
 const FLAV_MAT = ["oakwood","ashwood","yew","maple","pine","boiled leather","suede","bronze","iron","copper","pewter","tin","linen","wool","canvas","felt","parchment","rag paper","glass"];
@@ -1001,6 +1048,32 @@ function decorateDesc(rng, d){
   return d;
 }
 
+// ---------- Shopkeeper Generation ----------
+function makeShopkeeper(rng, shopType){
+  // Determine shopkeeper type: 70% fitting, 20% ironic, 10% wrong field
+  const roll = rng();
+  let type, namePool;
+
+  if (roll < 0.70) {
+    type = 'fitting';
+    namePool = pick(rng, [SHOPKEEPER_NAMES.generic, SHOPKEEPER_NAMES.generic, SHOPKEEPER_NAMES.humble]);
+  } else if (roll < 0.90) {
+    type = 'ironic';
+    namePool = pick(rng, [SHOPKEEPER_NAMES.generic, SHOPKEEPER_NAMES.exotic]);
+  } else {
+    type = 'wrongField';
+    namePool = pick(rng, [SHOPKEEPER_NAMES.exotic, SHOPKEEPER_NAMES.scholarly, SHOPKEEPER_NAMES.generic]);
+  }
+
+  const name = pick(rng, namePool);
+
+  // Get personality trait based on type and shop
+  const personalitySet = SHOPKEEPER_PERSONALITY[type][shopType] || SHOPKEEPER_PERSONALITY[type].default;
+  const personality = pick(rng, personalitySet);
+
+  return { name, personality, type };
+}
+
 // ---------- Generation ----------
 function generate(){
   const seed = $("sg-seed").value.trim();
@@ -1043,6 +1116,9 @@ function generate(){
   );
 
   selected.forEach(type=>{
+    // Generate shopkeeper
+    const shopkeeper = makeShopkeeper(rng, type);
+
     // One consistent markup per shop for realism
     const [pmin,pmax] = SETTLEMENT[settlement].price;
     const shopMarkup = within(rng, [pmin,pmax]); // e.g., 0.95–1.15 in towns
@@ -1057,10 +1133,14 @@ function generate(){
           Settlement: ${settlement} • Markup: ${markupPct>=0?'+':''}${markupPct}%
         </div>
       </div>
+      <div class="p-2 border-bottom border-secondary">
+        <div class="small"><strong>Shopkeeper:</strong> ${shopkeeper.name}</div>
+        <div class="small text-secondary fst-italic">${shopkeeper.personality}</div>
+      </div>
       <div class="p-2">
         <div class="table-responsive">
           <table class="sg-tbl">
-            <thead><tr><th scope="col" style="width:26%">Item</th><th scope="col" style="width:44%">Description</th><th scope="col" style="width:15%">Use</th><th scope="col" style="width:15%">Price</th></tr></thead>
+            <thead><tr><th scope="col" style="width:24%">Item</th><th scope="col" style="width:38%">Description</th><th scope="col" style="width:13%">Use</th><th scope="col" style="width:12%">Stock</th><th scope="col" style="width:13%">Price</th></tr></thead>
             <tbody></tbody>
           </table>
         </div>
@@ -1073,6 +1153,7 @@ function generate(){
 
     const items   = SHOPS[type];
     const weights = SETTLEMENT[settlement].weights;
+    const [stockMin, stockMax] = SETTLEMENT[settlement].stock;
 
     const seenKeys   = new Set();
     const listedNames= new Set();
@@ -1087,6 +1168,18 @@ function generate(){
       const key = it.n+"|"+it.r;
       if(seenKeys.has(key)) continue;
       seenKeys.add(key);
+
+      // Generate stock quantity based on settlement and rarity
+      let stockQty;
+      if (it.r === 'rare') {
+        stockQty = Math.floor(rng() * 3) + 1; // 1-3 for rare items
+      } else if (it.r === 'uncommon') {
+        stockQty = Math.floor(rng() * (stockMax - stockMin + 1)) + stockMin; // Full settlement range
+      } else {
+        // Common items get more stock
+        const bonus = Math.floor((stockMax - stockMin) * 0.5);
+        stockQty = Math.floor(rng() * (stockMax - stockMin + 1 + bonus)) + stockMin;
+      }
 
       // Extra surcharge on rares varies by settlement (previous behavior), then apply shop markup
       const rareAdj = (it.r==='rare')
@@ -1106,6 +1199,7 @@ function generate(){
           <td data-label="Item">${it.n}${badge}</td>
           <td data-label="Description">${d}</td>
           <td data-label="Use">${it.u}</td>
+          <td data-label="Stock">${stockQty}</td>
           <td data-label="Price">${formatPrice(sp)}</td>
         </tr>`;
 
@@ -1128,15 +1222,18 @@ function generate(){
 function copyOut(){
   const blocks = [...document.querySelectorAll("#sg-out .sg-shopcard")].map(card=>{
     const title = card.querySelector(".fw-semibold").textContent.trim();
+    const shopkeeperDivs = card.querySelectorAll(".p-2.border-bottom")[1]?.querySelectorAll("div");
+    const shopkeeperInfo = shopkeeperDivs ? `Shopkeeper: ${shopkeeperDivs[0].textContent.replace('Shopkeeper: ', '')} - ${shopkeeperDivs[1].textContent}` : '';
     const rows = [...card.querySelectorAll("tbody tr")].map(tr=>{
       const t = tr.children[0].innerText.replace(/\s+(common|uncommon|rare)$/,'');
       const d = tr.children[1].innerText;
       const u = tr.children[2].innerText;
-      const p = tr.children[3].innerText;
-      return `- ${t} | ${d} | Use: ${u} | ${p}`;
+      const stock = tr.children[3].innerText;
+      const p = tr.children[4].innerText;
+      return `- ${t} | ${d} | Use: ${u} | Stock: ${stock} | ${p}`;
     });
     const uniq = card.querySelector(".sg-uniq").textContent.trim();
-    return `# ${title}\n${rows.join("\n")}${uniq?`\n* ${uniq}`:""}`;
+    return `# ${title}\n${shopkeeperInfo}\n${rows.join("\n")}${uniq?`\n* ${uniq}`:""}`;
   });
   if(!blocks.length) return;
   navigator.clipboard.writeText(blocks.join("\n\n"));
