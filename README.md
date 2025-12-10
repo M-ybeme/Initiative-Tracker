@@ -38,12 +38,19 @@ Lightweight VTT for maps, tokens, and fog of war
 
 Upload custom maps or use grid overlay
 Token management (upload or use 28 built-in presets)
+Token labels with persistent name display above tokens
+HP tracking with visual HP bars (set/damage/heal/clear)
+Status conditions tracking (Poisoned, Stunned, etc.) displayed above tokens
+Aura effects with customizable radius circles and colors
+Vision cones with adjustable angle and range
 Fog of War (reveal/cover with brush tool)
+Fog shapes (rectangles/squares) with interactive resize handles
 Grid calibration (two-click distance measurement)
 Map transform controls (scale, offset, rotation)
 Zoom, pan, measure distance
 Mobile-friendly (pinch-zoom, touch controls)
-Session export/import (preserves fog state)
+Session export/import (preserves fog state and token features)
+Manual save system (Ctrl+S) to prevent performance issues
 Token placement with snap-to-grid
 Drag-and-drop tokens with rotation support
 
@@ -52,7 +59,11 @@ Use case: Upload a dungeon map, calibrate the grid in two clicks, add tokens, re
 ⚔️ Encounter Builder
 Quick encounter assembly with export to Initiative
 
-Searchable monster database
+Searchable monster database with hover tooltips
+Rich stat block previews (AC, HP, Speed, CR, abilities, actions)
+Expandable stat blocks in encounter roster with "Show Details" button
+Special abilities, legendary actions, and reactions display
+Attack information with to-hit bonuses, save DCs, and damage
 Custom monster support
 Drag-to-reorder encounter roster
 Direct export to Initiative Tracker
@@ -67,15 +78,20 @@ Full-featured character sheets for both DM prep and player use
 **Character Sheet Features:**
 - Full character sheet (stats, saves, skills, HP, AC)
 - Portrait system with zoom/pan framing editor
-- Spell management with tag/class filtering and custom spell builder
+- Spell management with tag/class filtering and custom spell builder (432 spells from PHB/Xanathar's/Tasha's)
 - Attack list with modal editor (weapon/spell attacks, damage rolls)
 - Spell slot tracking (levels 1-9 + pact slots) with long rest reset
 - Expertise support (double proficiency for skills)
+- Structured inventory system with encumbrance tracking
+- Initiative roller integrated into combat snapshot
 
 **Player-Facing Features:**
 - **Character Creation Wizard** - 7-step guided walkthrough for new players
 - Interactive dice roller with advantage/disadvantage support
-- Roll buttons for all skills, saves, and attacks
+- Explicit advantage/disadvantage buttons (Green/Normal/Red) for all rolls
+- Roll buttons for all skills, saves, and attacks with visual color coding
+- Separate damage roll controls (to-hit, primary damage, secondary damage)
+- Critical hit and half damage buttons for accurate 5e damage calculation
 - Roll history panel (last 50 rolls with timestamps, collapsible on mobile)
 - HP adjustment buttons (Heal, Damage, Temp HP, Max HP)
 - Inspiration and Concentration tracking
@@ -91,9 +107,13 @@ Full-featured character sheets for both DM prep and player use
 **Additional Features:**
 - Tabbed interface (Actions, Spells, Inventory, Features, Background)
 - Passive scores (Perception, Investigation, Insight)
+- Structured inventory with automatic encumbrance tracking (D&D 5e rules)
+- Visual encumbrance status (Normal/Encumbered/Heavily Encumbered/Over Capacity)
+- Equipment and attunement tracking
 - One-click export to Initiative Tracker
 - Import/export JSON (backup or share)
 - Multi-character management with dropdown selector
+- IndexedDB storage for large portraits (50MB-1GB+ capacity)
 
 **Use cases:**
 - **DM Mode:** Track the party—quick reference for passive Perception, spell lists, and story hooks. Export all 4 PCs to Initiative Tracker before combat.
@@ -102,13 +122,17 @@ Full-featured character sheets for both DM prep and player use
 🏪 Shop Generator
 Settlement-based economy with comprehensive inventories
 
+Auto-generated shopkeeper NPCs with names and personalities
+Personality system with fitting (70%), ironic (20%), and wrong-field (10%) traits
+10+ shop types with unique personality variations
 Organized item categories (Weapons, Armor, Tools, Adventuring Gear, Magic Items, Consumables)
 Settlement economy (Village/Town/Capital pricing)
 Rarity gating (Villages don't sell legendary items)
 Quality tiers (Rough/Standard/Premium/Masterwork)
-Stock quantities (limited rare items)
+Limited stock quantities varying by rarity and settlement size
+Settlement-based stock ranges (Village: 5-8, Town: 7-12, Capital: 10-16)
 Seeded RNG for reproducible shops
-Export/copy/download inventory lists
+Export/copy/download inventory lists with shopkeeper info
 
 Use case: Players walk into a village blacksmith. Generate inventory (Village, Standard quality, seed: "ironforge-blacksmith"). Shop has mundane weapons, no magic items, village pricing. Return next session—same shop, same inventory.
 
@@ -128,10 +152,13 @@ Use case: Players want to stay at an inn. Generate (Town, Cozy, seed: "riverside
 🧙 NPC Generator
 Memorable characters without overwhelming detail
 
-Physical description (age, build, hair, eyes, attire)
-Voice system (timbre, pitch, accent, mannerisms)
+Physical description (age, height, build, hair, eyes, attire)
+12 height variations (very short to statuesque)
+Voice system (tempo, timbre, pitch, accent, delivery, 2 mannerisms per NPC)
 Personality (demeanor, ideals, flaws, bonds)
 Wants/Avoids (actionable motivations)
+NPC secrets system (42 unique secrets across multiple categories)
+Secret categories: financial, criminal, hidden knowledge, identity, dark past
 Settlement roles (guards, merchants, nobles, clergy)
 Seeded RNG for consistency
 No forced backstories—just tools for improvisation
@@ -141,6 +168,12 @@ Use case: Players ask the bartender a question. Generate NPC (Town, Merchant cla
 💰 Loot Generator
 Treasure with flexible generation modes
 
+Hoard vs. Individual loot distinction (large treasure vs pocket loot)
+Monster-specific loot templates (9 types: Dragon, Lich, Vampire, Beholder, Giant, Demon/Devil, Fey Noble, Aberration, Undead Horde)
+Thematic flavor text and category weighting per monster type
+Mundane adventuring items category (20 items: rope, torches, camping gear, tools)
+Custom loot table import system (JSON format)
+Save/load preset system for common loot configurations
 Budget mode (set GP/SP total, auto-generate items)
 Preset controls for common loot bundles
 Item bundling (3× Potion of Healing)
@@ -229,8 +262,9 @@ The-DMs-Toolbox/
 │   ├── site.js             # Shared utilities
 │   ├── initiative.js       # Initiative Tracker logic
 │   ├── character.js        # Character Manager logic
-│   ├── spells-data.js      # Spell database (SRD)
-│   └── rules-data.js       # Rules reference data
+│   ├── spells-data.js      # Spell database (432 spells from PHB/Xanathar's/Tasha's)
+│   ├── rules-data.js       # Rules reference data
+│   └── indexed-db-storage.js  # IndexedDB storage system
 │
 ├── images/
 │   ├── playerTokens/       # 14 class tokens
@@ -276,9 +310,9 @@ Initiative Tracker:
 🔒 Privacy & Data
 Your data never leaves your browser.
 
-LocalStorage only — No server uploads, no cloud sync
+LocalStorage & IndexedDB only — No server uploads, no cloud sync
 No analytics — No Google Analytics, no tracking pixels
-No cookies — Except functional LocalStorage
+No cookies — Except functional LocalStorage and IndexedDB
 No accounts — No email, no password, no profile
 
 Export/Import for backups:
@@ -290,92 +324,9 @@ Import anytime to restore
 Data persistence:
 
 Initiative Tracker: Auto-saves every action
-Character Manager: Auto-saves on change with field normalization
-Battle Map: Auto-saves session state with fog preservation
+Character Manager: Auto-saves on change with field normalization (IndexedDB for portraits)
+Battle Map: Manual save system (Ctrl+S) with session state and fog preservation (IndexedDB for map images)
 Generators: Use seeded RNG for reproducibility
-
-
-📜 Changelog
-Full version history: CHANGELOG.md
-Recent Highlights
-v1.5.7 (2025-12-03) — Character Creation Wizard & Mobile Optimization
-
-🧙 Character Creation Wizard with 7-step guided walkthrough
-🎲 Interactive ability score roller (4d6 drop lowest)
-📚 Race/class selection with beginner-friendly descriptions
-📱 Full mobile-responsive design for phones and tablets
-👆 Touch-optimized buttons (38x38px minimum)
-📏 Collapsible roll history on mobile to save space
-🖨️ Print-friendly character sheets
-🔄 Adaptive layout for portrait/landscape mobile
-
-v1.5.6 (2025-12-03) — Player-Facing Features & Interactive Sheets
-
-🎲 Comprehensive dice roller with advantage/disadvantage support
-🎯 Interactive roll buttons for all skills, saves, and attacks
-📜 Roll history panel showing last 50 rolls with timestamps
-⚔️ HP adjustment buttons and combat feature tracking
-✨ Expertise support (double proficiency) for all skills
-🎭 Inspiration and Concentration tracking with auto-DC calculation
-💀 Death save automation (nat 20 = regain 1 HP, nat 1 = 2 failures)
-🐛 Fixed passive scores (Perception/Investigation/Insight) save/load
-
-v1.5.5 (2025-12-03) — Character Sheet Refinements
-
-🔮 Full spell slot tracking (levels 1-9 + pact slots) with long rest reset
-⚔️ Attack list management with modal editor
-🛌 Short/Long Rest helpers with automatic resource restoration
-💀 Exhaustion tracker with OneD&D extended levels
-🎯 Condition toggle buttons for quick status management
-
-v1.5.0 (2025-11-25) — Stability & Version Tracking
-
-🔄 Initiative Tracker refactor with unique character IDs
-🔒 Improved Player View security (AC reliably hidden)
-🎯 Active-turn persistence through sorting/reordering
-📝 Console build stamps for version tracking
-📄 Added MIT License and repository metadata
-🐛 Fixed cross-page sync issues
-
-v1.4.0 (2025-11-03 → 2025-11-21) — Battle Map & Encounter Builder
-
-🗺️ Battle Map MVP with tokens and fog-of-war
-⚔️ Encounter Builder with export-to-initiative
-📱 Pinch-zoom and mobile interaction improvements
-🎨 Updated navigation and Ko-fi integration
-🐛 Fixed 0 HP/AC edge cases
-✏️ Editable names with smart duplicate numbering
-
-v1.3.0 (2025-10-22 → 2025-10-30) — Spells & Rules Integration
-
-📚 Spells and Rules integrated into Initiative Tracker
-💾 Saved Characters modal for storage management
-🎨 Character type color-coding
-🔧 Removed old accordion layout
-🐛 Name generator button fixes
-
-v1.2.0 (2025-10-10 → 2025-10-16) — Death Saves & Temp HP
-
-☠️ Death Saves tracking
-⏮️ Temp HP Undo support
-🎯 Improved Concentration checks (triggers during turn)
-🎲 Dice roller upgrades
-📱 Mobile navigation improvements
-
-v1.1.0 (2025-09-03 → 2025-10-09) — Generators Expansion
-
-🔧 Generator tools across multiple pages
-📝 Improved name generator clarity
-💰 Loot bundles and preset controls
-📱 Mobile-friendly initiative improvements
-
-v1.0.0 (2025-08-27 → 2025-09-02) — Initial Release
-
-🎉 Project launch and deployment
-📛 Name generator
-💰 Basic loot generator
-🏪 Early shop generator
-🎲 Foundation for initiative tracker
 
 
 🛠️ Development
@@ -399,9 +350,10 @@ python -m http.server 8000
 - **~50MB LocalStorage available** (for portraits and session data)
 
 ### **Known Limitations**
-- **LocalStorage cap** (~5-10MB in most browsers)
-  - Character portraits stored as base64 (large images = more storage)
-  - Workaround: Use image URLs instead of uploads
+- **IndexedDB storage** (50MB-1GB+ capacity depending on browser)
+  - Character portraits and battle map data stored in IndexedDB
+  - Automatic migration from legacy localStorage on first load
+  - Import fallback prompts when storage quota exceeded
 - **No cloud sync** (by design)
   - Workaround: Export JSON backups manually
 - **Single-user** (no collaboration features)
@@ -484,4 +436,4 @@ Changelog: CHANGELOG.md
 
 
 Built with ❤️ for DMs who wing it.
-Last updated: 2025-12-03
+Last updated: 2025-12-09 (v1.8.5)
