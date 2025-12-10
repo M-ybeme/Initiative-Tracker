@@ -116,6 +116,60 @@
           rollHistory = rollHistory.slice(0, MAX_ROLL_HISTORY);
         }
         renderRollHistory();
+
+        // Show toast on mobile (screen width < 768px)
+        if (window.innerWidth < 768) {
+          showRollToast(result);
+        }
+      }
+
+      function showRollToast(result) {
+        const toastElement = document.getElementById('rollToast');
+        const toastBody = document.getElementById('rollToastBody');
+        if (!toastElement || !toastBody) return;
+
+        let resultClass = '';
+        let bgClass = 'bg-secondary';
+        if (result.isCritical) {
+          resultClass = 'text-success fw-bold';
+          bgClass = 'bg-success';
+        } else if (result.isFumble) {
+          resultClass = 'text-danger fw-bold';
+          bgClass = 'bg-danger';
+        }
+
+        let rollDisplay = '';
+        if (result.isAdvantage || result.isDisadvantage) {
+          rollDisplay = `[${result.rolls[0]}, ${result.rolls[1]}] → ${result.chosen}`;
+        } else {
+          rollDisplay = result.rolls.length > 1
+            ? `[${result.rolls.join(', ')}]`
+            : `${result.rolls[0]}`;
+        }
+
+        const modDisplay = result.modifier !== 0
+          ? ` ${result.modifier >= 0 ? '+' : ''}${result.modifier}`
+          : '';
+
+        toastBody.innerHTML = `
+          <div class="d-flex align-items-center justify-content-between gap-2">
+            <div class="flex-grow-1">
+              ${result.description ? `<div class="fw-bold">${result.description}</div>` : ''}
+              <div class="small">${rollDisplay}${modDisplay} = <span class="${resultClass}">${result.total}</span></div>
+            </div>
+            <div class="badge ${bgClass} fs-5">${result.total}</div>
+          </div>
+        `;
+
+        // Update toast background based on result
+        toastElement.className = `toast align-items-center border-0 ${bgClass}`;
+
+        // Show the toast
+        const toast = new bootstrap.Toast(toastElement, {
+          autohide: true,
+          delay: 3000
+        });
+        toast.show();
       }
 
       function renderRollHistory() {
@@ -3388,6 +3442,41 @@
             }
           });
         }
+
+        // Handle collapse icon rotation for all collapsible sections
+        document.querySelectorAll('.collapsible-header').forEach(header => {
+          const target = header.getAttribute('data-bs-target');
+          if (!target) return;
+
+          const collapseElement = document.querySelector(target);
+          if (!collapseElement) return;
+
+          collapseElement.addEventListener('show.bs.collapse', () => {
+            const icon = header.querySelector('.collapse-icon');
+            if (icon) {
+              icon.classList.remove('bi-chevron-right');
+              icon.classList.add('bi-chevron-down');
+            }
+          });
+
+          collapseElement.addEventListener('hide.bs.collapse', () => {
+            const icon = header.querySelector('.collapse-icon');
+            if (icon) {
+              icon.classList.remove('bi-chevron-down');
+              icon.classList.add('bi-chevron-right');
+            }
+          });
+
+          // Set initial icon state
+          const icon = header.querySelector('.collapse-icon');
+          if (icon) {
+            if (collapseElement.classList.contains('show')) {
+              icon.classList.add('bi-chevron-down');
+            } else {
+              icon.classList.add('bi-chevron-right');
+            }
+          }
+        });
       }
 
       if (document.readyState === 'loading') {

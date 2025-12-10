@@ -4,11 +4,102 @@
  */
 
 /* ========================================
+   TOAST NOTIFICATIONS (Mobile Roll Results)
+   ======================================== */
+
+/* Toast container positioning */
+.toast-container {
+  pointer-events: none;
+}
+
+.toast-container .toast {
+  pointer-events: auto;
+  min-width: 300px;
+  max-width: 90vw;
+  color: white;
+  font-weight: 500;
+}
+
+.toast .toast-body {
+  padding: 1rem;
+}
+
+/* Toast colors for different roll results */
+.toast.bg-success {
+  background-color: #198754 !important;
+}
+
+.toast.bg-danger {
+  background-color: #dc3545 !important;
+}
+
+.toast.bg-secondary {
+  background-color: #6c757d !important;
+}
+
+/* ========================================
+   COLLAPSIBLE SECTIONS
+   ======================================== */
+
+.collapsible-header {
+  user-select: none;
+  transition: background-color 0.2s ease;
+}
+
+.collapsible-header:hover {
+  background-color: rgba(255, 255, 255, 0.05) !important;
+}
+
+.collapsible-header .collapse-icon {
+  transition: transform 0.2s ease;
+  display: inline-block;
+}
+
+/* Rotate icon when collapsed/expanded */
+.collapsible-header .collapse-icon.bi-chevron-right {
+  transform: rotate(0deg);
+}
+
+.collapsible-header .collapse-icon.bi-chevron-down {
+  transform: rotate(0deg);
+}
+
+/* ========================================
    MOBILE BREAKPOINTS
    ======================================== */
 
 /* Small devices (phones, less than 768px) */
 @media (max-width: 767px) {
+
+  /* === COLLAPSIBLE SECTIONS === */
+  /* Add visual indicator that sections are collapsible */
+  .collapsible-header::after {
+    content: " (tap to expand/collapse)";
+    font-size: 0.7rem;
+    opacity: 0.5;
+    margin-left: 0.5rem;
+  }
+
+  /* Start some sections collapsed on mobile to reduce scrolling */
+  #collapseDeathSaves,
+  #collapsePortrait,
+  #collapseNotes {
+    /* These sections start collapsed on mobile */
+  }
+
+  /* === TOAST NOTIFICATIONS === */
+  /* Ensure toasts are visible and well-positioned on mobile */
+  .toast-container {
+    padding: 1rem !important;
+    width: 100%;
+    max-width: 100vw;
+  }
+
+  .toast-container .toast {
+    width: 100%;
+    max-width: calc(100vw - 2rem);
+    margin: 0 auto;
+  }
 
   /* === HEADER & TOOLBAR === */
   .container-fluid > .row > .col-12 > h1 {
@@ -74,6 +165,7 @@
   /* === CARDS === */
   .card {
     margin-bottom: 0.75rem !important;
+    scroll-margin-top: 80px; /* Offset for fixed navbar when scrolling */
   }
 
   .card-header {
@@ -83,6 +175,11 @@
 
   .card-body {
     padding: 0.75rem;
+  }
+
+  /* Smooth transitions for collapsible sections */
+  .collapse {
+    transition: height 0.25s ease;
   }
 
   /* === TABS === */

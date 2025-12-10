@@ -5,6 +5,45 @@ and this project adheres to Semantic Versioning.
 
 
 
+1.8.6 - 2025-12-09
+Character Manager: Mobile Optimization & Collapsible Sections
+
+Added
+
+- **Mobile Toast Notifications for Dice Rolls**
+  - Roll results appear as toast notifications at top of screen on mobile devices (< 768px)
+  - Color-coded toasts: green for critical hits (nat 20), red for critical failures (nat 1), gray for normal rolls
+  - Auto-dismiss after 3 seconds
+  - Displays roll description, dice rolled, modifiers, and total result
+  - Eliminates need to scroll to roll history panel on mobile
+
+- **Collapsible Card Sections**
+  - All major character sheet sections now collapsible via tap/click on header
+  - Animated chevron icons (down = expanded, right = collapsed) rotate smoothly
+  - Visual feedback on header hover
+  - Mobile hint text: "(tap to expand/collapse)" appears on mobile devices
+  - Sections intelligently default: frequently-used sections expanded, others collapsed on mobile
+  - Includes: Basic Information, Combat Snapshot, Currency, Death Saves, Resources & Rests, Ability Scores, Saving Throws, Skills, Portrait, Senses, Detailed Notes
+
+- **Mobile-Specific Enhancements**
+  - Smooth height transitions (0.25s) when expanding/collapsing sections
+  - Scroll offset accounts for fixed navbar (80px scroll margin)
+  - Toast container optimized for mobile screen widths
+  - Portrait, Death Saves, and Detailed Notes start collapsed on mobile to reduce initial scrolling
+
+Changed
+
+- **Resources & Rests Section Reorganized**
+  - Short Rest and Long Rest buttons moved from card header into card body
+  - Buttons positioned at top-right of section with moon/moon-stars icons
+  - Fixes collapse/expand functionality that was blocked by header buttons
+  - Improved mobile layout and accessibility
+
+Fixed
+
+- Resources & Rests section now properly collapses/expands (buttons no longer interfere)
+- Collapse icon rotation correctly syncs with section state on page load
+
 1.8.5 - 2025-12-09
 Character Manager: Structured Inventory System
 

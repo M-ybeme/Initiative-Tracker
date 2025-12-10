@@ -220,9 +220,10 @@
           <div class="col-12 col-lg-8">
             <!-- Basic Identity -->
             <div class="card bg-dark border-secondary mb-3">
-              <div class="card-header border-secondary">
-                <strong>Basic Information</strong>
+              <div class="card-header border-secondary collapsible-header" data-bs-toggle="collapse" data-bs-target="#collapseBasicInfo" aria-expanded="true" aria-controls="collapseBasicInfo" style="cursor: pointer;">
+                <strong><i class="bi bi-chevron-down me-1 collapse-icon"></i>Basic Information</strong>
               </div>
+              <div class="collapse show" id="collapseBasicInfo">
               <div class="card-body">
                 <div class="row g-3">
                   <div class="col-md-6">
@@ -258,14 +259,16 @@
                   </div>
                 </div>
               </div>
+              </div>
             </div>
 
             <!-- Resources & Rest -->
                          <!-- Combat Snapshot -->
             <div class="card bg-dark border-secondary mb-3">
-              <div class="card-header border-secondary">
-                <strong>Combat Snapshot</strong>
+              <div class="card-header border-secondary collapsible-header" data-bs-toggle="collapse" data-bs-target="#collapseCombat" aria-expanded="true" aria-controls="collapseCombat" style="cursor: pointer;">
+                <strong><i class="bi bi-chevron-down me-1 collapse-icon"></i>Combat Snapshot</strong>
               </div>
+              <div class="collapse show" id="collapseCombat">
               <div class="card-body">
                 <div class="row g-2 mb-2">
                   <div class="col-4 col-md-2">
@@ -402,13 +405,15 @@
                   </div>
                 </div>
               </div>
+              </div>
             </div>
 
             <!-- Currency -->
             <div class="card bg-dark border-secondary mb-3">
-              <div class="card-header border-secondary">
-                <strong>Currency</strong>
+              <div class="card-header border-secondary collapsible-header" data-bs-toggle="collapse" data-bs-target="#collapseCurrency" aria-expanded="true" aria-controls="collapseCurrency" style="cursor: pointer;">
+                <strong><i class="bi bi-chevron-down me-1 collapse-icon"></i>Currency</strong>
               </div>
+              <div class="collapse show" id="collapseCurrency">
               <div class="card-body">
                 <div class="row g-2">
                   <div class="col">
@@ -433,13 +438,15 @@
                   </div>
                 </div>
               </div>
+              </div>
             </div>
 
             <!-- Death Saves & Exhaustion -->
             <div class="card bg-dark border-secondary mb-3">
-              <div class="card-header border-secondary">
-                <strong>Death Saves & Exhaustion</strong>
+              <div class="card-header border-secondary collapsible-header" data-bs-toggle="collapse" data-bs-target="#collapseDeathSaves" aria-expanded="false" aria-controls="collapseDeathSaves" style="cursor: pointer;">
+                <strong><i class="bi bi-chevron-down me-1 collapse-icon"></i>Death Saves & Exhaustion</strong>
               </div>
+              <div class="collapse" id="collapseDeathSaves">
               <div class="card-body">
                 <div class="row g-3">
                   <div class="col-12 col-md-6">
@@ -489,17 +496,24 @@
                   </div>
                 </div>
               </div>
+              </div>
             </div>
 
             <div class="card bg-dark border-secondary mb-3" id="section-resources">
-              <div class="card-header border-secondary d-flex justify-content-between align-items-center">
-                <strong>Resources &amp; Rests</strong>
-                <div class="btn-group btn-group-sm" role="group" aria-label="Rest controls">
-                  <button type="button" class="btn btn-outline-light" id="shortRestBtn">Short Rest</button>
-                  <button type="button" class="btn btn-outline-success" id="longRestBtn">Long Rest</button>
-                </div>
+              <div class="card-header border-secondary collapsible-header" data-bs-toggle="collapse" data-bs-target="#collapseResources" aria-expanded="true" aria-controls="collapseResources" style="cursor: pointer;">
+                <strong><i class="bi bi-chevron-down me-1 collapse-icon"></i>Resources &amp; Rests</strong>
               </div>
+              <div class="collapse show" id="collapseResources">
               <div class="card-body">
+                <!-- Rest Buttons -->
+                <div class="d-flex justify-content-end gap-2 mb-3">
+                  <button type="button" class="btn btn-sm btn-outline-light" id="shortRestBtn">
+                    <i class="bi bi-moon"></i> Short Rest
+                  </button>
+                  <button type="button" class="btn btn-sm btn-outline-success" id="longRestBtn">
+                    <i class="bi bi-moon-stars"></i> Long Rest
+                  </button>
+                </div>
                 <div class="row g-2 mb-3">
                   <div class="col-6">
                     <label for="charHitDice" class="form-label small">Hit Dice</label>
@@ -592,13 +606,15 @@
                   </div>
                 </div>
               </div>
+              </div>
             </div>
 
             <!-- Ability Scores + Modifiers -->
             <div class="card bg-dark border-secondary mb-3">
-              <div class="card-header border-secondary">
-                <strong>Ability Scores & Modifiers</strong>
+              <div class="card-header border-secondary collapsible-header" data-bs-toggle="collapse" data-bs-target="#collapseAbilities" aria-expanded="true" aria-controls="collapseAbilities" style="cursor: pointer;">
+                <strong><i class="bi bi-chevron-down me-1 collapse-icon"></i>Ability Scores & Modifiers</strong>
               </div>
+              <div class="collapse show" id="collapseAbilities">
               <div class="card-body">
                 <div class="row g-3 text-center">
                   <!-- STR -->
@@ -681,14 +697,16 @@
                   </div>
                 </div>
               </div>
+              </div>
             </div>
 
             <!-- Saving Throws -->
             <div class="card bg-dark border-secondary mb-3">
-              <div class="card-header border-secondary d-flex justify-content-between align-items-center">
-                <strong>Saving Throws</strong>
+              <div class="card-header border-secondary d-flex justify-content-between align-items-center collapsible-header" data-bs-toggle="collapse" data-bs-target="#collapseSaves" aria-expanded="true" aria-controls="collapseSaves" style="cursor: pointer;">
+                <strong><i class="bi bi-chevron-down me-1 collapse-icon"></i>Saving Throws</strong>
                 <small class="text-muted">Shift+Click = Advantage, Ctrl+Click = Disadvantage</small>
               </div>
+              <div class="collapse show" id="collapseSaves">
               <div class="card-body">
                 <div class="row g-2">
                   <!-- STR save -->
@@ -837,14 +855,16 @@
                             placeholder="e.g. Advantage vs frightened, resistance to fire, etc."></textarea>
                 </div>
               </div>
+              </div>
             </div>
 
             <!-- Skills -->
             <div class="card bg-dark border-secondary mb-3">
-              <div class="card-header border-secondary d-flex justify-content-between align-items-center">
-                <strong>Skills</strong>
+              <div class="card-header border-secondary d-flex justify-content-between align-items-center collapsible-header" data-bs-toggle="collapse" data-bs-target="#collapseSkills" aria-expanded="true" aria-controls="collapseSkills" style="cursor: pointer;">
+                <strong><i class="bi bi-chevron-down me-1 collapse-icon"></i>Skills</strong>
                 <small class="text-muted">Exp = Expertise (×2 Prof) | Shift/Ctrl for Adv/Dis</small>
               </div>
+              <div class="collapse show" id="collapseSkills">
               <div class="card-body">
                 <div class="table-responsive">
                   <table class="table table-sm table-dark table-striped align-middle mb-2 skill-table">
@@ -1335,6 +1355,7 @@
                 <textarea id="skillsNotes" rows="2" class="form-control form-control-sm"
                           placeholder="Expertise, jack-of-all-trades, custom skills, etc."></textarea>
               </div>
+              </div>
             </div>
           </div>
 
@@ -1359,9 +1380,10 @@
 
             <!-- Portrait (preview only, edits via modal) -->
             <div class="card bg-dark border-secondary mb-3">
-              <div class="card-header border-secondary d-flex justify-content-between align-items-center">
-                <strong>Character Portrait</strong>
+              <div class="card-header border-secondary d-flex justify-content-between align-items-center collapsible-header" data-bs-toggle="collapse" data-bs-target="#collapsePortrait" aria-expanded="false" aria-controls="collapsePortrait" style="cursor: pointer;">
+                <strong><i class="bi bi-chevron-down me-1 collapse-icon"></i>Character Portrait</strong>
               </div>
+              <div class="collapse" id="collapsePortrait">
               <div class="card-body">
                 <div id="portraitContainer"
                      class="portrait-frame mb-3"
@@ -1398,16 +1420,18 @@
                   </button>
                 </div>
               </div>
+              </div>
             </div>
 
             <!-- Senses -->
             <div class="card bg-dark border-secondary mb-3" id="section-extras">
-              <div class="card-header border-secondary d-flex justify-content-between align-items-center">
-                <strong>Senses</strong>
-                <div class="small text-muted">
+              <div class="card-header border-secondary d-flex justify-content-between align-items-center collapsible-header" data-bs-toggle="collapse" data-bs-target="#collapseSenses" aria-expanded="true" aria-controls="collapseSenses" style="cursor: pointer;">
+                <strong><i class="bi bi-chevron-down me-1 collapse-icon"></i>Senses</strong>
+                <div class="small text-muted" onclick="event.stopPropagation();">
                   Prof. Bonus: <span id="charProficiencyBonusDisplay">+2</span>
                 </div>
               </div>
+              <div class="collapse show" id="collapseSenses">
               <div class="card-body">
                 <div class="row g-3">
                   <div class="col-4">
@@ -1438,13 +1462,15 @@
                   </div>
                 </div>
               </div>
+              </div>
             </div>
 
             <!-- Detailed Notes with DDB-style tabs -->
             <div class="card bg-dark border-secondary mb-3" id="section-notes">
-              <div class="card-header border-secondary">
-                <strong>Detailed Notes</strong>
+              <div class="card-header border-secondary collapsible-header" data-bs-toggle="collapse" data-bs-target="#collapseNotes" aria-expanded="false" aria-controls="collapseNotes" style="cursor: pointer;">
+                <strong><i class="bi bi-chevron-down me-1 collapse-icon"></i>Detailed Notes</strong>
               </div>
+              <div class="collapse" id="collapseNotes">
               <div class="card-body">
                 <!-- Tabs for this block -->
                 <ul class="nav nav-tabs small mb-3" id="detailTabs" role="tablist">
@@ -2067,6 +2093,7 @@
                   </div>
                 </div>
               </div>
+              </div>
             </div>
 
           </div>
@@ -2305,6 +2332,18 @@
         <div class="modal-footer border-secondary d-flex justify-content-between" id="wizardFooter">
           <!-- Wizard buttons populated by JS -->
         </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Container for Mobile Roll Notifications -->
+  <div class="toast-container position-fixed top-0 start-50 translate-middle-x p-3" style="z-index: 9999;">
+    <div id="rollToast" class="toast align-items-center border-0" role="alert" aria-live="assertive" aria-atomic="true">
+      <div class="d-flex">
+        <div class="toast-body" id="rollToastBody">
+          <!-- Roll result content -->
+        </div>
+        <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
       </div>
     </div>
   </div>
