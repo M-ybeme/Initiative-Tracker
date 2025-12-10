@@ -1200,7 +1200,16 @@ function generate(){
           <td data-label="Description">${d}</td>
           <td data-label="Use">${it.u}</td>
           <td data-label="Stock">${stockQty}</td>
-          <td data-label="Price">${formatPrice(sp)}</td>
+          <td data-label="Price">
+            ${formatPrice(sp)}
+            <button class="btn btn-outline-info btn-sm ms-2 negotiate-btn"
+              data-item="${it.n.replace(/"/g, '&quot;')}"
+              data-price="${sp}"
+              data-rarity="${it.r || 'common'}"
+              title="Negotiate Price">
+              <i class="bi bi-chat-dots"></i> Negotiate
+            </button>
+          </td>
         </tr>`;
 
       listedNames.add(it.n);
@@ -1246,6 +1255,104 @@ function downloadOut(){
   const a = document.createElement("a"); a.href=url; a.download="shops.txt"; a.click(); URL.revokeObjectURL(url);
 }
 
+// ---------- Negotiate Price Mechanic ----------
+function calculateNegotiateDC(rarity){
+  const dcMap = {
+    'common': 12,
+    'uncommon': 15,
+    'rare': 18
+  };
+  return dcMap[rarity] || 15;
+}
+
+function showNegotiateModal(itemName, basePrice, rarity){
+  const dc = calculateNegotiateDC(rarity);
+
+  // Create modal if it doesn't exist
+  let modal = document.getElementById("negotiateModal");
+  if(!modal){
+    modal = document.createElement("div");
+    modal.id = "negotiateModal";
+    modal.className = "modal fade";
+    modal.tabIndex = -1;
+    modal.innerHTML = `
+      <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content bg-dark text-light">
+          <div class="modal-header border-secondary">
+            <h5 class="modal-title"><i class="bi bi-chat-dots me-2"></i>Negotiate Price</h5>
+            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+          </div>
+          <div class="modal-body">
+            <div class="mb-3">
+              <h6 class="text-info" id="negotiateItem"></h6>
+              <p class="mb-1"><strong>Base Price:</strong> <span id="negotiateBasePrice"></span></p>
+              <p class="mb-0"><strong>Rarity:</strong> <span id="negotiateRarity" class="badge"></span></p>
+            </div>
+            <hr class="border-secondary">
+            <div class="mb-3">
+              <h6 class="text-warning"><i class="bi bi-dice-6 me-2"></i>Persuasion Check</h6>
+              <p class="mb-2"><strong>DC:</strong> <span id="negotiateDC"></span> <span id="negotiateDCLabel" class="text-secondary small"></span></p>
+            </div>
+            <div class="table-responsive">
+              <table class="table table-sm table-dark table-bordered">
+                <thead>
+                  <tr>
+                    <th>Result</th>
+                    <th>Price</th>
+                    <th>Discount</th>
+                  </tr>
+                </thead>
+                <tbody id="negotiateResults"></tbody>
+              </table>
+            </div>
+            <div class="alert alert-info small mb-0">
+              <i class="bi bi-info-circle me-1"></i>
+              Players make a <strong>Persuasion</strong> check. Success grants discounts; critical failure increases the price (shopkeeper offended)!
+            </div>
+          </div>
+          <div class="modal-footer border-secondary">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+          </div>
+        </div>
+      </div>`;
+    document.body.appendChild(modal);
+  }
+
+  // Populate modal content
+  document.getElementById("negotiateItem").textContent = itemName;
+  document.getElementById("negotiateBasePrice").textContent = formatPrice(basePrice);
+
+  const rarityBadge = document.getElementById("negotiateRarity");
+  rarityBadge.textContent = rarity.charAt(0).toUpperCase() + rarity.slice(1);
+  rarityBadge.className = 'badge ' + (rarity === 'rare' ? 'text-bg-danger' : rarity === 'uncommon' ? 'text-bg-warning text-dark' : 'text-bg-secondary');
+
+  document.getElementById("negotiateDC").textContent = dc;
+  document.getElementById("negotiateDCLabel").textContent = `(${rarity === 'rare' ? 'Hard' : rarity === 'uncommon' ? 'Standard' : 'Easy'})`;
+
+  // Calculate price outcomes
+  const sp = basePrice;
+  const outcomes = [
+    { result: `Critical Success (Nat 20 or ${dc + 10}+)`, price: Math.max(1, Math.round(sp * 0.70)), discount: '30% off', class: 'table-success' },
+    { result: `Success by 5+ (${dc + 5}+)`, price: Math.max(1, Math.round(sp * 0.80)), discount: '20% off', class: 'table-success' },
+    { result: `Success (${dc}+)`, price: Math.max(1, Math.round(sp * 0.90)), discount: '10% off', class: 'table-success' },
+    { result: `Failure (${dc - 1} or less)`, price: sp, discount: 'No discount', class: '' },
+    { result: `Critical Failure (Nat 1 or ${dc - 10} or less)`, price: Math.max(1, Math.round(sp * 1.10)), discount: '+10% (offended!)', class: 'table-danger' }
+  ];
+
+  const tbody = document.getElementById("negotiateResults");
+  tbody.innerHTML = outcomes.map(o => `
+    <tr class="${o.class}">
+      <td>${o.result}</td>
+      <td>${formatPrice(o.price)}</td>
+      <td>${o.discount}</td>
+    </tr>
+  `).join('');
+
+  // Show modal
+  const bsModal = new bootstrap.Modal(modal);
+  bsModal.show();
+}
+
 // Wire up
 document.addEventListener("DOMContentLoaded", ()=>{
   initPresets();
@@ -1262,6 +1369,17 @@ document.addEventListener("DOMContentLoaded", ()=>{
     $("sg-uniquePct").value = def;
     const [min,max] = SETTLEMENT[s].stock;
     $("sg-itemsPerShop").value = Math.round((min+max)/2);
+  });
+
+  // Event delegation for negotiate buttons
+  document.addEventListener("click", (e)=>{
+    if(e.target.closest(".negotiate-btn")){
+      const btn = e.target.closest(".negotiate-btn");
+      const itemName = btn.getAttribute("data-item");
+      const price = parseInt(btn.getAttribute("data-price"), 10);
+      const rarity = btn.getAttribute("data-rarity");
+      showNegotiateModal(itemName, price, rarity);
+    }
   });
 
   // First run

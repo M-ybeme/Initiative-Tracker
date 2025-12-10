@@ -1199,6 +1199,94 @@ $('clear-dice-history').addEventListener('click', ()=>{
     alert('All Initiative Tracker data cleared.');
   });
   $('undo-btn').addEventListener('click', undoLast);
+
+  // ---------- Bulk HP Adjustment ----------
+  let bulkHPModal = null;
+  const bulkHPModalEl = document.getElementById('bulkHPModal');
+  if (bulkHPModalEl) bulkHPModal = bootstrap.Modal.getOrCreateInstance(bulkHPModalEl);
+
+  $('bulk-hp-btn').addEventListener('click', ()=>{
+    if (!bulkHPModal) return;
+
+    // Update counts
+    const pcCount = characters.filter(c => c.type === 'PC').length;
+    const enemyCount = characters.filter(c => c.type === 'Enemy').length;
+    const allCount = characters.length;
+
+    $('bulkPCCount').textContent = `(${pcCount})`;
+    $('bulkEnemyCount').textContent = `(${enemyCount})`;
+    $('bulkAllCount').textContent = `(${allCount})`;
+
+    bulkHPModal.show();
+  });
+
+  // Toggle amount input visibility based on action
+  document.querySelectorAll('input[name="bulkAction"]').forEach(radio => {
+    radio.addEventListener('change', ()=>{
+      const amountSection = $('bulkAmountSection');
+      const action = document.querySelector('input[name="bulkAction"]:checked').value;
+      amountSection.style.display = (action === 'fullheal') ? 'none' : 'block';
+    });
+  });
+
+  $('bulkHPApply').addEventListener('click', ()=>{
+    const targetType = document.querySelector('input[name="bulkTarget"]:checked').value;
+    const action = document.querySelector('input[name="bulkAction"]:checked').value;
+    const amount = parseInt($('bulkAmount').value, 10) || 0;
+
+    if (action !== 'fullheal' && amount <= 0) {
+      alert('Please enter a valid HP amount.');
+      return;
+    }
+
+    // Filter targets
+    let targets = [];
+    if (targetType === 'PC') {
+      targets = characters.filter(c => c.type === 'PC');
+    } else if (targetType === 'Enemy') {
+      targets = characters.filter(c => c.type === 'Enemy');
+    } else {
+      targets = characters;
+    }
+
+    if (targets.length === 0) {
+      alert('No characters match the selected filter.');
+      return;
+    }
+
+    // Create single undo point
+    const targetNames = targets.map(c => c.name).join(', ');
+    const actionDesc = action === 'fullheal' ? 'Full Heal' : action === 'heal' ? `Heal +${amount}` : `Damage -${amount}`;
+    pushHistory(`Bulk ${actionDesc} → ${targetNames}`);
+
+    // Apply to all targets
+    targets.forEach(c => {
+      if (action === 'fullheal') {
+        c.currentHP = c.maxHP;
+        if (c.currentHP > 0) c.deathSaves = { s:0, f:0, stable:false };
+      } else if (action === 'heal') {
+        const oldHP = c.currentHP;
+        c.currentHP = Math.min(c.maxHP, c.currentHP + amount);
+        if (c.currentHP > 0) c.deathSaves = { s:0, f:0, stable:false };
+      } else if (action === 'damage') {
+        // Damage: consume temp HP first
+        let dmg = amount;
+        const usedThp = Math.min(c.tempHP || 0, dmg);
+        c.tempHP = (c.tempHP || 0) - usedThp;
+        dmg -= usedThp;
+        if (dmg > 0) {
+          const oldHP = c.currentHP;
+          c.currentHP = Math.max(0, c.currentHP - dmg);
+          const taken = oldHP - c.currentHP;
+          c.concDamagePending = (c.concDamagePending || 0) + taken;
+        }
+      }
+    });
+
+    buildTable();
+    bulkHPModal.hide();
+  });
+
   $('manualSaveBtn').addEventListener('click', ()=>{ saveState(true); alert('Manual save complete.'); });
   $('autoSaveToggle').addEventListener('change', e=>{ autoSaveEnabled = e.target.checked; });
   $('lockOrderToggle').addEventListener('change', e=>{

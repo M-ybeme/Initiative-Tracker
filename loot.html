@@ -358,7 +358,15 @@ const CATS={
       {n:"crate of dried spices",mat:"paper",w:8.0,sp:[400,1500],valuable:true},
       {n:"bundle of cured furs",mat:"leather",w:5.0,sp:[250,900],valuable:true},
       {n:"ingot of refined copper",mat:"metal",w:10.0,sp:[300,900],valuable:true},
-      {n:"ingot of worked silver",mat:"metal",w:5.0,sp:[1200,2600],valuable:true}
+      {n:"ingot of worked silver",mat:"metal",w:5.0,sp:[1200,2600],valuable:true},
+      {n:"barrel of aged wine",mat:"wood",w:40.0,sp:[500,1800],valuable:true},
+      {n:"crate of exotic tea leaves",mat:"paper",w:4.0,sp:[350,1400],valuable:true},
+      {n:"bundle of rare herbs",mat:"cloth",w:2.0,sp:[300,1100],valuable:true},
+      {n:"sack of quality coffee beans",mat:"cloth",w:8.0,sp:[250,900],valuable:true},
+      {n:"case of fine tobacco",mat:"wood",w:3.0,sp:[400,1300],valuable:true},
+      {n:"bolt of spider silk",mat:"cloth",w:1.0,sp:[800,2400],valuable:true},
+      {n:"jar of rare pigments",mat:"glass",w:2.0,sp:[600,1800],valuable:true},
+      {n:"bundle of exotic incense",mat:"paper",w:1.0,sp:[300,1000],valuable:true}
     ],
     make:(rng,b)=>{
       const m=pick(rng,MATERIALS[b.mat]); const detail=rng()<0.4?` (${pick(rng,PATTERNS)} marks)`:``;
@@ -371,7 +379,15 @@ const CATS={
       {n:"silvered hand mirror",mat:"metal",w:0.6,sp:[900,2400],valuable:true},
       {n:"miniature marble statuette",mat:"stone",w:1.2,sp:[1200,3600],valuable:true},
       {n:"string of river pearls",mat:"stone",w:0.05,sp:[700,2600],valuable:true},
-      {n:"framed vellum calligraphy",mat:"paper",w:0.4,sp:[600,2200],valuable:true}
+      {n:"framed vellum calligraphy",mat:"paper",w:0.4,sp:[600,2200],valuable:true},
+      {n:"ornate music box",mat:"metal",w:1.5,sp:[1000,3200],valuable:true},
+      {n:"jeweled hair comb",mat:"metal",w:0.1,sp:[900,2800],valuable:true},
+      {n:"crystal prism",mat:"glass",w:0.3,sp:[700,2400],valuable:true},
+      {n:"carved ivory cameo",mat:"stone",w:0.05,sp:[1100,3400],valuable:true},
+      {n:"gilded portrait frame",mat:"metal",w:2.0,sp:[800,2600],valuable:true},
+      {n:"polished jade figurine",mat:"stone",w:0.4,sp:[1300,3800],valuable:true},
+      {n:"silver filigree locket",mat:"metal",w:0.1,sp:[850,2700],valuable:true},
+      {n:"painted porcelain vase",mat:"clay",w:1.8,sp:[900,3000],valuable:true}
     ],
     make:(rng,b)=>{
       const m=pick(rng,MATERIALS[b.mat]); const col=rng()<0.4?`, ${pick(rng,COLORS)}`:""; const icon=rng()<0.35?` bearing a ${pick(rng,SIMPLE_ICONS)}`:"";
@@ -523,21 +539,73 @@ const CATS={
   // --- Minor Magic (gated by toggle) ---
   "Minor Magic":{
     base:[
-      // Consumables (one use): short-rest power level, descriptive — no rules text baked in
+      // Consumables - Healing & Recovery
       {n:"tonic of vigor (one use)",mat:"glass",w:0.3,sp:[400,900],kind:"consumable"},
+      {n:"salve of mending (heals minor wounds)",mat:"glass",w:0.2,sp:[350,850],kind:"consumable"},
+      {n:"restorative tea (removes fatigue)",mat:"paper",w:0.1,sp:[300,750],kind:"consumable"},
+      {n:"vial of clarity (advantage on next save vs mind effects)",mat:"glass",w:0.2,sp:[450,950],kind:"consumable"},
+
+      // Consumables - Combat & Defense
       {n:"smoke charm (one stealth test advantage)",mat:"cloth",w:0.1,sp:[350,800],kind:"consumable"},
-      {n:"feather token (negate a short fall once)",mat:"paper",w:0.05,sp:[500,1100],kind:"consumable"},
-      {n:"lucky coin (one d20 reroll, once)",mat:"metal",w:0.05,sp:[600,1200],kind:"consumable"},
-      {n:"oil of edge (sharpen once)",mat:"glass",w:0.2,sp:[450,1000],kind:"consumable"},
+      {n:"oil of edge (sharpen once, +1 damage one attack)",mat:"glass",w:0.2,sp:[450,1000],kind:"consumable"},
       {n:"warding ribbon (one save bolster)",mat:"cloth",w:0.05,sp:[350,900],kind:"consumable"},
-      // Situational gear — trivial, once per scene/session style
-      {n:"guide’s pin (advantage on one navigation check)",mat:"metal",w:0.05,sp:[500,1200],kind:"gear"},
-      {n:"scribe’s quill (advantage on one recall/decipher check)",mat:"wood",w:0.02,sp:[500,1200],kind:"gear"}
+      {n:"shield charm (one automatic hit becomes miss)",mat:"metal",w:0.1,sp:[550,1100],kind:"consumable"},
+      {n:"thunderstone (thrown, loud bang, disorient)",mat:"stone",w:0.5,sp:[400,900],kind:"consumable"},
+      {n:"flash powder (thrown, bright light, blind)",mat:"paper",w:0.1,sp:[400,900],kind:"consumable"},
+      {n:"tanglefoot bag (thrown, restrain briefly)",mat:"cloth",w:1.0,sp:[450,950],kind:"consumable"},
+
+      // Consumables - Movement & Utility
+      {n:"feather token (negate a short fall once)",mat:"paper",w:0.05,sp:[500,1100],kind:"consumable"},
+      {n:"boots of springing (one enhanced jump)",mat:"leather",w:0.5,sp:[500,1100],kind:"consumable"},
+      {n:"potion of water breathing (10 minutes)",mat:"glass",w:0.3,sp:[600,1200],kind:"consumable"},
+      {n:"dust of tracelessness (erase tracks for 1 hour)",mat:"paper",w:0.1,sp:[450,1000],kind:"consumable"},
+      {n:"feather fall token (slow fall for 1 minute)",mat:"paper",w:0.05,sp:[550,1150],kind:"consumable"},
+
+      // Consumables - Social & Luck
+      {n:"lucky coin (one d20 reroll, once)",mat:"metal",w:0.05,sp:[600,1200],kind:"consumable"},
+      {n:"charm of persuasion (advantage on one charisma check)",mat:"metal",w:0.05,sp:[400,900],kind:"consumable"},
+      {n:"vial of courage (advantage vs one fear effect)",mat:"glass",w:0.2,sp:[350,850],kind:"consumable"},
+      {n:"token of truth (know if next statement is lie)",mat:"metal",w:0.05,sp:[500,1000],kind:"consumable"},
+
+      // Situational Gear - Exploration
+      {n:"guide's pin (advantage on one navigation check)",mat:"metal",w:0.05,sp:[500,1200],kind:"gear"},
+      {n:"wayfinder's compass (points to nearest settlement)",mat:"metal",w:0.3,sp:[700,1400],kind:"gear"},
+      {n:"lens of detection (advantage on one search check)",mat:"glass",w:0.1,sp:[550,1150],kind:"gear"},
+      {n:"ear trumpet of listening (advantage on one perception check)",mat:"metal",w:0.4,sp:[500,1100],kind:"gear"},
+      {n:"dowsing rod (detect water within 100 ft)",mat:"wood",w:0.5,sp:[450,1000],kind:"gear"},
+
+      // Situational Gear - Knowledge & Magic
+      {n:"scribe's quill (advantage on one recall/decipher check)",mat:"wood",w:0.02,sp:[500,1200],kind:"gear"},
+      {n:"scholar's monocle (read one language you don't know)",mat:"glass",w:0.1,sp:[650,1300],kind:"gear"},
+      {n:"candle of revealing (detect invisible within 10 ft)",mat:"cloth",w:0.2,sp:[700,1400],kind:"gear"},
+      {n:"chalk of warding (draw protective circle, 1 hour)",mat:"stone",w:0.1,sp:[550,1150],kind:"gear"},
+      {n:"crystal of light (bright light 30 ft, 1 hour)",mat:"stone",w:0.3,sp:[400,900],kind:"gear"},
+
+      // Situational Gear - Tools & Craft
+      {n:"hammer of mending (repair one broken mundane item)",mat:"metal",w:1.0,sp:[600,1250],kind:"gear"},
+      {n:"rope of climbing (advantage on climbing with this rope)",mat:"cloth",w:5.0,sp:[800,1600],kind:"gear"},
+      {n:"thieves' gloves (advantage on one lockpicking attempt)",mat:"leather",w:0.2,sp:[650,1300],kind:"gear"},
+      {n:"bag of endless knots (never runs out of rope, 50ft max)",mat:"cloth",w:0.5,sp:[750,1500],kind:"gear"},
+
+      // Situational Gear - Nature & Animals
+      {n:"beast whistle (calm one animal)",mat:"wood",w:0.1,sp:[450,950],kind:"gear"},
+      {n:"druid's seed (grow edible fruit instantly, once)",mat:"wood",w:0.05,sp:[400,900],kind:"gear"},
+      {n:"weatherglass (predict weather 24 hours ahead)",mat:"glass",w:0.4,sp:[550,1150],kind:"gear"},
+
+      // Ongoing Minor Items (very limited power)
+      {n:"everburning torch (sheds light, never consumed)",mat:"wood",w:1.0,sp:[1200,2400],kind:"ongoing"},
+      {n:"self-heating mug (keeps beverages warm)",mat:"metal",w:0.5,sp:[500,1100],kind:"ongoing"},
+      {n:"cleaning cloth (removes dirt/stains with a wipe)",mat:"cloth",w:0.1,sp:[400,900],kind:"ongoing"},
+      {n:"compass of true north (always points north)",mat:"metal",w:0.2,sp:[600,1200],kind:"ongoing"},
+      {n:"tankard of purity (detects poison in drink)",mat:"metal",w:0.6,sp:[750,1500],kind:"ongoing"},
+      {n:"prestidigitation ring (create minor sensory effects)",mat:"metal",w:0.05,sp:[800,1600],kind:"ongoing"},
+      {n:"warming cloak clasp (wearer comfortable in cold)",mat:"metal",w:0.1,sp:[700,1400],kind:"ongoing"},
+      {n:"cooling hat pin (wearer comfortable in heat)",mat:"metal",w:0.05,sp:[700,1400],kind:"ongoing"}
     ],
     make:(rng,b)=>{
       const m=pick(rng,MATERIALS[b.mat]);
       const glimmer=rng()<0.6?` faintly glimmering`:"";
-      const note=b.kind==="consumable"?"consumable":"situational";
+      const note=b.kind==="consumable"?"consumable":(b.kind==="ongoing"?"ongoing":"situational");
       return [`${toTitle(m)} ${b.n}${glimmer}`, tags("minor-magic",note), true]
     }
   }

@@ -118,7 +118,7 @@
 
         <div class="alert alert-info mt-3 text-start">
           <div class="fw-semibold mb-1"><i class="bi bi-magic"></i> Tip</div>
-          Generate here, then give them a name with your **Name Generator** tab.
+          Click <strong>"Generate Name"</strong> on any NPC to add a name! Race is auto-detected from the description.
         </div>
       </div>
     </div>
@@ -383,6 +383,12 @@ function generate(){
     const col = document.createElement("div"); col.className = "col";
     const div = document.createElement("div"); div.className = "npc-tile";
     div.innerHTML = `
+      <div class="npc-field mb-2">
+        <b>Name:</b> <span class="npc-name-display text-info">[No name yet]</span>
+        <button class="btn btn-outline-success btn-sm ms-2 npc-name-gen-btn" title="Generate Name">
+          <i class="bi bi-person-badge me-1"></i>Generate Name
+        </button>
+      </div>
       <div class="npc-field"><b>Description:</b> ${desc}</div>
       <div class="npc-field"><b>Voice:</b> ${voice}</div>
       <div class="npc-field"><b>Mannerisms:</b> ${mans}</div>
@@ -393,15 +399,16 @@ function generate(){
     `;
     col.appendChild(div); out.appendChild(col);
 
-    rows.push([
-      `Description: ${desc}`,
-      `Voice: ${voice}`,
-      `Mannerisms: ${mans}`,
-      `Quirk: ${quirk}`,
-      `Wants: ${wants}`,
-      `Wants to Avoid: ${avoids}`,
-      `Secret: ${secret}`
-    ].join("\n"));
+    rows.push({
+      name: "[No name yet]",
+      desc: `Description: ${desc}`,
+      voice: `Voice: ${voice}`,
+      mans: `Mannerisms: ${mans}`,
+      quirk: `Quirk: ${quirk}`,
+      wants: `Wants: ${wants}`,
+      avoids: `Wants to Avoid: ${avoids}`,
+      secret: `Secret: ${secret}`
+    });
   }
   return rows;
 }
@@ -409,17 +416,237 @@ function generate(){
 // Copy / Download helpers
 function copyNPCs(){
   const rows = [...document.querySelectorAll("#npc-out .npc-tile")].map(tile=>{
-    return tile.innerText.replace(/\n{2,}/g,"\n");
+    const nameEl = tile.querySelector(".npc-name-display");
+    const name = nameEl ? nameEl.textContent : "[No name yet]";
+    const rest = tile.innerText.replace(/Name:.*?Generate Name/s, "").replace(/\n{2,}/g,"\n").trim();
+    return `Name: ${name}\n${rest}`;
   });
   if(!rows.length) return;
   navigator.clipboard.writeText(rows.join("\n\n---\n\n"));
 }
 function downloadNPCs(){
-  const text = [...document.querySelectorAll("#npc-out .npc-tile")].map(tile=>tile.innerText).join("\n\n---\n\n");
+  const text = [...document.querySelectorAll("#npc-out .npc-tile")].map(tile=>{
+    const nameEl = tile.querySelector(".npc-name-display");
+    const name = nameEl ? nameEl.textContent : "[No name yet]";
+    const rest = tile.innerText.replace(/Name:.*?Generate Name/s, "").replace(/\n{2,}/g,"\n").trim();
+    return `Name: ${name}\n${rest}`;
+  }).join("\n\n---\n\n");
   if(!text.trim()) return;
   const blob = new Blob([text], {type:"text/plain"});
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a"); a.href=url; a.download="npcs.txt"; a.click(); URL.revokeObjectURL(url);
+}
+
+// ---------- Name Generator Integration ----------
+function detectRaceFromDescription(desc){
+  const text = desc.toLowerCase();
+  const raceMap = {
+    dwarf: /\bdwarf/i,
+    elf: /\b(elf|elven)/i,
+    drow: /\bdrow/i,
+    orc: /\borc/i,
+    halfling: /\bhalfling/i,
+    gnome: /\bgnome/i,
+    dragonborn: /\bdragonborn/i,
+    tiefling: /\btiefling/i,
+    goblin: /\bgoblin/i,
+    lizardfolk: /\b(lizardfolk|lizard folk)/i,
+    genasi: /\bgenasi/i,
+    fey: /\b(fey|fairy|faerie)/i
+  };
+
+  for(const [race, pattern] of Object.entries(raceMap)){
+    if(pattern.test(text)) return race.charAt(0).toUpperCase() + race.slice(1);
+  }
+  return "Human (Latin)"; // default
+}
+
+function generateNamesForNPC(desc, count = 10){
+  // Simple name generator using same RNG approach
+  const race = detectRaceFromDescription(desc);
+  const seed = "npc-name-" + Date.now() + "-" + Math.random();
+  const rng = prand(seed);
+
+  const nameStyles = {
+    "Dwarf": {start:["br","dr","gr","th","bal"], mid:["a","o","u","or"], end:["ar","in","dur","grim"]},
+    "Elf": {start:["ae","li","fa","th","ar"], mid:["ri","la","si"], end:["el","iel","wyn","ara"]},
+    "Drow": {start:["zae","dra","vyr","zil"], mid:["ri","z","yl"], end:["th","rin","zra"]},
+    "Orc": {start:["gr","br","kr","gar","zug"], mid:["a","o","u","ok"], end:["th","g","zug","nak"]},
+    "Half-Orc": {start:["gr","thr","kar","dur","gor"], mid:["a","o","u","ar","ok"], end:["ak","og","ush","gak","rim"]},
+    "Halfling": {start:["al","ben","cor","pip","sam"], mid:["o","er","il","in"], end:["o","y","ie","in","wick"]},
+    "Gnome": {start:["bod","fiz","ned","tim","gar"], mid:["a","el","on","um"], end:["bin","wick","um","ock"]},
+    "Dragonborn": {start:["arj","drax","rax","vor","kry"], mid:["a","or","ul","an"], end:["thor","ion","var","drim"]},
+    "Tiefling": {start:["az","mal","vor","zar","dam"], mid:["a","ir","ul","oth"], end:["zor","iel","ith","mon"]},
+    "Goblin": {start:["sk","gr","zik","krik","nix"], mid:["a","i","zz","ik"], end:["it","ug","gob","git"]},
+    "Hobgoblin": {start:["kor","mag","drak","ghor","zar"], mid:["a","o","u","ag"], end:["gan","thul","ruk","dak"]},
+    "Kobold": {start:["kik","mik","tik","drix","zix"], mid:["i","a","ix","ak"], end:["ix","ak","ik","zik"]},
+    "Lizardfolk": {start:["sli","kra","ska","ss","tro"], mid:["s","az","or","ra"], end:["th","ss","zith","sith"]},
+    "Aarakocra": {start:["kee","aak","quil","aar","kaa"], mid:["ka","ra","ki","ak"], end:["kra","aar","kek","rill"]},
+    "Tabaxi": {start:["cloud","rain","mist","storm","wind"], mid:["on","in"], end:["mountains","water","forest","leaves","sky"]},
+    "Firbolg": {start:["adh","bru","car","dun","eir"], mid:["al","ir","an","or"], end:["an","ach","ion","os"]},
+    "Kenku": {start:["kik","kak","krek","chik","kaw"], mid:["i","a","e","ee"], end:["kaw","eek","awk","ik"]},
+    "Triton": {start:["cor","del","mar","nal","por"], mid:["a","i","an","or"], end:["is","os","ian","us"]},
+    "Goliath": {start:["kav","kul","mav","thu","vok"], mid:["a","o","u","ak"], end:["aak","oth","nak","kar"]},
+    "Genasi": {start:["aer","ign","zel","lum","cal"], mid:["ra","el","or","um"], end:["os","ara","ion","eth"]},
+    "Fey": {start:["ly","tia","vio","aur","syl"], mid:["li","ri","ya","ve"], end:["wyn","ria","yse","elle"]},
+    "Bugbear": {start:["gru","hru","kru","skar","thag"], mid:["u","oo","ag","ur"], end:["ub","ash","ug","urz"]},
+    "Yuan-ti": {start:["sss","sess","iss","zss","rass"], mid:["i","e","ss","eth"], end:["ith","eth","iss","ra"]},
+    "Changeling": {start:["bin","jin","sin","ven","wyn"], mid:["a","e","i","ar"], end:["ak","et","ix","yn"]},
+    "Warforged": {start:["bul","cog","iron","steel","war"], mid:["wark","guard","mark"], end:["ed","er","on","ium"]},
+    "Human (Latin)": {start:["mar","luc","val","jul","max"], mid:["a","i","an","us"], end:["a","us","ian","ella"]},
+    "Human (Norse)": {start:["al","bir","ein","har","thor","ulf"], mid:["a","e","ar","ir","or"], end:["ar","en","ir","ulf","son","rid"]},
+    "Human (Arabic)": {start:["al","has","kal","ras","sal"], mid:["a","i","im","ad"], end:["id","im","an","een"]},
+    "Human (Asian)": {start:["li","mei","yan","jin","ming"], mid:["an","ing","ao","ei"], end:["li","ying","feng","long"]}
+  };
+
+  const style = nameStyles[race] || nameStyles["Human (Latin)"];
+  const names = [];
+
+  for(let i = 0; i < count; i++){
+    const parts = [
+      pick(rng, style.start),
+      pick(rng, style.mid),
+      pick(rng, style.end)
+    ];
+    let name = parts.join("");
+    name = name.charAt(0).toUpperCase() + name.slice(1);
+    names.push(name);
+  }
+
+  return { names, race };
+}
+
+function showNamePickerModal(npcTile, desc){
+  let currentNPCTile = npcTile; // Store reference for regeneration
+  const detectedRace = detectRaceFromDescription(desc);
+
+  // Create modal if it doesn't exist
+  let modal = document.getElementById("namePickerModal");
+  if(!modal){
+    modal = document.createElement("div");
+    modal.id = "namePickerModal";
+    modal.className = "modal fade";
+    modal.tabIndex = -1;
+    modal.innerHTML = `
+      <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content bg-dark text-light">
+          <div class="modal-header border-secondary">
+            <h5 class="modal-title">Pick a Name</h5>
+            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+          </div>
+          <div class="modal-body">
+            <div class="mb-3">
+              <label for="raceSelect" class="form-label fw-semibold">
+                <i class="bi bi-people me-1"></i>Race/Culture:
+              </label>
+              <div class="input-group">
+                <select id="raceSelect" class="form-select">
+                  <optgroup label="Common Races">
+                    <option value="Human (Latin)">Human (Latin)</option>
+                    <option value="Human (Norse)">Human (Norse)</option>
+                    <option value="Human (Arabic)">Human (Arabic)</option>
+                    <option value="Human (Asian)">Human (Asian)</option>
+                    <option value="Dwarf">Dwarf</option>
+                    <option value="Elf">Elf</option>
+                    <option value="Halfling">Halfling</option>
+                    <option value="Gnome">Gnome</option>
+                  </optgroup>
+                  <optgroup label="Uncommon Races">
+                    <option value="Dragonborn">Dragonborn</option>
+                    <option value="Half-Orc">Half-Orc</option>
+                    <option value="Tiefling">Tiefling</option>
+                    <option value="Drow">Drow</option>
+                    <option value="Goliath">Goliath</option>
+                    <option value="Firbolg">Firbolg</option>
+                    <option value="Genasi">Genasi</option>
+                    <option value="Triton">Triton</option>
+                    <option value="Aarakocra">Aarakocra</option>
+                    <option value="Tabaxi">Tabaxi</option>
+                    <option value="Kenku">Kenku</option>
+                  </optgroup>
+                  <optgroup label="Monstrous Races">
+                    <option value="Orc">Orc</option>
+                    <option value="Goblin">Goblin</option>
+                    <option value="Hobgoblin">Hobgoblin</option>
+                    <option value="Kobold">Kobold</option>
+                    <option value="Lizardfolk">Lizardfolk</option>
+                    <option value="Bugbear">Bugbear</option>
+                    <option value="Yuan-ti">Yuan-ti</option>
+                  </optgroup>
+                  <optgroup label="Special Races">
+                    <option value="Fey">Fey</option>
+                    <option value="Changeling">Changeling</option>
+                    <option value="Warforged">Warforged</option>
+                  </optgroup>
+                </select>
+                <button class="btn btn-outline-info" id="regenerateNames" title="Generate new names">
+                  <i class="bi bi-arrow-clockwise"></i> Regenerate
+                </button>
+              </div>
+              <small class="text-secondary">Auto-detected: <strong id="detectedRaceLabel"></strong></small>
+            </div>
+            <hr class="border-secondary">
+            <div class="row row-cols-2 row-cols-md-3 g-2" id="nameGrid"></div>
+          </div>
+          <div class="modal-footer border-secondary">
+            <button type="button" class="btn btn-outline-light" id="nameOpenInGen">
+              <i class="bi bi-box-arrow-up-right me-1"></i>Open Name Generator
+            </button>
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+          </div>
+        </div>
+      </div>`;
+    document.body.appendChild(modal);
+  }
+
+  // Function to generate and populate names
+  function populateNames(race){
+    const { names } = generateNamesForNPC(`race: ${race}`, 12);
+    const grid = document.getElementById("nameGrid");
+    grid.innerHTML = "";
+
+    names.forEach(name => {
+      const col = document.createElement("div");
+      col.className = "col";
+      const btn = document.createElement("button");
+      btn.className = "btn btn-outline-info w-100 name-option-btn";
+      btn.textContent = name;
+      btn.onclick = ()=>{
+        const nameDisplay = currentNPCTile.querySelector(".npc-name-display");
+        nameDisplay.textContent = name;
+        nameDisplay.classList.remove("text-info");
+        nameDisplay.classList.add("text-success");
+        bootstrap.Modal.getInstance(modal).hide();
+      };
+      col.appendChild(btn);
+      grid.appendChild(col);
+    });
+  }
+
+  // Set detected race and populate initial names
+  document.getElementById("detectedRaceLabel").textContent = detectedRace;
+  document.getElementById("raceSelect").value = detectedRace;
+  populateNames(detectedRace);
+
+  // Setup regenerate button
+  document.getElementById("regenerateNames").onclick = ()=>{
+    const selectedRace = document.getElementById("raceSelect").value;
+    populateNames(selectedRace);
+  };
+
+  // Setup "Open Name Generator" button
+  document.getElementById("nameOpenInGen").onclick = ()=>{
+    const selectedRace = document.getElementById("raceSelect").value;
+    localStorage.setItem("npc-name-request", JSON.stringify({
+      race: selectedRace,
+      timestamp: Date.now()
+    }));
+    window.open("name.html?from=npc&race=" + encodeURIComponent(selectedRace), "_blank");
+  };
+
+  // Show modal
+  const bsModal = new bootstrap.Modal(modal);
+  bsModal.show();
 }
 
 // Wire up
@@ -428,6 +655,17 @@ document.addEventListener("DOMContentLoaded", ()=>{
   $("npc-copy").addEventListener("click", copyNPCs);
   $("npc-download").addEventListener("click", downloadNPCs);
   $("npc-clear").addEventListener("click", ()=>{ $("npc-out").innerHTML=""; $("npc-meta").innerHTML=""; });
+
+  // Event delegation for name generation buttons
+  document.addEventListener("click", (e)=>{
+    if(e.target.closest(".npc-name-gen-btn")){
+      const btn = e.target.closest(".npc-name-gen-btn");
+      const tile = btn.closest(".npc-tile");
+      const descField = tile.querySelector(".npc-field:has(b)");
+      const desc = descField ? descField.textContent : "";
+      showNamePickerModal(tile, desc);
+    }
+  });
 
   // initial batch
   generate();

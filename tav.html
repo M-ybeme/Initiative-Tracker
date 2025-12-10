@@ -126,7 +126,8 @@
 
               <div class="alert alert-info mt-3 text-start">
                 <div class="fw-semibold mb-1"><i class="bi bi-info-circle"></i> Tip</div>
-                This tool builds the <strong>menu, drinks, rooms, staff, name, sign, and ambience</strong>.
+                This tool builds the <strong>menu, drinks, rooms, staff, name, sign, and ambience</strong>.<br>
+                <small class="text-secondary">Click "Generate Full NPC Details" on any staff member to expand them with full personality traits!</small>
               </div>
             </div>
           </div>
@@ -521,7 +522,16 @@
               const card = document.createElement("div"); card.className="tv-card";
               card.innerHTML = `<div class="tv-staff-title">${s.role}</div>
                 <div class="small">${s.desc}</div>
-                <div class="small text-secondary">Voice: ${s.voice}; Mannerism: ${s.manner}.</div>`;
+                <div class="small text-secondary">Voice: ${s.voice}; Mannerism: ${s.manner}.</div>
+                <div class="mt-2">
+                  <button class="btn btn-outline-info btn-sm w-100 tv-npc-gen-btn"
+                    data-role="${s.role}"
+                    data-desc="${s.desc.replace(/"/g, '&quot;')}"
+                    data-voice="${s.voice.replace(/"/g, '&quot;')}"
+                    data-manner="${s.manner.replace(/"/g, '&quot;')}">
+                    <i class="bi bi-person-plus-fill me-1"></i>Generate Full NPC Details
+                  </button>
+                </div>`;
               col.appendChild(card); grid.appendChild(col);
             });
           }else{
@@ -565,15 +575,160 @@
           const a = document.createElement("a"); a.href=url; a.download="tavern_inn.txt"; a.click(); URL.revokeObjectURL(url);
         }
 
+        // ---------- NPC Integration (Staff → Full NPC) ----------
+        function generateFullNPCFromStaff(role, desc, voice, manner){
+          // Parse description to extract details
+          const settlement = $("tv-settlement").value || "town";
+          const seed = $("tv-seed").value.trim() + "-" + role + "-" + Date.now();
+          const rng = prand(seed);
+
+          // Build full NPC details using existing tavern staff data
+          const npc = {
+            role,
+            desc,
+            voice,
+            mannerisms: manner + "; " + pick(rng, MANNER),
+            quirk: pick(rng, ["collects buttons","keeps a neat ledger of tiny favors","names their tools","insists on exact change","carries a smooth lucky pebble","takes dawn walks daily","brews a personal tea blend","never swears","wears mismatched socks","polishes gear at the same hour"]),
+            wants: [
+              pick(rng, ["to make a fair sale","a quiet day of steady work","better tools","news from the road","to impress a supervisor","to trade for supplies","to hire short-term help","to clear a small debt","to finish on time"]),
+              pick(rng, ["to maintain a good reputation","to teach an apprentice","repeat customers","to avoid shortages","a day off soon","a fair hearing","more storage space","to learn a new skill"])
+            ].join("; "),
+            avoids: [
+              pick(rng, ["attention from officials","long haggling","rowdy crowds","credit purchases","wasting materials","lateness","broken promises","public arguments"]),
+              pick(rng, ["being overheard","theft","refund disputes","wet weather","idle gossip about them","mud tracked indoors","smoldering coals near stock"])
+            ].join("; "),
+            secret: pick(rng, ["owes money to a local merchant guild","once witnessed a crime but never reported it","has a hidden stash of silver coins","secretly practices minor magic","keeps a journal of overheard conversations","is related to minor nobility","fled from another town years ago","knows the location of a smuggler's cache","has a false identity","once worked for a thieves' guild","is being blackmailed over a past indiscretion","sends anonymous donations to the local temple","saved a noble's life once","has a hidden family in another city","knows a secret passage under the town","once served in a war under a false name"])
+          };
+
+          return npc;
+        }
+
+        function showNPCModal(npc){
+          // Create modal if it doesn't exist
+          let modal = document.getElementById("npcModal");
+          if(!modal){
+            modal = document.createElement("div");
+            modal.id = "npcModal";
+            modal.className = "modal fade";
+            modal.tabIndex = -1;
+            modal.innerHTML = `
+              <div class="modal-dialog modal-dialog-centered modal-lg">
+                <div class="modal-content bg-dark text-light">
+                  <div class="modal-header border-secondary">
+                    <h5 class="modal-title" id="npcModalTitle">Full NPC Details</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                  </div>
+                  <div class="modal-body" id="npcModalBody"></div>
+                  <div class="modal-footer border-secondary">
+                    <button type="button" class="btn btn-outline-light" id="npcCopyBtn"><i class="bi bi-clipboard me-1"></i>Copy</button>
+                    <button type="button" class="btn btn-primary" id="npcOpenInGenBtn"><i class="bi bi-box-arrow-up-right me-1"></i>Open in NPC Gen</button>
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                  </div>
+                </div>
+              </div>`;
+            document.body.appendChild(modal);
+          }
+
+          // Populate modal content
+          const body = document.getElementById("npcModalBody");
+          body.innerHTML = `
+            <div class="npc-details">
+              <div class="mb-3">
+                <h6 class="text-info">Role</h6>
+                <p>${npc.role}</p>
+              </div>
+              <div class="mb-3">
+                <h6 class="text-info">Description</h6>
+                <p>${npc.desc}</p>
+              </div>
+              <div class="mb-3">
+                <h6 class="text-info">Voice</h6>
+                <p>${npc.voice}</p>
+              </div>
+              <div class="mb-3">
+                <h6 class="text-info">Mannerisms</h6>
+                <p>${npc.mannerisms}</p>
+              </div>
+              <div class="mb-3">
+                <h6 class="text-info">Quirk</h6>
+                <p>${npc.quirk}</p>
+              </div>
+              <div class="mb-3">
+                <h6 class="text-info">Wants</h6>
+                <p>${npc.wants}</p>
+              </div>
+              <div class="mb-3">
+                <h6 class="text-info">Wants to Avoid</h6>
+                <p>${npc.avoids}</p>
+              </div>
+              <div class="mb-3">
+                <h6 class="text-info">Secret</h6>
+                <p>${npc.secret}</p>
+              </div>
+            </div>`;
+
+          // Setup copy button
+          document.getElementById("npcCopyBtn").onclick = ()=>{
+            const text = [
+              `Role: ${npc.role}`,
+              `Description: ${npc.desc}`,
+              `Voice: ${npc.voice}`,
+              `Mannerisms: ${npc.mannerisms}`,
+              `Quirk: ${npc.quirk}`,
+              `Wants: ${npc.wants}`,
+              `Wants to Avoid: ${npc.avoids}`,
+              `Secret: ${npc.secret}`
+            ].join("\n\n");
+            navigator.clipboard.writeText(text);
+          };
+
+          // Setup "Open in NPC Gen" button
+          document.getElementById("npcOpenInGenBtn").onclick = ()=>{
+            // Store NPC data in localStorage for NPC Gen to pick up
+            const npcData = {
+              fromTavern: true,
+              role: npc.role,
+              desc: npc.desc,
+              voice: npc.voice,
+              mannerisms: npc.mannerisms,
+              quirk: npc.quirk,
+              wants: npc.wants,
+              avoids: npc.avoids,
+              secret: npc.secret,
+              timestamp: Date.now()
+            };
+            localStorage.setItem("tavern-npc-handoff", JSON.stringify(npcData));
+            window.open("npc.html?from=tavern", "_blank");
+          };
+
+          // Show modal
+          const bsModal = new bootstrap.Modal(modal);
+          bsModal.show();
+        }
+
         // Wire up
         document.addEventListener("DOMContentLoaded", ()=>{
           $("tv-generate").addEventListener("click", generate);
           $("tv-copy").addEventListener("click", copyOut);
           $("tv-download").addEventListener("click", downloadOut);
-          $("tv-clear").addEventListener("click", ()=>{ 
+          $("tv-clear").addEventListener("click", ()=>{
             $("tv-meta").innerHTML=""; $("tv-sign").textContent=""; $("tv-amb").innerHTML=""; $("tv-unique").textContent="";
             $("tv-meals").innerHTML=""; $("tv-drinks").innerHTML=""; $("tv-rooms").innerHTML=""; $("tv-staff").innerHTML="";
           });
+
+          // Event delegation for NPC generation buttons
+          document.addEventListener("click", (e)=>{
+            if(e.target.closest(".tv-npc-gen-btn")){
+              const btn = e.target.closest(".tv-npc-gen-btn");
+              const role = btn.getAttribute("data-role");
+              const desc = btn.getAttribute("data-desc");
+              const voice = btn.getAttribute("data-voice");
+              const manner = btn.getAttribute("data-manner");
+              const npc = generateFullNPCFromStaff(role, desc, voice, manner);
+              showNPCModal(npc);
+            }
+          });
+
           generate();
         });
       })();

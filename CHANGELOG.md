@@ -5,6 +5,102 @@ and this project adheres to Semantic Versioning.
 
 
 
+1.8.8 - 2025-12-10
+Generator Integration & Loot Expansion
+
+Added
+
+**Name Generator Enhancements**
+- **Expanded Race Support** (30+ races)
+  - Added 16 new playable races with unique naming conventions
+  - New races: Half-Orc, Hobgoblin, Kobold, Aarakocra, Tabaxi, Firbolg, Kenku, Triton, Goliath, Bugbear, Yuan-ti, Changeling, Warforged
+  - Human cultural variants: Arabic, Asian (in addition to Latin and Norse)
+  - Each race has culturally appropriate syllable patterns for authentic name generation
+- **Organized Race Dropdown with Optgroups**
+  - Races categorized into 4 logical groups: Common Races, Uncommon Races, Monstrous Races, Special Races
+  - Improved UX with visual separation between race types
+  - Consistent organization across Name Generator and NPC Generator
+- **Race Presets for All New Races**
+  - 16 new race preset configurations with appropriate syllable counts, gender leanings, and harshness/exoticness values
+  - Race-specific suffixes for enhanced authenticity
+  - Special handling for unique races (e.g., Tabaxi compound names, Warforged mechanical names)
+
+**NPC Generator → Name Generator Integration**
+- **Interactive Name Picker Modal**
+  - "Generate Name" button on each NPC card
+  - Modal displays 12 name options based on detected race
+  - Race auto-detection from NPC description using pattern matching
+  - Manual race override via dropdown selector
+  - "Regenerate" button for fresh name options without closing modal
+  - "Open Name Generator" button for advanced customization
+- **Seamless Cross-Generator Communication**
+  - URL parameter passing for race presets
+  - localStorage handoff for bidirectional data flow
+  - Selected race automatically applied in Name Generator when opened
+
+**Tavern Generator → NPC Generator Integration**
+- **Staff Expansion System**
+  - "Generate Full NPC Details" button on each tavern staff member
+  - Converts basic staff (role, description, voice, mannerism) into complete 8-field NPCs
+  - Auto-generates: enhanced mannerisms, quirks, wants, avoids, and secrets
+  - Modal preview with copy and "Open in NPC Gen" options
+- **Cross-Generator Data Flow**
+  - localStorage handoff system for tavern staff → NPC generator
+  - URL parameters preserve context (from=tavern)
+  - NPC Generator recognizes and displays tavern-sourced NPCs
+
+**Shop Generator → Negotiate Price Mechanic**
+- **Haggling System**
+  - "Negotiate" button on each shop item
+  - Modal displays Persuasion DC based on item rarity (Common: DC 12, Uncommon: DC 15, Rare: DC 18)
+  - Price outcomes table:
+    - Critical Success (Nat 20 or DC+10): 30% discount
+    - Success by 5+ (DC+5): 20% discount
+    - Success (DC): 10% discount
+    - Failure (< DC): No discount
+    - Critical Failure (Nat 1 or DC-10): +10% price increase (shopkeeper offended)
+  - Visual color coding for success/failure tiers
+
+**Initiative Tracker → Bulk HP Adjustment**
+- **Mass Healing/Damage System**
+  - "Bulk HP Adjust" button in initiative footer
+  - Filter options: PCs only, Enemies only, or All characters
+  - Action types: Heal, Damage, Full Heal
+  - Single undo point for entire bulk operation
+  - Use cases: Long rest healing, area-of-effect damage, mass healing spells
+- **Smart HP Management**
+  - Damage prioritizes temporary HP consumption
+  - Healing automatically resets death saves
+  - Full heal restores all characters to max HP
+
+**Loot Generator Expansion**
+- **Expanded Trade Goods Category** (6 → 14 items)
+  - Added 8 new valuable trade items: barrel of aged wine, exotic tea leaves, rare herbs, coffee beans, fine tobacco, spider silk, rare pigments, exotic incense
+  - Broader variety for merchant-focused campaigns
+- **Expanded Gems & Art Category** (5 → 13 items)
+  - Added 8 new art objects: ornate music box, jeweled hair comb, crystal prism, carved ivory cameo, gilded portrait frame, polished jade figurine, silver filigree locket, painted porcelain vase
+  - More diverse treasure options for dragon hoards and noble estates
+- **Massively Expanded Minor Magic Items** (8 → 47 items)
+  - **Healing & Recovery (4 items)**: Tonic of Vigor, Salve of Mending, Restorative Tea, Vial of Clarity
+  - **Combat & Defense (7 items)**: Smoke Charm, Oil of Edge, Warding Ribbon, Shield Charm, Thunderstone, Flash Powder, Tanglefoot Bag
+  - **Movement & Utility (5 items)**: Feather Token, Boots of Springing, Potion of Water Breathing, Dust of Tracelessness, Feather Fall Token
+  - **Social & Luck (4 items)**: Lucky Coin, Charm of Persuasion, Vial of Courage, Token of Truth
+  - **Exploration (5 items)**: Guide's Pin, Wayfinder's Compass, Lens of Detection, Ear Trumpet of Listening, Dowsing Rod
+  - **Knowledge & Magic (5 items)**: Scribe's Quill, Scholar's Monocle, Candle of Revealing, Chalk of Warding, Crystal of Light
+  - **Tools & Craft (4 items)**: Hammer of Mending, Rope of Climbing, Thieves' Gloves, Bag of Endless Knots
+  - **Nature & Animals (3 items)**: Beast Whistle, Druid's Seed, Weatherglass
+  - **Ongoing Items (8 items)**: Everburning Torch, Self-Heating Mug, Cleaning Cloth, Compass of True North, Tankard of Purity, Prestidigitation Ring, Warming Cloak Clasp, Cooling Hat Pin
+  - All items include clear mechanical effects, value ranges, and categorization (consumable/situational/ongoing)
+
+Changed
+
+- Name Generator dropdown structure upgraded from flat list to organized optgroups
+- NPC cards now include name field with generation button
+- Tavern staff cards include integration button for NPC expansion
+- Shop item tables include negotiate button column
+- Initiative tracker footer includes bulk HP adjustment controls
+- Loot generator Minor Magic category expanded 6x for better variety
+
 1.8.7 - 2025-12-09
 Character Creation Wizard: Comprehensive Expansion
 
