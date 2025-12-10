@@ -86,7 +86,18 @@ Full-featured character sheets for both DM prep and player use
 - Initiative roller integrated into combat snapshot
 
 **Player-Facing Features:**
-- **Character Creation Wizard** - 7-step guided walkthrough for new players
+- **Character Creation Wizard** - Comprehensive 8-step guided character builder
+  - 33+ playable races (PHB, Volo's, Xanathar's, Eberron, Ravnica, Theros)
+  - Dynamic subrace selection (Elf, Dwarf, Halfling, Gnome, Dragonborn, Tiefling, Aasimar, Shifter)
+  - All 13 official classes including Artificer
+  - 13 backgrounds with automatic skill proficiencies
+  - Interactive skill proficiency selection (2-4 skills based on class)
+  - Automatic HP, AC, speed, and proficiency bonus calculation
+  - Automatic racial ability score bonuses (all races + subraces)
+  - Class-based saving throw proficiencies
+  - 4d6-drop-lowest ability score roller with visual dice display
+  - Character review summary before creation
+  - Creates 90% complete characters ready for immediate play
 - Interactive dice roller with advantage/disadvantage support
 - Explicit advantage/disadvantage buttons (Green/Normal/Red) for all rolls
 - Roll buttons for all skills, saves, and attacks with visual color coding
@@ -97,7 +108,7 @@ Full-featured character sheets for both DM prep and player use
 - Inspiration and Concentration tracking
 - Death save automation (nat 20/1 special handling)
 - Automatic concentration DC calculation on damage
-- **Mobile-Responsive** - Optimized for phones, tablets, and desktop
+- **Mobile-Responsive** - Optimized for phones, tablets, and desktop with collapsible sections
 
 **DM-Specific Fields:**
 - Party role / table notes

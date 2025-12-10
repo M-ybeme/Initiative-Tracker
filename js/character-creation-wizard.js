@@ -75,19 +75,67 @@ const CharacterCreationWizard = (function() {
           <label for="wizardRace" class="form-label">Race *</label>
           <select class="form-select" id="wizardRace">
             <option value="">Choose a race...</option>
-            <optgroup label="Common Races">
+            <optgroup label="Common Races (PHB)">
               <option value="Human">Human - Versatile, +1 to all abilities</option>
               <option value="Elf">Elf - Graceful, +2 Dex, darkvision, keen senses</option>
               <option value="Dwarf">Dwarf - Sturdy, +2 Con, darkvision, resilient</option>
               <option value="Halfling">Halfling - Lucky, +2 Dex, brave, nimble</option>
-            </optgroup>
-            <optgroup label="Uncommon Races">
               <option value="Dragonborn">Dragonborn - Draconic, +2 Str +1 Cha, breath weapon</option>
               <option value="Gnome">Gnome - Clever, +2 Int, darkvision, cunning</option>
               <option value="Half-Elf">Half-Elf - Charismatic, +2 Cha +1 to two others, versatile</option>
               <option value="Half-Orc">Half-Orc - Strong, +2 Str +1 Con, relentless, savage</option>
               <option value="Tiefling">Tiefling - Infernal, +2 Cha +1 Int, darkvision, fire resistance</option>
             </optgroup>
+            <optgroup label="Exotic Races (Volo's Guide)">
+              <option value="Aarakocra">Aarakocra - Bird-like, +2 Dex +1 Wis, flight</option>
+              <option value="Aasimar">Aasimar - Celestial, +2 Cha +1 Wis, healing hands, light bearer</option>
+              <option value="Bugbear">Bugbear - Sneaky brute, +2 Str +1 Dex, long-limbed, surprise attack</option>
+              <option value="Firbolg">Firbolg - Gentle giant, +2 Wis +1 Str, druidic magic, hidden step</option>
+              <option value="Goblin">Goblin - Small trickster, +2 Dex +1 Con, nimble escape, fury of the small</option>
+              <option value="Goliath">Goliath - Mountain warrior, +2 Str +1 Con, powerful build, stone's endurance</option>
+              <option value="Hobgoblin">Hobgoblin - Disciplined warrior, +2 Con +1 Int, martial training, saving face</option>
+              <option value="Kenku">Kenku - Crow-like mimic, +2 Dex +1 Wis, expert forgery, mimicry</option>
+              <option value="Kobold">Kobold - Small dragon-kin, +2 Dex -2 Str, pack tactics, sunlight sensitivity</option>
+              <option value="Lizardfolk">Lizardfolk - Reptilian survivor, +2 Con +1 Wis, natural armor, hold breath</option>
+              <option value="Orc">Orc - Savage warrior, +2 Str +1 Con, aggressive, powerful build</option>
+              <option value="Tabaxi">Tabaxi - Cat-like wanderer, +2 Dex +1 Cha, feline agility, cat's claws</option>
+              <option value="Triton">Triton - Sea guardian, +1 Str +1 Con +1 Cha, amphibious, control water/air</option>
+              <option value="Yuan-ti Pureblood">Yuan-ti Pureblood - Serpentine, +2 Cha +1 Int, magic resistance, poison immunity</option>
+            </optgroup>
+            <optgroup label="Elemental Races">
+              <option value="Genasi (Air)">Air Genasi - Wind-touched, +2 Con +1 Dex, unending breath, levitate</option>
+              <option value="Genasi (Earth)">Earth Genasi - Stone-touched, +2 Con +1 Str, earth walk, pass without trace</option>
+              <option value="Genasi (Fire)">Fire Genasi - Flame-touched, +2 Con +1 Int, darkvision, fire resistance, burning hands</option>
+              <option value="Genasi (Water)">Water Genasi - Wave-touched, +2 Con +1 Wis, amphibious, acid resistance, shape water</option>
+            </optgroup>
+            <optgroup label="Ravnica Races">
+              <option value="Centaur">Centaur - Horse-bodied, +2 Str +1 Wis, charge, hooves, equine build</option>
+              <option value="Loxodon">Loxodon - Elephant-like, +2 Con +1 Wis, powerful build, natural armor, trunk</option>
+              <option value="Minotaur">Minotaur - Bull-headed, +2 Str +1 Con, horns, goring rush, hammering horns</option>
+              <option value="Simic Hybrid">Simic Hybrid - Bio-engineered, +2 Con +1 to one other, animal enhancement</option>
+              <option value="Vedalken">Vedalken - Blue-skinned, +2 Int +1 Wis, tireless precision, partially amphibious</option>
+            </optgroup>
+            <optgroup label="Theros Races">
+              <option value="Leonin">Leonin - Lion-like, +2 Con +1 Str, claws, roar, hunter's instinct</option>
+              <option value="Satyr">Satyr - Fey goat-folk, +2 Cha +1 Dex, magic resistance, mirthful leaps, reveler</option>
+            </optgroup>
+            <optgroup label="Eberron Races">
+              <option value="Changeling">Changeling - Shapeshifter, +2 Cha +1 to one other, change appearance, unsettling</option>
+              <option value="Kalashtar">Kalashtar - Dream-touched, +2 Wis +1 Cha, telepathy, psychic resistance</option>
+              <option value="Shifter">Shifter - Were-touched, +2 Dex +1 to one other, shifting feature, darkvision</option>
+              <option value="Warforged">Warforged - Construct, +2 Con +1 to one other, integrated protection, constructed resilience</option>
+            </optgroup>
+            <optgroup label="Other Races">
+              <option value="Tortle">Tortle - Turtle-like, +2 Str +1 Wis, natural armor, shell defense, hold breath</option>
+              <option value="Locathah">Locathah - Fish-like, +2 Dex +1 Wis, natural armor, limited amphibiousness</option>
+              <option value="Grung">Grung - Poison frog, +2 Dex +1 Con, poison skin, standing leap, water dependency</option>
+            </optgroup>
+          </select>
+        </div>
+        <div id="subraceSection" class="mb-3" style="display:none;">
+          <label for="wizardSubrace" class="form-label">Subrace</label>
+          <select class="form-select" id="wizardSubrace">
+            <option value="">Choose a subrace...</option>
           </select>
         </div>
         <div id="raceDescription" class="alert alert-info" style="display:none;"></div>
@@ -100,12 +148,120 @@ const CharacterCreationWizard = (function() {
           return false;
         }
         wizardData.race = race;
+        wizardData.subrace = document.getElementById('wizardSubrace')?.value || '';
         return true;
       },
       onShow: () => {
         const raceSelect = document.getElementById('wizardRace');
+        const subraceSection = document.getElementById('subraceSection');
+        const subraceSelect = document.getElementById('wizardSubrace');
         const raceDesc = document.getElementById('raceDescription');
-        if (raceSelect && raceDesc) {
+
+        // Define subraces for applicable races
+        const subraces = {
+          'Elf': [
+            { value: 'High Elf', label: 'High Elf - Extra cantrip, weapon training, extra language' },
+            { value: 'Wood Elf', label: 'Wood Elf - Increased speed, mask of the wild, weapon training' },
+            { value: 'Dark Elf (Drow)', label: 'Dark Elf (Drow) - Superior darkvision, sunlight sensitivity, drow magic' },
+            { value: 'Eladrin', label: 'Eladrin - Fey step, seasonal abilities' },
+            { value: 'Sea Elf', label: 'Sea Elf - Swim speed, amphibious, friend of the sea' }
+          ],
+          'Dwarf': [
+            { value: 'Hill Dwarf', label: 'Hill Dwarf - Extra HP, dwarven toughness' },
+            { value: 'Mountain Dwarf', label: 'Mountain Dwarf - +2 Str, light/medium armor proficiency' },
+            { value: 'Duergar', label: 'Duergar - Superior darkvision, enlarge/invisibility spells, sunlight sensitivity' }
+          ],
+          'Halfling': [
+            { value: 'Lightfoot', label: 'Lightfoot - +1 Cha, naturally stealthy' },
+            { value: 'Stout', label: 'Stout - +1 Con, poison resistance' },
+            { value: 'Ghostwise', label: 'Ghostwise - +1 Wis, silent speech telepathy' }
+          ],
+          'Gnome': [
+            { value: 'Forest Gnome', label: 'Forest Gnome - +1 Dex, natural illusionist, speak with small beasts' },
+            { value: 'Rock Gnome', label: 'Rock Gnome - +1 Con, artificer\'s lore, tinker' },
+            { value: 'Deep Gnome (Svirfneblin)', label: 'Deep Gnome - +1 Dex, superior darkvision, stone camouflage' }
+          ],
+          'Dragonborn': [
+            { value: 'Black', label: 'Black Dragon Ancestry - Acid breath (line)' },
+            { value: 'Blue', label: 'Blue Dragon Ancestry - Lightning breath (line)' },
+            { value: 'Brass', label: 'Brass Dragon Ancestry - Fire breath (line)' },
+            { value: 'Bronze', label: 'Bronze Dragon Ancestry - Lightning breath (line)' },
+            { value: 'Copper', label: 'Copper Dragon Ancestry - Acid breath (line)' },
+            { value: 'Gold', label: 'Gold Dragon Ancestry - Fire breath (cone)' },
+            { value: 'Green', label: 'Green Dragon Ancestry - Poison breath (cone)' },
+            { value: 'Red', label: 'Red Dragon Ancestry - Fire breath (cone)' },
+            { value: 'Silver', label: 'Silver Dragon Ancestry - Cold breath (cone)' },
+            { value: 'White', label: 'White Dragon Ancestry - Cold breath (cone)' }
+          ],
+          'Tiefling': [
+            { value: 'Asmodeus', label: 'Asmodeus Bloodline - Fire spells' },
+            { value: 'Baalzebul', label: 'Baalzebul Bloodline - Corruption spells' },
+            { value: 'Dispater', label: 'Dispater Bloodline - Disguise spells' },
+            { value: 'Fierna', label: 'Fierna Bloodline - Charm spells' },
+            { value: 'Glasya', label: 'Glasya Bloodline - Illusion spells' },
+            { value: 'Levistus', label: 'Levistus Bloodline - Ice spells' },
+            { value: 'Mammon', label: 'Mammon Bloodline - Trickery spells' },
+            { value: 'Mephistopheles', label: 'Mephistopheles Bloodline - Arcane spells' },
+            { value: 'Zariel', label: 'Zariel Bloodline - Combat spells' }
+          ],
+          'Aasimar': [
+            { value: 'Protector', label: 'Protector - Flight, radiant damage' },
+            { value: 'Scourge', label: 'Scourge - Radiant damage aura' },
+            { value: 'Fallen', label: 'Fallen - Frighten enemies, necrotic damage' }
+          ],
+          'Shifter': [
+            { value: 'Beasthide', label: 'Beasthide - +1 Con, tough and resilient' },
+            { value: 'Longtooth', label: 'Longtooth - +1 Str, fierce bite attack' },
+            { value: 'Swiftstride', label: 'Swiftstride - +1 Dex, swift and agile' },
+            { value: 'Wildhunt', label: 'Wildhunt - +1 Wis, heightened senses' }
+          ]
+        };
+
+        const descriptions = {
+          'Human': 'Humans are the most adaptable and ambitious people. They get +1 to all ability scores, making them viable for any class.',
+          'Elf': 'Elves are magical people of otherworldly grace. They have keen senses, darkvision, and advantage against charm. Choose a subrace for additional traits.',
+          'Dwarf': 'Dwarves are stout and hardy, known for mining and craftsmanship. They resist poison, have darkvision, and proficiency with certain weapons. Choose a subrace.',
+          'Halfling': 'Halflings are small, cheerful folk who value comfort. They are naturally lucky, brave, and nimble. Choose a subrace for additional traits.',
+          'Dragonborn': 'Dragonborn look like humanoid dragons. Choose your draconic ancestry to determine your breath weapon and damage resistance.',
+          'Gnome': 'Gnomes are small, intelligent, and inventive. They have advantage against magic, darkvision, and keen intellect. Choose a subrace.',
+          'Half-Elf': 'Half-elves combine human ambition with elven grace. They are versatile, charismatic, and get +2 to Charisma plus +1 to two other abilities.',
+          'Half-Orc': 'Half-orcs are strong and intimidating, with fierce determination. They can endure death and deal devastating critical hits.',
+          'Tiefling': 'Tieflings have infernal heritage, giving them a devilish appearance and innate fire resistance. Choose a bloodline for specific magical abilities.',
+          'Aarakocra': 'Bird-like humanoids with the gift of flight. They soar through the skies and have talons for natural weapons. Flight speed of 50 feet.',
+          'Aasimar': 'Touched by celestial power, aasimar are mortals who carry the light of heaven. They have healing hands and can reveal their divine soul.',
+          'Bugbear': 'Large goblinoids known for surprising attacks. Their long arms give them extra reach, and they excel at ambush tactics.',
+          'Centaur': 'Half-human, half-horse creatures. Their hooves are natural weapons, they can charge into battle, and have increased carrying capacity.',
+          'Changeling': 'Shapechangers who can alter their appearance at will. Perfect for infiltration and disguise, with natural deception abilities.',
+          'Firbolg': 'Gentle forest giants with innate druidic magic. They can turn invisible, speak with beasts, and have powerful builds.',
+          'Genasi (Air)': 'Touched by elemental air. Can hold breath indefinitely and cast levitate once per day. Inherently connected to wind and sky.',
+          'Genasi (Earth)': 'Touched by elemental earth. Can move across difficult terrain and cast pass without trace once per day.',
+          'Genasi (Fire)': 'Touched by elemental fire. Resistant to fire damage, have darkvision, and can cast burning hands once per day.',
+          'Genasi (Water)': 'Touched by elemental water. Amphibious, resistant to acid, and can cast shape water at will.',
+          'Goblin': 'Small and nimble tricksters. Can bonus action disengage or hide, and deal extra damage when at low health.',
+          'Goliath': 'Towering mountain dwellers with incredible strength. Can shrug off damage once per rest and have powerful builds.',
+          'Grung': 'Small poisonous frog people. Their skin secretes poison, and they have powerful leaping abilities but need water regularly.',
+          'Hobgoblin': 'Disciplined warriors with martial training. Can add bonuses to allies\' attacks and save face when they miss.',
+          'Kalashtar': 'Bound to dream spirits from another plane. Have telepathy, advantage against psychic damage, and don\'t need to sleep.',
+          'Kenku': 'Crow-like creatures cursed to never fly. Master mimics who can duplicate any sound, with expertise in forgery.',
+          'Kobold': 'Small draconic creatures who work best in groups. Have pack tactics for advantage but sunlight sensitivity for disadvantage.',
+          'Leonin': 'Fierce lion-like warriors. Have natural claw attacks, a frightening roar, and keen hunting instincts.',
+          'Lizardfolk': 'Reptilian survivalists with natural armor. Can hold their breath, have bite attacks, and craft tools from corpses.',
+          'Locathah': 'Fish-like humanoids adapted to water. Have natural armor and can breathe air for limited time outside water.',
+          'Loxodon': 'Elephant-like beings with natural armor. Their trunk can be used as a tool or weapon, and they have powerful builds.',
+          'Minotaur': 'Bull-headed warriors. Have natural horn attacks, can make goring charges, and use horns for devastating headbutts.',
+          'Orc': 'Savage warriors driven by aggression. Can move toward enemies as a bonus action and have powerful, intimidating builds.',
+          'Satyr': 'Fey goat-folk who love revelry. Resistant to magic, can leap great distances, and have natural performance skills.',
+          'Shifter': 'Descended from lycanthropes. Can shift into a more bestial form temporarily, gaining temporary HP and other benefits based on subrace.',
+          'Simic Hybrid': 'Magically enhanced beings with animal traits. Choose adaptations like grappling appendages, underwater breathing, or acid spit.',
+          'Tabaxi': 'Cat-like wanderers with natural agility. Have climbing claws, can double their speed in bursts, and possess feline grace.',
+          'Tortle': 'Turtle-like beings with natural shell armor. Can retreat into shell for defense and hold breath for extended periods.',
+          'Triton': 'Guardians of ocean depths. Amphibious, can communicate with sea creatures, and control water and air magically.',
+          'Vedalken': 'Blue-skinned logical beings. Gain advantage on Intelligence, Wisdom, and Charisma saves, and have tireless precision.',
+          'Warforged': 'Constructed beings built for war. Don\'t need to sleep, eat, or breathe. Have integrated protection and constructed resilience.',
+          'Yuan-ti Pureblood': 'Serpentine humanoids with snake-like features. Immune to poison, resistant to magic, and can speak with serpents.'
+        };
+
+        if (raceSelect && raceDesc && subraceSection && subraceSelect) {
           // Remove any existing listener to prevent memory leaks and duplicate handlers
           const oldListener = raceSelect._raceChangeHandler;
           if (oldListener) {
@@ -114,22 +270,29 @@ const CharacterCreationWizard = (function() {
 
           // Create new handler and store reference for later removal
           const newHandler = (e) => {
-            const descriptions = {
-              'Human': 'Humans are the most adaptable and ambitious people. They get +1 to all ability scores.',
-              'Elf': 'Elves are magical people of otherworldly grace. They have keen senses and a deep connection to nature.',
-              'Dwarf': 'Dwarves are stout and hardy, known for mining and craftsmanship. They are tough and resilient.',
-              'Halfling': 'Halflings are small, cheerful folk who value comfort. They are naturally lucky and brave.',
-              'Dragonborn': 'Dragonborn look like humanoid dragons. They have a breath weapon matching their draconic ancestry.',
-              'Gnome': 'Gnomes are small, intelligent, and inventive. They love tinkering and have a knack for illusion magic.',
-              'Half-Elf': 'Half-elves combine human ambition with elven grace. They are versatile and charismatic.',
-              'Half-Orc': 'Half-orcs are strong and intimidating, with a fierce determination that helps them endure.',
-              'Tiefling': 'Tieflings have infernal heritage, giving them a devilish appearance and innate magical abilities.'
-            };
-            if (e.target.value && descriptions[e.target.value]) {
-              raceDesc.textContent = descriptions[e.target.value];
+            const selectedRace = e.target.value;
+
+            // Show race description
+            if (selectedRace && descriptions[selectedRace]) {
+              raceDesc.textContent = descriptions[selectedRace];
               raceDesc.style.display = 'block';
             } else {
               raceDesc.style.display = 'none';
+            }
+
+            // Handle subraces
+            if (selectedRace && subraces[selectedRace]) {
+              subraceSelect.innerHTML = '<option value="">Choose a subrace...</option>';
+              subraces[selectedRace].forEach(subrace => {
+                const option = document.createElement('option');
+                option.value = subrace.value;
+                option.textContent = subrace.label;
+                subraceSelect.appendChild(option);
+              });
+              subraceSection.style.display = 'block';
+            } else {
+              subraceSection.style.display = 'none';
+              subraceSelect.innerHTML = '<option value="">Choose a subrace...</option>';
             }
           };
 
@@ -147,28 +310,30 @@ const CharacterCreationWizard = (function() {
           <label for="wizardClass" class="form-label">Class *</label>
           <select class="form-select" id="wizardClass">
             <option value="">Choose a class...</option>
-            <optgroup label="Martial Classes (Fighters)">
-              <option value="Fighter">Fighter - Master of weapons and armor</option>
-              <option value="Barbarian">Barbarian - Fierce warrior who rages in battle</option>
-              <option value="Rogue">Rogue - Stealthy, skillful, sneaky</option>
-              <option value="Ranger">Ranger - Wilderness warrior and tracker</option>
-              <option value="Monk">Monk - Unarmed martial artist with ki powers</option>
+            <optgroup label="Martial Classes">
+              <option value="Barbarian">Barbarian - Fierce warrior who rages in battle (Str/Con)</option>
+              <option value="Fighter">Fighter - Master of weapons and armor (Str or Dex)</option>
+              <option value="Monk">Monk - Unarmed martial artist with ki powers (Dex/Wis)</option>
+              <option value="Ranger">Ranger - Wilderness warrior and tracker (Dex/Wis)</option>
+              <option value="Rogue">Rogue - Stealthy, skillful, sneaky (Dex)</option>
             </optgroup>
-            <optgroup label="Spellcasters">
-              <option value="Wizard">Wizard - Arcane scholar with vast spell knowledge</option>
-              <option value="Cleric">Cleric - Divine healer and support caster</option>
-              <option value="Druid">Druid - Nature spellcaster who can wild shape</option>
-              <option value="Sorcerer">Sorcerer - Innate magic user with metamagic</option>
-              <option value="Warlock">Warlock - Magic from a powerful patron</option>
-              <option value="Bard">Bard - Charismatic performer with support magic</option>
+            <optgroup label="Full Spellcasters">
+              <option value="Bard">Bard - Charismatic performer with support magic (Cha)</option>
+              <option value="Cleric">Cleric - Divine healer and support caster (Wis)</option>
+              <option value="Druid">Druid - Nature spellcaster who can wild shape (Wis)</option>
+              <option value="Sorcerer">Sorcerer - Innate magic user with metamagic (Cha)</option>
+              <option value="Warlock">Warlock - Magic from a powerful patron (Cha)</option>
+              <option value="Wizard">Wizard - Arcane scholar with vast spell knowledge (Int)</option>
             </optgroup>
-            <optgroup label="Hybrid Classes">
-              <option value="Paladin">Paladin - Holy warrior with divine magic</option>
+            <optgroup label="Half-Casters (Martial + Magic)">
+              <option value="Artificer">Artificer - Magical inventor with infusions (Int)</option>
+              <option value="Paladin">Paladin - Holy warrior with divine magic (Str/Cha)</option>
             </optgroup>
           </select>
         </div>
         <div id="classDescription" class="alert alert-info" style="display:none;"></div>
         <div id="classHitDie" class="alert alert-warning" style="display:none;"></div>
+        <div id="primaryAbility" class="alert alert-secondary" style="display:none;"></div>
       `,
       buttons: ['Back', 'Next'],
       validate: () => {
@@ -184,8 +349,9 @@ const CharacterCreationWizard = (function() {
         const classSelect = document.getElementById('wizardClass');
         const classDesc = document.getElementById('classDescription');
         const hitDieInfo = document.getElementById('classHitDie');
+        const primaryAbilityInfo = document.getElementById('primaryAbility');
 
-        if (classSelect && classDesc && hitDieInfo) {
+        if (classSelect && classDesc && hitDieInfo && primaryAbilityInfo) {
           // Remove any existing listener to prevent memory leaks and duplicate handlers
           const oldListener = classSelect._classChangeHandler;
           if (oldListener) {
@@ -195,24 +361,41 @@ const CharacterCreationWizard = (function() {
           // Create new handler and store reference for later removal
           const newHandler = (e) => {
             const descriptions = {
-              'Fighter': 'Fighters are masters of martial combat. They excel with weapons and armor. Great for beginners!',
-              'Barbarian': 'Barbarians channel their rage into devastating attacks. They have high HP and can take lots of damage.',
-              'Rogue': 'Rogues are cunning and precise. They deal massive damage with sneak attacks and have many skills.',
-              'Ranger': 'Rangers are skilled hunters and trackers who blend combat with nature magic.',
-              'Monk': 'Monks are martial artists who use ki energy for supernatural abilities.',
-              'Wizard': 'Wizards study arcane magic and have the largest spell selection. They are fragile but powerful.',
-              'Cleric': 'Clerics serve a deity and can heal allies and smite foes. Very versatile!',
-              'Druid': 'Druids draw power from nature and can transform into animals.',
-              'Sorcerer': 'Sorcerers have innate magic and can modify their spells with metamagic.',
-              'Warlock': 'Warlocks made a pact for power. They regain spell slots on short rests.',
-              'Bard': 'Bards inspire allies with music and have a mix of magic and skills.',
-              'Paladin': 'Paladins are holy warriors who smite evil and protect the innocent.'
+              'Artificer': 'Artificers are magical inventors who infuse items with power. They can create magical items, cast spells through tools, and support allies with their creations. Half-caster with unique crafting abilities.',
+              'Barbarian': 'Barbarians channel their rage into devastating attacks. They have the highest HP and can take massive damage. Fierce frontline warriors with primal power.',
+              'Bard': 'Bards inspire allies with music and magic. They have a mix of support spells, healing, and control. Jack of all trades with expertise in multiple skills.',
+              'Cleric': 'Clerics serve a deity and can heal allies and smite foes. Very versatile with access to all cleric spells. Choose a divine domain for specialization.',
+              'Druid': 'Druids draw power from nature and can transform into animals with Wild Shape. They have strong crowd control and battlefield manipulation spells.',
+              'Fighter': 'Fighters are masters of martial combat. They excel with weapons and armor, getting extra attacks and maneuvers. Great for beginners! Very customizable.',
+              'Monk': 'Monks are martial artists who use ki energy for supernatural abilities. Fast, mobile, and can stun enemies. Fight unarmed or with simple weapons.',
+              'Paladin': 'Paladins are holy warriors who smite evil and protect the innocent. Half-caster with powerful melee attacks and support abilities. Can heal and boost allies.',
+              'Ranger': 'Rangers are skilled hunters and trackers who blend combat with nature magic. Half-caster excellent at ranged combat and surviving in the wilderness.',
+              'Rogue': 'Rogues are cunning and precise. They deal massive damage with Sneak Attack and have the most skills. Masters of stealth, lockpicking, and trickery.',
+              'Sorcerer': 'Sorcerers have innate magic and can modify their spells with metamagic. Fewer spells known than wizards, but more flexible casting. Choose a sorcerous origin.',
+              'Warlock': 'Warlocks made a pact for powerful magic. They regain spell slots on short rests and get Eldritch Blast, the best damage cantrip. Choose a patron.',
+              'Wizard': 'Wizards study arcane magic and have the largest spell selection. They learn spells from scrolls and can prepare different spells daily. Fragile but incredibly powerful.'
             };
 
             const hitDice = {
-              'Fighter': 'd10', 'Barbarian': 'd12', 'Rogue': 'd8', 'Ranger': 'd10', 'Monk': 'd8',
-              'Wizard': 'd6', 'Cleric': 'd8', 'Druid': 'd8', 'Sorcerer': 'd6', 'Warlock': 'd8',
-              'Bard': 'd8', 'Paladin': 'd10'
+              'Artificer': 'd8', 'Barbarian': 'd12', 'Bard': 'd8', 'Cleric': 'd8', 'Druid': 'd8',
+              'Fighter': 'd10', 'Monk': 'd8', 'Paladin': 'd10', 'Ranger': 'd10', 'Rogue': 'd8',
+              'Sorcerer': 'd6', 'Warlock': 'd8', 'Wizard': 'd6'
+            };
+
+            const primaryAbilities = {
+              'Artificer': 'Intelligence (for spells and infusions)',
+              'Barbarian': 'Strength (for attacks), Constitution (for survivability)',
+              'Bard': 'Charisma (for spells and social skills)',
+              'Cleric': 'Wisdom (for spells and perception)',
+              'Druid': 'Wisdom (for spells and wild shape)',
+              'Fighter': 'Strength or Dexterity (your choice of fighting style)',
+              'Monk': 'Dexterity (for AC and attacks), Wisdom (for ki save DC)',
+              'Paladin': 'Strength (for attacks), Charisma (for spells and auras)',
+              'Ranger': 'Dexterity (for attacks), Wisdom (for spells and tracking)',
+              'Rogue': 'Dexterity (for attacks, AC, and stealth)',
+              'Sorcerer': 'Charisma (for spells)',
+              'Warlock': 'Charisma (for spells and eldritch invocations)',
+              'Wizard': 'Intelligence (for spells and knowledge)'
             };
 
             if (e.target.value && descriptions[e.target.value]) {
@@ -221,9 +404,13 @@ const CharacterCreationWizard = (function() {
 
               hitDieInfo.innerHTML = `<strong>Hit Die:</strong> ${hitDice[e.target.value]} per level. This determines your Hit Points.`;
               hitDieInfo.style.display = 'block';
+
+              primaryAbilityInfo.innerHTML = `<strong>Primary Ability:</strong> ${primaryAbilities[e.target.value]}`;
+              primaryAbilityInfo.style.display = 'block';
             } else {
               classDesc.style.display = 'none';
               hitDieInfo.style.display = 'none';
+              primaryAbilityInfo.style.display = 'none';
             }
           };
 
@@ -279,14 +466,22 @@ const CharacterCreationWizard = (function() {
             <div class="form-text small">Bard/Sorcerer/Warlock spells, persuasion</div>
           </div>
         </div>
-        <div class="alert alert-info mt-3">
+        <div class="alert alert-info mt-3" id="abilityTips">
           <strong>Tip:</strong> Put your highest scores in the abilities your class uses most!
           <ul class="small mb-0 mt-2">
-            <li><strong>Fighter/Barbarian/Paladin:</strong> Strength or Dexterity, then Constitution</li>
-            <li><strong>Rogue/Ranger/Monk:</strong> Dexterity, then Wisdom or Strength</li>
-            <li><strong>Wizard:</strong> Intelligence, then Dexterity or Constitution</li>
-            <li><strong>Cleric/Druid:</strong> Wisdom, then Constitution or Strength</li>
-            <li><strong>Sorcerer/Bard/Warlock:</strong> Charisma, then Constitution or Dexterity</li>
+            <li><strong>Artificer:</strong> Intelligence, then Constitution or Dexterity</li>
+            <li><strong>Barbarian:</strong> Strength, then Constitution (most important for survivability)</li>
+            <li><strong>Bard:</strong> Charisma, then Dexterity or Constitution</li>
+            <li><strong>Cleric:</strong> Wisdom, then Constitution or Strength</li>
+            <li><strong>Druid:</strong> Wisdom, then Constitution (you'll wild shape for combat)</li>
+            <li><strong>Fighter:</strong> Strength or Dexterity (your choice), then Constitution</li>
+            <li><strong>Monk:</strong> Dexterity, then Wisdom (both very important)</li>
+            <li><strong>Paladin:</strong> Strength, then Charisma (for spells and auras)</li>
+            <li><strong>Ranger:</strong> Dexterity, then Wisdom</li>
+            <li><strong>Rogue:</strong> Dexterity (most important), then Intelligence or Charisma</li>
+            <li><strong>Sorcerer:</strong> Charisma, then Constitution (you're fragile!)</li>
+            <li><strong>Warlock:</strong> Charisma, then Constitution or Dexterity</li>
+            <li><strong>Wizard:</strong> Intelligence, then Constitution or Dexterity (you're fragile!)</li>
           </ul>
         </div>
       `,
@@ -357,63 +552,438 @@ const CharacterCreationWizard = (function() {
       }
     },
     {
-      title: "Step 5: Skills & Proficiencies",
+      title: "Step 5: Choose Your Background",
       content: `
-        <h5>Choose your skills</h5>
-        <p>Skills represent areas where your character has training. Your class determines how many you can choose.</p>
-        <div class="alert alert-warning">
-          <strong>Number of skills:</strong> This depends on your class. Most classes get 2-4 skill proficiencies.
-          You'll be able to select these on the main character sheet after the wizard.
-        </div>
-        <p>Common skill choices by class:</p>
-        <ul class="small">
-          <li><strong>Fighter:</strong> Athletics, Intimidation, Perception</li>
-          <li><strong>Rogue:</strong> Stealth, Sleight of Hand, Perception, Investigation</li>
-          <li><strong>Wizard:</strong> Arcana, Investigation, History</li>
-          <li><strong>Cleric:</strong> Insight, Medicine, Religion</li>
-          <li><strong>Ranger:</strong> Survival, Nature, Stealth, Perception</li>
-        </ul>
-        <p class="text-muted small">We'll set this up on the main sheet in the next step.</p>
-      `,
-      buttons: ['Back', 'Next']
-    },
-    {
-      title: "Step 6: Equipment & Details",
-      content: `
-        <h5>Final details</h5>
-        <p>Let's set up some final character details.</p>
+        <h5>Choose your background</h5>
+        <p>Your background provides additional skill proficiencies, tool proficiencies, and roleplay hooks.</p>
         <div class="mb-3">
-          <label for="wizardAlignment" class="form-label">Alignment (optional)</label>
-          <select class="form-select" id="wizardAlignment">
-            <option value="">Choose alignment...</option>
-            <option value="Lawful Good">Lawful Good - Honors rules, helps others</option>
-            <option value="Neutral Good">Neutral Good - Helps others, flexible about rules</option>
-            <option value="Chaotic Good">Chaotic Good - Freedom-loving, kind-hearted</option>
-            <option value="Lawful Neutral">Lawful Neutral - Follows a code, not swayed by good/evil</option>
-            <option value="True Neutral">True Neutral - Balanced, avoids extremes</option>
-            <option value="Chaotic Neutral">Chaotic Neutral - Free spirit, unpredictable</option>
-            <option value="Lawful Evil">Lawful Evil - Uses rules for selfish gain</option>
-            <option value="Neutral Evil">Neutral Evil - Selfish, no honor</option>
-            <option value="Chaotic Evil">Chaotic Evil - Destructive and cruel</option>
+          <label for="wizardBackground" class="form-label">Background *</label>
+          <select class="form-select" id="wizardBackground">
+            <option value="">Choose a background...</option>
+            <option value="Acolyte">Acolyte - Religious servant (+Insight, +Religion)</option>
+            <option value="Charlatan">Charlatan - Con artist (+Deception, +Sleight of Hand)</option>
+            <option value="Criminal">Criminal - Lawbreaker (+Deception, +Stealth)</option>
+            <option value="Entertainer">Entertainer - Performer (+Acrobatics, +Performance)</option>
+            <option value="Folk Hero">Folk Hero - Common champion (+Animal Handling, +Survival)</option>
+            <option value="Guild Artisan">Guild Artisan - Craftsperson (+Insight, +Persuasion)</option>
+            <option value="Hermit">Hermit - Secluded sage (+Medicine, +Religion)</option>
+            <option value="Noble">Noble - High born (+History, +Persuasion)</option>
+            <option value="Outlander">Outlander - Wilderness survivor (+Athletics, +Survival)</option>
+            <option value="Sage">Sage - Scholar and researcher (+Arcana, +History)</option>
+            <option value="Sailor">Sailor - Sea voyager (+Athletics, +Perception)</option>
+            <option value="Soldier">Soldier - Military veteran (+Athletics, +Intimidation)</option>
+            <option value="Urchin">Urchin - Street kid (+Sleight of Hand, +Stealth)</option>
           </select>
         </div>
-        <div class="alert alert-info">
-          <strong>Equipment:</strong> Your class determines your starting equipment. Check your class description in the Player's Handbook for details, or ask your DM for starting gold to buy equipment.
+        <div id="backgroundDescription" class="alert alert-info" style="display:none;"></div>
+        <p class="text-muted small mt-3">Your background grants you two additional skill proficiencies and often special features or contacts.</p>
+      `,
+      buttons: ['Back', 'Next'],
+      validate: () => {
+        const background = document.getElementById('wizardBackground')?.value;
+        if (!background) {
+          alert('Please choose a background.');
+          return false;
+        }
+        wizardData.background = background;
+        return true;
+      },
+      onShow: () => {
+        const backgroundSelect = document.getElementById('wizardBackground');
+        const backgroundDesc = document.getElementById('backgroundDescription');
+
+        const descriptions = {
+          'Acolyte': 'You served in a temple, learning religious rites and tending to the faithful. You have connections to priests and temples.',
+          'Charlatan': 'You made your way in the world through trickery and deception. You can fake credentials and identities.',
+          'Criminal': 'You have a history of breaking the law. You have contact with criminal underworld networks.',
+          'Entertainer': 'You thrived in front of audiences. You can always find a place to perform for room and board.',
+          'Folk Hero': 'You stood up to tyrants and monsters. Common folk will shelter and protect you.',
+          'Guild Artisan': 'You learned a trade through a guild. You have guild membership and can get lodging through the guild.',
+          'Hermit': 'You lived in seclusion to seek enlightenment. You discovered an important spiritual truth or secret.',
+          'Noble': 'You come from privilege and high society. People defer to you, and you can secure audiences with nobility.',
+          'Outlander': 'You grew up in the wilds. You have excellent memory for geography and can find food/water for yourself and others.',
+          'Sage': 'You spent years learning lore and secrets. You know how to find information and can figure out where to learn things.',
+          'Sailor': 'You sailed the seas or rivers. You can secure free passage on ships and have knowledge of ports.',
+          'Soldier': 'You served in an army. You have rank and can get help from soldiers. You know military structure.',
+          'Urchin': 'You grew up poor on streets. You know secret city paths and can move quickly through urban areas.'
+        };
+
+        if (backgroundSelect && backgroundDesc) {
+          const oldListener = backgroundSelect._backgroundChangeHandler;
+          if (oldListener) {
+            backgroundSelect.removeEventListener('change', oldListener);
+          }
+
+          const newHandler = (e) => {
+            if (e.target.value && descriptions[e.target.value]) {
+              backgroundDesc.textContent = descriptions[e.target.value];
+              backgroundDesc.style.display = 'block';
+            } else {
+              backgroundDesc.style.display = 'none';
+            }
+          };
+
+          backgroundSelect._backgroundChangeHandler = newHandler;
+          backgroundSelect.addEventListener('change', newHandler);
+        }
+      }
+    },
+    {
+      title: "Step 6: Skills & Proficiencies",
+      content: `
+        <h5>Choose your skill proficiencies</h5>
+        <p id="skillSelectionInstructions">Select the skills your class grants you.</p>
+        <div id="skillSelectionContainer" class="mb-3">
+          <!-- Skills will be dynamically populated -->
         </div>
+        <div class="alert alert-info">
+          <strong>Note:</strong> Your background also grants 2 additional skills (shown in previous step).
+          Those will be automatically added along with your class skills.
+        </div>
+      `,
+      buttons: ['Back', 'Next'],
+      validate: () => {
+        const selectedSkills = Array.from(document.querySelectorAll('input[name="classSkill"]:checked'))
+          .map(cb => cb.value);
+
+        const requiredCount = wizardData.classSkillCount || 2;
+        if (selectedSkills.length !== requiredCount) {
+          alert(`Please select exactly ${requiredCount} skill(s) for your class.`);
+          return false;
+        }
+
+        wizardData.classSkills = selectedSkills;
+        return true;
+      },
+      onShow: () => {
+        // Define skills available per class and how many to pick
+        const classSkills = {
+          'Artificer': { count: 2, skills: ['Arcana', 'History', 'Investigation', 'Medicine', 'Nature', 'Perception', 'Sleight of Hand'] },
+          'Barbarian': { count: 2, skills: ['Animal Handling', 'Athletics', 'Intimidation', 'Nature', 'Perception', 'Survival'] },
+          'Bard': { count: 3, skills: ['Acrobatics', 'Animal Handling', 'Arcana', 'Athletics', 'Deception', 'History', 'Insight', 'Intimidation', 'Investigation', 'Medicine', 'Nature', 'Perception', 'Performance', 'Persuasion', 'Religion', 'Sleight of Hand', 'Stealth', 'Survival'] },
+          'Cleric': { count: 2, skills: ['History', 'Insight', 'Medicine', 'Persuasion', 'Religion'] },
+          'Druid': { count: 2, skills: ['Arcana', 'Animal Handling', 'Insight', 'Medicine', 'Nature', 'Perception', 'Religion', 'Survival'] },
+          'Fighter': { count: 2, skills: ['Acrobatics', 'Animal Handling', 'Athletics', 'History', 'Insight', 'Intimidation', 'Perception', 'Survival'] },
+          'Monk': { count: 2, skills: ['Acrobatics', 'Athletics', 'History', 'Insight', 'Religion', 'Stealth'] },
+          'Paladin': { count: 2, skills: ['Athletics', 'Insight', 'Intimidation', 'Medicine', 'Persuasion', 'Religion'] },
+          'Ranger': { count: 3, skills: ['Animal Handling', 'Athletics', 'Insight', 'Investigation', 'Nature', 'Perception', 'Stealth', 'Survival'] },
+          'Rogue': { count: 4, skills: ['Acrobatics', 'Athletics', 'Deception', 'Insight', 'Intimidation', 'Investigation', 'Perception', 'Performance', 'Persuasion', 'Sleight of Hand', 'Stealth'] },
+          'Sorcerer': { count: 2, skills: ['Arcana', 'Deception', 'Insight', 'Intimidation', 'Persuasion', 'Religion'] },
+          'Warlock': { count: 2, skills: ['Arcana', 'Deception', 'History', 'Intimidation', 'Investigation', 'Nature', 'Religion'] },
+          'Wizard': { count: 2, skills: ['Arcana', 'History', 'Insight', 'Investigation', 'Medicine', 'Religion'] }
+        };
+
+        const charClass = wizardData.class;
+        const classData = classSkills[charClass] || { count: 2, skills: [] };
+        wizardData.classSkillCount = classData.count;
+
+        const instructionEl = document.getElementById('skillSelectionInstructions');
+        const containerEl = document.getElementById('skillSelectionContainer');
+
+        if (instructionEl) {
+          instructionEl.textContent = `As a ${charClass}, choose ${classData.count} skill proficiencies from the list below:`;
+        }
+
+        if (containerEl) {
+          containerEl.innerHTML = '';
+          classData.skills.forEach(skill => {
+            const div = document.createElement('div');
+            div.className = 'form-check';
+
+            const checkbox = document.createElement('input');
+            checkbox.type = 'checkbox';
+            checkbox.className = 'form-check-input';
+            checkbox.name = 'classSkill';
+            checkbox.value = skill;
+            checkbox.id = `skill-${skill}`;
+
+            // Limit selection
+            checkbox.addEventListener('change', () => {
+              const checked = document.querySelectorAll('input[name="classSkill"]:checked');
+              if (checked.length > classData.count) {
+                checkbox.checked = false;
+              }
+            });
+
+            const label = document.createElement('label');
+            label.className = 'form-check-label';
+            label.htmlFor = `skill-${skill}`;
+            label.textContent = skill;
+
+            div.appendChild(checkbox);
+            div.appendChild(label);
+            containerEl.appendChild(div);
+          });
+        }
+      }
+    },
+    {
+      title: "Step 7: Hit Points & Combat Stats",
+      content: `
+        <h5>Calculate your starting stats</h5>
+        <p>We'll automatically calculate your HP, AC, and other combat statistics.</p>
+
+        <div class="mb-3">
+          <label class="form-label"><strong>Hit Points</strong></label>
+          <div id="hpCalculation" class="alert alert-secondary">
+            <!-- Will be populated dynamically -->
+          </div>
+          <div class="form-text">At 1st level, you get maximum HP from your hit die plus your Constitution modifier.</div>
+        </div>
+
+        <div class="mb-3">
+          <label class="form-label"><strong>Armor Class (AC)</strong></label>
+          <p class="small">Choose your starting armor:</p>
+          <div id="armorSelection">
+            <!-- Will be populated dynamically based on class -->
+          </div>
+          <div id="acCalculation" class="alert alert-secondary mt-2" style="display:none;">
+            <!-- AC will be calculated -->
+          </div>
+        </div>
+
+        <div class="mb-3">
+          <label class="form-label"><strong>Speed</strong></label>
+          <div id="speedDisplay" class="alert alert-secondary">
+            <!-- Will be populated based on race -->
+          </div>
+        </div>
+
+        <div class="alert alert-info">
+          <strong>Proficiency Bonus:</strong> <span id="profBonusDisplay">+2</span> (based on your level)
+        </div>
+      `,
+      buttons: ['Back', 'Next'],
+      validate: () => {
+        const selectedArmor = document.querySelector('input[name="startingArmor"]:checked');
+        if (!selectedArmor) {
+          alert('Please select your starting armor.');
+          return false;
+        }
+        wizardData.startingArmor = selectedArmor.value;
+        return true;
+      },
+      onShow: () => {
+        // Calculate HP
+        const hitDice = {
+          'Artificer': 8, 'Barbarian': 12, 'Bard': 8, 'Cleric': 8, 'Druid': 8,
+          'Fighter': 10, 'Monk': 8, 'Paladin': 10, 'Ranger': 10, 'Rogue': 8,
+          'Sorcerer': 6, 'Warlock': 8, 'Wizard': 6
+        };
+
+        const conMod = Math.floor((wizardData.con - 10) / 2);
+        const hitDie = hitDice[wizardData.class] || 8;
+        const maxHP = hitDie + conMod;
+        wizardData.maxHP = maxHP;
+        wizardData.currentHP = maxHP;
+        wizardData.hitDie = `1d${hitDie}`;
+
+        const hpCalc = document.getElementById('hpCalculation');
+        if (hpCalc) {
+          hpCalc.innerHTML = `<strong>Maximum HP:</strong> ${maxHP} (${hitDie} from ${wizardData.class} hit die + ${conMod} CON modifier)`;
+        }
+
+        // Calculate Speed
+        const racialSpeeds = {
+          'Human': 30, 'Elf': 30, 'Dwarf': 25, 'Halfling': 25, 'Dragonborn': 30,
+          'Gnome': 25, 'Half-Elf': 30, 'Half-Orc': 30, 'Tiefling': 30,
+          'Aarakocra': 25, 'Aasimar': 30, 'Bugbear': 30, 'Centaur': 40,
+          'Changeling': 30, 'Firbolg': 30, 'Genasi (Air)': 30, 'Genasi (Earth)': 30,
+          'Genasi (Fire)': 30, 'Genasi (Water)': 30, 'Goblin': 30, 'Goliath': 30,
+          'Grung': 25, 'Hobgoblin': 30, 'Kalashtar': 30, 'Kenku': 30,
+          'Kobold': 30, 'Leonin': 35, 'Lizardfolk': 30, 'Locathah': 10,
+          'Loxodon': 30, 'Minotaur': 30, 'Orc': 30, 'Satyr': 35,
+          'Shifter': 30, 'Simic Hybrid': 30, 'Tabaxi': 30, 'Tortle': 30,
+          'Triton': 30, 'Vedalken': 30, 'Warforged': 30, 'Yuan-ti Pureblood': 30
+        };
+
+        let baseSpeed = racialSpeeds[wizardData.race] || 30;
+        // Wood Elf gets +5 speed
+        if (wizardData.subrace === 'Wood Elf') baseSpeed = 35;
+
+        wizardData.speed = baseSpeed;
+
+        const speedDisplay = document.getElementById('speedDisplay');
+        if (speedDisplay) {
+          let speedText = `<strong>${baseSpeed} feet</strong>`;
+          if (wizardData.race === 'Aarakocra') {
+            speedText += ' (walking), 50 feet (flying)';
+          }
+          speedDisplay.innerHTML = speedText;
+        }
+
+        // Proficiency bonus
+        const profBonus = Math.floor((wizardData.level - 1) / 4) + 2;
+        wizardData.proficiencyBonus = profBonus;
+
+        const profDisplay = document.getElementById('profBonusDisplay');
+        if (profDisplay) {
+          profDisplay.textContent = `+${profBonus}`;
+        }
+
+        // Armor selection based on class
+        const armorSelection = document.getElementById('armorSelection');
+        const acCalculation = document.getElementById('acCalculation');
+
+        const classArmor = {
+          'Artificer': [
+            { name: 'Scale Mail', ac: 14, desc: 'Medium armor (AC 14 + DEX mod, max +2)' },
+            { name: 'Studded Leather', ac: 12, desc: 'Light armor (AC 12 + DEX mod)' }
+          ],
+          'Barbarian': [
+            { name: 'Unarmored', ac: 10, desc: 'Unarmored Defense (10 + DEX mod + CON mod)' },
+            { name: 'Hide Armor', ac: 12, desc: 'Medium armor (AC 12 + DEX mod, max +2)' }
+          ],
+          'Bard': [
+            { name: 'Leather Armor', ac: 11, desc: 'Light armor (AC 11 + DEX mod)' }
+          ],
+          'Cleric': [
+            { name: 'Chain Mail', ac: 16, desc: 'Heavy armor (AC 16, no DEX bonus)' },
+            { name: 'Scale Mail + Shield', ac: 16, desc: 'Medium armor (AC 14 + DEX mod, max +2) + Shield (+2)' }
+          ],
+          'Druid': [
+            { name: 'Leather Armor + Shield', ac: 13, desc: 'Light armor (AC 11 + DEX mod) + Shield (+2)' }
+          ],
+          'Fighter': [
+            { name: 'Chain Mail', ac: 16, desc: 'Heavy armor (AC 16, no DEX bonus)' },
+            { name: 'Leather Armor', ac: 11, desc: 'Light armor (AC 11 + DEX mod) for DEX fighters' }
+          ],
+          'Monk': [
+            { name: 'Unarmored', ac: 10, desc: 'Unarmored Defense (10 + DEX mod + WIS mod)' }
+          ],
+          'Paladin': [
+            { name: 'Chain Mail + Shield', ac: 18, desc: 'Heavy armor (AC 16) + Shield (+2)' }
+          ],
+          'Ranger': [
+            { name: 'Scale Mail', ac: 14, desc: 'Medium armor (AC 14 + DEX mod, max +2)' },
+            { name: 'Leather Armor', ac: 11, desc: 'Light armor (AC 11 + DEX mod)' }
+          ],
+          'Rogue': [
+            { name: 'Leather Armor', ac: 11, desc: 'Light armor (AC 11 + DEX mod)' }
+          ],
+          'Sorcerer': [
+            { name: 'Unarmored', ac: 10, desc: 'No armor (10 + DEX mod)' }
+          ],
+          'Warlock': [
+            { name: 'Leather Armor', ac: 11, desc: 'Light armor (AC 11 + DEX mod)' }
+          ],
+          'Wizard': [
+            { name: 'Unarmored', ac: 10, desc: 'No armor (10 + DEX mod)' }
+          ]
+        };
+
+        const armorOptions = classArmor[wizardData.class] || [{ name: 'Unarmored', ac: 10, desc: 'No armor (10 + DEX mod)' }];
+
+        if (armorSelection) {
+          armorSelection.innerHTML = '';
+          armorOptions.forEach((armor, index) => {
+            const div = document.createElement('div');
+            div.className = 'form-check';
+
+            const radio = document.createElement('input');
+            radio.type = 'radio';
+            radio.className = 'form-check-input';
+            radio.name = 'startingArmor';
+            radio.value = armor.name;
+            radio.id = `armor-${index}`;
+            if (index === 0) radio.checked = true;
+
+            radio.addEventListener('change', () => {
+              // Calculate AC
+              const dexMod = Math.floor((wizardData.dex - 10) / 2);
+              const conMod = Math.floor((wizardData.con - 10) / 2);
+              const wisMod = Math.floor((wizardData.wis - 10) / 2);
+
+              let totalAC = armor.ac;
+
+              if (armor.name === 'Unarmored' && wizardData.class === 'Barbarian') {
+                totalAC = 10 + dexMod + conMod;
+              } else if (armor.name === 'Unarmored' && wizardData.class === 'Monk') {
+                totalAC = 10 + dexMod + wisMod;
+              } else if (armor.name === 'Unarmored' || armor.desc.includes('Light armor')) {
+                totalAC = armor.ac + dexMod;
+              } else if (armor.desc.includes('Medium armor')) {
+                totalAC = armor.ac + Math.min(dexMod, 2);
+              }
+              // Heavy armor doesn't add DEX
+
+              wizardData.ac = totalAC;
+
+              if (acCalculation) {
+                acCalculation.innerHTML = `<strong>Your AC:</strong> ${totalAC}`;
+                acCalculation.style.display = 'block';
+              }
+            });
+
+            const label = document.createElement('label');
+            label.className = 'form-check-label';
+            label.htmlFor = `armor-${index}`;
+            label.innerHTML = `<strong>${armor.name}</strong> - ${armor.desc}`;
+
+            div.appendChild(radio);
+            div.appendChild(label);
+            armorSelection.appendChild(div);
+          });
+
+          // Trigger first option to calculate AC
+          const firstRadio = document.querySelector('input[name="startingArmor"]');
+          if (firstRadio) firstRadio.dispatchEvent(new Event('change'));
+        }
+      }
+    },
+    {
+      title: "Step 8: Review & Finish",
+      content: `
+        <h5>Review your character</h5>
+        <p>Here's a summary of your character. Click "Create Character" to finish!</p>
+
+        <div id="characterSummary" class="alert alert-dark">
+          <!-- Will be populated with character summary -->
+        </div>
+
         <div class="alert alert-success">
-          <strong>Almost done!</strong> When you finish this wizard, we'll populate the character sheet with everything you've chosen. You can then:
+          <strong>What happens next:</strong>
           <ul class="mb-0">
-            <li>Fill in remaining details (AC, HP, equipment)</li>
-            <li>Select your skill proficiencies</li>
-            <li>Add spells (if you're a spellcaster)</li>
-            <li>Choose your background features</li>
+            <li>Your character sheet will be automatically filled out with all your choices</li>
+            <li>HP, AC, proficiency bonus, and saving throws will be calculated</li>
+            <li>Skill proficiencies from your class and background will be marked</li>
+            <li>You can then add equipment, spells, and additional details</li>
           </ul>
         </div>
       `,
-      buttons: ['Back', 'Finish & Create Character'],
+      buttons: ['Back', 'Create Character'],
       validate: () => {
-        wizardData.alignment = document.getElementById('wizardAlignment')?.value || '';
         return true;
+      },
+      onShow: () => {
+        const summary = document.getElementById('characterSummary');
+        if (summary) {
+          const subraceTxt = wizardData.subrace ? ` (${wizardData.subrace})` : '';
+          const backgroundTxt = wizardData.background || 'None';
+
+          summary.innerHTML = `
+            <h6><strong>${wizardData.name}</strong></h6>
+            <p class="mb-2">
+              <strong>Race:</strong> ${wizardData.race}${subraceTxt}<br>
+              <strong>Class:</strong> ${wizardData.class}, Level ${wizardData.level}<br>
+              <strong>Background:</strong> ${backgroundTxt}<br>
+              <strong>Alignment:</strong> ${wizardData.alignment || 'Not chosen'}
+            </p>
+            <p class="mb-2">
+              <strong>Ability Scores:</strong><br>
+              STR ${wizardData.str} | DEX ${wizardData.dex} | CON ${wizardData.con} |
+              INT ${wizardData.int} | WIS ${wizardData.wis} | CHA ${wizardData.cha}
+            </p>
+            <p class="mb-2">
+              <strong>Combat Stats:</strong><br>
+              HP: ${wizardData.maxHP} | AC: ${wizardData.ac} | Speed: ${wizardData.speed} ft | Prof. Bonus: +${wizardData.proficiencyBonus}
+            </p>
+            <p class="mb-0">
+              <strong>Skills:</strong> ${wizardData.classSkills ? wizardData.classSkills.join(', ') : 'None selected'}
+              (+ 2 from background)
+            </p>
+          `;
+        }
       }
     }
   ];
@@ -485,6 +1055,19 @@ const CharacterCreationWizard = (function() {
   }
 
   function finishWizard() {
+    // Add racial ability score bonuses
+    applyRacialBonuses();
+
+    // Get background skills
+    const backgroundSkills = getBackgroundSkills(wizardData.background);
+    wizardData.backgroundSkills = backgroundSkills;
+
+    // Combine all skills
+    wizardData.allSkills = [...(wizardData.classSkills || []), ...backgroundSkills];
+
+    // Calculate saving throws
+    wizardData.savingThrows = getClassSavingThrows(wizardData.class);
+
     // Populate the main character form with wizard data
     if (typeof fillFormFromWizardData === 'function') {
       fillFormFromWizardData(wizardData);
@@ -498,7 +1081,144 @@ const CharacterCreationWizard = (function() {
     }
 
     // Show success message
-    alert(`Character created! Welcome ${wizardData.name}, the ${wizardData.race} ${wizardData.class}!\n\nNow fill in the remaining details like HP, AC, skills, and equipment.`);
+    alert(`Character created successfully!\n\n${wizardData.name}, the Level ${wizardData.level} ${wizardData.race} ${wizardData.class}\n\nYour character sheet has been populated with:\n✓ Ability scores (with racial bonuses)\n✓ HP: ${wizardData.maxHP}, AC: ${wizardData.ac}\n✓ Skills, saving throws, and proficiency bonus\n✓ Speed and basic stats\n\nYou can now add equipment, spells, and customize further!`);
+  }
+
+  function applyRacialBonuses() {
+    // Apply racial ability score increases
+    const racialBonuses = {
+      'Human': { str: 1, dex: 1, con: 1, int: 1, wis: 1, cha: 1 },
+      'Elf': { dex: 2 },
+      'Dwarf': { con: 2 },
+      'Halfling': { dex: 2 },
+      'Dragonborn': { str: 2, cha: 1 },
+      'Gnome': { int: 2 },
+      'Half-Elf': { cha: 2 },
+      'Half-Orc': { str: 2, con: 1 },
+      'Tiefling': { cha: 2, int: 1 },
+      'Aarakocra': { dex: 2, wis: 1 },
+      'Aasimar': { cha: 2 },
+      'Bugbear': { str: 2, dex: 1 },
+      'Centaur': { str: 2, wis: 1 },
+      'Changeling': { cha: 2 },
+      'Firbolg': { wis: 2, str: 1 },
+      'Genasi (Air)': { con: 2, dex: 1 },
+      'Genasi (Earth)': { con: 2, str: 1 },
+      'Genasi (Fire)': { con: 2, int: 1 },
+      'Genasi (Water)': { con: 2, wis: 1 },
+      'Goblin': { dex: 2, con: 1 },
+      'Goliath': { str: 2, con: 1 },
+      'Grung': { dex: 2, con: 1 },
+      'Hobgoblin': { con: 2, int: 1 },
+      'Kalashtar': { wis: 2, cha: 1 },
+      'Kenku': { dex: 2, wis: 1 },
+      'Kobold': { dex: 2, str: -2 },
+      'Leonin': { con: 2, str: 1 },
+      'Lizardfolk': { con: 2, wis: 1 },
+      'Locathah': { dex: 2, wis: 1 },
+      'Loxodon': { con: 2, wis: 1 },
+      'Minotaur': { str: 2, con: 1 },
+      'Orc': { str: 2, con: 1 },
+      'Satyr': { cha: 2, dex: 1 },
+      'Shifter': { dex: 2 },
+      'Simic Hybrid': { con: 2 },
+      'Tabaxi': { dex: 2, cha: 1 },
+      'Tortle': { str: 2, wis: 1 },
+      'Triton': { str: 1, con: 1, cha: 1 },
+      'Vedalken': { int: 2, wis: 1 },
+      'Warforged': { con: 2 },
+      'Yuan-ti Pureblood': { cha: 2, int: 1 }
+    };
+
+    // Apply subrace bonuses
+    const subraceBonuses = {
+      'High Elf': { int: 1 },
+      'Wood Elf': { wis: 1 },
+      'Dark Elf (Drow)': { cha: 1 },
+      'Hill Dwarf': { wis: 1 },
+      'Mountain Dwarf': { str: 2 },
+      'Lightfoot': { cha: 1 },
+      'Stout': { con: 1 },
+      'Ghostwise': { wis: 1 },
+      'Forest Gnome': { dex: 1 },
+      'Rock Gnome': { con: 1 },
+      'Deep Gnome (Svirfneblin)': { dex: 1 },
+      'Protector': { wis: 1 },
+      'Scourge': { con: 1 },
+      'Fallen': { str: 1 },
+      'Beasthide': { con: 1 },
+      'Longtooth': { str: 1 },
+      'Swiftstride': { dex: 1 },
+      'Wildhunt': { wis: 1 }
+    };
+
+    const baseBonuses = racialBonuses[wizardData.race] || {};
+    const subraceBonus = subraceBonuses[wizardData.subrace] || {};
+
+    // Store original scores
+    wizardData.baseStr = wizardData.str;
+    wizardData.baseDex = wizardData.dex;
+    wizardData.baseCon = wizardData.con;
+    wizardData.baseInt = wizardData.int;
+    wizardData.baseWis = wizardData.wis;
+    wizardData.baseCha = wizardData.cha;
+
+    // Apply bonuses
+    wizardData.str += (baseBonuses.str || 0) + (subraceBonus.str || 0);
+    wizardData.dex += (baseBonuses.dex || 0) + (subraceBonus.dex || 0);
+    wizardData.con += (baseBonuses.con || 0) + (subraceBonus.con || 0);
+    wizardData.int += (baseBonuses.int || 0) + (subraceBonus.int || 0);
+    wizardData.wis += (baseBonuses.wis || 0) + (subraceBonus.wis || 0);
+    wizardData.cha += (baseBonuses.cha || 0) + (subraceBonus.cha || 0);
+
+    // Recalculate HP with new CON
+    const conMod = Math.floor((wizardData.con - 10) / 2);
+    const hitDice = {
+      'Artificer': 8, 'Barbarian': 12, 'Bard': 8, 'Cleric': 8, 'Druid': 8,
+      'Fighter': 10, 'Monk': 8, 'Paladin': 10, 'Ranger': 10, 'Rogue': 8,
+      'Sorcerer': 6, 'Warlock': 8, 'Wizard': 6
+    };
+    const hitDie = hitDice[wizardData.class] || 8;
+    wizardData.maxHP = hitDie + conMod;
+    wizardData.currentHP = wizardData.maxHP;
+  }
+
+  function getBackgroundSkills(background) {
+    const backgroundSkills = {
+      'Acolyte': ['Insight', 'Religion'],
+      'Charlatan': ['Deception', 'Sleight of Hand'],
+      'Criminal': ['Deception', 'Stealth'],
+      'Entertainer': ['Acrobatics', 'Performance'],
+      'Folk Hero': ['Animal Handling', 'Survival'],
+      'Guild Artisan': ['Insight', 'Persuasion'],
+      'Hermit': ['Medicine', 'Religion'],
+      'Noble': ['History', 'Persuasion'],
+      'Outlander': ['Athletics', 'Survival'],
+      'Sage': ['Arcana', 'History'],
+      'Sailor': ['Athletics', 'Perception'],
+      'Soldier': ['Athletics', 'Intimidation'],
+      'Urchin': ['Sleight of Hand', 'Stealth']
+    };
+    return backgroundSkills[background] || [];
+  }
+
+  function getClassSavingThrows(charClass) {
+    const classSaves = {
+      'Artificer': ['Constitution', 'Intelligence'],
+      'Barbarian': ['Strength', 'Constitution'],
+      'Bard': ['Dexterity', 'Charisma'],
+      'Cleric': ['Wisdom', 'Charisma'],
+      'Druid': ['Intelligence', 'Wisdom'],
+      'Fighter': ['Strength', 'Constitution'],
+      'Monk': ['Strength', 'Dexterity'],
+      'Paladin': ['Wisdom', 'Charisma'],
+      'Ranger': ['Strength', 'Dexterity'],
+      'Rogue': ['Dexterity', 'Intelligence'],
+      'Sorcerer': ['Constitution', 'Charisma'],
+      'Warlock': ['Wisdom', 'Charisma'],
+      'Wizard': ['Intelligence', 'Wisdom']
+    };
+    return classSaves[charClass] || ['Strength', 'Dexterity'];
   }
 
   // Public API

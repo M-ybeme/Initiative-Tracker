@@ -2103,12 +2103,16 @@
         // Fill in basic info
         if (wizardData.name) $('charName').value = wizardData.name;
         if (wizardData.playerName) $('playerName').value = wizardData.playerName;
-        if (wizardData.race) $('charRace').value = wizardData.race;
+        if (wizardData.race) {
+          const raceText = wizardData.subrace ? `${wizardData.race} (${wizardData.subrace})` : wizardData.race;
+          $('charRace').value = raceText;
+        }
         if (wizardData.class) $('charClass').value = wizardData.class;
         if (wizardData.level) $('charLevel').value = wizardData.level;
         if (wizardData.alignment) $('charAlignment').value = wizardData.alignment;
+        if (wizardData.background) $('charBackground').value = wizardData.background;
 
-        // Fill in ability scores
+        // Fill in ability scores (with racial bonuses already applied)
         if (wizardData.str) $('statStr').value = wizardData.str;
         if (wizardData.dex) $('statDex').value = wizardData.dex;
         if (wizardData.con) $('statCon').value = wizardData.con;
@@ -2116,9 +2120,85 @@
         if (wizardData.wis) $('statWis').value = wizardData.wis;
         if (wizardData.cha) $('statCha').value = wizardData.cha;
 
+        // Fill in combat stats
+        if (wizardData.maxHP) {
+          $('charMaxHP').value = wizardData.maxHP;
+          $('charCurrentHP').value = wizardData.currentHP || wizardData.maxHP;
+        }
+        if (wizardData.ac) $('charAC').value = wizardData.ac;
+        if (wizardData.speed) $('charSpeed').value = wizardData.speed;
+        if (wizardData.hitDie) $('charHitDice').value = wizardData.hitDie;
+
+        // Fill in proficiency bonus
+        if (wizardData.proficiencyBonus && $('charProfBonus')) {
+          $('charProfBonus').value = wizardData.proficiencyBonus;
+        }
+
         // Trigger recalculation of derived values
         recalcDerivedFromForm();
+
+        // Set saving throw proficiencies
+        if (wizardData.savingThrows && wizardData.savingThrows.length > 0) {
+          const saveCheckboxes = {
+            'Strength': $('saveStrProf'),
+            'Dexterity': $('saveDexProf'),
+            'Constitution': $('saveConProf'),
+            'Intelligence': $('saveIntProf'),
+            'Wisdom': $('saveWisProf'),
+            'Charisma': $('saveChaProf')
+          };
+
+          // Uncheck all first
+          Object.values(saveCheckboxes).forEach(cb => {
+            if (cb) cb.checked = false;
+          });
+
+          // Check the class proficiencies
+          wizardData.savingThrows.forEach(save => {
+            if (saveCheckboxes[save]) {
+              saveCheckboxes[save].checked = true;
+            }
+          });
+        }
+
         recalcSavesFromForm(false);
+
+        // Set skill proficiencies
+        if (wizardData.allSkills && wizardData.allSkills.length > 0) {
+          const skillCheckboxes = {
+            'Acrobatics': $('skillAcrobaticsProf'),
+            'Animal Handling': $('skillAnimalHandlingProf'),
+            'Arcana': $('skillArcanaProf'),
+            'Athletics': $('skillAthleticsProf'),
+            'Deception': $('skillDeceptionProf'),
+            'History': $('skillHistoryProf'),
+            'Insight': $('skillInsightProf'),
+            'Intimidation': $('skillIntimidationProf'),
+            'Investigation': $('skillInvestigationProf'),
+            'Medicine': $('skillMedicineProf'),
+            'Nature': $('skillNatureProf'),
+            'Perception': $('skillPerceptionProf'),
+            'Performance': $('skillPerformanceProf'),
+            'Persuasion': $('skillPersuasionProf'),
+            'Religion': $('skillReligionProf'),
+            'Sleight of Hand': $('skillSleightOfHandProf'),
+            'Stealth': $('skillStealthProf'),
+            'Survival': $('skillSurvivalProf')
+          };
+
+          // Uncheck all first
+          Object.values(skillCheckboxes).forEach(cb => {
+            if (cb) cb.checked = false;
+          });
+
+          // Check the selected skills
+          wizardData.allSkills.forEach(skill => {
+            if (skillCheckboxes[skill]) {
+              skillCheckboxes[skill].checked = true;
+            }
+          });
+        }
+
         recalcSkillsFromForm(false);
         recalcPassivesFromForm();
 

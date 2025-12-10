@@ -5,6 +5,97 @@ and this project adheres to Semantic Versioning.
 
 
 
+1.8.7 - 2025-12-09
+Character Creation Wizard: Comprehensive Expansion
+
+Added
+
+- **Expanded Race Selection** (9 → 33+ races)
+  - All Player's Handbook races: Human, Elf, Dwarf, Halfling, Dragonborn, Gnome, Half-Elf, Half-Orc, Tiefling
+  - Volo's Guide races (14): Aarakocra, Aasimar, Bugbear, Firbolg, Goblin, Goliath, Hobgoblin, Kenku, Kobold, Lizardfolk, Orc, Tabaxi, Triton, Yuan-ti Pureblood
+  - Elemental races (4): Air/Earth/Fire/Water Genasi
+  - Ravnica races (5): Centaur, Loxodon, Minotaur, Simic Hybrid, Vedalken
+  - Theros races (2): Leonin, Satyr
+  - Eberron races (4): Changeling, Kalashtar, Shifter, Warforged
+  - Other races (3): Tortle, Locathah, Grung
+  - Each race includes detailed description of traits and abilities
+
+- **Subrace Support System**
+  - Dynamic subrace dropdown appears when applicable race selected
+  - **Elf subraces** (5): High Elf, Wood Elf, Dark Elf (Drow), Eladrin, Sea Elf
+  - **Dwarf subraces** (3): Hill Dwarf, Mountain Dwarf, Duergar
+  - **Halfling subraces** (3): Lightfoot, Stout, Ghostwise
+  - **Gnome subraces** (3): Forest Gnome, Rock Gnome, Deep Gnome (Svirfneblin)
+  - **Dragonborn ancestries** (10): All chromatic and metallic dragons with breath weapon details
+  - **Tiefling bloodlines** (9): Asmodeus, Baalzebul, Dispater, Fierna, Glasya, Levistus, Mammon, Mephistopheles, Zariel
+  - **Aasimar types** (3): Protector, Scourge, Fallen
+  - **Shifter types** (4): Beasthide, Longtooth, Swiftstride, Wildhunt
+
+- **Class Expansion** (12 → 13 classes)
+  - Added Artificer (Eberron's magical inventor class)
+  - Reorganized into logical groups: Martial Classes, Full Spellcasters, Half-Casters
+  - Each class shows primary abilities (e.g., "Str/Con" for Barbarian)
+  - Enhanced class descriptions with playstyle details
+
+- **Background Selection Step** (Step 5)
+  - 13 official D&D backgrounds with descriptions
+  - Backgrounds: Acolyte, Charlatan, Criminal, Entertainer, Folk Hero, Guild Artisan, Hermit, Noble, Outlander, Sage, Sailor, Soldier, Urchin
+  - Each background grants 2 skill proficiencies automatically
+  - Background features and special abilities described
+
+- **Interactive Skill Proficiency Selection** (Step 6)
+  - Dynamic skill picker based on class choice
+  - Shows only available skills for selected class
+  - Enforces correct number of selections (2-4 depending on class)
+  - Prevents over-selection with smart checkbox limiting
+  - Rogue gets 4 skills, Bard/Ranger get 3, most classes get 2
+  - Visual feedback for skill selection progress
+
+- **Automatic HP & Combat Stats Calculation** (Step 7)
+  - **Hit Points**: Auto-calculated from class hit die + CON modifier
+  - **Armor Class**: Class-appropriate armor options with accurate calculations
+    - Light armor: AC + full DEX modifier
+    - Medium armor: AC + DEX modifier (max +2)
+    - Heavy armor: No DEX bonus
+    - Unarmored Defense: Special calculations for Barbarian (10 + DEX + CON) and Monk (10 + DEX + WIS)
+  - **Speed**: Race-based movement speed (25-40 ft, special speeds like Aarakocra flight)
+  - **Proficiency Bonus**: Level-based calculation (+2 at level 1-4)
+  - Armor selection based on class starting equipment options
+
+- **Character Review & Summary** (Step 8)
+  - Complete character summary before creation
+  - Shows all choices: race, class, background, alignment
+  - Displays ability scores, HP, AC, speed, proficiency bonus
+  - Lists all selected skills (class + background)
+
+- **Automatic Racial Ability Score Bonuses**
+  - All 33+ races have correct ability score modifiers
+  - Subrace bonuses automatically applied (e.g., High Elf +1 INT, Mountain Dwarf +2 STR)
+  - HP recalculated after racial CON bonuses applied
+  - Original base scores preserved, racial bonuses added transparently
+
+- **Automatic Saving Throw Proficiencies**
+  - Class-based saving throw proficiencies automatically set
+  - All 13 classes have correct save proficiencies
+  - Checkboxes auto-marked on character sheet
+
+- **Complete Character Sheet Population**
+  - **Basic info**: Name, player name, level, race (with subrace), class, background, alignment
+  - **Ability scores**: All 6 abilities with racial bonuses applied
+  - **Combat stats**: Max HP, current HP, AC, speed, hit dice
+  - **Proficiencies**: Proficiency bonus, saving throws, skills (class + background)
+  - **90% complete character** ready for immediate play
+
+Changed
+
+- Wizard steps expanded from 6 to 8 steps for comprehensive coverage
+- Race descriptions now include all racial features and traits
+- Class descriptions enhanced with hit die, primary abilities, and detailed playstyle info
+- Ability score tips updated with all 13 classes
+- Skills section converted from static recommendations to interactive selection
+- Equipment step replaced with automated HP/AC calculation step
+- Success message now shows detailed character summary with all calculated stats
+
 1.8.6 - 2025-12-09
 Character Manager: Mobile Optimization & Collapsible Sections
 
