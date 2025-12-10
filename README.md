@@ -425,19 +425,6 @@ If you find it useful and want to support continued development:
 
 ---
 
-## 📄 License
-
-**MIT License** — See [`LICENSE.md`](./LICENSE.md)
-```
-Copyright (c) 2025 Maybeme (M-ybeme)
-
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software to use, copy, modify, merge, publish, distribute, sublicense,
-and/or sell copies, provided this notice is included in all copies.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND.
-TL;DR: Use it, modify it, share it. Just keep the license notice.
-
 🔗 Links
 
 Live Site: https://dnddmtoolbox.netlify.app/

@@ -2214,7 +2214,62 @@
   document.getElementById('measureToggle').classList.toggle('active', state.ui.measureToggle);
   document.getElementById('measureToggle').setAttribute('aria-pressed', String(state.ui.measureToggle));
 
-  load();
+  load().then(() => {
+    // Check for pending character import from characters page (after load completes)
+    if (window.location.hash === '#autoinput') {
+      try {
+        const pendingData = localStorage.getItem('dmtools.pendingBattleMapImport');
+        if (pendingData) {
+          const data = JSON.parse(pendingData);
+          localStorage.removeItem('dmtools.pendingBattleMapImport');
+          window.location.hash = ''; // Clear the hash
+
+          // Import tokens
+          if (data.tokens && Array.isArray(data.tokens)) {
+            let imported = 0;
+            data.tokens.forEach(token => {
+              if (token.tokenImage && token.name) {
+                // Load the token image and add it to the map
+                loadImage(token.tokenImage).then(img => {
+                  const cells = 1; // Default size
+                  const size = state.grid.size * cells;
+                  const center = screenToWorld(canvas.width/2, canvas.height/2);
+
+                  // Create token without affecting existing selections
+                  const newToken = {
+                    id: 't_'+Math.random().toString(36).slice(2,9),
+                    name: token.name,
+                    imgSrc: token.tokenImage,
+                    img,
+                    x: center.x - size/2,
+                    y: center.y - size/2,
+                    w: size,
+                    h: size,
+                    rot: 0,
+                    selected: false // Don't select the new token
+                  };
+
+                  // Don't deselect existing tokens - just add the new one
+                  state.tokens.push(newToken);
+                  updateTokenList();
+                  save();
+
+                  imported++;
+                  if (imported === data.tokens.length) {
+                    setStatus(`Imported ${imported} character token(s) from Characters page`);
+                  }
+                }).catch(err => {
+                  console.error('Failed to load token image:', err);
+                });
+              }
+            });
+          }
+        }
+      } catch (e) {
+        console.error('Failed to import pending battle map data:', e);
+      }
+    }
+  });
   updateTokenList();
   requestAnimationFrame(draw);
 })();

@@ -5,6 +5,50 @@ and this project adheres to Semantic Versioning.
 
 
 
+1.8.9 - 2025-12-10
+Character Token Generation for Battle Map
+
+Added
+
+**Character to Battle Map Token System**
+- **Token Generation & Export**
+  - New "Send to Battle Map" button on character sheet
+  - Generates circular tokens with character portraits using custom positioning
+  - Automatic fallback to base token with character initials when no portrait exists
+  - Token generation respects circular clipping (88% radius) to fit within decorative frames
+  - Uses CharacterTokenFrame.png overlay for portrait tokens
+  - Uses BaseToken.png with initials for characters without portraits
+
+- **Interactive Token Preview Modal**
+  - Live circular preview canvas (250x250px) shows exact token appearance
+  - Zoom slider (0.5x to 3x) for adjusting portrait scale
+  - Drag-to-pan functionality for repositioning portraits within the circle
+  - Reset button to restore default zoom and position
+  - Real-time preview updates as user adjusts settings
+  - "Send to Battle Map" confirmation sends token with user-defined settings
+
+- **Battle Map Integration**
+  - Auto-import system detects pending character tokens on battle map load
+  - Tokens appear at center of current view without affecting existing tokens
+  - Preserves all existing token selections and positions
+  - Non-disruptive append mode - existing map state remains unchanged
+  - Status message confirms successful import
+
+- **CORS Protection**
+  - Upfront detection of URL-based portraits to prevent canvas tainting errors
+  - Clear error messages explaining browser security restrictions
+  - Recommends uploading image files instead of using URLs
+  - Only base64-encoded (uploaded) images supported for token generation
+
+Technical Details
+- Canvas-based token generation with HTML5 Canvas API
+- localStorage handoff between character sheet and battle map pages
+- Token settings stored separately from character portrait settings
+- Image loading with crossOrigin support for compatible sources
+- Circular clipping optimization for clean frame fit
+
+
+
 1.8.8 - 2025-12-10
 Generator Integration & Loot Expansion
 
