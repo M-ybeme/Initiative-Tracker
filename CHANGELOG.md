@@ -5,6 +5,101 @@ and this project adheres to Semantic Versioning.
 
 
 
+1.9.0 - 2025-12-11
+Shop-to-Character Inventory Integration & Battle Map Enhancements
+
+Added
+
+**Shop Generator → Character Inventory Integration**
+- **Add to Character Inventory System**
+  - "Add to Character" button on every shop item
+  - Modal interface for selecting destination character from dropdown
+  - Automatic data transfer: item name, description, use, price, and rarity
+  - Customizable fields: quantity, weight per item, equipped status, attuned status
+  - Optional additional notes field for player-specific information
+  - Item details (description + use) automatically combined into notes field
+  - Success confirmation message after adding item
+- **Cross-Page Storage Integration**
+  - IndexedDB/localStorage compatibility for character data access
+  - Non-destructive append - existing inventory items preserved
+  - Automatic inventory array initialization for characters without inventories
+  - Supports both IndexedDB and localStorage fallback
+- **Smart Item Data Mapping**
+  - Shop item properties mapped to character inventory structure
+  - Price information preserved but not stored in character inventory
+  - Rarity badges transferred to character sheet
+  - Stock quantities not transferred (shop-specific data)
+
+**Battle Map Measurement Enhancements**
+- **Multi-Shape Measurement Tools**
+  - Shape selector dropdown with 3 options: Line, Cone, Circle
+  - **Line measurement** (original): Straight-line distance measurement
+  - **Cone measurement** (new): 90-degree cone from origin point pointing toward cursor
+  - **Circle measurement** (new): Radius/AoE measurement with visual circle fill
+  - Semi-transparent fills (20% opacity) with solid borders for all shapes
+  - Shape-specific labels: "X ft cone", "X ft radius", "X ft (line)"
+- **Aura Radius Auto-Adjustment**
+  - Aura circles now automatically add 0.5 cells to user-specified radius
+  - Accounts for token's own cell (aura extends from edge of token's cell, not center)
+  - Example: 10 ft aura (2 cells) now correctly displays as 2 cells beyond token's space
+  - User-facing values remain unchanged - adjustment is visual only
+- **Right-Click Exit Functionality**
+  - Right-click anywhere on canvas exits measurement mode
+  - Clears active measurement and resets measurement toggle button
+  - Prevents context menu from appearing during measurement
+  - Intuitive cancel action for measurement tools
+
+**Shop Generator UI Overhaul**
+- **Modern Shop Card Design**
+  - Elevated cards with subtle shadows and depth
+  - Hover effects with border highlighting
+  - Improved border radius and spacing
+  - Better visual separation between shops
+- **Enhanced Shop Headers**
+  - Larger, bold shop type titles with icons
+  - Settlement and markup info styled as metadata badges
+  - Location and price icons for visual clarity
+  - Cleaner hierarchy with flexbox layout
+- **Shopkeeper Section Redesign**
+  - Person icon with character info layout
+  - Subtle background differentiation
+  - Better typography and spacing
+  - Enhanced visual interest
+- **Table Improvements**
+  - Uppercase column headers with cyan accent color
+  - Letter-spacing and subtle background on headers
+  - Row hover effects for interactivity
+  - Stock displayed as badges for visual distinction
+  - Item names bold for better scannability
+  - Price shown in bold green, more prominent
+  - Better cell padding and alignment
+- **Action Button Refinements**
+  - Icon-only buttons for cleaner appearance (full tooltips on hover)
+  - Price displayed prominently next to action buttons
+  - Improved button spacing and grouping
+  - Column renamed from "Price" to "Actions" for clarity
+- **Unique Items Styling**
+  - Cyan accent color with left border accent
+  - Subtle background highlight
+  - Better padding and visual separation from main inventory
+- **Responsive Design Enhancements**
+  - Tablet breakpoint: Inline buttons with better wrapping
+  - Mobile breakpoint: Full-width buttons with card layout
+  - Improved spacing and sizing on all devices
+  - Better label display on mobile (uppercase, cyan, with spacing)
+
+Changed
+
+- Shop item table columns reordered: Item (22%), Description (32%), Use (12%), Stock (8%), Actions (26%)
+- Table header styling unified with cyan theme color (#8bd3ff)
+- Stock column now center-aligned with badge styling
+- Item names moved to separate line above rarity badge
+- Description text muted for better visual hierarchy
+- Buttons condensed to icon-only with tooltips
+- Measurement shape persistence - shapes display while mouse button held, disappear on release
+- Battle map aura visual calculation adjusted (+0.5 cells) without changing user input
+- Shop cards now have consistent spacing and elevation
+
 1.8.9 - 2025-12-10
 Character Token Generation for Battle Map
 

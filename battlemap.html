@@ -456,6 +456,13 @@
         <!-- NEW: Mobile-friendly mode toggles -->
         <button id="fogBrushMode" aria-pressed="false" title="Toggle brush mode for touch/mobile">Brush Mode</button>
         <button id="measureToggle" aria-pressed="false" title="Toggle measure mode (mobile-friendly)">Measure</button>
+        <label class="ms-2">Shape
+          <select id="measureShape" style="width:90px">
+            <option value="line">Line</option>
+            <option value="cone">Cone</option>
+            <option value="circle">Circle</option>
+          </select>
+        </label>
 
         <span id="status" class="ms-2">Ready</span>
       </div>
@@ -867,7 +874,8 @@
         ctx.globalAlpha = 0.2;
         ctx.fillStyle = t.aura.color || '#8bd3ff';
         ctx.beginPath();
-        ctx.arc(cx, cy, t.aura.radius * state.grid.size, 0, Math.PI * 2);
+        // Add 0.5 to radius to account for the token's own cell (aura extends from edge of token's cell)
+        ctx.arc(cx, cy, (t.aura.radius + 0.5) * state.grid.size, 0, Math.PI * 2);
         ctx.fill();
         ctx.globalAlpha = 0.6;
         ctx.strokeStyle = t.aura.color || '#8bd3ff';
@@ -996,19 +1004,59 @@
       const distPx = Math.hypot(dx, dy);
       const cells = distPx / state.grid.size;
       const units = cells * state.grid.unitsPerCell;
+
+      const measureShape = document.getElementById('measureShape').value;
+
       ctx.save();
       ctx.lineWidth = 2 / state.view.scale;
       ctx.strokeStyle = '#8bd3ff';
-      ctx.beginPath();
-      ctx.moveTo(mp.x, mp.y);
-      ctx.lineTo(mWorld.x, mWorld.y);
-      ctx.stroke();
+      ctx.fillStyle = 'rgba(139, 211, 255, 0.2)';
+
+      if (measureShape === 'line') {
+        // Line measurement (original behavior)
+        ctx.beginPath();
+        ctx.moveTo(mp.x, mp.y);
+        ctx.lineTo(mWorld.x, mWorld.y);
+        ctx.stroke();
+      } else if (measureShape === 'cone') {
+        // Cone measurement (90-degree cone)
+        const angle = Math.atan2(dy, dx);
+        const coneAngle = Math.PI / 2; // 90 degrees
+
+        ctx.beginPath();
+        ctx.moveTo(mp.x, mp.y);
+        ctx.arc(mp.x, mp.y, distPx, angle - coneAngle / 2, angle + coneAngle / 2);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+      } else if (measureShape === 'circle') {
+        // Circle/radius measurement
+        ctx.beginPath();
+        ctx.arc(mp.x, mp.y, distPx, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+
+        // Draw radius line
+        ctx.beginPath();
+        ctx.moveTo(mp.x, mp.y);
+        ctx.lineTo(mWorld.x, mWorld.y);
+        ctx.stroke();
+      }
+
       ctx.restore();
+
       // label
       const mid = worldToScreen((mp.x + mWorld.x)/2, (mp.y + mWorld.y)/2);
       measureLabel.style.left = mid.x + 'px';
       measureLabel.style.top = mid.y + 'px';
-      measureLabel.textContent = `${Math.round(units)} ft (${cells.toFixed(2)} cells)`;
+
+      if (measureShape === 'cone') {
+        measureLabel.textContent = `${Math.round(units)} ft cone (${cells.toFixed(2)} cells)`;
+      } else if (measureShape === 'circle') {
+        measureLabel.textContent = `${Math.round(units)} ft radius (${cells.toFixed(2)} cells)`;
+      } else {
+        measureLabel.textContent = `${Math.round(units)} ft (${cells.toFixed(2)} cells)`;
+      }
       measureLabel.style.display = 'block';
     } else {
       measureLabel.style.display = 'none';
@@ -1499,6 +1547,22 @@
   // Context menu (right-click)
   canvas.addEventListener('contextmenu', (e)=>{
     e.preventDefault();
+
+    // Exit measure mode on right-click
+    if (state.ui.measuring) {
+      state.ui.measuring = false;
+      state.ui.measureStart = null;
+      // If measure toggle is on, turn it off
+      if (state.ui.measureToggle) {
+        state.ui.measureToggle = false;
+        const measureToggleBtn = document.getElementById('measureToggle');
+        measureToggleBtn.classList.remove('active');
+        measureToggleBtn.setAttribute('aria-pressed', 'false');
+        setStatus('Measure mode OFF');
+      }
+      return;
+    }
+
     const rect = canvas.getBoundingClientRect();
     const sx = (e.clientX - rect.left) * DPR; const sy = (e.clientY - rect.top) * DPR;
     const wpt = screenToWorld(sx, sy);
