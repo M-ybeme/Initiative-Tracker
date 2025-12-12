@@ -4,6 +4,74 @@ The format is based on Keep a Changelog,
 and this project adheres to Semantic Versioning.
 
 
+1.9.1 - 2025-12-12
+Tavern Events & Rumors, Battle Map Data Safety, and Documentation Updates
+
+Added
+
+**Tavern/Inn Generator: Events & Rumors System**
+- **Random Event Generator**
+  - "What's Happening at the Tavern?" section with 1-2 random events per generation
+  - 65+ unique tavern events: bard performances, arm-wrestling contests, mysterious strangers, burning dinners, dice games, political debates, singing patrons, etc.
+  - Events provide immediate atmosphere and interaction opportunities
+  - Visual presentation with activity icon and success-colored bullet points
+- **Bartender Rumors**
+  - "Rumors from the Bartender" section with 2-3 rumors per generation
+  - 63+ unique bartender rumors: strange lights at old mill, missing caravans, shady mayor meetings, ancient coins, temple donations, vanishing horses, etc.
+  - Rumors from trusted tavern keeper perspective
+  - Visual presentation with cup icon and info-colored quote styling
+- **Patron Rumors**
+  - "Overheard from Patrons" section with 2-4 rumors per generation
+  - 62+ unique patron rumors: giant creatures in mountains, Baron hiring adventurers, new cave systems, missing families, poaching, secret fighting rings, etc.
+  - Rumors from gossip/hearsay perspective with varying reliability
+  - Visual presentation with people icon and warning-colored quote styling
+- **Integrated UI Controls**
+  - "Include events & rumors" checkbox in generator controls
+  - Events and rumors respect seeded RNG for reproducible results
+  - Export/copy/download includes all events and rumors sections
+  - Clear button properly resets events and rumors displays
+- **Side Quest & Plot Hook Generation**
+  - 190+ total rumor/event options provide endless side quest inspiration
+  - Mix of immediate (events) and background (rumors) story hooks
+  - Suitable for improvisation and session prep
+  - Helps DMs create living, dynamic tavern atmospheres
+
+**Battle Map Unsaved Changes Indicator**
+- **Dirty Flag System**
+  - Visual "Unsaved Changes" badge with warning icon next to Save Session button
+  - Pulsing animation (opacity fade) draws attention to unsaved state
+  - Badge automatically appears when map changes are made
+  - Badge disappears after successful save operation
+- **Comprehensive Change Detection**
+  - Tracks fog painting, fog shape drag/resize, fog shape add/delete
+  - Tracks token moves, adds, deletes, edits (HP, status, auras, vision cones, rotation, resize)
+  - Tracks grid calibration, origin adjustments, size/color/alpha changes
+  - Tracks map transform operations (scale, offset)
+  - All keyboard shortcuts properly trigger dirty flag
+  - All context menu operations properly trigger dirty flag
+- **Browser Navigation Guard**
+  - `beforeunload` event handler warns when leaving page with unsaved changes
+  - Only warns if dirty flag is set (no false alarms)
+  - Standard browser confirmation dialog prevents accidental data loss
+  - Manual save model preserved (no aggressive autosave)
+- **Professional UX Polish**
+  - Clear visual feedback for unsaved state
+  - Prevents #1 rage-quit scenario (losing hours of battle map setup)
+  - Demonstrates data-safety thinking and user-focused design
+
+**Documentation & Version Management**
+- **README Version Reference Update**
+  - Removed hardcoded version line "Last updated: 2025-12-09 (v1.8.5)"
+  - Replaced with dynamic reference: "See CHANGELOG.md for the latest version and feature updates"
+  - Eliminates maintenance burden of updating version in multiple places
+  - Improves professionalism by providing single source of truth for versions
+  - Prevents credibility issues from outdated version information
+
+Changed
+
+- Tavern generator output now includes Events and Rumors sections when checkbox enabled
+- Tavern generator serialization includes events and rumors in exported/copied text
+- README no longer contains hardcoded version number
 
 1.9.0 - 2025-12-11
 Shop-to-Character Inventory Integration & Battle Map Enhancements

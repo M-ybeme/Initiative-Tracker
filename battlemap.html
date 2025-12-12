@@ -91,6 +91,12 @@
 
     .measure-label { position:absolute; background:#0f1620; border:1px solid var(--line); border-radius:6px; padding:2px 6px; font-size:12px; color:var(--ink); transform:translate(-50%, -150%); pointer-events:none; }
 
+    /* Unsaved changes indicator animation */
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.6; }
+    }
+
     /* Mobile touch targets */
     @media (max-width: 991.98px){
       input, select, button { min-height: 44px; }
@@ -259,8 +265,11 @@
             <div id="accSession" class="accordion-collapse collapse" data-bs-parent="#bmAccordion">
               <div class="accordion-body">
                 <div class="group">
-                  <div class="row-inline">
+                  <div class="row-inline" style="align-items: center; gap: 8px;">
                     <button id="saveSession">Save Session</button>
+                    <span id="unsavedIndicator" class="badge bg-warning text-dark" style="display: none; animation: pulse 2s infinite;">
+                      <i class="bi bi-exclamation-triangle-fill me-1"></i>Unsaved Changes
+                    </span>
                     <button id="exportJson">Export JSON</button>
                   </div>
                   <div class="row-inline">
@@ -604,6 +613,34 @@
   /** @typedef {{ id:string, type:'rect'|'circle', x:number, y:number, w?:number, h?:number, r?:number, mode:'reveal'|'cover', color:string, selected?:boolean }} FogShape */
   const fogShapes = /** @type{FogShape[]} */([]);
 
+  // --- Dirty flag tracking for unsaved changes
+  let isDirty = false;
+  const unsavedIndicator = document.getElementById('unsavedIndicator');
+
+  function setDirty() {
+    if (!isDirty) {
+      isDirty = true;
+      if (unsavedIndicator) {
+        unsavedIndicator.style.display = 'inline-block';
+      }
+    }
+  }
+
+  function clearDirty() {
+    isDirty = false;
+    if (unsavedIndicator) {
+      unsavedIndicator.style.display = 'none';
+    }
+  }
+
+  // Warn user before leaving with unsaved changes
+  window.addEventListener('beforeunload', (e) => {
+    if (isDirty) {
+      e.preventDefault();
+      e.returnValue = ''; // Chrome requires returnValue to be set
+    }
+  });
+
   function setFogUI(enabled) {
     document.getElementById('toggleFog').textContent = enabled ? 'Fog: On' : 'Fog: Off';
     ['fogReveal','fogCover','fogBrush','fogClear','fogShapeType','fogShapeColor','fogShapeSize','addFogShape','deleteFogShape'].forEach(id=>{
@@ -701,6 +738,7 @@
         } catch (e) {
           console.log('ℹ localStorage backup skipped (quota exceeded, but IndexedDB save succeeded)');
         }
+        clearDirty(); // Clear unsaved changes indicator
         return;
       } catch (error) {
         console.error('❌ IndexedDB save failed, trying localStorage fallback:', error);
@@ -708,7 +746,10 @@
     }
 
     // Fallback to localStorage
-    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(payload)); } catch {}
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
+      clearDirty(); // Clear unsaved changes indicator
+    } catch {}
   }
   async function load(){
     let data = null;
@@ -1280,6 +1321,7 @@
         gridOffsetXEl.value = Math.round(state.grid.offsetX);
         gridOffsetYEl.value = Math.round(state.grid.offsetY);
         state.ui.tool = 'none'; calibStatusEl.textContent = `Calibrated: ${state.grid.size.toFixed(2)} px/cell`;
+        setDirty();
       }
       return;
     }
@@ -1287,7 +1329,9 @@
       state.grid.offsetX = wpt.x; state.grid.offsetY = wpt.y;
       gridOffsetXEl.value = Math.round(state.grid.offsetX);
       gridOffsetYEl.value = Math.round(state.grid.offsetY);
-      state.ui.tool = 'none'; calibStatusEl.textContent = 'Origin set'; return;
+      state.ui.tool = 'none'; calibStatusEl.textContent = 'Origin set';
+      setDirty();
+      return;
     }
     if(state.ui.tool === 'snapOrigin'){
       const size = state.grid.size;
@@ -1295,7 +1339,9 @@
       state.grid.offsetY = wpt.y - Math.round(wpt.y/size)*size;
       gridOffsetXEl.value = Math.round(state.grid.offsetX);
       gridOffsetYEl.value = Math.round(state.grid.offsetY);
-      state.ui.tool = 'none'; calibStatusEl.textContent = 'Aligned to clicked intersection'; return;
+      state.ui.tool = 'none'; calibStatusEl.textContent = 'Aligned to clicked intersection';
+      setDirty();
+      return;
     }
 
     // Check for fog shape handle hit first (if fog enabled and not in pan mode)
@@ -1472,6 +1518,7 @@
 
     if (fogState.painting) {
       fogState.painting = false;
+      setDirty(); // Fog was painted
       return;
     }
 
@@ -1491,10 +1538,12 @@
         t.x = Math.round(t.x / s) * s;
         t.y = Math.round(t.y / s) * s;
       }
+      setDirty(); // Token was moved
     }
     if(state.ui.dragMode === 'fogShape' || state.ui.dragMode === 'fogShapeResize'){
       // Fog shape dragging/resizing completed, save changes
       renderFogShapes();
+      setDirty(); // Fog shape was moved/resized
     }
     state.ui.dragMode = 'none';
     state.ui.dragId = null;
@@ -1612,9 +1661,13 @@
     if(!t) return;
     if (cmd==='rename'){
       const name = prompt('Token name:', t.name || '');
-      if (name!==null) t.name = name.trim();
+      if (name!==null) {
+        t.name = name.trim();
+        setDirty();
+      }
     } else if (cmd==='toggleLabel'){
       t.showLabel = !t.showLabel;
+      setDirty();
     } else if (cmd==='setHp'){
       const choice = prompt('HP: [S]et max/current, [D]amage, [H]eal, [C]lear', 'S').toUpperCase();
       if (choice === 'S') {
@@ -1622,14 +1675,22 @@
         const maxHp = prompt('Max HP:', t.maxHp || '');
         if (hp !== null) t.hp = parseInt(hp) || 0;
         if (maxHp !== null) t.maxHp = parseInt(maxHp) || 0;
+        setDirty();
       } else if (choice === 'D') {
         const dmg = prompt('Damage amount:', '');
-        if (dmg !== null) t.hp = Math.max(0, (t.hp || 0) - (parseInt(dmg) || 0));
+        if (dmg !== null) {
+          t.hp = Math.max(0, (t.hp || 0) - (parseInt(dmg) || 0));
+          setDirty();
+        }
       } else if (choice === 'H') {
         const heal = prompt('Heal amount:', '');
-        if (heal !== null) t.hp = Math.min((t.maxHp || 0), (t.hp || 0) + (parseInt(heal) || 0));
+        if (heal !== null) {
+          t.hp = Math.min((t.maxHp || 0), (t.hp || 0) + (parseInt(heal) || 0));
+          setDirty();
+        }
       } else if (choice === 'C') {
         t.hp = 0; t.maxHp = 0;
+        setDirty();
       }
     } else if (cmd==='addStatus'){
       const choice = prompt('Status: [A]dd, [C]lear', 'A').toUpperCase();
@@ -1638,9 +1699,11 @@
         if (status !== null && status.trim()) {
           if (!t.statusConditions) t.statusConditions = [];
           t.statusConditions.push(status.trim());
+          setDirty();
         }
       } else if (choice === 'C') {
         t.statusConditions = [];
+        setDirty();
       }
     } else if (cmd==='setAura'){
       const radius = prompt('Aura radius (in cells, 0 to remove):', t.aura?.radius || '');
@@ -1652,6 +1715,7 @@
           const color = prompt('Aura color (hex, e.g., #ff0000):', t.aura?.color || '#8bd3ff');
           t.aura = { radius: r, color: color || '#8bd3ff' };
         }
+        setDirty();
       }
     } else if (cmd==='setVision'){
       const range = prompt('Vision range (in cells, 0 to remove):', t.visionCone?.range || '');
@@ -1668,6 +1732,7 @@
             color: color || '#ffff88'
           };
         }
+        setDirty();
       }
     } else if (cmd==='duplicate'){
       const copy = { ...t, id:'t_'+Math.random().toString(36).slice(2,9), x:t.x+10, y:t.y+10, selected:true };
@@ -1676,12 +1741,16 @@
       if(t.visionCone) copy.visionCone = {...t.visionCone};
       state.tokens.forEach(x=>x.selected=false);
       state.tokens.push(copy);
+      setDirty();
     } else if (cmd==='bring'){
       const i = state.tokens.indexOf(t); if(i>=0){ state.tokens.splice(i,1); state.tokens.push(t); }
+      setDirty();
     } else if (cmd==='send'){
       const i = state.tokens.indexOf(t); if(i>=0){ state.tokens.splice(i,1); state.tokens.unshift(t); }
+      setDirty();
     } else if (cmd==='delete'){
       state.tokens = state.tokens.filter(x=>!x.selected);
+      setDirty();
     }
     hideMenu(); updateTokenList();
   });
@@ -1711,6 +1780,7 @@
           fs.r *= 1.1;
         }
         renderFogShapes();
+        setDirty();
         return;
       }
       if(e.key === '-' || e.key === '_'){
@@ -1721,6 +1791,7 @@
           fs.r *= 0.9;
         }
         renderFogShapes();
+        setDirty();
         return;
       }
     }
@@ -1728,11 +1799,11 @@
     // Handle token operations
     const t = state.tokens.find(x=>x.selected);
     if(!t) return;
-    if(e.key === 'r' || e.key === 'R'){ t.rot = (t.rot||0) + (Math.PI/12); }
-    if(e.key === '+'){ t.w*=1.1; t.h*=1.1; }
-    if(e.key === '-'){ t.w*=0.9; t.h*=0.9; }
-    if(e.key === '['){ const i=state.tokens.indexOf(t); if(i>0){ state.tokens.splice(i,1); state.tokens.splice(i-1,0,t); } }
-    if(e.key === ']'){ const i=state.tokens.indexOf(t); if(i>=0 && i<state.tokens.length-1){ state.tokens.splice(i,1); state.tokens.splice(i+1,0,t); } }
+    if(e.key === 'r' || e.key === 'R'){ t.rot = (t.rot||0) + (Math.PI/12); setDirty(); }
+    if(e.key === '+'){ t.w*=1.1; t.h*=1.1; setDirty(); }
+    if(e.key === '-'){ t.w*=0.9; t.h*=0.9; setDirty(); }
+    if(e.key === '['){ const i=state.tokens.indexOf(t); if(i>0){ state.tokens.splice(i,1); state.tokens.splice(i-1,0,t); setDirty(); } }
+    if(e.key === ']'){ const i=state.tokens.indexOf(t); if(i>=0 && i<state.tokens.length-1){ state.tokens.splice(i,1); state.tokens.splice(i+1,0,t); setDirty(); } }
   });
   window.addEventListener('keyup', (e)=>{
     if(e.code === 'Space'){ state.ui.spaceDown = false; canvas.classList.remove('dragging'); }
@@ -1757,28 +1828,29 @@
     fctx.clearRect(0,0,fog.width,fog.height);
     fitMap(); save();
   });
-  document.getElementById('gridSize').addEventListener('input', (e)=>{ state.grid.size = clamp(parseFloat(e.target.value)||50, 4, 256); });
-  document.getElementById('unitsPerCell').addEventListener('input', (e)=>{ state.grid.unitsPerCell = Math.max(1, parseFloat(e.target.value)||5); });
-  document.getElementById('gridColor').addEventListener('input', (e)=>{ state.grid.color = e.target.value; });
-  document.getElementById('gridAlpha').addEventListener('input', (e)=>{ state.grid.alpha = clamp(parseFloat(e.target.value)||0.35, 0, 1); });
-  document.getElementById('showGrid').addEventListener('change', (e)=>{ state.grid.show = e.target.checked; });
+  document.getElementById('gridSize').addEventListener('input', (e)=>{ state.grid.size = clamp(parseFloat(e.target.value)||50, 4, 256); setDirty(); });
+  document.getElementById('unitsPerCell').addEventListener('input', (e)=>{ state.grid.unitsPerCell = Math.max(1, parseFloat(e.target.value)||5); setDirty(); });
+  document.getElementById('gridColor').addEventListener('input', (e)=>{ state.grid.color = e.target.value; setDirty(); });
+  document.getElementById('gridAlpha').addEventListener('input', (e)=>{ state.grid.alpha = clamp(parseFloat(e.target.value)||0.35, 0, 1); setDirty(); });
+  document.getElementById('showGrid').addEventListener('change', (e)=>{ state.grid.show = e.target.checked; setDirty(); });
 
   // Map transform inputs (unique names to avoid redeclare)
   const mapScaleInput  = document.getElementById('mapScale');
   const mapOffsetXInput = document.getElementById('mapOffsetX');
   const mapOffsetYInput = document.getElementById('mapOffsetY');
-  mapScaleInput.addEventListener('input', (e)=>{ state.mapTransform.scale = clamp((parseFloat(e.target.value)||100)/100, 0.1, 4); });
-  mapOffsetXInput.addEventListener('input', (e)=>{ state.mapTransform.x = parseFloat(e.target.value)||0; });
-  mapOffsetYInput.addEventListener('input', (e)=>{ state.mapTransform.y = parseFloat(e.target.value)||0; });
+  mapScaleInput.addEventListener('input', (e)=>{ state.mapTransform.scale = clamp((parseFloat(e.target.value)||100)/100, 0.1, 4); setDirty(); });
+  mapOffsetXInput.addEventListener('input', (e)=>{ state.mapTransform.x = parseFloat(e.target.value)||0; setDirty(); });
+  mapOffsetYInput.addEventListener('input', (e)=>{ state.mapTransform.y = parseFloat(e.target.value)||0; setDirty(); });
   document.getElementById('resetMapTransform').addEventListener('click', ()=>{
     state.mapTransform = { scale:1, x:0, y:0 }; mapScaleInput.value = 100; mapOffsetXInput.value = 0; mapOffsetYInput.value = 0;
+    setDirty();
   });
 
   // Grid alignment inputs (unique names)
   const gridOffsetXEl = document.getElementById('gridOffsetX');
   const gridOffsetYEl = document.getElementById('gridOffsetY');
-  gridOffsetXEl.addEventListener('input', (e)=>{ state.grid.offsetX = parseFloat(e.target.value)||0; });
-  gridOffsetYEl.addEventListener('input', (e)=>{ state.grid.offsetY = parseFloat(e.target.value)||0; });
+  gridOffsetXEl.addEventListener('input', (e)=>{ state.grid.offsetX = parseFloat(e.target.value)||0; setDirty(); });
+  gridOffsetYEl.addEventListener('input', (e)=>{ state.grid.offsetY = parseFloat(e.target.value)||0; setDirty(); });
 
   const calibCellsEl = document.getElementById('calibCells');
   const calibStatusEl = document.getElementById('calibStatus');
@@ -2150,7 +2222,7 @@
   function deleteSelected(){
     const before = state.tokens.length;
     state.tokens = state.tokens.filter(t=> !t.selected);
-    if(state.tokens.length !== before){ updateTokenList(); setStatus('Deleted selected tokens'); }
+    if(state.tokens.length !== before){ updateTokenList(); setStatus('Deleted selected tokens'); setDirty(); }
   }
 
   function deleteSelectedFogShapes(){
@@ -2161,6 +2233,7 @@
       fogShapes.push(...newShapes);
       renderFogShapes();
       setStatus('Deleted selected fog shapes');
+      setDirty();
     }
   }
 

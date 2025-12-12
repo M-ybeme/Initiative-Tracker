@@ -2381,6 +2381,68 @@
     </div>
   </div>
 
+  <!-- Hit Dice Healing Modal -->
+  <div class="modal fade" id="hitDiceModal" tabindex="-1" aria-labelledby="hitDiceModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content bg-dark text-light border-secondary">
+        <div class="modal-header border-secondary">
+          <h5 class="modal-title" id="hitDiceModalLabel">
+            <i class="bi bi-heart-pulse me-2"></i>Spend Hit Dice to Heal
+          </h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <div class="alert alert-info text-light mb-3">
+            <strong>Short Rest Healing:</strong> Spend hit dice to regain HP. Roll the die and add your Constitution modifier to the result.
+          </div>
+
+          <div class="mb-3">
+            <div class="d-flex justify-content-between align-items-center mb-2">
+              <label class="form-label mb-0"><strong>Current HP:</strong></label>
+              <span id="hdModalCurrentHP" class="badge bg-danger fs-6">0 / 0</span>
+            </div>
+            <div class="d-flex justify-content-between align-items-center">
+              <label class="form-label mb-0"><strong>Available Hit Dice:</strong></label>
+              <span id="hdModalAvailable" class="badge bg-secondary fs-6">0d0</span>
+            </div>
+          </div>
+
+          <div class="mb-3">
+            <label for="hdSpendCount" class="form-label">How many hit dice to spend?</label>
+            <div class="input-group">
+              <button class="btn btn-outline-secondary" type="button" id="hdDecrement">-</button>
+              <input type="number" class="form-control text-center" id="hdSpendCount" value="1" min="0" max="0" />
+              <button class="btn btn-outline-secondary" type="button" id="hdIncrement">+</button>
+            </div>
+            <div class="form-text">Constitution modifier: <span id="hdConMod">+0</span></div>
+          </div>
+
+          <div id="hdRollResults" class="mb-3" style="display: none;">
+            <div class="alert alert-success text-light">
+              <div class="d-flex justify-content-between align-items-center mb-2">
+                <strong>Rolls:</strong>
+                <span id="hdRollDetails" class="font-monospace"></span>
+              </div>
+              <div class="d-flex justify-content-between align-items-center">
+                <strong>Total Healing:</strong>
+                <span id="hdTotalHealing" class="fs-5 text-success fw-bold"></span>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer border-secondary">
+          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button type="button" class="btn btn-warning" id="hdRollBtn">
+            <i class="bi bi-dice-5 me-1"></i>Roll Hit Dice
+          </button>
+          <button type="button" class="btn btn-success" id="hdApplyBtn" style="display: none;">
+            <i class="bi bi-check2-circle me-1"></i>Apply Healing
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- Toast Container for Mobile Roll Notifications -->
   <div class="toast-container position-fixed top-0 start-50 translate-middle-x p-3" style="z-index: 9999;">
     <div id="rollToast" class="toast align-items-center border-0" role="alert" aria-live="assertive" aria-atomic="true">

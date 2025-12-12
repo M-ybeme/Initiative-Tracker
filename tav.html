@@ -116,6 +116,10 @@
                 <input class="form-check-input" type="checkbox" id="tv-showRooms" checked>
                 <label class="form-check-label" for="tv-showRooms">Include room listings</label>
               </div>
+              <div class="form-check">
+                <input class="form-check-input" type="checkbox" id="tv-showEvents" checked>
+                <label class="form-check-label" for="tv-showEvents">Include events & rumors</label>
+              </div>
 
               <div class="d-grid d-sm-flex gap-2 mt-3">
                 <button class="btn btn-success w-100 w-sm-auto" id="tv-generate"><i class="bi bi-cup-hot me-1"></i>Generate</button>
@@ -194,6 +198,31 @@
                     <div class="card-header border-secondary"><h6 class="mb-0">Staff</h6></div>
                     <div class="card-body">
                       <div class="row row-cols-1 row-cols-sm-2 g-2" id="tv-staff"></div>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="col-12" id="tv-events-wrap">
+                  <div class="card bg-dark border-secondary">
+                    <div class="card-header border-secondary"><h6 class="mb-0"><i class="bi bi-activity me-1"></i>What's Happening at the Tavern?</h6></div>
+                    <div class="card-body">
+                      <div id="tv-events"></div>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="col-12" id="tv-rumors-wrap">
+                  <div class="card bg-dark border-secondary">
+                    <div class="card-header border-secondary"><h6 class="mb-0"><i class="bi bi-chat-quote me-1"></i>Rumors & Whispers</h6></div>
+                    <div class="card-body">
+                      <div class="mb-3">
+                        <div class="fw-semibold text-info mb-2"><i class="bi bi-cup-hot me-1"></i>From the Bartender:</div>
+                        <div id="tv-bartender-rumors"></div>
+                      </div>
+                      <div>
+                        <div class="fw-semibold text-warning mb-2"><i class="bi bi-people me-1"></i>Overheard from Patrons:</div>
+                        <div id="tv-patron-rumors"></div>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -304,6 +333,207 @@
           "dark stout floated with cream",
           "tea blend of mint and nettle",
           "clarified cider with a dash of bitters"
+        ];
+
+        const TAVERN_EVENTS = [
+          "A traveling bard has just arrived and is setting up in the corner",
+          "Two patrons are engaged in a heated arm-wrestling contest",
+          "A merchant is showing off exotic spices to anyone who will listen",
+          "The cook just burned dinner and is frantically trying to fix it",
+          "A group of off-duty guards are celebrating a recent promotion",
+          "Someone's dog is begging for scraps under every table",
+          "A mysterious cloaked figure sits alone in the darkest corner",
+          "The local drunk is telling tall tales of their adventuring days",
+          "A game of dice has attracted a small crowd of spectators",
+          "Fresh flowers have been placed on every table for a local festival",
+          "A heated political debate is occurring near the fireplace",
+          "The barkeep is teaching a new server the ropes",
+          "A patron is trying to sell a 'genuine magic item' to other customers",
+          "Two old friends have just recognized each other after years apart",
+          "Someone spilled a full pitcher of ale and staff are mopping it up",
+          "A local noble has entered with their entourage, demanding service",
+          "Children are daring each other to talk to the scariest-looking patron",
+          "A traveling merchant is offering to buy unusual items from anyone",
+          "The hearth fire is smoking badly and filling the room with haze",
+          "A patron is sketching portraits and offering them for a few coins",
+          "Someone left a mysterious package on a table and disappeared",
+          "A group is singing drinking songs, getting louder with each verse",
+          "Two patrons are arguing over a card game they claim was rigged",
+          "A local farmer is complaining loudly about the weather ruining crops",
+          "The cat has caught a mouse and is parading it around triumphantly",
+          "A wealthy-looking traveler is interviewing people for hired help",
+          "Someone's attempting to play a musical instrument poorly",
+          "A patron is challenging others to riddle contests for drinks",
+          "The staff are whispering about strange noises from the cellar",
+          "A regular patron is celebrating their birthday with friends",
+          "Two rival merchant families are dining on opposite sides, glaring",
+          "A cleric is blessing meals for anyone who asks",
+          "Someone claims they saw something unusual on the road here",
+          "A patron is desperately looking for their lost coin purse",
+          "The evening rush has just started and tables are filling fast",
+          "A fortune teller is reading palms at a corner table for copper coins",
+          "The kitchen staff are arguing loudly about a recipe",
+          "A patron is teaching a card trick to fascinated onlookers",
+          "Someone's trying to start a tab but the barkeep is suspicious",
+          "A group of sailors just arrived, bringing the smell of salt air",
+          "Two patrons are comparing scars and telling war stories",
+          "A child is peeking through the windows, watching the adults inside",
+          "The stablehand rushes in to report something wrong with the horses",
+          "A patron is showing off a trained bird that steals food",
+          "Someone accidentally sat in the town elder's usual spot",
+          "A traveling tinker is demonstrating clever gadgets to customers",
+          "The regular crowd is gossiping about someone who just left",
+          "A patron dressed far too finely for this place just walked in",
+          "Someone's trying to pawn jewelry to other patrons for quick coin",
+          "The tavern keeper is sampling the new batch of ale with regulars",
+          "A messenger bursts in asking if anyone's seen a specific person",
+          "Two drunks are philosophizing loudly about the meaning of life",
+          "A patron is arm-wrestling all comers for drinks",
+          "Someone's crying quietly in a corner booth",
+          "The evening storyteller has gathered an audience of children",
+          "A game of chance has broken out with high stakes",
+          "The local matchmaker is pointing out prospects to a shy patron",
+          "Someone's trying to start a sing-along but getting no takers",
+          "A patron is demonstrating impressive knife-throwing at a board",
+          "The bouncer is watching a rowdy table with growing concern",
+          "A group is planning an expedition and recruiting companions",
+          "Someone's haggling with staff over a bill they dispute",
+          "A patron is offering to arm-wrestle their trained monkey",
+          "The cook is asking patrons to taste-test a new dish",
+          "Two scholars are debating ancient history at increasing volume",
+          "A patron claims they're nobility traveling incognito"
+        ];
+
+        const BARTENDER_RUMORS = [
+          "I heard the old mill on the edge of town has strange lights at night",
+          "A merchant caravan went missing on the north road last week",
+          "The mayor's been meeting with some shady types after dark",
+          "There's talk of bandits setting up camp in the Thornwood",
+          "Someone found ancient coins while digging a new well",
+          "The temple received a mysterious donation of gold",
+          "A noble's prized horse vanished from a locked stable",
+          "Fishermen are reporting the catch has been strange lately",
+          "The blacksmith's forge went cold and won't relight, no matter what",
+          "There's a reward posted for information about stolen livestock",
+          "I heard singing coming from the old crypt last full moon",
+          "A traveler swears they saw a ghost on the bridge",
+          "The herbalist has been buying unusual ingredients in bulk",
+          "Someone's been leaving flowers at the war memorial each dawn",
+          "The town guard doubled patrols but won't say why",
+          "A stranger's been asking questions about families that moved away",
+          "There's talk the old Margrave's treasure was never found",
+          "The well water tasted odd for three days, then returned to normal",
+          "A peddler claims to have a map to a dragon's hoard",
+          "Livestock keep breaking their fences on the east farms",
+          "The lighthouse keeper hasn't been seen in town for weeks",
+          "Someone saw hooded figures performing a ritual in the forest",
+          "A child found a sword in the river, too fine for any local smith",
+          "The beekeeper's hives all swarmed on the same day",
+          "There's a new face in town staying at the fancy inn",
+          "The old watchtower collapsed but no one heard it fall",
+          "A merchant ship limped into port with half the crew missing",
+          "The town archives were broken into but nothing seems stolen",
+          "I've been getting strange orders for specific bottles of wine",
+          "The judge has been acting paranoid, checking over his shoulder",
+          "Someone's been paying good coin for information about the sewers",
+          "A regular customer hasn't shown up in three weeks, very unlike them",
+          "The local artist started painting disturbing scenes in their sleep",
+          "I heard there's a new gambling den that only opens at midnight",
+          "The baker's ovens won't stay lit past sunset for some reason",
+          "A wealthy patron asked me about escape routes from town",
+          "Someone tried to pay their tab with coins from a century ago",
+          "The night watch found strange symbols chalked on several doors",
+          "A customer whispered that the tax ledgers have been altered",
+          "There's been a run on iron nails at the smithy, no one knows why",
+          "I overheard guards talking about sealed orders from the capital",
+          "The chandler's shop burned down, third fire on that street this year",
+          "A patron mentioned seeing the same stranger in three different towns",
+          "The cooper found a hidden compartment in a returned barrel",
+          "Someone's buying up all the silver jewelry in the market",
+          "I heard the old prison is being reopened for mysterious prisoners",
+          "A ship's captain refused to sail, said the stars were wrong",
+          "The magistrate's clerk has been asking odd questions about genealogy",
+          "There's talk of a secret passage under the merchant's guild",
+          "A customer paid me to remember who asks about them",
+          "The town crier started announcing things that haven't happened yet",
+          "I heard something howling in the hills that wasn't any wolf",
+          "A patron showed me a wanted poster for someone who died years ago",
+          "The midwife has been called to the manor house three times this week",
+          "Someone's been stealing only left-handed gloves from the market",
+          "I heard the executioner's axe went missing from the courthouse",
+          "A regular swears they saw someone walking into the fog and vanish",
+          "The price of salt has tripled and no one's saying why",
+          "There's a new brothel in town but no one knows where it is",
+          "I overheard two guards arguing about what to put in their reports",
+          "A traveler left behind a journal written in a language nobody knows",
+          "The apothecary has been asking about poisons, for research they say",
+          "Someone's been leaving anonymous tips about crimes that haven't happened"
+        ];
+
+        const PATRON_RUMORS = [
+          "My cousin swears they saw a giant creature in the mountains",
+          "I heard the Baron is looking to hire adventurers for something secret",
+          "There's a cave system that was just discovered by miners",
+          "The Silverpine family hasn't been seen at market in over a month",
+          "Someone's been poaching in the royal hunting grounds",
+          "A ship came into port flying no colors and left before dawn",
+          "The astrologer predicted something big would happen this season",
+          "I heard there's a secret fighting ring operating somewhere in town",
+          "A traveling wizard is looking for rare components",
+          "The old lighthouse is supposed to be haunted by its last keeper",
+          "There's a hidden smuggler's route through the marshes",
+          "Someone found a sealed letter from fifty years ago in an old book",
+          "The harvest festival might be canceled due to crop failures",
+          "A wandering knight challenged three guards to a duel and won",
+          "There are wolves that are far too bold getting close to town",
+          "I heard the Collector is looking for specific historical artifacts",
+          "A fortune teller set up shop and was gone the next morning",
+          "The cemetery caretaker quit suddenly without explanation",
+          "There's talk of reopening the old silver mine",
+          "A merchant is offering top coin for information about local legends",
+          "Someone claims to have seen lights moving under the lake",
+          "The tax collector is coming earlier than usual this year",
+          "A fancy carriage with covered windows arrives every new moon",
+          "I heard there's going to be a grand tournament next month",
+          "The old hermit in the woods hasn't been seen in weeks",
+          "My sister says the duchess is looking for a new food taster",
+          "There's a bounty on wolves, but only ones with white paws",
+          "I heard a merchant's entire warehouse inventory just vanished",
+          "Someone saw a child speaking to animals in the market square",
+          "The old Thornwood estate is being prepared for new residents",
+          "A stranger's been buying every map of the region they can find",
+          "My uncle claims he saw a door in the cliff face that wasn't there before",
+          "There's talk that the old war is flaring up again in the north",
+          "I heard someone's been grave robbing in the pauper's cemetery",
+          "A traveling merchant showed me a coin I've never seen before",
+          "The Widow Marsh swears her dead husband visited her last night",
+          "Someone's offering triple wages for guards willing to work nights",
+          "I heard the guild master's daughter ran away with a street performer",
+          "There's a standing reward for anyone who can explain the crop circles",
+          "My nephew found a tunnel under his house that goes who knows where",
+          "A group of monks arrived asking questions about ancient bloodlines",
+          "I heard someone's been impersonating the river warden",
+          "The old ruins outside town are supposedly cursed ground",
+          "A merchant claimed their competitor is using illegal trade practices",
+          "Someone saw a figure in white walking through walls at the castle",
+          "I heard the queen's cousin is traveling in disguise through the realm",
+          "There's word of a plague ship that was turned away from the port",
+          "My brother-in-law knows someone who found a hidden room full of books",
+          "Someone's been asking dock workers about ships that sail without crews",
+          "I heard there's a reward for capturing a specific bird alive",
+          "The old battlefield north of here is supposedly haunted by soldiers",
+          "A peddler told me the road west has been blocked by fallen trees",
+          "Someone claims the stone circle in the meadow moves during storms",
+          "I heard a noble's bastard child has surfaced claiming inheritance",
+          "There's talk of strange tracks found near the sheep pastures",
+          "My friend's friend knows someone who can get you fake documents",
+          "I heard the king is planning to visit the region unannounced",
+          "Someone found a cache of weapons hidden in an abandoned barn",
+          "The local soothsayer predicted three deaths before winter",
+          "I heard there's a reward for information about a missing heirloom",
+          "Someone claimed they saw a mermaid in the harbor at dawn",
+          "There's word the forest to the east is growing faster than natural",
+          "I heard a deserter from the army is hiding somewhere nearby"
         ];
 
         const STAFF_ROLES = ["Proprietor","Barkeep","Cook","Server","Server"];
@@ -444,6 +674,21 @@
           }
           return staff;
         }
+        function buildEventsAndRumors(rng){
+          // Generate 1-2 events happening right now
+          const eventCount = Math.floor(rng() * 2) + 1; // 1 or 2 events
+          const events = pickN(rng, TAVERN_EVENTS, eventCount);
+
+          // Generate 2-3 bartender rumors
+          const bartenderCount = Math.floor(rng() * 2) + 2; // 2 or 3 rumors
+          const bartenderRumors = pickN(rng, BARTENDER_RUMORS, bartenderCount);
+
+          // Generate 2-4 patron rumors
+          const patronCount = Math.floor(rng() * 3) + 2; // 2, 3, or 4 rumors
+          const patronRumors = pickN(rng, PATRON_RUMORS, patronCount);
+
+          return { events, bartenderRumors, patronRumors };
+        }
 
         // ---------- Generate ----------
         function generate(){
@@ -537,6 +782,50 @@
           }else{
             wrapStaff.style.display="none";
           }
+
+          // events and rumors
+          const showEvents = $("tv-showEvents").checked;
+          const wrapEvents = $("tv-events-wrap");
+          const wrapRumors = $("tv-rumors-wrap");
+          if(showEvents){
+            wrapEvents.style.display="";
+            wrapRumors.style.display="";
+
+            const { events, bartenderRumors, patronRumors } = buildEventsAndRumors(rng);
+
+            // Display events
+            const eventsDiv = $("tv-events");
+            eventsDiv.innerHTML = "";
+            events.forEach(event => {
+              const p = document.createElement("p");
+              p.className = "mb-2";
+              p.innerHTML = `<i class="bi bi-dot text-success"></i> ${event}`;
+              eventsDiv.appendChild(p);
+            });
+
+            // Display bartender rumors
+            const bartenderDiv = $("tv-bartender-rumors");
+            bartenderDiv.innerHTML = "";
+            bartenderRumors.forEach(rumor => {
+              const p = document.createElement("p");
+              p.className = "mb-2 small";
+              p.innerHTML = `<i class="bi bi-chat-left-quote text-info"></i> "${rumor}"`;
+              bartenderDiv.appendChild(p);
+            });
+
+            // Display patron rumors
+            const patronDiv = $("tv-patron-rumors");
+            patronDiv.innerHTML = "";
+            patronRumors.forEach(rumor => {
+              const p = document.createElement("p");
+              p.className = "mb-2 small";
+              p.innerHTML = `<i class="bi bi-chat-left-quote text-warning"></i> "${rumor}"`;
+              patronDiv.appendChild(p);
+            });
+          }else{
+            wrapEvents.style.display="none";
+            wrapRumors.style.display="none";
+          }
         }
 
         // ---------- Serialize / Copy / Download ----------
@@ -553,6 +842,14 @@
           const staff = [...document.querySelectorAll("#tv-staff .tv-card")]
             .map(c=>c.innerText.replace(/\n+/g," — ")).join("\n");
 
+          // Events and rumors
+          const events = [...document.querySelectorAll("#tv-events p")]
+            .map(p => `- ${p.innerText.replace(/^• /, '')}`).join("\n");
+          const bartenderRumors = [...document.querySelectorAll("#tv-bartender-rumors p")]
+            .map(p => `- ${p.innerText.replace(/^" /, '').replace(/" $/, '')}`).join("\n");
+          const patronRumors = [...document.querySelectorAll("#tv-patron-rumors p")]
+            .map(p => `- ${p.innerText.replace(/^" /, '').replace(/" $/, '')}`).join("\n");
+
           return [
             nameLine,
             amb ? `Ambience: ${amb}` : "",
@@ -560,7 +857,10 @@
             meals ? "Meals:\n"+meals : "",
             drinks ? "Drinks:\n"+drinks : "",
             rooms ? "Rooms:\n"+rooms : "",
-            staff ? "Staff:\n"+staff : ""
+            staff ? "Staff:\n"+staff : "",
+            events ? "What's Happening at the Tavern:\n"+events : "",
+            bartenderRumors ? "Rumors from the Bartender:\n"+bartenderRumors : "",
+            patronRumors ? "Rumors Overheard from Patrons:\n"+patronRumors : ""
           ].filter(Boolean).join("\n\n");
         }
         function copyOut(){
@@ -714,6 +1014,7 @@
           $("tv-clear").addEventListener("click", ()=>{
             $("tv-meta").innerHTML=""; $("tv-sign").textContent=""; $("tv-amb").innerHTML=""; $("tv-unique").textContent="";
             $("tv-meals").innerHTML=""; $("tv-drinks").innerHTML=""; $("tv-rooms").innerHTML=""; $("tv-staff").innerHTML="";
+            $("tv-events").innerHTML=""; $("tv-bartender-rumors").innerHTML=""; $("tv-patron-rumors").innerHTML="";
           });
 
           // Event delegation for NPC generation buttons

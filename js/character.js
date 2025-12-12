@@ -3132,33 +3132,130 @@
 
       // ---------- Rest handlers ----------
 
-      function handleShortRest() {
-        // Deliberately minimal. You can expand later to prompt for hit-die spending.
-        alert('Short Rest: adjust HP and resources manually, then click Save.');
+      let hitDiceModalData = null;
+
+      function openHitDiceModal() {
+        // Get current character data
+        const curHP = getNumber('charCurrentHP', 0);
+        const maxHP = getNumber('charMaxHP', 0);
+        const hdRemaining = $('charHitDiceRemaining')?.value.trim() || '0d0';
+        const conMod = getNumber('charConMod', 0);
+
+        // Parse hit dice (e.g., "5d10" -> {count: 5, die: 10})
+        const hdMatch = hdRemaining.match(/^(\d+)d(\d+)/);
+        if (!hdMatch) {
+          alert('Invalid hit dice format. Expected format: XdY (e.g., 5d10)');
+          return;
+        }
+
+        const availableCount = parseInt(hdMatch[1], 10);
+        const dieSize = parseInt(hdMatch[2], 10);
+
+        if (availableCount === 0) {
+          alert('No hit dice remaining! You must take a long rest to restore hit dice.');
+          return;
+        }
+
+        // Store modal data
+        hitDiceModalData = {
+          curHP,
+          maxHP,
+          availableCount,
+          dieSize,
+          conMod,
+          spentCount: 0,
+          rolledHealing: 0
+        };
+
+        // Update modal UI
+        $('hdModalCurrentHP').textContent = `${curHP} / ${maxHP}`;
+        $('hdModalAvailable').textContent = hdRemaining;
+        $('hdConMod').textContent = conMod >= 0 ? `+${conMod}` : `${conMod}`;
+        $('hdSpendCount').value = Math.min(1, availableCount);
+        $('hdSpendCount').max = availableCount;
+        $('hdRollResults').style.display = 'none';
+        $('hdRollBtn').style.display = '';
+        $('hdApplyBtn').style.display = 'none';
+
+        // Show modal
+        const modal = new bootstrap.Modal($('hitDiceModal'));
+        modal.show();
       }
 
-      function handleLongRest() {
-        // HP: full heal, clear temp
-        const maxHp = getNumber('charMaxHP', 0);
-        const curHpEl = $('charCurrentHP');
-        const tempHpEl = $('charTempHP');
-        if (curHpEl) curHpEl.value = maxHp || 0;
-        if (tempHpEl) tempHpEl.value = 0;
-          
-        // Hit dice: Remaining = Total
-        const hdTotalEl = $('charHitDice');
-        const hdRemainEl = $('charHitDiceRemaining');
-        if (hdTotalEl && hdRemainEl && hdTotalEl.value.trim() !== '') {
-          hdRemainEl.value = hdTotalEl.value;
+      function rollHitDice() {
+        if (!hitDiceModalData) return;
+
+        const count = parseInt($('hdSpendCount').value, 10);
+        if (count <= 0 || count > hitDiceModalData.availableCount) {
+          alert('Invalid number of hit dice to spend.');
+          return;
         }
-      
-        // Generic resources: set current = max where max is present
+
+        const { dieSize, conMod } = hitDiceModalData;
+        const rolls = [];
+        let total = 0;
+
+        // Roll each hit die
+        for (let i = 0; i < count; i++) {
+          const roll = Math.floor(Math.random() * dieSize) + 1;
+          rolls.push(roll);
+          total += roll + conMod; // Add CON mod to each roll
+        }
+
+        // Store results
+        hitDiceModalData.spentCount = count;
+        hitDiceModalData.rolledHealing = Math.max(total, count); // Minimum 1 HP per hit die spent
+
+        // Display results
+        const rollDetails = rolls.map((r, i) => `${r}+${conMod >= 0 ? conMod : `(${conMod})`}`).join(', ');
+        $('hdRollDetails').textContent = `[${rollDetails}]`;
+        $('hdTotalHealing').textContent = `+${hitDiceModalData.rolledHealing} HP`;
+        $('hdRollResults').style.display = '';
+        $('hdRollBtn').style.display = 'none';
+        $('hdApplyBtn').style.display = '';
+      }
+
+      function applyHitDiceHealing() {
+        if (!hitDiceModalData) return;
+
+        const { curHP, maxHP, spentCount, dieSize, rolledHealing, availableCount } = hitDiceModalData;
+
+        // Apply healing (can't exceed max HP)
+        const newHP = Math.min(maxHP, curHP + rolledHealing);
+        $('charCurrentHP').value = newHP;
+
+        // Reduce remaining hit dice
+        const newRemaining = availableCount - spentCount;
+        $('charHitDiceRemaining').value = `${newRemaining}d${dieSize}`;
+
+        // Close modal
+        const modal = bootstrap.Modal.getInstance($('hitDiceModal'));
+        if (modal) modal.hide();
+
+        // Clear data
+        hitDiceModalData = null;
+
+        // Show success message
+        alert(`Healed for ${rolledHealing} HP!\n\nNew HP: ${newHP} / ${maxHP}\nRemaining Hit Dice: ${newRemaining}d${dieSize}\n\nRemember to click Save!`);
+      }
+
+      function handleShortRest() {
+        // D&D 5e Short Rest (typically 1 hour):
+        // - Regain HP by spending hit dice (opens modal)
+        // - Warlock pact slots reset
+        // - Short rest abilities/resources reset
+
+        // Reset pact slots (Warlock feature - resets on short rest)
+        const pactUsedEl = $('pactUsed');
+        if (pactUsedEl) pactUsedEl.value = 0;
+
+        // Reset generic resources that are marked for short rest
         const pairs = [
           { cur: 'res1Current', max: 'res1Max' },
           { cur: 'res2Current', max: 'res2Max' },
           { cur: 'res3Current', max: 'res3Max' }
         ];
-      
+
         pairs.forEach(p => {
           const curEl = $(p.cur);
           const maxEl = $(p.max);
@@ -3166,17 +3263,77 @@
           const maxVal = maxEl.value.trim();
           if (maxVal !== '') curEl.value = maxVal;
         });
-      
-        // NEW: reset spell slots (used -> 0)
+
+        // Open hit dice healing modal
+        openHitDiceModal();
+      }
+
+      function handleLongRest() {
+        // D&D 5e Long Rest (typically 8 hours):
+        // - Restore all HP to maximum
+        // - Clear temporary HP
+        // - Restore hit dice (minimum half of total, rounded down)
+        // - Restore all spell slots
+        // - Restore pact slots
+        // - Restore all abilities/resources
+
+        // HP: full heal, clear temp
+        const maxHp = getNumber('charMaxHP', 0);
+        const curHpEl = $('charCurrentHP');
+        const tempHpEl = $('charTempHP');
+        if (curHpEl) curHpEl.value = maxHp || 0;
+        if (tempHpEl) tempHpEl.value = 0;
+
+        // Hit dice: Restore at least half (RAW: regain hit dice equal to half your total, minimum 1)
+        const hdTotalEl = $('charHitDice');
+        const hdRemainEl = $('charHitDiceRemaining');
+        if (hdTotalEl && hdRemainEl) {
+          const totalHD = hdTotalEl.value.trim();
+          if (totalHD !== '') {
+            // Parse hit dice (e.g., "5d10" -> 5)
+            const match = totalHD.match(/^(\d+)d/);
+            if (match) {
+              const total = parseInt(match[1], 10);
+              const currentRemaining = hdRemainEl.value.trim();
+              const currentNum = currentRemaining.match(/^(\d+)d/) ? parseInt(currentRemaining.match(/^(\d+)d/)[1], 10) : 0;
+
+              // Restore at least half, minimum 1
+              const restored = Math.max(1, Math.floor(total / 2));
+              const newRemaining = Math.min(total, currentNum + restored);
+              hdRemainEl.value = totalHD.replace(/^\d+/, newRemaining);
+            } else {
+              // If format is unclear, just restore to full
+              hdRemainEl.value = totalHD;
+            }
+          }
+        }
+
+        // Generic resources: set current = max where max is present
+        const pairs = [
+          { cur: 'res1Current', max: 'res1Max' },
+          { cur: 'res2Current', max: 'res2Max' },
+          { cur: 'res3Current', max: 'res3Max' }
+        ];
+
+        pairs.forEach(p => {
+          const curEl = $(p.cur);
+          const maxEl = $(p.max);
+          if (!curEl || !maxEl) return;
+          const maxVal = maxEl.value.trim();
+          if (maxVal !== '') curEl.value = maxVal;
+        });
+
+        // Reset spell slots (used -> 0)
         for (let lvl = 1; lvl <= 9; lvl++) {
           const usedEl = $(`slots${lvl}Used`);
           if (usedEl) usedEl.value = 0;
         }
-      
-        // NEW: pact slots – RAW they reset on short rest,
-        // but long rest can also safely set used = 0.
+
+        // Reset pact slots
         const pactUsedEl = $('pactUsed');
         if (pactUsedEl) pactUsedEl.value = 0;
+
+        alert('Long Rest complete!\n\n✓ HP restored to maximum\n✓ Temp HP cleared\n✓ Hit dice restored (at least half)\n✓ All spell slots restored\n✓ Pact slots restored\n✓ All abilities/resources restored\n\nRemember to click Save!');
       }
 
       // ---------- Events ----------
@@ -3331,6 +3488,37 @@
           longRestBtn.addEventListener('click', handleLongRest);
         }
 
+        // Hit dice modal buttons
+        const hdDecrementBtn = $('hdDecrement');
+        const hdIncrementBtn = $('hdIncrement');
+        const hdRollBtn = $('hdRollBtn');
+        const hdApplyBtn = $('hdApplyBtn');
+
+        if (hdDecrementBtn) {
+          hdDecrementBtn.addEventListener('click', () => {
+            const input = $('hdSpendCount');
+            if (input && parseInt(input.value) > 0) {
+              input.value = parseInt(input.value) - 1;
+            }
+          });
+        }
+
+        if (hdIncrementBtn) {
+          hdIncrementBtn.addEventListener('click', () => {
+            const input = $('hdSpendCount');
+            if (input && parseInt(input.value) < parseInt(input.max)) {
+              input.value = parseInt(input.value) + 1;
+            }
+          });
+        }
+
+        if (hdRollBtn) {
+          hdRollBtn.addEventListener('click', rollHitDice);
+        }
+
+        if (hdApplyBtn) {
+          hdApplyBtn.addEventListener('click', applyHitDiceHealing);
+        }
 
         const containerModal = $('portraitContainerModal');
         const imgModal = $('portraitPreviewModal');

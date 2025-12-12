@@ -434,4 +434,5 @@ Changelog: CHANGELOG.md
 
 
 Built with ❤️ for DMs who wing it.
-Last updated: 2025-12-09 (v1.8.5)
+
+See [CHANGELOG.md](CHANGELOG.md) for the latest version and feature updates.
