@@ -4,6 +4,120 @@ The format is based on Keep a Changelog,
 and this project adheres to Semantic Versioning.
 
 
+1.9.2 - 2025-12-12
+Quality-of-Life Enhancements: NPC Combat Stats, Tavern Patrons, Loot Quick Bundles, and Battle Map Integration
+
+Added
+
+**NPC Generator: Combat Stat Block System**
+- **5-Tier Difficulty System**
+  - Tier 1: Commoner (CR 0-1/8) - Weak, untrained individuals
+  - Tier 2: Trained (CR 1/4-1) - Basic combat training
+  - Tier 3: Veteran (CR 2-4) - Experienced fighters
+  - Tier 4: Elite (CR 5-8) - Skilled warriors
+  - Tier 5: Legendary (CR 9-15) - Master combatants
+- **17 Combat Specialties**
+  - Common Folk: Commoner, Laborer, Farmer, Merchant
+  - Trained Fighters: Guard, Soldier, Scout, Thug, Bandit
+  - Skilled Combatants: Veteran, Knight, Monk
+  - Spellcasters: Mage, Priest
+  - Elite/Legendary: Assassin, Champion, Archmage
+- **Complete Stat Block Generation**
+  - Auto-calculates HP (randomized within tier range)
+  - Auto-calculates AC (randomized within tier range)
+  - Auto-scales ability scores based on tier (+0/+2/+4/+6/+8 for tiers 1-5)
+  - Calculates all ability modifiers (STR, DEX, CON, INT, WIS, CHA)
+  - Includes speed (30 ft base, 40 ft for Scout/Monk, 25 ft for Knight)
+  - Proficiency bonus by tier (+0 to +4)
+  - Specialty-specific attacks and traits
+- **Interactive Modal UI**
+  - "Generate Stats" button on each NPC card
+  - Modal with tier and specialty selection dropdowns
+  - Live specialty description preview
+  - One-click stat block generation with formatted D&D output
+- **Copy Functionality**
+  - Individual "Copy" button appears after stat block generation
+  - Copies full NPC (description + voice + stats) to clipboard
+  - Professional stat block formatting with ability scores and combat info
+
+**Tavern Generator: Patron System**
+- **Random Patron Generation**
+  - Generates 3-5 patrons per tavern
+  - "Patrons in the Common Room" section with individual patron cards
+  - Toggle control: "Include patrons (3-5 NPCs)" checkbox in settings
+- **27 Patron Types**
+  - Variety includes: local regular, traveling merchant, off-duty guard, farmer, craftsperson, sellsword, pilgrim, gambler, scholar, miner, sailor, thief, hedge witch, bounty hunter, and more
+- **22 Visual Quirks**
+  - Distinctive features: missing a finger, scar across cheek, nervous twitch, tattoo, eye patch, gold tooth, limping, polishing coin, chewing pipe, fidgeting with cards, etc.
+- **27 Activity Hooks**
+  - Immediate engagement opportunities: looking for work, celebrating windfall, drowning sorrows, meeting someone secretly, seeking adventurers, playing dice, telling tall tales, eavesdropping, spreading news, etc.
+- **Compact Card Layout**
+  - Each patron shows: type/age/build, appearance quirk, and current activity
+  - Grid display (3 columns on desktop, 2 on tablet, 1 on mobile)
+  - Visual activity icon for quick identification
+
+**Loot Generator: Quick Bundle Presets**
+- **6 One-Click Loot Bundles**
+  - **Pocket Loot** (~50 gp): Individual loot, coins + mundane items (5 items)
+  - **Coin Pouch** (200-500 gp): Coins only bundle (budget mode)
+  - **5 Gems** (~500 gp): Gem collection (5 items, 50-200 gp each)
+  - **Potion Bundle** (3 potions): Minor magic consumables
+  - **Scroll Bundle** (3 scrolls): Minor magic scrolls
+  - **Boss Hoard** (~2000 gp): Full treasure pile with gems, coins, trade goods, and magic items (50 items, budget mode)
+- **Auto-Configuration System**
+  - Each bundle has pre-optimized settings (mode, loot type, count, budget, categories)
+  - One click instantly generates loot without manual settings adjustment
+  - Bypasses all dropdown/slider configuration
+  - Settings remain visible for customization after generation
+- **Visual Bundle Grid**
+  - 2x3 grid layout with color-coded buttons
+  - Icons for each bundle type (coin, cash-stack, gem, droplet, file-text, trophy)
+  - Value estimates displayed below each button
+  - Organized by use case: quick loot, valuables, consumables, boss rewards
+
+**Battle Map: Token Combat Stats & Initiative Integration**
+- **AC and Initiative Token Fields**
+  - Added `ac` (Armor Class) field to token data structure
+  - Added `initiative` (Initiative Bonus) field to token data structure
+  - Both fields persist with map save/load
+- **Context Menu: Set Stats**
+  - New "⚔️ AC / Init" button in token context menu
+  - Prompts for Armor Class and Initiative Bonus
+  - Values stored on token and saved with session
+- **Context Menu: Add to Initiative**
+  - New "📊 Add to Initiative" button in token context menu
+  - Auto-populates Initiative Tracker form with token data:
+    - Name (from token label)
+    - Max HP and Current HP (from token HP tracking)
+    - AC (from token AC field)
+    - Initiative roll (auto-rolled: 1d20 + initiative bonus)
+  - Opens Initiative Tracker in new tab with form pre-filled
+  - Visual feedback: Button highlights "✨ Add from Battle Map" for 3 seconds
+  - Character type defaults to "Enemy" for tokens
+- **localStorage Communication**
+  - Battle Map stores token data in `dmtools.pendingInitiativeImport`
+  - Initiative Tracker detects `#autoimport` hash and loads pending data
+  - Non-destructive: Initiative Tracker preserves existing initiative list
+  - Data cleared after successful import
+
+**Name Generator: Favorites Persistence**
+- **Status**: Already fully implemented (no changes needed)
+- Favorites save to localStorage (`'ng-favs'`)
+- Add/remove/copy functionality works correctly
+- Persists across sessions and page refreshes
+
+Changed
+
+- NPC cards now include "Generate Stats" button and stat block display area
+- NPC copy functionality updated to include combat stats when present
+- Tavern generator output includes "Patrons in the Common Room" section when enabled
+- Tavern settings include patron toggle checkbox
+- Loot Generator UI includes Quick Bundles section at top of settings
+- Battle Map token typedef expanded to include `ac` and `initiative` fields
+- Battle Map save/load functions preserve AC and initiative data
+- Initiative Tracker auto-imports tokens from Battle Map via hash navigation
+- Context menu in Battle Map expanded with 2 new options (10 total buttons)
+
 1.9.1 - 2025-12-12
 Tavern Events & Rumors, Battle Map Data Safety, and Documentation Updates
 

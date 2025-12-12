@@ -39,6 +39,58 @@ const statusEffects = [
   } else {
     initModals();
   }
+
+  // ---------- Battle Map Auto-Import ----------
+  function checkBattleMapImport() {
+    if (window.location.hash === '#autoimport') {
+      const pendingData = localStorage.getItem('dmtools.pendingInitiativeImport');
+      if (pendingData) {
+        try {
+          const data = JSON.parse(pendingData);
+          localStorage.removeItem('dmtools.pendingInitiativeImport');
+          window.location.hash = '';
+
+          // Auto-populate form
+          $('character-name').value = data.name || '';
+          $('character-health').value = data.maxHp || 0;
+          $('character-ac').value = data.ac || 10;
+
+          // Roll initiative: 1d20 + bonus
+          const d20Roll = Math.floor(Math.random() * 20) + 1;
+          const initBonus = data.initiative || 0;
+          $('initiative-roll').value = d20Roll + initBonus;
+
+          // Set type to Enemy by default
+          $('character-type').value = 'enemy';
+
+          // Focus on the add button to make it obvious
+          setTimeout(() => {
+            const addBtn = document.querySelector('#initiative-form button[type="submit"]');
+            if (addBtn) {
+              addBtn.classList.add('btn-warning');
+              addBtn.textContent = '✨ Add from Battle Map';
+              setTimeout(() => {
+                addBtn.classList.remove('btn-warning');
+                addBtn.classList.add('btn-success');
+                addBtn.textContent = 'Add';
+              }, 3000);
+            }
+          }, 100);
+
+        } catch (e) {
+          console.error('Failed to import from Battle Map:', e);
+        }
+      }
+    }
+  }
+
+  // Check for auto-import on page load
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', checkBattleMapImport);
+  } else {
+    checkBattleMapImport();
+  }
+
   // ---------- Session notes ----------
   const notesKey = 'sessionNotes';
   function loadNotes(){ const s = localStorage.getItem(notesKey); if(s) $('session-notes').value = s; }

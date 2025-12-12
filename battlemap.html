@@ -483,9 +483,11 @@
           <button data-cmd="rename">✏️ Rename</button>
           <button data-cmd="toggleLabel">🏷️ Label</button>
           <button data-cmd="setHp">❤️ HP</button>
+          <button data-cmd="setStats">⚔️ AC / Init</button>
           <button data-cmd="addStatus">🔶 Status</button>
           <button data-cmd="setAura">⭕ Aura</button>
           <button data-cmd="setVision">👁️ Vision</button>
+          <button data-cmd="addToInitiative">📊 Add to Initiative</button>
           <hr style="margin:2px 0;border:none;border-top:1px solid var(--line)">
           <button data-cmd="duplicate">📋 Duplicate</button>
           <button data-cmd="delete">🗑️ Delete</button>
@@ -563,7 +565,7 @@
     return loadImage(src).then(img=>{ imageCache.set(src,img); return img; });
   }
 
-  /** @typedef {{ id:string, name:string, imgSrc:string, img:HTMLImageElement|null, x:number, y:number, w:number, h:number, rot:number, selected?:boolean, hp?:number, maxHp?:number, showLabel?:boolean, statusConditions?:string[], aura?:{radius:number, color:string}, visionCone?:{angle:number, range:number, color:string} }} Token */
+  /** @typedef {{ id:string, name:string, imgSrc:string, img:HTMLImageElement|null, x:number, y:number, w:number, h:number, rot:number, selected?:boolean, hp?:number, maxHp?:number, ac?:number, initiative?:number, showLabel?:boolean, statusConditions?:string[], aura?:{radius:number, color:string}, visionCone?:{angle:number, range:number, color:string} }} Token */
 
   const canvas = document.getElementById('stage');
   const ctx = canvas.getContext('2d', { alpha: false });
@@ -701,6 +703,8 @@
         selected: !!t.selected,
         hp: t.hp,
         maxHp: t.maxHp,
+        ac: t.ac,
+        initiative: t.initiative,
         showLabel: t.showLabel,
         statusConditions: t.statusConditions,
         aura: t.aura,
@@ -1692,6 +1696,32 @@
         t.hp = 0; t.maxHp = 0;
         setDirty();
       }
+    } else if (cmd==='setStats'){
+      const ac = prompt('Armor Class (AC):', t.ac || '');
+      const init = prompt('Initiative Bonus (e.g., +2 or -1):', t.initiative || '');
+      if (ac !== null) t.ac = parseInt(ac) || 0;
+      if (init !== null) {
+        const initStr = init.trim();
+        t.initiative = initStr.startsWith('+') || initStr.startsWith('-') ? parseInt(initStr) || 0 : parseInt(initStr) || 0;
+      }
+      setDirty();
+    } else if (cmd==='addToInitiative'){
+      // Prepare data for Initiative Tracker
+      const initiativeData = {
+        name: t.name || 'Unknown Token',
+        hp: t.hp || 0,
+        maxHp: t.maxHp || 0,
+        ac: t.ac || 10,
+        initiative: t.initiative || 0
+      };
+
+      // Store in localStorage for Initiative Tracker
+      localStorage.setItem('dmtools.pendingInitiativeImport', JSON.stringify(initiativeData));
+
+      // Open Initiative Tracker
+      window.open('index.html#autoimport', '_blank');
+
+      setStatus(`Sent "${t.name}" to Initiative Tracker`);
     } else if (cmd==='addStatus'){
       const choice = prompt('Status: [A]dd, [C]lear', 'A').toUpperCase();
       if (choice === 'A') {

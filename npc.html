@@ -306,6 +306,184 @@ const AVOIDS = [
   "taking sides in disputes","overlong stories while working","open flames near spirits"
 ];
 
+// ---------- Stat Block System ----------
+// Tier system: 1=Commoner, 2=Trained, 3=Veteran, 4=Elite, 5=Legendary
+const STAT_TIERS = {
+  1: { name: "Commoner", cr: "0-1/8", hp: [4, 8], ac: [10, 12], prof: 0, abilities: "basic" },
+  2: { name: "Trained", cr: "1/4-1", hp: [11, 22], ac: [12, 14], prof: 2, abilities: "trained" },
+  3: { name: "Veteran", cr: "2-4", hp: [27, 49], ac: [14, 16], prof: 2, abilities: "veteran" },
+  4: { name: "Elite", cr: "5-8", hp: [68, 136], ac: [16, 18], prof: 3, abilities: "elite" },
+  5: { name: "Legendary", cr: "9-15", hp: [153, 250], ac: [17, 20], prof: 4, abilities: "legendary" }
+};
+
+// Specialties define combat style and stat priorities
+const STAT_SPECIALTIES = {
+  "Commoner": {
+    desc: "Untrained individual, attacks with improvised weapons",
+    stats: { str: 10, dex: 10, con: 10, int: 10, wis: 10, cha: 10 },
+    attacks: ["Improvised weapon (club, stick, etc.)"],
+    traits: ["Untrained"]
+  },
+  "Laborer": {
+    desc: "Strong from physical work, hardy but slow",
+    stats: { str: 14, dex: 9, con: 13, int: 9, wis: 11, cha: 9 },
+    attacks: ["Improvised tool (shovel, hammer, etc.)"],
+    traits: ["Hardy", "Strong back"]
+  },
+  "Farmer": {
+    desc: "Rural worker, uses farming tools as weapons",
+    stats: { str: 12, dex: 10, con: 12, int: 9, wis: 12, cha: 9 },
+    attacks: ["Pitchfork or scythe"],
+    traits: ["Weathered", "Early riser"]
+  },
+  "Merchant": {
+    desc: "Quick-witted trader, convincing but not a fighter",
+    stats: { str: 9, dex: 11, con: 10, int: 12, wis: 11, cha: 14 },
+    attacks: ["Dagger or light crossbow"],
+    traits: ["Silver tongue", "Merchant's eye"]
+  },
+  "Guard": {
+    desc: "Trained town guard with basic combat skills",
+    stats: { str: 13, dex: 12, con: 12, int: 10, wis: 11, cha: 10 },
+    attacks: ["Spear", "Club"],
+    traits: ["Alert", "Watchful"]
+  },
+  "Soldier": {
+    desc: "Trained military fighter with weapons proficiency",
+    stats: { str: 14, dex: 12, con: 13, int: 10, wis: 11, cha: 10 },
+    attacks: ["Longsword", "Crossbow"],
+    traits: ["Martial training", "Disciplined"]
+  },
+  "Scout": {
+    desc: "Agile ranger, skilled in ranged combat",
+    stats: { str: 11, dex: 15, con: 12, int: 11, wis: 13, cha: 9 },
+    attacks: ["Shortbow", "Shortsword"],
+    traits: ["Keen eye", "Stealthy"]
+  },
+  "Veteran": {
+    desc: "Experienced fighter, skilled in multiple weapons",
+    stats: { str: 15, dex: 13, con: 14, int: 10, wis: 12, cha: 11 },
+    attacks: ["Longsword", "Shield bash", "Heavy crossbow"],
+    traits: ["Battle hardened", "Tactical awareness"]
+  },
+  "Knight": {
+    desc: "Heavily armored warrior with noble training",
+    stats: { str: 16, dex: 11, con: 14, int: 11, wis: 11, cha: 13 },
+    attacks: ["Greatsword or lance", "Shield bash"],
+    traits: ["Heavy armor master", "Noble bearing"]
+  },
+  "Thug": {
+    desc: "Street tough, brutal and direct in combat",
+    stats: { str: 15, dex: 11, con: 14, int: 9, wis: 10, cha: 9 },
+    attacks: ["Mace", "Heavy fists"],
+    traits: ["Pack tactics", "Intimidating"]
+  },
+  "Bandit": {
+    desc: "Opportunistic criminal, hits and runs",
+    stats: { str: 11, dex: 14, con: 12, int: 10, wis: 10, cha: 10 },
+    attacks: ["Scimitar", "Light crossbow"],
+    traits: ["Cunning action", "Ambusher"]
+  },
+  "Monk": {
+    desc: "Unarmed martial artist, agile and precise",
+    stats: { str: 11, dex: 16, con: 13, int: 11, wis: 15, cha: 10 },
+    attacks: ["Unarmed strike (multiple)", "Quarterstaff"],
+    traits: ["Unarmored defense", "Ki strikes", "Deflect missiles"]
+  },
+  "Mage": {
+    desc: "Spellcaster with limited combat magic",
+    stats: { str: 8, dex: 12, con: 11, int: 16, wis: 12, cha: 11 },
+    attacks: ["Fire bolt cantrip", "Quarterstaff"],
+    traits: ["Spellcasting (wizard)", "Arcane recovery"]
+  },
+  "Priest": {
+    desc: "Divine caster with healing and support",
+    stats: { str: 10, dex: 10, con: 12, int: 11, wis: 16, cha: 13 },
+    attacks: ["Sacred flame cantrip", "Mace"],
+    traits: ["Spellcasting (cleric)", "Divine intervention"]
+  },
+  "Assassin": {
+    desc: "Deadly striker, excels at surprise attacks",
+    stats: { str: 11, dex: 17, con: 13, int: 13, wis: 12, cha: 10 },
+    attacks: ["Shortsword (poison)", "Hand crossbow"],
+    traits: ["Sneak attack", "Assassinate", "Evasion"]
+  },
+  "Champion": {
+    desc: "Master warrior with legendary combat prowess",
+    stats: { str: 18, dex: 14, con: 16, int: 11, wis: 12, cha: 14 },
+    attacks: ["Multiple attacks", "Any martial weapon"],
+    traits: ["Multiattack (3)", "Action surge", "Indomitable"]
+  },
+  "Archmage": {
+    desc: "Powerful wizard with devastating spells",
+    stats: { str: 8, dex: 14, con: 14, int: 20, wis: 15, cha: 12 },
+    attacks: ["High-level spells", "Staff"],
+    traits: ["Spellcasting (9th level)", "Spell resistance", "Magic resistance"]
+  }
+};
+
+function generateStatBlock(tier, specialty, rng) {
+  const tierData = STAT_TIERS[tier];
+  const specData = STAT_SPECIALTIES[specialty];
+
+  // Calculate HP (random within tier range)
+  const hp = tierData.hp[0] + Math.floor(rng() * (tierData.hp[1] - tierData.hp[0] + 1));
+
+  // Calculate AC (random within tier range)
+  const ac = tierData.ac[0] + Math.floor(rng() * (tierData.ac[1] - tierData.ac[0] + 1));
+
+  // Scale stats based on tier
+  const statMod = (tier - 1) * 2; // +0 for tier 1, +2 for tier 2, etc.
+  const stats = {};
+  for (const [stat, base] of Object.entries(specData.stats)) {
+    stats[stat] = Math.min(20, base + statMod);
+  }
+
+  // Calculate ability modifiers
+  const mods = {};
+  for (const [stat, score] of Object.entries(stats)) {
+    mods[stat] = Math.floor((score - 10) / 2);
+  }
+
+  // Calculate speed (based on armor/build)
+  let speed = 30;
+  if (specialty === "Scout" || specialty === "Monk") speed = 40;
+  if (specialty === "Knight") speed = 25;
+
+  return {
+    tier: tierData.name,
+    cr: tierData.cr,
+    specialty,
+    hp,
+    ac,
+    speed,
+    stats,
+    mods,
+    profBonus: tierData.prof,
+    attacks: specData.attacks,
+    traits: specData.traits,
+    desc: specData.desc
+  };
+}
+
+function formatStatBlock(block) {
+  const modStr = (m) => (m >= 0 ? `+${m}` : `${m}`);
+
+  return `**${block.specialty}** (${block.tier}, CR ${block.cr})
+━━━━━━━━━━━━━━━━━━━━━━━━━━
+**HP:** ${block.hp}  **AC:** ${block.ac}  **Speed:** ${block.speed} ft.
+**Prof. Bonus:** +${block.profBonus}
+
+**Ability Scores:**
+STR ${block.stats.str} (${modStr(block.mods.str)})  DEX ${block.stats.dex} (${modStr(block.mods.dex)})  CON ${block.stats.con} (${modStr(block.mods.con)})
+INT ${block.stats.int} (${modStr(block.mods.int)})  WIS ${block.stats.wis} (${modStr(block.mods.wis)})  CHA ${block.stats.cha} (${modStr(block.mods.cha)})
+
+**Attacks:** ${block.attacks.join(", ")}
+**Traits:** ${block.traits.join(", ")}
+
+*${block.desc}*`;
+}
+
 // Roles by settlement (used only inside the description if enabled)
 const ROLES = {
   village: [
@@ -396,6 +574,15 @@ function generate(){
       <div class="npc-field"><b>Wants:</b> ${wants}</div>
       <div class="npc-field"><b>Wants to Avoid:</b> ${avoids}</div>
       <div class="npc-field"><b>Secret:</b> ${secret}</div>
+      <div class="mt-2 d-grid gap-2 d-sm-flex">
+        <button class="btn btn-outline-warning btn-sm npc-stat-gen-btn" title="Generate Combat Stats">
+          <i class="bi bi-shield-fill-check me-1"></i>Generate Stats
+        </button>
+        <button class="btn btn-outline-info btn-sm npc-copy-btn" title="Copy this NPC" style="display:none;">
+          <i class="bi bi-clipboard me-1"></i>Copy
+        </button>
+      </div>
+      <div class="npc-stats-display mt-2" style="display:none;"></div>
     `;
     col.appendChild(div); out.appendChild(col);
 
@@ -649,6 +836,138 @@ function showNamePickerModal(npcTile, desc){
   bsModal.show();
 }
 
+// ---------- Stat Block Modal ----------
+function showStatBlockModal(npcTile) {
+  let currentNPCTile = npcTile;
+
+  // Create modal if it doesn't exist
+  let modal = document.getElementById("statBlockModal");
+  if(!modal){
+    modal = document.createElement("div");
+    modal.id = "statBlockModal";
+    modal.className = "modal fade";
+    modal.tabIndex = -1;
+    modal.innerHTML = `
+      <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content bg-dark text-light">
+          <div class="modal-header border-secondary">
+            <h5 class="modal-title"><i class="bi bi-shield-fill-check me-2"></i>Generate Combat Stats</h5>
+            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+          </div>
+          <div class="modal-body">
+            <div class="mb-3">
+              <label for="statTierSelect" class="form-label fw-semibold">
+                <i class="bi bi-bar-chart-steps me-1"></i>Difficulty Tier:
+              </label>
+              <select id="statTierSelect" class="form-select">
+                <option value="1">Tier 1: Commoner (CR 0-1/8) - Weak, untrained</option>
+                <option value="2" selected>Tier 2: Trained (CR 1/4-1) - Basic combat training</option>
+                <option value="3">Tier 3: Veteran (CR 2-4) - Experienced fighter</option>
+                <option value="4">Tier 4: Elite (CR 5-8) - Skilled warrior</option>
+                <option value="5">Tier 5: Legendary (CR 9-15) - Master combatant</option>
+              </select>
+            </div>
+
+            <div class="mb-3">
+              <label for="statSpecialtySelect" class="form-label fw-semibold">
+                <i class="bi bi-person-gear me-1"></i>Combat Specialty:
+              </label>
+              <select id="statSpecialtySelect" class="form-select">
+                <optgroup label="Common Folk">
+                  <option value="Commoner">Commoner - Untrained, improvised weapons</option>
+                  <option value="Laborer">Laborer - Strong, uses tools as weapons</option>
+                  <option value="Farmer">Farmer - Hardy, uses farming implements</option>
+                  <option value="Merchant">Merchant - Quick-witted, light weapons</option>
+                </optgroup>
+                <optgroup label="Trained Fighters">
+                  <option value="Guard">Guard - Town watch, basic combat</option>
+                  <option value="Soldier">Soldier - Military training, disciplined</option>
+                  <option value="Scout">Scout - Agile ranger, ranged combat</option>
+                  <option value="Thug">Thug - Street tough, brutal</option>
+                  <option value="Bandit">Bandit - Hit and run tactics</option>
+                </optgroup>
+                <optgroup label="Skilled Combatants">
+                  <option value="Veteran">Veteran - Experienced, versatile</option>
+                  <option value="Knight">Knight - Heavy armor, noble training</option>
+                  <option value="Monk">Monk - Unarmed martial artist</option>
+                </optgroup>
+                <optgroup label="Spellcasters">
+                  <option value="Mage">Mage - Arcane spellcaster</option>
+                  <option value="Priest">Priest - Divine spellcaster</option>
+                </optgroup>
+                <optgroup label="Elite/Legendary">
+                  <option value="Assassin">Assassin - Deadly striker</option>
+                  <option value="Champion">Champion - Master warrior</option>
+                  <option value="Archmage">Archmage - Powerful wizard</option>
+                </optgroup>
+              </select>
+              <small class="text-secondary mt-1 d-block" id="specialtyDesc">Select a specialty to see details</small>
+            </div>
+
+            <div class="alert alert-info">
+              <i class="bi bi-info-circle me-1"></i>
+              <strong>Tip:</strong> Choose tier based on challenge, specialty based on their background.
+            </div>
+          </div>
+          <div class="modal-footer border-secondary">
+            <button type="button" class="btn btn-success" id="generateStatBlockBtn">
+              <i class="bi bi-dice-5 me-1"></i>Generate
+            </button>
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+          </div>
+        </div>
+      </div>`;
+    document.body.appendChild(modal);
+  }
+
+  // Update specialty description on change
+  const specialtySelect = document.getElementById("statSpecialtySelect");
+  const specialtyDesc = document.getElementById("specialtyDesc");
+  specialtySelect.addEventListener("change", ()=>{
+    const spec = STAT_SPECIALTIES[specialtySelect.value];
+    if(spec) specialtyDesc.textContent = spec.desc;
+  });
+
+  // Initialize description
+  const initialSpec = STAT_SPECIALTIES[specialtySelect.value];
+  if(initialSpec) specialtyDesc.textContent = initialSpec.desc;
+
+  // Generate button handler
+  document.getElementById("generateStatBlockBtn").onclick = ()=>{
+    const tier = parseInt(document.getElementById("statTierSelect").value);
+    const specialty = document.getElementById("statSpecialtySelect").value;
+
+    // Generate stat block with seeded RNG for consistency
+    const seed = "stat-" + Date.now() + "-" + Math.random();
+    const rng = prand(seed);
+    const statBlock = generateStatBlock(tier, specialty, rng);
+    const formatted = formatStatBlock(statBlock);
+
+    // Display in NPC tile
+    const statsDisplay = currentNPCTile.querySelector(".npc-stats-display");
+    statsDisplay.style.display = "block";
+    statsDisplay.innerHTML = `
+      <div class="card bg-dark border-warning">
+        <div class="card-body p-2">
+          <pre class="mb-0" style="font-size: 0.85rem; white-space: pre-wrap;">${formatted}</pre>
+        </div>
+      </div>`;
+
+    // Show copy button
+    const copyBtn = currentNPCTile.querySelector(".npc-copy-btn");
+    copyBtn.style.display = "inline-block";
+
+    // Store stat block data for copying
+    currentNPCTile.dataset.statBlock = formatted;
+
+    bootstrap.Modal.getInstance(modal).hide();
+  };
+
+  // Show modal
+  const bsModal = new bootstrap.Modal(modal);
+  bsModal.show();
+}
+
 // Wire up
 document.addEventListener("DOMContentLoaded", ()=>{
   $("npc-generate").addEventListener("click", generate);
@@ -656,14 +975,40 @@ document.addEventListener("DOMContentLoaded", ()=>{
   $("npc-download").addEventListener("click", downloadNPCs);
   $("npc-clear").addEventListener("click", ()=>{ $("npc-out").innerHTML=""; $("npc-meta").innerHTML=""; });
 
-  // Event delegation for name generation buttons
+  // Event delegation for buttons
   document.addEventListener("click", (e)=>{
+    // Name generation
     if(e.target.closest(".npc-name-gen-btn")){
       const btn = e.target.closest(".npc-name-gen-btn");
       const tile = btn.closest(".npc-tile");
       const descField = tile.querySelector(".npc-field:has(b)");
       const desc = descField ? descField.textContent : "";
       showNamePickerModal(tile, desc);
+    }
+
+    // Stat block generation
+    if(e.target.closest(".npc-stat-gen-btn")){
+      const btn = e.target.closest(".npc-stat-gen-btn");
+      const tile = btn.closest(".npc-tile");
+      showStatBlockModal(tile);
+    }
+
+    // Copy individual NPC
+    if(e.target.closest(".npc-copy-btn")){
+      const btn = e.target.closest(".npc-copy-btn");
+      const tile = btn.closest(".npc-tile");
+      const nameEl = tile.querySelector(".npc-name-display");
+      const name = nameEl ? nameEl.textContent : "[No name yet]";
+      const desc = tile.innerText.split("Generate Stats")[0].replace(/Name:.*?Generate Name/s, "").replace(/\n{2,}/g,"\n").trim();
+      const statBlock = tile.dataset.statBlock || "";
+
+      let fullText = `Name: ${name}\n${desc}`;
+      if(statBlock) fullText += `\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━\nCOMBAT STATS:\n${statBlock}`;
+
+      navigator.clipboard.writeText(fullText).then(()=>{
+        btn.innerHTML = '<i class="bi bi-check me-1"></i>Copied!';
+        setTimeout(()=>{ btn.innerHTML = '<i class="bi bi-clipboard me-1"></i>Copy'; }, 2000);
+      });
     }
   });
 

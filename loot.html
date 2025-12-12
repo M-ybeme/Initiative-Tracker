@@ -92,6 +92,58 @@
                 <div class="form-hint mt-1">Presets adjust budget/caps/usefulness. You can still tweak below.</div>
               </div>
 
+              <!-- Quick Bundle Presets -->
+              <div class="mb-3">
+                <label class="form-label fw-semibold">
+                  <i class="bi bi-lightning-charge me-1"></i>Quick Bundles
+                </label>
+                <div class="d-grid gap-2">
+                  <div class="row g-2">
+                    <div class="col-6">
+                      <button class="btn btn-sm btn-outline-primary w-100 quick-bundle-btn" data-bundle="pocket">
+                        <i class="bi bi-coin me-1"></i>Pocket Loot
+                        <small class="d-block text-secondary" style="font-size: 0.7rem;">~50 gp</small>
+                      </button>
+                    </div>
+                    <div class="col-6">
+                      <button class="btn btn-sm btn-outline-primary w-100 quick-bundle-btn" data-bundle="coinpouch">
+                        <i class="bi bi-cash-stack me-1"></i>Coin Pouch
+                        <small class="d-block text-secondary" style="font-size: 0.7rem;">200-500 gp</small>
+                      </button>
+                    </div>
+                  </div>
+                  <div class="row g-2">
+                    <div class="col-6">
+                      <button class="btn btn-sm btn-outline-success w-100 quick-bundle-btn" data-bundle="gems">
+                        <i class="bi bi-gem me-1"></i>5 Gems
+                        <small class="d-block text-secondary" style="font-size: 0.7rem;">~500 gp</small>
+                      </button>
+                    </div>
+                    <div class="col-6">
+                      <button class="btn btn-sm btn-outline-info w-100 quick-bundle-btn" data-bundle="potions">
+                        <i class="bi bi-droplet-fill me-1"></i>Potion Bundle
+                        <small class="d-block text-secondary" style="font-size: 0.7rem;">3 potions</small>
+                      </button>
+                    </div>
+                  </div>
+                  <div class="row g-2">
+                    <div class="col-6">
+                      <button class="btn btn-sm btn-outline-info w-100 quick-bundle-btn" data-bundle="scrolls">
+                        <i class="bi bi-file-text me-1"></i>Scroll Bundle
+                        <small class="d-block text-secondary" style="font-size: 0.7rem;">3 scrolls</small>
+                      </button>
+                    </div>
+                    <div class="col-6">
+                      <button class="btn btn-sm btn-outline-warning w-100 quick-bundle-btn" data-bundle="boss">
+                        <i class="bi bi-trophy me-1"></i>Boss Hoard
+                        <small class="d-block text-secondary" style="font-size: 0.7rem;">~2000 gp</small>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+                <div class="form-hint mt-1">One-click common loot scenarios. Bypasses settings below.</div>
+              </div>
+
               <!-- Monster Type -->
               <div class="mb-2">
                 <label for="lg-monster" class="form-label">Monster Type (Optional)</label>
@@ -1005,6 +1057,129 @@ function currentSelectedCats(){
 // Custom loot tables storage
 let customLootTables = {};
 
+// Quick Bundle configurations
+const QUICK_BUNDLES = {
+  pocket: {
+    name: "Pocket Loot",
+    mode: "count",
+    lootType: "individual",
+    count: 5,
+    min: 1,
+    max: 15,
+    budget: 50,
+    usefulness: 50,
+    template: "none",
+    monster: "none",
+    magic: false,
+    categories: ["Coins & Purses", "Food & Provisions", "Tools & Utensils", "Mundane Adventuring Items"]
+  },
+  coinpouch: {
+    name: "Coin Pouch",
+    mode: "budget",
+    lootType: "individual",
+    count: 3,
+    min: 50,
+    max: 200,
+    budget: 350,
+    usefulness: 10,
+    template: "none",
+    monster: "none",
+    magic: false,
+    categories: ["Coins & Purses"]
+  },
+  gems: {
+    name: "5 Gems",
+    mode: "count",
+    lootType: "hoard",
+    count: 5,
+    min: 50,
+    max: 200,
+    budget: 500,
+    usefulness: 80,
+    template: "none",
+    monster: "none",
+    magic: false,
+    categories: ["Gems & Art"]
+  },
+  potions: {
+    name: "Potion Bundle (3)",
+    mode: "count",
+    lootType: "hoard",
+    count: 3,
+    min: 20,
+    max: 100,
+    budget: 150,
+    usefulness: 100,
+    template: "none",
+    monster: "none",
+    magic: true,
+    categories: ["Minor Magic"]
+  },
+  scrolls: {
+    name: "Scroll Bundle (3)",
+    mode: "count",
+    lootType: "hoard",
+    count: 3,
+    min: 20,
+    max: 150,
+    budget: 200,
+    usefulness: 100,
+    template: "none",
+    monster: "none",
+    magic: true,
+    categories: ["Minor Magic"]
+  },
+  boss: {
+    name: "Boss Hoard",
+    mode: "budget",
+    lootType: "hoard",
+    count: 50,
+    min: 10,
+    max: 300,
+    budget: 2000,
+    usefulness: 75,
+    template: "none",
+    monster: "none",
+    magic: true,
+    categories: ["Coins & Purses", "Gems & Art", "Trade Goods", "Minor Magic", "Adventuring Gear of Note"]
+  }
+};
+
+function applyQuickBundle(bundleKey) {
+  const bundle = QUICK_BUNDLES[bundleKey];
+  if (!bundle) return;
+
+  // Set all form values
+  if (bundle.mode === "budget") {
+    $("lg-mode-budget").checked = true;
+  } else {
+    $("lg-mode-count").checked = true;
+  }
+
+  if (bundle.lootType === "individual") {
+    $("lg-loot-individual").checked = true;
+  } else {
+    $("lg-loot-hoard").checked = true;
+  }
+
+  $("lg-count").value = bundle.count;
+  $("lg-min").value = bundle.min;
+  $("lg-max").value = bundle.max;
+  $("lg-budget").value = bundle.budget;
+  $("lg-use").value = bundle.usefulness;
+  $("lg-template").value = bundle.template;
+  $("lg-monster").value = bundle.monster;
+  $("lg-magic").checked = bundle.magic;
+
+  // Set categories - uncheck all first, then check only bundle categories
+  document.querySelectorAll("#lg-cats input[type='checkbox']").forEach(cb => {
+    cb.checked = bundle.categories.includes(cb.dataset.cat);
+  });
+
+  // Auto-generate
+  doGenerate();
+}
+
 function doGenerate(){
   const seed=$("lg-seed").value.trim(); const rng=prand(seed);
   const mode=document.querySelector('input[name="lg-mode"]:checked').value;
@@ -1185,6 +1360,15 @@ document.addEventListener("DOMContentLoaded",()=>{
 
   $("lg-preset").addEventListener("change",(e)=>{
     const v=e.target.value; (PRESETS[v]||PRESETS.custom)();
+  });
+
+  // Quick Bundle event listeners
+  document.querySelectorAll(".quick-bundle-btn").forEach(btn => {
+    btn.addEventListener("click", (e) => {
+      e.preventDefault();
+      const bundleKey = btn.dataset.bundle;
+      applyQuickBundle(bundleKey);
+    });
   });
 
   // New event handlers

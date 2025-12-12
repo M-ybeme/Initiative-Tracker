@@ -113,6 +113,10 @@
                 <label class="form-check-label" for="tv-showStaff">Include staff snippets</label>
               </div>
               <div class="form-check">
+                <input class="form-check-input" type="checkbox" id="tv-showPatrons" checked>
+                <label class="form-check-label" for="tv-showPatrons">Include patrons (3-5 NPCs)</label>
+              </div>
+              <div class="form-check">
                 <input class="form-check-input" type="checkbox" id="tv-showRooms" checked>
                 <label class="form-check-label" for="tv-showRooms">Include room listings</label>
               </div>
@@ -198,6 +202,15 @@
                     <div class="card-header border-secondary"><h6 class="mb-0">Staff</h6></div>
                     <div class="card-body">
                       <div class="row row-cols-1 row-cols-sm-2 g-2" id="tv-staff"></div>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="col-12" id="tv-patrons-wrap">
+                  <div class="card bg-dark border-secondary">
+                    <div class="card-header border-secondary"><h6 class="mb-0">Patrons in the Common Room</h6></div>
+                    <div class="card-body">
+                      <div class="row row-cols-1 row-cols-sm-2 row-cols-md-3 g-2" id="tv-patrons"></div>
                     </div>
                   </div>
                 </div>
@@ -674,6 +687,49 @@
           }
           return staff;
         }
+
+        // ---------- Patron Pools ----------
+        const PATRON_TYPES = [
+          "local regular","traveling merchant","off-duty guard","farmer","craftsperson","sellsword",
+          "pilgrim","gambler","scholar","miner","sailor","peddler","tinker","hunter","herbalist",
+          "wandering bard","caravan guard","apprentice wizard","young noble","old soldier","thief",
+          "courier","scribe","acolyte","hedge witch","fortune teller","bounty hunter","shipwright"
+        ];
+
+        const PATRON_QUIRKS = [
+          "missing a finger","scar across cheek","nervous twitch","tattoo on neck","eye patch","gold tooth",
+          "walks with a limp","constantly polishing a coin","chewing on a pipe stem","fidgeting with cards",
+          "reading a crumpled letter","sharpening a knife","counting coins repeatedly","whittling wood",
+          "humming a tune","tapping fingers rhythmically","checking the door frequently","wearing a lucky charm",
+          "speaking in whispers","overly loud laugh","perpetually yawning","cleaning fingernails with dagger"
+        ];
+
+        const PATRON_HOOKS = [
+          "looking for work","celebrating a recent windfall","drowning sorrows","meeting someone secretly",
+          "hiding from someone","spreading news from afar","seeking adventurers for a job","playing cards/dice",
+          "telling tall tales","eavesdropping on conversations","waiting for a contact","arguing about politics",
+          "bragging about past exploits","complaining about taxes","nursing an old wound","selling something under the table",
+          "recruiting for a cause","warning about danger nearby","seeking revenge","trying to charm the staff",
+          "sketching the room in a journal","listening to gossip intently","brooding over a map","teaching someone a game",
+          "trading rumors for drinks","showing off a trophy","asking about local legends","looking for someone who went missing"
+        ];
+
+        function buildPatrons(rng, count){
+          const patrons = [];
+          for(let i=0; i<count; i++){
+            const type = pick(rng, PATRON_TYPES);
+            const age = pick(rng, AGE);
+            const build = pick(rng, BUILD);
+            const attire = pick(rng, ATTIRE);
+            const quirk = pick(rng, PATRON_QUIRKS);
+            const hook = pick(rng, PATRON_HOOKS);
+            const desc = `${age}, ${build} ${type}`;
+            const appearance = `${quirk}, wearing ${attire}`;
+            patrons.push({desc, appearance, hook});
+          }
+          return patrons;
+        }
+
         function buildEventsAndRumors(rng){
           // Generate 1-2 events happening right now
           const eventCount = Math.floor(rng() * 2) + 1; // 1 or 2 events
@@ -781,6 +837,26 @@
             });
           }else{
             wrapStaff.style.display="none";
+          }
+
+          // patrons
+          const showPatrons = $("tv-showPatrons").checked;
+          const wrapPatrons = $("tv-patrons-wrap");
+          if(showPatrons){
+            wrapPatrons.style.display="";
+            const patronCount = Math.floor(rng() * 3) + 3; // 3-5 patrons
+            const patrons = buildPatrons(rng, patronCount);
+            const grid = $("tv-patrons"); grid.innerHTML="";
+            patrons.forEach(p=>{
+              const col = document.createElement("div"); col.className="col";
+              const card = document.createElement("div"); card.className="tv-card";
+              card.innerHTML = `<div class="tv-patron-desc fw-semibold small">${p.desc}</div>
+                <div class="small text-secondary">${p.appearance}</div>
+                <div class="small mt-1"><i class="bi bi-activity text-warning"></i> <span class="text-info">${p.hook}</span></div>`;
+              col.appendChild(card); grid.appendChild(col);
+            });
+          }else{
+            wrapPatrons.style.display="none";
           }
 
           // events and rumors
