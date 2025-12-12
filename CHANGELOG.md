@@ -4,6 +4,19 @@ The format is based on Keep a Changelog,
 and this project adheres to Semantic Versioning.
 
 
+1.9.3.1 - 2025-12-12
+**Battle Map: Canvas Flicker Revert**
+
+- **Fixed**
+
+  - Battle Map: Reverted Rendering Change Introduced in 1.9.2
+
+  - Reverted the Battle Map rendering behavior to the pre-1.9.2 implementation after 1.9.2 introduced a visual regression.
+
+  - Fixes an issue where the canvas would briefly flash black for a couple      seconds when users moved tokens.
+
+  - Token dragging now renders smoothly again with no black-frame flicker.
+
 1.9.3 - 2025-12-12
 Encounter Builder: DM Reference Export System
 
