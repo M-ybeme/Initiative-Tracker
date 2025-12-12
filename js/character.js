@@ -646,7 +646,7 @@
           const abilMod = mods[cfg.ability] || 0;
           const prof = profEl && profEl.checked ? pb : 0;
           const total = abilMod + prof;
-          bonusEl.value = total >= 0 ? `+${total}` : `${total}`;
+          bonusEl.value = total;
         });
       }
 
@@ -713,7 +713,7 @@
           }
 
           const total = abilMod + prof;
-          bonusEl.value = total >= 0 ? `+${total}` : `${total}`;
+          bonusEl.value = total;
         });
       }
 
@@ -1916,6 +1916,7 @@
           $('playerName').value = char.playerName || '';
           $('charRace').value = char.race || '';
           $('charClass').value = char.charClass || '';
+          $('charBackground').value = char.background || '';
           $('charLevel').value = char.level ?? '';
           $('charAlignment').value = char.alignment || '';
           $('charRoleNotes').value = char.roleNotes || '';
@@ -2097,10 +2098,13 @@
       // ---------- Wizard Integration ----------
       // This function is called by the character creation wizard to populate the form
       function fillFormFromWizardData(wizardData) {
+        console.log('📝 fillFormFromWizardData called with data:', wizardData);
+
         // Set loading flag to prevent auto-saves during form population
         isLoadingCharacter = true;
 
         // Fill in basic info
+        console.log('Setting character name to:', wizardData.name);
         if (wizardData.name) $('charName').value = wizardData.name;
         if (wizardData.playerName) $('playerName').value = wizardData.playerName;
         if (wizardData.race) {
@@ -2108,9 +2112,9 @@
           $('charRace').value = raceText;
         }
         if (wizardData.class) $('charClass').value = wizardData.class;
+        if (wizardData.background) $('charBackground').value = wizardData.background;
         if (wizardData.level) $('charLevel').value = wizardData.level;
         if (wizardData.alignment) $('charAlignment').value = wizardData.alignment;
-        if (wizardData.background) $('charBackground').value = wizardData.background;
 
         // Fill in ability scores (with racial bonuses already applied)
         if (wizardData.str) $('statStr').value = wizardData.str;
@@ -2202,11 +2206,15 @@
         recalcSkillsFromForm(false);
         recalcPassivesFromForm();
 
+        console.log('✅ Form population complete, scheduling save...');
+
         // Clear loading flag after a short delay
         setTimeout(() => {
           isLoadingCharacter = false;
+          console.log('💾 Saving character from wizard...');
           // NOW save the character once
           saveCurrentCharacter();
+          console.log('✅ Character saved!');
         }, 100);
       }
 
@@ -2221,6 +2229,7 @@
           playerName: '',
           race: '',
           charClass: '',
+          background: '',
           level: '',
           alignment: '',
           roleNotes: '',
@@ -2392,6 +2401,7 @@
           char.playerName = getVal('playerName');
           char.race = getVal('charRace');
           char.charClass = getVal('charClass');
+          char.background = getVal('charBackground');
           char.level = getNum('charLevel');
           char.alignment = getVal('charAlignment');
           char.roleNotes = getVal('charRoleNotes');
@@ -4123,6 +4133,11 @@
           }
         });
       }
+
+      // ---------- Global API for Level-Up System ----------
+      window.getCurrentCharacter = getCurrentCharacter;
+      window.saveCurrentCharacter = saveCurrentCharacter;
+      window.loadCharacterIntoForm = fillFormFromCharacter;
 
       if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', init);

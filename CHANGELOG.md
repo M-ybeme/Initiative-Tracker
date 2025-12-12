@@ -4,6 +4,65 @@ The format is based on Keep a Changelog,
 and this project adheres to Semantic Versioning.
 
 
+1.10.0 - 2025-12-12
+**Character Manager: Level-Up System**
+
+- **Added**
+
+  - **Complete D&D 5e Level-Up System**
+    - Step-by-step wizard interface for leveling characters from 1-20
+    - Supports all 12 PHB core classes (Barbarian, Bard, Cleric, Druid, Fighter, Monk, Paladin, Ranger, Rogue, Sorcerer, Warlock, Wizard)
+    - Comprehensive data files with class progression tables, spell slots, and features
+
+  - **HP Management**
+    - Choice between rolling hit die or taking average HP gain
+    - Automatic CON modifier calculation
+    - Updates both max HP and current HP on level up
+
+  - **Ability Score Improvements (ASI)**
+    - Available at class-appropriate levels (e.g., Fighter at 4, 6, 8, etc.)
+    - Standard ASI options: +2 to one ability, or +1 to two abilities
+    - Ability score cap enforcement (max 20)
+    - Validation to ensure exactly +2 total increase
+
+  - **Feat System**
+    - 40+ official D&D 5e feats from Player's Handbook
+    - Prerequisite checking (ability scores, proficiencies, etc.)
+    - Automatic ability score increases from feats (e.g., Resilient, Actor)
+    - Complete feat descriptions and benefits
+    - Organized categories: Combat, Defensive, Utility, Magic, and Mobility
+
+  - **Spell Slot Progression**
+    - Automatic spell slot updates for all caster classes
+    - Separate Pact Magic tracking for Warlocks
+    - Proper multiclass spell slot calculations
+    - 1st through 9th level spell slot support
+
+  - **Class Features Display**
+    - Shows new features gained at each level
+    - Automatic proficiency bonus updates
+    - Feature descriptions appended to character notes
+
+  - **Character Creation Wizard Integration**
+    - Added Background field to Basic Information section
+    - Fixed wizard completion to properly populate character sheet
+    - Improved save/load synchronization
+
+- **Fixed**
+
+  - Character creation wizard now correctly fills out character sheet on completion
+  - Level-up changes now properly save to IndexedDB
+  - Fixed save/load order to ensure modified character data persists
+  - Removed "+" prefix from number inputs to eliminate browser warnings
+  - Background field now integrated throughout character save/load system
+
+- **Technical**
+
+  - New files: `js/level-up-data.js`, `js/level-up-system.js`
+  - Documentation: `LEVEL_UP_SYSTEM.md`, `LEVEL_UP_TESTING.md`
+  - Global API exports for character management functions
+  - Improved getCurrentCharacter() integration with level-up system
+
 1.9.3.1 - 2025-12-12
 **Battle Map: Canvas Flicker Revert**
 

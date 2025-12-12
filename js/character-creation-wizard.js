@@ -993,14 +993,18 @@ const CharacterCreationWizard = (function() {
   }
 
   function openWizard() {
+    console.log('🪄 Opening Character Creation Wizard');
     currentStep = 0;
     wizardData = {};
 
     const modal = document.getElementById('characterCreationModal');
     if (modal) {
+      console.log('✅ Modal found, showing wizard');
       const bsModal = new bootstrap.Modal(modal);
       bsModal.show();
       renderStep();
+    } else {
+      console.error('❌ Character creation modal not found in DOM');
     }
   }
 
@@ -1035,6 +1039,8 @@ const CharacterCreationWizard = (function() {
   }
 
   function handleButtonClick(action) {
+    console.log('🔘 Button clicked:', action);
+
     if (action === 'Back') {
       if (currentStep > 0) {
         currentStep--;
@@ -1046,15 +1052,21 @@ const CharacterCreationWizard = (function() {
         currentStep++;
         renderStep();
       }
-    } else if (action === 'Finish & Create Character') {
+    } else if (action === 'Create Character' || action === 'Finish & Create Character') {
+      console.log('🎯 Finish button clicked, validating...');
       const step = steps[currentStep];
       if (!step.validate || step.validate()) {
+        console.log('✅ Validation passed, calling finishWizard()');
         finishWizard();
+      } else {
+        console.log('❌ Validation failed');
       }
     }
   }
 
   function finishWizard() {
+    console.log('🧙 Wizard finishing with data:', wizardData);
+
     // Add racial ability score bonuses
     applyRacialBonuses();
 
@@ -1068,20 +1080,37 @@ const CharacterCreationWizard = (function() {
     // Calculate saving throws
     wizardData.savingThrows = getClassSavingThrows(wizardData.class);
 
+    console.log('📋 Final wizard data:', {
+      name: wizardData.name,
+      race: wizardData.race,
+      class: wizardData.class,
+      level: wizardData.level,
+      hp: wizardData.maxHP,
+      ac: wizardData.ac
+    });
+
     // Populate the main character form with wizard data
-    if (typeof fillFormFromWizardData === 'function') {
-      fillFormFromWizardData(wizardData);
-    }
+    console.log('🔍 Checking fillFormFromWizardData...', typeof window.fillFormFromWizardData);
+    if (typeof window.fillFormFromWizardData === 'function') {
+      console.log('✅ Calling fillFormFromWizardData');
+      window.fillFormFromWizardData(wizardData);
 
-    // Close the modal
-    const modal = document.getElementById('characterCreationModal');
-    if (modal) {
-      const bsModal = bootstrap.Modal.getInstance(modal);
-      if (bsModal) bsModal.hide();
-    }
+      // Wait for the form to be filled and saved (fillFormFromWizardData has a 100ms delay)
+      setTimeout(() => {
+        // Close the modal
+        const modal = document.getElementById('characterCreationModal');
+        if (modal) {
+          const bsModal = bootstrap.Modal.getInstance(modal);
+          if (bsModal) bsModal.hide();
+        }
 
-    // Show success message
-    alert(`Character created successfully!\n\n${wizardData.name}, the Level ${wizardData.level} ${wizardData.race} ${wizardData.class}\n\nYour character sheet has been populated with:\n✓ Ability scores (with racial bonuses)\n✓ HP: ${wizardData.maxHP}, AC: ${wizardData.ac}\n✓ Skills, saving throws, and proficiency bonus\n✓ Speed and basic stats\n\nYou can now add equipment, spells, and customize further!`);
+        // Show success message
+        alert(`Character created successfully!\n\n${wizardData.name}, the Level ${wizardData.level} ${wizardData.race} ${wizardData.class}\n\nYour character sheet has been populated with:\n✓ Ability scores (with racial bonuses)\n✓ HP: ${wizardData.maxHP}, AC: ${wizardData.ac}\n✓ Skills, saving throws, and proficiency bonus\n✓ Speed and basic stats\n\nYou can now add equipment, spells, and customize further!`);
+      }, 200); // Wait 200ms to ensure fillFormFromWizardData completes
+    } else {
+      console.error('fillFormFromWizardData function not found. Make sure character.js is loaded.');
+      alert('Error: Unable to populate character sheet. Please refresh the page and try again.');
+    }
   }
 
   function applyRacialBonuses() {
