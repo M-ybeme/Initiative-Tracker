@@ -4,6 +4,41 @@ The format is based on Keep a Changelog,
 and this project adheres to Semantic Versioning.
 
 
+1.9.3 - 2025-12-12
+Encounter Builder: DM Reference Export System
+
+Added
+
+**Encounter Builder: Enemy Stat Block Text Export**
+- **Automatic Text File Generation**
+  - Generates comprehensive DM reference file with all enemy stat blocks
+  - Includes all data from the D&D 5e API: actions, reactions, special abilities, legendary actions
+  - Formatted with clear sections and ASCII dividers for easy reading
+  - Professional stat block layout with attack bonuses, save DCs, and damage dice
+- **Export Prompt on Send to Tracker**
+  - When clicking "Send to Initiative Tracker", user is prompted to download stat blocks
+  - Confirm dialog explains the file includes all actions, reactions, and special abilities
+  - Optional download - user can decline and proceed to tracker without file
+  - Filename includes timestamp for organization (e.g., `encounter_statblocks_2025-12-12T14-30-45.txt`)
+- **Complete Stat Block Details**
+  - Each enemy shows: Name, Size, Type, CR, AC, HP, Speed
+  - CR breakdown with offensive/defensive ratings
+  - Special abilities with full descriptions
+  - Actions with attack bonuses (+X to hit), save DCs, and damage notation
+  - Reactions for tactical awareness
+  - Legendary actions for boss encounters
+  - Encounter summary with XP calculations and difficulty rating
+- **DM Workflow Enhancement**
+  - Eliminates need to manually copy stat blocks during combat
+  - All enemy information in one text file for quick reference
+  - DM can print or keep open on second screen
+  - Saves time during session prep and improves combat flow
+
+Changed
+
+- "Send to Initiative Tracker" button now includes optional stat block export prompt
+- Text file export function generates formatted plain text with encounter summary
+
 1.9.2 - 2025-12-12
 Quality-of-Life Enhancements: NPC Combat Stats, Tavern Patrons, Loot Quick Bundles, and Battle Map Integration
 
