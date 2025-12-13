@@ -420,7 +420,120 @@ const CharacterCreationWizard = (function() {
       }
     },
     {
-      title: "Step 4: Ability Scores",
+      title: "Step 4: Choose Your Subclass",
+      content: `
+        <h5>Select your specialization</h5>
+        <p id="subclassIntro">Your subclass defines your character's unique path and abilities.</p>
+        <div id="subclassSelectionContainer">
+          <!-- Will be populated dynamically based on class and level -->
+        </div>
+      `,
+      buttons: ['Back', 'Next'],
+      validate: () => {
+        // Check if subclass selection is required
+        const needsSubclass = wizardData.subclassRequired;
+        if (!needsSubclass) {
+          return true; // Skip validation if not needed
+        }
+
+        const selectedSubclass = wizardData.subclass;
+        if (!selectedSubclass) {
+          alert('Please select your subclass.');
+          return false;
+        }
+        return true;
+      },
+      onShow: () => {
+        const container = document.getElementById('subclassSelectionContainer');
+        const intro = document.getElementById('subclassIntro');
+        if (!container || !intro) return;
+
+        const className = wizardData.class;
+        const level = wizardData.level || 1;
+
+        // Check if subclass selection is needed at this level
+        if (window.LevelUpData && typeof window.LevelUpData.getSubclassSelectionLevel === 'function') {
+          const selectionLevel = window.LevelUpData.getSubclassSelectionLevel(className);
+          const needsSubclass = selectionLevel && level >= selectionLevel;
+
+          wizardData.subclassRequired = needsSubclass;
+
+          if (!needsSubclass) {
+            container.innerHTML = `
+              <div class="alert alert-info">
+                <i class="bi bi-info-circle me-2"></i>
+                Your ${className} will choose their subclass at level ${selectionLevel || 'N/A'}.
+                You can skip this step for now.
+              </div>
+            `;
+            return;
+          }
+
+          // Get subclass data
+          const subclassData = window.LevelUpData.getSubclassData(className);
+          if (!subclassData) {
+            container.innerHTML = `
+              <div class="alert alert-warning">
+                <i class="bi bi-exclamation-triangle me-2"></i>
+                Subclass data not available for ${className}.
+              </div>
+            `;
+            return;
+          }
+
+          intro.textContent = `Choose your ${subclassData.name}. This choice is permanent and defines your character's path.`;
+
+          // Render subclass options
+          const options = Object.keys(subclassData.options);
+          container.innerHTML = `
+            <div class="list-group">
+              ${options.map(optionName => {
+                const option = subclassData.options[optionName];
+                const firstFeatures = option.features[selectionLevel] || [];
+                return `
+                  <label class="list-group-item list-group-item-action bg-dark border-secondary cursor-pointer">
+                    <div class="d-flex align-items-start gap-2">
+                      <input type="radio" name="wizardSubclass" value="${optionName}"
+                             class="form-check-input mt-1 wizard-subclass-radio">
+                      <div class="flex-grow-1">
+                        <h6 class="mb-1">${option.name}</h6>
+                        <p class="mb-2 small text-muted">${option.description}</p>
+                        ${firstFeatures.length > 0 ? `
+                          <div class="small">
+                            <strong>Initial Features (Level ${selectionLevel}):</strong>
+                            <ul class="mb-0 mt-1">
+                              ${firstFeatures.map(f => `<li>${f}</li>`).join('')}
+                            </ul>
+                          </div>
+                        ` : ''}
+                      </div>
+                    </div>
+                  </label>
+                `;
+              }).join('')}
+            </div>
+          `;
+
+          // Add event listeners to radio buttons
+          const radios = container.querySelectorAll('.wizard-subclass-radio');
+          radios.forEach(radio => {
+            radio.addEventListener('change', (e) => {
+              wizardData.subclass = e.target.value;
+            });
+          });
+
+        } else {
+          container.innerHTML = `
+            <div class="alert alert-warning">
+              <i class="bi bi-exclamation-triangle me-2"></i>
+              Level-up data not loaded. Please refresh the page.
+            </div>
+          `;
+        }
+      }
+    },
+    {
+      title: "Step 5: Ability Scores",
       content: `
         <h5>Roll your ability scores</h5>
         <p>The six ability scores define your character's core attributes. Roll 4d6, drop the lowest die, and assign the results.</p>
@@ -552,7 +665,7 @@ const CharacterCreationWizard = (function() {
       }
     },
     {
-      title: "Step 5: Choose Your Background",
+      title: "Step 6: Choose Your Background",
       content: `
         <h5>Choose your background</h5>
         <p>Your background provides additional skill proficiencies, tool proficiencies, and roleplay hooks.</p>
@@ -629,7 +742,7 @@ const CharacterCreationWizard = (function() {
       }
     },
     {
-      title: "Step 6: Skills & Proficiencies",
+      title: "Step 7: Skills & Proficiencies",
       content: `
         <h5>Choose your skill proficiencies</h5>
         <p id="skillSelectionInstructions">Select the skills your class grants you.</p>
@@ -718,7 +831,7 @@ const CharacterCreationWizard = (function() {
       }
     },
     {
-      title: "Step 7: Hit Points & Combat Stats",
+      title: "Step 8: Hit Points & Combat Stats",
       content: `
         <h5>Calculate your starting stats</h5>
         <p>We'll automatically calculate your HP, AC, and other combat statistics.</p>
@@ -932,7 +1045,235 @@ const CharacterCreationWizard = (function() {
       }
     },
     {
-      title: "Step 8: Review & Finish",
+      title: "Step 9: Learn Starting Spells",
+      content: `
+        <h5>Select your starting spells</h5>
+        <div id="spellLearningContainer">
+          <!-- Will be populated dynamically based on class and level -->
+        </div>
+      `,
+      buttons: ['Back', 'Next'],
+      validate: () => {
+        // Skip if not a spellcaster
+        if (!wizardData.isSpellcaster) return true;
+
+        // Check if required cantrips are selected
+        const requiredCantrips = wizardData.requiredCantrips || 0;
+        const selectedCantrips = wizardData.selectedCantrips || [];
+
+        if (selectedCantrips.length < requiredCantrips) {
+          alert(`Please select ${requiredCantrips - selectedCantrips.length} more cantrip${requiredCantrips - selectedCantrips.length > 1 ? 's' : ''}.`);
+          return false;
+        }
+
+        // Check if required spells are selected
+        const requiredSpells = wizardData.requiredStartingSpells || 0;
+        const selectedSpells = wizardData.selectedSpells || [];
+
+        if (selectedSpells.length < requiredSpells) {
+          alert(`Please select ${requiredSpells - selectedSpells.length} more spell${requiredSpells - selectedSpells.length > 1 ? 's' : ''}.`);
+          return false;
+        }
+
+        return true;
+      },
+      onShow: () => {
+        const container = document.getElementById('spellLearningContainer');
+        if (!container) return;
+
+        // Check if character is a spellcaster
+        const spellcastingClasses = ['Wizard', 'Sorcerer', 'Bard', 'Warlock', 'Cleric', 'Druid', 'Paladin', 'Ranger', 'Artificer'];
+        const isSpellcaster = spellcastingClasses.includes(wizardData.class);
+
+        if (!isSpellcaster) {
+          container.innerHTML = `
+            <div class="alert alert-info">
+              <p>${wizardData.class}s don't learn spells at character creation.</p>
+              <p>You can proceed to the next step!</p>
+            </div>
+          `;
+          wizardData.isSpellcaster = false;
+          return;
+        }
+
+        wizardData.isSpellcaster = true;
+
+        // Determine spell learning rules
+        let spellsToLearn = 0;
+        let cantripsToLearn = 0;
+        let maxSpellLevel = 0;
+        let isPreparedCaster = false;
+
+        if (wizardData.class === 'Wizard') {
+          spellsToLearn = 6; // Wizards start with 6 1st-level spells
+          cantripsToLearn = 3;
+          maxSpellLevel = 1;
+        } else if (wizardData.class === 'Sorcerer') {
+          spellsToLearn = 2; // Sorcerers start with 2 1st-level spells
+          cantripsToLearn = 4;
+          maxSpellLevel = 1;
+        } else if (wizardData.class === 'Bard') {
+          spellsToLearn = 4; // Bards start with 4 1st-level spells
+          cantripsToLearn = 2;
+          maxSpellLevel = 1;
+        } else if (wizardData.class === 'Warlock') {
+          spellsToLearn = 2; // Warlocks start with 2 1st-level spells
+          cantripsToLearn = 2;
+          maxSpellLevel = 1;
+        } else if (wizardData.class === 'Cleric' || wizardData.class === 'Druid') {
+          // Prepared casters don't "learn" spells
+          container.innerHTML = `
+            <div class="alert alert-info">
+              <p><strong>${wizardData.class}s</strong> are <strong>prepared casters</strong>.</p>
+              <p>You don't choose a fixed spell list. Instead, you can prepare different spells each day from the full ${wizardData.class} spell list!</p>
+              <p class="mb-0"><small>After a long rest, you can prepare a number of ${wizardData.class} spells equal to your ${wizardData.class === 'Cleric' ? 'WIS' : 'WIS'} modifier + your ${wizardData.class} level (minimum 1).</small></p>
+            </div>
+          `;
+          wizardData.isSpellcaster = false;
+          isPreparedCaster = true;
+          return;
+        } else if (wizardData.class === 'Paladin') {
+          // Paladins don't get spells at level 1
+          if (wizardData.level === 1) {
+            container.innerHTML = `
+              <div class="alert alert-info">
+                <p>Paladins don't gain spellcasting until <strong>level 2</strong>.</p>
+                <p>You can proceed to the next step!</p>
+              </div>
+            `;
+            wizardData.isSpellcaster = false;
+            return;
+          } else {
+            // Level 2+ Paladins are prepared casters
+            isPreparedCaster = true;
+            container.innerHTML = `
+              <div class="alert alert-info">
+                <p><strong>Paladins</strong> are <strong>prepared casters</strong>.</p>
+                <p>You can prepare different spells each day from the Paladin spell list!</p>
+              </div>
+            `;
+            wizardData.isSpellcaster = false;
+            return;
+          }
+        } else if (wizardData.class === 'Ranger') {
+          // Rangers don't get spells at level 1
+          if (wizardData.level === 1) {
+            container.innerHTML = `
+              <div class="alert alert-info">
+                <p>Rangers don't gain spellcasting until <strong>level 2</strong>.</p>
+                <p>You can proceed to the next step!</p>
+              </div>
+            `;
+            wizardData.isSpellcaster = false;
+            return;
+          } else {
+            spellsToLearn = 2; // Rangers learn 2 spells at level 2
+            maxSpellLevel = 1;
+          }
+        } else if (wizardData.class === 'Artificer') {
+          spellsToLearn = 0; // Artificers prepare spells
+          cantripsToLearn = 2;
+          isPreparedCaster = true;
+          container.innerHTML = `
+            <div class="alert alert-info">
+              <p><strong>Artificers</strong> prepare spells from the Artificer spell list.</p>
+              <p>You don't choose a fixed spell list!</p>
+            </div>
+          `;
+          wizardData.isSpellcaster = false;
+          return;
+        }
+
+        // Adjust for higher starting levels
+        if (wizardData.level > 1 && wizardData.class === 'Wizard') {
+          spellsToLearn = 6 + (wizardData.level - 1) * 2; // 2 spells per level
+        } else if (wizardData.level > 1 && (wizardData.class === 'Sorcerer' || wizardData.class === 'Bard' || wizardData.class === 'Warlock')) {
+          // These classes gain spells at specific levels
+          const spellsKnownByLevel = {
+            'Sorcerer': [0, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 12, 13, 13, 14, 14, 15, 15, 15, 15],
+            'Bard': [0, 4, 5, 6, 7, 8, 9, 10, 11, 12, 14, 15, 15, 16, 18, 19, 19, 20, 22, 22, 22],
+            'Warlock': [0, 2, 3, 4, 5, 6, 7, 8, 9, 10, 10, 11, 11, 12, 12, 13, 13, 14, 14, 15, 15]
+          };
+          spellsToLearn = spellsKnownByLevel[wizardData.class][wizardData.level] || spellsToLearn;
+        }
+
+        // Set max spell level based on character level
+        if (wizardData.level >= 17) maxSpellLevel = 9;
+        else if (wizardData.level >= 15) maxSpellLevel = 8;
+        else if (wizardData.level >= 13) maxSpellLevel = 7;
+        else if (wizardData.level >= 11) maxSpellLevel = 6;
+        else if (wizardData.level >= 9) maxSpellLevel = 5;
+        else if (wizardData.level >= 7) maxSpellLevel = 4;
+        else if (wizardData.level >= 5) maxSpellLevel = 3;
+        else if (wizardData.level >= 3) maxSpellLevel = 2;
+        else maxSpellLevel = 1;
+
+        wizardData.requiredStartingSpells = spellsToLearn;
+        wizardData.requiredCantrips = cantripsToLearn;
+        wizardData.selectedSpells = [];
+        wizardData.selectedCantrips = [];
+
+        // Build the spell selection UI
+        container.innerHTML = `
+          <div class="alert alert-primary">
+            <p><strong>${wizardData.class} Spell Learning:</strong></p>
+            <ul class="mb-0">
+              ${cantripsToLearn > 0 ? `<li>Select <strong>${cantripsToLearn} cantrips</strong></li>` : ''}
+              ${spellsToLearn > 0 ? `<li>Select <strong>${spellsToLearn} spells</strong> of level ${maxSpellLevel} or lower</li>` : ''}
+            </ul>
+          </div>
+
+          ${cantripsToLearn > 0 ? `
+            <div class="mb-4">
+              <h6>Cantrips</h6>
+              <div class="input-group input-group-sm mb-2">
+                <span class="input-group-text"><i class="bi bi-search"></i></span>
+                <input type="text" id="cantripSearch" class="form-control" placeholder="Search cantrips...">
+              </div>
+              <div id="cantripList" style="max-height: 200px; overflow-y: auto; border: 1px solid #dee2e6; border-radius: 0.25rem; padding: 0.5rem;">
+                <!-- Cantrips will be loaded here -->
+              </div>
+              <div class="mt-2">
+                <strong>Selected:</strong> <span id="selectedCantripCount" class="badge bg-primary">0/${cantripsToLearn}</span>
+                <div id="selectedCantripsList" class="mt-1"></div>
+              </div>
+            </div>
+          ` : ''}
+
+          ${spellsToLearn > 0 ? `
+            <div class="mb-4">
+              <h6>Spells (Level 1-${maxSpellLevel})</h6>
+              <div class="input-group input-group-sm mb-2">
+                <span class="input-group-text"><i class="bi bi-search"></i></span>
+                <input type="text" id="spellSearch" class="form-control" placeholder="Search spells...">
+                <select id="spellLevelFilter" class="form-select" style="max-width: 150px;">
+                  <option value="all">All Levels</option>
+                  ${Array.from({length: maxSpellLevel}, (_, i) => i + 1).map(lvl =>
+                    `<option value="${lvl}">Level ${lvl}</option>`
+                  ).join('')}
+                </select>
+              </div>
+              <div id="spellList" style="max-height: 300px; overflow-y: auto; border: 1px solid #dee2e6; border-radius: 0.25rem; padding: 0.5rem;">
+                <!-- Spells will be loaded here -->
+              </div>
+              <div class="mt-2">
+                <strong>Selected:</strong> <span id="selectedSpellCount" class="badge bg-primary">0/${spellsToLearn}</span>
+                <div id="selectedSpellsList" class="mt-1"></div>
+              </div>
+            </div>
+          ` : ''}
+        `;
+
+        // Load spell data and populate lists
+        if (window.SPELLS_DATA) {
+          renderWizardSpells(wizardData.class, maxSpellLevel, cantripsToLearn, spellsToLearn);
+        } else {
+          container.innerHTML += '<div class="alert alert-danger">Error: Spell database not loaded.</div>';
+        }
+      }
+    },
+    {
+      title: "Step 10: Review & Finish",
       content: `
         <h5>Review your character</h5>
         <p>Here's a summary of your character. Click "Create Character" to finish!</p>
@@ -1062,6 +1403,149 @@ const CharacterCreationWizard = (function() {
         console.log('❌ Validation failed');
       }
     }
+  }
+
+  function renderWizardSpells(className, maxSpellLevel, cantripsNeeded, spellsNeeded) {
+    if (!window.SPELLS_DATA) return;
+
+    // Filter spells for this class
+    const classSpells = window.SPELLS_DATA.filter(spell =>
+      spell.classes && spell.classes.includes(className)
+    );
+
+    // Separate cantrips and leveled spells
+    const cantrips = classSpells.filter(s => s.level === 0);
+    const leveledSpells = classSpells.filter(s => s.level > 0 && s.level <= maxSpellLevel);
+
+    // Render cantrips
+    if (cantripsNeeded > 0) {
+      renderSpellCategory('cantrip', cantrips, cantripsNeeded);
+    }
+
+    // Render leveled spells
+    if (spellsNeeded > 0) {
+      renderSpellCategory('spell', leveledSpells, spellsNeeded);
+    }
+  }
+
+  function renderSpellCategory(type, spells, maxSelect) {
+    const listId = type === 'cantrip' ? 'cantripList' : 'spellList';
+    const searchId = type === 'cantrip' ? 'cantripSearch' : 'spellSearch';
+    const selectedKey = type === 'cantrip' ? 'selectedCantrips' : 'selectedSpells';
+
+    let filteredSpells = [...spells];
+    let searchTerm = '';
+    let levelFilter = 'all';
+
+    function renderList() {
+      const listEl = document.getElementById(listId);
+      if (!listEl) return;
+
+      let displaySpells = filteredSpells;
+
+      // Apply search filter
+      if (searchTerm) {
+        displaySpells = displaySpells.filter(spell =>
+          spell.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          (spell.school || '').toLowerCase().includes(searchTerm.toLowerCase())
+        );
+      }
+
+      // Apply level filter (for leveled spells only)
+      if (type === 'spell' && levelFilter !== 'all') {
+        displaySpells = displaySpells.filter(s => s.level === parseInt(levelFilter));
+      }
+
+      // Limit to 50 results
+      displaySpells = displaySpells.slice(0, 50);
+
+      listEl.innerHTML = displaySpells.map(spell => {
+        const isSelected = wizardData[selectedKey].some(s => s.title === spell.title);
+        return `
+          <div class="form-check">
+            <input class="form-check-input spell-checkbox" type="checkbox"
+                   id="${type}-${spell.title.replace(/[^a-zA-Z0-9]/g, '')}"
+                   data-spell-title="${spell.title}"
+                   ${isSelected ? 'checked' : ''}>
+            <label class="form-check-label small" for="${type}-${spell.title.replace(/[^a-zA-Z0-9]/g, '')}">
+              <strong>${spell.title}</strong>
+              ${type === 'spell' ? `<span class="badge bg-secondary ms-1">Lvl ${spell.level}</span>` : ''}
+              <small class="text-muted ms-1">${spell.school || ''}</small>
+            </label>
+          </div>
+        `;
+      }).join('');
+
+      // Add event listeners to checkboxes
+      listEl.querySelectorAll('.spell-checkbox').forEach(checkbox => {
+        checkbox.addEventListener('change', (e) => {
+          const spellTitle = e.target.dataset.spellTitle;
+          const spell = spells.find(s => s.title === spellTitle);
+          if (!spell) return;
+
+          if (e.target.checked) {
+            // Add spell
+            if (wizardData[selectedKey].length < maxSelect) {
+              wizardData[selectedKey].push(spell);
+            } else {
+              alert(`You can only select ${maxSelect} ${type === 'cantrip' ? 'cantrips' : 'spells'}.`);
+              e.target.checked = false;
+              return;
+            }
+          } else {
+            // Remove spell
+            wizardData[selectedKey] = wizardData[selectedKey].filter(s => s.title !== spellTitle);
+          }
+
+          updateSelectedDisplay();
+        });
+      });
+    }
+
+    function updateSelectedDisplay() {
+      const countEl = document.getElementById(type === 'cantrip' ? 'selectedCantripCount' : 'selectedSpellCount');
+      const listEl = document.getElementById(type === 'cantrip' ? 'selectedCantripsList' : 'selectedSpellsList');
+
+      if (countEl) {
+        const count = wizardData[selectedKey].length;
+        countEl.textContent = `${count}/${maxSelect}`;
+        countEl.className = count === maxSelect ? 'badge bg-success' : 'badge bg-primary';
+      }
+
+      if (listEl) {
+        if (wizardData[selectedKey].length === 0) {
+          listEl.innerHTML = '<small class="text-muted">None selected</small>';
+        } else {
+          listEl.innerHTML = wizardData[selectedKey].map(s =>
+            `<span class="badge bg-info me-1">${s.title}</span>`
+          ).join('');
+        }
+      }
+    }
+
+    // Set up search
+    const searchEl = document.getElementById(searchId);
+    if (searchEl) {
+      searchEl.addEventListener('input', (e) => {
+        searchTerm = e.target.value;
+        renderList();
+      });
+    }
+
+    // Set up level filter (for leveled spells only)
+    if (type === 'spell') {
+      const filterEl = document.getElementById('spellLevelFilter');
+      if (filterEl) {
+        filterEl.addEventListener('change', (e) => {
+          levelFilter = e.target.value;
+          renderList();
+        });
+      }
+    }
+
+    // Initial render
+    renderList();
+    updateSelectedDisplay();
   }
 
   function finishWizard() {

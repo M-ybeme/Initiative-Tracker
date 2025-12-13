@@ -76,6 +76,58 @@ const LevelUpSystem = (function() {
   }
 
   /**
+   * Get ordinal suffix for a number (1st, 2nd, 3rd, etc.)
+   */
+  function getOrdinalSuffix(num) {
+    const j = num % 10;
+    const k = num % 100;
+    if (j === 1 && k !== 11) return 'st';
+    if (j === 2 && k !== 12) return 'nd';
+    if (j === 3 && k !== 13) return 'rd';
+    return 'th';
+  }
+
+  /**
+   * Filter spells for level-up based on class, level, and search criteria
+   */
+  function filterSpellsForLevelUp(className, maxSpellLevel, searchTerm, levelFilter, knownSpells) {
+    if (!window.SPELLS_DATA) return [];
+
+    return window.SPELLS_DATA
+      .filter(spell => {
+        // Class match
+        if (!spell.classes || !spell.classes.includes(className)) return false;
+
+        // Level restriction
+        if (spell.level > maxSpellLevel) return false;
+
+        // Not already known
+        const spellName = spell.title.toLowerCase();
+        if (knownSpells.some(s => (s.name || '').toLowerCase() === spellName)) return false;
+
+        // Level filter
+        if (levelFilter !== 'all' && spell.level !== parseInt(levelFilter, 10)) return false;
+
+        // Search term
+        if (searchTerm) {
+          const term = searchTerm.toLowerCase();
+          const matchName = spell.title.toLowerCase().includes(term);
+          const matchSchool = (spell.school || '').toLowerCase().includes(term);
+          const matchTags = (spell.tags || []).some(t => t.toLowerCase().includes(term));
+          if (!matchName && !matchSchool && !matchTags) return false;
+        }
+
+        return true;
+      })
+      .sort((a, b) => {
+        // Sort by level, then alphabetically
+        if (a.level !== b.level) return a.level - b.level;
+        return a.title.localeCompare(b.title);
+      })
+      .slice(0, 50); // Limit display to 50 results
+  }
+
+  /**
    * Show the level-up modal with all options
    */
   function showLevelUpModal(character, className, currentLevel, newLevel, classData, changes) {
@@ -141,32 +193,289 @@ const LevelUpSystem = (function() {
    */
   function renderLevelUpSteps(character, className, classData, changes) {
     let html = '<div class="accordion" id="levelUpAccordion">';
+    let stepNum = 1;
 
-    // Step 1: Hit Points
-    html += renderHPStep(character, classData, changes, 1);
+    // Check if subclass selection is needed
+    const currentLevel = parseInt(character.level, 10) || 1;
+    const newLevel = currentLevel + 1;
 
-    // Step 2: Ability Score Improvement / Feat
+    // Step: Multiclass Choice (optional)
+    html += renderMulticlassChoiceStep(character, className, stepNum++);
+
+    const needsSubclass = LevelUpData.needsSubclassSelection(
+      className,
+      currentLevel,
+      newLevel,
+      !!character.subclass
+    );
+
+    // Step: Subclass Selection (if needed)
+    if (needsSubclass) {
+      html += renderSubclassStep(character, className, stepNum++);
+    }
+
+    // Step: Hit Points
+    html += renderHPStep(character, classData, changes, stepNum++);
+
+    // Step: Spell Learning (if applicable)
+    const spellRules = LevelUpData.getSpellLearningRules(className, newLevel);
+    if (spellRules) {
+      html += renderSpellLearningStep(character, spellRules, stepNum++);
+    }
+
+    // Step: Ability Score Improvement / Feat
     if (changes.hasASI) {
-      html += renderASIFeatStep(character, 2);
+      html += renderASIFeatStep(character, stepNum++);
     }
 
-    // Step 3: Spell Slots (if caster)
+    // Step: Spell Slots (if caster)
     if (changes.spellSlots || changes.pactSlots) {
-      html += renderSpellSlotsStep(character, classData, changes, changes.hasASI ? 3 : 2);
+      html += renderSpellSlotsStep(character, classData, changes, stepNum++);
     }
 
-    // Step 4: New Features
-    html += renderFeaturesStep(character, className, changes, changes.hasASI ? 4 : 3);
+    // Step: New Features
+    html += renderFeaturesStep(character, className, changes, stepNum++);
 
-    // Step 5: Summary
-    html += renderSummaryStep(character, className, changes, changes.hasASI ? 5 : 4);
+    // Step: Summary
+    html += renderSummaryStep(character, className, changes, stepNum);
 
     html += '</div>';
     return html;
   }
 
   /**
-   * Step 1: Hit Point Increase
+   * Step: Multiclass Choice (always shown)
+   */
+  function renderMulticlassChoiceStep(character, className, stepNum) {
+    return `
+      <div class="accordion-item bg-dark border-secondary">
+        <h2 class="accordion-header">
+          <button class="accordion-button bg-dark text-light" type="button"
+                  data-bs-toggle="collapse" data-bs-target="#step${stepNum}">
+            <strong>Step ${stepNum}: Choose Level-Up Path</strong>
+            <span class="ms-auto me-3 badge bg-info" id="multiclassPathBadge">Continue ${className}</span>
+          </button>
+        </h2>
+        <div id="step${stepNum}" class="accordion-collapse collapse show"
+             data-bs-parent="#levelUpAccordion">
+          <div class="accordion-body">
+            <p class="text-muted mb-3">
+              <i class="bi bi-info-circle me-1"></i>
+              Choose whether to level up in your current class or multiclass into a new one.
+            </p>
+
+            <div class="list-group">
+              <label class="list-group-item list-group-item-action bg-dark border-secondary cursor-pointer">
+                <div class="d-flex align-items-start gap-2">
+                  <input type="radio" name="multiclassPath" value="continue" checked
+                         class="form-check-input mt-1 multiclass-path-radio" />
+                  <div class="flex-grow-1">
+                    <h6 class="mb-1"><i class="bi bi-arrow-up me-1"></i>Continue as ${className}</h6>
+                    <p class="mb-0 small text-muted">Level up normally in your current class</p>
+                  </div>
+                </div>
+              </label>
+
+              <label class="list-group-item list-group-item-action bg-dark border-secondary cursor-pointer">
+                <div class="d-flex align-items-start gap-2">
+                  <input type="radio" name="multiclassPath" value="multiclass"
+                         class="form-check-input mt-1 multiclass-path-radio" />
+                  <div class="flex-grow-1">
+                    <h6 class="mb-1"><i class="bi bi-diagram-3 me-1"></i>Multiclass into a New Class</h6>
+                    <p class="mb-0 small text-muted">Take your first level in a different class (requires meeting prerequisites)</p>
+                  </div>
+                </div>
+              </label>
+            </div>
+
+            <div id="multiclassClassSelection" class="mt-3 d-none">
+              <label class="form-label">Select New Class:</label>
+              <select class="form-select" id="multiclassNewClass">
+                <option value="">Choose a class...</option>
+                <option value="Artificer">Artificer</option>
+                <option value="Barbarian">Barbarian</option>
+                <option value="Bard">Bard</option>
+                <option value="Cleric">Cleric</option>
+                <option value="Druid">Druid</option>
+                <option value="Fighter">Fighter</option>
+                <option value="Monk">Monk</option>
+                <option value="Paladin">Paladin</option>
+                <option value="Ranger">Ranger</option>
+                <option value="Rogue">Rogue</option>
+                <option value="Sorcerer">Sorcerer</option>
+                <option value="Warlock">Warlock</option>
+                <option value="Wizard">Wizard</option>
+              </select>
+              <div id="multiclassPrereqWarning" class="alert alert-warning mt-2 d-none">
+                <i class="bi bi-exclamation-triangle me-1"></i>
+                <strong>Prerequisites not met:</strong>
+                <span id="multiclassPrereqText"></span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  /**
+   * Step: Subclass Selection (if applicable)
+   */
+  function renderSubclassStep(character, className, stepNum) {
+    const subclassData = LevelUpData.getSubclassData(className);
+    if (!subclassData) return '';
+
+    const options = Object.keys(subclassData.options);
+
+    return `
+      <div class="accordion-item bg-dark border-secondary">
+        <h2 class="accordion-header">
+          <button class="accordion-button bg-dark text-light" type="button"
+                  data-bs-toggle="collapse" data-bs-target="#step${stepNum}">
+            <strong>Step ${stepNum}: Choose ${subclassData.name}</strong>
+            <span class="ms-auto me-3 badge bg-warning text-dark" id="subclassBadge">Not Selected</span>
+          </button>
+        </h2>
+        <div id="step${stepNum}" class="accordion-collapse collapse show"
+             data-bs-parent="#levelUpAccordion">
+          <div class="accordion-body">
+            <p class="text-muted mb-3">
+              <i class="bi bi-info-circle me-1"></i>
+              Choose your <strong>${subclassData.name}</strong>. This choice is permanent and defines
+              your character's path going forward.
+            </p>
+
+            <div class="list-group">
+              ${options.map(optionName => {
+                const option = subclassData.options[optionName];
+                return `
+                  <label class="list-group-item list-group-item-action bg-dark border-secondary cursor-pointer">
+                    <div class="d-flex align-items-start gap-2">
+                      <input type="radio" name="subclassChoice" value="${optionName}"
+                             class="form-check-input mt-1 subclass-radio" />
+                      <div class="flex-grow-1">
+                        <h6 class="mb-1 fw-bold text-primary">${option.name}</h6>
+                        <p class="mb-2 small text-light">${option.description}</p>
+                        <details class="small">
+                          <summary class="text-info fw-semibold" style="cursor: pointer;">
+                            <i class="bi bi-list-ul me-1"></i>View Features by Level
+                          </summary>
+                          <ul class="mt-2 mb-0 ps-3">
+                            ${Object.entries(option.features).map(([level, features]) =>
+                              `<li class="text-muted"><strong class="text-light">Level ${level}:</strong> ${features.join(', ')}</li>`
+                            ).join('')}
+                          </ul>
+                        </details>
+                      </div>
+                    </div>
+                  </label>
+                `;
+              }).join('')}
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  /**
+   * Step: Spell Learning (if applicable)
+   */
+  function renderSpellLearningStep(character, spellRules, stepNum) {
+    const { newSpells, canSwap, maxSpellLevel, className } = spellRules;
+
+    return `
+      <div class="accordion-item bg-dark border-secondary">
+        <h2 class="accordion-header">
+          <button class="accordion-button bg-dark text-light" type="button"
+                  data-bs-toggle="collapse" data-bs-target="#step${stepNum}">
+            <strong>Step ${stepNum}: Learn Spells</strong>
+            <span class="ms-auto me-3 badge bg-warning text-dark" id="spellBadge">Not Selected</span>
+          </button>
+        </h2>
+        <div id="step${stepNum}" class="accordion-collapse collapse show"
+             data-bs-parent="#levelUpAccordion">
+          <div class="accordion-body">
+            <p class="text-muted mb-3">
+              <i class="bi bi-book me-1"></i>
+              Select <strong>${newSpells}</strong> new ${className} spell${newSpells > 1 ? 's' : ''}
+              of level <strong>${maxSpellLevel}</strong> or lower.
+            </p>
+
+            <!-- Filter and Search -->
+            <div class="row g-2 mb-3">
+              <div class="col-md-6">
+                <label class="form-label small">Filter by Spell Level:</label>
+                <div class="btn-group btn-group-sm w-100" role="group">
+                  <button type="button" class="btn btn-outline-light spell-level-filter" data-filter-level="0">
+                    Cantrips
+                  </button>
+                  ${Array.from({length: maxSpellLevel}, (_, i) => i + 1).map(level => `
+                    <button type="button" class="btn btn-outline-light spell-level-filter" data-filter-level="${level}">
+                      ${level}${getOrdinalSuffix(level)}
+                    </button>
+                  `).join('')}
+                  <button type="button" class="btn btn-outline-light spell-level-filter active" data-filter-level="all">
+                    All
+                  </button>
+                </div>
+              </div>
+              <div class="col-md-6">
+                <label class="form-label small">Search Spells:</label>
+                <div class="input-group input-group-sm">
+                  <span class="input-group-text"><i class="bi bi-search"></i></span>
+                  <input type="text" id="levelUpSpellSearch" class="form-control"
+                         placeholder="Search by name, school, or tag..." />
+                </div>
+              </div>
+            </div>
+
+            <!-- Available Spells List -->
+            <div class="mb-3">
+              <label class="form-label small">Available Spells:</label>
+              <div id="availableSpellsList" class="list-group" style="max-height: 300px; overflow-y: auto;">
+                <div class="text-center text-muted py-3">
+                  <i class="bi bi-hourglass-split"></i> Loading spells...
+                </div>
+              </div>
+            </div>
+
+            <!-- Selected Spells Display -->
+            <div class="alert alert-info mb-0">
+              <div class="d-flex justify-content-between align-items-center mb-2">
+                <strong><i class="bi bi-check2-square me-1"></i>Selected Spells:</strong>
+                <span class="badge bg-primary" id="selectedSpellCount">0/${newSpells}</span>
+              </div>
+              <div id="selectedSpellsList" class="d-flex flex-wrap gap-2">
+                <span class="text-muted small">No spells selected yet</span>
+              </div>
+            </div>
+
+            ${canSwap ? `
+              <!-- Optional: Spell Swapping Section -->
+              <div class="mt-3 border-top border-secondary pt-3">
+                <label class="form-label small">
+                  <i class="bi bi-arrow-left-right me-1"></i>
+                  Optional: Replace a Known Spell
+                </label>
+                <select id="spellToSwap" class="form-select form-select-sm">
+                  <option value="">-- Don't swap any spell --</option>
+                </select>
+                <div id="swapReplacementSection" class="mt-2 d-none">
+                  <small class="text-muted">Choose a replacement spell:</small>
+                  <div id="swapSpellsList" class="list-group mt-2" style="max-height: 200px; overflow-y: auto;">
+                  </div>
+                </div>
+              </div>
+            ` : ''}
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  /**
+   * Step: Hit Point Increase
    */
   function renderHPStep(character, classData, changes, stepNum) {
     const conMod = calculateAbilityModifier(character.stats?.con || 10);
@@ -440,6 +749,80 @@ const LevelUpSystem = (function() {
    * Set up event listeners for the level-up modal
    */
   function setupLevelUpModalEvents(modal, character, newLevel, classData, changes) {
+    // Multiclass Path Selection
+    const multiclassPathRadios = modal.querySelectorAll('.multiclass-path-radio');
+    const multiclassSelection = modal.querySelector('#multiclassClassSelection');
+    const multiclassNewClassSelect = modal.querySelector('#multiclassNewClass');
+    const multiclassPrereqWarning = modal.querySelector('#multiclassPrereqWarning');
+    const multiclassPrereqText = modal.querySelector('#multiclassPrereqText');
+    const multiclassPathBadge = modal.querySelector('#multiclassPathBadge');
+
+    multiclassPathRadios.forEach(radio => {
+      radio.addEventListener('change', (e) => {
+        if (e.target.value === 'multiclass') {
+          multiclassSelection.classList.remove('d-none');
+          if (multiclassPathBadge) {
+            multiclassPathBadge.textContent = 'Multiclass';
+            multiclassPathBadge.className = 'ms-auto me-3 badge bg-warning';
+          }
+        } else {
+          multiclassSelection.classList.add('d-none');
+          multiclassPrereqWarning.classList.add('d-none');
+          if (multiclassPathBadge) {
+            multiclassPathBadge.textContent = `Continue ${extractClassName(character.charClass)}`;
+            multiclassPathBadge.className = 'ms-auto me-3 badge bg-info';
+          }
+        }
+      });
+    });
+
+    if (multiclassNewClassSelect) {
+      multiclassNewClassSelect.addEventListener('change', (e) => {
+        const newClass = e.target.value;
+        if (!newClass) return;
+
+        // Check prerequisites
+        const abilityScores = {
+          str: parseInt(character.stats?.str, 10) || 10,
+          dex: parseInt(character.stats?.dex, 10) || 10,
+          con: parseInt(character.stats?.con, 10) || 10,
+          int: parseInt(character.stats?.int, 10) || 10,
+          wis: parseInt(character.stats?.wis, 10) || 10,
+          cha: parseInt(character.stats?.cha, 10) || 10
+        };
+
+        const result = LevelUpData.checkMulticlassPrerequisites(newClass, abilityScores);
+        if (!result.meetsRequirements) {
+          multiclassPrereqWarning.classList.remove('d-none');
+          multiclassPrereqText.textContent = `Requires ${result.missing.join(', ')}`;
+        } else {
+          multiclassPrereqWarning.classList.add('d-none');
+        }
+
+        if (multiclassPathBadge) {
+          multiclassPathBadge.textContent = `Multiclass: ${newClass}`;
+          multiclassPathBadge.className = 'ms-auto me-3 badge bg-success';
+        }
+      });
+    }
+
+    // Subclass Selection
+    const subclassRadios = modal.querySelectorAll('.subclass-radio');
+    const subclassBadge = modal.querySelector('#subclassBadge');
+
+    if (subclassRadios.length > 0) {
+      subclassRadios.forEach(radio => {
+        radio.addEventListener('change', (e) => {
+          const selectedSubclass = e.target.value;
+          if (subclassBadge) {
+            subclassBadge.textContent = selectedSubclass;
+            subclassBadge.className = 'ms-auto me-3 badge bg-success';
+          }
+          updateSummary(modal, changes);
+        });
+      });
+    }
+
     // HP Selection
     const hpMethodRadios = modal.querySelectorAll('input[name="hpMethod"]');
     const rollHPBtn = modal.querySelector('#rollHPBtn');
@@ -550,6 +933,247 @@ const LevelUpSystem = (function() {
       });
     }
 
+    // Spell Learning Event Handlers
+    const spellBadge = modal.querySelector('#spellBadge');
+    const availableSpellsList = modal.querySelector('#availableSpellsList');
+    const selectedSpellsList = modal.querySelector('#selectedSpellsList');
+    const selectedSpellCount = modal.querySelector('#selectedSpellCount');
+    const spellSearch = modal.querySelector('#levelUpSpellSearch');
+    const spellLevelFilters = modal.querySelectorAll('.spell-level-filter');
+    const spellToSwap = modal.querySelector('#spellToSwap');
+
+    console.log('Spell Learning Setup:', {
+      availableSpellsList: !!availableSpellsList,
+      spellRules: changes.spellRules,
+      spellsDataAvailable: !!window.SPELLS_DATA,
+      spellsDataLength: window.SPELLS_DATA ? window.SPELLS_DATA.length : 0
+    });
+
+    if (availableSpellsList && changes.spellRules) {
+      const spellState = {
+        selectedSpells: [],
+        currentFilter: 'all',
+        searchTerm: '',
+        swapOldSpell: null,
+        swapNewSpell: null
+      };
+
+      // Populate swap dropdown with current spells
+      if (spellToSwap && character.spellList && character.spellList.length > 0) {
+        character.spellList.forEach(spell => {
+          const option = document.createElement('option');
+          option.value = spell.name || spell.title || '';
+          option.textContent = spell.name || spell.title || '';
+          spellToSwap.appendChild(option);
+        });
+      }
+
+      // Render available spells
+      function renderAvailableSpells() {
+        // Check if SPELLS_DATA is loaded
+        if (!window.SPELLS_DATA || !Array.isArray(window.SPELLS_DATA)) {
+          availableSpellsList.innerHTML = `
+            <div class="text-center text-danger py-3">
+              <i class="bi bi-exclamation-triangle"></i> Error: Spell database not loaded.
+              <br><small>Please ensure spells-data.js is loaded before using level-up.</small>
+            </div>
+          `;
+          console.error('SPELLS_DATA not available:', window.SPELLS_DATA);
+          return;
+        }
+
+        const knownSpells = character.spellList || [];
+        const filteredSpells = filterSpellsForLevelUp(
+          changes.spellRules.className,
+          changes.spellRules.maxSpellLevel,
+          spellState.searchTerm,
+          spellState.currentFilter,
+          knownSpells
+        );
+
+        if (filteredSpells.length === 0) {
+          availableSpellsList.innerHTML = `
+            <div class="text-center text-muted py-3">
+              <i class="bi bi-exclamation-circle"></i> No spells found matching your criteria.
+              <br><small>Class: ${changes.spellRules.className}, Max Level: ${changes.spellRules.maxSpellLevel}, Filter: ${spellState.currentFilter}</small>
+            </div>
+          `;
+          console.log('No spells found:', {
+            className: changes.spellRules.className,
+            maxSpellLevel: changes.spellRules.maxSpellLevel,
+            filter: spellState.currentFilter,
+            searchTerm: spellState.searchTerm,
+            totalSpells: window.SPELLS_DATA.length
+          });
+          return;
+        }
+
+        availableSpellsList.innerHTML = filteredSpells.map(spell => {
+          const isSelected = spellState.selectedSpells.some(s => s.title === spell.title);
+          return `
+            <button type="button"
+                    class="list-group-item list-group-item-action ${isSelected ? 'active' : ''}"
+                    data-spell-name="${spell.title}"
+                    data-spell-level="${spell.level}">
+              <div class="d-flex justify-content-between align-items-start">
+                <div>
+                  <strong>${spell.title}</strong>
+                  <small class="text-muted ms-2">${spell.school}</small>
+                </div>
+                <span class="badge ${isSelected ? 'bg-light text-dark' : 'bg-primary'}">
+                  ${spell.level === 0 ? 'Cantrip' : `Level ${spell.level}`}
+                </span>
+              </div>
+              ${spell.concentration ? '<small class="text-warning"><i class="bi bi-circle-fill"></i> Concentration</small>' : ''}
+            </button>
+          `;
+        }).join('');
+
+        // Add click handlers to spell buttons
+        availableSpellsList.querySelectorAll('[data-spell-name]').forEach(btn => {
+          btn.addEventListener('click', () => {
+            const spellName = btn.dataset.spellName;
+            const spell = filteredSpells.find(s => s.title === spellName);
+            if (!spell) return;
+
+            const isSelected = spellState.selectedSpells.some(s => s.title === spell.title);
+            if (isSelected) {
+              // Deselect
+              spellState.selectedSpells = spellState.selectedSpells.filter(s => s.title !== spell.title);
+            } else {
+              // Select
+              if (spellState.selectedSpells.length < changes.spellRules.newSpells) {
+                spellState.selectedSpells.push(spell);
+              } else {
+                alert(`You can only select ${changes.spellRules.newSpells} spell${changes.spellRules.newSpells > 1 ? 's' : ''}.`);
+                return;
+              }
+            }
+            renderAvailableSpells();
+            updateSelectedSpellsDisplay();
+          });
+        });
+      }
+
+      // Update selected spells display
+      function updateSelectedSpellsDisplay() {
+        const count = spellState.selectedSpells.length;
+        const max = changes.spellRules.newSpells;
+
+        selectedSpellCount.textContent = `${count}/${max}`;
+
+        if (count === 0) {
+          selectedSpellsList.innerHTML = '<span class="text-muted small">No spells selected yet</span>';
+          spellBadge.textContent = 'Not Selected';
+          spellBadge.className = 'ms-auto me-3 badge bg-warning text-dark';
+        } else {
+          selectedSpellsList.innerHTML = spellState.selectedSpells.map(spell => `
+            <span class="badge bg-primary">
+              ${spell.title}
+              <button type="button" class="btn-close btn-close-white btn-sm ms-1"
+                      data-remove-spell="${spell.title}"
+                      style="font-size: 0.5rem; padding: 0.15rem;"></button>
+            </span>
+          `).join('');
+
+          // Add remove handlers
+          selectedSpellsList.querySelectorAll('[data-remove-spell]').forEach(btn => {
+            btn.addEventListener('click', () => {
+              const spellName = btn.dataset.removeSpell;
+              spellState.selectedSpells = spellState.selectedSpells.filter(s => s.title !== spellName);
+              renderAvailableSpells();
+              updateSelectedSpellsDisplay();
+            });
+          });
+
+          if (count === max) {
+            spellBadge.textContent = `${count} Selected`;
+            spellBadge.className = 'ms-auto me-3 badge bg-success';
+          } else {
+            spellBadge.textContent = `${count}/${max} Selected`;
+            spellBadge.className = 'ms-auto me-3 badge bg-warning text-dark';
+          }
+        }
+
+        updateSummary(modal, changes);
+      }
+
+      // Level filter buttons
+      if (spellLevelFilters) {
+        spellLevelFilters.forEach(btn => {
+          btn.addEventListener('click', () => {
+            spellLevelFilters.forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            spellState.currentFilter = btn.dataset.filterLevel;
+            renderAvailableSpells();
+          });
+        });
+      }
+
+      // Search input
+      if (spellSearch) {
+        spellSearch.addEventListener('input', (e) => {
+          spellState.searchTerm = e.target.value.trim();
+          renderAvailableSpells();
+        });
+      }
+
+      // Spell swapping
+      if (spellToSwap && changes.spellRules.canSwap) {
+        const swapReplacementSection = modal.querySelector('#swapReplacementSection');
+        const swapSpellsList = modal.querySelector('#swapSpellsList');
+
+        spellToSwap.addEventListener('change', (e) => {
+          spellState.swapOldSpell = e.target.value || null;
+
+          if (spellState.swapOldSpell) {
+            swapReplacementSection.classList.remove('d-none');
+
+            // Show spell selection for replacement
+            const knownSpells = character.spellList || [];
+            const replacementSpells = filterSpellsForLevelUp(
+              changes.spellRules.className,
+              changes.spellRules.maxSpellLevel,
+              '',
+              'all',
+              knownSpells
+            );
+
+            swapSpellsList.innerHTML = replacementSpells.slice(0, 20).map(spell => `
+              <button type="button"
+                      class="list-group-item list-group-item-action ${spellState.swapNewSpell === spell.title ? 'active' : ''}"
+                      data-swap-spell="${spell.title}">
+                <strong>${spell.title}</strong>
+                <span class="badge bg-primary ms-2">
+                  ${spell.level === 0 ? 'Cantrip' : `Level ${spell.level}`}
+                </span>
+              </button>
+            `).join('');
+
+            // Add swap spell handlers
+            swapSpellsList.querySelectorAll('[data-swap-spell]').forEach(btn => {
+              btn.addEventListener('click', () => {
+                spellState.swapNewSpell = btn.dataset.swapSpell;
+                swapSpellsList.querySelectorAll('[data-swap-spell]').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                updateSummary(modal, changes);
+              });
+            });
+          } else {
+            swapReplacementSection.classList.add('d-none');
+            spellState.swapNewSpell = null;
+            updateSummary(modal, changes);
+          }
+        });
+      }
+
+      // Store spell state in changes object for later retrieval
+      changes.spellState = spellState;
+
+      // Initial render
+      renderAvailableSpells();
+    }
+
     // Confirm Level Up
     const confirmBtn = modal.querySelector('#confirmLevelUpBtn');
     confirmBtn.addEventListener('click', () => {
@@ -568,6 +1192,13 @@ const LevelUpSystem = (function() {
     const summaryList = modal.querySelector('#summaryList');
     const confirmBtn = modal.querySelector('#confirmLevelUpBtn');
 
+    // Check subclass selection
+    const subclassRadios = modal.querySelectorAll('input[name="subclassChoice"]');
+    let subclassSet = true;
+    if (subclassRadios.length > 0) {
+      subclassSet = !!modal.querySelector('input[name="subclassChoice"]:checked');
+    }
+
     const hpSet = parseInt(modal.querySelector('#hpGainValue').value || '0', 10) > 0;
     let asiSet = true;
 
@@ -583,9 +1214,24 @@ const LevelUpSystem = (function() {
       }
     }
 
-    const allComplete = hpSet && asiSet;
+    // Check spell learning
+    let spellsSet = true;
+    if (changes.spellRules && changes.spellState) {
+      spellsSet = changes.spellState.selectedSpells.length === changes.spellRules.newSpells;
+    }
+
+    const allComplete = subclassSet && hpSet && asiSet && spellsSet;
 
     let html = '';
+
+    if (subclassRadios.length > 0) {
+      if (subclassSet) {
+        html += `<li class="text-success"><i class="bi bi-check-circle-fill me-1"></i>Subclass selected</li>`;
+      } else {
+        html += `<li class="text-muted">Select your subclass</li>`;
+      }
+    }
+
     if (hpSet) {
       html += `<li class="text-success"><i class="bi bi-check-circle-fill me-1"></i>HP increase selected</li>`;
     } else {
@@ -597,6 +1243,15 @@ const LevelUpSystem = (function() {
         html += `<li class="text-success"><i class="bi bi-check-circle-fill me-1"></i>ASI/Feat selected</li>`;
       } else {
         html += `<li class="text-muted">Complete ASI/Feat selection</li>`;
+      }
+    }
+
+    if (changes.spellRules) {
+      if (spellsSet) {
+        html += `<li class="text-success"><i class="bi bi-check-circle-fill me-1"></i>Spells selected</li>`;
+      } else {
+        const count = changes.spellState ? changes.spellState.selectedSpells.length : 0;
+        html += `<li class="text-muted">Select ${changes.spellRules.newSpells - count} more spell${changes.spellRules.newSpells - count > 1 ? 's' : ''}</li>`;
       }
     }
 
@@ -622,8 +1277,55 @@ const LevelUpSystem = (function() {
       spellSlots: changes.spellSlots || null,
       pactSlots: changes.pactSlots || null,
       asi: null,
-      feat: null
+      feat: null,
+      subclass: null,
+      spellsLearned: [],
+      spellSwapped: null,
+      multiclassPath: 'continue',
+      multiclassNewClass: null
     };
+
+    // Check multiclass path
+    const multiclassPathRadio = modal.querySelector('input[name="multiclassPath"]:checked');
+    if (multiclassPathRadio && multiclassPathRadio.value === 'multiclass') {
+      data.multiclassPath = 'multiclass';
+      const newClassSelect = modal.querySelector('#multiclassNewClass');
+      if (newClassSelect && newClassSelect.value) {
+        data.multiclassNewClass = newClassSelect.value;
+      } else {
+        alert('Please select a class to multiclass into.');
+        return null;
+      }
+
+      // Check prerequisites
+      const abilityScores = {
+        str: parseInt(character.stats?.str, 10) || 10,
+        dex: parseInt(character.stats?.dex, 10) || 10,
+        con: parseInt(character.stats?.con, 10) || 10,
+        int: parseInt(character.stats?.int, 10) || 10,
+        wis: parseInt(character.stats?.wis, 10) || 10,
+        cha: parseInt(character.stats?.cha, 10) || 10
+      };
+
+      const result = LevelUpData.checkMulticlassPrerequisites(data.multiclassNewClass, abilityScores);
+      if (!result.meetsRequirements) {
+        alert(`Cannot multiclass into ${data.multiclassNewClass}. Prerequisites not met: ${result.missing.join(', ')}`);
+        return null;
+      }
+    }
+
+    // Check for subclass selection if needed
+    const subclassRadio = modal.querySelector('input[name="subclassChoice"]:checked');
+    if (subclassRadio) {
+      data.subclass = subclassRadio.value;
+    } else {
+      // Check if subclass selection was required
+      const subclassRadios = modal.querySelectorAll('input[name="subclassChoice"]');
+      if (subclassRadios.length > 0) {
+        alert('Please select your subclass.');
+        return null;
+      }
+    }
 
     if (data.hpGain <= 0) {
       alert('Please select a method for increasing HP.');
@@ -665,6 +1367,35 @@ const LevelUpSystem = (function() {
       }
     }
 
+    // Gather spell learning data
+    if (changes.spellRules && changes.spellState) {
+      if (changes.spellState.selectedSpells.length !== changes.spellRules.newSpells) {
+        alert(`Please select exactly ${changes.spellRules.newSpells} spell${changes.spellRules.newSpells > 1 ? 's' : ''}.`);
+        return null;
+      }
+
+      data.spellsLearned = changes.spellState.selectedSpells.map(spell => ({
+        name: spell.title,
+        level: spell.level,
+        school: spell.school,
+        castingTime: spell.casting_time,
+        range: spell.range,
+        components: spell.components,
+        duration: spell.duration,
+        concentration: spell.concentration || false,
+        ritual: spell.ritual || false,
+        description: spell.body || ''
+      }));
+
+      // Check for spell swapping
+      if (changes.spellState.swapOldSpell && changes.spellState.swapNewSpell) {
+        data.spellSwapped = {
+          oldSpell: changes.spellState.swapOldSpell,
+          newSpell: changes.spellState.swapNewSpell
+        };
+      }
+    }
+
     return data;
   }
 
@@ -682,6 +1413,73 @@ const LevelUpSystem = (function() {
 
     // Update level
     character.level = levelUpData.newLevel;
+
+    // Handle multiclassing
+    if (levelUpData.multiclassPath === 'multiclass' && levelUpData.multiclassNewClass) {
+      // Initialize or update multiclass array
+      character.multiclass = true;
+      character.classes = character.classes || [];
+
+      // Check if this is the first multiclass
+      if (character.classes.length === 0) {
+        // Add the original class first
+        const originalClass = extractClassName(character.charClass);
+        const originalLevel = levelUpData.newLevel - 1; // Previous level
+        character.classes.push({
+          className: originalClass,
+          subclass: character.subclass || '',
+          level: originalLevel,
+          subclassLevel: character.subclassLevel || 0
+        });
+      }
+
+      // Add the new class
+      character.classes.push({
+        className: levelUpData.multiclassNewClass,
+        subclass: '',
+        level: 1, // Starting at level 1 in the new class
+        subclassLevel: 0
+      });
+
+      // Update the class field
+      const classString = character.classes.map(c =>
+        c.subclass ? `${c.className} (${c.subclass})` : c.className
+      ).join(' / ');
+
+      character.charClass = classString.split(' / ')[0]; // Primary class
+      character.fullClassString = classString;
+
+    } else if (character.multiclass && character.classes && character.classes.length > 0) {
+      // Continue leveling in an existing class (multiclassed character)
+      // Find the primary class and increase its level
+      const primaryClass = character.classes[0];
+      if (primaryClass) {
+        primaryClass.level += 1;
+
+        // Update the class field
+        const classString = character.classes.map(c =>
+          c.subclass ? `${c.className} (${c.subclass})` : c.className
+        ).join(' / ');
+
+        character.fullClassString = classString;
+      }
+    }
+
+    // Apply subclass selection if provided
+    if (levelUpData.subclass) {
+      character.subclass = levelUpData.subclass;
+      character.subclassLevel = levelUpData.newLevel;
+
+      // If multiclassed, update the appropriate class in the classes array
+      if (character.multiclass && character.classes && character.classes.length > 0) {
+        const currentClass = extractClassName(character.charClass);
+        const classEntry = character.classes.find(c => c.className === currentClass);
+        if (classEntry) {
+          classEntry.subclass = levelUpData.subclass;
+          classEntry.subclassLevel = classEntry.level;
+        }
+      }
+    }
 
     // Update HP
     const currentMaxHP = parseInt(character.maxHP, 10) || 0;
@@ -708,17 +1506,25 @@ const LevelUpSystem = (function() {
       character.feats = character.feats || [];
       character.feats.push(levelUpData.feat);
 
-      // Handle feat bonuses (e.g., ability increases from feats)
+      // Get feat data for description
       const featData = LevelUpData.getFeatData(levelUpData.feat);
-      if (featData && featData.abilityIncrease) {
-        character.stats = character.stats || {};
-        const { choice, amount } = featData.abilityIncrease;
-        // For simplicity, apply to first available choice
-        // In a full implementation, you'd prompt the user
-        if (choice && choice.length > 0) {
-          const ability = choice[0];
-          const current = character.stats[ability] || 10;
-          character.stats[ability] = Math.min(20, current + amount);
+
+      // Add feat to features field with description
+      if (featData) {
+        const featText = `\n\n=== FEAT: ${featData.name} (Level ${levelUpData.newLevel}) ===\n${featData.description}`;
+        character.features = (character.features || '') + featText;
+
+        // Handle feat bonuses (e.g., ability increases from feats)
+        if (featData.abilityIncrease) {
+          character.stats = character.stats || {};
+          const { choice, amount } = featData.abilityIncrease;
+          // For simplicity, apply to first available choice
+          // In a full implementation, you'd prompt the user
+          if (choice && choice.length > 0) {
+            const ability = choice[0];
+            const current = character.stats[ability] || 10;
+            character.stats[ability] = Math.min(20, current + amount);
+          }
         }
       }
     }
@@ -735,6 +1541,51 @@ const LevelUpSystem = (function() {
     if (levelUpData.pactSlots) {
       character.pactLevel = levelUpData.pactSlots.level;
       character.pactMax = levelUpData.pactSlots.slots;
+    }
+
+    // Apply spell learning
+    if (levelUpData.spellsLearned && levelUpData.spellsLearned.length > 0) {
+      character.spellList = character.spellList || [];
+
+      // Handle spell swapping first (remove old spell)
+      if (levelUpData.spellSwapped && levelUpData.spellSwapped.oldSpell) {
+        const oldSpellName = levelUpData.spellSwapped.oldSpell.toLowerCase();
+        character.spellList = character.spellList.filter(spell =>
+          (spell.name || '').toLowerCase() !== oldSpellName
+        );
+
+        // Find the new spell in SPELLS_DATA and add it
+        if (window.SPELLS_DATA && levelUpData.spellSwapped.newSpell) {
+          const newSpellData = window.SPELLS_DATA.find(s =>
+            s.title === levelUpData.spellSwapped.newSpell
+          );
+          if (newSpellData) {
+            character.spellList.push({
+              name: newSpellData.title,
+              level: newSpellData.level,
+              school: newSpellData.school,
+              castingTime: newSpellData.casting_time,
+              range: newSpellData.range,
+              components: newSpellData.components,
+              duration: newSpellData.duration,
+              concentration: newSpellData.concentration || false,
+              ritual: newSpellData.ritual || false,
+              description: newSpellData.body || ''
+            });
+          }
+        }
+      }
+
+      // Add newly learned spells
+      levelUpData.spellsLearned.forEach(spell => {
+        // Check if spell already exists (shouldn't happen, but safety check)
+        const exists = character.spellList.some(s =>
+          (s.name || '').toLowerCase() === spell.name.toLowerCase()
+        );
+        if (!exists) {
+          character.spellList.push(spell);
+        }
+      });
     }
 
     // Add features to notes (optional)

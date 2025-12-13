@@ -1915,7 +1915,12 @@
           $('charName').value = char.name || '';
           $('playerName').value = char.playerName || '';
           $('charRace').value = char.race || '';
-          $('charClass').value = char.charClass || '';
+          // Display class with subclass if available
+          if (char.subclass) {
+            $('charClass').value = `${char.charClass} (${char.subclass})`;
+          } else {
+            $('charClass').value = char.charClass || '';
+          }
           $('charBackground').value = char.background || '';
           $('charLevel').value = char.level ?? '';
           $('charAlignment').value = char.alignment || '';
@@ -2097,6 +2102,107 @@
 
       // ---------- Wizard Integration ----------
       // This function is called by the character creation wizard to populate the form
+      /**
+       * Calculate spell slots for a character (handles both single-class and multiclass)
+       * @param {Object} character - Character data with multiclass info
+       * @returns {Object} - {sharedSlots: Array|null, pactSlots: Object|null}
+       */
+      function calculateCharacterSpellSlots(character) {
+        // Check if character is multiclassed
+        const isMulticlass = character.multiclass && character.classes && character.classes.length > 0;
+
+        if (isMulticlass) {
+          // Use multiclass spell slot calculation
+          const sharedSlots = window.LevelUpData
+            ? window.LevelUpData.getMulticlassSpellSlots(character.classes)
+            : null;
+
+          // Check for Warlock levels (Pact Magic is separate)
+          const warlockClass = character.classes.find(c => c.className === 'Warlock');
+          const pactSlots = warlockClass && window.LevelUpData
+            ? window.LevelUpData.getWarlockPactSlots(warlockClass.level)
+            : null;
+
+          return { sharedSlots, pactSlots };
+        } else {
+          // Single class - use standard calculation
+          const className = character.charClass;
+          const level = parseInt(character.level, 10);
+
+          if (className === 'Warlock') {
+            // Warlock only has Pact Magic
+            const pactSlots = getPactMagicSlots(level);
+            return { sharedSlots: null, pactSlots };
+          } else {
+            // Regular spellcaster
+            const sharedSlots = getSpellSlotsForClassLevel(className, level);
+            return { sharedSlots, pactSlots: null };
+          }
+        }
+      }
+
+      function getSpellSlotsForClassLevel(className, level) {
+        // First try to use LevelUpData if available
+        if (window.LevelUpData && typeof window.LevelUpData.getClassData === 'function') {
+          const classData = window.LevelUpData.getClassData(className);
+          if (classData && classData.spellSlots && classData.spellSlots[level]) {
+            return classData.spellSlots[level];
+          }
+        }
+
+        // Fallback: Use hardcoded spell slot tables (PHB standard progression)
+        // Format: [1st, 2nd, 3rd, 4th, 5th, 6th, 7th, 8th, 9th]
+        const spellSlotTables = {
+          'Wizard': { 1: [2,0,0,0,0,0,0,0,0], 2: [3,0,0,0,0,0,0,0,0], 3: [4,2,0,0,0,0,0,0,0], 4: [4,3,0,0,0,0,0,0,0], 5: [4,3,2,0,0,0,0,0,0], 6: [4,3,3,0,0,0,0,0,0], 7: [4,3,3,1,0,0,0,0,0], 8: [4,3,3,2,0,0,0,0,0], 9: [4,3,3,3,1,0,0,0,0], 10: [4,3,3,3,2,0,0,0,0], 11: [4,3,3,3,2,1,0,0,0], 12: [4,3,3,3,2,1,0,0,0], 13: [4,3,3,3,2,1,1,0,0], 14: [4,3,3,3,2,1,1,0,0], 15: [4,3,3,3,2,1,1,1,0], 16: [4,3,3,3,2,1,1,1,0], 17: [4,3,3,3,2,1,1,1,1], 18: [4,3,3,3,3,1,1,1,1], 19: [4,3,3,3,3,2,1,1,1], 20: [4,3,3,3,3,2,2,1,1] },
+          'Sorcerer': { 1: [2,0,0,0,0,0,0,0,0], 2: [3,0,0,0,0,0,0,0,0], 3: [4,2,0,0,0,0,0,0,0], 4: [4,3,0,0,0,0,0,0,0], 5: [4,3,2,0,0,0,0,0,0], 6: [4,3,3,0,0,0,0,0,0], 7: [4,3,3,1,0,0,0,0,0], 8: [4,3,3,2,0,0,0,0,0], 9: [4,3,3,3,1,0,0,0,0], 10: [4,3,3,3,2,0,0,0,0], 11: [4,3,3,3,2,1,0,0,0], 12: [4,3,3,3,2,1,0,0,0], 13: [4,3,3,3,2,1,1,0,0], 14: [4,3,3,3,2,1,1,0,0], 15: [4,3,3,3,2,1,1,1,0], 16: [4,3,3,3,2,1,1,1,0], 17: [4,3,3,3,2,1,1,1,1], 18: [4,3,3,3,3,1,1,1,1], 19: [4,3,3,3,3,2,1,1,1], 20: [4,3,3,3,3,2,2,1,1] },
+          'Bard': { 1: [2,0,0,0,0,0,0,0,0], 2: [3,0,0,0,0,0,0,0,0], 3: [4,2,0,0,0,0,0,0,0], 4: [4,3,0,0,0,0,0,0,0], 5: [4,3,2,0,0,0,0,0,0], 6: [4,3,3,0,0,0,0,0,0], 7: [4,3,3,1,0,0,0,0,0], 8: [4,3,3,2,0,0,0,0,0], 9: [4,3,3,3,1,0,0,0,0], 10: [4,3,3,3,2,0,0,0,0], 11: [4,3,3,3,2,1,0,0,0], 12: [4,3,3,3,2,1,0,0,0], 13: [4,3,3,3,2,1,1,0,0], 14: [4,3,3,3,2,1,1,0,0], 15: [4,3,3,3,2,1,1,1,0], 16: [4,3,3,3,2,1,1,1,0], 17: [4,3,3,3,2,1,1,1,1], 18: [4,3,3,3,3,1,1,1,1], 19: [4,3,3,3,3,2,1,1,1], 20: [4,3,3,3,3,2,2,1,1] },
+          'Cleric': { 1: [2,0,0,0,0,0,0,0,0], 2: [3,0,0,0,0,0,0,0,0], 3: [4,2,0,0,0,0,0,0,0], 4: [4,3,0,0,0,0,0,0,0], 5: [4,3,2,0,0,0,0,0,0], 6: [4,3,3,0,0,0,0,0,0], 7: [4,3,3,1,0,0,0,0,0], 8: [4,3,3,2,0,0,0,0,0], 9: [4,3,3,3,1,0,0,0,0], 10: [4,3,3,3,2,0,0,0,0], 11: [4,3,3,3,2,1,0,0,0], 12: [4,3,3,3,2,1,0,0,0], 13: [4,3,3,3,2,1,1,0,0], 14: [4,3,3,3,2,1,1,0,0], 15: [4,3,3,3,2,1,1,1,0], 16: [4,3,3,3,2,1,1,1,0], 17: [4,3,3,3,2,1,1,1,1], 18: [4,3,3,3,3,1,1,1,1], 19: [4,3,3,3,3,2,1,1,1], 20: [4,3,3,3,3,2,2,1,1] },
+          'Druid': { 1: [2,0,0,0,0,0,0,0,0], 2: [3,0,0,0,0,0,0,0,0], 3: [4,2,0,0,0,0,0,0,0], 4: [4,3,0,0,0,0,0,0,0], 5: [4,3,2,0,0,0,0,0,0], 6: [4,3,3,0,0,0,0,0,0], 7: [4,3,3,1,0,0,0,0,0], 8: [4,3,3,2,0,0,0,0,0], 9: [4,3,3,3,1,0,0,0,0], 10: [4,3,3,3,2,0,0,0,0], 11: [4,3,3,3,2,1,0,0,0], 12: [4,3,3,3,2,1,0,0,0], 13: [4,3,3,3,2,1,1,0,0], 14: [4,3,3,3,2,1,1,0,0], 15: [4,3,3,3,2,1,1,1,0], 16: [4,3,3,3,2,1,1,1,0], 17: [4,3,3,3,2,1,1,1,1], 18: [4,3,3,3,3,1,1,1,1], 19: [4,3,3,3,3,2,1,1,1], 20: [4,3,3,3,3,2,2,1,1] },
+          'Paladin': { 1: [0,0,0,0,0,0,0,0,0], 2: [2,0,0,0,0,0,0,0,0], 3: [3,0,0,0,0,0,0,0,0], 4: [3,0,0,0,0,0,0,0,0], 5: [4,2,0,0,0,0,0,0,0], 6: [4,2,0,0,0,0,0,0,0], 7: [4,3,0,0,0,0,0,0,0], 8: [4,3,0,0,0,0,0,0,0], 9: [4,3,2,0,0,0,0,0,0], 10: [4,3,2,0,0,0,0,0,0], 11: [4,3,3,0,0,0,0,0,0], 12: [4,3,3,0,0,0,0,0,0], 13: [4,3,3,1,0,0,0,0,0], 14: [4,3,3,1,0,0,0,0,0], 15: [4,3,3,2,0,0,0,0,0], 16: [4,3,3,2,0,0,0,0,0], 17: [4,3,3,3,1,0,0,0,0], 18: [4,3,3,3,1,0,0,0,0], 19: [4,3,3,3,2,0,0,0,0], 20: [4,3,3,3,2,0,0,0,0] },
+          'Ranger': { 1: [0,0,0,0,0,0,0,0,0], 2: [2,0,0,0,0,0,0,0,0], 3: [3,0,0,0,0,0,0,0,0], 4: [3,0,0,0,0,0,0,0,0], 5: [4,2,0,0,0,0,0,0,0], 6: [4,2,0,0,0,0,0,0,0], 7: [4,3,0,0,0,0,0,0,0], 8: [4,3,0,0,0,0,0,0,0], 9: [4,3,2,0,0,0,0,0,0], 10: [4,3,2,0,0,0,0,0,0], 11: [4,3,3,0,0,0,0,0,0], 12: [4,3,3,0,0,0,0,0,0], 13: [4,3,3,1,0,0,0,0,0], 14: [4,3,3,1,0,0,0,0,0], 15: [4,3,3,2,0,0,0,0,0], 16: [4,3,3,2,0,0,0,0,0], 17: [4,3,3,3,1,0,0,0,0], 18: [4,3,3,3,1,0,0,0,0], 19: [4,3,3,3,2,0,0,0,0], 20: [4,3,3,3,2,0,0,0,0] },
+          'Artificer': { 1: [0,0,0,0,0,0,0,0,0], 2: [2,0,0,0,0,0,0,0,0], 3: [3,0,0,0,0,0,0,0,0], 4: [3,0,0,0,0,0,0,0,0], 5: [4,2,0,0,0,0,0,0,0], 6: [4,2,0,0,0,0,0,0,0], 7: [4,3,0,0,0,0,0,0,0], 8: [4,3,0,0,0,0,0,0,0], 9: [4,3,2,0,0,0,0,0,0], 10: [4,3,2,0,0,0,0,0,0], 11: [4,3,3,0,0,0,0,0,0], 12: [4,3,3,0,0,0,0,0,0], 13: [4,3,3,1,0,0,0,0,0], 14: [4,3,3,1,0,0,0,0,0], 15: [4,3,3,2,0,0,0,0,0], 16: [4,3,3,2,0,0,0,0,0], 17: [4,3,3,3,1,0,0,0,0], 18: [4,3,3,3,1,0,0,0,0], 19: [4,3,3,3,2,0,0,0,0], 20: [4,3,3,3,2,0,0,0,0] }
+        };
+
+        // Warlock uses Pact Magic (handled separately)
+        if (className === 'Warlock') {
+          return null;
+        }
+
+        // Return spell slots for the class and level
+        if (spellSlotTables[className] && spellSlotTables[className][level]) {
+          return spellSlotTables[className][level];
+        }
+
+        return null;
+      }
+
+      function getPactMagicSlots(level) {
+        // Warlock pact magic progression
+        const pactMagic = {
+          1: { slots: 1, level: 1 },
+          2: { slots: 2, level: 1 },
+          3: { slots: 2, level: 2 },
+          4: { slots: 2, level: 2 },
+          5: { slots: 2, level: 3 },
+          6: { slots: 2, level: 3 },
+          7: { slots: 2, level: 4 },
+          8: { slots: 2, level: 4 },
+          9: { slots: 2, level: 5 },
+          10: { slots: 2, level: 5 },
+          11: { slots: 3, level: 5 },
+          12: { slots: 3, level: 5 },
+          13: { slots: 3, level: 5 },
+          14: { slots: 3, level: 5 },
+          15: { slots: 3, level: 5 },
+          16: { slots: 3, level: 5 },
+          17: { slots: 4, level: 5 },
+          18: { slots: 4, level: 5 },
+          19: { slots: 4, level: 5 },
+          20: { slots: 4, level: 5 }
+        };
+        return pactMagic[level] || null;
+      }
+
       function fillFormFromWizardData(wizardData) {
         console.log('📝 fillFormFromWizardData called with data:', wizardData);
 
@@ -2111,7 +2217,10 @@
           const raceText = wizardData.subrace ? `${wizardData.race} (${wizardData.subrace})` : wizardData.race;
           $('charRace').value = raceText;
         }
-        if (wizardData.class) $('charClass').value = wizardData.class;
+        if (wizardData.class) {
+          const classText = wizardData.subclass ? `${wizardData.class} (${wizardData.subclass})` : wizardData.class;
+          $('charClass').value = classText;
+        }
         if (wizardData.background) $('charBackground').value = wizardData.background;
         if (wizardData.level) $('charLevel').value = wizardData.level;
         if (wizardData.alignment) $('charAlignment').value = wizardData.alignment;
@@ -2206,6 +2315,119 @@
         recalcSkillsFromForm(false);
         recalcPassivesFromForm();
 
+        // Add wizard-selected spells to the spell list
+        if (wizardData.selectedSpells && wizardData.selectedSpells.length > 0) {
+          currentSpellList = wizardData.selectedSpells.map(spell => ({
+            name: spell.title,
+            level: spell.level,
+            school: spell.school,
+            castingTime: spell.casting_time,
+            range: spell.range,
+            components: spell.components,
+            duration: spell.duration,
+            concentration: spell.concentration || false,
+            ritual: spell.ritual || false,
+            description: spell.body || ''
+          }));
+        }
+
+        // Add cantrips
+        if (wizardData.selectedCantrips && wizardData.selectedCantrips.length > 0) {
+          const cantrips = wizardData.selectedCantrips.map(spell => ({
+            name: spell.title,
+            level: 0,
+            school: spell.school,
+            castingTime: spell.casting_time,
+            range: spell.range,
+            components: spell.components,
+            duration: spell.duration,
+            concentration: spell.concentration || false,
+            ritual: spell.ritual || false,
+            description: spell.body || ''
+          }));
+          currentSpellList = [...(currentSpellList || []), ...cantrips];
+        }
+
+        // Render the spell list if spells were added
+        if (currentSpellList && currentSpellList.length > 0) {
+          renderCharacterSpellList();
+        }
+
+        // Set spellcasting ability based on class
+        if (wizardData.class) {
+          const spellcastingAbilities = {
+            'Wizard': 'int',
+            'Sorcerer': 'cha',
+            'Bard': 'cha',
+            'Warlock': 'cha',
+            'Cleric': 'wis',
+            'Druid': 'wis',
+            'Paladin': 'cha',
+            'Ranger': 'wis',
+            'Artificer': 'int'
+          };
+
+          const ability = spellcastingAbilities[wizardData.class];
+          if (ability && $('spellcastingAbility')) {
+            $('spellcastingAbility').value = ability;
+
+            // Calculate and set Spell Save DC and Spell Attack Bonus
+            const abilityScore = wizardData[ability] || 10; // Get the ability score (e.g., wizardData.int)
+            const abilityMod = Math.floor((abilityScore - 10) / 2);
+            const profBonus = wizardData.proficiencyBonus || 2;
+
+            const spellSaveDC = 8 + profBonus + abilityMod;
+            const spellAttackBonus = profBonus + abilityMod;
+
+            if ($('spellSaveDC')) {
+              $('spellSaveDC').textContent = spellSaveDC;
+            }
+            if ($('spellAttackBonus')) {
+              $('spellAttackBonus').textContent = spellAttackBonus >= 0 ? `+${spellAttackBonus}` : spellAttackBonus;
+            }
+          }
+        }
+
+        // Set spell slots based on class and level
+        if (wizardData.class && wizardData.level) {
+          const spellSlots = getSpellSlotsForClassLevel(wizardData.class, wizardData.level);
+          console.log(`Setting spell slots for ${wizardData.class} level ${wizardData.level}:`, spellSlots);
+          if (spellSlots) {
+            // Find the highest spell level with slots
+            let highestSlotLevel = 0;
+            for (let i = 0; i < spellSlots.length; i++) {
+              if (spellSlots[i] > 0) {
+                highestSlotLevel = i + 1;
+              }
+            }
+
+            // Populate all spell levels up to and including one beyond the highest
+            // This makes the next spell level visible on the UI (with 0 slots)
+            const maxLevelToPopulate = Math.min(highestSlotLevel + 1, 9);
+
+            for (let i = 1; i <= maxLevelToPopulate; i++) {
+              const maxEl = $(`slots${i}Max`);
+              const usedEl = $(`slots${i}Used`);
+              if (maxEl) {
+                const slotValue = spellSlots[i - 1] || 0;
+                maxEl.value = slotValue;
+                if (usedEl) usedEl.value = 0; // Start with all slots available
+                console.log(`  Slot level ${i}: Max=${slotValue}, Used=0`);
+              }
+            }
+
+            // Handle Warlock pact magic separately
+            if (wizardData.class === 'Warlock' && wizardData.level >= 1) {
+              const pactSlots = getPactMagicSlots(wizardData.level);
+              if (pactSlots && $('pactMax')) {
+                $('pactMax').value = pactSlots.slots;
+                $('pactLevel').value = pactSlots.level;
+                if ($('pactUsed')) $('pactUsed').value = 0;
+              }
+            }
+          }
+        }
+
         console.log('✅ Form population complete, scheduling save...');
 
         // Clear loading flag after a short delay
@@ -2229,10 +2451,16 @@
           playerName: '',
           race: '',
           charClass: '',
+          subclass: '',
+          subclassLevel: 0,
           background: '',
           level: '',
           alignment: '',
           roleNotes: '',
+
+          // Multiclassing support
+          multiclass: false,
+          classes: [], // Array of {className, subclass, level, subclassLevel}
 
           // Combat snapshot
           ac: '',
@@ -2400,7 +2628,80 @@
           char.name = getVal('charName') || 'Unnamed Character';
           char.playerName = getVal('playerName');
           char.race = getVal('charRace');
-          char.charClass = getVal('charClass');
+
+          // Parse class field to extract class(es) and subclass(es)
+          // Supports both single-class: "Wizard (School of Evocation)"
+          // and multiclass: "Paladin (Oath of Devotion) / Fighter (Champion)"
+          const fullClass = getVal('charClass');
+          const classes = fullClass.split('/').map(c => c.trim());
+
+          if (classes.length > 1) {
+            // Multiclass character
+            char.multiclass = true;
+            char.classes = [];
+
+            let totalLevel = 0;
+            for (const classStr of classes) {
+              const match = classStr.match(/^([^(]+)(?:\(([^)]+)\))?\s*(\d+)?/);
+              if (match) {
+                const className = match[1].trim();
+                const subclass = match[2] ? match[2].trim() : '';
+                const classLevel = match[3] ? parseInt(match[3], 10) : 1; // Default to 1 if not specified
+
+                char.classes.push({
+                  className,
+                  subclass,
+                  level: classLevel,
+                  subclassLevel: subclass ? classLevel : 0
+                });
+
+                totalLevel += classLevel;
+              }
+            }
+
+            // For backward compatibility, set primary class as first class
+            if (char.classes.length > 0) {
+              char.charClass = char.classes[0].className;
+              char.subclass = char.classes[0].subclass;
+              char.subclassLevel = char.classes[0].subclassLevel;
+            }
+
+            // Update total level if it differs
+            if (totalLevel > 0 && totalLevel !== getNum('charLevel')) {
+              console.warn(`Total multiclass levels (${totalLevel}) differs from character level (${getNum('charLevel')}). Using character level.`);
+            }
+
+          } else {
+            // Single class character
+            char.multiclass = false;
+            char.classes = [];
+
+            const match = fullClass.match(/^([^(]+)(?:\(([^)]+)\))?/);
+            if (match) {
+              char.charClass = match[1].trim();
+              if (match[2]) {
+                char.subclass = match[2].trim();
+                // Set subclassLevel if not already set
+                if (!char.subclassLevel || char.subclassLevel === 0) {
+                  const currentLevel = getNum('charLevel');
+                  if (window.LevelUpData && typeof window.LevelUpData.getSubclassSelectionLevel === 'function') {
+                    const selectionLevel = window.LevelUpData.getSubclassSelectionLevel(char.charClass);
+                    char.subclassLevel = selectionLevel || currentLevel;
+                  } else {
+                    char.subclassLevel = currentLevel;
+                  }
+                }
+              } else {
+                char.subclass = '';
+                char.subclassLevel = 0;
+              }
+            } else {
+              char.charClass = fullClass;
+              char.subclass = '';
+              char.subclassLevel = 0;
+            }
+          }
+
           char.background = getVal('charBackground');
           char.level = getNum('charLevel');
           char.alignment = getVal('charAlignment');
@@ -3432,6 +3733,91 @@
           applyModalPortraitTransform();
         });
 
+        // Spell slot management buttons (use, regain, reset)
+        document.querySelectorAll('[data-action="use-slot"]').forEach(btn => {
+          btn.addEventListener('click', () => {
+            const level = btn.dataset.level;
+            const usedEl = $(`slots${level}Used`);
+            const maxEl = $(`slots${level}Max`);
+            if (usedEl && maxEl) {
+              const used = parseInt(usedEl.value || 0, 10);
+              const max = parseInt(maxEl.value || 0, 10);
+              if (used < max) {
+                usedEl.value = used + 1;
+                saveCurrentCharacter();
+              }
+            }
+          });
+        });
+
+        document.querySelectorAll('[data-action="regain-slot"]').forEach(btn => {
+          btn.addEventListener('click', () => {
+            const level = btn.dataset.level;
+            const usedEl = $(`slots${level}Used`);
+            if (usedEl) {
+              const used = parseInt(usedEl.value || 0, 10);
+              if (used > 0) {
+                usedEl.value = used - 1;
+                saveCurrentCharacter();
+              }
+            }
+          });
+        });
+
+        document.querySelectorAll('[data-action="reset-slot"]').forEach(btn => {
+          btn.addEventListener('click', () => {
+            const level = btn.dataset.level;
+            const usedEl = $(`slots${level}Used`);
+            if (usedEl) {
+              usedEl.value = 0;
+              saveCurrentCharacter();
+            }
+          });
+        });
+
+        // Pact magic slot buttons (Warlock)
+        const pactUseBtn = document.querySelector('[data-action="use-pact-slot"]');
+        const pactRegainBtn = document.querySelector('[data-action="regain-pact-slot"]');
+        const pactResetBtn = document.querySelector('[data-action="reset-pact-slot"]');
+
+        if (pactUseBtn) {
+          pactUseBtn.addEventListener('click', () => {
+            const usedEl = $('pactUsed');
+            const maxEl = $('pactMax');
+            if (usedEl && maxEl) {
+              const used = parseInt(usedEl.value || 0, 10);
+              const max = parseInt(maxEl.value || 0, 10);
+              if (used < max) {
+                usedEl.value = used + 1;
+                saveCurrentCharacter();
+              }
+            }
+          });
+        }
+
+        if (pactRegainBtn) {
+          pactRegainBtn.addEventListener('click', () => {
+            const usedEl = $('pactUsed');
+            if (usedEl) {
+              const used = parseInt(usedEl.value || 0, 10);
+              if (used > 0) {
+                usedEl.value = used - 1;
+                saveCurrentCharacter();
+              }
+            }
+          });
+        }
+
+        if (pactResetBtn) {
+          pactResetBtn.addEventListener('click', () => {
+            const usedEl = $('pactUsed');
+            if (usedEl) {
+              usedEl.value = 0;
+              saveCurrentCharacter();
+            }
+          });
+        }
+
         // Auto-calc: update mods / PB / passive Perception when key fields change
         [
           'statStr','statDex','statCon','statInt','statWis','statCha',
@@ -4063,6 +4449,11 @@
           attachEventHandlers();
           updateSpellSlotsDisplay();
           initMobileFeatures();
+
+          // Initialize Level Up System
+          if (typeof LevelUpSystem !== 'undefined' && LevelUpSystem.init) {
+            LevelUpSystem.init();
+          }
         }
 
       // ---------- Mobile Features ----------

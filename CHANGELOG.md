@@ -3,7 +3,311 @@ All notable changes to The DM's Toolbox are documented here.
 The format is based on Keep a Changelog,
 and this project adheres to Semantic Versioning.
 
+1.10.1 - 2025-12-13
+**Character Manager: Subclasses, Spells, and Multiclassing**
 
+- **Added**
+
+- **Subclass Selection System (Phase 2 – Complete)**
+
+  - Full subclass data for all 12 PHB classes added to js/level-up-data.js:
+
+  - Barbarian (Lv 3): Path of the Berserker, Path of the Totem Warrior
+
+  - Bard (Lv 3): College of Lore, College of Valor
+  
+  - Cleric (Lv 1): Knowledge, Life, Light, Nature, Tempest, Trickery, War
+  
+  - Druid (Lv 2): Circle of the Land, Circle of the Moon
+  
+  - Fighter (Lv 3): Champion, Battle Master, Eldritch Knight
+  
+  - Monk (Lv 3): Way of the Open Hand, Way of Shadow, Way of the Four Elements
+  
+  - Paladin (Lv 3): Oath of Devotion, Oath of the Ancients, Oath of Vengeance
+  
+  - Ranger (Lv 3): Hunter, Beast Master
+  
+  - Rogue (Lv 3): Thief, Assassin, Arcane Trickster
+  
+  - Sorcerer (Lv 1): Draconic Bloodline, Wild Magic
+  
+  - Warlock (Lv 1): The Archfey, The Fiend, The Great Old One
+  
+  - Wizard (Lv 2): Abjuration, Conjuration, Divination, Enchantment, Evocation, Illusion, Necromancy, Transmutation
+
+- **Subclass data API helpers in js/level-up-data.js:**
+
+  - getSubclassData(className) – full subclass information for a class
+
+  - getSubclassOptions(className) – list of available subclass options
+
+  - getSubclassSelectionLevel(className) – level where that class chooses a subclass
+
+  - needsSubclassSelection(className, level) – checks if a subclass choice is currently required
+
+- **Character model integration (js/character.js):**
+
+  - Added subclass and subclassLevel fields to the character object.
+
+  - Save/load now correctly parses and emits Class (Subclass) format.
+
+  - UI consistently displays combined class name, e.g. Wizard (School of Evocation).
+
+- **Level-Up Wizard integration (js/level-up-system.js):**
+
+  - Dynamic Subclass step appears automatically at the correct level:
+
+    - Level 1: Cleric, Sorcerer, Warlock
+
+    - Level 2: Wizard, Druid (when starting at 2+)
+
+    - Level 3: Barbarian, Bard, Fighter, Monk, Paladin, Ranger, Rogue
+
+  - “Nice” radio-button UI with subclass names, descriptions, and feature previews.
+
+  - Subclass choice is validated before allowing the level-up to complete.
+
+  - Once chosen, the subclass is saved to the character and shown in the summary; later level-ups won’t re-prompt for subclass.
+
+- **Spell Learning System (Phase 3 – Complete)**
+
+  - Rules / data helpers in js/level-up-data.js:
+
+    - getSpellLearningRules(className, level) – determines:
+
+      - How many spells are learned on this level-up.
+
+      - Whether the class can swap an existing known spell.
+
+    - getMaxSpellLevel(className, level) – returns the highest spell level the character can cast.
+
+  - Level-Up Wizard spell learning UI in js/level-up-system.js:
+
+    - Utility helpers (lines 78–128):
+
+      - getOrdinalSuffix for clean display (“1st level”, “2nd level”, etc.).
+
+      - filterSpellsForLevelUp for narrowing down eligible spells.
+
+    - Wizard flow integration (lines 164–168):
+
+      - Spell-learning step is inserted into the level-up sequence when relevant.
+
+    - renderSpellLearningStep() (lines 244–393):
+
+      - Full spell selection UI with:
+
+        - Filters by spell level (Cantrips, 1st, 2nd, …).
+
+        - Text search by name, school, and tags.
+
+        - Class-based filtering so only legal spells appear.
+
+        - Already-known spells excluded from the candidate list.
+
+        - Real-time “X of Y spells selected” badges.
+
+    - Event handlers (lines 800–1012):
+
+      - Click-to-select / click-to-deselect behavior for each spell.
+
+      - Small “X” removal buttons for selected spells.
+
+      - Optional “swap spell” section for classes that can trade out known spells.
+
+    - Summary & validation:
+
+      - updateSummary() updated (lines 1054–1060) to include spell-learning checks.
+
+      - Spell choices are shown in the summary (lines 1086–1093).
+
+    - Data & persistence:
+
+      - gatherLevelUpData() extended (lines 1176–1203) to gather new spell choices and swaps.
+
+      - applyLevelUp() updated (lines 1283–1326) to write new spells into character.spellList.
+
+  - **Class-specific rules implemented:**
+
+    - Prepared casters
+
+      - Cleric, Druid: no “learn new spell” UI; treated as fully prepared casters.
+
+    - Full known-spell casters
+
+      - Wizard: learns 2 spells/level, no swaps.
+
+      - Bard, Sorcerer, Warlock: learn 1 spell, can swap out 1 existing known spell.
+
+    - Half casters
+
+      - Paladin, Ranger: start learning spells at level 2, 1 spell on level-up with swap support.
+
+  - **Smart filtering:**
+
+    - Only spells from SPELLS_DATA relevant to the character’s class and max spell level are shown.
+
+    - Can filter by level, name, school, tags, and exclude already-known spells.
+
+- **Multiclassing System – Implementation Complete**
+
+  - **Multiclass calculation engine** (js/level-up-data.js):
+  
+    - PHB-accurate effective caster level calculation:
+  
+      - Full casters (Wizard, Sorcerer, Bard, Cleric, Druid): count all levels.
+  
+      - Half casters (Paladin, Ranger): floor(level / 2).
+  
+      - Artificer: ceil(level / 2) (rounded up).
+  
+      - Third casters (Eldritch Knight, Arcane Trickster): floor(level / 3).
+  
+      - Warlock: contributes 0 to shared slots (Pact Magic handled separately).
+  
+    - Centralized multiclass spell slot table for levels 1–20.
+  
+    - Prerequisite checking for all classes before multiclassing is allowed.
+  
+    - Warlock Pact Magic is calculated and displayed separately from shared slots.
+  
+  - **Character sheet UI** (characters.html, js/multiclass-ui.js):
+  
+    - New “Multiclass” button next to the Class field.
+  
+    - Multiclass Management Modal:
+  
+      - Level allocation UI across multiple classes.
+  
+      - Progress bar indicating total level and class distribution.
+  
+      - Inline prerequisite warnings (e.g., missing minimum ability scores).
+  
+      - Spell slot preview showing:
+  
+        - Shared spell slots (from multiclass table).
+  
+        - Warlock Pact slots (when applicable).
+  
+      - Add/remove class entries with validation so the total never exceeds 20.
+  
+    - Class field display:
+  
+      - Single-class: Wizard (Evocation)
+  
+      - Multiclass: Wizard (Evocation) / Fighter (Champion)
+  
+  - **Level-Up integration** (js/level-up-system.js):
+  
+    - New Step 1: “Choose Level-Up Path”:
+  
+      - Option to continue in an existing class.
+  
+      - Option to add a new class (multiclass).
+  
+    - Before confirming a multiclass:
+  
+      - Prerequisite checks run for the target class.
+  
+      - UI blocks invalid multiclass selections with clear reasons.
+  
+    - On successful level-up:
+  
+      - Class levels are tracked in character.classes as:
+  
+        - { className, subclass, level, subclassLevel }
+  
+      - Class string (character.class) is automatically rebuilt from the classes array.
+  
+      - Existing single-class characters remain compatible and can be “upgraded” the first time they multiclass.
+  
+  - **Data model updates** (js/character.js):
+  
+    - New fields:
+  
+      - multiclass: boolean – whether the character is multiclassed.
+  
+      - classes: [] – list of per-class level descriptors.
+  
+    - Class string parsing:
+  
+      - Supports both Class and Class (Subclass) for single-class characters.
+  
+      - Supports Class (Subclass) / Class (Subclass) for multiclass characters.
+  
+    - Spell slot calculation:
+  
+      - calculateCharacterSpellSlots(character):
+  
+      - Detects when multiclass rules apply.
+  
+      - Returns { sharedSlots, pactSlots }.
+  
+      - Uses the multiclass spell slot table for shared slots and Pact Magic rules for Warlock.
+  
+  - **Character creation subclass support** (js/character-creation-wizard.js):
+  
+    - Added Subclass step to character creation (Step 4).
+  
+    - Conditionally displays subclass choices only when:
+  
+      - Starting level is high enough for that class’s subclass.
+  
+      - Class actually has subclasses defined in level-up-data.js.
+  
+    - Uses the same subclass data and UI patterns as the level-up system for consistency.
+
+- **Changed**
+
+  - **Spellcasting initialization on character creation** (js/character-creation.js):
+
+    - Added a backup mapping table to correctly set:
+
+      - Spellcasting ability (INT/WIS/CHA) based on class.
+
+      - Baseline spell slot progression when a new spellcasting class is created.
+
+    - Ensures that newly created casters have their spell slots and spellcasting ability consistently initialized even if other systems fail to do so.
+
+  - **Feat transfer clarity:**
+
+    - When feats are selected in the level-up wizard, the feat summaries (description / key effects) are now transferred to and displayed on the main character sheet.
+
+    - This gives a quick reference for what each feat actually does without needing to reopen the wizard.
+
+- **Fixed**
+
+  - **Character creation failure:**
+  
+    - Fixed a bug where character creation could silently fail, resulting in no character object and an empty sheet.
+  
+    - Creation flow now reliably builds the character object and populates all relevant sections of the sheet on completion.
+  
+  - **Spell lookup & filtering:**
+  
+    - Resolved an issue where spells from data-spells could not be properly searched or filtered by:
+  
+      - Cantrip vs. leveled spells
+  
+      - Spell level
+  
+      - Class
+  
+    - Updated lookup logic so all spell filtering and searching is now consistent with the level-up spell learning UI.
+  
+  - **Spell slot controls:**
+  
+    - Fixed a long-standing bug where the add, minus, and reset buttons on spell slots had no event handlers and therefore never worked.
+  
+    - All spell slot controls now have proper handlers and correctly modify the spell slot counts.
+  
+  - **Subclass integration edge cases:**
+  
+    - Tightened subclass logic so characters who already have a subclass are never prompted again on later level-ups.
+  
+    - Creation and level-up now agree on where subclass data lives on the character object and how it’s displayed.
+  
 1.10.0 - 2025-12-12
 **Character Manager: Level-Up System**
 

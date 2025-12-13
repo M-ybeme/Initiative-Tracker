@@ -243,8 +243,14 @@
                     <input type="text" id="charRace" class="form-control form-control-sm" placeholder="Tiefling, Human, Owlin..." />
                   </div>
                   <div class="col-md-3">
-                    <label for="charClass" class="form-label">Class / Subclass</label>
+                    <label for="charClass" class="form-label">
+                      Class / Subclass
+                      <button type="button" class="btn btn-sm btn-outline-info ms-2" id="manageMulticlassBtn" style="padding: 0 6px; font-size: 0.7rem;">
+                        <i class="bi bi-diagram-3"></i> Multiclass
+                      </button>
+                    </label>
                     <input type="text" id="charClass" class="form-control form-control-sm" placeholder="Wizard (Evocation)..." />
+                    <small class="text-muted">For multiclass: Wizard / Fighter</small>
                   </div>
                   <div class="col-md-3">
                     <label for="charBackground" class="form-label">Background</label>
@@ -2459,11 +2465,77 @@
     </div>
   </div>
 
+  <!-- Multiclass Management Modal -->
+  <div class="modal fade" id="multiclassModal" tabindex="-1" aria-labelledby="multiclassModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+      <div class="modal-content bg-dark text-light border-secondary">
+        <div class="modal-header border-secondary">
+          <h5 class="modal-title" id="multiclassModalLabel">
+            <i class="bi bi-diagram-3 me-2"></i>Manage Multiclass Levels
+          </h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <p class="text-muted mb-3">
+            <i class="bi bi-info-circle me-1"></i>
+            Allocate your character's total level across multiple classes. The system will automatically calculate spell slots using multiclass rules.
+          </p>
+
+          <div class="mb-3">
+            <label class="form-label">Total Character Level: <strong id="multiclassTotalLevel">1</strong></label>
+            <div class="progress" style="height: 25px;">
+              <div id="multiclassLevelBar" class="progress-bar" role="progressbar" style="width: 0%">
+                <span id="multiclassLevelText">0 / 1</span>
+              </div>
+            </div>
+          </div>
+
+          <div id="multiclassClassList" class="mb-3">
+            <!-- Class entries will be dynamically added here -->
+          </div>
+
+          <button type="button" class="btn btn-sm btn-outline-success" id="addMulticlassBtn">
+            <i class="bi bi-plus-circle me-1"></i>Add Class
+          </button>
+
+          <hr class="border-secondary my-3">
+
+          <div id="multiclassPrereqWarnings" class="alert alert-warning d-none">
+            <i class="bi bi-exclamation-triangle me-1"></i>
+            <strong>Prerequisites not met:</strong>
+            <ul id="multiclassPrereqList" class="mb-0 mt-2"></ul>
+          </div>
+
+          <div id="multiclassSpellSlotPreview" class="d-none">
+            <h6 class="mb-2">Spell Slots Preview:</h6>
+            <div class="row g-2">
+              <div class="col">
+                <small class="text-muted d-block">Shared Slots</small>
+                <div id="multiclassSharedSlots" class="small"></div>
+              </div>
+              <div class="col" id="multiclassPactSlotSection" style="display: none;">
+                <small class="text-muted d-block">Pact Magic</small>
+                <div id="multiclassPactSlots" class="small"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer border-secondary">
+          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button type="button" class="btn btn-success" id="applyMulticlassBtn">
+            <i class="bi bi-check2-circle me-1"></i>Apply Multiclass
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <script src="/js/indexed-db-storage.js"></script>
   <script src="/js/spells-data.js"></script>
   <script src="/js/character-creation-wizard.js"></script>
   <script src="/js/level-up-data.js"></script>
   <script src="/js/level-up-system.js"></script>
   <script src="/js/character.js"></script>
+  <script src="/js/multiclass-ui.js"></script>
 </body>
 </html>
