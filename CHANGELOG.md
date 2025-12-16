@@ -3,6 +3,30 @@ All notable changes to The DM's Toolbox are documented here.
 The format is based on Keep a Changelog,
 and this project adheres to Semantic Versioning.
 
+1.10.2 - 2025-12-15
+**Tavern Generator: Context & Metrics Update**
+
+- **Added**
+
+  - New UI controls in `tav.html`: `time-of-day` and `tavern-type` selectors, and a `Context Influence` slider to control how strongly the tavern context biases generated people, events, and rumors.
+  - `boostedPool` merging strategy to weight context-specific pools against base pools and an option to omit context entirely when the slider is set to 0.
+  - Guarantees in the builder functions to ensure at least one context-specific patron/event/rumor when context entries exist.
+  - Extensive expansion of context pools (patron types, quirks, hooks, events, bartender/patron rumors) so context settings meaningfully affect output.
+  - New metrics tooling: `simulate_tavern_metrics.py` extracts literal pools from `tav.html` and runs Monte Carlo trials to measure context share and item frequency; outputs `sim_metrics.json`.
+
+- **Changed**
+
+  - Improved seeded RNG handling and PRNG parity for deterministic simulations.
+  - Small tightening of `boostedPool` growth cap to prevent runaway pool growth while still allowing influence.
+
+- **Removed / Cleaned**
+
+  - Legacy simulation scripts and older result files were archived/cleaned and replaced with a focused metrics script.
+
+- **Notes**
+
+  - Metrics measure both presence and share of context selections; follow-up tuning may increase the cap or tweak repetition formula if stronger flavoring is desired.
+
 1.10.1 - 2025-12-13
 **Character Manager: Subclasses, Spells, and Multiclassing**
 

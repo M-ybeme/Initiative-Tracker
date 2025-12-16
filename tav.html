@@ -97,6 +97,38 @@
                 </div>
               </div>
 
+              <div class="row g-2 mt-2">
+                <div class="col-6">
+                  <label for="tv-timeOfDay" class="form-label">Time of day</label>
+                  <select id="tv-timeOfDay" class="form-select">
+                    <option value="dawn">Dawn</option>
+                    <option value="morning" selected>Morning</option>
+                    <option value="afternoon">Afternoon</option>
+                    <option value="evening">Evening</option>
+                    <option value="night">Night</option>
+                    <option value="midnight">Midnight</option>
+                  </select>
+                </div>
+                <div class="col-6">
+                  <label for="tv-tavernType" class="form-label">Tavern type</label>
+                  <select id="tv-tavernType" class="form-select">
+                    <option value="tavern" selected>Tavern</option>
+                    <option value="inn">Inn</option>
+                    <option value="roadhouse">Roadhouse</option>
+                    <option value="seedy">Seedy tavern</option>
+                    <option value="noble">Noble inn</option>
+                    <option value="temple">Temple/ Shrine tavern</option>
+                  </select>
+                </div>
+              </div>
+              <div class="row g-2 mt-2">
+                <div class="col-12">
+                  <label for="tv-contextInfluence" class="form-label">Context influence</label>
+                  <input id="tv-contextInfluence" type="range" min="0" max="10" step="1" value="5" class="form-range">
+                  <div class="small text-secondary">Lower = more generic output; Higher = strongly flavored by settings</div>
+                </div>
+              </div>
+
               <div class="row g-2 mt-1">
                 <div class="col-6">
                   <label for="tv-seed" class="form-label">Seed (optional)</label>
@@ -417,6 +449,195 @@
           "A patron claims they're nobility traveling incognito"
         ];
 
+          // ----- Time-of-day / Tavern-type specific pools -----
+          const EVENTS_BY_TIME = {
+            dawn: ["A weary courier arrives asking for directions before leaving at first light","The cook rushes out to fetch a special ingredient for breakfast service"],
+            morning: ["A delivery cart unloads fresh supplies at the back door","Local tradesfolk stop in for a quick meal before work"],
+            afternoon: ["Travelers swap news of the road over watered ale","A minor scuffle breaks out between two itinerant merchants"],
+            evening: ["Musicians set up as the room begins to fill for supper","A storyteller gathers children for tales by the fire"],
+            night: ["A clandestine meeting takes place in a shadowed corner","Late-night gamblers start a high-stakes game"],
+            midnight: ["A hooded figure slips a sealed note to the barkeep","Someone tries to bribe the bouncer to look the other way"]
+          };
+
+          // Bartender rumors by time of day (expanded)
+          const BARTENDER_RUMORS_BY_TIME = {
+            dawn: [
+              "ship left at first light",
+              "caravan due this morning",
+              "a lamplighter was seen heading north",
+              "fishermen returned with a strange catch"
+            ],
+            morning: [
+              "the miller paid his debts",
+              "a suspicious cart passed through",
+              "a monk arrived with sealed letters",
+              "the market herald announced new tariffs"
+            ],
+            afternoon: [
+              "a well was struck nearby",
+              "someone's lost dog returned",
+              "a caravan traded exotic cloth",
+              "a pair of foreign soldiers asked directions"
+            ],
+            evening: [
+              "the lord seeks recruits",
+              "a troupe performs tonight",
+              "a new play premieres at the square",
+              "a traveling merchant tells of a cursed idol"
+            ],
+            night: [
+              "There's a gambling ring that only runs after dusk",
+              "Someone's been selling strange tonics to sailors at night",
+              "Late shipments keep arriving with no manifest",
+              "A hush falls at the stroke of eleven when certain patrons arrive"
+            ],
+            midnight: [
+              "A courier left a pouch with a strange sigil at the bar",
+              "They say midnight is when the smugglers meet at the quay",
+              "An unknown patron pays for a private room each new moon",
+              "The cellar door has been opened in the dead of night recently"
+            ]
+          };
+
+          // Bartender rumors by tavern type (only 'noble' has special entries here)
+          const BARTENDER_RUMORS_BY_TYPE = {
+            noble: [
+              "They pay well but ask for discretion",
+              "Strange requests come from the upper floors late at night",
+              "Servants whisper of sealed correspondence delivered after dark",
+              "A valet once offered a coin to keep a secret about a guest"
+            ]
+          };
+
+          // Patron rumors keyed by settlement/quality/size
+          const PATRON_RUMORS_BY_SETTLEMENT = {
+            village: ["They whisper about the old hedge that seems to move","A shepherd found odd tracks by the brook"],
+            town: ["The market guild is hiring muscle for night shifts","Someone paid a small fortune for a map recently"],
+            capital: ["Nobles are arranging marriages behind closed doors","A courier vanished between two wards last week"]
+          };
+          const PATRON_RUMORS_BY_QUALITY = {
+            fine: ["A rumor that a noble is recruiting discreetly","Talk of a forgery ring selling fake letters"]
+          };
+          const PATRON_RUMORS_BY_SIZE = {
+            large: ["A traveling caravan left a strange crate in the stables","Many different accents suggest a broader rumor network"]
+          };
+
+          // Patron rumors keyed by time of day
+          const PATRON_RUMORS_BY_TIME = {
+            dawn: [
+              "the bridge toll is waived at dawn",
+              "someone lost a pouch by the quay",
+              "fisherfolk traded a strange map",
+              "a child found a brass key"
+            ],
+            morning: [
+              "the baker's son is ill",
+              "strange marks appeared on the trading post",
+              "the apothecary ran out of a rare herb",
+              "a cart overturned spilling letters"
+            ],
+            afternoon: [
+              "a new house is rising by the lane",
+              "a forester spotted a wounded stag",
+              "the smith hired an extra hand",
+              "a noble's carriage passed with curtains drawn"
+            ],
+            evening: [
+              "a feast is planned at the manor",
+              "a traveling bard knows a secret song",
+              "the lamplighter forgot his route",
+              "the apothecary sold a potion for bravery"
+            ],
+            night: [
+              "a stranger seeks work under cover of dark",
+              "folks avoid the old hollow",
+              "someone lit a signal on the hill",
+              "a cart rolled silently down an empty street"
+            ],
+            midnight: [
+              "a secret meeting near the mill",
+              "dogs howled till dawn last night",
+              "a cloaked rider passed with haste",
+              "the church bell rang out of turn"
+            ]
+          };
+
+          // Patron rumors keyed by tavern type / mood
+          const PATRON_RUMORS_BY_TYPE = {
+            seedy: [
+              "a fence bought a fine silver cup nearby",
+              "the watch looks the other way for a price",
+              "someone is buying stolen trinkets",
+              "rumors of a confidence man in town"
+            ],
+            noble: [
+              "a duel is whispered between two young lords",
+              "the envoy carries sealed orders",
+              "a dowry dispute reached the manor",
+              "an heir was seen courting in disguise"
+            ],
+            roadhouse: [
+              "bandits have been tracking the east road",
+              "a bridge washed out last night",
+              "a coach broke an axle outside town",
+              "a courier lost his route amidst fog"
+            ],
+            inn: [
+              "a lodger took a map leading into the hills",
+              "someone left a chest under a bed",
+              "a pair of travelers argued about coin",
+              "an extra hand stayed the week for reasons"
+            ],
+            temple: [
+              "the shrine received a strange votive",
+              "a pilgrim vanished from the hostelry",
+              "a novice is whispering of visions",
+              "a relic's case was found unlocked"
+            ]
+          };
+          const EVENTS_BY_TYPE = {
+            seedy: ["A cutpurse eyes unattended purses under the tables","The back room is being used for an illicit dice ring"],
+            noble: ["A well-dressed retinue demands a private dining area","Servants whisper about a secret engagement in the upstairs suite"],
+            roadhouse: ["Riders hitch their horses and compare notes about the road ahead","Travelers swap information on blocked passes and fallen bridges"],
+            temple: ["Pilgrims quietly offer thanks and share omens","A cleric quietly blesses meals for those who ask"]
+          };
+
+          const EVENTS_BY_SETTLEMENT = {
+            village: ["Farmers argue about a ruined crop","A traveling peddler hawks odd trinkets"],
+            town: ["A market seller disputes a price","Town criers announce a local ordinance"],
+            capital: ["A city official inspects a ledger","A sedan chair arrives with important visitors"]
+          };
+
+          const EVENTS_BY_QUALITY = {
+            rough: ["Spilled ale results in a shouting match","A brawl threatens the main table"],
+            common: ["Regulars trade stories of local happenings","A server fumbles a tray but recovers with a joke"],
+            cozy: ["A hearth-side storyteller charms a small group","The cook offers a complimentary sample"],
+            fine: ["A private tasting is held upstairs","A well-dressed guest offers to pay for everyone's meal"]
+          };
+
+          const EVENTS_BY_SIZE = {
+            small: ["Space is tight and patrons squeeze together","Local chatter is dominated by a single loud voice"],
+            medium: ["A corner table hosts a lively family reunion","A troupe performs briefly between courses"],
+            large: ["Several tables are reserved for a visiting delegation","A travelling merchant sets up a small stall inside"]
+          };
+
+          const BARTENDER_RUMORS_BY_SETTLEMENT = {
+            village: [
+              "There's talk of a missing oxen herd",
+              "They suspect the miller's son knows more than he admits",
+              "Some claim the well runs strange colors at dawn"
+            ],
+            town: [
+              "A merchant is said to be skimming taxes",
+              "The local magistrate is said to be ill",
+              "A cart driver swears he saw a strange procession on the road"
+            ]
+          };
+          const BARTENDER_RUMORS_BY_QUALITY = {
+            fine: ["Someone paid oddly for a table and asked about private entrances","The cellar stores some rare vintages not for public sale"]
+          };
+          
+
         const BARTENDER_RUMORS = [
           "I heard the old mill on the edge of town has strange lights at night",
           "A merchant caravan went missing on the north road last week",
@@ -564,6 +785,29 @@
 
         // ---------- Helpers ----------
         function within(rng,[a,b]){ return a + rng()*(b-a) }
+        function repeatArray(arr, times){ if(!arr||!arr.length) return []; const out=[]; for(let i=0;i<times;i++) out.push(...arr); return out; }
+        function boostedPool(base, contexts, boost){
+          // If no explicit boost provided, read the UI slider `tv-contextInfluence` if present
+          let b = boost;
+          try{ if(typeof b==='undefined' && typeof document!=='undefined'){ const el = document.getElementById('tv-contextInfluence'); if(el) b = Math.max(0, Math.min(10, +el.value||0)); } }catch(e){ b = (typeof b==='number'? b : 3); }
+          b = (typeof b==='number' && !isNaN(b)) ? Math.round(b) : 3;
+          const pool = [...(base||[])];
+          if(!contexts||!contexts.length) return pool;
+          // If slider is 0, omit context entries entirely
+          let totalCtx = 0;
+          contexts.forEach(c=>{ if(Array.isArray(c)) totalCtx += c.length||0; });
+          if(b === 0 || totalCtx === 0) return pool;
+          // Scale context repetition relative to base pool size so small context arrays aren't drowned out
+          const baseLen = Math.max(1, pool.length);
+          const ctxLen = Math.max(1, totalCtx);
+          let repeat = Math.max(1, Math.round(b * (baseLen / ctxLen)));
+          // tighter cap to avoid runaway growth while still allowing influence
+          repeat = Math.min(repeat, 6);
+          for(let r=0;r<repeat;r++){
+            contexts.forEach(ctx=>{ if(ctx && ctx.length) pool.push(...ctx); });
+          }
+          return pool;
+        }
         function money(sp){ if(sp>=10){const gp=sp/10; return (gp%1?gp.toFixed(1):gp.toFixed(0))+" gp"; } return sp+" sp"; }
         function priceScale(rng, settlement, quality){
           const s = within(rng, SETTLEMENT[settlement].price);
@@ -693,7 +937,10 @@
           "local regular","traveling merchant","off-duty guard","farmer","craftsperson","sellsword",
           "pilgrim","gambler","scholar","miner","sailor","peddler","tinker","hunter","herbalist",
           "wandering bard","caravan guard","apprentice wizard","young noble","old soldier","thief",
-          "courier","scribe","acolyte","hedge witch","fortune teller","bounty hunter","shipwright"
+          "courier","scribe","acolyte","hedge witch","fortune teller","bounty hunter","shipwright",
+          "inn lodger","stable hand","market hawker","coachman","drayman","house servant","street urchin",
+          "itinerant artisan","map seller","fortune seeker","herbal gatherer","festival performer","dog trainer",
+          "bookbinder","cloth merchant","leatherworker","coppersmith","fishmonger","silk trader"
         ];
 
         const PATRON_QUIRKS = [
@@ -701,7 +948,9 @@
           "walks with a limp","constantly polishing a coin","chewing on a pipe stem","fidgeting with cards",
           "reading a crumpled letter","sharpening a knife","counting coins repeatedly","whittling wood",
           "humming a tune","tapping fingers rhythmically","checking the door frequently","wearing a lucky charm",
-          "speaking in whispers","overly loud laugh","perpetually yawning","cleaning fingernails with dagger"
+          "speaking in whispers","overly loud laugh","perpetually yawning","cleaning fingernails with dagger",
+          "keeps a small notebook","wears a stained cloak","obsessively cleans boots","smells faintly of lavender",
+          "keeps a lucky coin on a string","tucks a ribbon into hat","has soot under nails","sings softly to self"
         ];
 
         const PATRON_HOOKS = [
@@ -711,18 +960,242 @@
           "bragging about past exploits","complaining about taxes","nursing an old wound","selling something under the table",
           "recruiting for a cause","warning about danger nearby","seeking revenge","trying to charm the staff",
           "sketching the room in a journal","listening to gossip intently","brooding over a map","teaching someone a game",
-          "trading rumors for drinks","showing off a trophy","asking about local legends","looking for someone who went missing"
+          "trading rumors for drinks","showing off a trophy","asking about local legends","looking for someone who went missing",
+          "seeking a lost heirloom","trying to recruit for a caravan","looking for medical help","hiding contraband",
+          "seeking directions","testing a forged letter","offering to sell a map","looking for a safe bed"
         ];
+        // Context-specific patron pools
+        const PATRON_TYPES_BY_SETTLEMENT = { 
+          village: ["smallholding farmer","itinerant shepherd","local storyteller","miller's apprentice"], 
+          town: ["market trader","coachman","guild journeyman","apothecary's helper"], 
+          capital: ["court clerk","merchant agent","city watch","minor noble's retainer"] };
+        const PATRON_TYPES_BY_QUALITY = {
+          rough: ["drunken laborer","roughlancer","coalman","barnhand","river scull"],
+          common: ["marketgoer","apprentice","town clerk","baker's helper","shop assistant"],
+          cozy: ["family group","local teacher","quilting circle member","hearth-side poet"],
+          fine: ["genteel traveler","retired officer","tastemaker","dressed envoy","patron of the arts"]
+        };
+        const PATRON_TYPES_BY_SIZE = {
+          small: ["local farmer","weaver's apprentice"],
+          medium: ["regional merchant","travelling minstrel"],
+          large: ["distant noble","merchant caravan leader","importer"]
+        };
+        const PATRON_TYPES_BY_TIME = {
+          dawn: [
+            "weary courier",
+            "early milker",
+            "milking hand returning from fields",
+            "dawn market runner",
+            "courier with a satchel"
+          ],
+          morning: [
+            "delivery driver",
+            "market buyer",
+            "street vendor setting up",
+            "apprentice running errands",
+            "traveler grabbing a quick bite before the road"
+          ],
+          afternoon: [
+            "coach passenger",
+            "day laborer",
+            "itinerant artisan",
+            "postal clerk on a break",
+            "caravan scout"
+          ],
+          evening: [
+            "families dining",
+            "supper crowd",
+            "musician warming up",
+            "guild journeyman stopping after work",
+            "local teacher with students"
+          ],
+          night: [
+            "late-shift worker",
+            "drifter",
+            "night watch",
+            "barback cleaning up",
+            "shadowed traveler"
+          ],
+          midnight: [
+            "shadowy visitor",
+            "mysterious courier",
+            "cloak-and-dagger messenger",
+            "silent passenger slipping upstairs",
+            "someone with a sealed parcel"
+          ]
+        };
+        const PATRON_TYPES_BY_TYPE = {
+          seedy: [
+            "cutpurse",
+            "shady fence",
+            "beggarman",
+            "back-alley informant",
+            "sly bookie"
+          ],
+          noble: [
+            "retinue member",
+            "lady-in-waiting",
+            "private tutor",
+            "minor courtier",
+            "sommelier from the manor"
+          ],
+          roadhouse: [
+            "wagon driver",
+            "relay rider",
+            "traveler with mud-splattered cloak",
+            "circus hand",
+            "merchant of odd wares"
+          ],
+          inn: [
+            "long-term lodger",
+            "inn valet",
+            "hired hand lodging for the week",
+            "traveler on extended leave",
+            "outsourced carriage caretaker"
+          ],
+          temple: [
+            "silent pilgrim",
+            "cleric's novice",
+            "itinerant scribe",
+            "lay devotee",
+            "votive-offering seller"
+          ]
+        };
 
-        function buildPatrons(rng, count){
+        const PATRON_QUIRKS_BY_CONTEXT = {
+          capital: [
+            "keeps a ledger of names",
+            "speaks in clipped tones",
+            "adjusts a signet ring",
+            "uses formal greetings",
+            "presents calling cards",
+            "notes conversations in shorthand"
+          ],
+          fine: [
+            "checks napkin for stains",
+            "twitches when servants pass",
+            "inspects cutlery",
+            "smells faint perfume",
+            "sips wine with tilted pinky",
+            "keeps a tasting journal"
+          ],
+          seedy: [
+            "constantly scans the room",
+            "finger always near a dagger",
+            "hunched shoulders",
+            "avoids eye contact",
+            "cleans a small knife obsessively",
+            "taps coins under the table"
+          ],
+          night: [
+            "whispers about routes they traveled",
+            "covers face with hood",
+            "keeps coin pouch hidden",
+            "checks alleyways through windows",
+            "speaks in hushed timbre"
+          ],
+          village: [
+            "smells of fresh hay",
+            "calls everyone by name",
+            "boots full of straw",
+            "greets like family",
+            "brings a small woven trinket"
+          ],
+          town: [
+            "keeps tally on a scrap of paper",
+            "uses local slang",
+            "smudged ink on fingers",
+            "bumps elbows with merchants",
+            "polishes a small brass token"
+          ],
+          middle: [
+            "fidgets with a pocket watch",
+            "keeps checking the door",
+            "smooths a dusty coat"
+          ]
+        };
+
+        const PATRON_HOOKS_BY_CONTEXT = {
+          village: [
+            "talking about a bad harvest",
+            "looking for hired hands",
+            "asking about seed prices",
+            "seeking tradesmen recommendations"
+          ],
+          capital: [
+            "looking for employment at court",
+            "seeking news from the capital",
+            "asking about travel permits",
+            "pursuing introductions to officials"
+          ],
+          fine: [
+            "seeking invitations to salons",
+            "discussing theatre schedules",
+            "arranging private tastings",
+            "hosting a discreet gathering"
+          ],
+          seedy: [
+            "selling rumors for a coin",
+            "looking to recruit for shady work",
+            "trying to fence a trinket",
+            "asking who will watch the door tonight"
+          ],
+          roadhouse: [
+            "asking about road conditions",
+            "looking for a stable hand",
+            "seeking news of bandit sightings"
+          ],
+          morning: [
+            "buying supplies for the day",
+            "looking for early work",
+            "asking for the fastest route to market"
+          ],
+          afternoon: [
+            "seeking shelter from heat",
+            "looking for an afternoon ale",
+            "trying to find a temporary job"
+          ],
+          night: [
+            "looking for a late job",
+            "hunting information after dark",
+            "asking about hidden rooms or back doors"
+          ]
+        };
+
+        // Build patrons using context to bias pools
+        function buildPatrons(rng, count, settlement, quality, size, timeOfDay, tavernType){
           const patrons = [];
-          for(let i=0; i<count; i++){
-            const type = pick(rng, PATRON_TYPES);
+
+          // Compose type/quirk/hook pools but boost context entries so they matter
+          const typePool = boostedPool(PATRON_TYPES, [PATRON_TYPES_BY_SETTLEMENT[settlement], PATRON_TYPES_BY_QUALITY[quality], PATRON_TYPES_BY_SIZE[size], PATRON_TYPES_BY_TIME[timeOfDay], PATRON_TYPES_BY_TYPE[tavernType]]);
+          const quirkPool = boostedPool(PATRON_QUIRKS, [PATRON_QUIRKS_BY_CONTEXT[settlement], PATRON_QUIRKS_BY_CONTEXT[quality], PATRON_QUIRKS_BY_CONTEXT[tavernType], PATRON_QUIRKS_BY_CONTEXT[timeOfDay]]);
+          const hookPool = boostedPool(PATRON_HOOKS, [PATRON_HOOKS_BY_CONTEXT[settlement], PATRON_HOOKS_BY_CONTEXT[quality], PATRON_HOOKS_BY_CONTEXT[tavernType], PATRON_HOOKS_BY_CONTEXT[size], PATRON_HOOKS_BY_CONTEXT[timeOfDay]]);
+
+          // Guarantee at least one context-specific patron type if available
+          const ctxTypes = [].concat(PATRON_TYPES_BY_SETTLEMENT[settlement]||[], PATRON_TYPES_BY_QUALITY[quality]||[], PATRON_TYPES_BY_SIZE[size]||[], PATRON_TYPES_BY_TIME[timeOfDay]||[], PATRON_TYPES_BY_TYPE[tavernType]||[]).filter(Boolean);
+          const usedTypes = new Set();
+          if(ctxTypes.length){
+            const t = pick(rng, ctxTypes);
+            usedTypes.add(t);
             const age = pick(rng, AGE);
             const build = pick(rng, BUILD);
             const attire = pick(rng, ATTIRE);
-            const quirk = pick(rng, PATRON_QUIRKS);
-            const hook = pick(rng, PATRON_HOOKS);
+            const quirk = pick(rng, quirkPool);
+            const hook = pick(rng, hookPool);
+            const desc = `${age}, ${build} ${t}`;
+            const appearance = `${quirk}, wearing ${attire}`;
+            patrons.push({desc, appearance, hook});
+          }
+          for(let i=patrons.length;i<count;i++){
+            let type;
+            let guard=0;
+            do{ type = pick(rng, typePool); guard++; }while(usedTypes.has(type) && guard<10);
+            usedTypes.add(type);
+            const age = pick(rng, AGE);
+            const build = pick(rng, BUILD);
+            const attire = pick(rng, ATTIRE);
+            const quirk = pick(rng, quirkPool);
+            const hook = pick(rng, hookPool);
             const desc = `${age}, ${build} ${type}`;
             const appearance = `${quirk}, wearing ${attire}`;
             patrons.push({desc, appearance, hook});
@@ -730,18 +1203,35 @@
           return patrons;
         }
 
-        function buildEventsAndRumors(rng){
-          // Generate 1-2 events happening right now
+        function buildEventsAndRumors(rng, settlement, quality, size, timeOfDay, tavernType){
+          // Decide how many items to pick
           const eventCount = Math.floor(rng() * 2) + 1; // 1 or 2 events
-          const events = pickN(rng, TAVERN_EVENTS, eventCount);
-
-          // Generate 2-3 bartender rumors
           const bartenderCount = Math.floor(rng() * 2) + 2; // 2 or 3 rumors
-          const bartenderRumors = pickN(rng, BARTENDER_RUMORS, bartenderCount);
+          const patronCount = Math.floor(rng() * 3) + 2; // 2-4 rumors
 
-          // Generate 2-4 patron rumors
-          const patronCount = Math.floor(rng() * 3) + 2; // 2, 3, or 4 rumors
-          const patronRumors = pickN(rng, PATRON_RUMORS, patronCount);
+          // Merge base pools with time-of-day, tavern-type, settlement, quality, and size variations
+          // Boost time and type relevance for events/rumors so settings matter
+          const eventPool = boostedPool(TAVERN_EVENTS, [EVENTS_BY_TIME[timeOfDay], EVENTS_BY_TYPE[tavernType], EVENTS_BY_SETTLEMENT[settlement], EVENTS_BY_QUALITY[quality], EVENTS_BY_SIZE[size]]);
+          const bartenderPool = boostedPool(BARTENDER_RUMORS, [BARTENDER_RUMORS_BY_TIME[timeOfDay], BARTENDER_RUMORS_BY_TYPE[tavernType], BARTENDER_RUMORS_BY_SETTLEMENT[settlement], BARTENDER_RUMORS_BY_QUALITY[quality]]);
+          const patronPool = boostedPool(PATRON_RUMORS, [PATRON_RUMORS_BY_TIME[timeOfDay], PATRON_RUMORS_BY_TYPE[tavernType], PATRON_RUMORS_BY_SETTLEMENT[settlement], PATRON_RUMORS_BY_QUALITY[quality], PATRON_RUMORS_BY_SIZE[size]]);
+
+          // Guarantee at least one context-specific event and one bartender/patron rumor when available,
+          // then fill remaining slots from the boosted pool
+          const ctxEvents = [].concat(EVENTS_BY_TIME[timeOfDay]||[], EVENTS_BY_TYPE[tavernType]||[], EVENTS_BY_SETTLEMENT[settlement]||[], EVENTS_BY_QUALITY[quality]||[], EVENTS_BY_SIZE[size]||[]).filter(Boolean);
+          const events = [];
+          if(ctxEvents.length) events.push(pick(rng, ctxEvents));
+          const needEvents = Math.max(0, eventCount - events.length);
+          pickN(rng, eventPool, needEvents).forEach(e=>events.push(e));
+
+          const ctxBart = [].concat(BARTENDER_RUMORS_BY_TIME[timeOfDay]||[], BARTENDER_RUMORS_BY_TYPE[tavernType]||[], BARTENDER_RUMORS_BY_SETTLEMENT[settlement]||[], BARTENDER_RUMORS_BY_QUALITY[quality]||[]).filter(Boolean);
+          const bartenderRumors = [];
+          if(ctxBart.length) bartenderRumors.push(pick(rng, ctxBart));
+          pickN(rng, bartenderPool, Math.max(0, bartenderCount - bartenderRumors.length)).forEach(b=>bartenderRumors.push(b));
+
+          const ctxPatRum = [].concat(PATRON_RUMORS_BY_TIME[timeOfDay]||[], PATRON_RUMORS_BY_TYPE[tavernType]||[], PATRON_RUMORS_BY_SETTLEMENT[settlement]||[], PATRON_RUMORS_BY_QUALITY[quality]||[], PATRON_RUMORS_BY_SIZE[size]||[]).filter(Boolean);
+          const patronRumors = [];
+          if(ctxPatRum.length) patronRumors.push(pick(rng, ctxPatRum));
+          pickN(rng, patronPool, Math.max(0, patronCount - patronRumors.length)).forEach(p=>patronRumors.push(p));
 
           return { events, bartenderRumors, patronRumors };
         }
@@ -752,6 +1242,8 @@
           const quality = $("tv-quality").value;
           const size = $("tv-size").value;
           const seed = $("tv-seed").value.trim();
+          const timeOfDay = $("tv-timeOfDay").value || "morning";
+          const tavernType = $("tv-tavernType").value || "tavern";
           const uniquePct = clamp(+$("tv-uniquepct").value||35,0,100);
           const showStaff = $("tv-showRooms").checked; // intentionally left – next line corrects mapping
           // correct flags:
@@ -763,7 +1255,7 @@
 
           // meta
           const meta = $("tv-meta"); meta.innerHTML="";
-          [["Settlement",settlement],["Quality",quality],["Size",size],["Seed",seed||"(random)"]]
+          [["Settlement",settlement],["Quality",quality],["Size",size],["Time",timeOfDay],["Type",tavernType],["Context", (document.getElementById('tv-contextInfluence')? document.getElementById('tv-contextInfluence').value : '5')],["Seed",seed||"(random)"]]
             .forEach(([k,v])=>{ const s=document.createElement("span"); s.className="tv-pill"; s.textContent=`${k}: ${v}`; meta.appendChild(s); });
 
           // name + ambience
@@ -845,7 +1337,7 @@
           if(showPatrons){
             wrapPatrons.style.display="";
             const patronCount = Math.floor(rng() * 3) + 3; // 3-5 patrons
-            const patrons = buildPatrons(rng, patronCount);
+            const patrons = buildPatrons(rng, patronCount, settlement, quality, size, timeOfDay, tavernType);
             const grid = $("tv-patrons"); grid.innerHTML="";
             patrons.forEach(p=>{
               const col = document.createElement("div"); col.className="col";
@@ -867,7 +1359,7 @@
             wrapEvents.style.display="";
             wrapRumors.style.display="";
 
-            const { events, bartenderRumors, patronRumors } = buildEventsAndRumors(rng);
+            const { events, bartenderRumors, patronRumors } = buildEventsAndRumors(rng, settlement, quality, size, timeOfDay, tavernType);
 
             // Display events
             const eventsDiv = $("tv-events");

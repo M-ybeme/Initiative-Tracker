@@ -1,6 +1,10 @@
 const DM_TOOLBOX_BUILD = {
     name: "The DM's Toolbox",
-    version: "1.10.1",
+    version: "1.10.2",
+    recentChanges: [
+      "Tavern generator: time-of-day / tavern-type controls",
+      "Context-weighting (boostedPool), expanded pools, and metrics tooling"
+    ],
     buildTime: new Date().toISOString(),
     author: "Maybeme"
 };
