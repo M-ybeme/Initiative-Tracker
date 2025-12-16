@@ -19,13 +19,17 @@
       }
 
       function parseDiceNotation(notation) {
-        // Parse notation like "2d6+3" or "1d20" or "d8+2"
-        const match = notation.trim().match(/^(\d*)d(\d+)([+-]\d+)?$/i);
+        // Parse notation like "2d6+3", "1d20", "d8+2", or with spaces/parentheses like "(1d6 + 6)"
+        const match = notation.trim().match(/^\s*\(?\s*(\d*)d(\d+)\s*([+-]\s*\d+)?\s*\)?\s*$/i);
         if (!match) return null;
 
         const count = match[1] ? parseInt(match[1], 10) : 1;
         const sides = parseInt(match[2], 10);
-        const modifier = match[3] ? parseInt(match[3], 10) : 0;
+        let modifier = 0;
+        if (match[3]) {
+          const modStr = match[3].replace(/\s+/g, '');
+          modifier = parseInt(modStr, 10) || 0;
+        }
 
         return { count, sides, modifier };
       }
