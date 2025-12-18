@@ -334,6 +334,20 @@
             </div>
 
             <div class="d-flex flex-wrap gap-2 justify-content-start justify-content-lg-end">
+              <!-- Print/Export Character Sheet Dropdown -->
+              <div class="btn-group" role="group">
+                <button type="button" class="btn btn-sm btn-outline-light dropdown-toggle" id="printExportDropdown" data-bs-toggle="dropdown" aria-expanded="false" title="Print or export character sheet">
+                  <i class="bi bi-printer me-1"></i>Print/Export Sheet
+                </button>
+                <ul class="dropdown-menu dropdown-menu-dark" aria-labelledby="printExportDropdown">
+                  <li><a class="dropdown-item" href="#" id="printSheetBtn"><i class="bi bi-printer me-2"></i>Print Character Sheet</a></li>
+                  <li><hr class="dropdown-divider"></li>
+                  <li><a class="dropdown-item" href="#" id="exportPdfBtn"><i class="bi bi-file-pdf me-2"></i>Export as PDF</a></li>
+                  <li><a class="dropdown-item" href="#" id="exportPngBtn"><i class="bi bi-file-image me-2"></i>Export as PNG Image</a></li>
+                  <li><a class="dropdown-item" href="#" id="exportWordBtn"><i class="bi bi-file-word me-2"></i>Export as Word (.docx)</a></li>
+                </ul>
+              </div>
+
               <button type="button" class="btn btn-sm btn-outline-info" id="exportCharacterBtn" title="Export current character as JSON">
                 <i class="bi bi-download me-1"></i>Export
               </button>
@@ -3440,6 +3454,7 @@
   <script src="/js/level-up-system.js"></script>
   <script src="/js/character.js"></script>
   <script src="/js/multiclass-ui.js"></script>
+  <script src="/js/character-sheet-export.js"></script>
 
   <!-- Combat/DM Mode Toggle Functionality -->
   <script>

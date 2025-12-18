@@ -3,6 +3,96 @@ All notable changes to The DM's Toolbox are documented here.
 The format is based on Keep a Changelog,
 and this project adheres to Semantic Versioning.
 
+1.10.7 - 2025-12-18
+**Character Manager: Character Sheet Export System**
+
+- **Added**
+  - **Print/Export Character Sheet Dropdown** - Multi-format export system
+    - Print Character Sheet: Opens browser print dialog for physical printing
+    - Export as PDF: Generates PDF file using jsPDF (2.5.1) and html2canvas (1.4.1)
+    - Export as PNG Image: Creates high-quality PNG image of character sheet
+    - Export as Word (.docx): Generates Microsoft Word document using docx library (7.8.2)
+    - Dropdown menu integrated into character toolbar with Bootstrap 5 styling
+    - File naming convention: `CharacterName_sheet.pdf/png/docx`
+
+  - **Complete D&D 5e Character Data Export** - All ~95 character fields included
+    - Basic Information: Name, Player, Race, Class, Subclass, Background, Level, Alignment
+    - Combat Stats: AC, HP (current/max/temp), Speed, Initiative, Hit Dice, Proficiency Bonus
+    - Death Saves: Successes, Failures, Stable status with visual tracking
+    - Exhaustion: Level 0-6 tracking
+    - Currency: All 5 coin types (CP, SP, EP, GP, PP)
+    - Custom Resources: 3 resource slots with name/current/max values
+    - Ability Scores: All 6 abilities with modifiers
+    - Saving Throws: Proficiency and bonuses for all 6 saves
+    - Skills: All 18 skills with proficiency/expertise/bonus tracking
+    - Senses: Passive Perception, Investigation, Insight plus notes
+    - Features & Traits: Full text export
+    - Equipment/Inventory: Complete item list
+    - Notes: Features, roleplay notes, and general notes sections
+
+  - **Enhanced Attack Display** - Full combat information per attack
+    - Attack Type: Melee Weapon, Ranged Weapon, Spell Attack, Save (DC)
+    - Range: Reach or distance in feet
+    - To Hit Bonus: Attack roll modifier
+    - Save DC: For save-based attacks
+    - Primary Damage: Dice notation + damage type (e.g., "1d8+3 slashing")
+    - Secondary Damage: Optional additional damage (e.g., "1d6 fire")
+    - Attack Properties: Notes and special features
+
+  - **Complete Spell System** - All spell data with full details
+    - Spell Slots: All 9 levels plus Pact Magic slots
+    - Spellcasting Ability: INT/WIS/CHA tracking
+    - Spell List Organization: Grouped by level (Cantrips, Level 1-9)
+    - Spell Details per entry:
+      - Name and school of magic
+      - Casting time, range, components (V/S/M)
+      - Duration and concentration requirement
+      - Ritual and prepared status
+      - Complete spell description text
+    - Empty levels auto-hidden when no spells present
+
+  - **Professional Export Formatting** - D&D-themed styling
+    - Maroon headers (#800020) with white text
+    - Dark text (#000) for maximum readability
+    - Clean grid layouts with proper spacing
+    - Section separators and visual hierarchy
+    - Bootstrap-inspired card styling
+    - Export-optimized layouts (no interactive elements)
+
+  - **Event Listeners Integration** - [character.js](js/character.js#L3708-3744)
+    - Print button: Opens browser print dialog with character data
+    - Export PDF button: Generates PDF with all character information
+    - Export PNG button: Creates image export
+    - Export Word button: Generates .docx file
+    - Character selection validation before export
+
+- **Changed**
+  - Character toolbar expanded with new Print/Export dropdown menu
+  - Export functions replace placeholder text with complete character data
+  - All export formats use standardized character sheet HTML template
+
+- **Technical**
+  - New file: [js/character-sheet-export.js](js/character-sheet-export.js) - Complete export module
+  - Library dependencies added to characters.html:
+    - jsPDF 2.5.1 (PDF generation)
+    - html2canvas 1.4.1 (HTML to canvas conversion)
+    - docx 7.8.2 (Word document generation)
+  - CharacterSheetExporter class with methods:
+    - `exportToPDF(character)` - PDF export with html2canvas rendering
+    - `exportToPNG(character)` - PNG image export
+    - `exportToWord(character)` - Word document generation with docx library
+    - `printSheet(character)` - Browser print dialog
+    - `generateSheetHTML(character)` - HTML template generator
+    - Section generators for attacks, spells, skills, senses, death saves, currency, resources
+  - Helper functions:
+    - `formatAttackType(type)` - Human-readable attack type labels
+    - `getProficiencyBonus(level)` - Calculates proficiency from level
+    - `calculateModifier(score)` - Ability score to modifier conversion
+
+- **Known Limitations**
+  - Portrait export disabled: Character portraits not included in exports
+  - Portraits can be manually added to exported Word documents if needed
+
 1.10.6 - 2025-12-18
 **Battle Map: Performance Optimization & Persistent Measurements**
 

@@ -1,8 +1,8 @@
 const DM_TOOLBOX_BUILD = {
     name: "The DM's Toolbox",
-    version: "1.10.6",
+    version: "1.10.7",
     recentChanges: [
-      "Battle Map: Layered canvas architecture for performance, persistent measurements with editing"
+      "Character Manager: Export character sheets to PDF, PNG, and Word formats with complete D&D 5e data"
     ],
     buildTime: new Date().toISOString(),
     author: "Maybeme"

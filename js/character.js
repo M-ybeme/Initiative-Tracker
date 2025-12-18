@@ -3705,6 +3705,44 @@
           e.target.value = '';
         });
 
+        // Print/Export Character Sheet buttons
+        $('printSheetBtn').addEventListener('click', (e) => {
+          e.preventDefault();
+          const char = getCurrentCharacter();
+          if (char) {
+            window.characterSheetExporter.printSheet(char);
+          } else {
+            alert('Please select a character first.');
+          }
+        });
+        $('exportPdfBtn').addEventListener('click', (e) => {
+          e.preventDefault();
+          const char = getCurrentCharacter();
+          if (char) {
+            window.characterSheetExporter.exportToPDF(char);
+          } else {
+            alert('Please select a character first.');
+          }
+        });
+        $('exportPngBtn').addEventListener('click', (e) => {
+          e.preventDefault();
+          const char = getCurrentCharacter();
+          if (char) {
+            window.characterSheetExporter.exportToPNG(char);
+          } else {
+            alert('Please select a character first.');
+          }
+        });
+        $('exportWordBtn').addEventListener('click', (e) => {
+          e.preventDefault();
+          const char = getCurrentCharacter();
+          if (char) {
+            window.characterSheetExporter.exportToWord(char);
+          } else {
+            alert('Please select a character first.');
+          }
+        });
+
         $('portraitFile').addEventListener('change', e => {
           const file = e.target.files[0];
           if (!file) return;
