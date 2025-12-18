@@ -83,7 +83,35 @@
       <div class="card-header border-secondary">
         <h5 class="mb-0">NPC Settings</h5>
       </div>
-      <div class="card-body">
+      <div class="card-body" style="max-height: 600px; overflow-y: auto;">
+        <!-- Preset Templates -->
+        <div class="mb-3">
+          <label for="npc-preset" class="form-label fw-semibold">
+            <i class="bi bi-bookmark-star me-1"></i>Quick Presets
+          </label>
+          <select id="npc-preset" class="form-select">
+            <option value="">Custom Settings</option>
+            <optgroup label="Town NPCs">
+              <option value="guards">Town Guards (5)</option>
+              <option value="merchants">Merchants & Shopkeepers (6)</option>
+              <option value="tavern">Tavern Staff (4)</option>
+              <option value="nobles">Nobles & Officials (3)</option>
+            </optgroup>
+            <optgroup label="Adventure NPCs">
+              <option value="bandits">Bandit Gang (8)</option>
+              <option value="cultists">Cultist Group (6)</option>
+              <option value="guild">Thieves' Guild Members (5)</option>
+              <option value="villagers">Village Folk (10)</option>
+            </optgroup>
+            <optgroup label="Special">
+              <option value="party">Adventuring Party (4)</option>
+              <option value="crowd">Random Crowd (20)</option>
+            </optgroup>
+          </select>
+        </div>
+
+        <hr class="border-secondary">
+
         <div class="mb-2">
           <label for="npc-settlement" class="form-label">Settlement profile</label>
           <select id="npc-settlement" class="form-select">
@@ -109,16 +137,36 @@
           <label class="form-check-label" for="npc-roleInDesc">Mention role in description</label>
         </div>
 
-        <div class="d-grid d-sm-flex gap-2 mt-3">
-          <button class="btn btn-success w-100 w-sm-auto" id="npc-generate"><i class="bi bi-people-fill me-1"></i>Generate</button>
-          <button class="btn btn-outline-light w-100 w-sm-auto" id="npc-copy"><i class="bi bi-clipboard me-1"></i>Copy</button>
-          <button class="btn btn-warning w-100 w-sm-auto" id="npc-download"><i class="bi bi-download me-1"></i>Download .txt</button>
-          <button class="btn btn-danger w-100 w-sm-auto" id="npc-clear"><i class="bi bi-trash me-1"></i>Clear</button>
+        <div class="form-check">
+          <input class="form-check-input" type="checkbox" id="npc-autoName">
+          <label class="form-check-label" for="npc-autoName">Auto-generate names</label>
         </div>
 
-        <div class="alert alert-info mt-3 text-start">
-          <div class="fw-semibold mb-1"><i class="bi bi-magic"></i> Tip</div>
-          Click <strong>"Generate Name"</strong> on any NPC to add a name! Race is auto-detected from the description.
+        <div class="d-grid gap-2 mt-3">
+          <button class="btn btn-success" id="npc-generate"><i class="bi bi-people-fill me-1"></i>Generate NPCs</button>
+
+          <div class="btn-group" role="group">
+            <button class="btn btn-outline-light" id="npc-copy"><i class="bi bi-clipboard me-1"></i>Copy All</button>
+            <button class="btn btn-outline-info dropdown-toggle dropdown-toggle-split" data-bs-toggle="dropdown">
+              <span class="visually-hidden">Export options</span>
+            </button>
+            <ul class="dropdown-menu dropdown-menu-dark">
+              <li><a class="dropdown-item" href="#" id="npc-download-txt"><i class="bi bi-file-text me-2"></i>Download as .txt</a></li>
+              <li><a class="dropdown-item" href="#" id="npc-download-json"><i class="bi bi-file-code me-2"></i>Download as .json</a></li>
+            </ul>
+          </div>
+
+          <button class="btn btn-outline-danger" id="npc-clear"><i class="bi bi-trash me-1"></i>Clear All</button>
+        </div>
+
+        <div class="alert alert-info mt-3 text-start small">
+          <div class="fw-semibold mb-1"><i class="bi bi-lightbulb me-1"></i>Tips</div>
+          <ul class="mb-0 ps-3 small">
+            <li>Use presets for quick NPC groups</li>
+            <li>Click "Generate Name" on any NPC</li>
+            <li>Click "Generate Stats" for combat-ready NPCs</li>
+            <li>Export to JSON for external tools</li>
+          </ul>
         </div>
       </div>
     </div>
@@ -539,6 +587,7 @@ function generate(){
   const count = clamp(+$("npc-count").value || 12, 1, 500);
   const seed = $("npc-seed").value.trim();
   const roleInDesc = $("npc-roleInDesc").checked;
+  const autoName = $("npc-autoName").checked;
 
   const rng = prand(seed);
   const out = $("npc-out"); out.innerHTML = "";
@@ -557,12 +606,22 @@ function generate(){
     const avoids = makeAvoids(rng);
     const secret = makeSecret(rng);
 
+    // Auto-generate name if enabled
+    let generatedName = "[No name yet]";
+    let nameClass = "text-info";
+    if(autoName){
+      const race = detectRaceFromDescription(desc);
+      const { names } = generateNamesForNPC(`race: ${race}`, 1);
+      generatedName = names[0] || "[No name yet]";
+      nameClass = "text-success";
+    }
+
     // render card
     const col = document.createElement("div"); col.className = "col";
     const div = document.createElement("div"); div.className = "npc-tile";
     div.innerHTML = `
       <div class="npc-field mb-2">
-        <b>Name:</b> <span class="npc-name-display text-info">[No name yet]</span>
+        <b>Name:</b> <span class="npc-name-display ${nameClass}">${generatedName}</span>
         <button class="btn btn-outline-success btn-sm ms-2 npc-name-gen-btn" title="Generate Name">
           <i class="bi bi-person-badge me-1"></i>Generate Name
         </button>
@@ -578,7 +637,7 @@ function generate(){
         <button class="btn btn-outline-warning btn-sm npc-stat-gen-btn" title="Generate Combat Stats">
           <i class="bi bi-shield-fill-check me-1"></i>Generate Stats
         </button>
-        <button class="btn btn-outline-info btn-sm npc-copy-btn" title="Copy this NPC" style="display:none;">
+        <button class="btn btn-outline-info btn-sm npc-copy-btn" title="Copy this NPC">
           <i class="bi bi-clipboard me-1"></i>Copy
         </button>
       </div>
@@ -587,7 +646,7 @@ function generate(){
     col.appendChild(div); out.appendChild(col);
 
     rows.push({
-      name: "[No name yet]",
+      name: generatedName,
       desc: `Description: ${desc}`,
       voice: `Voice: ${voice}`,
       mans: `Mannerisms: ${mans}`,
@@ -601,27 +660,97 @@ function generate(){
 }
 
 // Copy / Download helpers
+function extractNPCData(){
+  return [...document.querySelectorAll("#npc-out .npc-tile")].map(tile=>{
+    const nameEl = tile.querySelector(".npc-name-display");
+    const name = nameEl ? nameEl.textContent : "[No name yet]";
+
+    // Extract all fields
+    const fields = tile.querySelectorAll(".npc-field");
+    const data = { name };
+
+    fields.forEach(field => {
+      const text = field.textContent.trim();
+      const colonIdx = text.indexOf(':');
+      if(colonIdx > -1){
+        const key = text.substring(0, colonIdx).trim().toLowerCase();
+        const value = text.substring(colonIdx + 1).trim();
+        data[key] = value;
+      }
+    });
+
+    // Get stat block if it exists
+    if(tile.dataset.statBlock){
+      data.statBlock = tile.dataset.statBlock;
+    }
+
+    return data;
+  });
+}
+
 function copyNPCs(){
   const rows = [...document.querySelectorAll("#npc-out .npc-tile")].map(tile=>{
     const nameEl = tile.querySelector(".npc-name-display");
     const name = nameEl ? nameEl.textContent : "[No name yet]";
-    const rest = tile.innerText.replace(/Name:.*?Generate Name/s, "").replace(/\n{2,}/g,"\n").trim();
-    return `Name: ${name}\n${rest}`;
+    const rest = tile.innerText.replace(/Name:.*?Generate Name/s, "").replace(/Generate Stats.*$/s, "").replace(/\n{2,}/g,"\n").trim();
+    const statBlock = tile.dataset.statBlock || "";
+
+    let fullText = `Name: ${name}\n${rest}`;
+    if(statBlock) fullText += `\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━\nCOMBAT STATS:\n${statBlock}`;
+
+    return fullText;
   });
   if(!rows.length) return;
-  navigator.clipboard.writeText(rows.join("\n\n---\n\n"));
+  navigator.clipboard.writeText(rows.join("\n\n═══════════════════════════════════════\n\n"));
 }
-function downloadNPCs(){
+
+function downloadNPCsTxt(){
   const text = [...document.querySelectorAll("#npc-out .npc-tile")].map(tile=>{
     const nameEl = tile.querySelector(".npc-name-display");
     const name = nameEl ? nameEl.textContent : "[No name yet]";
-    const rest = tile.innerText.replace(/Name:.*?Generate Name/s, "").replace(/\n{2,}/g,"\n").trim();
-    return `Name: ${name}\n${rest}`;
-  }).join("\n\n---\n\n");
+    const rest = tile.innerText.replace(/Name:.*?Generate Name/s, "").replace(/Generate Stats.*$/s, "").replace(/\n{2,}/g,"\n").trim();
+    const statBlock = tile.dataset.statBlock || "";
+
+    let fullText = `Name: ${name}\n${rest}`;
+    if(statBlock) fullText += `\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━\nCOMBAT STATS:\n${statBlock}`;
+
+    return fullText;
+  }).join("\n\n═══════════════════════════════════════\n\n");
+
   if(!text.trim()) return;
-  const blob = new Blob([text], {type:"text/plain"});
+
+  const header = `NPC Collection\nGenerated: ${new Date().toLocaleString()}\nTotal NPCs: ${document.querySelectorAll("#npc-out .npc-tile").length}\n\n═══════════════════════════════════════\n\n`;
+  const fullText = header + text;
+
+  const blob = new Blob([fullText], {type:"text/plain;charset=utf-8"});
   const url = URL.createObjectURL(blob);
-  const a = document.createElement("a"); a.href=url; a.download="npcs.txt"; a.click(); URL.revokeObjectURL(url);
+  const a = document.createElement("a");
+  a.href=url;
+  a.download=`npcs_${new Date().toISOString().slice(0,10)}.txt`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+function downloadNPCsJson(){
+  const npcs = extractNPCData();
+  if(!npcs.length) return;
+
+  const exportData = {
+    metadata: {
+      generatedAt: new Date().toISOString(),
+      totalNPCs: npcs.length,
+      generator: "The DM's Toolbox - NPC Generator"
+    },
+    npcs: npcs
+  };
+
+  const blob = new Blob([JSON.stringify(exportData, null, 2)], {type:"application/json"});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href=url;
+  a.download=`npcs_${new Date().toISOString().slice(0,10)}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
 }
 
 // ---------- Name Generator Integration ----------
@@ -968,12 +1097,105 @@ function showStatBlockModal(npcTile) {
   bsModal.show();
 }
 
+// ---------- Presets ----------
+const PRESETS = {
+  guards: {
+    count: 5,
+    settlement: "town",
+    seed: "guards",
+    roleInDesc: true,
+    autoName: false
+  },
+  merchants: {
+    count: 6,
+    settlement: "town",
+    seed: "merchants",
+    roleInDesc: true,
+    autoName: false
+  },
+  tavern: {
+    count: 4,
+    settlement: "town",
+    seed: "tavern",
+    roleInDesc: true,
+    autoName: false
+  },
+  nobles: {
+    count: 3,
+    settlement: "capital",
+    seed: "nobles",
+    roleInDesc: true,
+    autoName: false
+  },
+  bandits: {
+    count: 8,
+    settlement: "village",
+    seed: "bandits",
+    roleInDesc: true,
+    autoName: false
+  },
+  cultists: {
+    count: 6,
+    settlement: "town",
+    seed: "cultists",
+    roleInDesc: true,
+    autoName: false
+  },
+  guild: {
+    count: 5,
+    settlement: "town",
+    seed: "thieves",
+    roleInDesc: true,
+    autoName: false
+  },
+  villagers: {
+    count: 10,
+    settlement: "village",
+    seed: "villagers",
+    roleInDesc: true,
+    autoName: false
+  },
+  party: {
+    count: 4,
+    settlement: "town",
+    seed: "party",
+    roleInDesc: false,
+    autoName: true
+  },
+  crowd: {
+    count: 20,
+    settlement: "town",
+    seed: "crowd",
+    roleInDesc: false,
+    autoName: false
+  }
+};
+
+function applyPreset(presetKey){
+  const preset = PRESETS[presetKey];
+  if(!preset) return;
+
+  $("npc-count").value = preset.count;
+  $("npc-settlement").value = preset.settlement;
+  $("npc-seed").value = preset.seed;
+  $("npc-roleInDesc").checked = preset.roleInDesc;
+  $("npc-autoName").checked = preset.autoName;
+}
+
 // Wire up
 document.addEventListener("DOMContentLoaded", ()=>{
   $("npc-generate").addEventListener("click", generate);
   $("npc-copy").addEventListener("click", copyNPCs);
-  $("npc-download").addEventListener("click", downloadNPCs);
+  $("npc-download-txt").addEventListener("click", (e)=>{ e.preventDefault(); downloadNPCsTxt(); });
+  $("npc-download-json").addEventListener("click", (e)=>{ e.preventDefault(); downloadNPCsJson(); });
   $("npc-clear").addEventListener("click", ()=>{ $("npc-out").innerHTML=""; $("npc-meta").innerHTML=""; });
+
+  // Preset handler
+  $("npc-preset").addEventListener("change", (e)=>{
+    if(e.target.value){
+      applyPreset(e.target.value);
+    }
+  });
 
   // Event delegation for buttons
   document.addEventListener("click", (e)=>{

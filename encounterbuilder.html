@@ -227,30 +227,112 @@
           <!-- Middle: Custom Monster -->
           <div class="col-12 col-lg-4">
             <div class="card bg-dark border-secondary h-100">
-              <div class="card-header fw-semibold"><i class="bi bi-plus-circle me-1"></i>Custom Monster</div>
-              <div class="card-body">
+              <div class="card-header fw-semibold d-flex justify-content-between align-items-center">
+                <span><i class="bi bi-plus-circle me-1"></i>Custom Monster</span>
+                <button id="cm-toggle-advanced" class="btn btn-sm btn-outline-info">Simple / Advanced</button>
+              </div>
+              <div class="card-body" style="max-height: 500px; overflow-y: auto;">
+                <!-- Basic Info -->
                 <div class="row g-2">
-                  <div class="col-12"><input id="cm-name" class="form-control" placeholder="Name"></div>
-                  <div class="col-6"><input id="cm-type" class="form-control" placeholder="Type (e.g., Undead)"></div>
-                  <div class="col-6"><input id="cm-size" class="form-control" placeholder="Size (e.g., Medium)"></div>
-                  <div class="col-4"><input id="cm-ac" class="form-control" type="number" placeholder="AC"></div>
-                  <div class="col-4"><input id="cm-hp" class="form-control" type="number" placeholder="HP"></div>
-                  <div class="col-4"><input id="cm-cr" class="form-control" type="number" step="0.125" placeholder="CR (optional)"></div>
-                  <div class="col-12">
-                    <label class="form-label mb-1">Actions (one per line, quick format)</label>
-                    <textarea id="cm-actions" rows="4" class="form-control" placeholder="Claw; toHit:+5; damage:2d6+3; attacks:2&#10;Breath; saveDC:15; damage:6d6; targets:2"></textarea>
-                    <div class="form-text">Fields: <code>toHit</code>, <code>saveDC</code>, <code>damage</code>, <code>attacks</code>, <code>targets</code>, optional <code>avg</code>.</div>
+                  <div class="col-12"><input id="cm-name" class="form-control" placeholder="Monster Name *"></div>
+                  <div class="col-6">
+                    <select id="cm-size" class="form-select">
+                      <option value="">Size</option>
+                      <option value="Tiny">Tiny</option>
+                      <option value="Small">Small</option>
+                      <option value="Medium" selected>Medium</option>
+                      <option value="Large">Large</option>
+                      <option value="Huge">Huge</option>
+                      <option value="Gargantuan">Gargantuan</option>
+                    </select>
                   </div>
-                  <div class="col-12 d-flex justify-content-between">
-                    <button id="cm-add" class="btn btn-outline-success"><i class="bi bi-cart-plus me-1"></i>Add to Encounter</button>
-                    <button id="cm-clear" class="btn btn-outline-secondary">Clear</button>
+                  <div class="col-6"><input id="cm-type" class="form-control" placeholder="Type (e.g., Undead) *"></div>
+                  <div class="col-4"><input id="cm-ac" class="form-control" type="number" placeholder="AC *"></div>
+                  <div class="col-4"><input id="cm-hp" class="form-control" type="number" placeholder="HP *"></div>
+                  <div class="col-4"><input id="cm-speed" class="form-control" placeholder="Speed (30 ft.)"></div>
+                </div>
+
+                <!-- Advanced Fields (Collapsible) -->
+                <div id="cm-advanced-fields" style="display:none;">
+                  <hr class="my-2">
+                  <div class="small text-secondary mb-2">Ability Scores (optional, for reference)</div>
+                  <div class="row g-1">
+                    <div class="col-4"><input id="cm-str" class="form-control form-control-sm" type="number" placeholder="STR"></div>
+                    <div class="col-4"><input id="cm-dex" class="form-control form-control-sm" type="number" placeholder="DEX"></div>
+                    <div class="col-4"><input id="cm-con" class="form-control form-control-sm" type="number" placeholder="CON"></div>
+                    <div class="col-4"><input id="cm-int" class="form-control form-control-sm" type="number" placeholder="INT"></div>
+                    <div class="col-4"><input id="cm-wis" class="form-control form-control-sm" type="number" placeholder="WIS"></div>
+                    <div class="col-4"><input id="cm-cha" class="form-control form-control-sm" type="number" placeholder="CHA"></div>
+                  </div>
+                  <div class="row g-1 mt-1">
+                    <div class="col-12"><input id="cm-saves" class="form-control form-control-sm" placeholder="Saving Throws (e.g., Dex +5, Wis +3)"></div>
+                    <div class="col-12"><input id="cm-skills" class="form-control form-control-sm" placeholder="Skills (e.g., Stealth +7, Perception +4)"></div>
+                    <div class="col-12"><input id="cm-senses" class="form-control form-control-sm" placeholder="Senses (e.g., darkvision 60 ft., passive Perception 14)"></div>
                   </div>
                 </div>
-                <hr>
-                <label class="form-label">Or paste Monster JSON</label>
-                <textarea id="cm-json" rows="5" class="form-control small" placeholder='{"name":"Shadow","type":"Undead","ac":12,"hp":16,"actions":[{"name":"Strength Drain","toHit":4,"damage":"2d6"}]}'></textarea>
-                <div class="mt-2 d-flex justify-content-end">
-                  <button id="cm-json-add" class="btn btn-outline-info">Add JSON</button>
+
+                <hr class="my-2">
+
+                <!-- Special Abilities -->
+                <div class="mb-2">
+                  <label class="form-label mb-1 small fw-semibold">Special Abilities (one per line)</label>
+                  <textarea id="cm-special" rows="2" class="form-control form-control-sm" placeholder="Name: Description&#10;Pack Tactics: Advantage on attack rolls if ally is within 5 ft. of target."></textarea>
+                </div>
+
+                <!-- Actions -->
+                <div class="mb-2">
+                  <label class="form-label mb-1 small fw-semibold">Actions (one per line)</label>
+                  <textarea id="cm-actions" rows="3" class="form-control form-control-sm" placeholder="Longsword; toHit:+5; damage:1d8+3; attacks:1&#10;Fire Breath; saveDC:15; damage:6d6; targets:3"></textarea>
+                  <div class="form-text small">Format: <code>Name; toHit:+X; damage:XdX+X</code> or <code>Name; saveDC:X; damage:XdX</code><br>
+                  Optional: <code>attacks:X</code>, <code>targets:X</code>, <code>avg:X</code></div>
+                </div>
+
+                <!-- Reactions -->
+                <div class="mb-2">
+                  <label class="form-label mb-1 small fw-semibold">Reactions (one per line, optional)</label>
+                  <textarea id="cm-reactions" rows="2" class="form-control form-control-sm" placeholder="Name: Description&#10;Parry: +2 AC against one melee attack."></textarea>
+                </div>
+
+                <!-- Legendary Actions -->
+                <div class="mb-2">
+                  <label class="form-label mb-1 small fw-semibold">Legendary Actions (one per line, optional)</label>
+                  <textarea id="cm-legendary" rows="2" class="form-control form-control-sm" placeholder="Name: Description&#10;Tail Attack: Makes one tail attack."></textarea>
+                </div>
+
+                <!-- Notes -->
+                <div class="mb-2">
+                  <label class="form-label mb-1 small fw-semibold">Notes (optional)</label>
+                  <textarea id="cm-notes" rows="1" class="form-control form-control-sm" placeholder="Additional DM notes..."></textarea>
+                </div>
+
+                <hr class="my-2">
+
+                <!-- CR Auto-calc info -->
+                <div class="small text-info mb-2">
+                  <i class="bi bi-info-circle"></i> CR will be auto-calculated when you add the monster based on HP, AC, and actions.
+                </div>
+
+                <div class="d-flex justify-content-between gap-2">
+                  <button id="cm-add" class="btn btn-sm btn-success flex-grow-1"><i class="bi bi-cart-plus me-1"></i>Add to Encounter</button>
+                  <button id="cm-clear" class="btn btn-sm btn-outline-secondary">Clear</button>
+                </div>
+
+                <hr class="my-2">
+
+                <div class="accordion accordion-flush" id="jsonAccordion">
+                  <div class="accordion-item bg-dark border-secondary">
+                    <h2 class="accordion-header">
+                      <button class="accordion-button collapsed bg-dark text-light small" type="button" data-bs-toggle="collapse" data-bs-target="#jsonCollapse">
+                        Or paste Monster JSON
+                      </button>
+                    </h2>
+                    <div id="jsonCollapse" class="accordion-collapse collapse" data-bs-parent="#jsonAccordion">
+                      <div class="accordion-body">
+                        <textarea id="cm-json" rows="4" class="form-control small" placeholder='{"name":"Shadow","type":"Undead","ac":12,"hp":16,"actions":[{"name":"Strength Drain","toHit":4,"damage":"2d6"}]}'></textarea>
+                        <button id="cm-json-add" class="btn btn-sm btn-outline-info mt-2">Add JSON</button>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
@@ -900,6 +982,25 @@
           const m = roster[i];
           let html = '';
 
+          // Ability scores (if available)
+          if (m.str || m.dex || m.con || m.int || m.wis || m.cha) {
+            html += '<div class="mt-2 mb-2"><div class="fw-bold text-warning mb-1">Ability Scores</div>';
+            html += '<div class="small">';
+            if (m.str) html += `STR ${m.str} `;
+            if (m.dex) html += `DEX ${m.dex} `;
+            if (m.con) html += `CON ${m.con} `;
+            if (m.int) html += `INT ${m.int} `;
+            if (m.wis) html += `WIS ${m.wis} `;
+            if (m.cha) html += `CHA ${m.cha}`;
+            html += '</div></div>';
+          }
+
+          // Saves, skills, senses
+          if (m.saves) html += `<div class="small mt-1"><span class="fw-bold text-warning">Saving Throws:</span> ${m.saves}</div>`;
+          if (m.skills) html += `<div class="small mt-1"><span class="fw-bold text-warning">Skills:</span> ${m.skills}</div>`;
+          if (m.senses) html += `<div class="small mt-1"><span class="fw-bold text-warning">Senses:</span> ${m.senses}</div>`;
+          if (m.speed) html += `<div class="small mt-1"><span class="fw-bold text-warning">Speed:</span> ${m.speed}</div>`;
+
           // Special Abilities
           if (m.special_abilities && m.special_abilities.length > 0) {
             html += '<div class="fw-bold text-warning mt-2 mb-1">Special Abilities</div>';
@@ -907,7 +1008,7 @@
             m.special_abilities.forEach(sa => {
               html += `<div class="roster-action-item">
                 <div class="fw-semibold">${sa.name}</div>
-                <div class="small text-secondary">${sa.desc}</div>
+                <div class="small text-secondary">${sa.desc || ''}</div>
               </div>`;
             });
             html += '</div>';
@@ -926,7 +1027,7 @@
 
               html += `<div class="roster-action-item">
                 <div class="fw-semibold">${action.name}${attackLine}</div>
-                <div class="small text-secondary">${action.desc}</div>
+                <div class="small text-secondary">${action.desc || ''}</div>
               </div>`;
             });
             html += '</div>';
@@ -939,7 +1040,7 @@
             m.reactions.forEach(r => {
               html += `<div class="roster-action-item">
                 <div class="fw-semibold">${r.name}</div>
-                <div class="small text-secondary">${r.desc}</div>
+                <div class="small text-secondary">${r.desc || ''}</div>
               </div>`;
             });
             html += '</div>';
@@ -952,15 +1053,10 @@
             m.legendary_actions.forEach(la => {
               html += `<div class="roster-action-item">
                 <div class="fw-semibold">${la.name}</div>
-                <div class="small text-secondary">${la.desc}</div>
+                <div class="small text-secondary">${la.desc || ''}</div>
               </div>`;
             });
             html += '</div>';
-          }
-
-          // Speed
-          if (m.speed) {
-            html += `<div class="mt-2"><span class="fw-bold text-warning">Speed:</span> ${m.speed}</div>`;
           }
 
           expanded.innerHTML = html || '<div class="text-secondary">No additional details available.</div>';
@@ -1025,18 +1121,75 @@
     }
 
     // -------------------- Custom Monster --------------------
+    function parseSpecialAbilities(text){
+      // Parse "Name: Description" format
+      return text.split('\n').map(l=>l.trim()).filter(Boolean).map(line=>{
+        const idx = line.indexOf(':');
+        if(idx === -1) return { name: line, desc: '' };
+        return {
+          name: line.substring(0, idx).trim(),
+          desc: line.substring(idx + 1).trim()
+        };
+      });
+    }
+
     function readCustomForm(){
       const name = $('#cm-name').value.trim();
       const type = $('#cm-type').value.trim() || '—';
-      const size = $('#cm-size').value.trim() || '';
+      const size = $('#cm-size').value.trim() || 'Medium';
       const ac = Number($('#cm-ac').value||'0');
       const hp = Number($('#cm-hp').value||'1');
-      const cr = Number($('#cm-cr').value||'');
+      const speed = $('#cm-speed').value.trim() || '';
       const actions = parseActionsQuick($('#cm-actions').value||'');
-      return { name, type, size, ac, hp, cr: isNaN(cr)?undefined:cr, actions, notes:'' };
+      const special_abilities = parseSpecialAbilities($('#cm-special').value||'');
+      const reactions = parseSpecialAbilities($('#cm-reactions').value||'');
+      const legendary_actions = parseSpecialAbilities($('#cm-legendary').value||'');
+      const notes = $('#cm-notes').value.trim();
+
+      // Advanced fields (optional)
+      const str = $('#cm-str').value ? Number($('#cm-str').value) : undefined;
+      const dex = $('#cm-dex').value ? Number($('#cm-dex').value) : undefined;
+      const con = $('#cm-con').value ? Number($('#cm-con').value) : undefined;
+      const int = $('#cm-int').value ? Number($('#cm-int').value) : undefined;
+      const wis = $('#cm-wis').value ? Number($('#cm-wis').value) : undefined;
+      const cha = $('#cm-cha').value ? Number($('#cm-cha').value) : undefined;
+      const saves = $('#cm-saves').value.trim();
+      const skills = $('#cm-skills').value.trim();
+      const senses = $('#cm-senses').value.trim();
+
+      const mon = {
+        name, type, size, ac, hp, speed, actions,
+        special_abilities, reactions, legendary_actions, notes
+      };
+
+      // Only include advanced fields if provided
+      if (str !== undefined) mon.str = str;
+      if (dex !== undefined) mon.dex = dex;
+      if (con !== undefined) mon.con = con;
+      if (int !== undefined) mon.int = int;
+      if (wis !== undefined) mon.wis = wis;
+      if (cha !== undefined) mon.cha = cha;
+      if (saves) mon.saves = saves;
+      if (skills) mon.skills = skills;
+      if (senses) mon.senses = senses;
+
+      return mon;
     }
+
     function clearCustomForm(){
-      ['#cm-name','#cm-type','#cm-size','#cm-ac','#cm-hp','#cm-cr','#cm-actions','#cm-json'].forEach(sel => $(sel).value='');
+      const fields = [
+        '#cm-name','#cm-type','#cm-ac','#cm-hp','#cm-speed',
+        '#cm-actions','#cm-special','#cm-reactions','#cm-legendary','#cm-notes',
+        '#cm-str','#cm-dex','#cm-con','#cm-int','#cm-wis','#cm-cha',
+        '#cm-saves','#cm-skills','#cm-senses','#cm-json'
+      ];
+      fields.forEach(sel => {
+        const elem = $(sel);
+        if (elem) elem.value = '';
+      });
+      // Reset size to Medium
+      const sizeElem = $('#cm-size');
+      if (sizeElem) sizeElem.value = 'Medium';
     }
 
     // -------------------- Export --------------------
@@ -1093,6 +1246,24 @@
         text += `Hit Points: ${m.hp ?? '—'}\n`;
         if (m.speed) text += `Speed: ${m.speed}\n`;
         text += `\n`;
+
+        // Ability Scores (if available)
+        if (m.str || m.dex || m.con || m.int || m.wis || m.cha) {
+          text += `Ability Scores:\n`;
+          if (m.str) text += `  STR ${m.str}\n`;
+          if (m.dex) text += `  DEX ${m.dex}\n`;
+          if (m.con) text += `  CON ${m.con}\n`;
+          if (m.int) text += `  INT ${m.int}\n`;
+          if (m.wis) text += `  WIS ${m.wis}\n`;
+          if (m.cha) text += `  CHA ${m.cha}\n`;
+          text += `\n`;
+        }
+
+        // Saves, skills, senses
+        if (m.saves) text += `Saving Throws: ${m.saves}\n`;
+        if (m.skills) text += `Skills: ${m.skills}\n`;
+        if (m.senses) text += `Senses: ${m.senses}\n`;
+        if (m.saves || m.skills || m.senses) text += `\n`;
 
         // Calculated CR breakdown
         if (m.calc) {
@@ -1213,6 +1384,16 @@
     $('#eb-cr-filter').onchange = renderResults;
     $('#eb-type-filter').onchange = renderResults;
 
+    // Advanced fields toggle
+    $('#cm-toggle-advanced').onclick = ()=>{
+      const advFields = $('#cm-advanced-fields');
+      if(advFields.style.display === 'none'){
+        advFields.style.display = 'block';
+      } else {
+        advFields.style.display = 'none';
+      }
+    };
+
     $('#eb-party-levels').oninput = ()=>{ renderPartySummary(); renderSummary(); };
     $('#eb-resist-mode').onchange = e=>{ resistMode = e.target.value; // recalc all
       roster.forEach((m,i)=>{ roster[i].calc = computeCR(m); }); renderRoster();
@@ -1222,6 +1403,7 @@
       const mon = readCustomForm();
       if(!mon.name || !mon.ac || !mon.hp) { alert('Name, AC, and HP are required.'); return; }
       addToRoster(mon);
+      clearCustomForm();
     };
     $('#cm-json-add').onclick = ()=>{
       try{

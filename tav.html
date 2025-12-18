@@ -117,7 +117,14 @@
                     <option value="roadhouse">Roadhouse</option>
                     <option value="seedy">Seedy tavern</option>
                     <option value="noble">Noble inn</option>
-                    <option value="temple">Temple/ Shrine tavern</option>
+                    <option value="temple">Temple/Shrine tavern</option>
+                    <option value="dwarven">Dwarven Ale Hall</option>
+                    <option value="elven">Elven Wine Garden</option>
+                    <option value="halfling">Halfling Hearth House</option>
+                    <option value="orcish">Orcish Mead Hall</option>
+                    <option value="coastal">Coastal Shanty</option>
+                    <option value="desert">Desert Oasis Inn</option>
+                    <option value="mountain">Mountain Lodge</option>
                   </select>
                 </div>
               </div>
@@ -319,6 +326,16 @@
 
         const AMBIENCE = ["low murmur","fire-lit","lamplit","clean","cozy","drafty","lively","quiet","rowdy after dusk","musician on market nights","card games","dice at back table","chalk menu board","cat by the hearth","fresh sawdust","hops aroma","yeast and bread","woodsmoke","herbal tea scents","oiled hinges"];
 
+        const AMBIENCE_BY_TYPE = {
+          dwarven: ["forge-warmed","stone pillars","ale-soaked tables","carved clan symbols","hammer-and-anvil decor","barrel-vaulted ceiling","mountain stone walls","brass tankards clanging"],
+          elven: ["moonlight filtering through","silver-threaded curtains","living wood furniture","soft harp melodies","ethereal glow","flowering vines overhead","crystal chimes tinkling","ancient tree supports"],
+          halfling: ["hearth-fire crackling","pie-scented air","cozy cushioned chairs","family portraits on walls","pipe smoke drifting","comfortable quilts draped","warm bread constantly baking","children's laughter echoing"],
+          orcish: ["battle trophies mounted","skull decorations","thick smoke","war drums in corner","weapon racks on walls","bone chandeliers","trophy pelts hanging","combat circle cleared"],
+          coastal: ["salt air drifting","driftwood furniture","fishing nets hanging","porthole windows","ship bell at bar","nautical flags displayed","rope and anchor decor","tide charts posted"],
+          desert: ["silk drapes flowing","spice-scented air","cushioned floor seating","brass lanterns gleaming","sand-colored walls","geometric tile patterns","water fountains trickling","cool stone floors"],
+          mountain: ["bear pelts on walls","snowshoes displayed","altitude chill outside","pine timber construction","trophy antlers mounted","thick wool blankets","stone fireplace massive","frost on windows"]
+        };
+
         const MEAL_BASE = [
           {n:"Hearty stew", p:[8,14], dBits:["thick broth","root vegetables","barley"], side:["heel of bread","pickled onions","herb dumpling"]},
           {n:"Roast fowl", p:[10,18], dBits:["crisp skin","pan gravy"], side:["buttered greens","spiced carrots","oaten loaf slice"]},
@@ -359,13 +376,148 @@
             {n:"Small beer", p:[2,4], notes:["very light"]}
           ]
         };
+        // Cultural/Regional Menu Variants
+        const CULTURAL_MENU = {
+          dwarven: {
+            food: [
+              {n:"Stone-baked mushroom bread", p:[4,8], dBits:["aged cheese"], side:["pickled radish","salt crystals","cave moss garnish"]},
+              {n:"Deep-miner's stew", p:[7,12], dBits:["root vegetables","smoked meat"], side:["dark rye","stone-ground mustard","onion relish"]},
+              {n:"Forge-roasted boar", p:[12,20], dBits:["crackling skin","juniper rub"], side:["mashed turnips","fermented cabbage","dark gravy"]},
+              {n:"Cavern eel pie", p:[9,15], dBits:["flaky crust","peppercorns"], side:["pickled beets","horseradish cream","black bread"]}
+            ],
+            drinks: {
+              ale: [
+                {n:"Stonehammer stout", p:[4,8], notes:["very dark","malty","thick head"]},
+                {n:"Deep ale", p:[5,9], notes:["aged in barrels","smoky","robust"]},
+                {n:"Forge fire ale", p:[4,7], notes:["spiced","warming","copper-red"]}
+              ],
+              spirits: [
+                {n:"Mountain whiskey", p:[10,18], notes:["peaty","aged 20 years","smooth"]},
+                {n:"Stone liqueur", p:[8,14], notes:["herbal","mineral notes","digestif"]}
+              ]
+            }
+          },
+          elven: {
+            food: [
+              {n:"Starlight salad", p:[8,14], dBits:["edible flowers","berry vinaigrette"], side:["honey bread","crystallized ginger","mint sprig"]},
+              {n:"Forest mushroom risotto", p:[10,16], dBits:["truffle oil","white wine"], side:["elderflower bread","herb butter","micro greens"]},
+              {n:"Moonwell fish", p:[12,20], dBits:["delicate herbs","citrus glaze"], side:["wild rice","spring vegetables","lemon water"]},
+              {n:"Sylvan berry tart", p:[7,12], dBits:["pastry cream","fresh berries"], side:["honeycomb","lavender sugar","mint tea"]}
+            ],
+            drinks: {
+              wine: [
+                {n:"Silverleaf white", p:[8,14], notes:["delicate","floral","crystal clear"]},
+                {n:"Moonvine rosé", p:[9,16], notes:["slightly sweet","fruit forward","elegant"]},
+                {n:"Starfruit wine", p:[12,20], notes:["rare","complex","aged 100 years"]}
+              ],
+              cider: [
+                {n:"Golden apple cider", p:[5,9], notes:["sparkling","light","refreshing"]},
+                {n:"Elderflower mead", p:[7,12], notes:["floral","delicate sweetness"]}
+              ]
+            }
+          },
+          halfling: {
+            food: [
+              {n:"Second breakfast platter", p:[6,10], dBits:["eggs","bacon","sausage","mushrooms"], side:["toast","butter","jam","cheese"]},
+              {n:"Threestack buttermilk pancakes", p:[5,8], dBits:["maple syrup","berry compote"], side:["whipped cream","honey butter","cinnamon"]},
+              {n:"Comfort pie (meat and potato)", p:[8,13], dBits:["flaky crust","rich gravy"], side:["mashed peas","crusty bread","pickled onions"]},
+              {n:"Garden vegetable quiche", p:[7,11], dBits:["farm-fresh eggs","three cheeses"], side:["green salad","herb bread","tomato chutney"]}
+            ],
+            drinks: {
+              ale: [
+                {n:"Longbottom leaf ale", p:[3,6], notes:["smooth","herbal notes","easy drinking"]},
+                {n:"Harvest amber", p:[4,7], notes:["malty","caramel","crisp"]}
+              ],
+              cider: [
+                {n:"Orchard cider (sweet)", p:[3,5], notes:["apple","pear","honey finish"]},
+                {n:"Brambleberry cider", p:[4,6], notes:["tart","fruity","refreshing"]}
+              ],
+              soft: [
+                {n:"Creamy hot chocolate", p:[3,5], notes:["rich","marshmallows","comforting"]}
+              ]
+            }
+          },
+          orcish: {
+            food: [
+              {n:"Warbeast haunch", p:[10,18], dBits:["char-grilled","blood-rare center"], side:["bone marrow","fire-roasted peppers","coarse salt"]},
+              {n:"Raider's stew", p:[8,14], dBits:["thick broth","game meat","root vegetables"], side:["hard flatbread","hot sauce","pickled eggs"]},
+              {n:"Conquest feast platter", p:[15,25], dBits:["mixed roasted meats","primal spices"], side:["roasted bones","charred onions","warrior's bread"]},
+              {n:"Battle rations (upgraded)", p:[6,10], dBits:["spiced jerky","hard cheese"], side:["rye bread","hot peppers","pickled garlic"]}
+            ],
+            drinks: {
+              ale: [
+                {n:"Bloodaxe mead", p:[5,9], notes:["strong","honey-forward","spiced"]},
+                {n:"War brew", p:[6,10], notes:["potent","smoky","thick"]}
+              ],
+              spirits: [
+                {n:"Fire water", p:[7,13], notes:["very strong","pepper finish","burns going down"]},
+                {n:"Conquest rum", p:[8,14], notes:["dark","molasses","robust"]}
+              ]
+            }
+          },
+          coastal: {
+            food: [
+              {n:"Catch of the day", p:[9,15], dBits:["grilled","lemon butter"], side:["sea salt","crusty bread","seaweed salad"]},
+              {n:"Clam chowder", p:[7,12], dBits:["creamy","bacon bits","fresh clams"], side:["oyster crackers","butter","parsley"]},
+              {n:"Salt-crusted fish", p:[10,17], dBits:["whole fish","herb stuffing"], side:["roasted vegetables","aioli","lemon wedge"]},
+              {n:"Sailor's stew", p:[8,13], dBits:["shellfish","tomato base"], side:["garlic bread","olive oil","red pepper flakes"]}
+            ],
+            drinks: {
+              spirits: [
+                {n:"Sailor's rum", p:[6,11], notes:["spiced","caramel","smooth"]},
+                {n:"Sea salt gin", p:[7,13], notes:["botanical","crisp","juniper"]}
+              ],
+              wine: [
+                {n:"Port wine", p:[8,14], notes:["sweet","fortified","ruby red"]}
+              ]
+            }
+          },
+          desert: {
+            food: [
+              {n:"Spiced lamb tagine", p:[11,18], dBits:["apricots","cinnamon","saffron"], side:["flatbread","yogurt sauce","olive tapenade"]},
+              {n:"Date and nut couscous", p:[7,12], dBits:["sweet dates","almonds","honey"], side:["mint tea","rose water","pistachios"]},
+              {n:"Oasis kebabs", p:[9,15], dBits:["marinated meats","grilled vegetables"], side:["hummus","pita","tahini sauce"]},
+              {n:"Honeyed pastries", p:[6,10], dBits:["flaky layers","nuts","sweet syrup"], side:["mint tea","dried fruit","candied ginger"]}
+            ],
+            drinks: {
+              soft: [
+                {n:"Mint tea (sweet)", p:[2,4], notes:["refreshing","aromatic","traditional"]},
+                {n:"Rose water lemonade", p:[3,5], notes:["floral","cooling","sweet-tart"]},
+                {n:"Spiced coffee", p:[3,5], notes:["cardamom","strong","energizing"]}
+              ],
+              wine: [
+                {n:"Desert red", p:[7,12], notes:["bold","spiced","full-bodied"]},
+                {n:"Pomegranate wine", p:[8,14], notes:["fruity","tart","refreshing"]}
+              ]
+            }
+          },
+          mountain: {
+            food: [
+              {n:"Hearty mountain stew", p:[8,14], dBits:["elk meat","wild herbs","thick broth"], side:["sourdough","mountain cheese","pickled vegetables"]},
+              {n:"Smoked trout", p:[10,16], dBits:["cold-smoked","dill cream"], side:["rye bread","butter","capers"]},
+              {n:"Alpine fondue", p:[12,19], dBits:["three mountain cheeses","white wine"], side:["bread cubes","cornichons","apples"]},
+              {n:"Game pie", p:[11,17], dBits:["venison","juniper berries","root vegetables"], side:["lingonberry jam","gravy","greens"]}
+            ],
+            drinks: {
+              spirits: [
+                {n:"Pine liqueur", p:[8,14], notes:["herbal","evergreen","digestif"]},
+                {n:"Mountain schnapps", p:[7,12], notes:["fruit-based","clear","warming"]}
+              ],
+              ale: [
+                {n:"Alpine lager", p:[4,7], notes:["crisp","clean","refreshing"]},
+                {n:"Mountain honey ale", p:[5,8], notes:["sweet","smooth","golden"]}
+              ]
+            }
+          }
+        };
+
         const HOUSE_TWISTS = [
           "house loaf served warm with herbed butter",
           "signature onion jam on the side",
           "smoked salt finish from a local kiln",
           "citrus-peel garnish on select plates",
           "pickled vegetables made in-house",
-          "stoneware mugs stamped with a simple maker’s circle",
+          "stoneware mugs stamped with a simple maker's circle",
           "the cook prefers a hint of clove in stews",
           "fresh herbs grown in window boxes",
           "brined meats for extra tenderness",
@@ -499,13 +651,55 @@
             ]
           };
 
-          // Bartender rumors by tavern type (only 'noble' has special entries here)
+          // Bartender rumors by tavern type
           const BARTENDER_RUMORS_BY_TYPE = {
             noble: [
               "They pay well but ask for discretion",
               "Strange requests come from the upper floors late at night",
               "Servants whisper of sealed correspondence delivered after dark",
               "A valet once offered a coin to keep a secret about a guest"
+            ],
+            dwarven: [
+              "A new gem vein was discovered deep in the mountains",
+              "The clan brewmaster is experimenting with a new recipe",
+              "There's talk of reopening the old deep mines",
+              "A master smith is taking commissions for the first time in decades"
+            ],
+            elven: [
+              "The forest has been singing differently lately",
+              "An ancient grove was discovered with trees from before the kingdoms fell",
+              "The seasonal wine this year is said to be exceptional",
+              "Travelers report strange lights dancing in the Feywild borderlands"
+            ],
+            halfling: [
+              "The harvest festival is going to be the biggest in a generation",
+              "Someone's grandmother has a pie recipe that won at the capital",
+              "A new pipeweed blend arrived from the southern shires",
+              "The comfort chef is looking for rare ingredients for a special feast"
+            ],
+            orcish: [
+              "A great beast was spotted in the nearby hills - perfect for a hunt",
+              "The wrestling champion is seeking worthy challengers",
+              "A war party returned with spoils and stories",
+              "The honor guard is recruiting for an important mission"
+            ],
+            coastal: [
+              "A ship came in with strange cargo from across the sea",
+              "The fishing has been unusually good - or unusually strange",
+              "Sailors report seeing lights beneath the waves at night",
+              "A merchant vessel went missing between here and the next port"
+            ],
+            desert: [
+              "A sandstorm revealed ruins that weren't there before",
+              "The oasis waters are clearer than they've been in years",
+              "Caravans report finding new routes through the dunes",
+              "A rare spice shipment arrived that hasn't been seen in a decade"
+            ],
+            mountain: [
+              "The pass will be snowed in within the week",
+              "A mountaineer found a cave system no one's mapped before",
+              "The high peaks are restless - avalanches have been frequent",
+              "Hunters brought in a beast's pelt like nothing we've seen"
             ]
           };
 
@@ -593,13 +787,62 @@
               "a pilgrim vanished from the hostelry",
               "a novice is whispering of visions",
               "a relic's case was found unlocked"
+            ],
+            dwarven: [
+              "a smith is forging something with a strange blue metal",
+              "clan disputes over mining rights are getting heated",
+              "someone found ancient dwarven runes in a collapsed tunnel",
+              "the brewmaster's latest batch is rumored to be legendary"
+            ],
+            elven: [
+              "the wine this season tastes of starlight and sorrow",
+              "an elf claimed to have walked the Feywild paths",
+              "someone heard the trees speaking warnings",
+              "a vineyard produced grapes of an unknown variety"
+            ],
+            halfling: [
+              "a family recipe was stolen and sold to a rival",
+              "the pie contest winner used a secret ingredient",
+              "someone's great-aunt is older than the town itself",
+              "a legendary comfort dish is being served only once this year"
+            ],
+            orcish: [
+              "a challenge was issued for the wrestling championship",
+              "the war drums were heard from the northern clans",
+              "a warrior returned from battle with a cursed weapon",
+              "honor demands satisfaction for a slight from years past"
+            ],
+            coastal: [
+              "a sailor claims to have seen a sea serpent",
+              "smugglers are using the tide caves again",
+              "a ship's crew mutinied and the captain was marooned",
+              "strange fish are washing up on shore"
+            ],
+            desert: [
+              "a caravan disappeared in a sandstorm and reappeared weeks later",
+              "an oasis dried up overnight and no one knows why",
+              "ancient treasures were found in newly exposed ruins",
+              "a sand witch offers fortunes for the right price"
+            ],
+            mountain: [
+              "a climbing party went missing on the high pass",
+              "the mountain spirits are angry - avalanches come without warning",
+              "a hermit living in the peaks knows secrets of the old world",
+              "strange howls echo from caves that were thought empty"
             ]
           };
           const EVENTS_BY_TYPE = {
             seedy: ["A cutpurse eyes unattended purses under the tables","The back room is being used for an illicit dice ring"],
             noble: ["A well-dressed retinue demands a private dining area","Servants whisper about a secret engagement in the upstairs suite"],
             roadhouse: ["Riders hitch their horses and compare notes about the road ahead","Travelers swap information on blocked passes and fallen bridges"],
-            temple: ["Pilgrims quietly offer thanks and share omens","A cleric quietly blesses meals for those who ask"]
+            temple: ["Pilgrims quietly offer thanks and share omens","A cleric quietly blesses meals for those who ask"],
+            dwarven: ["An axe-throwing contest has drawn a rowdy crowd","Miners debate the richest veins discovered this season","A clan elder settles a dispute over mining rights","Patrons are comparing the quality of different forge techniques"],
+            elven: ["A musician plays haunting melodies on an ancient flute","Poets engage in a battle of verses and wit","Someone shares a centuries-old tale of the Feywild","An artist is sketching portraits of patrons with incredible detail"],
+            halfling: ["A pie-eating contest has just been announced","Families are sharing recipes and cooking tips","Someone is organizing a pipeweed tasting","Children are running between tables playing games while adults indulge"],
+            orcish: ["A wrestling match is about to start in the cleared center area","Warriors are comparing battle scars and war stories","A drinking contest has attracted brave (or foolish) participants","Arm-wrestling challenges echo throughout the hall"],
+            coastal: ["Sailors are singing sea shanties and swapping tales of storms","A fisherman is showing off today's unusual catch","Someone is recruiting crew members for an upcoming voyage","Patrons debate the best fishing spots and sailing routes"],
+            desert: ["A spice merchant demonstrates exotic flavors to curious patrons","Travelers share stories of sandstorms and mirages","A storyteller weaves tales of ancient desert kingdoms","Nomads are trading maps and discussing caravan routes"],
+            mountain: ["A guide is warning about recent avalanche activity","Hunters compare the quality of their furs and pelts","Someone rescued from a blizzard is recovering by the fire","Patrons swap stories of encounters with mountain beasts"]
           };
 
           const EVENTS_BY_SETTLEMENT = {
@@ -783,6 +1026,51 @@
         const VOICE_ACCENT = ["local lilt","coastal drawl","northern clip","merchant cant","street patter","formal diction","sing-song inflection"];
         const MANNER = ["rubs thumb and forefinger","tilts head before answering","drums fingers on surfaces","keeps hands clasped","taps foot softly","hums under breath","adjusts spectacles","checks pocket contents","fidgets with a ring","smooths hair back"];
 
+        const STAFF_BY_TYPE = {
+          dwarven: {
+            attire: ["leather apron over chain mail","clan symbol embroidered vest","stone-dust covered work clothes","braided leather vest","forge-warmed tunic"],
+            demeanor: ["gruff but fair","proudly traditional","clan-loyal","stone-steady","hearty and booming"],
+            manner: ["strokes braided beard","inspects quality of tankards","speaks in clan proverbs","adjusts clan ring","taps fingers like a hammer rhythm"],
+            accent: ["deep mountain burr","clan dialect","stone-carver's cadence"]
+          },
+          elven: {
+            attire: ["flowing silk with leaf patterns","moonsilver jewelry","gossamer-light robes","nature-embroidered vest","star-motif tunic"],
+            demeanor: ["graceful and serene","ancient and patient","melodic and flowing","ethereal yet present","timelessly courteous"],
+            manner: ["moves with fluid grace","speaks in verse occasionally","touches living wood reverently","tilts head listening to distant sounds","traces patterns in the air"],
+            accent: ["lyrical and musical","forest-whisper soft","ancient tongue traces"]
+          },
+          halfling: {
+            attire: ["flour-dusted comfortable vest","patchwork apron with many pockets","cozy knitted cardigan","homespun tunic","well-worn comfortable shoes"],
+            demeanor: ["warm and welcoming","grandmotherly caring","infectiously cheerful","comfort-focused","family-oriented"],
+            manner: ["offers extra helpings unprompted","pats shoulders reassuringly","wipes hands on apron frequently","hums cheerful tunes","checks if guests are comfortable"],
+            accent: ["homey and warm","rural gentle lilt","storyteller's cadence"]
+          },
+          orcish: {
+            attire: ["battle-scarred leather vest","trophy bones woven into clothing","war paint remnants","tribal warrior garb","rough-sewn practical gear"],
+            demeanor: ["direct and unflinching","honor-bound","fierce but loyal","battle-hardened","straightforward"],
+            manner: ["maintains intense eye contact","speaks in short powerful statements","displays scars openly","stands with warrior's stance","grips forearms in greeting"],
+            accent: ["guttural and forceful","war-camp dialect","primal and commanding"]
+          },
+          coastal: {
+            attire: ["salt-stained sailor's vest","rope-belt work clothes","weather-beaten sea coat","netting-adorned apron","tide-worn practical gear"],
+            demeanor: ["weather-wise and knowing","sailor's superstitious","tide-timed efficient","sea-story rich","storm-tested calm"],
+            manner: ["checks the wind direction often","speaks in nautical terms","ties and unties knots absently","scans horizons habitually","walks with sea-leg sway"],
+            accent: ["sailor's rolling drawl","port-town blend","sea-shanty rhythm"]
+          },
+          desert: {
+            attire: ["flowing sand-colored robes","spice-scented silk wrappings","sun-protective layered garments","geometric patterned vest","oasis-blue sash"],
+            demeanor: ["hospitable and generous","desert-wise reserved","water-conscious careful","caravan-cultured worldly","shade-keeper calm"],
+            manner: ["offers water first always","shields eyes when looking outside","speaks of stars and dunes","adjusts head wrapping frequently","moves with heat-efficient grace"],
+            accent: ["desert kingdoms' formal speech","caravan-route polyglot","spice-trader's eloquence"]
+          },
+          mountain: {
+            attire: ["fur-trimmed mountain gear","altitude-practical layers","avalanche-ready sturdy clothes","peak-climber's vest","weathered hiking boots"],
+            demeanor: ["mountain-tough resilient","altitude-quiet contemplative","avalanche-alert vigilant","peak-wise experienced","lodge-keeper protective"],
+            manner: ["checks weather constantly","speaks of passes and peaks","keeps emergency supplies close","listens to wind patterns","stamps feet to keep warm"],
+            accent: ["high-altitude thin speech","mountain-folk clipped","lodge-keeper's measured tones"]
+          }
+        };
+
         // ---------- Helpers ----------
         function within(rng,[a,b]){ return a + rng()*(b-a) }
         function repeatArray(arr, times){ if(!arr||!arr.length) return []; const out=[]; for(let i=0;i<times;i++) out.push(...arr); return out; }
@@ -853,17 +1141,32 @@
         }
 
         // ---------- Builders ----------
-        function buildAmbience(rng, settlement, quality){
+        function buildAmbience(rng, settlement, quality, tavernType){
           const tags = new Set();
           QUALITY[quality].tags.forEach(t=>tags.add(t));
-          pickN(rng, AMBIENCE, 4).forEach(t=>tags.add(t));
+
+          // Add cultural ambiance if available
+          const culturalAmbiance = AMBIENCE_BY_TYPE[tavernType];
+          if(culturalAmbiance && culturalAmbiance.length > 0){
+            // For cultural taverns, pick 3 cultural tags and 2 generic tags
+            pickN(rng, culturalAmbiance, 3).forEach(t=>tags.add(t));
+            pickN(rng, AMBIENCE, 2).forEach(t=>tags.add(t));
+          } else {
+            // For non-cultural taverns, use 4 generic tags
+            pickN(rng, AMBIENCE, 4).forEach(t=>tags.add(t));
+          }
+
           return [...tags];
         }
-        function buildMeals(rng, count, mult){
+        function buildMeals(rng, count, mult, tavernType){
+          // Check if this is a cultural tavern type with custom menu
+          const cultural = CULTURAL_MENU[tavernType];
+          const foodSource = cultural && cultural.food ? cultural.food : MEAL_BASE;
+
           const rows=[]; const seen=new Set();
           let guard=0;
           while(rows.length<count && guard++<200){
-            const b = pick(rng, MEAL_BASE);
+            const b = pick(rng, foodSource);
             const sides = pick(rng, b.side);
             const bits = pickN(rng, b.dBits, Math.max(1, Math.floor(rng()*b.dBits.length)));
             const name = b.n;
@@ -875,13 +1178,25 @@
           if(rows.length) rows[0].desc += ` — ${pick(rng, HOUSE_TWISTS)}`;
           return rows;
         }
-        function flattenDrinkList(){
+        function flattenDrinkList(tavernType){
           const all=[];
-          for(const [type,arr] of Object.entries(DRINKS)){ arr.forEach(x=>all.push({...x,type})); }
+          // Check if this is a cultural tavern type with custom drinks
+          const cultural = CULTURAL_MENU[tavernType];
+          const drinkSource = cultural && cultural.drinks ? cultural.drinks : DRINKS;
+
+          for(const [type,arr] of Object.entries(drinkSource)){ arr.forEach(x=>all.push({...x,type})); }
+          // Also add some standard drinks for variety (50% chance per type)
+          if(cultural && cultural.drinks){
+            for(const [type,arr] of Object.entries(DRINKS)){
+              if(Math.random() > 0.5){ // Mix in some standard options
+                arr.slice(0, Math.ceil(arr.length/2)).forEach(x=>all.push({...x,type}));
+              }
+            }
+          }
           return all;
         }
-        function buildDrinks(rng, count, mult){
-          const list = flattenDrinkList();
+        function buildDrinks(rng, count, mult, tavernType){
+          const list = flattenDrinkList(tavernType);
           const rows=[]; const seen=new Set();
           let guard=0;
           while(rows.length<count && guard++<200){
@@ -919,13 +1234,25 @@
           });
           return rows;
         }
-        function buildStaff(rng, count){
+        function buildStaff(rng, count, tavernType){
           const staff=[];
+          const cultural = STAFF_BY_TYPE[tavernType];
+
           for(let i=0;i<count;i++){
             const role = STAFF_ROLES[i] || "Server";
-            const age = pick(rng, AGE), build=pick(rng, BUILD), hair=`${pick(rng,HAIR_STYLE)} ${pick(rng,HAIR_COLOR)}`, eyes=pick(rng,EYES), attire=pick(rng,ATTIRE), dem=pick(rng,DEMEANOR);
-            const voice = `${pick(rng,VOICE_TIMBRE)}, ${pick(rng,VOICE_PITCH)}; ${pick(rng,VOICE_ACCENT)}`;
-            const manner = pick(rng, MANNER);
+            const age = pick(rng, AGE), build=pick(rng, BUILD), hair=`${pick(rng,HAIR_STYLE)} ${pick(rng,HAIR_COLOR)}`, eyes=pick(rng,EYES);
+
+            // Use cultural attire/demeanor if available, otherwise use generic
+            const attire = cultural && cultural.attire ? pick(rng, cultural.attire) : pick(rng, ATTIRE);
+            const dem = cultural && cultural.demeanor ? pick(rng, cultural.demeanor) : pick(rng, DEMEANOR);
+
+            // Use cultural accent if available, otherwise use generic
+            const accent = cultural && cultural.accent ? pick(rng, cultural.accent) : pick(rng, VOICE_ACCENT);
+            const voice = `${pick(rng,VOICE_TIMBRE)}, ${pick(rng,VOICE_PITCH)}; ${accent}`;
+
+            // Use cultural manner if available (50% chance), otherwise generic
+            const manner = (cultural && cultural.manner && rng() > 0.5) ? pick(rng, cultural.manner) : pick(rng, MANNER);
+
             const desc = `A ${age}, ${build} ${role.toLowerCase()} with ${hair} and ${eyes} eyes, wearing a ${attire}. ${dem} manner.`;
             staff.push({role, desc, voice, manner});
           }
@@ -1059,6 +1386,69 @@
             "itinerant scribe",
             "lay devotee",
             "votive-offering seller"
+          ],
+          dwarven: [
+            "dwarven smith",
+            "stone mason",
+            "mining foreman",
+            "gemcutter",
+            "brewmaster's apprentice",
+            "clan historian",
+            "tunnel engineer"
+          ],
+          elven: [
+            "elven musician",
+            "forest warden",
+            "scroll keeper",
+            "arcane botanist",
+            "weaver of moonsilk",
+            "star reader",
+            "vintner's assistant"
+          ],
+          halfling: [
+            "halfling baker",
+            "pipeweed merchant",
+            "comfort chef",
+            "quilting circle member",
+            "family patriarch",
+            "storytelling grandmother",
+            "pie contest judge"
+          ],
+          orcish: [
+            "war-scarred veteran",
+            "beast trainer",
+            "tribal emissary",
+            "wrestling champion",
+            "honor guard",
+            "clan armorer",
+            "raiding party member"
+          ],
+          coastal: [
+            "weathered sailor",
+            "net mender",
+            "ship's carpenter",
+            "pearl diver",
+            "tide caller",
+            "fishmonger",
+            "lighthouse keeper"
+          ],
+          desert: [
+            "caravan master",
+            "spice merchant",
+            "sand guide",
+            "oasis keeper",
+            "nomad trader",
+            "water diviner",
+            "silk road traveler"
+          ],
+          mountain: [
+            "mountain guide",
+            "avalanche survivor",
+            "fur trapper",
+            "alpine shepherd",
+            "lodge keeper",
+            "ice climber",
+            "ranger from the peaks"
           ]
         };
 
@@ -1263,14 +1653,14 @@
           $("tv-sign").innerHTML = `<span class="fw-semibold">Name:</span> ${tavName} <span class="text-secondary small">— sign: ${motif}</span>`;
 
           $("tv-amb").innerHTML = "";
-          buildAmbience(rng, settlement, quality).forEach(t=>{
+          buildAmbience(rng, settlement, quality, tavernType).forEach(t=>{
             const span = document.createElement("span"); span.className="tv-tag"; span.textContent=t; $("tv-amb").appendChild(span);
           });
           $("tv-unique").textContent = (rng()*100 < uniquePct) ? `Unique touch: ${pick(rng, HOUSE_TWISTS)}.` : "";
 
           // meals
           const mealCount = SETTLEMENT[settlement].meals + (size==="large"?2: size==="small"?0:1);
-          const meals = buildMeals(rng, mealCount, mult);
+          const meals = buildMeals(rng, mealCount, mult, tavernType);
           const mealsT = $("tv-meals"); mealsT.innerHTML="";
           meals.forEach(m=>{
             const tr=document.createElement("tr");
@@ -1280,7 +1670,7 @@
 
           // drinks
           const drinkCount = SETTLEMENT[settlement].drinks + (size==="large"?3: size==="small"?0:1);
-          const drinks = buildDrinks(rng, drinkCount, mult);
+          const drinks = buildDrinks(rng, drinkCount, mult, tavernType);
           const drinksT = $("tv-drinks"); drinksT.innerHTML="";
           drinks.forEach(d=>{
             const tr=document.createElement("tr");
@@ -1308,7 +1698,7 @@
           if(showStaffReal){
             wrapStaff.style.display="";
             const count = SETTLEMENT[settlement].staff + (size==="large"?1:0);
-            const staff = buildStaff(rng, count);
+            const staff = buildStaff(rng, count, tavernType);
             const grid = $("tv-staff"); grid.innerHTML="";
             staff.forEach(s=>{
               const col = document.createElement("div"); col.className="col";

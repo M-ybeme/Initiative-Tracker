@@ -1,8 +1,8 @@
 const DM_TOOLBOX_BUILD = {
     name: "The DM's Toolbox",
-    version: "1.10.4",
+    version: "1.10.5",
     recentChanges: [
-      "Character Manager: Combat/DM View toggle with actions and spells"
+      "Tavern Generator: Full cultural immersion system (patrons, events, rumors, ambiance, staff)"
     ],
     buildTime: new Date().toISOString(),
     author: "Maybeme"

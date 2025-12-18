@@ -29,34 +29,91 @@
     .ng-pill { border: 1px solid rgba(255,255,255,.15); border-radius: 50rem; padding: .15rem .5rem; }
     .ng-tile {
                 display: flex;
-                flex-direction: column;  
+                flex-direction: column;
                 align-items: stretch;
                 justify-content: center;
                 gap: .4rem;
                 border: 1px solid rgba(255,255,255,.15);
                 border-radius: .6rem;
-                padding: .6rem .75rem;
-                background: rgba(0,0,0,.25);
-                min-height: 64px;
+                padding: .8rem .9rem;
+                background: rgba(0,0,0,.3);
+                min-height: 72px;
+                transition: all 0.2s ease;
+                cursor: default;
           }
+    .ng-tile:hover {
+                background: rgba(0,0,0,.5);
+                border-color: rgba(255,255,255,.3);
+                transform: translateY(-2px);
+                box-shadow: 0 4px 8px rgba(0,0,0,.3);
+              }
 
     .ng-name {
                 text-align: center;
-                font-weight: 500;
+                font-weight: 600;
+                font-size: 1.05rem;
                 white-space: nowrap;
                 overflow: hidden;
                 text-overflow: ellipsis;
+                letter-spacing: 0.02em;
               }
 
     .ng-actions {
                   display: flex;
                   justify-content: center;
-                  gap: .4rem;
+                  gap: .5rem;
                 }
     .ng-actions .btn {
-                        padding: .25rem .4rem;
-                        font-size: .9rem;
+                        padding: .3rem .5rem;
+                        font-size: .95rem;
+                        transition: all 0.15s ease;
                       }
+    .ng-actions .btn:hover {
+                        transform: scale(1.1);
+                      }
+
+    .quick-race-btn {
+      padding: .4rem .8rem;
+      border-radius: .5rem;
+      border: 1px solid rgba(255,255,255,.2);
+      background: rgba(0,0,0,.3);
+      color: #fff;
+      transition: all 0.2s ease;
+      font-size: .9rem;
+      font-weight: 500;
+    }
+    .quick-race-btn:hover {
+      background: rgba(255,255,255,.1);
+      border-color: rgba(255,255,255,.4);
+      transform: translateY(-1px);
+    }
+    .quick-race-btn.active {
+      background: rgba(13, 110, 253, .3);
+      border-color: #0d6efd;
+    }
+
+    .compact-help {
+      background: rgba(17, 61, 184, 0.61);
+      border-left: 3px solid #0d6efd;
+      padding: .75rem 1rem;
+      border-radius: .375rem;
+      font-size: .9rem;
+    }
+
+    .settings-section {
+      border-left: 2px solid rgba(255,255,255,.1);
+      padding-left: .75rem;
+      margin-bottom: 1rem;
+    }
+    .settings-section-title {
+      font-size: .85rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: rgba(255,255,255,.6);
+      margin-bottom: .5rem;
+      font-weight: 600;
+    }
+
     .help-badge { font-size: .8rem; vertical-align: middle; cursor: help; }
     .code-block { background: rgba(255,255,255,.05); border: 1px solid rgba(255,255,255,.1); border-radius: .5rem; padding: .75rem; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace; font-size: .9rem; overflow:auto;}
     #ng-out .col { display: flex; }
@@ -114,18 +171,28 @@
         </div>
       </div>
 
-      <!-- Helper blurb -->
-      <div class="alert alert-info text-start shadow-sm mt-3">
-        <h5 class="mb-2"><i class="bi bi-magic"></i> How to Use</h5>
-        <p class="mb-2">
-          Pick a <strong>Race Style</strong>, optionally <strong>Apply Race Preset</strong> for smart defaults, set
-          <strong>syllables</strong>, <strong>gender leaning</strong>, and flavor (<em>Harshness</em>, <em>Exoticness</em>).
-          Toggle <strong>Surname</strong> to generate two-part names. Click <strong>Generate</strong>.
-        </p>
-        <ul class="mb-2">
-          <li>Per-tile: <span class="text-nowrap">⭐ favorite</span>, <span class="text-nowrap">📋 copy</span>, and <span class="text-nowrap">↻ re-roll</span> (or double-click the tile).</li>
-          <li>Settings/results auto-save. Use <strong>Share</strong> to copy a link that reproduces your setup.</li>
-        </ul>
+      <!-- Compact Helper -->
+      <div class="compact-help mt-3">
+        <div class="d-flex align-items-center justify-content-between">
+          <div>
+            <i class="bi bi-info-circle me-2"></i>
+            <strong>Quick Start:</strong> Pick a race, click "Apply Race Preset", then "Generate"
+          </div>
+          <button class="btn btn-sm btn-link text-info p-0" type="button" data-bs-toggle="collapse" data-bs-target="#fullHelp" aria-expanded="false">
+            <i class="bi bi-chevron-down"></i> More
+          </button>
+        </div>
+        <div class="collapse mt-2" id="fullHelp">
+          <hr class="my-2 opacity-25">
+          <p class="mb-2 small">
+            Customize <strong>syllables</strong>, <strong>gender leaning</strong>, and flavor (<em>Harshness</em>, <em>Exoticness</em>).
+            Toggle <strong>Surname</strong> for two-part names.
+          </p>
+          <ul class="mb-0 small">
+            <li>Per-tile actions: ⭐ favorite, 📋 copy, ↻ re-roll (or double-click)</li>
+            <li>Settings/results auto-save. Use <strong>Share</strong> to copy a link</li>
+          </ul>
+        </div>
       </div>
 
       <div class="row g-3 align-items-start">
@@ -551,113 +618,131 @@
 
     // --- Settings form (single source-of-truth) ---
     const settingsFormHTML = String.raw`
-      <!-- Race & Preset -->
+      <!-- Quick Race Selector -->
       <div class="mb-3">
-        <label for="ng-style" class="form-label">Race Style
-          <i class="bi bi-question-circle help-badge" data-bs-toggle="tooltip" title="Choose the race/culture flavor. Preset applies recommended defaults."></i>
-        </label>
-        <div class="input-group">
+        <div class="settings-section-title">Quick Select</div>
+        <div class="d-flex flex-wrap gap-2">
+          <button type="button" class="quick-race-btn" data-race="Elf">🏹 Elf</button>
+          <button type="button" class="quick-race-btn" data-race="Dwarf">⛏️ Dwarf</button>
+          <button type="button" class="quick-race-btn" data-race="Human (Latin)">👤 Human</button>
+          <button type="button" class="quick-race-btn" data-race="Orc">🗡️ Orc</button>
+          <button type="button" class="quick-race-btn" data-race="Dragonborn">🐉 Dragon</button>
+          <button type="button" class="quick-race-btn" data-race="Tiefling">😈 Tiefling</button>
+        </div>
+      </div>
+
+      <!-- Race Selection & Preset -->
+      <div class="settings-section">
+        <div class="settings-section-title">Race Style</div>
+        <div class="mb-2">
+          <label for="ng-style" class="form-label small">Race / Culture
+            <i class="bi bi-question-circle help-badge" data-bs-toggle="tooltip" title="Choose the race/culture flavor."></i>
+          </label>
           <select id="ng-style" class="form-select"></select>
-          <button class="btn btn-outline-info" id="ng-applyPreset" type="button" title="Apply race defaults">Apply Race Preset</button>
         </div>
-        <div class="form-text text-secondary">Presets adjust syllables, suffixes, and flavor knobs to match the race.</div>
+        <button class="btn btn-outline-info btn-sm w-100" id="ng-applyPreset" type="button">
+          <i class="bi bi-magic me-1"></i>Apply Race Preset
+        </button>
       </div>
 
-      <!-- Counts & seed -->
-      <div class="row g-2">
-        <div class="col-6">
-          <label for="ng-count" class="form-label">Count</label>
-          <input id="ng-count" type="number" inputmode="numeric" min="1" max="200" value="20" class="form-control" />
-        </div>
-        <div class="col-6">
-          <label for="ng-seed" class="form-label">Seed <span class="text-secondary small">(repeatable)</span></label>
-          <input id="ng-seed" type="text" placeholder="optional" class="form-control" />
-        </div>
-      </div>
-
-      <!-- Syllables -->
-      <div class="row g-2 mt-1">
-        <div class="col-6">
-          <label for="ng-minSyl" class="form-label">Min syllables</label>
-          <input id="ng-minSyl" type="number" inputmode="numeric" min="1" max="6" value="2" class="form-control" />
-        </div>
-        <div class="col-6">
-          <label for="ng-maxSyl" class="form-label">Max syllables</label>
-          <input id="ng-maxSyl" type="number" inputmode="numeric" min="1" max="8" value="3" class="form-control" />
-        </div>
-      </div>
-
-      <!-- Gender & Alliteration -->
-      <div class="row g-2 mt-1">
-        <div class="col-6">
-          <label for="ng-gender" class="form-label">Gender leaning</label>
-          <select id="ng-gender" class="form-select">
-            <option value="neutral" selected>Neutral</option>
-            <option value="feminine">Feminine</option>
-            <option value="masculine">Masculine</option>
-          </select>
-        </div>
-        <div class="col-6">
-          <label for="ng-allit" class="form-label">Alliteration</label>
-          <input id="ng-allit" type="text" maxlength="1" placeholder="e.g. R" class="form-control" />
-        </div>
-      </div>
-
-      <!-- Flavor knobs -->
-      <div class="mt-2">
-        <label class="form-label">Flavor knobs</label>
+      <!-- Generation Settings -->
+      <div class="settings-section">
+        <div class="settings-section-title">Generation</div>
         <div class="row g-2">
           <div class="col-6">
-            <label for="ng-harsh" class="form-label d-flex justify-content-between">
-              <span>Harshness</span><span class="text-secondary"><span id="ng-harsh-val">25</span></span>
-            </label>
-            <input id="ng-harsh" type="range" class="form-range" min="0" max="100" value="25">
+            <label for="ng-count" class="form-label small">Count</label>
+            <input id="ng-count" type="number" inputmode="numeric" min="1" max="200" value="20" class="form-control form-control-sm" />
           </div>
           <div class="col-6">
-            <label for="ng-exotic" class="form-label d-flex justify-content-between">
-              <span>Exoticness</span><span class="text-secondary"><span id="ng-exotic-val">20</span></span>
-            </label>
-            <input id="ng-exotic" type="range" class="form-range" min="0" max="100" value="20">
+            <label for="ng-seed" class="form-label small">Seed</label>
+            <input id="ng-seed" type="text" placeholder="optional" class="form-control form-control-sm" />
           </div>
         </div>
-        <div class="form-check mt-2">
+
+        <div class="row g-2 mt-2">
+          <div class="col-6">
+            <label for="ng-minSyl" class="form-label small">Min syllables</label>
+            <input id="ng-minSyl" type="number" inputmode="numeric" min="1" max="6" value="2" class="form-control form-control-sm" />
+          </div>
+          <div class="col-6">
+            <label for="ng-maxSyl" class="form-label small">Max syllables</label>
+            <input id="ng-maxSyl" type="number" inputmode="numeric" min="1" max="8" value="3" class="form-control form-control-sm" />
+          </div>
+        </div>
+
+        <div class="row g-2 mt-2">
+          <div class="col-6">
+            <label for="ng-gender" class="form-label small">Gender</label>
+            <select id="ng-gender" class="form-select form-select-sm">
+              <option value="neutral" selected>Neutral</option>
+              <option value="feminine">Feminine</option>
+              <option value="masculine">Masculine</option>
+            </select>
+          </div>
+          <div class="col-6">
+            <label for="ng-allit" class="form-label small">Alliteration</label>
+            <input id="ng-allit" type="text" maxlength="1" placeholder="e.g. R" class="form-control form-control-sm" />
+          </div>
+        </div>
+      </div>
+
+      <!-- Flavor Settings -->
+      <div class="settings-section">
+        <div class="settings-section-title">Flavor</div>
+        <div class="mb-2">
+          <label for="ng-harsh" class="form-label small d-flex justify-content-between">
+            <span>Harshness</span><span class="text-secondary"><span id="ng-harsh-val">25</span></span>
+          </label>
+          <input id="ng-harsh" type="range" class="form-range" min="0" max="100" value="25">
+        </div>
+        <div class="mb-2">
+          <label for="ng-exotic" class="form-label small d-flex justify-content-between">
+            <span>Exoticness</span><span class="text-secondary"><span id="ng-exotic-val">20</span></span>
+          </label>
+          <input id="ng-exotic" type="range" class="form-range" min="0" max="100" value="20">
+        </div>
+        <div class="form-check small">
           <input class="form-check-input" type="checkbox" id="ng-raceSuffix" checked />
-          <label class="form-check-label" for="ng-raceSuffix">Enable race-flavored suffix</label>
+          <label class="form-check-label" for="ng-raceSuffix">Race suffix</label>
+        </div>
+        <div class="form-check small">
+          <input class="form-check-input" type="checkbox" id="ng-apos" checked />
+          <label class="form-check-label" for="ng-apos">Apostrophes</label>
+        </div>
+        <div class="form-check small">
+          <input class="form-check-input" type="checkbox" id="ng-diacritics" />
+          <label class="form-check-label" for="ng-diacritics">Diacritics</label>
         </div>
       </div>
 
-      <!-- Special chars base toggles -->
-      <div class="form-check mt-2">
-        <input class="form-check-input" type="checkbox" id="ng-apos" checked />
-        <label class="form-check-label" for="ng-apos">Allow apostrophes</label>
-      </div>
-      <div class="form-check">
-        <input class="form-check-input" type="checkbox" id="ng-diacritics" />
-        <label class="form-check-label" for="ng-diacritics">Allow diacritics</label>
-      </div>
-
-      <!-- Surname options -->
-      <div class="form-check mt-3">
-        <input class="form-check-input" type="checkbox" id="ng-surname" />
-        <label class="form-check-label" for="ng-surname">Add surname (two-part names)</label>
-      </div>
-      <div id="surnameRow" class="row g-2 mt-1" style="display:none;">
-        <div class="col-7">
-          <label for="ng-surnameStyle" class="form-label">Surname style</label>
-          <select id="ng-surnameStyle" class="form-select"></select>
+      <!-- Surname Options -->
+      <div class="settings-section">
+        <div class="settings-section-title">Surnames</div>
+        <div class="form-check small mb-2">
+          <input class="form-check-input" type="checkbox" id="ng-surname" />
+          <label class="form-check-label" for="ng-surname">Generate two-part names</label>
         </div>
-        <div class="col-5">
-          <label for="ng-joiner" class="form-label">Joiner</label>
-          <input id="ng-joiner" type="text" class="form-control" value=" " placeholder=" , -, &#39; , of ">
+        <div id="surnameRow" style="display:none;">
+          <div class="mb-2">
+            <label for="ng-surnameStyle" class="form-label small">Surname style</label>
+            <select id="ng-surnameStyle" class="form-select form-select-sm"></select>
+          </div>
+          <div>
+            <label for="ng-joiner" class="form-label small">Joiner</label>
+            <input id="ng-joiner" type="text" class="form-control form-control-sm" value=" " placeholder=" , -, &#39; , of ">
+          </div>
         </div>
       </div>
 
       <!-- Actions -->
-      <div class="d-grid d-sm-flex gap-2 mt-3">
-        <button class="btn btn-success w-100 w-sm-auto" id="ng-generate"><i class="bi bi-stars me-1"></i>Generate</button>
-        <button class="btn btn-outline-light w-100 w-sm-auto" id="ng-copy"><i class="bi bi-clipboard me-1"></i>Copy</button>
-        <button class="btn btn-warning w-100 w-sm-auto" id="ng-download"><i class="bi bi-download me-1"></i>Download .txt</button>
-        <button class="btn btn-danger w-100 w-sm-auto" id="ng-clear"><i class="bi bi-trash me-1"></i>Clear</button>
+      <hr class="my-3 opacity-25">
+      <div class="d-grid gap-2">
+        <button class="btn btn-success" id="ng-generate"><i class="bi bi-stars me-1"></i>Generate Names</button>
+        <div class="d-flex gap-2">
+          <button class="btn btn-outline-light flex-fill" id="ng-copy"><i class="bi bi-clipboard me-1"></i>Copy</button>
+          <button class="btn btn-outline-warning flex-fill" id="ng-download"><i class="bi bi-download me-1"></i>Download</button>
+        </div>
+        <button class="btn btn-outline-danger btn-sm" id="ng-clear"><i class="bi bi-trash me-1"></i>Clear Results</button>
       </div>
 
       <!-- Advanced tables -->
@@ -1002,6 +1087,34 @@
 
       connect(desktopRoot, false);
       connect(mobileRoot,  true);
+
+      // Quick race buttons
+      const quickRaceBtns = [...desktopRoot.querySelectorAll('.quick-race-btn'), ...mobileRoot.querySelectorAll('.quick-race-btn')];
+      quickRaceBtns.forEach(btn => {
+        btn.addEventListener('click', function() {
+          const race = this.dataset.race;
+          if (!race) return;
+
+          // Update both desktop and mobile selects
+          const desktopSelect = $d('ng-style');
+          const mobileSelect = $m('ng-style');
+          if (desktopSelect) desktopSelect.value = race;
+          if (mobileSelect) mobileSelect.value = race;
+
+          // Apply preset and update active state
+          applyRacePreset($d);
+
+          // Update active button state
+          quickRaceBtns.forEach(b => b.classList.remove('active'));
+          const btnInDesktop = desktopRoot.querySelector(`.quick-race-btn[data-race="${race}"]`);
+          const btnInMobile = mobileRoot.querySelector(`.quick-race-btn[data-race="${race}"]`);
+          if (btnInDesktop) btnInDesktop.classList.add('active');
+          if (btnInMobile) btnInMobile.classList.add('active');
+
+          // Save to querystring
+          settingsToQS(snapshot($d));
+        });
+      });
 
       // XS quick buttons in Results header
       const genXs = document.getElementById('ng-generate-xs');

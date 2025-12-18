@@ -3,6 +3,76 @@ All notable changes to The DM's Toolbox are documented here.
 The format is based on Keep a Changelog,
 and this project adheres to Semantic Versioning.
 
+1.10.5 - 2025-12-18
+**Tavern Generator: Full Cultural Immersion System**
+
+- **Added**
+  - **Cultural Patron Types** - 7 patron type arrays for each cultural tavern (7 types per culture)
+    - Dwarven: dwarven smith, stone mason, mining foreman, gemcutter, brewmaster's apprentice, clan historian, tunnel engineer
+    - Elven: elven musician, forest warden, scroll keeper, arcane botanist, weaver of moonsilk, star reader, vintner's assistant
+    - Halfling: halfling baker, pipeweed merchant, comfort chef, quilting circle member, family patriarch, storytelling grandmother, pie contest judge
+    - Orcish: war-scarred veteran, beast trainer, tribal emissary, wrestling champion, honor guard, clan armorer, raiding party member
+    - Coastal: weathered sailor, net mender, ship's carpenter, pearl diver, tide caller, fishmonger, lighthouse keeper
+    - Desert: caravan master, spice merchant, sand guide, oasis keeper, nomad trader, water diviner, silk road traveler
+    - Mountain: mountain guide, avalanche survivor, fur trapper, alpine shepherd, lodge keeper, ice climber, ranger from the peaks
+
+  - **Cultural Events** - 3-4 unique events per tavern type
+    - Dwarven: axe-throwing contests, mining debates, clan disputes, forge technique comparisons
+    - Elven: haunting flute melodies, poetry battles, Feywild tales, portrait sketching
+    - Halfling: pie-eating contests, recipe sharing, pipeweed tastings, children playing
+    - Orcish: wrestling matches, scar comparisons, drinking contests, arm-wrestling
+    - Coastal: sea shanties, unusual catches, crew recruitment, sailing debates
+    - Desert: spice demonstrations, sandstorm stories, ancient tales, caravan trading
+    - Mountain: avalanche warnings, fur trading, blizzard stories, beast encounters
+
+  - **Cultural Bartender Rumors** - 4 themed rumors per culture
+    - Dwarven: gem veins, brew experiments, deep mines, master smiths
+    - Elven: forest mysteries, ancient groves, rare wines, Feywild lights
+    - Halfling: harvest festivals, legendary recipes, pipeweed blends, special feasts
+    - Orcish: beast hunts, wrestling champions, war party returns, honor missions
+    - Coastal: strange cargo, unusual fishing, underwater lights, missing vessels
+    - Desert: revealed ruins, oasis mysteries, new routes, rare spices
+    - Mountain: snowed passes, unmapped caves, avalanche activity, unique pelts
+
+  - **Cultural Patron Rumors** - 4 themed rumors per culture
+    - Dwarven: forging secrets, clan disputes, ancient runes, legendary brews
+    - Elven: starlight wines, Feywild encounters, tree warnings, unknown grapes
+    - Halfling: recipe theft, pie secrets, ancient relatives, legendary dishes
+    - Orcish: championship challenges, war drums, cursed weapons, honor debts
+    - Coastal: sea serpents, smuggler caves, mutinies, strange fish
+    - Desert: caravan disappearances, dry oases, exposed treasures, sand witches
+    - Mountain: missing climbers, angry spirits, hermit secrets, strange howls
+
+  - **Cultural Ambiance Tags** - 8 atmospheric descriptors per culture
+    - Dwarven: forge-warmed, stone pillars, ale-soaked tables, carved clan symbols, brass tankards clanging
+    - Elven: moonlight filtering, silver-threaded curtains, living wood furniture, crystal chimes tinkling
+    - Halfling: hearth-fire crackling, pie-scented air, family portraits, children's laughter echoing
+    - Orcish: battle trophies mounted, skull decorations, war drums, combat circle cleared
+    - Coastal: salt air drifting, driftwood furniture, fishing nets hanging, ship bell at bar
+    - Desert: silk drapes flowing, spice-scented air, brass lanterns gleaming, water fountains trickling
+    - Mountain: bear pelts on walls, snowshoes displayed, trophy antlers mounted, frost on windows
+
+  - **Cultural Staff Descriptors** - Complete character trait sets per culture
+    - Custom attire (clan vests, moonsilk, battle leather, salt-stained gear)
+    - Cultural demeanor (stone-steady, ethereal yet present, honor-bound, sailor's superstitious)
+    - Unique manners (strokes beard, moves with grace, maintains eye contact, checks wind)
+    - Cultural accents (deep mountain burr, lyrical and musical, guttural and forceful, sailor's drawl)
+
+- **Changed**
+  - buildAmbience() now accepts tavernType parameter and uses 3 cultural + 2 generic tags for cultural taverns
+  - buildStaff() now accepts tavernType parameter and applies cultural traits to staff members
+  - Cultural tavern type selection now influences ALL aspects of generation, not just menus
+  - Patron generation heavily weighted toward cultural types for immersive atmosphere
+
+- **Technical**
+  - PATRON_TYPES_BY_TYPE expanded with 7 new cultural entries (56 new patron types total)
+  - EVENTS_BY_TYPE expanded with 7 new cultural entries (28 new events total)
+  - BARTENDER_RUMORS_BY_TYPE expanded with 7 new entries (28 new rumors total)
+  - PATRON_RUMORS_BY_TYPE expanded with 7 new entries (28 new rumors total)
+  - AMBIENCE_BY_TYPE created with 8 tags per culture (56 new ambiance tags total)
+  - STAFF_BY_TYPE created with full descriptor sets per culture (attire, demeanor, manner, accent)
+  - Boosted pool system leverages all cultural context arrays for weighted generation
+
 1.10.4 - 2025-12-18
 **Character Manager: Combat/DM View Toggle**
 
