@@ -1,8 +1,8 @@
 const DM_TOOLBOX_BUILD = {
     name: "The DM's Toolbox",
-    version: "1.10.5",
+    version: "1.10.6",
     recentChanges: [
-      "Tavern Generator: Full cultural immersion system (patrons, events, rumors, ambiance, staff)"
+      "Battle Map: Layered canvas architecture for performance, persistent measurements with editing"
     ],
     buildTime: new Date().toISOString(),
     author: "Maybeme"

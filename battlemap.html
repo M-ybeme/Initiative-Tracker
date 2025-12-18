@@ -394,9 +394,25 @@
                 <div class="group">
                   <h3>Measurement</h3>
                   <div class="muted" style="line-height: 1.5;">
-                    <strong>Desktop:</strong> Hold Alt, click and drag<br>
-                    <strong>Mobile:</strong> Toggle "Measure" button<br>
-                    Shows distance in feet and grid cells
+                    <strong>Quick Measure:</strong><br>
+                    • Desktop: Hold Alt, click and drag<br>
+                    • Mobile: Toggle "Measure" button<br>
+                    • Shows temporary distance in feet and grid cells<br>
+                    <br>
+                    <strong>Persistent Measurements:</strong><br>
+                    • Click "Persist Measure" button to enable<br>
+                    • Choose shape: Line, Cone (90°), or Circle (radius)<br>
+                    • Pick a color for the measurement<br>
+                    • Click and drag to create (preview shown while dragging)<br>
+                    • Measurements save with your session<br>
+                    <br>
+                    <strong>Editing Measurements:</strong><br>
+                    • <strong>Move:</strong> Click and drag anywhere in the measurement area<br>
+                    • <strong>Resize:</strong> Select measurement, drag the endpoint handles<br>
+                    • <strong>Rename:</strong> Right-click measurement, select "Rename"<br>
+                    • <strong>Delete:</strong> Right-click measurement, select "Delete"<br>
+                    • <strong>Clear All:</strong> Click "Clear Measures" button<br>
+                    <em>Perfect for tracking spell areas, movement ranges, and threat zones!</em>
                   </div>
                 </div>
 
@@ -477,6 +493,7 @@
         <!-- NEW: Mobile-friendly mode toggles -->
         <button id="fogBrushMode" aria-pressed="false" title="Toggle brush mode for touch/mobile">Brush Mode</button>
         <button id="measureToggle" aria-pressed="false" title="Toggle measure mode (mobile-friendly)">Measure</button>
+        <button id="persistMeasureToggle" aria-pressed="false" title="Create persistent measurement">Persist Measure</button>
         <label class="ms-2">Shape
           <select id="measureShape" style="width:90px">
             <option value="line">Line</option>
@@ -484,6 +501,10 @@
             <option value="circle">Circle</option>
           </select>
         </label>
+        <label class="ms-2">Color
+          <input id="measureColor" type="color" value="#8bd3ff" style="width:60px" />
+        </label>
+        <button id="clearMeasurements" title="Clear all persistent measurements">Clear Measures</button>
 
         <span id="status" class="ms-2">Ready</span>
       </div>
@@ -656,9 +677,13 @@
       measuring:false, measureStart:null,
       brushMode:false,        // NEW: mobile fog brush
       measureToggle:false,     // NEW: mobile measure
+      persistMeasureToggle:false, // NEW: persistent measure mode
       fogShapeDragId: null    // NEW: dragging fog shape
     }
   };
+
+  /** @typedef {{ id:string, type:'line'|'cone'|'circle', startX:number, startY:number, endX:number, endY:number, color:string, name?:string, selected?:boolean }} PersistentMeasurement */
+  const persistentMeasurements = /** @type{PersistentMeasurement[]} */([]);
 
   // --- Fog of War layer (image-space bitmap, aligns with map image)
   const fog = document.createElement('canvas');
@@ -781,6 +806,17 @@
         mode: s.mode,
         color: s.color,
         selected: !!s.selected
+      })),
+      persistentMeasurements: persistentMeasurements.map(m => ({
+        id: m.id,
+        type: m.type,
+        startX: m.startX,
+        startY: m.startY,
+        endX: m.endX,
+        endY: m.endY,
+        color: m.color,
+        name: m.name,
+        selected: !!m.selected
       }))
     };
 
@@ -891,6 +927,22 @@
           mode: s.mode,
           color: s.color || '#000000',
           selected: !!s.selected
+        })));
+      }
+
+      // Restore persistent measurements if present
+      if (data.persistentMeasurements) {
+        persistentMeasurements.length = 0;
+        persistentMeasurements.push(...data.persistentMeasurements.map(m => ({
+          id: m.id,
+          type: m.type,
+          startX: m.startX,
+          startY: m.startY,
+          endX: m.endX,
+          endY: m.endY,
+          color: m.color || '#8bd3ff',
+          name: m.name,
+          selected: !!m.selected
         })));
       }
 
@@ -1143,7 +1195,10 @@
 
     uiCtx.setTransform(state.view.scale, 0, 0, state.view.scale, state.view.x, state.view.y);
 
-    // Measuring overlay
+    // Draw persistent measurements
+    drawPersistentMeasurements(uiCtx);
+
+    // Measuring overlay (temporary)
     if (state.ui.measuring && state.ui.measureStart) {
       const mp = state.ui.measureStart;
       const rect = uiLayer.getBoundingClientRect();
@@ -1207,6 +1262,71 @@
       measureLabel.style.display = 'block';
     } else {
       measureLabel.style.display = 'none';
+    }
+
+    // Persistent measurement preview while dragging
+    if (state.ui.dragMode === 'persistMeasure' && state.ui.measureStart) {
+      const mp = state.ui.measureStart;
+      const rect = uiLayer.getBoundingClientRect();
+      const mx = (mouseScreen.x - rect.left) * DPR;
+      const my = (mouseScreen.y - rect.top) * DPR;
+      const mWorld = screenToWorld(mx, my);
+      const dx = mWorld.x - mp.x;
+      const dy = mWorld.y - mp.y;
+      const distPx = Math.hypot(dx, dy);
+      const cells = distPx / state.grid.size;
+      const units = cells * state.grid.unitsPerCell;
+
+      const measureShape = document.getElementById('measureShape').value;
+      const measureColor = document.getElementById('measureColor').value;
+
+      uiCtx.save();
+      uiCtx.lineWidth = 2 / state.view.scale;
+      uiCtx.strokeStyle = measureColor;
+      uiCtx.fillStyle = measureColor.replace('rgb', 'rgba').replace(')', ', 0.2)');
+
+      if (measureShape === 'line') {
+        uiCtx.beginPath();
+        uiCtx.moveTo(mp.x, mp.y);
+        uiCtx.lineTo(mWorld.x, mWorld.y);
+        uiCtx.stroke();
+      } else if (measureShape === 'cone') {
+        const angle = Math.atan2(dy, dx);
+        const coneAngle = Math.PI / 2;
+
+        uiCtx.beginPath();
+        uiCtx.moveTo(mp.x, mp.y);
+        uiCtx.arc(mp.x, mp.y, distPx, angle - coneAngle / 2, angle + coneAngle / 2);
+        uiCtx.closePath();
+        uiCtx.fill();
+        uiCtx.stroke();
+      } else if (measureShape === 'circle') {
+        uiCtx.beginPath();
+        uiCtx.arc(mp.x, mp.y, distPx, 0, Math.PI * 2);
+        uiCtx.fill();
+        uiCtx.stroke();
+
+        uiCtx.beginPath();
+        uiCtx.moveTo(mp.x, mp.y);
+        uiCtx.lineTo(mWorld.x, mWorld.y);
+        uiCtx.stroke();
+      }
+
+      uiCtx.restore();
+
+      // Show preview label
+      const mid = worldToScreen((mp.x + mWorld.x)/2, (mp.y + mWorld.y)/2);
+      measureLabel.style.left = mid.x + 'px';
+      measureLabel.style.top = mid.y + 'px';
+
+      if (measureShape === 'cone') {
+        measureLabel.textContent = `${Math.round(units)} ft cone (${cells.toFixed(2)} cells)`;
+      } else if (measureShape === 'circle') {
+        measureLabel.textContent = `${Math.round(units)} ft radius (${cells.toFixed(2)} cells)`;
+      } else {
+        measureLabel.textContent = `${Math.round(units)} ft (${cells.toFixed(2)} cells)`;
+      }
+      measureLabel.style.display = 'block';
     }
 
     uiCtx.setTransform(1,0,0,1,0,0);
@@ -1278,6 +1398,72 @@
       if(Math.abs(rx) <= t.w/2 && Math.abs(ry) <= t.h/2){ return t; }
     }
     return null;
+  }
+
+  function hitMeasurement(wx, wy){
+    // Check measurements in reverse order (top to bottom)
+    const hitRadius = 10 / state.view.scale; // Hit detection threshold
+
+    for(let i = persistentMeasurements.length - 1; i >= 0; i--){
+      const m = persistentMeasurements[i];
+      const dx = m.endX - m.startX;
+      const dy = m.endY - m.startY;
+      const distPx = Math.hypot(dx, dy);
+
+      if(m.type === 'line'){
+        // Check if point is near the line
+        const dist = pointToLineDistance(wx, wy, m.startX, m.startY, m.endX, m.endY);
+        if(dist < hitRadius) return m;
+      } else if(m.type === 'cone' || m.type === 'circle'){
+        // Check if point is inside the shape
+        const distFromStart = Math.hypot(wx - m.startX, wy - m.startY);
+        if(distFromStart < distPx){
+          if(m.type === 'circle'){
+            return m;
+          } else {
+            // For cone, check if point is within the 90° cone
+            const angle = Math.atan2(dy, dx);
+            const pointAngle = Math.atan2(wy - m.startY, wx - m.startX);
+            const coneAngle = Math.PI / 2;
+            let angleDiff = Math.abs(pointAngle - angle);
+            if(angleDiff > Math.PI) angleDiff = 2 * Math.PI - angleDiff;
+            if(angleDiff < coneAngle / 2) return m;
+          }
+        }
+      }
+    }
+    return null;
+  }
+
+  function hitMeasurementHandle(wx, wy){
+    // Check if clicking on an endpoint handle of a selected measurement
+    const handleSize = 8 / state.view.scale;
+
+    for(const m of persistentMeasurements){
+      if(!m.selected) continue;
+
+      const distStart = Math.hypot(wx - m.startX, wy - m.startY);
+      if(distStart < handleSize) return { measurement: m, handle: 'start' };
+
+      const distEnd = Math.hypot(wx - m.endX, wy - m.endY);
+      if(distEnd < handleSize) return { measurement: m, handle: 'end' };
+    }
+    return null;
+  }
+
+  function pointToLineDistance(px, py, x1, y1, x2, y2){
+    // Calculate perpendicular distance from point to line segment
+    const dx = x2 - x1;
+    const dy = y2 - y1;
+    const lenSq = dx * dx + dy * dy;
+    if(lenSq === 0) return Math.hypot(px - x1, py - y1);
+
+    let t = ((px - x1) * dx + (py - y1) * dy) / lenSq;
+    t = Math.max(0, Math.min(1, t));
+
+    const nearX = x1 + t * dx;
+    const nearY = y1 + t * dy;
+    return Math.hypot(px - nearX, py - nearY);
   }
 
   function hitFogShape(wx, wy){
@@ -1398,7 +1584,14 @@
     const sy = (e.clientY - rect.top) * DPR;
     const wpt = screenToWorld(sx, sy);
 
-    // Mobile/Toggle measuring
+    // Persistent measurement mode
+    if (state.ui.persistMeasureToggle) {
+      state.ui.dragMode = 'persistMeasure';
+      state.ui.measureStart = wpt;
+      return;
+    }
+
+    // Mobile/Toggle measuring (temporary)
     if (state.ui.measureToggle || state.ui.measuring) {
       state.ui.measuring = true;
       state.ui.measureStart = wpt;
@@ -1451,13 +1644,44 @@
       return;
     }
 
-    // Check for fog shape handle hit first (if fog enabled and not in pan mode)
+    // Check for measurement handle hit first (highest priority)
     const panMode = state.ui.spaceDown || e.button === 1;
-    const handleHit = fogState.enabled && !panMode ? hitFogShapeHandle(wpt.x, wpt.y) : null;
-    const fogShape = !handleHit && fogState.enabled && !panMode ? hitFogShape(wpt.x, wpt.y) : null;
-    const token = hitToken(wpt.x, wpt.y);
+    const measurementHandleHit = !panMode ? hitMeasurementHandle(wpt.x, wpt.y) : null;
+    const measurement = !measurementHandleHit && !panMode ? hitMeasurement(wpt.x, wpt.y) : null;
+    const handleHit = !measurementHandleHit && !measurement && fogState.enabled && !panMode ? hitFogShapeHandle(wpt.x, wpt.y) : null;
+    const fogShape = !measurementHandleHit && !measurement && !handleHit && fogState.enabled && !panMode ? hitFogShape(wpt.x, wpt.y) : null;
+    const token = !measurementHandleHit && !measurement && hitToken(wpt.x, wpt.y);
 
-    if(!panMode && handleHit){
+    if(!panMode && measurementHandleHit){
+      // Resize measurement by dragging endpoint
+      const {measurement: m, handle} = measurementHandleHit;
+      persistentMeasurements.forEach(pm=> pm.selected = false);
+      fogShapes.forEach(s=> s.selected = false);
+      state.tokens.forEach(t=> t.selected = false);
+      m.selected = true;
+      state.ui.dragMode = 'measurementResize';
+      state.ui.dragId = m.id;
+      state.ui.resizeHandle = handle;
+      hideMenu();
+      setStatus(`Adjusting measurement endpoint`);
+      updateTokenList();
+      dirty.ui = true;
+      requestRender();
+    } else if(!panMode && measurement){
+      // Select and start dragging measurement
+      persistentMeasurements.forEach(pm=> pm.selected = false);
+      fogShapes.forEach(s=> s.selected = false);
+      state.tokens.forEach(t=> t.selected = false);
+      measurement.selected = true;
+      state.ui.dragMode = 'measurementDrag';
+      state.ui.dragId = measurement.id;
+      state.ui.dragOffset = { x: wpt.x - measurement.startX, y: wpt.y - measurement.startY };
+      hideMenu();
+      setStatus(`Dragging measurement`);
+      updateTokenList();
+      dirty.ui = true;
+      requestRender();
+    } else if(!panMode && handleHit){
       // Resize handle interaction
       const {shape, handle} = handleHit;
       fogShapes.forEach(s=> s.selected = false);
@@ -1550,6 +1774,50 @@
     }
 
     if(state.ui.measuring) return; // render handles the line
+
+    // Update preview for persistent measure
+    if(state.ui.dragMode === 'persistMeasure'){
+      dirty.ui = true;
+      requestRender();
+      return;
+    }
+
+    if(state.ui.dragMode === 'measurementResize' && state.ui.dragId){
+      const m = persistentMeasurements.find(pm=> pm.id === state.ui.dragId);
+      if(m){
+        // Update the appropriate endpoint
+        if(state.ui.resizeHandle === 'start'){
+          m.startX = wpt.x;
+          m.startY = wpt.y;
+        } else {
+          m.endX = wpt.x;
+          m.endY = wpt.y;
+        }
+        dirty.ui = true;
+        requestRender();
+      }
+      return;
+    }
+
+    if(state.ui.dragMode === 'measurementDrag' && state.ui.dragId){
+      const m = persistentMeasurements.find(pm=> pm.id === state.ui.dragId);
+      if(m){
+        // Move both endpoints to maintain shape
+        const newStartX = wpt.x - state.ui.dragOffset.x;
+        const newStartY = wpt.y - state.ui.dragOffset.y;
+        const dx = newStartX - m.startX;
+        const dy = newStartY - m.startY;
+
+        m.startX = newStartX;
+        m.startY = newStartY;
+        m.endX += dx;
+        m.endY += dy;
+
+        dirty.ui = true;
+        requestRender();
+      }
+      return;
+    }
 
     if(state.ui.dragMode === 'fogShapeResize' && state.ui.fogShapeDragId){
       const shape = fogShapes.find(s=> s.id === state.ui.fogShapeDragId);
@@ -1655,11 +1923,55 @@
       }
       setDirty(); // Token was moved
     }
+    if(state.ui.dragMode === 'measurementResize' || state.ui.dragMode === 'measurementDrag'){
+      // Measurement adjusted or moved, save changes
+      setDirty();
+      dirty.ui = true;
+      requestRender();
+    }
     if(state.ui.dragMode === 'fogShape' || state.ui.dragMode === 'fogShapeResize'){
       // Fog shape dragging/resizing completed, save changes
       renderFogShapes();
       setDirty(); // Fog shape was moved/resized
     }
+
+    // Create persistent measurement on release
+    if(state.ui.dragMode === 'persistMeasure' && state.ui.measureStart){
+      const rect = uiLayer.getBoundingClientRect();
+      const sx = (e.clientX - rect.left) * DPR;
+      const sy = (e.clientY - rect.top) * DPR;
+      const endPt = screenToWorld(sx, sy);
+
+      // Only create if there's meaningful distance
+      const dx = endPt.x - state.ui.measureStart.x;
+      const dy = endPt.y - state.ui.measureStart.y;
+      const dist = Math.hypot(dx, dy);
+
+      if(dist > 5){ // Minimum 5px threshold
+        const measureShape = document.getElementById('measureShape').value;
+        const measureColor = document.getElementById('measureColor').value;
+
+        const measurement = {
+          id: 'pm_' + Math.random().toString(36).slice(2, 9),
+          type: measureShape,
+          startX: state.ui.measureStart.x,
+          startY: state.ui.measureStart.y,
+          endX: endPt.x,
+          endY: endPt.y,
+          color: measureColor,
+          selected: false
+        };
+
+        persistentMeasurements.push(measurement);
+        dirty.ui = true;
+        requestRender();
+        setDirty();
+        setStatus('Persistent measurement created');
+      }
+
+      state.ui.measureStart = null;
+    }
+
     state.ui.dragMode = 'none';
     state.ui.dragId = null;
     state.ui.fogShapeDragId = null;
@@ -1735,6 +2047,17 @@
     const sx = (e.clientX - rect.left) * DPR; const sy = (e.clientY - rect.top) * DPR;
     const wpt = screenToWorld(sx, sy);
 
+    // Check for measurement first
+    const measurement = hitMeasurement(wpt.x, wpt.y);
+    if (measurement) {
+      persistentMeasurements.forEach(pm=> pm.selected = false);
+      measurement.selected = true;
+      dirty.ui = true;
+      requestRender();
+      showMeasurementMenu(e.clientX, e.clientY, measurement);
+      return;
+    }
+
     const token = hitToken(wpt.x, wpt.y);
     if (!token) { hideMenu(); return; }
     state.tokens.forEach(t=> t.selected = false);
@@ -1774,8 +2097,65 @@
   }
   function hideMenu(){ ctxMenu.style.display='none'; }
 
+  function showMeasurementMenu(x, y, measurement) {
+    ctxMenu.innerHTML = `
+      <button data-cmd="renameMeasurement">✏️ Rename</button>
+      <button data-cmd="deleteMeasurement">🗑️ Delete</button>
+    `;
+    ctxMenu.style.display='block';
+
+    const menuRect = ctxMenu.getBoundingClientRect();
+    const viewportWidth = window.innerWidth;
+    const viewportHeight = window.innerHeight;
+
+    let left = x;
+    let top = y;
+
+    if (left + menuRect.width > viewportWidth) {
+      left = viewportWidth - menuRect.width - 10;
+    }
+    if (top + menuRect.height > viewportHeight) {
+      top = y - menuRect.height;
+      if (top < 0) top = Math.max(10, viewportHeight - menuRect.height - 10);
+    }
+
+    left = Math.max(10, left);
+    top = Math.max(10, top);
+
+    ctxMenu.style.left = left+'px';
+    ctxMenu.style.top = top+'px';
+  }
+
   ctxMenu.addEventListener('click', (e)=>{
     const cmd = e.target.dataset.cmd;
+
+    // Handle measurement commands
+    if(cmd === 'renameMeasurement'){
+      const m = persistentMeasurements.find(x=>x.selected);
+      if(!m) return;
+      const name = prompt('Measurement name (leave empty to show distance only):', m.name || '');
+      if (name !== null) {
+        m.name = name.trim() || undefined;
+        dirty.ui = true;
+        requestRender();
+        setDirty();
+      }
+      hideMenu();
+      return;
+    }
+    if(cmd === 'deleteMeasurement'){
+      const idx = persistentMeasurements.findIndex(x=>x.selected);
+      if(idx >= 0){
+        persistentMeasurements.splice(idx, 1);
+        dirty.ui = true;
+        requestRender();
+        setDirty();
+      }
+      hideMenu();
+      return;
+    }
+
+    // Handle token commands
     const t = state.tokens.find(x=>x.selected);
     if(!t) return;
     if (cmd==='rename'){
@@ -2036,7 +2416,41 @@
     e.currentTarget.setAttribute('aria-pressed', String(state.ui.measureToggle));
     state.ui.measuring = state.ui.measureToggle;
     if(!state.ui.measureToggle){ state.ui.measureStart = null; }
+
+    // Disable persist measure mode when regular measure is enabled
+    if (state.ui.measureToggle && state.ui.persistMeasureToggle) {
+      state.ui.persistMeasureToggle = false;
+      document.getElementById('persistMeasureToggle').classList.remove('active');
+      document.getElementById('persistMeasureToggle').setAttribute('aria-pressed', 'false');
+    }
+
     setStatus(state.ui.measureToggle ? 'Measure mode ON' : 'Measure mode OFF');
+  });
+
+  const persistMeasureToggleBtn = document.getElementById('persistMeasureToggle');
+  persistMeasureToggleBtn.addEventListener('click', (e)=>{
+    state.ui.persistMeasureToggle = !state.ui.persistMeasureToggle;
+    e.currentTarget.classList.toggle('active', state.ui.persistMeasureToggle);
+    e.currentTarget.setAttribute('aria-pressed', String(state.ui.persistMeasureToggle));
+
+    // Disable regular measure mode when persist measure is enabled
+    if (state.ui.persistMeasureToggle && state.ui.measureToggle) {
+      state.ui.measureToggle = false;
+      state.ui.measuring = false;
+      state.ui.measureStart = null;
+      document.getElementById('measureToggle').classList.remove('active');
+      document.getElementById('measureToggle').setAttribute('aria-pressed', 'false');
+    }
+
+    setStatus(state.ui.persistMeasureToggle ? 'Persist Measure mode ON - Click and drag to create' : 'Persist Measure mode OFF');
+  });
+
+  document.getElementById('clearMeasurements').addEventListener('click', ()=>{
+    persistentMeasurements.length = 0;
+    dirty.ui = true;
+    requestRender();
+    setDirty();
+    setStatus('Cleared all persistent measurements');
   });
 
   // Presets
@@ -2100,6 +2514,22 @@
           mode: s.mode,
           color: s.color || '#000000',
           selected: !!s.selected
+        })));
+      }
+
+      // Restore persistent measurements if present
+      if (data.persistentMeasurements) {
+        persistentMeasurements.length = 0;
+        persistentMeasurements.push(...data.persistentMeasurements.map(m => ({
+          id: m.id,
+          type: m.type,
+          startX: m.startX,
+          startY: m.startY,
+          endX: m.endX,
+          endY: m.endY,
+          color: m.color || '#8bd3ff',
+          name: m.name,
+          selected: !!m.selected
         })));
       }
 
@@ -2297,6 +2727,148 @@
 
       ctx.restore();
     }
+  }
+
+  function drawPersistentMeasurements(ctx) {
+    // Draw all persistent measurements in world space
+    for (const measurement of persistentMeasurements) {
+      const dx = measurement.endX - measurement.startX;
+      const dy = measurement.endY - measurement.startY;
+      const distPx = Math.hypot(dx, dy);
+      const cells = distPx / state.grid.size;
+      const units = cells * state.grid.unitsPerCell;
+
+      ctx.save();
+      ctx.lineWidth = 2 / state.view.scale;
+      ctx.strokeStyle = measurement.color;
+
+      // Use semi-transparent fill
+      const rgb = hexToRgb(measurement.color);
+      ctx.fillStyle = `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 0.2)`;
+
+      // Add selection highlight
+      if (measurement.selected) {
+        ctx.lineWidth = 3 / state.view.scale;
+        ctx.strokeStyle = '#ffffff';
+      }
+
+      if (measurement.type === 'line') {
+        ctx.beginPath();
+        ctx.moveTo(measurement.startX, measurement.startY);
+        ctx.lineTo(measurement.endX, measurement.endY);
+        ctx.stroke();
+      } else if (measurement.type === 'cone') {
+        const angle = Math.atan2(dy, dx);
+        const coneAngle = Math.PI / 2;
+
+        ctx.beginPath();
+        ctx.moveTo(measurement.startX, measurement.startY);
+        ctx.arc(measurement.startX, measurement.startY, distPx, angle - coneAngle / 2, angle + coneAngle / 2);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+      } else if (measurement.type === 'circle') {
+        ctx.beginPath();
+        ctx.arc(measurement.startX, measurement.startY, distPx, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+
+        // Draw radius line
+        ctx.beginPath();
+        ctx.moveTo(measurement.startX, measurement.startY);
+        ctx.lineTo(measurement.endX, measurement.endY);
+        ctx.stroke();
+      }
+
+      // Draw text label - positioned above the measurement to avoid overlap
+      const midX = (measurement.startX + measurement.endX) / 2;
+      const midY = (measurement.startY + measurement.endY) / 2;
+
+      ctx.font = `bold ${12/state.view.scale}px sans-serif`;
+      ctx.fillStyle = measurement.color;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'bottom';
+
+      // Build label text
+      let distanceText;
+      if (measurement.type === 'cone') {
+        distanceText = `${Math.round(units)} ft cone`;
+      } else if (measurement.type === 'circle') {
+        distanceText = `${Math.round(units)} ft radius`;
+      } else {
+        distanceText = `${Math.round(units)} ft`;
+      }
+
+      // Use custom name if provided, otherwise use distance
+      const labelText = measurement.name || distanceText;
+      const showDistance = !!measurement.name; // Show distance below name if custom name exists
+
+      // Calculate label position above the measurement
+      // For cones and circles, position above the start point
+      // For lines, position above the midpoint
+      let labelX = midX;
+      let labelY = midY;
+
+      if (measurement.type === 'cone' || measurement.type === 'circle') {
+        // Position above the start point (apex/center)
+        labelX = measurement.startX;
+        labelY = measurement.startY - (distPx + 20 / state.view.scale);
+      } else {
+        // For lines, position above the midpoint
+        labelY = midY - 20 / state.view.scale;
+      }
+
+      // Text background
+      const textWidth = ctx.measureText(labelText).width;
+      const pad = 4 / state.view.scale;
+      const lineHeight = 16 / state.view.scale;
+      const totalHeight = showDistance ? lineHeight * 2 : lineHeight;
+
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
+      ctx.fillRect(labelX - textWidth/2 - pad, labelY - totalHeight, textWidth + pad*2, totalHeight);
+
+      // Draw main label
+      ctx.fillStyle = measurement.color;
+      ctx.fillText(labelText, labelX, showDistance ? labelY - lineHeight/2 : labelY);
+
+      // Draw distance below if custom name exists
+      if (showDistance) {
+        ctx.font = `${10/state.view.scale}px sans-serif`;
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
+        ctx.fillText(distanceText, labelX, labelY);
+      }
+
+      // Draw endpoint handles if selected
+      if (measurement.selected) {
+        const handleSize = 8 / state.view.scale;
+        ctx.fillStyle = '#ffffff';
+        ctx.strokeStyle = measurement.color;
+        ctx.lineWidth = 2 / state.view.scale;
+
+        // Start handle
+        ctx.beginPath();
+        ctx.arc(measurement.startX, measurement.startY, handleSize, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+
+        // End handle
+        ctx.beginPath();
+        ctx.arc(measurement.endX, measurement.endY, handleSize, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+      }
+
+      ctx.restore();
+    }
+  }
+
+  function hexToRgb(hex) {
+    const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+    return result ? {
+      r: parseInt(result[1], 16),
+      g: parseInt(result[2], 16),
+      b: parseInt(result[3], 16)
+    } : { r: 139, g: 211, b: 255 };
   }
 
   function addTokenFromInputs(){
@@ -2549,6 +3121,8 @@
       else if (state.ui.dragMode === 'fogShape' || state.ui.dragMode === 'fogShapeResize') {
         dirty.fog = true;
       }
+      // Persistent measurement preview is handled by ui layer
+      // (no additional flags needed, dirty.ui is already set)
 
       requestRender();
     }

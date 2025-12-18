@@ -3,6 +3,59 @@ All notable changes to The DM's Toolbox are documented here.
 The format is based on Keep a Changelog,
 and this project adheres to Semantic Versioning.
 
+1.10.6 - 2025-12-18
+**Battle Map: Performance Optimization & Persistent Measurements**
+
+- **Added**
+  - **Layered Canvas Architecture** - Eliminated flickering with event-driven rendering
+    - 4 separate canvas layers: mapLayer, fogLayer, tokenLayer, uiLayer
+    - Dirty flag system triggers selective redraws only when needed
+    - Debounced resize handling for smooth viewport adjustments
+    - Split monolithic draw() into layer-specific render functions
+    - Dramatically improved performance - no more 60fps continuous redraw
+    - Flickering no longer an issue and more features are now possible on this toolset
+
+  - **Persistent Measurement System** - Save and manipulate measurements across sessions
+    - "Persist Measure" button creates permanent measurements on the map
+    - Three measurement shapes: Line, Cone (90°), Circle (radius)
+    - Color picker for custom measurement colors
+    - Live preview while dragging (shows shape and distance before releasing)
+    - All measurements save with your session
+
+  - **Interactive Measurement Editing**
+    - **Move entire measurement**: Click and drag anywhere in the measured area
+    - **Resize measurements**: Drag endpoint handles to adjust size/direction
+    - **Rename measurements**: Right-click → "Rename" for custom labels
+    - **Delete measurements**: Right-click → "Delete" to remove
+    - **Clear all**: "Clear Measures" button removes all measurements at once
+    - Custom names display above measurements with smart positioning to avoid overlap
+
+  - **Enhanced Help Documentation**
+    - Comprehensive Measurement section with Quick Measure vs Persistent Measurements
+    - Step-by-step editing instructions for moving, resizing, renaming, deleting
+    - Clear explanations of shape types and use cases
+
+- **Changed**
+  - Canvas rendering switched from continuous redraw to event-driven dirty flags
+  - Pan/zoom operations now update all layers synchronously
+  - Measurement labels repositioned above shapes to prevent overlap with visualization
+  - All canvases use pointer-events:none except uiLayer for consistent interaction
+  - HTML structure updated with 4 stacked canvas elements for layered rendering
+
+- **Fixed**
+  - **Flickering eliminated**: Layered architecture prevents visual glitches during pan/zoom/drag
+  - **Performance improved**: Selective rendering reduces CPU usage dramatically
+  - **Synchronous updates**: All layers (map, fog, tokens, UI) transform together during navigation
+  - Label overlap resolved with intelligent positioning above measurement areas
+
+- **Technical**
+  - requestAnimationFrame-based render queue with dirty flag tracking
+  - Layer-specific render functions: renderMapLayer(), renderFogLayer(), renderTokenLayer(), renderUiLayer()
+  - Hit detection algorithms: pointToLineDistance(), cone angle checks, circle radius tests
+  - Measurement drag modes: measurementResize (endpoints), measurementDrag (full shape)
+  - Context menu integration for measurement operations
+  - IndexedDB persistence for measurements with save/load support
+
 1.10.5 - 2025-12-18
 **Tavern Generator: Full Cultural Immersion System**
 
