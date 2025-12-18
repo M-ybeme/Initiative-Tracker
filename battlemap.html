@@ -81,8 +81,20 @@
     .bar .active { outline: 2px solid var(--accent); }
 
     .canvas-wrap { position: relative; flex: 1 1 auto; min-height: 0; }
-    canvas { display:block; width: 100%; height: 100%; background: #0a0f16; border: 1px solid var(--line); border-radius: 12px; cursor: grab; touch-action: none; }
-    canvas.dragging { cursor: grabbing; }
+    .canvas-wrap canvas {
+      position: absolute;
+      inset: 0;
+      display: block;
+      width: 100%;
+      height: 100%;
+      border-radius: 12px;
+      touch-action: none;
+      pointer-events: none;
+    }
+    #mapLayer { background: #0a0f16; border: 1px solid var(--line); }
+    #fogLayer, #tokenLayer { background: transparent; }
+    #uiLayer { background: transparent; pointer-events: auto; cursor: grab; }
+    #uiLayer.dragging { cursor: grabbing; }
     .token-list { display:flex; flex-wrap: wrap; gap:6px; }
     .pill { border:1px solid var(--line); padding:4px 8px; border-radius:999px; font-size:12px; background:#0a111a; }
 
@@ -477,7 +489,10 @@
       </div>
 
       <div class="canvas-wrap">
-        <canvas id="stage" width="1920" height="1080"></canvas>
+        <canvas id="mapLayer" width="1920" height="1080"></canvas>
+        <canvas id="fogLayer" width="1920" height="1080"></canvas>
+        <canvas id="tokenLayer" width="1920" height="1080"></canvas>
+        <canvas id="uiLayer" width="1920" height="1080"></canvas>
         <div id="measureLabel" class="measure-label" style="display:none;">0 ft</div>
         <div id="ctxMenu" class="context-menu">
           <button data-cmd="rename">✏️ Rename</button>
@@ -565,21 +580,61 @@
 
   /** @typedef {{ id:string, name:string, imgSrc:string, img:HTMLImageElement|null, x:number, y:number, w:number, h:number, rot:number, selected?:boolean, hp?:number, maxHp?:number, showLabel?:boolean, statusConditions?:string[], aura?:{radius:number, color:string}, visionCone?:{angle:number, range:number, color:string} }} Token */
 
-  const canvas = document.getElementById('stage');
-  const ctx = canvas.getContext('2d', { alpha: false });
+  // Layer canvases
+  const mapLayer = document.getElementById('mapLayer');
+  const fogLayer = document.getElementById('fogLayer');
+  const tokenLayer = document.getElementById('tokenLayer');
+  const uiLayer = document.getElementById('uiLayer');
+
+  const mapCtx = mapLayer.getContext('2d', { alpha: false });
+  const fogCtx = fogLayer.getContext('2d', { alpha: true });
+  const tokenCtx = tokenLayer.getContext('2d', { alpha: true });
+  const uiCtx = uiLayer.getContext('2d', { alpha: true });
+
   const DPR = Math.max(1, window.devicePixelRatio || 1);
 
-  function resizeCanvas(){
-    const rect = canvas.getBoundingClientRect();
-    const W = Math.max(200, Math.round(rect.width * DPR));
-    const H = Math.max(200, Math.round(rect.height * DPR));
-    if (canvas.width !== W || canvas.height !== H) {
-      canvas.width = W;
-      canvas.height = H;
-    }
+  // Dirty flags for selective rendering
+  let renderRequested = false;
+  const dirty = {
+    map: true,
+    fog: true,
+    tokens: true,
+    grid: true,
+    ui: true
+  };
+
+  function requestRender() {
+    if (renderRequested) return;
+    renderRequested = true;
+    requestAnimationFrame(renderFrame);
   }
-  new ResizeObserver(resizeCanvas).observe(canvas);
-  resizeCanvas();
+
+  function resizeLayerCanvas(cnv) {
+    const rect = cnv.getBoundingClientRect();
+    const targetW = Math.max(200, Math.round(rect.width * DPR));
+    const targetH = Math.max(200, Math.round(rect.height * DPR));
+    if (cnv.width === targetW && cnv.height === targetH) return;
+    cnv.width = targetW;
+    cnv.height = targetH;
+  }
+
+  let resizeRaf = false;
+  function resizeAllLayers() {
+    if (resizeRaf) return;
+    resizeRaf = true;
+    requestAnimationFrame(() => {
+      resizeRaf = false;
+      resizeLayerCanvas(mapLayer);
+      resizeLayerCanvas(fogLayer);
+      resizeLayerCanvas(tokenLayer);
+      resizeLayerCanvas(uiLayer);
+      dirty.map = dirty.fog = dirty.tokens = dirty.grid = dirty.ui = true;
+      requestRender();
+    });
+  }
+
+  new ResizeObserver(resizeAllLayers).observe(document.querySelector('.canvas-wrap'));
+  resizeAllLayers();
 
   const statusEl = document.getElementById('status');
   const tokenListEl = document.getElementById('tokenList');
@@ -849,10 +904,15 @@
           };
           ensureFogSize();
           if (data.fog) {
-            drawDataUrlToCanvas(data.fog, fog);
+            drawDataUrlToCanvas(data.fog, fog).then(() => {
+              dirty.map = dirty.fog = dirty.tokens = dirty.grid = true;
+              requestRender();
+            });
           } else {
             // No saved fog bitmap, render shapes if present
             renderFogShapes();
+            dirty.map = dirty.fog = dirty.tokens = dirty.grid = true;
+            requestRender();
           }
           // IMPORTANT: do NOT call fitMap(); keep saved view/pan/zoom
         });
@@ -862,7 +922,11 @@
       }
 
       state.tokens.forEach(t => {
-        loadImage(t.imgSrc).then(img => (t.img = img));
+        loadImage(t.imgSrc).then(img => {
+          t.img = img;
+          dirty.tokens = true;
+          requestRender();
+        });
       });
     } catch (e) {
       console.warn('❌ Load failed', e);
@@ -878,30 +942,72 @@
   }
   function setStatus(text){ statusEl.textContent = text; }
 
-  function draw(){
-    const { width:W, height:H } = canvas;
-    ctx.setTransform(1,0,0,1,0,0);
-    ctx.fillStyle = '#091018';
-    ctx.fillRect(0,0,W,H);
+  // Event-driven rendering system - main entry point
+  function renderFrame() {
+    renderRequested = false;
 
-    // world->screen
-    ctx.setTransform(state.view.scale, 0, 0, state.view.scale, state.view.x, state.view.y);
+    if (dirty.map || dirty.grid) renderMapLayer();
+    if (dirty.fog) renderFogLayer();
+    if (dirty.tokens) renderTokenLayer();
+    if (dirty.ui || state.ui.measuring) renderUiLayer();
+
+    dirty.map = dirty.fog = dirty.tokens = dirty.grid = dirty.ui = false;
+  }
+
+  // Render map image and grid on the map layer
+  function renderMapLayer() {
+    const { width:W, height:H } = mapLayer;
+    mapCtx.setTransform(1,0,0,1,0,0);
+    mapCtx.fillStyle = '#091018';
+    mapCtx.fillRect(0,0,W,H);
+
+    mapCtx.setTransform(state.view.scale, 0, 0, state.view.scale, state.view.x, state.view.y);
 
     // Map image (image->world)
     if(state.map.img){
-      ctx.save();
-      ctx.translate(state.mapTransform.x, state.mapTransform.y);
-      ctx.scale(state.mapTransform.scale, state.mapTransform.scale);
-      ctx.drawImage(state.map.img, 0, 0);
-      // Fog in image-space over the map
-      if (fogState.enabled && fog.width > 1 && fog.height > 1) {
-        ctx.drawImage(fog, 0, 0);
-      }
-      ctx.restore();
+      mapCtx.save();
+      mapCtx.translate(state.mapTransform.x, state.mapTransform.y);
+      mapCtx.scale(state.mapTransform.scale, state.mapTransform.scale);
+      mapCtx.drawImage(state.map.img, 0, 0);
+      mapCtx.restore();
     }
 
     // Grid (world-space)
-    if(state.grid.show){ drawGrid(); }
+    if(state.grid.show){ drawGrid(mapCtx); }
+
+    mapCtx.setTransform(1,0,0,1,0,0);
+  }
+
+  // Render fog bitmap and fog shapes on the fog layer
+  function renderFogLayer() {
+    const { width:W, height:H } = fogLayer;
+    fogCtx.setTransform(1,0,0,1,0,0);
+    fogCtx.clearRect(0,0,W,H);
+
+    fogCtx.setTransform(state.view.scale, 0, 0, state.view.scale, state.view.x, state.view.y);
+
+    if(fogState.enabled && state.map.img && fog.width > 1 && fog.height > 1){
+      fogCtx.save();
+      fogCtx.translate(state.mapTransform.x, state.mapTransform.y);
+      fogCtx.scale(state.mapTransform.scale, state.mapTransform.scale);
+      fogCtx.drawImage(fog, 0, 0);
+      fogCtx.restore();
+
+      // Fog shapes (drawn after fog bitmap)
+      drawFogShapes(fogCtx);
+      drawFogShapeOutlines(fogCtx);
+    }
+
+    fogCtx.setTransform(1,0,0,1,0,0);
+  }
+
+  // Render tokens, auras, vision cones, HP bars, labels on the token layer
+  function renderTokenLayer() {
+    const { width:W, height:H } = tokenLayer;
+    tokenCtx.setTransform(1,0,0,1,0,0);
+    tokenCtx.clearRect(0,0,W,H);
+
+    tokenCtx.setTransform(state.view.scale, 0, 0, state.view.scale, state.view.x, state.view.y);
 
     // Tokens - auras and vision cones first (behind tokens)
     for(const t of state.tokens){
@@ -911,57 +1017,56 @@
 
       // Aura
       if(t.aura && t.aura.radius > 0){
-        ctx.save();
-        ctx.globalAlpha = 0.2;
-        ctx.fillStyle = t.aura.color || '#8bd3ff';
-        ctx.beginPath();
-        // Add 0.5 to radius to account for the token's own cell (aura extends from edge of token's cell)
-        ctx.arc(cx, cy, (t.aura.radius + 0.5) * state.grid.size, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.globalAlpha = 0.6;
-        ctx.strokeStyle = t.aura.color || '#8bd3ff';
-        ctx.lineWidth = 2/state.view.scale;
-        ctx.stroke();
-        ctx.restore();
+        tokenCtx.save();
+        tokenCtx.globalAlpha = 0.2;
+        tokenCtx.fillStyle = t.aura.color || '#8bd3ff';
+        tokenCtx.beginPath();
+        tokenCtx.arc(cx, cy, (t.aura.radius + 0.5) * state.grid.size, 0, Math.PI * 2);
+        tokenCtx.fill();
+        tokenCtx.globalAlpha = 0.6;
+        tokenCtx.strokeStyle = t.aura.color || '#8bd3ff';
+        tokenCtx.lineWidth = 2/state.view.scale;
+        tokenCtx.stroke();
+        tokenCtx.restore();
       }
 
       // Vision cone
       if(t.visionCone && t.visionCone.range > 0){
-        ctx.save();
-        ctx.globalAlpha = 0.15;
-        ctx.fillStyle = t.visionCone.color || '#ffff88';
-        ctx.beginPath();
+        tokenCtx.save();
+        tokenCtx.globalAlpha = 0.15;
+        tokenCtx.fillStyle = t.visionCone.color || '#ffff88';
+        tokenCtx.beginPath();
         const angleRad = (t.visionCone.angle || 90) * Math.PI / 180;
         const range = t.visionCone.range * state.grid.size;
         const startAngle = (t.rot || 0) - angleRad / 2;
         const endAngle = (t.rot || 0) + angleRad / 2;
-        ctx.moveTo(cx, cy);
-        ctx.arc(cx, cy, range, startAngle, endAngle);
-        ctx.closePath();
-        ctx.fill();
-        ctx.globalAlpha = 0.4;
-        ctx.strokeStyle = t.visionCone.color || '#ffff88';
-        ctx.lineWidth = 2/state.view.scale;
-        ctx.stroke();
-        ctx.restore();
+        tokenCtx.moveTo(cx, cy);
+        tokenCtx.arc(cx, cy, range, startAngle, endAngle);
+        tokenCtx.closePath();
+        tokenCtx.fill();
+        tokenCtx.globalAlpha = 0.4;
+        tokenCtx.strokeStyle = t.visionCone.color || '#ffff88';
+        tokenCtx.lineWidth = 2/state.view.scale;
+        tokenCtx.stroke();
+        tokenCtx.restore();
       }
     }
 
     // Tokens - main images
     for(const t of state.tokens){
       if(t.img){
-        ctx.save();
+        tokenCtx.save();
         const cx = t.x + t.w/2;
         const cy = t.y + t.h/2;
-        ctx.translate(cx, cy);
-        if (t.rot) ctx.rotate(t.rot);
-        ctx.drawImage(t.img, -t.w/2, -t.h/2, t.w, t.h);
+        tokenCtx.translate(cx, cy);
+        if (t.rot) tokenCtx.rotate(t.rot);
+        tokenCtx.drawImage(t.img, -t.w/2, -t.h/2, t.w, t.h);
         if(t.selected){
-          ctx.lineWidth = 2/state.view.scale;
-          ctx.strokeStyle = 'rgba(255,255,255,0.9)';
-          ctx.strokeRect(-t.w/2, -t.h/2, t.w, t.h);
+          tokenCtx.lineWidth = 2/state.view.scale;
+          tokenCtx.strokeStyle = 'rgba(255,255,255,0.9)';
+          tokenCtx.strokeRect(-t.w/2, -t.h/2, t.w, t.h);
         }
-        ctx.restore();
+        tokenCtx.restore();
       }
     }
 
@@ -971,23 +1076,23 @@
       const cx = t.x + t.w/2;
       const cy = t.y + t.h/2;
 
-      ctx.save();
-      ctx.translate(cx, cy);
+      tokenCtx.save();
+      tokenCtx.translate(cx, cy);
 
       // HP Bar
       if(t.maxHp && t.maxHp > 0){
         const barY = t.h/2 + 4/state.view.scale;
         const hpPct = Math.max(0, Math.min(1, (t.hp || 0) / t.maxHp));
 
-        ctx.fillStyle = 'rgba(0,0,0,0.7)';
-        ctx.fillRect(-t.w/2, barY, t.w, 6/state.view.scale);
+        tokenCtx.fillStyle = 'rgba(0,0,0,0.7)';
+        tokenCtx.fillRect(-t.w/2, barY, t.w, 6/state.view.scale);
 
-        ctx.fillStyle = hpPct > 0.5 ? '#4ade80' : hpPct > 0.25 ? '#fbbf24' : '#ef4444';
-        ctx.fillRect(-t.w/2, barY, t.w * hpPct, 6/state.view.scale);
+        tokenCtx.fillStyle = hpPct > 0.5 ? '#4ade80' : hpPct > 0.25 ? '#fbbf24' : '#ef4444';
+        tokenCtx.fillRect(-t.w/2, barY, t.w * hpPct, 6/state.view.scale);
 
-        ctx.strokeStyle = 'rgba(255,255,255,0.5)';
-        ctx.lineWidth = 1/state.view.scale;
-        ctx.strokeRect(-t.w/2, barY, t.w, 6/state.view.scale);
+        tokenCtx.strokeStyle = 'rgba(255,255,255,0.5)';
+        tokenCtx.lineWidth = 1/state.view.scale;
+        tokenCtx.strokeRect(-t.w/2, barY, t.w, 6/state.view.scale);
       }
 
       // Status & Label - batch text rendering
@@ -995,48 +1100,53 @@
       const hasLabel = t.showLabel && t.name;
 
       if(hasStatus || hasLabel){
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
+        tokenCtx.textAlign = 'center';
+        tokenCtx.textBaseline = 'middle';
         let yOffset = -t.h/2 - 8/state.view.scale;
 
         // Label
         if(hasLabel){
-          ctx.font = `bold ${11/state.view.scale}px sans-serif`;
+          tokenCtx.font = `bold ${11/state.view.scale}px sans-serif`;
           const pad = 3/state.view.scale;
-          ctx.fillStyle = 'rgba(0,0,0,0.8)';
-          const lw = ctx.measureText(t.name).width;
-          ctx.fillRect(-lw/2-pad, yOffset-8/state.view.scale, lw+pad*2, 16/state.view.scale);
-          ctx.fillStyle = '#8bd3ff';
-          ctx.fillText(t.name, 0, yOffset);
+          tokenCtx.fillStyle = 'rgba(0,0,0,0.8)';
+          const lw = tokenCtx.measureText(t.name).width;
+          tokenCtx.fillRect(-lw/2-pad, yOffset-8/state.view.scale, lw+pad*2, 16/state.view.scale);
+          tokenCtx.fillStyle = '#8bd3ff';
+          tokenCtx.fillText(t.name, 0, yOffset);
           yOffset -= 16/state.view.scale;
         }
 
         // Status
         if(hasStatus){
           const statusTxt = t.statusConditions.join(', ');
-          ctx.font = `${9/state.view.scale}px sans-serif`;
+          tokenCtx.font = `${9/state.view.scale}px sans-serif`;
           const pad = 3/state.view.scale;
-          ctx.fillStyle = 'rgba(0,0,0,0.8)';
-          const sw = ctx.measureText(statusTxt).width;
-          ctx.fillRect(-sw/2-pad, yOffset-6/state.view.scale, sw+pad*2, 12/state.view.scale);
-          ctx.fillStyle = '#fbbf24';
-          ctx.fillText(statusTxt, 0, yOffset);
+          tokenCtx.fillStyle = 'rgba(0,0,0,0.8)';
+          const sw = tokenCtx.measureText(statusTxt).width;
+          tokenCtx.fillRect(-sw/2-pad, yOffset-6/state.view.scale, sw+pad*2, 12/state.view.scale);
+          tokenCtx.fillStyle = '#fbbf24';
+          tokenCtx.fillText(statusTxt, 0, yOffset);
         }
       }
 
-      ctx.restore();
+      tokenCtx.restore();
     }
 
-    // Fog shapes (drawn after tokens so they appear on top)
-    if(fogState.enabled){
-      drawFogShapes();
-      drawFogShapeOutlines();
-    }
+    tokenCtx.setTransform(1,0,0,1,0,0);
+  }
+
+  // Render measurement overlay on the UI layer
+  function renderUiLayer() {
+    const { width:W, height:H } = uiLayer;
+    uiCtx.setTransform(1,0,0,1,0,0);
+    uiCtx.clearRect(0,0,W,H);
+
+    uiCtx.setTransform(state.view.scale, 0, 0, state.view.scale, state.view.x, state.view.y);
 
     // Measuring overlay
     if (state.ui.measuring && state.ui.measureStart) {
       const mp = state.ui.measureStart;
-      const rect = canvas.getBoundingClientRect();
+      const rect = uiLayer.getBoundingClientRect();
       const mx = (mouseScreen.x - rect.left) * DPR;
       const my = (mouseScreen.y - rect.top) * DPR;
       const mWorld = screenToWorld(mx, my);
@@ -1048,43 +1158,39 @@
 
       const measureShape = document.getElementById('measureShape').value;
 
-      ctx.save();
-      ctx.lineWidth = 2 / state.view.scale;
-      ctx.strokeStyle = '#8bd3ff';
-      ctx.fillStyle = 'rgba(139, 211, 255, 0.2)';
+      uiCtx.save();
+      uiCtx.lineWidth = 2 / state.view.scale;
+      uiCtx.strokeStyle = '#8bd3ff';
+      uiCtx.fillStyle = 'rgba(139, 211, 255, 0.2)';
 
       if (measureShape === 'line') {
-        // Line measurement (original behavior)
-        ctx.beginPath();
-        ctx.moveTo(mp.x, mp.y);
-        ctx.lineTo(mWorld.x, mWorld.y);
-        ctx.stroke();
+        uiCtx.beginPath();
+        uiCtx.moveTo(mp.x, mp.y);
+        uiCtx.lineTo(mWorld.x, mWorld.y);
+        uiCtx.stroke();
       } else if (measureShape === 'cone') {
-        // Cone measurement (90-degree cone)
         const angle = Math.atan2(dy, dx);
-        const coneAngle = Math.PI / 2; // 90 degrees
+        const coneAngle = Math.PI / 2;
 
-        ctx.beginPath();
-        ctx.moveTo(mp.x, mp.y);
-        ctx.arc(mp.x, mp.y, distPx, angle - coneAngle / 2, angle + coneAngle / 2);
-        ctx.closePath();
-        ctx.fill();
-        ctx.stroke();
+        uiCtx.beginPath();
+        uiCtx.moveTo(mp.x, mp.y);
+        uiCtx.arc(mp.x, mp.y, distPx, angle - coneAngle / 2, angle + coneAngle / 2);
+        uiCtx.closePath();
+        uiCtx.fill();
+        uiCtx.stroke();
       } else if (measureShape === 'circle') {
-        // Circle/radius measurement
-        ctx.beginPath();
-        ctx.arc(mp.x, mp.y, distPx, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.stroke();
+        uiCtx.beginPath();
+        uiCtx.arc(mp.x, mp.y, distPx, 0, Math.PI * 2);
+        uiCtx.fill();
+        uiCtx.stroke();
 
-        // Draw radius line
-        ctx.beginPath();
-        ctx.moveTo(mp.x, mp.y);
-        ctx.lineTo(mWorld.x, mWorld.y);
-        ctx.stroke();
+        uiCtx.beginPath();
+        uiCtx.moveTo(mp.x, mp.y);
+        uiCtx.lineTo(mWorld.x, mWorld.y);
+        uiCtx.stroke();
       }
 
-      ctx.restore();
+      uiCtx.restore();
 
       // label
       const mid = worldToScreen((mp.x + mWorld.x)/2, (mp.y + mWorld.y)/2);
@@ -1103,13 +1209,12 @@
       measureLabel.style.display = 'none';
     }
 
-    ctx.setTransform(1,0,0,1,0,0);
-    requestAnimationFrame(draw);
+    uiCtx.setTransform(1,0,0,1,0,0);
   }
 
-  function drawGrid(){
+  function drawGrid(ctx){
     const { size, color, alpha, offsetX, offsetY } = state.grid;
-    const { width:W, height:H } = canvas;
+    const { width:W, height:H } = mapLayer;
 
     ctx.save();
     ctx.globalAlpha = alpha;
@@ -1145,14 +1250,16 @@
 
   function centerMap(){
     if(!state.map.img) return;
-    const { width:W, height:H } = canvas;
+    const { width:W, height:H } = mapLayer;
     state.view.x = (W - state.map.w*state.view.scale)/2;
     state.view.y = (H - state.map.h*state.view.scale)/2;
+    dirty.map = dirty.grid = dirty.fog = dirty.tokens = true;
+    requestRender();
     setStatus('Centered');
   }
   function fitMap(){
     if(!state.map.img) return;
-    const { width:W, height:H } = canvas;
+    const { width:W, height:H } = mapLayer;
     const sx = W / Math.max(1,state.map.w);
     const sy = H / Math.max(1,state.map.h);
     state.view.scale = Math.min(sx, sy) * 0.95;
@@ -1250,8 +1357,8 @@
       && (ev.shiftKey || state.ui.brushMode);
   }
 
-  canvas.addEventListener('pointerdown', (e)=>{
-    canvas.setPointerCapture(e.pointerId);
+  uiLayer.addEventListener('pointerdown', (e)=>{
+    uiLayer.setPointerCapture(e.pointerId);
 
     // Track all active pointers for pinch
     activePointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
@@ -1263,7 +1370,7 @@
       pinchStartScale = state.view.scale;
 
       // Compute world-space center of the pinch
-      const rect = canvas.getBoundingClientRect();
+      const rect = uiLayer.getBoundingClientRect();
       const centerClientX = (p1.x + p2.x) / 2;
       const centerClientY = (p1.y + p2.y) / 2;
       const sx = (centerClientX - rect.left) * DPR;
@@ -1286,7 +1393,7 @@
     isPointerDown = true;
     last = { x:e.clientX, y:e.clientY };
 
-    const rect = canvas.getBoundingClientRect();
+    const rect = uiLayer.getBoundingClientRect();
     const sx = (e.clientX - rect.left) * DPR;
     const sy = (e.clientY - rect.top) * DPR;
     const wpt = screenToWorld(sx, sy);
@@ -1396,7 +1503,7 @@
     }
   });
 
-    canvas.addEventListener('pointermove', (e)=>{
+    uiLayer.addEventListener('pointermove', (e)=>{
     mouseScreen = { x:e.clientX, y:e.clientY };
 
     // Update position of this pointer if it's part of a pinch
@@ -1420,13 +1527,17 @@
       state.view.x += (before.x - after.x);
       state.view.y += (before.y - after.y);
 
+      // Mark all layers dirty on zoom
+      dirty.map = dirty.fog = dirty.tokens = dirty.grid = dirty.ui = true;
+      requestRender();
+
       return; // don't run the normal drag/pan logic
     }
 
     // Normal single-pointer logic
     if(!isPointerDown || e.pointerId !== pointerId) return;
 
-    const rect = canvas.getBoundingClientRect();
+    const rect = uiLayer.getBoundingClientRect();
     const sx = (e.clientX - rect.left) * DPR;
     const sy = (e.clientY - rect.top) * DPR;
     const wpt = screenToWorld(sx, sy);
@@ -1497,6 +1608,10 @@
       state.view.x += dx;
       state.view.y += dy;
       last = { x:e.clientX, y:e.clientY };
+
+      // Mark all layers dirty on pan
+      dirty.map = dirty.fog = dirty.tokens = dirty.grid = dirty.ui = true;
+      requestRender();
     }
   });
 
@@ -1513,7 +1628,7 @@
     if(e.pointerId === pointerId){
       isPointerDown = false;
       pointerId = null;
-      try { canvas.releasePointerCapture(e.pointerId); } catch {}
+      try { uiLayer.releasePointerCapture(e.pointerId); } catch {}
     }
 
     if (fogState.painting) {
@@ -1565,7 +1680,7 @@
     if(e.pointerId === pointerId){
       isPointerDown = false;
       pointerId = null;
-      try { canvas.releasePointerCapture(e.pointerId); } catch {}
+      try { uiLayer.releasePointerCapture(e.pointerId); } catch {}
     }
 
     if (fogState.painting) {
@@ -1578,9 +1693,9 @@
   });
 
 
-  canvas.addEventListener('wheel', (e)=>{
+  uiLayer.addEventListener('wheel', (e)=>{
     e.preventDefault();
-    const rect = canvas.getBoundingClientRect();
+    const rect = uiLayer.getBoundingClientRect();
     const sx = (e.clientX - rect.left) * DPR; const sy = (e.clientY - rect.top) * DPR;
 
     const before = screenToWorld(sx, sy);
@@ -1591,10 +1706,14 @@
 
     state.view.x += (after.x - before.x) * state.view.scale;
     state.view.y += (after.y - before.y) * state.view.scale;
+
+    // Mark all layers dirty on zoom
+    dirty.map = dirty.fog = dirty.tokens = dirty.grid = dirty.ui = true;
+    requestRender();
   }, { passive:false });
 
   // Context menu (right-click)
-  canvas.addEventListener('contextmenu', (e)=>{
+  uiLayer.addEventListener('contextmenu', (e)=>{
     e.preventDefault();
 
     // Exit measure mode on right-click
@@ -1612,7 +1731,7 @@
       return;
     }
 
-    const rect = canvas.getBoundingClientRect();
+    const rect = uiLayer.getBoundingClientRect();
     const sx = (e.clientX - rect.left) * DPR; const sy = (e.clientY - rect.top) * DPR;
     const wpt = screenToWorld(sx, sy);
 
@@ -1756,7 +1875,7 @@
   });
 
   window.addEventListener('keydown', (e)=>{
-    if(e.code === 'Space') { state.ui.spaceDown = true; canvas.classList.add('dragging'); }
+    if(e.code === 'Space') { state.ui.spaceDown = true; uiLayer.classList.add('dragging'); }
     if(e.key === 'Delete' || e.key === 'Backspace') {
       deleteSelected();
       deleteSelectedFogShapes();
@@ -1806,7 +1925,7 @@
     if(e.key === ']'){ const i=state.tokens.indexOf(t); if(i>=0 && i<state.tokens.length-1){ state.tokens.splice(i,1); state.tokens.splice(i+1,0,t); setDirty(); } }
   });
   window.addEventListener('keyup', (e)=>{
-    if(e.code === 'Space'){ state.ui.spaceDown = false; canvas.classList.remove('dragging'); }
+    if(e.code === 'Space'){ state.ui.spaceDown = false; uiLayer.classList.remove('dragging'); }
     if(!e.altKey && state.ui.measuring && !state.ui.measureToggle){
       state.ui.measuring = false; state.ui.measureStart = null;
     }
@@ -1828,11 +1947,11 @@
     fctx.clearRect(0,0,fog.width,fog.height);
     fitMap(); save();
   });
-  document.getElementById('gridSize').addEventListener('input', (e)=>{ state.grid.size = clamp(parseFloat(e.target.value)||50, 4, 256); setDirty(); });
+  document.getElementById('gridSize').addEventListener('input', (e)=>{ state.grid.size = clamp(parseFloat(e.target.value)||50, 4, 256); dirty.grid = dirty.map = true; requestRender(); setDirty(); });
   document.getElementById('unitsPerCell').addEventListener('input', (e)=>{ state.grid.unitsPerCell = Math.max(1, parseFloat(e.target.value)||5); setDirty(); });
-  document.getElementById('gridColor').addEventListener('input', (e)=>{ state.grid.color = e.target.value; setDirty(); });
-  document.getElementById('gridAlpha').addEventListener('input', (e)=>{ state.grid.alpha = clamp(parseFloat(e.target.value)||0.35, 0, 1); setDirty(); });
-  document.getElementById('showGrid').addEventListener('change', (e)=>{ state.grid.show = e.target.checked; setDirty(); });
+  document.getElementById('gridColor').addEventListener('input', (e)=>{ state.grid.color = e.target.value; dirty.grid = dirty.map = true; requestRender(); setDirty(); });
+  document.getElementById('gridAlpha').addEventListener('input', (e)=>{ state.grid.alpha = clamp(parseFloat(e.target.value)||0.35, 0, 1); dirty.grid = dirty.map = true; requestRender(); setDirty(); });
+  document.getElementById('showGrid').addEventListener('change', (e)=>{ state.grid.show = e.target.checked; dirty.grid = dirty.map = true; requestRender(); setDirty(); });
 
   // Map transform inputs (unique names to avoid redeclare)
   const mapScaleInput  = document.getElementById('mapScale');
@@ -2104,7 +2223,7 @@
     fctx.globalCompositeOperation = 'source-over';
   }
 
-  function drawFogShapes() {
+  function drawFogShapes(ctx) {
     // Draw filled fog shapes in world space (on top of everything)
     for (const shape of fogShapes) {
       const worldPos = imageToWorld(shape.x, shape.y);
@@ -2135,7 +2254,7 @@
     }
   }
 
-  function drawFogShapeOutlines() {
+  function drawFogShapeOutlines(ctx) {
     // Draw outlines for fog shapes in world space (for selection feedback)
     for (const shape of fogShapes) {
       const worldPos = imageToWorld(shape.x, shape.y);
@@ -2200,7 +2319,7 @@
   }
   function placeToken(name, src, img, cells){
     const size = state.grid.size * cells;
-    const center = screenToWorld(canvas.width/2, canvas.height/2);
+    const center = screenToWorld(mapLayer.width/2, mapLayer.height/2);
     const token = {
       id: 't_'+Math.random().toString(36).slice(2,9),
       name: name || 'Token',
@@ -2250,7 +2369,7 @@
     const defaultSize = gridSize * shapeSizeCells / state.mapTransform.scale;
 
     // Place at center of viewport in image-space
-    const center = screenToWorld(canvas.width/2, canvas.height/2);
+    const center = screenToWorld(mapLayer.width/2, mapLayer.height/2);
     const imgCenter = worldToImage(center.x, center.y);
 
     let shape;
@@ -2318,11 +2437,11 @@
 
   // ---- Long-press context menu for touch ----
   let lpTimer = null;
-  canvas.addEventListener('pointerdown', (e) => {
+  uiLayer.addEventListener('pointerdown', (e) => {
     if (e.pointerType === 'touch') {
       const startX = e.clientX, startY = e.clientY;
       lpTimer = setTimeout(() => {
-        const rect = canvas.getBoundingClientRect();
+        const rect = uiLayer.getBoundingClientRect();
         const sx = (startX - rect.left) * DPR, sy = (startY - rect.top) * DPR;
         const wpt = screenToWorld(sx, sy);
         const token = hitToken(wpt.x, wpt.y);
@@ -2336,11 +2455,11 @@
   }, { passive: true });
 
   ['pointermove','pointerup','pointercancel'].forEach(ev =>
-    canvas.addEventListener(ev, () => { if (lpTimer) { clearTimeout(lpTimer); lpTimer = null; } }, { passive: true })
+    uiLayer.addEventListener(ev, () => { if (lpTimer) { clearTimeout(lpTimer); lpTimer = null; } }, { passive: true })
   );
 
-  // Prevent browser gestures from stealing interaction on canvas while dragging
-  canvas.addEventListener('touchmove', (e) => {
+  // Prevent browser gestures from stealing interaction on uiLayer while dragging
+  uiLayer.addEventListener('touchmove', (e) => {
     if (state.ui.dragMode !== 'none' || fogState.painting) e.preventDefault();
   }, { passive: false });
 
@@ -2370,7 +2489,7 @@
                 loadImage(token.tokenImage).then(img => {
                   const cells = 1; // Default size
                   const size = state.grid.size * cells;
-                  const center = screenToWorld(canvas.width/2, canvas.height/2);
+                  const center = screenToWorld(mapLayer.width/2, mapLayer.height/2);
 
                   // Create token without affecting existing selections
                   const newToken = {
@@ -2408,7 +2527,34 @@
     }
   });
   updateTokenList();
-  requestAnimationFrame(draw);
+
+  // Initialize with first render
+  dirty.map = dirty.fog = dirty.tokens = dirty.grid = dirty.ui = true;
+  requestRender();
+
+  // Keep continuous UI updates for smooth measurement and dragging
+  function continuousUiUpdate() {
+    if (state.ui.measuring || state.ui.dragMode !== 'none') {
+      dirty.ui = true;
+
+      // Pan affects all layers since they all use state.view transform
+      if (state.ui.dragMode === 'pan') {
+        dirty.map = dirty.fog = dirty.tokens = dirty.grid = true;
+      }
+      // Token drag only affects token layer
+      else if (state.ui.dragMode === 'token') {
+        dirty.tokens = true;
+      }
+      // Fog shape operations affect fog layer
+      else if (state.ui.dragMode === 'fogShape' || state.ui.dragMode === 'fogShapeResize') {
+        dirty.fog = true;
+      }
+
+      requestRender();
+    }
+    requestAnimationFrame(continuousUiUpdate);
+  }
+  continuousUiUpdate();
 })();
 </script>
 </body>
