@@ -776,6 +776,10 @@
       let currentAttackList = [];
       let isLoadingCharacter = false; // Flag to prevent saves during character load
 
+      // Expose spell and attack lists globally for combat view
+      window.currentSpellList = currentSpellList;
+      window.currentAttackList = currentAttackList;
+
       // ---------- Spells data + helpers ----------
       const RAW_SPELLS = (window.SPELLS_DATA || window.SPELLS || []);
 
@@ -1248,6 +1252,7 @@
         });
 
         currentSpellList = normalized;
+        window.currentSpellList = currentSpellList;
         renderCharacterSpellList();
         clearSpellSearchResults();
       }
@@ -1377,6 +1382,7 @@
         if (exists) return;
 
         currentSpellList.push(spell);
+        window.currentSpellList = currentSpellList;
         renderCharacterSpellList();
       }
 
@@ -1386,11 +1392,13 @@
         currentSpellList = currentSpellList.filter(spell =>
           (spell.name || '').toLowerCase() !== key
         );
+        window.currentSpellList = currentSpellList;
         renderCharacterSpellList();
       }
 
       function clearAllSpellsForCurrentCharacter() {
         currentSpellList = [];
+        window.currentSpellList = currentSpellList;
         renderCharacterSpellList();
         clearSpellSearchResults();
       }
@@ -1399,6 +1407,7 @@
 
       function syncAttackListFromCharacter(char) {
         currentAttackList = Array.isArray(char?.attacks) ? [...char.attacks] : [];
+        window.currentAttackList = currentAttackList;
         renderAttackList();
       }
 
@@ -1613,6 +1622,7 @@
           currentAttackList.push(attack);
         }
 
+        window.currentAttackList = currentAttackList;
         renderAttackList();
         bootstrap.Modal.getOrCreateInstance($('attackModal')).hide();
       }
@@ -1622,6 +1632,7 @@
         const attack = currentAttackList[index];
         if (!confirm(`Delete attack "${attack.name || 'Unnamed Attack'}"?`)) return;
         currentAttackList.splice(index, 1);
+        window.currentAttackList = currentAttackList;
         renderAttackList();
       }
 

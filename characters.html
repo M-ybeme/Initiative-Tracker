@@ -106,6 +106,155 @@
     .save-pill .btn-group button {
       flex: 1;
     }
+
+    /* Combat/DM View Styles */
+    .combat-card-view {
+      max-width: 400px;
+      margin: 0 auto;
+      background: rgba(0, 0, 0, 0.85);
+      border: 2px solid rgba(255, 255, 255, 0.3);
+      border-radius: 1rem;
+      padding: 1.5rem;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+    }
+
+    .combat-portrait-frame {
+      width: 100%;
+      aspect-ratio: 3 / 4;
+      overflow: hidden;
+      position: relative;
+      border-radius: 0.75rem;
+      border: 2px solid rgba(255, 255, 255, 0.2);
+      background-color: rgba(15, 15, 15, 0.9);
+      margin-bottom: 1rem;
+    }
+
+    .combat-portrait-image {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%) scale(1);
+      transform-origin: center center;
+      user-select: none;
+      -webkit-user-drag: none;
+      max-width: none;
+      max-height: none;
+      min-width: 100%;
+      min-height: 100%;
+    }
+
+    .combat-info-line {
+      display: flex;
+      justify-content: space-between;
+      padding: 0.5rem 0;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+      font-size: 0.95rem;
+    }
+
+    .combat-info-line:last-child {
+      border-bottom: none;
+    }
+
+    .combat-info-label {
+      font-weight: bold;
+      color: #adb5bd;
+      min-width: 120px;
+    }
+
+    .combat-info-value {
+      color: #f8f9fa;
+      text-align: right;
+      flex-grow: 1;
+    }
+
+    .combat-stat-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 0.75rem;
+      margin: 1rem 0;
+    }
+
+    .combat-stat-box {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      border-radius: 0.5rem;
+      padding: 0.75rem;
+      text-align: center;
+    }
+
+    .combat-stat-label {
+      font-size: 0.75rem;
+      color: #adb5bd;
+      text-transform: uppercase;
+      margin-bottom: 0.25rem;
+    }
+
+    .combat-stat-value {
+      font-size: 1.5rem;
+      font-weight: bold;
+      color: #f8f9fa;
+    }
+
+    .combat-section-title {
+      font-size: 1rem;
+      font-weight: bold;
+      color: #f8f9fa;
+      margin-top: 1rem;
+      margin-bottom: 0.5rem;
+      padding-bottom: 0.25rem;
+      border-bottom: 2px solid rgba(255, 255, 255, 0.2);
+    }
+
+    .combat-action-item {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      border-radius: 0.5rem;
+      padding: 0.75rem;
+      margin-bottom: 0.5rem;
+    }
+
+    .combat-action-name {
+      font-weight: bold;
+      color: #f8f9fa;
+      margin-bottom: 0.25rem;
+    }
+
+    .combat-action-detail {
+      color: #adb5bd;
+      font-size: 0.875rem;
+      margin-bottom: 0.25rem;
+    }
+
+    .combat-spell-item {
+      background: rgba(139, 92, 246, 0.1);
+      border: 1px solid rgba(139, 92, 246, 0.3);
+      border-radius: 0.5rem;
+      padding: 0.5rem 0.75rem;
+      margin-bottom: 0.5rem;
+    }
+
+    .combat-spell-name {
+      font-weight: bold;
+      color: #c4b5fd;
+    }
+
+    .combat-spell-meta {
+      color: #adb5bd;
+      font-size: 0.75rem;
+    }
+
+    /* Hide full sheet when in combat mode */
+    body.combat-mode #fullCharacterSheet {
+      display: none;
+    }
+
+    body.combat-mode #combatCardView {
+      display: block;
+    }
+
+    body:not(.combat-mode) #combatCardView {
+      display: none;
+    }
   </style>
 </head>
 <body class="bgimage">
@@ -213,7 +362,15 @@
 
         <!-- Last updated & Storage Info -->
         <div class="mb-3 d-flex justify-content-between align-items-center flex-wrap gap-2">
-          <small id="lastUpdatedText" class="text-muted"></small>
+          <div class="d-flex align-items-center gap-3">
+            <small id="lastUpdatedText" class="text-muted"></small>
+            <div class="form-check form-switch">
+              <input class="form-check-input" type="checkbox" role="switch" id="dmCombatModeToggle" title="Toggle DM/Combat View">
+              <label class="form-check-label text-light" for="dmCombatModeToggle">
+                <i class="bi bi-lightning-charge me-1"></i>Combat View
+              </label>
+            </div>
+          </div>
           <small id="storageUsageText" class="text-muted">
             <i class="bi bi-database me-1"></i>
             <span id="storageUsageValue">Calculating...</span>
@@ -221,7 +378,7 @@
         </div>
 
         <!-- Main layout -->
-        <div class="row g-3">
+        <div id="fullCharacterSheet" class="row g-3">
           <!-- LEFT COLUMN -->
           <div class="col-12 col-lg-8">
             <!-- Basic Identity -->
@@ -2114,6 +2271,116 @@
 
           </div>
         </div> <!-- /row -->
+
+        <!-- Combat Card View (Hidden by default, shown when combat mode is toggled) -->
+        <div id="combatCardView" class="combat-card-view">
+          <!-- Portrait -->
+          <div class="combat-portrait-frame" id="combatPortraitFrame">
+            <img id="combatPortraitImage" class="combat-portrait-image d-none" alt="Character portrait" />
+            <span id="combatPortraitPlaceholder" class="text-muted position-absolute top-50 start-50 translate-middle text-center">
+              No portrait
+            </span>
+          </div>
+
+          <!-- Character Name -->
+          <h3 class="text-center mb-3" id="combatCharName">Character Name</h3>
+
+          <!-- Quick Stats Grid -->
+          <div class="combat-stat-grid">
+            <div class="combat-stat-box">
+              <div class="combat-stat-label">AC</div>
+              <div class="combat-stat-value" id="combatAC">10</div>
+            </div>
+            <div class="combat-stat-box">
+              <div class="combat-stat-label">HP</div>
+              <div class="combat-stat-value" id="combatHP">10</div>
+            </div>
+            <div class="combat-stat-box">
+              <div class="combat-stat-label">Speed</div>
+              <div class="combat-stat-value" id="combatSpeed">30</div>
+            </div>
+          </div>
+
+          <!-- Basic Info -->
+          <div class="combat-section-title">Character Info</div>
+          <div class="combat-info-line">
+            <span class="combat-info-label">Class</span>
+            <span class="combat-info-value" id="combatClass">-</span>
+          </div>
+          <div class="combat-info-line">
+            <span class="combat-info-label">Race</span>
+            <span class="combat-info-value" id="combatRace">-</span>
+          </div>
+          <div class="combat-info-line">
+            <span class="combat-info-label">Level</span>
+            <span class="combat-info-value" id="combatLevel">1</span>
+          </div>
+          <div class="combat-info-line">
+            <span class="combat-info-label">Initiative</span>
+            <span class="combat-info-value" id="combatInitiative">+0</span>
+          </div>
+
+          <!-- Combat Stats -->
+          <div class="combat-section-title">Combat Stats</div>
+          <div class="combat-info-line">
+            <span class="combat-info-label">Hit Dice</span>
+            <span class="combat-info-value" id="combatHitDice">1d8</span>
+          </div>
+          <div class="combat-info-line">
+            <span class="combat-info-label">Proficiency Bonus</span>
+            <span class="combat-info-value" id="combatProfBonus">+2</span>
+          </div>
+          <div class="combat-info-line">
+            <span class="combat-info-label">Passive Perception</span>
+            <span class="combat-info-value" id="combatPassivePerception">10</span>
+          </div>
+
+          <!-- Saving Throws -->
+          <div class="combat-section-title">Saving Throws</div>
+          <div class="combat-info-line">
+            <span class="combat-info-label">STR</span>
+            <span class="combat-info-value" id="combatSaveStr">+0</span>
+          </div>
+          <div class="combat-info-line">
+            <span class="combat-info-label">DEX</span>
+            <span class="combat-info-value" id="combatSaveDex">+0</span>
+          </div>
+          <div class="combat-info-line">
+            <span class="combat-info-label">CON</span>
+            <span class="combat-info-value" id="combatSaveCon">+0</span>
+          </div>
+          <div class="combat-info-line">
+            <span class="combat-info-label">INT</span>
+            <span class="combat-info-value" id="combatSaveInt">+0</span>
+          </div>
+          <div class="combat-info-line">
+            <span class="combat-info-label">WIS</span>
+            <span class="combat-info-value" id="combatSaveWis">+0</span>
+          </div>
+          <div class="combat-info-line">
+            <span class="combat-info-label">CHA</span>
+            <span class="combat-info-value" id="combatSaveCha">+0</span>
+          </div>
+
+          <!-- Conditions & Notes -->
+          <div class="combat-section-title">Conditions</div>
+          <div id="combatConditions" class="text-muted fst-italic">None</div>
+
+          <!-- Actions & Attacks -->
+          <div class="combat-section-title">Actions & Attacks</div>
+          <div id="combatActions" class="small">
+            <!-- Populated by JS -->
+          </div>
+
+          <!-- Spells -->
+          <div id="combatSpellsSection" class="d-none">
+            <div class="combat-section-title">Spells</div>
+            <div id="combatSpells" class="small">
+              <!-- Populated by JS -->
+            </div>
+          </div>
+        </div>
+
       </div>
     </div>
   </main>
@@ -2643,6 +2910,47 @@
 
                 <div class="accordion-item bg-dark">
                   <h2 class="accordion-header">
+                    <button class="accordion-button bg-dark text-light collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#combat-view">
+                      <i class="bi bi-lightning-charge me-2 text-warning"></i>Combat View Toggle
+                    </button>
+                  </h2>
+                  <div id="combat-view" class="accordion-collapse collapse" data-bs-parent="#gettingStartedAccordion">
+                    <div class="accordion-body">
+                      <h6>What is Combat View?</h6>
+                      <p>Combat View transforms the full character sheet into a compact combat card that shows only the information needed during battle.</p>
+
+                      <h6>How to Use</h6>
+                      <ol>
+                        <li>Toggle the <strong>"Combat View"</strong> switch in the header (next to "Last Updated")</li>
+                        <li>The page transforms into a compact card showing:
+                          <ul>
+                            <li>Character portrait (if available)</li>
+                            <li>Essential stats: AC, HP, Speed</li>
+                            <li>Combat info: Initiative, Proficiency Bonus, Passive Perception</li>
+                            <li>All saving throws</li>
+                            <li>Active conditions</li>
+                            <li>All attacks with to-hit bonuses and damage</li>
+                            <li>All spells organized by level</li>
+                          </ul>
+                        </li>
+                        <li>Toggle back to access the full sheet for editing</li>
+                      </ol>
+
+                      <div class="alert alert-info">
+                        <i class="bi bi-lightbulb me-1"></i>
+                        <strong>Tip:</strong> Perfect for DMs who need quick combat reference, or players who want a cleaner battle interface!
+                      </div>
+
+                      <div class="alert alert-success">
+                        <i class="bi bi-check-circle me-1"></i>
+                        <strong>Auto-Updates:</strong> Combat view automatically refreshes when you switch characters or make changes to attacks/spells!
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="accordion-item bg-dark">
+                  <h2 class="accordion-header">
                     <button class="accordion-button bg-dark text-light collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#page-layout">
                       <i class="bi bi-layout-text-window me-2 text-info"></i>Understanding the Page Layout
                     </button>
@@ -2651,7 +2959,7 @@
                     <div class="accordion-body">
                       <p>The character sheet is organized into sections:</p>
                       <ul>
-                        <li><strong>Top Bar:</strong> Character selection, New/Save/Delete, Export, Level Up, Help</li>
+                        <li><strong>Top Bar:</strong> Character selection, New/Save/Delete, Export, Level Up, Help, Combat View toggle</li>
                         <li><strong>Left Column:</strong> Character info (name, race, class, level, backstory, portrait)</li>
                         <li><strong>Center Column:</strong> Stats (abilities, skills, proficiency, senses)</li>
                         <li><strong>Right Column:</strong> Combat info (HP, AC, attacks, death saves)</li>
@@ -3132,5 +3440,265 @@
   <script src="/js/level-up-system.js"></script>
   <script src="/js/character.js"></script>
   <script src="/js/multiclass-ui.js"></script>
+
+  <!-- Combat/DM Mode Toggle Functionality -->
+  <script>
+    (function() {
+      const dmCombatModeToggle = document.getElementById('dmCombatModeToggle');
+
+      // Function to update combat card view with current character data
+      function updateCombatCardView() {
+        // Get character data from the form fields
+        const charName = document.getElementById('charName')?.value || 'Character Name';
+        const charRace = document.getElementById('charRace')?.value || '-';
+        const charClass = document.getElementById('charClass')?.value || '-';
+        const charLevel = document.getElementById('charLevel')?.value || '1';
+
+        // Basic stats (using correct field IDs)
+        const ac = document.getElementById('charAC')?.value || '10';
+        const currentHp = document.getElementById('charCurrentHP')?.value || '10';
+        const maxHp = document.getElementById('charMaxHP')?.value || '10';
+        const speed = document.getElementById('charSpeed')?.value || '30';
+        const profBonus = document.getElementById('proficiencyBonus')?.value || '+2';
+        const passivePerception = document.getElementById('passivePerception')?.value || '10';
+
+        // Initiative (DEX modifier)
+        const dexMod = document.getElementById('dexMod')?.value || '+0';
+
+        // Hit dice
+        const hitDice = document.getElementById('totalHitDice')?.value || '1d8';
+
+        // Saving throws
+        const strSave = document.getElementById('strSave')?.value || '+0';
+        const dexSave = document.getElementById('dexSave')?.value || '+0';
+        const conSave = document.getElementById('conSave')?.value || '+0';
+        const intSave = document.getElementById('intSave')?.value || '+0';
+        const wisSave = document.getElementById('wisSave')?.value || '+0';
+        const chaSave = document.getElementById('chaSave')?.value || '+0';
+
+        // Get portrait data
+        const portraitPreview = document.getElementById('portraitPreview');
+        const combatPortraitImage = document.getElementById('combatPortraitImage');
+        const combatPortraitPlaceholder = document.getElementById('combatPortraitPlaceholder');
+
+        // Update portrait
+        if (portraitPreview && !portraitPreview.classList.contains('d-none')) {
+          combatPortraitImage.src = portraitPreview.src;
+          combatPortraitImage.style.transform = portraitPreview.style.transform || 'translate(-50%, -50%) scale(1)';
+          combatPortraitImage.classList.remove('d-none');
+          combatPortraitPlaceholder.classList.add('d-none');
+        } else {
+          combatPortraitImage.classList.add('d-none');
+          combatPortraitPlaceholder.classList.remove('d-none');
+        }
+
+        // Update all combat card fields
+        document.getElementById('combatCharName').textContent = charName;
+        document.getElementById('combatClass').textContent = charClass;
+        document.getElementById('combatRace').textContent = charRace;
+        document.getElementById('combatLevel').textContent = charLevel;
+        document.getElementById('combatAC').textContent = ac;
+        document.getElementById('combatHP').textContent = `${currentHp}/${maxHp}`;
+        document.getElementById('combatSpeed').textContent = `${speed} ft`;
+        document.getElementById('combatInitiative').textContent = dexMod;
+        document.getElementById('combatHitDice').textContent = hitDice;
+        document.getElementById('combatProfBonus').textContent = profBonus;
+        document.getElementById('combatPassivePerception').textContent = passivePerception;
+
+        // Update saving throws
+        document.getElementById('combatSaveStr').textContent = strSave;
+        document.getElementById('combatSaveDex').textContent = dexSave;
+        document.getElementById('combatSaveCon').textContent = conSave;
+        document.getElementById('combatSaveInt').textContent = intSave;
+        document.getElementById('combatSaveWis').textContent = wisSave;
+        document.getElementById('combatSaveCha').textContent = chaSave;
+
+        // Get conditions/notes if they exist
+        const conditions = document.getElementById('conditions')?.value || 'None';
+        document.getElementById('combatConditions').textContent = conditions || 'None';
+
+        // Update Actions/Attacks
+        updateCombatActions();
+
+        // Update Spells
+        updateCombatSpells();
+      }
+
+      // Function to render actions/attacks in combat view
+      function updateCombatActions() {
+        const combatActionsEl = document.getElementById('combatActions');
+        if (!combatActionsEl) return;
+
+        // Access the global currentAttackList from character.js
+        const attackList = window.currentAttackList || [];
+
+        if (!attackList.length) {
+          combatActionsEl.innerHTML = '<div class="text-muted fst-italic">No attacks or actions added.</div>';
+          return;
+        }
+
+        let html = '';
+        attackList.forEach(attack => {
+          const attackTypeLabel = {
+            'melee-weapon': 'Melee Weapon',
+            'ranged-weapon': 'Ranged Weapon',
+            'melee-spell': 'Melee Spell',
+            'ranged-spell': 'Ranged Spell',
+            'save': 'Save DC',
+            'other': 'Other'
+          }[attack.type] || attack.type;
+
+          html += '<div class="combat-action-item">';
+          html += `<div class="combat-action-name">${attack.name || 'Unnamed Attack'}</div>`;
+          html += `<div class="combat-action-detail">${attackTypeLabel}`;
+
+          if (attack.range) {
+            html += ` · ${attack.range}`;
+          }
+
+          if (attack.bonus) {
+            html += ` · <span class="badge bg-primary bg-opacity-75">${attack.bonus} to hit</span>`;
+          }
+
+          if (attack.saveDC) {
+            html += ` · <span class="badge bg-warning bg-opacity-75 text-dark">DC ${attack.saveDC}</span>`;
+          }
+
+          html += '</div>';
+
+          if (attack.damage) {
+            const dmgType = attack.damageType ? ` ${attack.damageType}` : '';
+            html += `<div class="combat-action-detail"><strong>Damage:</strong> ${attack.damage}${dmgType}`;
+
+            if (attack.damage2) {
+              const dmgType2 = attack.damageType2 ? ` ${attack.damageType2}` : '';
+              html += ` + ${attack.damage2}${dmgType2}`;
+            }
+
+            html += '</div>';
+          }
+
+          if (attack.notes) {
+            html += `<div class="combat-action-detail small"><em>${attack.notes}</em></div>`;
+          }
+
+          html += '</div>';
+        });
+
+        combatActionsEl.innerHTML = html;
+      }
+
+      // Function to render spells in combat view
+      function updateCombatSpells() {
+        const combatSpellsEl = document.getElementById('combatSpells');
+        const combatSpellsSection = document.getElementById('combatSpellsSection');
+        if (!combatSpellsEl || !combatSpellsSection) return;
+
+        // Access the global currentSpellList from character.js
+        const spellList = window.currentSpellList || [];
+
+        if (!spellList.length) {
+          combatSpellsSection.classList.add('d-none');
+          return;
+        }
+
+        combatSpellsSection.classList.remove('d-none');
+
+        // Group spells by level
+        const spellsByLevel = {};
+        spellList.forEach(spell => {
+          const level = spell.level ?? 0;
+          if (!spellsByLevel[level]) {
+            spellsByLevel[level] = [];
+          }
+          spellsByLevel[level].push(spell);
+        });
+
+        let html = '';
+
+        // Sort levels (cantrips first, then 1-9)
+        const levels = Object.keys(spellsByLevel).map(Number).sort((a, b) => a - b);
+
+        levels.forEach(level => {
+          const levelLabel = level === 0 ? 'Cantrips' : `Level ${level}`;
+          const spells = spellsByLevel[level];
+
+          html += `<div class="mb-2"><strong class="text-light">${levelLabel}</strong></div>`;
+
+          spells.forEach(spell => {
+            const title = spell.title || spell.name || 'Unknown';
+            const prepared = spell.prepared ? '<span class="badge bg-success bg-opacity-75 ms-1" style="font-size: 0.7rem;">Prep</span>' : '';
+
+            html += '<div class="combat-spell-item">';
+            html += `<div class="combat-spell-name">${title} ${prepared}</div>`;
+
+            const meta = [];
+            if (spell.school) meta.push(spell.school);
+            if (spell.casting_time) meta.push(`Cast: ${spell.casting_time}`);
+            if (spell.range) meta.push(`Range: ${spell.range}`);
+            if (spell.concentration) meta.push('Concentration');
+
+            if (meta.length) {
+              html += `<div class="combat-spell-meta">${meta.join(' · ')}</div>`;
+            }
+
+            html += '</div>';
+          });
+        });
+
+        combatSpellsEl.innerHTML = html;
+      }
+
+      // Toggle combat mode
+      function toggleCombatMode() {
+        const isChecked = dmCombatModeToggle.checked;
+
+        if (isChecked) {
+          // Update the combat card with latest data before showing
+          updateCombatCardView();
+          document.body.classList.add('combat-mode');
+          localStorage.setItem('dmCombatMode', 'true');
+        } else {
+          document.body.classList.remove('combat-mode');
+          localStorage.setItem('dmCombatMode', 'false');
+        }
+      }
+
+      // Event listener for toggle
+      if (dmCombatModeToggle) {
+        dmCombatModeToggle.addEventListener('change', toggleCombatMode);
+
+        // Restore saved state on page load
+        const savedMode = localStorage.getItem('dmCombatMode');
+        if (savedMode === 'true') {
+          dmCombatModeToggle.checked = true;
+          toggleCombatMode();
+        }
+      }
+
+      // Also update combat view when character is changed/loaded
+      // We'll hook into the existing character select change event
+      const characterSelect = document.getElementById('characterSelect');
+      if (characterSelect) {
+        characterSelect.addEventListener('change', function() {
+          // Wait a bit for the character data to load
+          setTimeout(function() {
+            if (dmCombatModeToggle && dmCombatModeToggle.checked) {
+              updateCombatCardView();
+            }
+          }, 100);
+        });
+      }
+
+      // Update combat view when any input changes (if in combat mode)
+      document.addEventListener('input', function(e) {
+        if (dmCombatModeToggle && dmCombatModeToggle.checked) {
+          // Debounce updates
+          clearTimeout(window.combatViewUpdateTimer);
+          window.combatViewUpdateTimer = setTimeout(updateCombatCardView, 300);
+        }
+      });
+    })();
+  </script>
 </body>
 </html>

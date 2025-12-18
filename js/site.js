@@ -1,8 +1,8 @@
 const DM_TOOLBOX_BUILD = {
     name: "The DM's Toolbox",
-    version: "1.10.3",
+    version: "1.10.4",
     recentChanges: [
-      "Character Manager: Racial features, scaling tables, and help modal"
+      "Character Manager: Combat/DM View toggle with actions and spells"
     ],
     buildTime: new Date().toISOString(),
     author: "Maybeme"
