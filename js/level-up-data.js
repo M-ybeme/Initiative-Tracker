@@ -238,6 +238,242 @@ const LevelUpData = (function() {
       description: 'Increase STR or DEX by 1. Gain proficiency with 4 weapons of your choice.',
       prerequisites: null,
       abilityIncrease: { choice: ['str', 'dex'], amount: 1 }
+    },
+
+    // ============================================================
+    // TASHA'S CAULDRON OF EVERYTHING FEATS
+    // ============================================================
+
+    'Artificer Initiate': {
+      name: 'Artificer Initiate',
+      description: 'Learn one cantrip from the Artificer spell list. Learn one 1st-level spell from that list, cast it once per long rest at its lowest level, and you can cast it using any spell slots you have. Choose one type of artisan\'s tools to gain proficiency with. Intelligence is your spellcasting ability for these spells.',
+      prerequisites: null,
+      source: 'Tasha\'s Cauldron of Everything'
+    },
+    'Chef': {
+      name: 'Chef',
+      description: 'Increase CON or WIS by 1. Gain proficiency with cook\'s utensils. As part of a short rest, cook food for up to 6 creatures who regain extra HP equal to your proficiency bonus. With 1 hour and cook\'s utensils, make treats equal to your proficiency bonus; eating one as a bonus action gives temporary HP equal to your proficiency bonus.',
+      prerequisites: null,
+      abilityIncrease: { choice: ['con', 'wis'], amount: 1 },
+      source: 'Tasha\'s Cauldron of Everything'
+    },
+    'Crusher': {
+      name: 'Crusher',
+      description: 'Increase STR or CON by 1. Once per turn, when you hit with bludgeoning damage, you can move the creature 5 feet. When you score a critical hit with bludgeoning damage, attack rolls against that creature are made with advantage until the start of your next turn.',
+      prerequisites: null,
+      abilityIncrease: { choice: ['str', 'con'], amount: 1 },
+      source: 'Tasha\'s Cauldron of Everything'
+    },
+    'Eldritch Adept': {
+      name: 'Eldritch Adept',
+      description: 'Learn one Eldritch Invocation of your choice from the warlock class. If the invocation has prerequisites, you can choose it only if you\'re a warlock and meet those prerequisites. When you gain a level, you can replace the invocation.',
+      prerequisites: { canCastSpell: true },
+      source: 'Tasha\'s Cauldron of Everything'
+    },
+    'Fey Touched': {
+      name: 'Fey Touched',
+      description: 'Increase INT, WIS, or CHA by 1. Learn Misty Step and one 1st-level spell from the divination or enchantment school. You can cast each spell once per long rest without a spell slot, and you can cast them using spell slots you have of the appropriate level. Choose your spellcasting ability for these spells.',
+      prerequisites: null,
+      abilityIncrease: { choice: ['int', 'wis', 'cha'], amount: 1 },
+      source: 'Tasha\'s Cauldron of Everything'
+    },
+    'Fighting Initiate': {
+      name: 'Fighting Initiate',
+      description: 'Learn one Fighting Style option from the fighter class. If you already have a style, the one you choose must be different. When you gain a level, you can replace this feat\'s fighting style with another one that you don\'t have.',
+      prerequisites: { proficiency: 'Martial Weapon' },
+      source: 'Tasha\'s Cauldron of Everything'
+    },
+    'Gunner': {
+      name: 'Gunner',
+      description: 'Increase DEX by 1. Gain proficiency with firearms. You ignore the loading property of firearms. Being within 5 feet of a hostile creature doesn\'t impose disadvantage on your ranged attack rolls.',
+      prerequisites: null,
+      abilityIncrease: { choice: ['dex'], amount: 1 },
+      source: 'Tasha\'s Cauldron of Everything'
+    },
+    'Metamagic Adept': {
+      name: 'Metamagic Adept',
+      description: 'Learn two Metamagic options from the sorcerer class (can\'t pick one you already know). Gain 2 sorcery points to spend on Metamagic (regain all on long rest). These are in addition to sorcerer sorcery points.',
+      prerequisites: { canCastSpell: true },
+      source: 'Tasha\'s Cauldron of Everything'
+    },
+    'Piercer': {
+      name: 'Piercer',
+      description: 'Increase STR or DEX by 1. Once per turn, when you hit with piercing damage, you can reroll one damage die and use either result. When you score a critical hit with piercing damage, roll one additional damage die.',
+      prerequisites: null,
+      abilityIncrease: { choice: ['str', 'dex'], amount: 1 },
+      source: 'Tasha\'s Cauldron of Everything'
+    },
+    'Poisoner': {
+      name: 'Poisoner',
+      description: 'Increase INT or WIS by 1. Gain proficiency with poisoner\'s kit. You can apply poison to a weapon as a bonus action. When you make a damage roll that deals poison damage, ignore resistance to poison damage. You can coat a weapon in basic poison or vial of acid as a bonus action.',
+      prerequisites: null,
+      abilityIncrease: { choice: ['int', 'wis'], amount: 1 },
+      source: 'Tasha\'s Cauldron of Everything'
+    },
+    'Practiced Expert': {
+      name: 'Practiced Expert',
+      description: 'Increase one ability score by 1. Gain proficiency in one skill of your choice. Choose one skill in which you have proficiency; you gain expertise with that skill, doubling your proficiency bonus for ability checks you make with it.',
+      prerequisites: null,
+      abilityIncrease: { choice: ['str', 'dex', 'con', 'int', 'wis', 'cha'], amount: 1 },
+      source: 'Tasha\'s Cauldron of Everything'
+    },
+    'Shadow Touched': {
+      name: 'Shadow Touched',
+      description: 'Increase INT, WIS, or CHA by 1. Learn Invisibility and one 1st-level spell from the illusion or necromancy school. You can cast each spell once per long rest without a spell slot, and you can cast them using spell slots you have. Choose your spellcasting ability for these spells.',
+      prerequisites: null,
+      abilityIncrease: { choice: ['int', 'wis', 'cha'], amount: 1 },
+      source: 'Tasha\'s Cauldron of Everything'
+    },
+    'Skill Expert': {
+      name: 'Skill Expert',
+      description: 'Increase one ability score by 1. Gain proficiency in one skill of your choice. Choose one skill in which you have proficiency; you gain expertise with that skill.',
+      prerequisites: null,
+      abilityIncrease: { choice: ['str', 'dex', 'con', 'int', 'wis', 'cha'], amount: 1 },
+      source: 'Tasha\'s Cauldron of Everything'
+    },
+    'Slasher': {
+      name: 'Slasher',
+      description: 'Increase STR or DEX by 1. Once per turn when you hit with slashing damage, you can reduce the target\'s speed by 10 feet until the start of your next turn. When you score a critical hit with slashing damage, the target has disadvantage on attack rolls until the start of your next turn.',
+      prerequisites: null,
+      abilityIncrease: { choice: ['str', 'dex'], amount: 1 },
+      source: 'Tasha\'s Cauldron of Everything'
+    },
+    'Telekinetic': {
+      name: 'Telekinetic',
+      description: 'Increase INT, WIS, or CHA by 1. Learn the Mage Hand cantrip (invisible). As a bonus action, you can try to shove one creature you can see within 30 feet (opposed Strength check vs. your spellcasting ability).',
+      prerequisites: null,
+      abilityIncrease: { choice: ['int', 'wis', 'cha'], amount: 1 },
+      source: 'Tasha\'s Cauldron of Everything'
+    },
+    'Telepathic': {
+      name: 'Telepathic',
+      description: 'Increase INT, WIS, or CHA by 1. You can speak telepathically to any creature within 60 feet (it understands if you share a language). As an action, you can cast Detect Thoughts without components (save DC 8 + proficiency + spellcasting modifier). Once you cast it, you can\'t do so again until you finish a long rest, or you can cast it using a spell slot.',
+      prerequisites: null,
+      abilityIncrease: { choice: ['int', 'wis', 'cha'], amount: 1 },
+      source: 'Tasha\'s Cauldron of Everything'
+    },
+
+    // ============================================================
+    // XANATHAR'S GUIDE TO EVERYTHING FEATS
+    // ============================================================
+
+    'Bountiful Luck': {
+      name: 'Bountiful Luck',
+      description: 'When an ally you can see within 30 feet rolls a 1 on the d20 for an attack roll, ability check, or saving throw, you can use your reaction to let the ally reroll the die. The ally must use the new roll. Once you use this ability, you can\'t use it again until you finish a short or long rest.',
+      prerequisites: { race: 'Halfling' },
+      source: 'Xanathar\'s Guide to Everything'
+    },
+    'Dragon Fear': {
+      name: 'Dragon Fear',
+      description: 'Increase STR, CON, or CHA by 1. Instead of exhaling destructive energy, you can expend a use of your Breath Weapon to roar. Each creature within 30 feet must succeed on a Wisdom saving throw or become frightened of you for 1 minute. A creature can repeat the save at the end of each of its turns, ending the effect on itself on a success.',
+      prerequisites: { race: 'Dragonborn' },
+      abilityIncrease: { choice: ['str', 'con', 'cha'], amount: 1 },
+      source: 'Xanathar\'s Guide to Everything'
+    },
+    'Dragon Hide': {
+      name: 'Dragon Hide',
+      description: 'Increase STR, CON, or CHA by 1. Your scales harden. While you aren\'t wearing armor, you can calculate your AC as 13 + your Dexterity modifier. You can use a shield and still gain this benefit. You grow retractable claws. Your unarmed strikes deal 1d4 + STR slashing damage.',
+      prerequisites: { race: 'Dragonborn' },
+      abilityIncrease: { choice: ['str', 'con', 'cha'], amount: 1 },
+      source: 'Xanathar\'s Guide to Everything'
+    },
+    'Drow High Magic': {
+      name: 'Drow High Magic',
+      description: 'You learn more magic from the Underdark. Learn Detect Magic. At 3rd level, learn Levitate. At 5th level, learn Dispel Magic. Each spell can be cast once per long rest without a spell slot. Charisma is your spellcasting ability for these spells.',
+      prerequisites: { race: 'Elf (Drow)' },
+      source: 'Xanathar\'s Guide to Everything'
+    },
+    'Dwarven Fortitude': {
+      name: 'Dwarven Fortitude',
+      description: 'Increase CON by 1. When you take the Dodge action in combat, you can spend one Hit Die to heal yourself. Roll the die, add your Constitution modifier, and regain that many hit points.',
+      prerequisites: { race: 'Dwarf' },
+      abilityIncrease: { choice: ['con'], amount: 1 },
+      source: 'Xanathar\'s Guide to Everything'
+    },
+    'Elven Accuracy': {
+      name: 'Elven Accuracy',
+      description: 'Increase DEX, INT, WIS, or CHA by 1. When you have advantage on an attack roll using DEX, INT, WIS, or CHA, you can reroll one of the dice once.',
+      prerequisites: { race: 'Elf' },
+      abilityIncrease: { choice: ['dex', 'int', 'wis', 'cha'], amount: 1 },
+      source: 'Xanathar\'s Guide to Everything'
+    },
+    'Fade Away': {
+      name: 'Fade Away',
+      description: 'Increase DEX or INT by 1. When you take damage, you can use a reaction to become invisible until the end of your next turn or until you attack, deal damage, or force a save. Once you use this, you can\'t do so again until you finish a short or long rest.',
+      prerequisites: { race: 'Gnome' },
+      abilityIncrease: { choice: ['dex', 'int'], amount: 1 },
+      source: 'Xanathar\'s Guide to Everything'
+    },
+    'Fey Teleportation': {
+      name: 'Fey Teleportation',
+      description: 'Increase INT or CHA by 1. Learn to speak, read, and write Sylvan. Learn Misty Step and can cast it once per short or long rest without a spell slot. Intelligence is your spellcasting ability for this spell.',
+      prerequisites: { race: 'Elf (High)' },
+      abilityIncrease: { choice: ['int', 'cha'], amount: 1 },
+      source: 'Xanathar\'s Guide to Everything'
+    },
+    'Flames of Phlegethos': {
+      name: 'Flames of Phlegethos',
+      description: 'Increase INT or CHA by 1. When you roll fire damage for a spell, you can reroll any 1s, but must use the new roll. When you cast a spell that deals fire damage, you can cause flames to wreathe you until the end of your next turn. The flames shed bright light in 30 feet radius and dim light 30 feet beyond. Creatures within 5 feet that hit you with a melee attack take 1d4 fire damage.',
+      prerequisites: { race: 'Tiefling' },
+      abilityIncrease: { choice: ['int', 'cha'], amount: 1 },
+      source: 'Xanathar\'s Guide to Everything'
+    },
+    'Infernal Constitution': {
+      name: 'Infernal Constitution',
+      description: 'Increase CON by 1. You have resistance to cold and poison damage. You have advantage on saving throws against being poisoned.',
+      prerequisites: { race: 'Tiefling' },
+      abilityIncrease: { choice: ['con'], amount: 1 },
+      source: 'Xanathar\'s Guide to Everything'
+    },
+    'Orcish Fury': {
+      name: 'Orcish Fury',
+      description: 'Increase STR or CON by 1. When you hit with an attack using a simple or martial weapon, you can roll one of the weapon\'s damage dice an additional time and add it to the extra damage of the critical hit. When you use Relentless Endurance, you can use your reaction to make one weapon attack.',
+      prerequisites: { race: 'Half-Orc' },
+      abilityIncrease: { choice: ['str', 'con'], amount: 1 },
+      source: 'Xanathar\'s Guide to Everything'
+    },
+    'Prodigy': {
+      name: 'Prodigy',
+      description: 'Gain one skill proficiency, one tool proficiency, fluency in one language, and expertise in one skill you\'re proficient in.',
+      prerequisites: { race: 'Half-Elf, Half-Orc, or Human' },
+      source: 'Xanathar\'s Guide to Everything'
+    },
+    'Second Chance': {
+      name: 'Second Chance',
+      description: 'Increase DEX, CON, or CHA by 1. When a creature you can see hits you with an attack roll, you can use your reaction to force that creature to reroll. Once you use this, you can\'t do so again until you roll initiative or finish a short or long rest.',
+      prerequisites: { race: 'Halfling' },
+      abilityIncrease: { choice: ['dex', 'con', 'cha'], amount: 1 },
+      source: 'Xanathar\'s Guide to Everything'
+    },
+    'Squat Nimbleness': {
+      name: 'Squat Nimbleness',
+      description: 'Increase STR or DEX by 1. Increase your walking speed by 5 feet. Gain proficiency in Acrobatics or Athletics (your choice). Advantage on checks to escape a grapple.',
+      prerequisites: { race: 'Dwarf or Small race' },
+      abilityIncrease: { choice: ['str', 'dex'], amount: 1 },
+      source: 'Xanathar\'s Guide to Everything'
+    },
+    'Wood Elf Magic': {
+      name: 'Wood Elf Magic',
+      description: 'Learn one druid cantrip. Learn Longstrider and Pass Without Trace, each can be cast once per long rest without a spell slot. Wisdom is your spellcasting ability for these spells.',
+      prerequisites: { race: 'Elf (Wood)' },
+      source: 'Xanathar\'s Guide to Everything'
+    },
+
+    // ============================================================
+    // ELEMENTAL EVIL PLAYER'S COMPANION FEATS
+    // ============================================================
+
+    'Elemental Adept': {
+      name: 'Elemental Adept',
+      description: 'Choose acid, cold, fire, lightning, or thunder. Spells you cast ignore resistance to that damage type. When you roll damage for a spell dealing that type, treat any 1 on a damage die as a 2. You can select this feat multiple times, choosing a different damage type each time.',
+      prerequisites: { canCastSpell: true },
+      source: 'Elemental Evil Player\'s Companion'
+    },
+    'Svirfneblin Magic': {
+      name: 'Svirfneblin Magic',
+      description: 'Learn the Nondetection spell and can cast it on yourself at will without material components. Learn Blindness/Deafness, Blur, and Disguise Self, each can be cast once per long rest without a spell slot. Intelligence is your spellcasting ability for these spells.',
+      prerequisites: { race: 'Gnome (Deep Gnome)' },
+      source: 'Elemental Evil Player\'s Companion'
     }
   };
 
@@ -1493,6 +1729,284 @@ const LevelUpData = (function() {
     },
 
     // ============================================================
+    // RACIAL LEVEL FEATURES
+    // ============================================================
+
+    /**
+     * Racial features that unlock at specific character levels
+     * Format: { 'RaceName': { level: { name, description, options? } } }
+     */
+    RACIAL_FEATURES: {
+      // Aasimar (All variants - Volo's Guide / Mordenkainen's)
+      'Aasimar': {
+        3: {
+          name: 'Celestial Revelation',
+          description: 'Choose your celestial transformation: Necrotic Shroud, Radiant Consumption, or Radiant Soul. You can transform as a bonus action once per long rest.',
+          options: [
+            {
+              name: 'Necrotic Shroud',
+              description: 'Transform with spectral wings. Creatures within 10 feet that see you must succeed on a Charisma saving throw (DC 8 + proficiency + CHA) or become frightened until the end of your next turn. Once per turn, add extra necrotic damage equal to your proficiency bonus to one target. Lasts 1 minute.'
+            },
+            {
+              name: 'Radiant Consumption',
+              description: 'Radiant light emanates from you in a 10-foot radius. You and creatures of your choice shed bright light for 10 feet and dim light for another 10. At the end of each of your turns, you and each creature within 10 feet take radiant damage equal to half your level. Once per turn, add extra radiant damage equal to your proficiency bonus to one target. Lasts 1 minute.'
+            },
+            {
+              name: 'Radiant Soul',
+              description: 'Sprout spectral wings. You gain a flying speed equal to your walking speed. Once per turn, add extra radiant damage equal to your proficiency bonus to one target. Lasts 1 minute.'
+            }
+          ]
+        }
+      },
+      'Protector Aasimar': {
+        3: {
+          name: 'Radiant Soul',
+          description: 'Starting at 3rd level, you can use your action to unleash the divine energy within yourself, causing your eyes to glimmer and two luminous, incorporeal wings to sprout from your back. Your transformation lasts for 1 minute or until you end it as a bonus action. During it, you have a flying speed of 30 feet, and once on each of your turns, you can deal extra radiant damage to one target when you deal damage to it with an attack or a spell. The extra radiant damage equals your level. Once you use this trait, you can\'t use it again until you finish a long rest.'
+        }
+      },
+      'Scourge Aasimar': {
+        3: {
+          name: 'Radiant Consumption',
+          description: 'Starting at 3rd level, you can use your action to unleash the divine energy within yourself, causing searing light to radiate from you, pour out of your eyes and mouth, and threaten to char you. Your transformation lasts for 1 minute or until you end it as a bonus action. During it, you shed bright light in a 10-foot radius and dim light for an additional 10 feet, and at the end of each of your turns, you and each creature within 10 feet of you take radiant damage equal to half your level (rounded up). In addition, once on each of your turns, you can deal extra radiant damage to one target when you deal damage to it with an attack or a spell. The extra radiant damage equals your level. Once you use this trait, you can\'t use it again until you finish a long rest.'
+        }
+      },
+      'Fallen Aasimar': {
+        3: {
+          name: 'Necrotic Shroud',
+          description: 'Starting at 3rd level, you can use your action to unleash the divine energy within yourself, causing your eyes to turn into pools of darkness and two skeletal, ghostly, flightless wings to sprout from your back. The instant you transform, other creatures within 10 feet of you that can see you must each succeed on a Charisma saving throw (DC 8 + your proficiency bonus + your Charisma modifier) or become frightened of you until the end of your next turn. Your transformation lasts for 1 minute or until you end it as a bonus action. During it, once on each of your turns, you can deal extra necrotic damage to one target when you deal damage to it with an attack or a spell. The extra necrotic damage equals your level. Once you use this trait, you can\'t use it again until you finish a long rest.'
+        }
+      },
+
+      // Tiefling (PHB)
+      'Tiefling': {
+        3: {
+          name: 'Infernal Legacy',
+          description: 'You can cast the Hellish Rebuke spell as a 2nd-level spell once with this trait. You regain the ability to cast it when you finish a long rest.'
+        },
+        5: {
+          name: 'Infernal Legacy',
+          description: 'You can cast the Darkness spell once with this trait. You regain the ability to cast it when you finish a long rest.'
+        }
+      },
+
+      // Genasi (Elemental Evil Player's Companion)
+      'Air Genasi': {
+        5: {
+          name: 'Levitate',
+          description: 'You can cast the Levitate spell once with this trait, requiring no material components. You regain the ability to cast this spell when you finish a long rest. Constitution is your spellcasting ability for this spell.'
+        }
+      },
+      'Earth Genasi': {
+        5: {
+          name: 'Pass Without Trace',
+          description: 'You can cast the Pass Without Trace spell once with this trait, requiring no material components. You regain the ability to cast this spell when you finish a long rest. Constitution is your spellcasting ability for this spell.'
+        }
+      },
+      'Fire Genasi': {
+        3: {
+          name: 'Burning Hands',
+          description: 'You can cast the Burning Hands spell once with this trait as a 1st-level spell. You regain the ability to cast this spell when you finish a long rest. Constitution is your spellcasting ability for this spell.'
+        }
+      },
+      'Water Genasi': {
+        5: {
+          name: 'Create or Destroy Water',
+          description: 'You can cast the Create or Destroy Water spell as a 2nd-level spell once with this trait. You regain the ability to cast this spell when you finish a long rest. Constitution is your spellcasting ability for this spell.'
+        }
+      },
+
+      // Duergar (Mordenkainen's Tome of Foes)
+      'Duergar': {
+        3: {
+          name: 'Duergar Magic',
+          description: 'You can cast the Enlarge/Reduce spell on yourself once with this trait, without requiring a material component. You regain the ability to cast this spell when you finish a long rest. Intelligence is your spellcasting ability for this spell.'
+        },
+        5: {
+          name: 'Duergar Magic',
+          description: 'You can cast the Invisibility spell on yourself once with this trait, without requiring a material component. You regain the ability to cast this spell when you finish a long rest. Intelligence is your spellcasting ability for this spell.'
+        }
+      },
+
+      // Triton (Volo's Guide to Monsters)
+      'Triton': {
+        3: {
+          name: 'Emissary of the Sea',
+          description: 'You can cast the Fog Cloud spell once with this trait. You regain the ability to cast this spell when you finish a long rest. Charisma is your spellcasting ability for this spell.'
+        },
+        5: {
+          name: 'Emissary of the Sea',
+          description: 'You can cast the Gust of Wind spell once with this trait. You regain the ability to cast this spell when you finish a long rest. Charisma is your spellcasting ability for this spell.'
+        }
+      },
+
+      // Yuan-ti Pureblood (Volo's Guide to Monsters)
+      'Yuan-ti Pureblood': {
+        3: {
+          name: 'Innate Spellcasting',
+          description: 'You can cast the Suggestion spell once with this trait. You regain the ability to cast this spell when you finish a long rest. Charisma is your spellcasting ability for this spell.'
+        }
+      },
+
+      // Eladrin (Mordenkainen's Tome of Foes)
+      'Eladrin': {
+        3: {
+          name: 'Fey Step Enhancement',
+          description: 'Your Fey Step ability gains additional effects based on your season. When you use Fey Step, you can now affect creatures near your origin or destination based on your current season (Autumn: frighten, Winter: frighten, Spring: teleport willing creature, Summer: fire damage).'
+        }
+      },
+
+      // Githyanki (Mordenkainen's Tome of Foes / Monsters of the Multiverse)
+      'Githyanki': {
+        3: {
+          name: 'Githyanki Psionics',
+          description: 'You learn the Jump spell and can cast it at will, without expending a spell slot. You also learn the Misty Step spell, which you can cast once with this trait. You regain the ability to cast Misty Step when you finish a long rest. Intelligence is your spellcasting ability for these spells. When you cast them with this trait, they don\'t require components.'
+        },
+        5: {
+          name: 'Githyanki Psionics',
+          description: 'You learn the Nondetection spell and can cast it on yourself at will, without expending a spell slot. Intelligence is your spellcasting ability for this spell. When you cast it with this trait, it doesn\'t require components.'
+        }
+      },
+
+      // Githzerai (Mordenkainen's Tome of Foes / Monsters of the Multiverse)
+      'Githzerai': {
+        3: {
+          name: 'Githzerai Psionics',
+          description: 'You learn the Shield spell and can cast it once with this trait. You regain the ability to cast it when you finish a long rest. Wisdom is your spellcasting ability for this spell. When you cast it with this trait, it doesn\'t require components.'
+        },
+        5: {
+          name: 'Githzerai Psionics',
+          description: 'You learn the Detect Thoughts spell and can cast it once with this trait. You regain the ability to cast it when you finish a long rest. Wisdom is your spellcasting ability for this spell. When you cast it with this trait, the spell doesn\'t require components, and the target doesn\'t know you\'re using the spell on it unless you probe deeper into its mind.'
+        }
+      },
+
+      // Shadar-kai (Mordenkainen's Tome of Foes / Monsters of the Multiverse)
+      'Shadar-kai': {
+        3: {
+          name: 'Blessing of the Raven Queen',
+          description: 'As a bonus action, you can magically teleport up to 30 feet to an unoccupied space you can see. You can use this trait a number of times equal to your proficiency bonus, and you regain all expended uses when you finish a long rest. Starting at 3rd level, you also gain resistance to all damage when you teleport using this trait. The resistance lasts until the start of your next turn. During that time, you appear ghostly and translucent.'
+        }
+      },
+
+      // Bugbear (Volo's Guide / Monsters of the Multiverse)
+      'Bugbear': {
+        5: {
+          name: 'Sneaky',
+          description: 'You are proficient in the Stealth skill if you aren\'t already. At 5th level, you can move through the space of any creature that is of a size larger than yours.'
+        }
+      },
+
+      // Hobgoblin (Volo's Guide / Monsters of the Multiverse)
+      'Hobgoblin': {
+        3: {
+          name: 'Fortune from the Many',
+          description: 'When you miss with an attack roll or fail an ability check or a saving throw, you can draw on your bonds of reciprocity to gain a bonus to the roll equal to the number of allies you can see within 30 feet of you (maximum bonus of +3). You can use this trait a number of times equal to your proficiency bonus, and you regain all expended uses when you finish a long rest.'
+        }
+      }
+
+      // Note: Most other races (Dragonborn, Dwarf, Elf, Half-Elf, Halfling, Half-Orc, Human, Gnome, Tabaxi, Kenku, etc.)
+      // do not have level-based racial features in official D&D 5e
+    },
+
+    // ============================================================
+    // RACIAL SCALING FEATURES (Level 1 features that scale)
+    // ============================================================
+
+    /**
+     * Racial features that exist at level 1 but scale with character level
+     * These are shown at character creation as reference tables
+     */
+    RACIAL_SCALING_FEATURES: {
+      'Dragonborn': {
+        name: 'Breath Weapon',
+        description: 'You can use your action to exhale destructive energy. Your draconic ancestry determines the size, shape, and damage type of the exhalation.',
+        scaling: [
+          { levels: '1-5', value: '2d6 damage' },
+          { levels: '6-10', value: '3d6 damage' },
+          { levels: '11-15', value: '4d6 damage' },
+          { levels: '16-20', value: '5d6 damage' }
+        ],
+        note: 'Usable once per short or long rest. Save DC = 8 + CON modifier + proficiency bonus.'
+      },
+      'Goliath': {
+        name: 'Stone\'s Endurance',
+        description: 'You can focus yourself to occasionally shrug off injury. When you take damage, you can use your reaction to roll a d12. Add your Constitution modifier to the number rolled, and reduce the damage by that total.',
+        scaling: [
+          { levels: '1-4', value: 'Usable 2 times per long rest (proficiency bonus +2)' },
+          { levels: '5-8', value: 'Usable 3 times per long rest (proficiency bonus +3)' },
+          { levels: '9-12', value: 'Usable 4 times per long rest (proficiency bonus +4)' },
+          { levels: '13-16', value: 'Usable 5 times per long rest (proficiency bonus +5)' },
+          { levels: '17-20', value: 'Usable 6 times per long rest (proficiency bonus +6)' }
+        ],
+        note: 'Damage reduction = 1d12 + CON modifier.'
+      },
+      'Shifter': {
+        name: 'Shifting',
+        description: 'As a bonus action, you can assume a more bestial appearance. This transformation lasts for 1 minute, until you die, or until you revert to your normal appearance as a bonus action.',
+        scaling: [
+          { levels: '1-2', value: '1 + CON modifier temporary HP' },
+          { levels: '3-4', value: '3 + CON modifier temporary HP' },
+          { levels: '5-6', value: '5 + CON modifier temporary HP' },
+          { levels: '7-8', value: '7 + CON modifier temporary HP' },
+          { levels: '9-10', value: '9 + CON modifier temporary HP' },
+          { levels: '11-12', value: '11 + CON modifier temporary HP' },
+          { levels: '13-14', value: '13 + CON modifier temporary HP' },
+          { levels: '15-16', value: '15 + CON modifier temporary HP' },
+          { levels: '17-18', value: '17 + CON modifier temporary HP' },
+          { levels: '19-20', value: '19 + CON modifier temporary HP' }
+        ],
+        note: 'Usable once per short or long rest. Temporary HP = level + CON modifier (minimum 1).'
+      },
+      'Lizardfolk': {
+        name: 'Hungry Jaws',
+        description: 'In battle, you can throw yourself into a vicious feeding frenzy. As a bonus action, you can make a special attack with your bite. If the attack hits, it deals its normal damage, and you gain temporary hit points equal to your Constitution modifier (minimum of 1).',
+        scaling: [
+          { levels: '1-4', value: 'Usable 2 times per long rest (proficiency bonus +2)' },
+          { levels: '5-8', value: 'Usable 3 times per long rest (proficiency bonus +3)' },
+          { levels: '9-12', value: 'Usable 4 times per long rest (proficiency bonus +4)' },
+          { levels: '13-16', value: 'Usable 5 times per long rest (proficiency bonus +5)' },
+          { levels: '17-20', value: 'Usable 6 times per long rest (proficiency bonus +6)' }
+        ],
+        note: 'Temporary HP = CON modifier (minimum 1).'
+      },
+      'Goblin': {
+        name: 'Fury of the Small',
+        description: 'When you damage a creature with an attack or a spell and the creature\'s size is larger than yours, you can cause the attack or spell to deal extra damage to the creature. The extra damage equals your level.',
+        scaling: [
+          { levels: '1-4', value: 'Usable 2 times per long rest (proficiency bonus +2)' },
+          { levels: '5-8', value: 'Usable 3 times per long rest (proficiency bonus +3)' },
+          { levels: '9-12', value: 'Usable 4 times per long rest (proficiency bonus +4)' },
+          { levels: '13-16', value: 'Usable 5 times per long rest (proficiency bonus +5)' },
+          { levels: '17-20', value: 'Usable 6 times per long rest (proficiency bonus +6)' }
+        ],
+        note: 'Extra damage equals your character level.'
+      },
+      'Orc': {
+        name: 'Adrenaline Rush',
+        description: 'You can take the Dash action as a bonus action. When you do so, you gain temporary hit points equal to your proficiency bonus.',
+        scaling: [
+          { levels: '1-4', value: '2 temporary HP, usable 2 times per long rest' },
+          { levels: '5-8', value: '3 temporary HP, usable 3 times per long rest' },
+          { levels: '9-12', value: '4 temporary HP, usable 4 times per long rest' },
+          { levels: '13-16', value: '5 temporary HP, usable 5 times per long rest' },
+          { levels: '17-20', value: '6 temporary HP, usable 6 times per long rest' }
+        ],
+        note: 'Temporary HP and uses both equal proficiency bonus.'
+      },
+      'Kobold': {
+        name: 'Draconic Cry',
+        description: 'As a bonus action, you let out a cry at your enemies within 10 feet of you. Until the start of your next turn, you and your allies have advantage on attack rolls against any of those enemies who could hear you.',
+        scaling: [
+          { levels: '1-4', value: 'Usable 2 times per long rest (proficiency bonus +2)' },
+          { levels: '5-8', value: 'Usable 3 times per long rest (proficiency bonus +3)' },
+          { levels: '9-12', value: 'Usable 4 times per long rest (proficiency bonus +4)' },
+          { levels: '13-16', value: 'Usable 5 times per long rest (proficiency bonus +5)' },
+          { levels: '17-20', value: 'Usable 6 times per long rest (proficiency bonus +6)' }
+        ],
+        note: 'Uses equal proficiency bonus.'
+      }
+    },
+
+    // ============================================================
     // MULTICLASSING SUPPORT
     // ============================================================
 
@@ -1660,6 +2174,70 @@ const LevelUpData = (function() {
       if (!classData || !classData.spellcaster) return 0;
 
       return this.getMaxSpellLevel(classData, classLevel);
+    },
+
+    // ============================================================
+    // RACIAL FEATURE HELPERS
+    // ============================================================
+
+    /**
+     * Get racial features available at a specific level
+     * @param {string} race - Character's race
+     * @param {number} level - Character's total level
+     * @returns {Object|null} - Racial feature object or null
+     */
+    getRacialFeature(race, level) {
+      if (!race || !level) return null;
+
+      const racialData = this.RACIAL_FEATURES[race];
+      if (!racialData) return null;
+
+      return racialData[level] || null;
+    },
+
+    /**
+     * Get all racial features for a race up to a given level
+     * @param {string} race - Character's race
+     * @param {number} maxLevel - Maximum level to check
+     * @returns {Array} - Array of {level, ...feature} objects
+     */
+    getAllRacialFeatures(race, maxLevel) {
+      if (!race || !maxLevel) return [];
+
+      const racialData = this.RACIAL_FEATURES[race];
+      if (!racialData) return [];
+
+      const features = [];
+      for (let level = 1; level <= maxLevel; level++) {
+        if (racialData[level]) {
+          features.push({
+            level,
+            ...racialData[level]
+          });
+        }
+      }
+
+      return features;
+    },
+
+    /**
+     * Check if a race has a feature at a specific level
+     * @param {string} race - Character's race
+     * @param {number} level - Level to check
+     * @returns {boolean}
+     */
+    hasRacialFeatureAtLevel(race, level) {
+      return this.getRacialFeature(race, level) !== null;
+    },
+
+    /**
+     * Get scaling feature reference for a race
+     * @param {string} race - Character's race
+     * @returns {Object|null} - Scaling feature data or null
+     */
+    getRacialScalingFeature(race) {
+      if (!race) return null;
+      return this.RACIAL_SCALING_FEATURES[race] || null;
     }
   };
 })();

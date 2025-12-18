@@ -197,6 +197,9 @@
               <button type="button" class="btn btn-sm btn-outline-info" id="exportAllCharactersBtn" title="Export all characters as JSON">
                 <i class="bi bi-archive me-1"></i>Export All
               </button>
+              <button type="button" class="btn btn-sm btn-primary" id="helpBtn" title="View help and guide" data-bs-toggle="modal" data-bs-target="#helpModal">
+                <i class="bi bi-question-circle me-1"></i>Help
+              </button>
 
               <div class="position-relative">
                 <input type="file" id="importFileInput" accept="application/json" class="d-none" />
@@ -2530,10 +2533,602 @@
     </div>
   </div>
 
+  <!-- Help Modal -->
+  <div class="modal fade" id="helpModal" tabindex="-1" aria-labelledby="helpModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-scrollable">
+      <div class="modal-content bg-dark text-light">
+        <div class="modal-header border-secondary">
+          <h5 class="modal-title" id="helpModalLabel">
+            <i class="bi bi-question-circle-fill me-2 text-primary"></i>
+            Character Sheet Help & Guide
+          </h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <!-- Tab Navigation -->
+          <ul class="nav nav-tabs mb-3" id="helpTabs" role="tablist">
+            <li class="nav-item" role="presentation">
+              <button class="nav-link active" id="getting-started-tab" data-bs-toggle="tab" data-bs-target="#getting-started" type="button" role="tab">
+                <i class="bi bi-play-circle me-1"></i>Getting Started
+              </button>
+            </li>
+            <li class="nav-item" role="presentation">
+              <button class="nav-link" id="character-info-tab" data-bs-toggle="tab" data-bs-target="#character-info" type="button" role="tab">
+                <i class="bi bi-person-badge me-1"></i>Character Info
+              </button>
+            </li>
+            <li class="nav-item" role="presentation">
+              <button class="nav-link" id="stats-combat-tab" data-bs-toggle="tab" data-bs-target="#stats-combat" type="button" role="tab">
+                <i class="bi bi-shield-shaded me-1"></i>Stats & Combat
+              </button>
+            </li>
+            <li class="nav-item" role="presentation">
+              <button class="nav-link" id="spells-tab" data-bs-toggle="tab" data-bs-target="#spells" type="button" role="tab">
+                <i class="bi bi-stars me-1"></i>Spells
+              </button>
+            </li>
+            <li class="nav-item" role="presentation">
+              <button class="nav-link" id="level-up-tab" data-bs-toggle="tab" data-bs-target="#level-up" type="button" role="tab">
+                <i class="bi bi-arrow-up-circle me-1"></i>Leveling Up
+              </button>
+            </li>
+            <li class="nav-item" role="presentation">
+              <button class="nav-link" id="features-tab" data-bs-toggle="tab" data-bs-target="#features" type="button" role="tab">
+                <i class="bi bi-lightning-charge me-1"></i>Features
+              </button>
+            </li>
+          </ul>
+
+          <!-- Tab Content -->
+          <div class="tab-content" id="helpTabContent">
+            <!-- Getting Started Tab -->
+            <div class="tab-pane fade show active" id="getting-started" role="tabpanel">
+              <h5 class="text-primary mb-3">Welcome to the Character Manager!</h5>
+              <p class="lead">This tool helps you create, manage, and level up D&D 5e characters with ease.</p>
+
+              <div class="accordion accordion-flush" id="gettingStartedAccordion">
+                <div class="accordion-item bg-dark">
+                  <h2 class="accordion-header">
+                    <button class="accordion-button bg-dark text-light collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#create-character">
+                      <i class="bi bi-person-plus me-2 text-success"></i>Creating Your First Character
+                    </button>
+                  </h2>
+                  <div id="create-character" class="accordion-collapse collapse" data-bs-parent="#gettingStartedAccordion">
+                    <div class="accordion-body">
+                      <ol>
+                        <li><strong>Click the "New" button</strong> at the top of the page</li>
+                        <li><strong>Follow the wizard:</strong>
+                          <ul>
+                            <li>Enter character name and basic info</li>
+                            <li>Choose race (see scaling features if applicable)</li>
+                            <li>Select class and subclass (if level 1-3)</li>
+                            <li>Roll or assign ability scores</li>
+                            <li>Pick skills and equipment</li>
+                          </ul>
+                        </li>
+                        <li><strong>Click "Create Character"</strong> to finish</li>
+                        <li>Your character is automatically saved to browser storage</li>
+                      </ol>
+                      <div class="alert alert-info">
+                        <i class="bi bi-lightbulb me-1"></i>
+                        <strong>Tip:</strong> Characters are stored locally in your browser. Use "Export" to create backup files!
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="accordion-item bg-dark">
+                  <h2 class="accordion-header">
+                    <button class="accordion-button bg-dark text-light collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#saving-loading">
+                      <i class="bi bi-save me-2 text-warning"></i>Saving & Loading Characters
+                    </button>
+                  </h2>
+                  <div id="saving-loading" class="accordion-collapse collapse" data-bs-parent="#gettingStartedAccordion">
+                    <div class="accordion-body">
+                      <h6>Auto-Save</h6>
+                      <p>Characters automatically save when you click the <strong>"Save" button</strong> or after certain actions like leveling up.</p>
+
+                      <h6>Loading</h6>
+                      <p>Use the <strong>character dropdown</strong> at the top to switch between saved characters.</p>
+
+                      <h6>Export/Import</h6>
+                      <ul>
+                        <li><strong>Export:</strong> Downloads character as JSON file (backup)</li>
+                        <li><strong>Export All:</strong> Downloads all characters as one file</li>
+                        <li><strong>Import:</strong> Loads character from a JSON file</li>
+                      </ul>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="accordion-item bg-dark">
+                  <h2 class="accordion-header">
+                    <button class="accordion-button bg-dark text-light collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#page-layout">
+                      <i class="bi bi-layout-text-window me-2 text-info"></i>Understanding the Page Layout
+                    </button>
+                  </h2>
+                  <div id="page-layout" class="accordion-collapse collapse" data-bs-parent="#gettingStartedAccordion">
+                    <div class="accordion-body">
+                      <p>The character sheet is organized into sections:</p>
+                      <ul>
+                        <li><strong>Top Bar:</strong> Character selection, New/Save/Delete, Export, Level Up, Help</li>
+                        <li><strong>Left Column:</strong> Character info (name, race, class, level, backstory, portrait)</li>
+                        <li><strong>Center Column:</strong> Stats (abilities, skills, proficiency, senses)</li>
+                        <li><strong>Right Column:</strong> Combat info (HP, AC, attacks, death saves)</li>
+                        <li><strong>Bottom Tabs:</strong> Inventory, Spells, Features & Traits</li>
+                      </ul>
+                      <div class="alert alert-success">
+                        <i class="bi bi-phone me-1"></i>
+                        <strong>Mobile Friendly:</strong> On smaller screens, columns stack vertically for easy scrolling!
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Character Info Tab -->
+            <div class="tab-pane fade" id="character-info" role="tabpanel">
+              <h5 class="text-primary mb-3">Character Information</h5>
+              <p>The left side of the sheet contains your character's identity and story.</p>
+
+              <div class="accordion accordion-flush" id="characterInfoAccordion">
+                <div class="accordion-item bg-dark">
+                  <h2 class="accordion-header">
+                    <button class="accordion-button bg-dark text-light collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#basic-info">
+                      <i class="bi bi-card-text me-2"></i>Basic Information
+                    </button>
+                  </h2>
+                  <div id="basic-info" class="accordion-collapse collapse" data-bs-parent="#characterInfoAccordion">
+                    <div class="accordion-body">
+                      <table class="table table-sm table-dark">
+                        <tr>
+                          <td><strong>Character Name</strong></td>
+                          <td>Your character's name (editable field)</td>
+                        </tr>
+                        <tr>
+                          <td><strong>Class / Subclass</strong></td>
+                          <td>e.g., "Fighter (Champion)" or "Wizard / Rogue" for multiclass</td>
+                        </tr>
+                        <tr>
+                          <td><strong>Level</strong></td>
+                          <td>Current character level (1-20)</td>
+                        </tr>
+                        <tr>
+                          <td><strong>Race</strong></td>
+                          <td>Your character's race (e.g., Human, Elf, Dragonborn)</td>
+                        </tr>
+                        <tr>
+                          <td><strong>Background</strong></td>
+                          <td>Story background (e.g., Soldier, Noble, Acolyte)</td>
+                        </tr>
+                        <tr>
+                          <td><strong>Alignment</strong></td>
+                          <td>Moral compass (e.g., Lawful Good, Chaotic Neutral)</td>
+                        </tr>
+                      </table>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="accordion-item bg-dark">
+                  <h2 class="accordion-header">
+                    <button class="accordion-button bg-dark text-light collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#backstory-portrait">
+                      <i class="bi bi-book me-2"></i>Backstory & Portrait
+                    </button>
+                  </h2>
+                  <div id="backstory-portrait" class="accordion-collapse collapse" data-bs-parent="#characterInfoAccordion">
+                    <div class="accordion-body">
+                      <h6>Backstory</h6>
+                      <p>Click <strong>"Backstory"</strong> to expand a text area where you can write your character's history, personality traits, bonds, flaws, and ideals.</p>
+
+                      <h6>Portrait</h6>
+                      <p>Click <strong>"Character Portrait"</strong> to:</p>
+                      <ul>
+                        <li>Upload an image from your computer</li>
+                        <li>Use a URL from the web</li>
+                        <li>Adjust position/zoom with the preview tool</li>
+                      </ul>
+                      <p class="text-muted small">Portrait is saved with your character and displayed in the frame.</p>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="accordion-item bg-dark">
+                  <h2 class="accordion-header">
+                    <button class="accordion-button bg-dark text-light collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#multiclass-btn">
+                      <i class="bi bi-diagram-3 me-2"></i>Multiclass Button
+                    </button>
+                  </h2>
+                  <div id="multiclass-btn" class="accordion-collapse collapse" data-bs-parent="#characterInfoAccordion">
+                    <div class="accordion-body">
+                      <p>The <strong>"Multiclass" button</strong> next to the Class field lets you:</p>
+                      <ul>
+                        <li>Add multiple classes (e.g., Paladin 3 / Fighter 2)</li>
+                        <li>See spell slot calculations for multiclass casters</li>
+                        <li>Manage level distribution across classes</li>
+                      </ul>
+                      <div class="alert alert-warning">
+                        <i class="bi bi-exclamation-triangle me-1"></i>
+                        <strong>Prerequisites:</strong> Multiclassing requires meeting ability score minimums (checked automatically).
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Stats & Combat Tab -->
+            <div class="tab-pane fade" id="stats-combat" role="tabpanel">
+              <h5 class="text-primary mb-3">Stats, Skills & Combat</h5>
+
+              <div class="accordion accordion-flush" id="statsCombatAccordion">
+                <div class="accordion-item bg-dark">
+                  <h2 class="accordion-header">
+                    <button class="accordion-button bg-dark text-light collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#ability-scores">
+                      <i class="bi bi-graph-up me-2"></i>Ability Scores
+                    </button>
+                  </h2>
+                  <div id="ability-scores" class="accordion-collapse collapse" data-bs-parent="#statsCombatAccordion">
+                    <div class="accordion-body">
+                      <p>The six core abilities (STR, DEX, CON, INT, WIS, CHA) are shown in the center column.</p>
+                      <ul>
+                        <li><strong>Score:</strong> The ability score value (8-20)</li>
+                        <li><strong>Modifier:</strong> Auto-calculated bonus/penalty</li>
+                        <li><strong>Save:</strong> Checkbox for proficiency + calculated bonus</li>
+                      </ul>
+                      <p class="text-muted">Modifiers are used for skills, saves, and attacks. They update automatically when you change scores.</p>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="accordion-item bg-dark">
+                  <h2 class="accordion-header">
+                    <button class="accordion-button bg-dark text-light collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#skills-section">
+                      <i class="bi bi-gear me-2"></i>Skills & Proficiencies
+                    </button>
+                  </h2>
+                  <div id="skills-section" class="accordion-collapse collapse" data-bs-parent="#statsCombatAccordion">
+                    <div class="accordion-body">
+                      <p>Skills are listed below ability scores. Each skill has:</p>
+                      <ul>
+                        <li><strong>Checkbox:</strong> Check if proficient</li>
+                        <li><strong>Expertise (⭐):</strong> Click star icon for double proficiency</li>
+                        <li><strong>Bonus:</strong> Auto-calculated total</li>
+                      </ul>
+                      <p><strong>Proficiency Bonus:</strong> Shown at the top, increases at levels 5, 9, 13, 17.</p>
+                      <p><strong>Initiative:</strong> Uses DEX modifier + any bonuses (like Alert feat).</p>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="accordion-item bg-dark">
+                  <h2 class="accordion-header">
+                    <button class="accordion-button bg-dark text-light collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#hp-ac">
+                      <i class="bi bi-heart-fill me-2"></i>HP, AC & Combat Stats
+                    </button>
+                  </h2>
+                  <div id="hp-ac" class="accordion-collapse collapse" data-bs-parent="#statsCombatAccordion">
+                    <div class="accordion-body">
+                      <h6>Hit Points</h6>
+                      <ul>
+                        <li><strong>Current HP:</strong> Your current hit points</li>
+                        <li><strong>Max HP:</strong> Maximum hit points</li>
+                        <li><strong>Temp HP:</strong> Temporary hit points (absorbed first)</li>
+                        <li><strong>Hit Dice:</strong> Click to roll for recovery during short rest</li>
+                      </ul>
+
+                      <h6>Armor Class (AC)</h6>
+                      <p>Your defense value. Higher = harder to hit.</p>
+
+                      <h6>Speed</h6>
+                      <p>Movement speed in feet per turn.</p>
+
+                      <h6>Death Saves</h6>
+                      <p>When at 0 HP, track successes and failures. 3 successes = stabilized, 3 failures = death.</p>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="accordion-item bg-dark">
+                  <h2 class="accordion-header">
+                    <button class="accordion-button bg-dark text-light collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#attacks-section">
+                      <i class="bi bi-lightning-fill me-2"></i>Attacks & Actions
+                    </button>
+                  </h2>
+                  <div id="attacks-section" class="accordion-collapse collapse" data-bs-parent="#statsCombatAccordion">
+                    <div class="accordion-body">
+                      <p>The <strong>Attacks</strong> section lets you track your weapons and actions:</p>
+                      <ul>
+                        <li><strong>Add Attack:</strong> Click "+" to create a new attack entry</li>
+                        <li>Enter attack name, bonus, damage, and type</li>
+                        <li><strong>Delete:</strong> Click trash icon to remove</li>
+                      </ul>
+                      <p>Common attacks: Longsword, Shortbow, Fire Bolt, Eldritch Blast, etc.</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Spells Tab -->
+            <div class="tab-pane fade" id="spells" role="tabpanel">
+              <h5 class="text-primary mb-3">Spellcasting</h5>
+
+              <div class="accordion accordion-flush" id="spellsAccordion">
+                <div class="accordion-item bg-dark">
+                  <h2 class="accordion-header">
+                    <button class="accordion-button bg-dark text-light collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#spell-slots">
+                      <i class="bi bi-circle me-2"></i>Spell Slots
+                    </button>
+                  </h2>
+                  <div id="spell-slots" class="accordion-collapse collapse" data-bs-parent="#spellsAccordion">
+                    <div class="accordion-body">
+                      <p>Spell slots appear automatically for spellcasting classes:</p>
+                      <ul>
+                        <li><strong>Max:</strong> Total slots available</li>
+                        <li><strong>Used:</strong> Slots you've expended</li>
+                        <li><strong>+/- buttons:</strong> Quickly adjust used slots</li>
+                        <li><strong>Reset:</strong> Set used slots back to 0 (after long rest)</li>
+                      </ul>
+                      <p><strong>Pact Magic (Warlock):</strong> Shown separately with different recovery rules.</p>
+                      <p class="text-muted">Multiclass spell slots are calculated automatically using PHB rules!</p>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="accordion-item bg-dark">
+                  <h2 class="accordion-header">
+                    <button class="accordion-button bg-dark text-light collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#known-spells">
+                      <i class="bi bi-stars me-2"></i>Known Spells List
+                    </button>
+                  </h2>
+                  <div id="known-spells" class="accordion-collapse collapse" data-bs-parent="#spellsAccordion">
+                    <div class="accordion-body">
+                      <p>In the <strong>Spells tab</strong> at the bottom of the page:</p>
+                      <ul>
+                        <li>Spells are organized by level (Cantrips, 1st, 2nd, etc.)</li>
+                        <li><strong>Add Spell:</strong> Type name and press Enter</li>
+                        <li><strong>Remove:</strong> Click X next to spell name</li>
+                        <li>Spells learned during level-up are added automatically</li>
+                      </ul>
+                      <div class="alert alert-info">
+                        <i class="bi bi-lightbulb me-1"></i>
+                        <strong>Tip:</strong> Spells are automatically suggested during level-up based on your class!
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="accordion-item bg-dark">
+                  <h2 class="accordion-header">
+                    <button class="accordion-button bg-dark text-light collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#spell-dc">
+                      <i class="bi bi-crosshair me-2"></i>Spell Save DC & Attack Bonus
+                    </button>
+                  </h2>
+                  <div id="spell-dc" class="accordion-collapse collapse" data-bs-parent="#spellsAccordion">
+                    <div class="accordion-body">
+                      <p>These are calculated automatically based on your spellcasting ability:</p>
+                      <ul>
+                        <li><strong>Spell Save DC:</strong> 8 + proficiency + ability modifier</li>
+                        <li><strong>Spell Attack Bonus:</strong> proficiency + ability modifier</li>
+                      </ul>
+                      <p>The spellcasting ability depends on your class (INT for Wizard, WIS for Cleric, CHA for Sorcerer, etc.)</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Level Up Tab -->
+            <div class="tab-pane fade" id="level-up" role="tabpanel">
+              <h5 class="text-primary mb-3">Leveling Up Your Character</h5>
+
+              <div class="accordion accordion-flush" id="levelUpAccordion">
+                <div class="accordion-item bg-dark">
+                  <h2 class="accordion-header">
+                    <button class="accordion-button bg-dark text-light collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#level-up-process">
+                      <i class="bi bi-arrow-up-circle me-2"></i>Level-Up Process
+                    </button>
+                  </h2>
+                  <div id="level-up-process" class="accordion-collapse collapse" data-bs-parent="#levelUpAccordion">
+                    <div class="accordion-body">
+                      <ol>
+                        <li>Click the <strong>"Level Up" button</strong> at the top</li>
+                        <li>Follow the step-by-step wizard:
+                          <ul>
+                            <li><strong>Step 1:</strong> Choose to continue in current class or multiclass</li>
+                            <li><strong>Step 2:</strong> Select subclass (if reaching selection level)</li>
+                            <li><strong>Step 3:</strong> Choose HP increase (roll or take average)</li>
+                            <li><strong>Step 4:</strong> Racial features (if unlocked at this level)</li>
+                            <li><strong>Step 5:</strong> Learn new spells (for spellcasters)</li>
+                            <li><strong>Step 6:</strong> Choose ASI or feat (at levels 4, 8, 12, 16, 19)</li>
+                            <li><strong>Step 7:</strong> Review new class features</li>
+                            <li><strong>Step 8:</strong> Confirm changes</li>
+                          </ul>
+                        </li>
+                        <li>Character automatically saves after level-up</li>
+                      </ol>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="accordion-item bg-dark">
+                  <h2 class="accordion-header">
+                    <button class="accordion-button bg-dark text-light collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#multiclass-levelup">
+                      <i class="bi bi-diagram-3 me-2"></i>Multiclassing
+                    </button>
+                  </h2>
+                  <div id="multiclass-levelup" class="accordion-collapse collapse" data-bs-parent="#levelUpAccordion">
+                    <div class="accordion-body">
+                      <p>At Step 1 of level-up, you can choose to multiclass into a new class:</p>
+                      <ul>
+                        <li>Prerequisites are checked automatically (ability scores)</li>
+                        <li>You gain level 1 features of the new class</li>
+                        <li>Your character becomes "Paladin / Fighter" format</li>
+                        <li>Spell slots are calculated using multiclass rules</li>
+                      </ul>
+                      <p>Use the <strong>Multiclass button</strong> on the character sheet to manage level distribution later.</p>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="accordion-item bg-dark">
+                  <h2 class="accordion-header">
+                    <button class="accordion-button bg-dark text-light collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#asi-feats">
+                      <i class="bi bi-plus-square me-2"></i>ASI & Feats
+                    </button>
+                  </h2>
+                  <div id="asi-feats" class="accordion-collapse collapse" data-bs-parent="#levelUpAccordion">
+                    <div class="accordion-body">
+                      <p>At certain levels (usually 4, 8, 12, 16, 19), you can choose:</p>
+
+                      <h6>Ability Score Improvement (ASI)</h6>
+                      <ul>
+                        <li>Increase one score by +2</li>
+                        <li>OR increase two scores by +1 each</li>
+                        <li>Maximum ability score is 20</li>
+                      </ul>
+
+                      <h6>Feat</h6>
+                      <p>Choose from 60+ feats including:</p>
+                      <ul>
+                        <li><strong>PHB:</strong> Alert, Lucky, War Caster, Great Weapon Master, etc.</li>
+                        <li><strong>Tasha's:</strong> Fey Touched, Shadow Touched, Crusher, Slasher, etc.</li>
+                        <li><strong>Xanathar's:</strong> Elven Accuracy, Orcish Fury, racial feats, etc.</li>
+                      </ul>
+                      <p class="text-muted">Many feats also grant +1 to an ability score!</p>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="accordion-item bg-dark">
+                  <h2 class="accordion-header">
+                    <button class="accordion-button bg-dark text-light collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#racial-features-levelup">
+                      <i class="bi bi-star me-2"></i>Racial Features
+                    </button>
+                  </h2>
+                  <div id="racial-features-levelup" class="accordion-collapse collapse" data-bs-parent="#levelUpAccordion">
+                    <div class="accordion-body">
+                      <p>Some races unlock features at specific levels:</p>
+                      <ul>
+                        <li><strong>Aasimar (Level 3):</strong> Choose celestial transformation</li>
+                        <li><strong>Tiefling (Levels 3 & 5):</strong> Gain Hellish Rebuke and Darkness spells</li>
+                        <li><strong>Genasi (Levels 3 or 5):</strong> Unlock elemental spells</li>
+                        <li><strong>Githyanki/Githzerai (Levels 3 & 5):</strong> Psionic spells</li>
+                      </ul>
+                      <p>These appear automatically during level-up when you reach the appropriate level!</p>
+
+                      <div class="alert alert-success">
+                        <i class="bi bi-graph-up me-1"></i>
+                        <strong>Scaling Features:</strong> Some racial features (Dragonborn Breath Weapon, Goliath Stone's Endurance) scale with level. Reference tables are shown during character creation!
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Features Tab -->
+            <div class="tab-pane fade" id="features" role="tabpanel">
+              <h5 class="text-primary mb-3">Features & Other Tools</h5>
+
+              <div class="accordion accordion-flush" id="featuresAccordion">
+                <div class="accordion-item bg-dark">
+                  <h2 class="accordion-header">
+                    <button class="accordion-button bg-dark text-light collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#inventory-tab">
+                      <i class="bi bi-backpack me-2"></i>Inventory Management
+                    </button>
+                  </h2>
+                  <div id="inventory-tab" class="accordion-collapse collapse" data-bs-parent="#featuresAccordion">
+                    <div class="accordion-body">
+                      <p>The <strong>Inventory tab</strong> at the bottom lets you track:</p>
+                      <ul>
+                        <li><strong>Equipment:</strong> Armor, weapons, tools</li>
+                        <li><strong>Items:</strong> Potions, scrolls, misc items</li>
+                        <li><strong>Currency:</strong> CP, SP, EP, GP, PP</li>
+                      </ul>
+                      <p>Click <strong>"Add Item"</strong> to open the item modal with name, quantity, weight, and description fields.</p>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="accordion-item bg-dark">
+                  <h2 class="accordion-header">
+                    <button class="accordion-button bg-dark text-light collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#features-traits-tab">
+                      <i class="bi bi-lightning-charge me-2"></i>Features & Traits
+                    </button>
+                  </h2>
+                  <div id="features-traits-tab" class="accordion-collapse collapse" data-bs-parent="#featuresAccordion">
+                    <div class="accordion-body">
+                      <p>The <strong>Features & Traits tab</strong> shows:</p>
+                      <ul>
+                        <li>Class features gained from leveling up</li>
+                        <li>Racial traits</li>
+                        <li>Feats you've chosen</li>
+                        <li>Special abilities</li>
+                      </ul>
+                      <p>This is automatically populated as you level up. You can also add custom features manually.</p>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="accordion-item bg-dark">
+                  <h2 class="accordion-header">
+                    <button class="accordion-button bg-dark text-light collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#send-to-tools">
+                      <i class="bi bi-send me-2"></i>Send to Other Tools
+                    </button>
+                  </h2>
+                  <div id="send-to-tools" class="accordion-collapse collapse" data-bs-parent="#featuresAccordion">
+                    <div class="accordion-body">
+                      <p>Integrate with other DM Toolbox features:</p>
+
+                      <h6>Send to Initiative Tracker</h6>
+                      <p>Adds your character to the combat tracker with HP, AC, and initiative.</p>
+
+                      <h6>Send to Battle Map</h6>
+                      <p>Creates a token on the battle map using your portrait image.</p>
+
+                      <p class="text-muted">These buttons are at the top of the page!</p>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="accordion-item bg-dark">
+                  <h2 class="accordion-header">
+                    <button class="accordion-button bg-dark text-light collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#tips-tricks">
+                      <i class="bi bi-lightbulb me-2"></i>Tips & Tricks
+                    </button>
+                  </h2>
+                  <div id="tips-tricks" class="accordion-collapse collapse" data-bs-parent="#featuresAccordion">
+                    <div class="accordion-body">
+                      <ul>
+                        <li><strong>Always Save:</strong> Click Save after making changes to ensure they persist</li>
+                        <li><strong>Export Regularly:</strong> Create backup JSON files of important characters</li>
+                        <li><strong>Use Multiclass Manager:</strong> Better control over level distribution than manual editing</li>
+                        <li><strong>Spell Slots:</strong> Use +/- buttons for quick tracking during sessions</li>
+                        <li><strong>Death Saves:</strong> Reset these after a long rest!</li>
+                        <li><strong>Hit Dice:</strong> Track what you've used and recover half on long rest</li>
+                        <li><strong>Portrait Zoom:</strong> Adjust your portrait position in the modal for perfect framing</li>
+                      </ul>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer border-secondary">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <script src="/js/indexed-db-storage.js"></script>
   <script src="/js/spells-data.js"></script>
-  <script src="/js/character-creation-wizard.js"></script>
   <script src="/js/level-up-data.js"></script>
+  <script src="/js/character-creation-wizard.js"></script>
   <script src="/js/level-up-system.js"></script>
   <script src="/js/character.js"></script>
   <script src="/js/multiclass-ui.js"></script>

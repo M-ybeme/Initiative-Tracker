@@ -139,6 +139,26 @@ const CharacterCreationWizard = (function() {
           </select>
         </div>
         <div id="raceDescription" class="alert alert-info" style="display:none;"></div>
+        <div id="racialScalingTable" class="mt-3" style="display:none;">
+          <h6 class="text-primary"><i class="bi bi-graph-up me-1"></i>Scaling Feature Reference</h6>
+          <div class="card bg-dark border-secondary">
+            <div class="card-body">
+              <h6 id="scalingFeatureName" class="card-title text-warning"></h6>
+              <p id="scalingFeatureDesc" class="card-text small"></p>
+              <table class="table table-sm table-dark table-striped mt-2">
+                <thead>
+                  <tr>
+                    <th>Character Level</th>
+                    <th>Effect</th>
+                  </tr>
+                </thead>
+                <tbody id="scalingTableBody">
+                </tbody>
+              </table>
+              <p id="scalingFeatureNote" class="small text-muted mb-0 mt-2"></p>
+            </div>
+          </div>
+        </div>
       `,
       buttons: ['Back', 'Next'],
       validate: () => {
@@ -293,6 +313,40 @@ const CharacterCreationWizard = (function() {
             } else {
               subraceSection.style.display = 'none';
               subraceSelect.innerHTML = '<option value="">Choose a subrace...</option>';
+            }
+
+            // Show scaling feature table if available
+            const scalingTableDiv = document.getElementById('racialScalingTable');
+            const scalingFeatureName = document.getElementById('scalingFeatureName');
+            const scalingFeatureDesc = document.getElementById('scalingFeatureDesc');
+            const scalingTableBody = document.getElementById('scalingTableBody');
+            const scalingFeatureNote = document.getElementById('scalingFeatureNote');
+
+            if (selectedRace && window.LevelUpData && scalingTableDiv && scalingFeatureName && scalingFeatureDesc && scalingTableBody && scalingFeatureNote) {
+              const scalingFeature = window.LevelUpData.getRacialScalingFeature(selectedRace);
+
+              if (scalingFeature) {
+                scalingFeatureName.textContent = scalingFeature.name;
+                scalingFeatureDesc.textContent = scalingFeature.description;
+                scalingFeatureNote.textContent = scalingFeature.note || '';
+
+                // Build scaling table
+                scalingTableBody.innerHTML = '';
+                scalingFeature.scaling.forEach(entry => {
+                  const row = document.createElement('tr');
+                  row.innerHTML = `
+                    <td><strong>${entry.levels}</strong></td>
+                    <td>${entry.value}</td>
+                  `;
+                  scalingTableBody.appendChild(row);
+                });
+
+                scalingTableDiv.style.display = 'block';
+              } else {
+                scalingTableDiv.style.display = 'none';
+              }
+            } else if (scalingTableDiv) {
+              scalingTableDiv.style.display = 'none';
             }
           };
 
@@ -450,6 +504,18 @@ const CharacterCreationWizard = (function() {
 
         const className = wizardData.class;
         const level = wizardData.level || 1;
+
+        // Level 1 characters don't choose subclasses during creation
+        if (level === 1) {
+          wizardData.subclassRequired = false;
+          container.innerHTML = `
+            <div class="alert alert-info">
+              <i class="bi bi-info-circle me-2"></i>
+              Subclass selection happens at higher levels. You'll choose your specialization when you level up.
+            </div>
+          `;
+          return;
+        }
 
         // Check if subclass selection is needed at this level
         if (window.LevelUpData && typeof window.LevelUpData.getSubclassSelectionLevel === 'function') {

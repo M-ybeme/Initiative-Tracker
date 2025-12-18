@@ -217,6 +217,12 @@ const LevelUpSystem = (function() {
     // Step: Hit Points
     html += renderHPStep(character, classData, changes, stepNum++);
 
+    // Step: Racial Feature (if applicable)
+    const racialFeature = LevelUpData.getRacialFeature(character.race, newLevel);
+    if (racialFeature) {
+      html += renderRacialFeatureStep(character, racialFeature, newLevel, stepNum++);
+    }
+
     // Step: Spell Learning (if applicable)
     const spellRules = LevelUpData.getSpellLearningRules(className, newLevel);
     if (spellRules) {
@@ -372,6 +378,70 @@ const LevelUpSystem = (function() {
                 `;
               }).join('')}
             </div>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  /**
+   * Step: Racial Feature (if applicable)
+   */
+  function renderRacialFeatureStep(character, racialFeature, newLevel, stepNum) {
+    const hasOptions = racialFeature.options && racialFeature.options.length > 0;
+
+    return `
+      <div class="accordion-item bg-dark border-secondary">
+        <h2 class="accordion-header">
+          <button class="accordion-button bg-dark text-light" type="button"
+                  data-bs-toggle="collapse" data-bs-target="#step${stepNum}">
+            <strong>Step ${stepNum}: ${racialFeature.name}</strong>
+            <span class="ms-auto me-3 badge ${hasOptions ? 'bg-warning text-dark' : 'bg-success'}" id="racialFeatureBadge">
+              ${hasOptions ? 'Choice Required' : 'Gained'}
+            </span>
+          </button>
+        </h2>
+        <div id="step${stepNum}" class="accordion-collapse collapse show"
+             data-bs-parent="#levelUpAccordion">
+          <div class="accordion-body">
+            <div class="alert alert-info">
+              <i class="bi bi-star-fill me-1"></i>
+              <strong>Racial Feature Unlocked at Level ${newLevel}!</strong>
+            </div>
+
+            <p class="text-light mb-3">${racialFeature.description}</p>
+
+            ${hasOptions ? `
+              <h6 class="text-warning mb-3">
+                <i class="bi bi-hand-index me-1"></i>Choose Your Option:
+              </h6>
+              <div class="list-group">
+                ${racialFeature.options.map(option => `
+                  <label class="list-group-item list-group-item-action bg-dark border-secondary cursor-pointer">
+                    <div class="d-flex align-items-start gap-2">
+                      <input type="radio" name="racialFeatureChoice" value="${option.name}"
+                             class="form-check-input mt-1 racial-feature-radio" />
+                      <div class="flex-grow-1">
+                        <h6 class="mb-1 fw-bold text-primary">${option.name}</h6>
+                        <p class="mb-0 small text-light">${option.description}</p>
+                      </div>
+                    </div>
+                  </label>
+                `).join('')}
+              </div>
+            ` : `
+              <div class="alert alert-success">
+                <i class="bi bi-check-circle me-1"></i>
+                This feature is automatically added to your character. Make sure to note it on your character sheet!
+              </div>
+            `}
+
+            ${racialFeature.note ? `
+              <div class="alert alert-warning mt-3">
+                <i class="bi bi-exclamation-triangle me-1"></i>
+                <strong>Note:</strong> ${racialFeature.note}
+              </div>
+            ` : ''}
           </div>
         </div>
       </div>
@@ -823,6 +893,23 @@ const LevelUpSystem = (function() {
       });
     }
 
+    // Racial Feature Selection
+    const racialFeatureRadios = modal.querySelectorAll('.racial-feature-radio');
+    const racialFeatureBadge = modal.querySelector('#racialFeatureBadge');
+
+    if (racialFeatureRadios.length > 0) {
+      racialFeatureRadios.forEach(radio => {
+        radio.addEventListener('change', (e) => {
+          const selectedOption = e.target.value;
+          if (racialFeatureBadge) {
+            racialFeatureBadge.textContent = selectedOption;
+            racialFeatureBadge.className = 'ms-auto me-3 badge bg-success';
+          }
+          updateSummary(modal, changes);
+        });
+      });
+    }
+
     // HP Selection
     const hpMethodRadios = modal.querySelectorAll('input[name="hpMethod"]');
     const rollHPBtn = modal.querySelector('#rollHPBtn');
@@ -1199,6 +1286,13 @@ const LevelUpSystem = (function() {
       subclassSet = !!modal.querySelector('input[name="subclassChoice"]:checked');
     }
 
+    // Check racial feature selection
+    const racialFeatureRadios = modal.querySelectorAll('input[name="racialFeatureChoice"]');
+    let racialFeatureSet = true;
+    if (racialFeatureRadios.length > 0) {
+      racialFeatureSet = !!modal.querySelector('input[name="racialFeatureChoice"]:checked');
+    }
+
     const hpSet = parseInt(modal.querySelector('#hpGainValue').value || '0', 10) > 0;
     let asiSet = true;
 
@@ -1220,7 +1314,7 @@ const LevelUpSystem = (function() {
       spellsSet = changes.spellState.selectedSpells.length === changes.spellRules.newSpells;
     }
 
-    const allComplete = subclassSet && hpSet && asiSet && spellsSet;
+    const allComplete = subclassSet && racialFeatureSet && hpSet && asiSet && spellsSet;
 
     let html = '';
 
@@ -1229,6 +1323,14 @@ const LevelUpSystem = (function() {
         html += `<li class="text-success"><i class="bi bi-check-circle-fill me-1"></i>Subclass selected</li>`;
       } else {
         html += `<li class="text-muted">Select your subclass</li>`;
+      }
+    }
+
+    if (racialFeatureRadios.length > 0) {
+      if (racialFeatureSet) {
+        html += `<li class="text-success"><i class="bi bi-check-circle-fill me-1"></i>Racial feature selected</li>`;
+      } else {
+        html += `<li class="text-muted">Select your racial feature option</li>`;
       }
     }
 
@@ -1279,6 +1381,7 @@ const LevelUpSystem = (function() {
       asi: null,
       feat: null,
       subclass: null,
+      racialFeatureChoice: null,
       spellsLearned: [],
       spellSwapped: null,
       multiclassPath: 'continue',
@@ -1323,6 +1426,19 @@ const LevelUpSystem = (function() {
       const subclassRadios = modal.querySelectorAll('input[name="subclassChoice"]');
       if (subclassRadios.length > 0) {
         alert('Please select your subclass.');
+        return null;
+      }
+    }
+
+    // Check for racial feature choice if needed
+    const racialFeatureRadio = modal.querySelector('input[name="racialFeatureChoice"]:checked');
+    if (racialFeatureRadio) {
+      data.racialFeatureChoice = racialFeatureRadio.value;
+    } else {
+      // Check if racial feature choice was required
+      const racialFeatureRadios = modal.querySelectorAll('input[name="racialFeatureChoice"]');
+      if (racialFeatureRadios.length > 0) {
+        alert('Please select your racial feature option.');
         return null;
       }
     }
@@ -1479,6 +1595,15 @@ const LevelUpSystem = (function() {
           classEntry.subclassLevel = classEntry.level;
         }
       }
+    }
+
+    // Apply racial feature choice if provided
+    if (levelUpData.racialFeatureChoice) {
+      character.racialFeatures = character.racialFeatures || [];
+      character.racialFeatures.push({
+        level: levelUpData.newLevel,
+        choice: levelUpData.racialFeatureChoice
+      });
     }
 
     // Update HP

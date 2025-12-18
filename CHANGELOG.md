@@ -3,6 +3,48 @@ All notable changes to The DM's Toolbox are documented here.
 The format is based on Keep a Changelog,
 and this project adheres to Semantic Versioning.
 
+1.10.3 - 2025-12-17
+**Character Manager: Racial Features & Help System**
+
+- **Added**
+
+  - **Missing Racial Features** - Added 5 races with level-based features:
+    - Githyanki (levels 3 & 5): Psionic spells (Jump at will, Misty Step, Nondetection)
+    - Githzerai (levels 3 & 5): Psionic spells (Shield, Detect Thoughts)
+    - Shadar-kai (level 3): Blessing of the Raven Queen teleport with damage resistance
+    - Bugbear (level 5): Sneaky feature allowing movement through larger creatures
+    - Hobgoblin (level 3): Fortune from the Many (bonus to rolls based on nearby allies)
+
+  - **Racial Scaling Features System** - Reference tables for level 1 features that scale:
+    - Dragonborn: Breath Weapon damage (2d6 → 5d6 from levels 1-20)
+    - Goliath: Stone's Endurance uses (2-6 based on proficiency bonus)
+    - Shifter: Shifting temporary HP (1 + CON → 19 + CON)
+    - Lizardfolk: Hungry Jaws uses (proficiency bonus based)
+    - Goblin: Fury of the Small uses and damage (equals character level)
+    - Orc: Adrenaline Rush temporary HP and uses (proficiency bonus based)
+    - Kobold: Draconic Cry uses (proficiency bonus based)
+    - Scaling tables automatically display during character creation when applicable race is selected
+    - Tables show level ranges (1-5, 6-10, etc.) with corresponding effects
+
+  - **Comprehensive Help Modal System**:
+    - Help button in top navigation bar
+    - Large, scrollable modal with 6 tabbed sections:
+      - **Getting Started**: Creating characters, saving/loading, page layout overview
+      - **Character Info**: Basic info, backstory, portrait, multiclass button
+      - **Stats & Combat**: Ability scores, skills, HP/AC, attacks, death saves
+      - **Spells**: Spell slots, known spells, spell DC/attack bonus, prepared casters
+      - **Leveling Up**: Level-up wizard, multiclassing, ASI/feats, racial features
+      - **Features**: Inventory, features & traits, send to tools, tips & tricks
+    - Each tab contains multiple accordion sections with detailed explanations
+    - "Understanding the Page Layout" section maps all UI sections (top bar, left/center/right columns, bottom tabs)
+    - Includes tips, warnings, and usage examples throughout
+    - Mobile-friendly note about responsive column stacking
+
+- **Changed**
+  - Character creation wizard now displays racial scaling feature tables when applicable
+  - Help content provides comprehensive coverage of all character sheet features
+  - Page layout documentation clarifies where all UI elements are located
+
 1.10.2 - 2025-12-15
 **Tavern Generator: Context & Metrics Update**
 
