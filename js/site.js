@@ -1,8 +1,8 @@
 const DM_TOOLBOX_BUILD = {
     name: "The DM's Toolbox",
-    version: "1.10.7",
+    version: "1.10.8",
     recentChanges: [
-      "Character Manager: Export character sheets to PDF, PNG, and Word formats with complete D&D 5e data"
+      "Tavern Generator: Expanded cultural tavern menus with 4-5x more food and drink options per type"
     ],
     buildTime: new Date().toISOString(),
     author: "Maybeme"

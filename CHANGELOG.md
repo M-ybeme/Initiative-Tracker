@@ -3,6 +3,43 @@ All notable changes to The DM's Toolbox are documented here.
 The format is based on Keep a Changelog,
 and this project adheres to Semantic Versioning.
 
+1.10.8 - 2025-12-18
+**Tavern Generator: Expanded Cultural Menus**
+
+- **Enhanced**
+  - **Dwarven Ale Hall** - Expanded from 4 to 16 food items and 5 to 19 drink options
+    - Added items like Ironbeard's meat platter, Tunnel rat skewers, Battlehammer beef ribs, Clan mother's dumplings
+    - Drinks include Ironfoot porter, Granite grey ale, Firebeard brandy, Deepvault red, Mountain honey mead
+
+  - **Elven Wine Garden** - Expanded from 4 to 18 food items and 5 to 20 drink options
+    - Added items like Twilight venison medallions, Moonlight pasta, Whisperwind quail, Crystalbrook trout
+    - Drinks include Twilight red, Moonpetal sparkling, Starfall pear cider, Moonflower liqueur, Silverleaf tea
+
+  - **Halfling Hearth House** - Expanded from 4 to 19 food items and 5 to 19 drink options
+    - Added items like Elevensies tea sandwiches, Grandmother's chicken pot pie, Buttermilk fried chicken, Blackberry cobbler
+    - Drinks include Sunny day golden ale, Strawberry fields cider, Dandelion wine, Fresh-squeezed lemonade
+
+  - **Orcish Mead Hall** - Expanded from 4 to 19 food items and 4 to 17 drink options
+    - Added items like Skullcrusher ribs, Warchief's bone soup, Battle-won venison steaks, Victory feast brisket
+    - Drinks include Skullcrusher stout, Warlord's whiskey, Blood liquor, Honey war mead, Bull's blood (beet juice)
+
+  - **Coastal Shanty** - Expanded from 4 to 20 food items and 3 to 18 drink options
+    - Added items like Grilled lobster tail, Crab cakes, Seafood paella, Tuna steak rare, Seafarer's sampler
+    - Drinks include Navy grog, Shipwreck whiskey, Coastal white, Harbor golden ale, Ginger beer
+
+  - **Desert Oasis Inn** - Expanded from 4 to 20 food items and 5 to 18 drink options
+    - Added items like Merguez sausage, Shakshuka, Bedouin roasted goat, Kofta platter, Maqluba
+    - Drinks include Tamarind juice, Hibiscus tea, Date milk, Arak, Fig brandy, Oasis lager
+
+  - **Mountain Lodge** - Expanded from 4 to 21 food items and 4 to 21 drink options
+    - Added items like Roasted wild boar, Venison steaks, Bear meat roast, Raclette platter, Hiker's mixed grill
+    - Drinks include Alpine whiskey, Glacier vodka, Summit amber, Peak porter, Wildflower mead, Pine needle tea
+
+- **Impact**
+  - Each tavern type now has 4-5x more menu variety for unique generation results
+  - Greater thematic authenticity with culturally-appropriate food and drink names
+  - Reduced repetition across multiple tavern generations
+
 1.10.7 - 2025-12-18
 **Character Manager: Character Sheet Export System**
 
