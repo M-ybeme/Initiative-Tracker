@@ -1,1961 +1,589 @@
-Changelog
-All notable changes to The DM's Toolbox are documented here.
-The format is based on Keep a Changelog,
-and this project adheres to Semantic Versioning.
+# Changelog
 
-1.10.9 - 2025-12-22
+All notable changes to The DM's Toolbox are documented here.
+The format is based on Keep a Changelog, and this project adheres to Semantic Versioning.
+
+## Version Series Overview
+
+The DM's Toolbox has evolved through focused feature releases:
+
+- **1.11.x**: Journal system with rich text editor and IndexedDB persistence
+- **1.10.x**: Full character manager with multiclass support, spell learning, subclass selection, and character sheet export
+- **1.9.x**: Battle map measurement tools, persistent fog shapes, and generator integration across NPC/Tavern/Shop systems
+- **1.8.x**: Spell database expansion to 432+ spells, inventory management, loot generator overhaul, and character token generation
+
+---
+
+## [1.11.0] - 2025-12-22
+**Journal: Rich Text Editor with Persistent Storage**
+
+### Added
+- **Rich Text Editor** - Full-featured journal powered by Quill with formatting (headers, bold, italic, lists), text/background colors, alignment, links, and local image insertion
+- **Image Management** - Drag-to-resize images with 8 handles, text wrapping (float left/right), and visual resize indicators
+- **File Management** - Sidebar with all saved entries, timestamp-based default names, custom naming, sort by newest first
+- **Persistent Storage** - IndexedDB storage with auto-save on Ctrl+S, cross-session persistence, and toast notifications
+- **User Interface** - Toolbar tooltips, active file highlighting, dark theme, responsive layout with file list and editor side-by-side
+
+---
+
+## [1.10.9] - 2025-12-22
 **Loot Generator: Cursed Items System**
 
-- **Added**
-  - **Cursed Items Category** - 50 new cursed items with risk/reward mechanics
-    - Items feature appealing benefits with hidden drawbacks (e.g., boots of haste: +10 ft movement but 1d4 slip chance)
-    - 5 severity levels from minor flavor curses to serious mechanical penalties
-    - All items appear as masterwork quality to tempt players
-    - Cursed items visually distinguished with red borders, warning icons, and "CURSED" labels
+### Added
+- **Cursed Items Category** - 50 new cursed items with risk/reward mechanics, 5 severity levels, visually distinguished with red borders and warning icons
+- **Curse Severity Slider** - Dynamic difficulty control (1-5 scale) from minor flavor curses to serious mechanical penalties
+- **Cursed Items Toggle** - Enable/disable cursed item generation, integrated with monster templates
+- **Quick Bundles** - Pre-configured cursed items bundle (6 items) and magic items bundle (8 items)
 
-  - **Curse Severity Slider** - Dynamic difficulty control (1-5 scale)
-    - Level 1-2: Flavor/minor annoyances (e.g., charming brooch that makes you compliment strangers)
-    - Level 3: Balanced trade-offs (e.g., keen dagger: +1 hit/damage but killing blow damages self)
-    - Level 4-5: Strong benefits with serious consequences (e.g., bloodthirsty blade requires daily use)
-    - Slider only visible when cursed items toggle is enabled
+### Fixed
+- **Potion/Scroll Bundles** - Fixed category validation errors by changing from invalid "Minor Magic" category to proper categories
 
-  - **Cursed Items Toggle** - Enable/disable cursed item generation
-    - Auto-included in generation when enabled (like Minor Magic)
-    - Integrated with monster templates (lich, demon, undead get higher curse rates)
-    - Saved/loaded with custom presets
+### Enhanced
+- **Results Display** - Added cursed item counter to metadata pills
+- **Preset System** - Cursed toggle and severity now saved/loaded with presets
+- **Template Integration** - Cursed items weighted higher for lich (1.5x), demon (1.4x), undead (1.3x)
 
-  - **Quick Bundle: Cursed Items** - Pre-configured cursed loot generation
-    - Generates 6 cursed items with balanced severity
-    - Broad category base for variety
-    - Red button with warning icon for visual distinction
+---
 
-  - **Quick Bundle: Magic Items** - Pre-configured magical loot generation
-    - Generates 8 minor magic items
-    - High usefulness bias for practical items
-    - Broad category mix across gear, tools, gems, and containers
-
-- **Fixed**
-  - **Potion Bundle** - No longer fails category validation
-    - Changed from invalid "Minor Magic" category to "Adventuring Gear of Note"
-    - Magic toggle still enables minor magic item generation
-
-  - **Scroll Bundle** - No longer fails category validation
-    - Changed from invalid "Minor Magic" category to "Toolkits & Supplies"
-    - Magic toggle still enables minor magic item generation
-
-- **Enhanced**
-  - **Results Display** - Added cursed item counter to metadata pills
-  - **Category System** - Updated hints to mention cursed items auto-inclusion
-  - **Preset System** - Cursed toggle and severity now saved/loaded with presets
-  - **Template Integration** - Cursed items weighted higher for lich (1.5x), demon (1.4x), undead (1.3x)
-
-- **Technical**
-  - Cursed items use severity-based filtering in generation logic
-  - All 50 items balanced across severity spectrum with unique mechanics
-  - Masterwork appearance descriptors replace ominous descriptors for better deception
-
-1.10.8 - 2025-12-18
+## [1.10.8] - 2025-12-18
 **Tavern Generator: Expanded Cultural Menus**
 
-- **Enhanced**
-  - **Dwarven Ale Hall** - Expanded from 4 to 16 food items and 5 to 19 drink options
-    - Added items like Ironbeard's meat platter, Tunnel rat skewers, Battlehammer beef ribs, Clan mother's dumplings
-    - Drinks include Ironfoot porter, Granite grey ale, Firebeard brandy, Deepvault red, Mountain honey mead
+### Enhanced
+- **Cultural Tavern Menus** - Expanded all 7 cultural tavern types (Dwarven, Elven, Halfling, Orcish, Coastal, Desert, Mountain) with 4-5x more food and drink options per type
+- **Menu Variety** - Each tavern type now has 16-21 food items and 17-21 drink options for unique generation results
+- **Thematic Authenticity** - Culturally-appropriate food and drink names reduce repetition across multiple generations
 
-  - **Elven Wine Garden** - Expanded from 4 to 18 food items and 5 to 20 drink options
-    - Added items like Twilight venison medallions, Moonlight pasta, Whisperwind quail, Crystalbrook trout
-    - Drinks include Twilight red, Moonpetal sparkling, Starfall pear cider, Moonflower liqueur, Silverleaf tea
+---
 
-  - **Halfling Hearth House** - Expanded from 4 to 19 food items and 5 to 19 drink options
-    - Added items like Elevensies tea sandwiches, Grandmother's chicken pot pie, Buttermilk fried chicken, Blackberry cobbler
-    - Drinks include Sunny day golden ale, Strawberry fields cider, Dandelion wine, Fresh-squeezed lemonade
-
-  - **Orcish Mead Hall** - Expanded from 4 to 19 food items and 4 to 17 drink options
-    - Added items like Skullcrusher ribs, Warchief's bone soup, Battle-won venison steaks, Victory feast brisket
-    - Drinks include Skullcrusher stout, Warlord's whiskey, Blood liquor, Honey war mead, Bull's blood (beet juice)
-
-  - **Coastal Shanty** - Expanded from 4 to 20 food items and 3 to 18 drink options
-    - Added items like Grilled lobster tail, Crab cakes, Seafood paella, Tuna steak rare, Seafarer's sampler
-    - Drinks include Navy grog, Shipwreck whiskey, Coastal white, Harbor golden ale, Ginger beer
-
-  - **Desert Oasis Inn** - Expanded from 4 to 20 food items and 5 to 18 drink options
-    - Added items like Merguez sausage, Shakshuka, Bedouin roasted goat, Kofta platter, Maqluba
-    - Drinks include Tamarind juice, Hibiscus tea, Date milk, Arak, Fig brandy, Oasis lager
-
-  - **Mountain Lodge** - Expanded from 4 to 21 food items and 4 to 21 drink options
-    - Added items like Roasted wild boar, Venison steaks, Bear meat roast, Raclette platter, Hiker's mixed grill
-    - Drinks include Alpine whiskey, Glacier vodka, Summit amber, Peak porter, Wildflower mead, Pine needle tea
-
-- **Impact**
-  - Each tavern type now has 4-5x more menu variety for unique generation results
-  - Greater thematic authenticity with culturally-appropriate food and drink names
-  - Reduced repetition across multiple tavern generations
-
-1.10.7 - 2025-12-18
+## [1.10.7] - 2025-12-18
 **Character Manager: Character Sheet Export System**
 
-- **Added**
-  - **Print/Export Character Sheet Dropdown** - Multi-format export system
-    - Print Character Sheet: Opens browser print dialog for physical printing
-    - Export as PDF: Generates PDF file using jsPDF (2.5.1) and html2canvas (1.4.1)
-    - Export as PNG Image: Creates high-quality PNG image of character sheet
-    - Export as Word (.docx): Generates Microsoft Word document using docx library (7.8.2)
-    - Dropdown menu integrated into character toolbar with Bootstrap 5 styling
-    - File naming convention: `CharacterName_sheet.pdf/png/docx`
+See [CHARACTER_MANAGER.md](docs/CHARACTER_MANAGER.md) for complete character manager feature documentation.
 
-  - **Complete D&D 5e Character Data Export** - All ~95 character fields included
-    - Basic Information: Name, Player, Race, Class, Subclass, Background, Level, Alignment
-    - Combat Stats: AC, HP (current/max/temp), Speed, Initiative, Hit Dice, Proficiency Bonus
-    - Death Saves: Successes, Failures, Stable status with visual tracking
-    - Exhaustion: Level 0-6 tracking
-    - Currency: All 5 coin types (CP, SP, EP, GP, PP)
-    - Custom Resources: 3 resource slots with name/current/max values
-    - Ability Scores: All 6 abilities with modifiers
-    - Saving Throws: Proficiency and bonuses for all 6 saves
-    - Skills: All 18 skills with proficiency/expertise/bonus tracking
-    - Senses: Passive Perception, Investigation, Insight plus notes
-    - Features & Traits: Full text export
-    - Equipment/Inventory: Complete item list
-    - Notes: Features, roleplay notes, and general notes sections
+### Added
+- **Multi-Format Export** - Print, PDF (jsPDF), PNG (html2canvas), and Word (.docx) export options
+- **Complete D&D 5e Data** - All ~95 character fields exported including combat stats, abilities, skills, spells, attacks, inventory
+- **Professional Formatting** - D&D-themed styling with maroon headers, clean layouts, section separators
 
-  - **Enhanced Attack Display** - Full combat information per attack
-    - Attack Type: Melee Weapon, Ranged Weapon, Spell Attack, Save (DC)
-    - Range: Reach or distance in feet
-    - To Hit Bonus: Attack roll modifier
-    - Save DC: For save-based attacks
-    - Primary Damage: Dice notation + damage type (e.g., "1d8+3 slashing")
-    - Secondary Damage: Optional additional damage (e.g., "1d6 fire")
-    - Attack Properties: Notes and special features
+### Technical
+- New file: `js/character-sheet-export.js` with CharacterSheetExporter class
+- Export methods: exportToPDF, exportToPNG, exportToWord, printSheet, generateSheetHTML
 
-  - **Complete Spell System** - All spell data with full details
-    - Spell Slots: All 9 levels plus Pact Magic slots
-    - Spellcasting Ability: INT/WIS/CHA tracking
-    - Spell List Organization: Grouped by level (Cantrips, Level 1-9)
-    - Spell Details per entry:
-      - Name and school of magic
-      - Casting time, range, components (V/S/M)
-      - Duration and concentration requirement
-      - Ritual and prepared status
-      - Complete spell description text
-    - Empty levels auto-hidden when no spells present
+---
 
-  - **Professional Export Formatting** - D&D-themed styling
-    - Maroon headers (#800020) with white text
-    - Dark text (#000) for maximum readability
-    - Clean grid layouts with proper spacing
-    - Section separators and visual hierarchy
-    - Bootstrap-inspired card styling
-    - Export-optimized layouts (no interactive elements)
-
-  - **Event Listeners Integration** - [character.js](js/character.js#L3708-3744)
-    - Print button: Opens browser print dialog with character data
-    - Export PDF button: Generates PDF with all character information
-    - Export PNG button: Creates image export
-    - Export Word button: Generates .docx file
-    - Character selection validation before export
-
-- **Changed**
-  - Character toolbar expanded with new Print/Export dropdown menu
-  - Export functions replace placeholder text with complete character data
-  - All export formats use standardized character sheet HTML template
-
-- **Technical**
-  - New file: [js/character-sheet-export.js](js/character-sheet-export.js) - Complete export module
-  - Library dependencies added to characters.html:
-    - jsPDF 2.5.1 (PDF generation)
-    - html2canvas 1.4.1 (HTML to canvas conversion)
-    - docx 7.8.2 (Word document generation)
-  - CharacterSheetExporter class with methods:
-    - `exportToPDF(character)` - PDF export with html2canvas rendering
-    - `exportToPNG(character)` - PNG image export
-    - `exportToWord(character)` - Word document generation with docx library
-    - `printSheet(character)` - Browser print dialog
-    - `generateSheetHTML(character)` - HTML template generator
-    - Section generators for attacks, spells, skills, senses, death saves, currency, resources
-  - Helper functions:
-    - `formatAttackType(type)` - Human-readable attack type labels
-    - `getProficiencyBonus(level)` - Calculates proficiency from level
-    - `calculateModifier(score)` - Ability score to modifier conversion
-
-- **Known Limitations**
-  - Portrait export disabled: Character portraits not included in exports
-  - Portraits can be manually added to exported Word documents if needed
-
-1.10.6 - 2025-12-18
+## [1.10.6] - 2025-12-18
 **Battle Map: Performance Optimization & Persistent Measurements**
 
-- **Added**
-  - **Layered Canvas Architecture** - Eliminated flickering with event-driven rendering
-    - 4 separate canvas layers: mapLayer, fogLayer, tokenLayer, uiLayer
-    - Dirty flag system triggers selective redraws only when needed
-    - Debounced resize handling for smooth viewport adjustments
-    - Split monolithic draw() into layer-specific render functions
-    - Dramatically improved performance - no more 60fps continuous redraw
-    - Flickering no longer an issue and more features are now possible on this toolset
+See [BATTLEMAP.md](docs/BATTLEMAP.md) for detailed battle map features.
 
-  - **Persistent Measurement System** - Save and manipulate measurements across sessions
-    - "Persist Measure" button creates permanent measurements on the map
-    - Three measurement shapes: Line, Cone (90°), Circle (radius)
-    - Color picker for custom measurement colors
-    - Live preview while dragging (shows shape and distance before releasing)
-    - All measurements save with your session
+### Added
+- **Layered Canvas Architecture** - 4 separate layers (map, fog, token, UI) with dirty flag system eliminates flickering and improves performance
+- **Persistent Measurement System** - Save and manipulate measurements with three shapes (Line, Cone 90°, Circle), color picker, move/resize/rename/delete functionality
+- **Interactive Measurement Editing** - Drag measurements, resize with endpoint handles, right-click to rename or delete
 
-  - **Interactive Measurement Editing**
-    - **Move entire measurement**: Click and drag anywhere in the measured area
-    - **Resize measurements**: Drag endpoint handles to adjust size/direction
-    - **Rename measurements**: Right-click → "Rename" for custom labels
-    - **Delete measurements**: Right-click → "Delete" to remove
-    - **Clear all**: "Clear Measures" button removes all measurements at once
-    - Custom names display above measurements with smart positioning to avoid overlap
+### Changed
+- Canvas rendering switched from continuous redraw to event-driven dirty flags
+- All layers transform synchronously during pan/zoom operations
 
-  - **Enhanced Help Documentation**
-    - Comprehensive Measurement section with Quick Measure vs Persistent Measurements
-    - Step-by-step editing instructions for moving, resizing, renaming, deleting
-    - Clear explanations of shape types and use cases
+---
 
-- **Changed**
-  - Canvas rendering switched from continuous redraw to event-driven dirty flags
-  - Pan/zoom operations now update all layers synchronously
-  - Measurement labels repositioned above shapes to prevent overlap with visualization
-  - All canvases use pointer-events:none except uiLayer for consistent interaction
-  - HTML structure updated with 4 stacked canvas elements for layered rendering
-
-- **Fixed**
-  - **Flickering eliminated**: Layered architecture prevents visual glitches during pan/zoom/drag
-  - **Performance improved**: Selective rendering reduces CPU usage dramatically
-  - **Synchronous updates**: All layers (map, fog, tokens, UI) transform together during navigation
-  - Label overlap resolved with intelligent positioning above measurement areas
-
-- **Technical**
-  - requestAnimationFrame-based render queue with dirty flag tracking
-  - Layer-specific render functions: renderMapLayer(), renderFogLayer(), renderTokenLayer(), renderUiLayer()
-  - Hit detection algorithms: pointToLineDistance(), cone angle checks, circle radius tests
-  - Measurement drag modes: measurementResize (endpoints), measurementDrag (full shape)
-  - Context menu integration for measurement operations
-  - IndexedDB persistence for measurements with save/load support
-
-1.10.5 - 2025-12-18
+## [1.10.5] - 2025-12-18
 **Tavern Generator: Full Cultural Immersion System**
 
-- **Added**
-  - **Cultural Patron Types** - 7 patron type arrays for each cultural tavern (7 types per culture)
-    - Dwarven: dwarven smith, stone mason, mining foreman, gemcutter, brewmaster's apprentice, clan historian, tunnel engineer
-    - Elven: elven musician, forest warden, scroll keeper, arcane botanist, weaver of moonsilk, star reader, vintner's assistant
-    - Halfling: halfling baker, pipeweed merchant, comfort chef, quilting circle member, family patriarch, storytelling grandmother, pie contest judge
-    - Orcish: war-scarred veteran, beast trainer, tribal emissary, wrestling champion, honor guard, clan armorer, raiding party member
-    - Coastal: weathered sailor, net mender, ship's carpenter, pearl diver, tide caller, fishmonger, lighthouse keeper
-    - Desert: caravan master, spice merchant, sand guide, oasis keeper, nomad trader, water diviner, silk road traveler
-    - Mountain: mountain guide, avalanche survivor, fur trapper, alpine shepherd, lodge keeper, ice climber, ranger from the peaks
+See [GENERATORS.md](docs/GENERATORS.md) for generator system documentation.
 
-  - **Cultural Events** - 3-4 unique events per tavern type
-    - Dwarven: axe-throwing contests, mining debates, clan disputes, forge technique comparisons
-    - Elven: haunting flute melodies, poetry battles, Feywild tales, portrait sketching
-    - Halfling: pie-eating contests, recipe sharing, pipeweed tastings, children playing
-    - Orcish: wrestling matches, scar comparisons, drinking contests, arm-wrestling
-    - Coastal: sea shanties, unusual catches, crew recruitment, sailing debates
-    - Desert: spice demonstrations, sandstorm stories, ancient tales, caravan trading
-    - Mountain: avalanche warnings, fur trading, blizzard stories, beast encounters
+### Added
+- **Cultural Patron Types** - 7 patron types per culture (56 new types total) with thematic professions
+- **Cultural Events** - 3-4 unique events per tavern type (28 new events)
+- **Cultural Rumors** - 4 themed bartender rumors and 4 themed patron rumors per culture
+- **Cultural Ambiance** - 8 atmospheric descriptors per culture for immersive generation
+- **Cultural Staff Descriptors** - Complete character traits (attire, demeanor, manner, accent) per culture
 
-  - **Cultural Bartender Rumors** - 4 themed rumors per culture
-    - Dwarven: gem veins, brew experiments, deep mines, master smiths
-    - Elven: forest mysteries, ancient groves, rare wines, Feywild lights
-    - Halfling: harvest festivals, legendary recipes, pipeweed blends, special feasts
-    - Orcish: beast hunts, wrestling champions, war party returns, honor missions
-    - Coastal: strange cargo, unusual fishing, underwater lights, missing vessels
-    - Desert: revealed ruins, oasis mysteries, new routes, rare spices
-    - Mountain: snowed passes, unmapped caves, avalanche activity, unique pelts
+### Changed
+- Cultural tavern type now influences all generation aspects (menus, patrons, events, rumors, ambiance, staff)
+- Patron generation heavily weighted toward cultural types for authentic atmosphere
 
-  - **Cultural Patron Rumors** - 4 themed rumors per culture
-    - Dwarven: forging secrets, clan disputes, ancient runes, legendary brews
-    - Elven: starlight wines, Feywild encounters, tree warnings, unknown grapes
-    - Halfling: recipe theft, pie secrets, ancient relatives, legendary dishes
-    - Orcish: championship challenges, war drums, cursed weapons, honor debts
-    - Coastal: sea serpents, smuggler caves, mutinies, strange fish
-    - Desert: caravan disappearances, dry oases, exposed treasures, sand witches
-    - Mountain: missing climbers, angry spirits, hermit secrets, strange howls
+---
 
-  - **Cultural Ambiance Tags** - 8 atmospheric descriptors per culture
-    - Dwarven: forge-warmed, stone pillars, ale-soaked tables, carved clan symbols, brass tankards clanging
-    - Elven: moonlight filtering, silver-threaded curtains, living wood furniture, crystal chimes tinkling
-    - Halfling: hearth-fire crackling, pie-scented air, family portraits, children's laughter echoing
-    - Orcish: battle trophies mounted, skull decorations, war drums, combat circle cleared
-    - Coastal: salt air drifting, driftwood furniture, fishing nets hanging, ship bell at bar
-    - Desert: silk drapes flowing, spice-scented air, brass lanterns gleaming, water fountains trickling
-    - Mountain: bear pelts on walls, snowshoes displayed, trophy antlers mounted, frost on windows
-
-  - **Cultural Staff Descriptors** - Complete character trait sets per culture
-    - Custom attire (clan vests, moonsilk, battle leather, salt-stained gear)
-    - Cultural demeanor (stone-steady, ethereal yet present, honor-bound, sailor's superstitious)
-    - Unique manners (strokes beard, moves with grace, maintains eye contact, checks wind)
-    - Cultural accents (deep mountain burr, lyrical and musical, guttural and forceful, sailor's drawl)
-
-- **Changed**
-  - buildAmbience() now accepts tavernType parameter and uses 3 cultural + 2 generic tags for cultural taverns
-  - buildStaff() now accepts tavernType parameter and applies cultural traits to staff members
-  - Cultural tavern type selection now influences ALL aspects of generation, not just menus
-  - Patron generation heavily weighted toward cultural types for immersive atmosphere
-
-- **Technical**
-  - PATRON_TYPES_BY_TYPE expanded with 7 new cultural entries (56 new patron types total)
-  - EVENTS_BY_TYPE expanded with 7 new cultural entries (28 new events total)
-  - BARTENDER_RUMORS_BY_TYPE expanded with 7 new entries (28 new rumors total)
-  - PATRON_RUMORS_BY_TYPE expanded with 7 new entries (28 new rumors total)
-  - AMBIENCE_BY_TYPE created with 8 tags per culture (56 new ambiance tags total)
-  - STAFF_BY_TYPE created with full descriptor sets per culture (attire, demeanor, manner, accent)
-  - Boosted pool system leverages all cultural context arrays for weighted generation
-
-1.10.4 - 2025-12-18
+## [1.10.4] - 2025-12-18
 **Character Manager: Combat/DM View Toggle**
 
-- **Added**
-  - **Combat/DM View Toggle** - New display mode for quick combat reference
-    - Toggle switch in header labeled "Combat View" with lightning bolt icon
-    - Persists preference across page reloads using localStorage
-    - Transforms full character sheet into compact combat card view
+### Added
+- **Combat View Toggle** - New display mode for quick combat reference with localStorage persistence
+- **Compact Combat Card** - Essential stats (AC, HP, Speed, Initiative), saving throws, conditions, attacks, and spells in clean read-only format
+- **Auto-Updates** - Combat card refreshes automatically when character data changes (debounced 300ms)
 
-  - **Compact Combat Card Display**
-    - Max 400px centered card with dark semi-transparent background
-    - Character portrait in 3:4 aspect ratio with same zoom/positioning as full sheet
-    - Quick stat boxes for AC, HP (current/max), and Speed
-    - Essential combat info: Class, Race, Level, Initiative modifier
-    - Combat stats: Hit Dice, Proficiency Bonus, Passive Perception
-    - All six saving throws (STR, DEX, CON, INT, WIS, CHA)
-    - Conditions/status effects display
+---
 
-  - **Actions & Attacks in Combat View**
-    - All character attacks displayed with clean, read-only formatting
-    - Shows attack type (Melee Weapon, Ranged Weapon, Spell Attack, etc.)
-    - Displays to-hit bonus, save DC, range, and damage dice with types
-    - Includes attack notes for special properties
-    - Separate card styling with subtle background differentiation
-
-  - **Spells in Combat View**
-    - Spells organized by level (Cantrips, Level 1-9)
-    - Shows casting time, range, school, and concentration requirements
-    - Prepared spells marked with green "Prep" badge
-    - Purple-tinted card styling to distinguish from actions
-    - Auto-hides when character has no spells
-
-- **Changed**
-  - Full character sheet hidden when Combat View toggled on
-  - Combat card automatically updates when character data changes (debounced 300ms)
-  - Character selection automatically refreshes combat view data
-
-- **Fixed**
-  - Combat view now uses correct field IDs for HP (`charCurrentHP`, `charMaxHP`) and AC (`charAC`)
-  - Attack and spell lists properly exposed globally for combat view access
-  - All modifications to attacks/spells update the combat view in real-time
-
-- **Technical**
-  - Global variables `window.currentAttackList` and `window.currentSpellList` exposed from character.js
-  - Attack/spell modification functions updated to sync global references
-  - Combat card update logic handles portrait positioning, stats, actions, and spells
-  - CSS toggle uses `body.combat-mode` class for view switching
-
-1.10.3 - 2025-12-17
+## [1.10.3] - 2025-12-17
 **Character Manager: Racial Features & Help System**
 
-- **Added**
+### Added
+- **Missing Racial Features** - Added 5 races with level-based features (Githyanki, Githzerai, Shadar-kai, Bugbear, Hobgoblin)
+- **Racial Scaling Features** - Reference tables for level 1 features that scale (Dragonborn breath weapon, Goliath Stone's Endurance, Shifter temporary HP, etc.)
+- **Comprehensive Help Modal** - 6 tabbed sections covering getting started, character info, stats/combat, spells, leveling up, and features with accordion subsections
 
-  - **Missing Racial Features** - Added 5 races with level-based features:
-    - Githyanki (levels 3 & 5): Psionic spells (Jump at will, Misty Step, Nondetection)
-    - Githzerai (levels 3 & 5): Psionic spells (Shield, Detect Thoughts)
-    - Shadar-kai (level 3): Blessing of the Raven Queen teleport with damage resistance
-    - Bugbear (level 5): Sneaky feature allowing movement through larger creatures
-    - Hobgoblin (level 3): Fortune from the Many (bonus to rolls based on nearby allies)
+---
 
-  - **Racial Scaling Features System** - Reference tables for level 1 features that scale:
-    - Dragonborn: Breath Weapon damage (2d6 → 5d6 from levels 1-20)
-    - Goliath: Stone's Endurance uses (2-6 based on proficiency bonus)
-    - Shifter: Shifting temporary HP (1 + CON → 19 + CON)
-    - Lizardfolk: Hungry Jaws uses (proficiency bonus based)
-    - Goblin: Fury of the Small uses and damage (equals character level)
-    - Orc: Adrenaline Rush temporary HP and uses (proficiency bonus based)
-    - Kobold: Draconic Cry uses (proficiency bonus based)
-    - Scaling tables automatically display during character creation when applicable race is selected
-    - Tables show level ranges (1-5, 6-10, etc.) with corresponding effects
-
-  - **Comprehensive Help Modal System**:
-    - Help button in top navigation bar
-    - Large, scrollable modal with 6 tabbed sections:
-      - **Getting Started**: Creating characters, saving/loading, page layout overview
-      - **Character Info**: Basic info, backstory, portrait, multiclass button
-      - **Stats & Combat**: Ability scores, skills, HP/AC, attacks, death saves
-      - **Spells**: Spell slots, known spells, spell DC/attack bonus, prepared casters
-      - **Leveling Up**: Level-up wizard, multiclassing, ASI/feats, racial features
-      - **Features**: Inventory, features & traits, send to tools, tips & tricks
-    - Each tab contains multiple accordion sections with detailed explanations
-    - "Understanding the Page Layout" section maps all UI sections (top bar, left/center/right columns, bottom tabs)
-    - Includes tips, warnings, and usage examples throughout
-    - Mobile-friendly note about responsive column stacking
-
-- **Changed**
-  - Character creation wizard now displays racial scaling feature tables when applicable
-  - Help content provides comprehensive coverage of all character sheet features
-  - Page layout documentation clarifies where all UI elements are located
-
-1.10.2 - 2025-12-15
+## [1.10.2] - 2025-12-15
 **Tavern Generator: Context & Metrics Update**
-- **Added**
-  - New UI controls in `tav.html`: `time-of-day` and `tavern-type` selectors, and a `Context Influence` slider to control how strongly the tavern context biases generated people, events, and rumors.
-  - `boostedPool` merging strategy to weight context-specific pools against base pools and an option to omit context entirely when the slider is set to 0.
-  - Guarantees in the builder functions to ensure at least one context-specific patron/event/rumor when context entries exist.
-  - Extensive expansion of context pools (patron types, quirks, hooks, events, bartender/patron rumors) so context settings meaningfully affect output.
-  - New metrics tooling: `simulate_tavern_metrics.py` extracts literal pools from `tav.html` and runs Monte Carlo trials to measure context share and item frequency; outputs `sim_metrics.json`.
 
-- **Changed**
-  - Improved seeded RNG handling and PRNG parity for deterministic simulations.
-  - Small tightening of `boostedPool` growth cap to prevent runaway pool growth while still allowing influence.
+### Added
+- **Context Influence System** - Time-of-day and tavern-type selectors with Context Influence slider to control bias strength
+- **Boosted Pool Strategy** - Weight context-specific pools against base pools with optional omission at slider value 0
+- **Metrics Tooling** - `simulate_tavern_metrics.py` for Monte Carlo trials measuring context share and item frequency
 
-- **Removed / Cleaned**
-  - Legacy simulation scripts and older result files were archived/cleaned and replaced with a focused metrics script.
+### Changed
+- Improved seeded RNG handling for deterministic simulations
+- Tightened boostedPool growth cap to prevent runaway pool sizes
 
-- **Notes**
-  - Metrics measure both presence and share of context selections; follow-up tuning may increase the cap or tweak repetition formula if stronger flavoring is desired.
+---
 
-1.10.1 - 2025-12-13
+## [1.10.1] - 2025-12-13
 **Character Manager: Subclasses, Spells, and Multiclassing**
 
-- **Added**
-- **Subclass Selection System (Phase 2 – Complete)**
-  - Full subclass data for all 12 PHB classes added to js/level-up-data.js:
-  - Barbarian (Lv 3): Path of the Berserker, Path of the Totem Warrior
-  - Bard (Lv 3): College of Lore, College of Valor
-  - Cleric (Lv 1): Knowledge, Life, Light, Nature, Tempest, Trickery, War
-  - Druid (Lv 2): Circle of the Land, Circle of the Moon
-  - Fighter (Lv 3): Champion, Battle Master, Eldritch Knight
-  - Monk (Lv 3): Way of the Open Hand, Way of Shadow, Way of the Four Elements
-  - Paladin (Lv 3): Oath of Devotion, Oath of the Ancients, Oath of Vengeance
-  - Ranger (Lv 3): Hunter, Beast Master
-  - Rogue (Lv 3): Thief, Assassin, Arcane Trickster
-  - Sorcerer (Lv 1): Draconic Bloodline, Wild Magic
-  - Warlock (Lv 1): The Archfey, The Fiend, The Great Old One
-  - Wizard (Lv 2): Abjuration, Conjuration, Divination, Enchantment, Evocation, Illusion, Necromancy, Transmutation
+See [CHARACTER_MANAGER.md](docs/CHARACTER_MANAGER.md) for full feature documentation.
 
-- **Subclass data API helpers in js/level-up-data.js:**
-  - getSubclassData(className) – full subclass information for a class
-  - getSubclassOptions(className) – list of available subclass options
-  - getSubclassSelectionLevel(className) – level where that class chooses a subclass
-  - needsSubclassSelection(className, level) – checks if a subclass choice is currently required
+### Added
+- **Complete Subclass System** - All 12 PHB classes with full subclass data in level-up-data.js
+- **Spell Learning System** - Automatic spell learning UI during level-up with class-specific rules, filters, and swap support
+- **Multiclassing System** - PHB-accurate multiclass calculations, prerequisite checking, spell slot preview, level allocation UI
 
-- **Character model integration (js/character.js):**
-  - Added subclass and subclassLevel fields to the character object.
-  - Save/load now correctly parses and emits Class (Subclass) format.
-  - UI consistently displays combined class name, e.g. Wizard (School of Evocation).
+### Changed
+- Character data structure updated with multiclass fields and classes array
+- Spell slot calculation detects multiclass rules and returns shared/pact slots
+- Character creation wizard includes subclass selection step
 
-- **Level-Up Wizard integration (js/level-up-system.js):**
-  - Dynamic Subclass step appears automatically at the correct level:
-    - Level 1: Cleric, Sorcerer, Warlock
-    - Level 2: Wizard, Druid (when starting at 2+)
-    - Level 3: Barbarian, Bard, Fighter, Monk, Paladin, Ranger, Rogue
-  - “Nice” radio-button UI with subclass names, descriptions, and feature previews.
-  - Subclass choice is validated before allowing the level-up to complete.
-  - Once chosen, the subclass is saved to the character and shown in the summary; later level-ups won’t re-prompt for subclass.
+### Fixed
+- Character creation failure resolved with reliable character object building
+- Spell slot controls now have proper event handlers
+- Subclass integration edge cases resolved
 
-- **Spell Learning System (Phase 3 – Complete)**
-  - Rules / data helpers in js/level-up-data.js:
-    - getSpellLearningRules(className, level) – determines:
-      - How many spells are learned on this level-up.
-      - Whether the class can swap an existing known spell.
-    - getMaxSpellLevel(className, level) – returns the highest spell level the character can cast.
-  - Level-Up Wizard spell learning UI in js/level-up-system.js:
-    - Utility helpers (lines 78–128):
-      - getOrdinalSuffix for clean display (“1st level”, “2nd level”, etc.).
-      - filterSpellsForLevelUp for narrowing down eligible spells.
-    - Wizard flow integration (lines 164–168):
-      - Spell-learning step is inserted into the level-up sequence when relevant.
-    - renderSpellLearningStep() (lines 244–393):
-      - Full spell selection UI with:
-        - Filters by spell level (Cantrips, 1st, 2nd, …).
-        - Text search by name, school, and tags.
-        - Class-based filtering so only legal spells appear.
-        - Already-known spells excluded from the candidate list.
-        - Real-time “X of Y spells selected” badges.
-    - Event handlers (lines 800–1012):
-      - Click-to-select / click-to-deselect behavior for each spell.
-      - Small “X” removal buttons for selected spells.
-      - Optional “swap spell” section for classes that can trade out known spells.
-    - Summary & validation:
-      - updateSummary() updated (lines 1054–1060) to include spell-learning checks.
-      - Spell choices are shown in the summary (lines 1086–1093).
-    - Data & persistence:
-      - gatherLevelUpData() extended (lines 1176–1203) to gather new spell choices and swaps.
-      - applyLevelUp() updated (lines 1283–1326) to write new spells into character.spellList.
+---
 
-  - **Class-specific rules implemented:**
-    - Prepared casters
-      - Cleric, Druid: no “learn new spell” UI; treated as fully prepared casters.
-    - Full known-spell casters
-      - Wizard: learns 2 spells/level, no swaps.
-      - Bard, Sorcerer, Warlock: learn 1 spell, can swap out 1 existing known spell.
-    - Half casters
-      - Paladin, Ranger: start learning spells at level 2, 1 spell on level-up with swap support.
-
-  - **Smart filtering:**
-    - Only spells from SPELLS_DATA relevant to the character’s class and max spell level are shown.
-    - Can filter by level, name, school, tags, and exclude already-known spells.
-
-- **Multiclassing System – Implementation Complete**
-
-  - **Multiclass calculation engine** (js/level-up-data.js):
-    - PHB-accurate effective caster level calculation:
-      - Full casters (Wizard, Sorcerer, Bard, Cleric, Druid): count all levels.
-      - Half casters (Paladin, Ranger): floor(level / 2).
-      - Artificer: ceil(level / 2) (rounded up).
-      - Third casters (Eldritch Knight, Arcane Trickster): floor(level / 3).
-      - Warlock: contributes 0 to shared slots (Pact Magic handled separately).
-    - Centralized multiclass spell slot table for levels 1–20.
-    - Prerequisite checking for all classes before multiclassing is allowed.
-    - Warlock Pact Magic is calculated and displayed separately from shared slots.
-  
-  - **Character sheet UI** (characters.html, js/multiclass-ui.js):
-    - New “Multiclass” button next to the Class field.
-    - Multiclass Management Modal:
-      - Level allocation UI across multiple classes.
-      - Progress bar indicating total level and class distribution.
-      - Inline prerequisite warnings (e.g., missing minimum ability scores).
-      - Spell slot preview showing:
-        - Shared spell slots (from multiclass table).
-        - Warlock Pact slots (when applicable).
-      - Add/remove class entries with validation so the total never exceeds 20.
-    - Class field display:
-      - Single-class: Wizard (Evocation)
-      - Multiclass: Wizard (Evocation) / Fighter (Champion)
-  
-  - **Level-Up integration** (js/level-up-system.js):
-    - New Step 1: “Choose Level-Up Path”:
-      - Option to continue in an existing class.
-      - Option to add a new class (multiclass).
-    - Before confirming a multiclass:
-      - Prerequisite checks run for the target class.
-      - UI blocks invalid multiclass selections with clear reasons.
-    - On successful level-up:
-      - Class levels are tracked in character.classes as:
-        - { className, subclass, level, subclassLevel }
-      - Class string (character.class) is automatically rebuilt from the classes array.
-      - Existing single-class characters remain compatible and can be “upgraded” the first time they multiclass.
-  
-  - **Data model updates** (js/character.js):
-    - New fields:
-      - multiclass: boolean – whether the character is multiclassed.
-      - classes: [] – list of per-class level descriptors.
-    - Class string parsing:
-      - Supports both Class and Class (Subclass) for single-class characters.
-      - Supports Class (Subclass) / Class (Subclass) for multiclass characters.
-    - Spell slot calculation:
-      - calculateCharacterSpellSlots(character):
-      - Detects when multiclass rules apply.
-      - Returns { sharedSlots, pactSlots }.
-      - Uses the multiclass spell slot table for shared slots and Pact Magic rules for Warlock.
-  
-  - **Character creation subclass support** (js/character-creation-wizard.js):
-    - Added Subclass step to character creation (Step 4).
-    - Conditionally displays subclass choices only when:
-      - Starting level is high enough for that class’s subclass.
-      - Class actually has subclasses defined in level-up-data.js.
-    - Uses the same subclass data and UI patterns as the level-up system for consistency.
-
-- **Changed**
-  - **Spellcasting initialization on character creation** (js/character-creation.js):
-    - Added a backup mapping table to correctly set:
-      - Spellcasting ability (INT/WIS/CHA) based on class.
-      - Baseline spell slot progression when a new spellcasting class is created.
-    - Ensures that newly created casters have their spell slots and spellcasting ability consistently initialized even if other systems fail to do so.
-
-  - **Feat transfer clarity:**
-    - When feats are selected in the level-up wizard, the feat summaries (description / key effects) are now transferred to and displayed on the main character sheet.
-    - This gives a quick reference for what each feat actually does without needing to reopen the wizard.
-
-- **Fixed**
-
-  - **Character creation failure:**
-    - Fixed a bug where character creation could silently fail, resulting in no character object and an empty sheet.
-    - Creation flow now reliably builds the character object and populates all relevant sections of the sheet on completion.
-  
-  - **Spell lookup & filtering:**
-    - Resolved an issue where spells from data-spells could not be properly searched or filtered by:
-      - Cantrip vs. leveled spells
-      - Spell level
-      - Class
-    - Updated lookup logic so all spell filtering and searching is now consistent with the level-up spell learning UI.
-  
-  - **Spell slot controls:**
-    - Fixed a long-standing bug where the add, minus, and reset buttons on spell slots had no event handlers and therefore never worked.
-    - All spell slot controls now have proper handlers and correctly modify the spell slot counts.
-  
-  - **Subclass integration edge cases:**
-    - Tightened subclass logic so characters who already have a subclass are never prompted again on later level-ups.
-    - Creation and level-up now agree on where subclass data lives on the character object and how it’s displayed.
-  
-1.10.0 - 2025-12-12
+## [1.10.0] - 2025-12-12
 **Character Manager: Level-Up System**
 
-- **Added**
-  - **Complete D&D 5e Level-Up System**
-    - Step-by-step wizard interface for leveling characters from 1-20
-    - Supports all 12 PHB core classes (Barbarian, Bard, Cleric, Druid, Fighter, Monk, Paladin, Ranger, Rogue, Sorcerer, Warlock, Wizard)
-    - Comprehensive data files with class progression tables, spell slots, and features
+### Added
+- **Complete Level-Up Wizard** - Step-by-step wizard for leveling characters 1-20 with all 12 PHB classes
+- **HP Management** - Roll or take average with automatic CON modifier calculation
+- **Ability Score Improvements** - ASI options at class-appropriate levels with +2 total enforcement
+- **Feat System** - 40+ official feats with prerequisite checking and automatic ability increases
+- **Spell Slot Progression** - Automatic updates for all caster classes with Pact Magic tracking
+- **Class Features Display** - New features shown at each level with descriptions
 
-  - **HP Management**
-    - Choice between rolling hit die or taking average HP gain
-    - Automatic CON modifier calculation
-    - Updates both max HP and current HP on level up
+### Technical
+- New files: `js/level-up-data.js`, `js/level-up-system.js`
+- Documentation: `LEVEL_UP_SYSTEM.md`, `LEVEL_UP_TESTING.md`
 
-  - **Ability Score Improvements (ASI)**
-    - Available at class-appropriate levels (e.g., Fighter at 4, 6, 8, etc.)
-    - Standard ASI options: +2 to one ability, or +1 to two abilities
-    - Ability score cap enforcement (max 20)
-    - Validation to ensure exactly +2 total increase
+---
 
-  - **Feat System**
-    - 40+ official D&D 5e feats from Player's Handbook
-    - Prerequisite checking (ability scores, proficiencies, etc.)
-    - Automatic ability score increases from feats (e.g., Resilient, Actor)
-    - Complete feat descriptions and benefits
-    - Organized categories: Combat, Defensive, Utility, Magic, and Mobility
-
-  - **Spell Slot Progression**
-    - Automatic spell slot updates for all caster classes
-    - Separate Pact Magic tracking for Warlocks
-    - Proper multiclass spell slot calculations
-    - 1st through 9th level spell slot support
-
-  - **Class Features Display**
-    - Shows new features gained at each level
-    - Automatic proficiency bonus updates
-    - Feature descriptions appended to character notes
-
-  - **Character Creation Wizard Integration**
-    - Added Background field to Basic Information section
-    - Fixed wizard completion to properly populate character sheet
-    - Improved save/load synchronization
-
-- **Fixed**
-  - Character creation wizard now correctly fills out character sheet on completion
-  - Level-up changes now properly save to IndexedDB
-  - Fixed save/load order to ensure modified character data persists
-  - Removed "+" prefix from number inputs to eliminate browser warnings
-  - Background field now integrated throughout character save/load system
-
-- **Technical**
-  - New files: `js/level-up-data.js`, `js/level-up-system.js`
-  - Documentation: `LEVEL_UP_SYSTEM.md`, `LEVEL_UP_TESTING.md`
-  - Global API exports for character management functions
-  - Improved getCurrentCharacter() integration with level-up system
-
-1.9.3.1 - 2025-12-12
+## [1.9.3.1] - 2025-12-12
 **Battle Map: Canvas Flicker Revert**
 
-- **Fixed**
-  - Battle Map: Reverted Rendering Change Introduced in 1.9.2
-  - Reverted the Battle Map rendering behavior to the pre-1.9.2 implementation after 1.9.2 introduced a visual regression.
-  - Fixes an issue where the canvas would briefly flash black for a couple      seconds when users moved tokens.
-  - Token dragging now renders smoothly again with no black-frame flicker.
-
-1.9.3 - 2025-12-12
-Encounter Builder: DM Reference Export System
-
-Added
-
-**Encounter Builder: Enemy Stat Block Text Export**
-- **Automatic Text File Generation**
-  - Generates comprehensive DM reference file with all enemy stat blocks
-  - Includes all data from the D&D 5e API: actions, reactions, special abilities, legendary actions
-  - Formatted with clear sections and ASCII dividers for easy reading
-  - Professional stat block layout with attack bonuses, save DCs, and damage dice
-- **Export Prompt on Send to Tracker**
-  - When clicking "Send to Initiative Tracker", user is prompted to download stat blocks
-  - Confirm dialog explains the file includes all actions, reactions, and special abilities
-  - Optional download - user can decline and proceed to tracker without file
-  - Filename includes timestamp for organization (e.g., `encounter_statblocks_2025-12-12T14-30-45.txt`)
-- **Complete Stat Block Details**
-  - Each enemy shows: Name, Size, Type, CR, AC, HP, Speed
-  - CR breakdown with offensive/defensive ratings
-  - Special abilities with full descriptions
-  - Actions with attack bonuses (+X to hit), save DCs, and damage notation
-  - Reactions for tactical awareness
-  - Legendary actions for boss encounters
-  - Encounter summary with XP calculations and difficulty rating
-- **DM Workflow Enhancement**
-  - Eliminates need to manually copy stat blocks during combat
-  - All enemy information in one text file for quick reference
-  - DM can print or keep open on second screen
-  - Saves time during session prep and improves combat flow
-
-Changed
-
-- "Send to Initiative Tracker" button now includes optional stat block export prompt
-- Text file export function generates formatted plain text with encounter summary
-
-1.9.2 - 2025-12-12
-Quality-of-Life Enhancements: NPC Combat Stats, Tavern Patrons, Loot Quick Bundles, and Battle Map Integration
-
-Added
-
-**NPC Generator: Combat Stat Block System**
-- **5-Tier Difficulty System**
-  - Tier 1: Commoner (CR 0-1/8) - Weak, untrained individuals
-  - Tier 2: Trained (CR 1/4-1) - Basic combat training
-  - Tier 3: Veteran (CR 2-4) - Experienced fighters
-  - Tier 4: Elite (CR 5-8) - Skilled warriors
-  - Tier 5: Legendary (CR 9-15) - Master combatants
-- **17 Combat Specialties**
-  - Common Folk: Commoner, Laborer, Farmer, Merchant
-  - Trained Fighters: Guard, Soldier, Scout, Thug, Bandit
-  - Skilled Combatants: Veteran, Knight, Monk
-  - Spellcasters: Mage, Priest
-  - Elite/Legendary: Assassin, Champion, Archmage
-- **Complete Stat Block Generation**
-  - Auto-calculates HP (randomized within tier range)
-  - Auto-calculates AC (randomized within tier range)
-  - Auto-scales ability scores based on tier (+0/+2/+4/+6/+8 for tiers 1-5)
-  - Calculates all ability modifiers (STR, DEX, CON, INT, WIS, CHA)
-  - Includes speed (30 ft base, 40 ft for Scout/Monk, 25 ft for Knight)
-  - Proficiency bonus by tier (+0 to +4)
-  - Specialty-specific attacks and traits
-- **Interactive Modal UI**
-  - "Generate Stats" button on each NPC card
-  - Modal with tier and specialty selection dropdowns
-  - Live specialty description preview
-  - One-click stat block generation with formatted D&D output
-- **Copy Functionality**
-  - Individual "Copy" button appears after stat block generation
-  - Copies full NPC (description + voice + stats) to clipboard
-  - Professional stat block formatting with ability scores and combat info
-
-**Tavern Generator: Patron System**
-- **Random Patron Generation**
-  - Generates 3-5 patrons per tavern
-  - "Patrons in the Common Room" section with individual patron cards
-  - Toggle control: "Include patrons (3-5 NPCs)" checkbox in settings
-- **27 Patron Types**
-  - Variety includes: local regular, traveling merchant, off-duty guard, farmer, craftsperson, sellsword, pilgrim, gambler, scholar, miner, sailor, thief, hedge witch, bounty hunter, and more
-- **22 Visual Quirks**
-  - Distinctive features: missing a finger, scar across cheek, nervous twitch, tattoo, eye patch, gold tooth, limping, polishing coin, chewing pipe, fidgeting with cards, etc.
-- **27 Activity Hooks**
-  - Immediate engagement opportunities: looking for work, celebrating windfall, drowning sorrows, meeting someone secretly, seeking adventurers, playing dice, telling tall tales, eavesdropping, spreading news, etc.
-- **Compact Card Layout**
-  - Each patron shows: type/age/build, appearance quirk, and current activity
-  - Grid display (3 columns on desktop, 2 on tablet, 1 on mobile)
-  - Visual activity icon for quick identification
-
-**Loot Generator: Quick Bundle Presets**
-- **6 One-Click Loot Bundles**
-  - **Pocket Loot** (~50 gp): Individual loot, coins + mundane items (5 items)
-  - **Coin Pouch** (200-500 gp): Coins only bundle (budget mode)
-  - **5 Gems** (~500 gp): Gem collection (5 items, 50-200 gp each)
-  - **Potion Bundle** (3 potions): Minor magic consumables
-  - **Scroll Bundle** (3 scrolls): Minor magic scrolls
-  - **Boss Hoard** (~2000 gp): Full treasure pile with gems, coins, trade goods, and magic items (50 items, budget mode)
-- **Auto-Configuration System**
-  - Each bundle has pre-optimized settings (mode, loot type, count, budget, categories)
-  - One click instantly generates loot without manual settings adjustment
-  - Bypasses all dropdown/slider configuration
-  - Settings remain visible for customization after generation
-- **Visual Bundle Grid**
-  - 2x3 grid layout with color-coded buttons
-  - Icons for each bundle type (coin, cash-stack, gem, droplet, file-text, trophy)
-  - Value estimates displayed below each button
-  - Organized by use case: quick loot, valuables, consumables, boss rewards
-
-**Battle Map: Token Combat Stats & Initiative Integration**
-- **AC and Initiative Token Fields**
-  - Added `ac` (Armor Class) field to token data structure
-  - Added `initiative` (Initiative Bonus) field to token data structure
-  - Both fields persist with map save/load
-- **Context Menu: Set Stats**
-  - New "⚔️ AC / Init" button in token context menu
-  - Prompts for Armor Class and Initiative Bonus
-  - Values stored on token and saved with session
-- **Context Menu: Add to Initiative**
-  - New "📊 Add to Initiative" button in token context menu
-  - Auto-populates Initiative Tracker form with token data:
-    - Name (from token label)
-    - Max HP and Current HP (from token HP tracking)
-    - AC (from token AC field)
-    - Initiative roll (auto-rolled: 1d20 + initiative bonus)
-  - Opens Initiative Tracker in new tab with form pre-filled
-  - Visual feedback: Button highlights "✨ Add from Battle Map" for 3 seconds
-  - Character type defaults to "Enemy" for tokens
-- **localStorage Communication**
-  - Battle Map stores token data in `dmtools.pendingInitiativeImport`
-  - Initiative Tracker detects `#autoimport` hash and loads pending data
-  - Non-destructive: Initiative Tracker preserves existing initiative list
-  - Data cleared after successful import
-
-**Name Generator: Favorites Persistence**
-- **Status**: Already fully implemented (no changes needed)
-- Favorites save to localStorage (`'ng-favs'`)
-- Add/remove/copy functionality works correctly
-- Persists across sessions and page refreshes
-
-Changed
-
-- NPC cards now include "Generate Stats" button and stat block display area
-- NPC copy functionality updated to include combat stats when present
-- Tavern generator output includes "Patrons in the Common Room" section when enabled
-- Tavern settings include patron toggle checkbox
-- Loot Generator UI includes Quick Bundles section at top of settings
-- Battle Map token typedef expanded to include `ac` and `initiative` fields
-- Battle Map save/load functions preserve AC and initiative data
-- Initiative Tracker auto-imports tokens from Battle Map via hash navigation
-- Context menu in Battle Map expanded with 2 new options (10 total buttons)
-
-1.9.1 - 2025-12-12
-Tavern Events & Rumors, Battle Map Data Safety, and Documentation Updates
-
-Added
-
-**Tavern/Inn Generator: Events & Rumors System**
-- **Random Event Generator**
-  - "What's Happening at the Tavern?" section with 1-2 random events per generation
-  - 65+ unique tavern events: bard performances, arm-wrestling contests, mysterious strangers, burning dinners, dice games, political debates, singing patrons, etc.
-  - Events provide immediate atmosphere and interaction opportunities
-  - Visual presentation with activity icon and success-colored bullet points
-- **Bartender Rumors**
-  - "Rumors from the Bartender" section with 2-3 rumors per generation
-  - 63+ unique bartender rumors: strange lights at old mill, missing caravans, shady mayor meetings, ancient coins, temple donations, vanishing horses, etc.
-  - Rumors from trusted tavern keeper perspective
-  - Visual presentation with cup icon and info-colored quote styling
-- **Patron Rumors**
-  - "Overheard from Patrons" section with 2-4 rumors per generation
-  - 62+ unique patron rumors: giant creatures in mountains, Baron hiring adventurers, new cave systems, missing families, poaching, secret fighting rings, etc.
-  - Rumors from gossip/hearsay perspective with varying reliability
-  - Visual presentation with people icon and warning-colored quote styling
-- **Integrated UI Controls**
-  - "Include events & rumors" checkbox in generator controls
-  - Events and rumors respect seeded RNG for reproducible results
-  - Export/copy/download includes all events and rumors sections
-  - Clear button properly resets events and rumors displays
-- **Side Quest & Plot Hook Generation**
-  - 190+ total rumor/event options provide endless side quest inspiration
-  - Mix of immediate (events) and background (rumors) story hooks
-  - Suitable for improvisation and session prep
-  - Helps DMs create living, dynamic tavern atmospheres
-
-**Battle Map Unsaved Changes Indicator**
-- **Dirty Flag System**
-  - Visual "Unsaved Changes" badge with warning icon next to Save Session button
-  - Pulsing animation (opacity fade) draws attention to unsaved state
-  - Badge automatically appears when map changes are made
-  - Badge disappears after successful save operation
-- **Comprehensive Change Detection**
-  - Tracks fog painting, fog shape drag/resize, fog shape add/delete
-  - Tracks token moves, adds, deletes, edits (HP, status, auras, vision cones, rotation, resize)
-  - Tracks grid calibration, origin adjustments, size/color/alpha changes
-  - Tracks map transform operations (scale, offset)
-  - All keyboard shortcuts properly trigger dirty flag
-  - All context menu operations properly trigger dirty flag
-- **Browser Navigation Guard**
-  - `beforeunload` event handler warns when leaving page with unsaved changes
-  - Only warns if dirty flag is set (no false alarms)
-  - Standard browser confirmation dialog prevents accidental data loss
-  - Manual save model preserved (no aggressive autosave)
-- **Professional UX Polish**
-  - Clear visual feedback for unsaved state
-  - Prevents #1 rage-quit scenario (losing hours of battle map setup)
-  - Demonstrates data-safety thinking and user-focused design
-
-**Documentation & Version Management**
-- **README Version Reference Update**
-  - Removed hardcoded version line "Last updated: 2025-12-09 (v1.8.5)"
-  - Replaced with dynamic reference: "See CHANGELOG.md for the latest version and feature updates"
-  - Eliminates maintenance burden of updating version in multiple places
-  - Improves professionalism by providing single source of truth for versions
-  - Prevents credibility issues from outdated version information
-
-Changed
-
-- Tavern generator output now includes Events and Rumors sections when checkbox enabled
-- Tavern generator serialization includes events and rumors in exported/copied text
-- README no longer contains hardcoded version number
-
-1.9.0 - 2025-12-11
-Shop-to-Character Inventory Integration & Battle Map Enhancements
-
-Added
-
-**Shop Generator → Character Inventory Integration**
-- **Add to Character Inventory System**
-  - "Add to Character" button on every shop item
-  - Modal interface for selecting destination character from dropdown
-  - Automatic data transfer: item name, description, use, price, and rarity
-  - Customizable fields: quantity, weight per item, equipped status, attuned status
-  - Optional additional notes field for player-specific information
-  - Item details (description + use) automatically combined into notes field
-  - Success confirmation message after adding item
-- **Cross-Page Storage Integration**
-  - IndexedDB/localStorage compatibility for character data access
-  - Non-destructive append - existing inventory items preserved
-  - Automatic inventory array initialization for characters without inventories
-  - Supports both IndexedDB and localStorage fallback
-- **Smart Item Data Mapping**
-  - Shop item properties mapped to character inventory structure
-  - Price information preserved but not stored in character inventory
-  - Rarity badges transferred to character sheet
-  - Stock quantities not transferred (shop-specific data)
-
-**Battle Map Measurement Enhancements**
-- **Multi-Shape Measurement Tools**
-  - Shape selector dropdown with 3 options: Line, Cone, Circle
-  - **Line measurement** (original): Straight-line distance measurement
-  - **Cone measurement** (new): 90-degree cone from origin point pointing toward cursor
-  - **Circle measurement** (new): Radius/AoE measurement with visual circle fill
-  - Semi-transparent fills (20% opacity) with solid borders for all shapes
-  - Shape-specific labels: "X ft cone", "X ft radius", "X ft (line)"
-- **Aura Radius Auto-Adjustment**
-  - Aura circles now automatically add 0.5 cells to user-specified radius
-  - Accounts for token's own cell (aura extends from edge of token's cell, not center)
-  - Example: 10 ft aura (2 cells) now correctly displays as 2 cells beyond token's space
-  - User-facing values remain unchanged - adjustment is visual only
-- **Right-Click Exit Functionality**
-  - Right-click anywhere on canvas exits measurement mode
-  - Clears active measurement and resets measurement toggle button
-  - Prevents context menu from appearing during measurement
-  - Intuitive cancel action for measurement tools
-
-**Shop Generator UI Overhaul**
-- **Modern Shop Card Design**
-  - Elevated cards with subtle shadows and depth
-  - Hover effects with border highlighting
-  - Improved border radius and spacing
-  - Better visual separation between shops
-- **Enhanced Shop Headers**
-  - Larger, bold shop type titles with icons
-  - Settlement and markup info styled as metadata badges
-  - Location and price icons for visual clarity
-  - Cleaner hierarchy with flexbox layout
-- **Shopkeeper Section Redesign**
-  - Person icon with character info layout
-  - Subtle background differentiation
-  - Better typography and spacing
-  - Enhanced visual interest
-- **Table Improvements**
-  - Uppercase column headers with cyan accent color
-  - Letter-spacing and subtle background on headers
-  - Row hover effects for interactivity
-  - Stock displayed as badges for visual distinction
-  - Item names bold for better scannability
-  - Price shown in bold green, more prominent
-  - Better cell padding and alignment
-- **Action Button Refinements**
-  - Icon-only buttons for cleaner appearance (full tooltips on hover)
-  - Price displayed prominently next to action buttons
-  - Improved button spacing and grouping
-  - Column renamed from "Price" to "Actions" for clarity
-- **Unique Items Styling**
-  - Cyan accent color with left border accent
-  - Subtle background highlight
-  - Better padding and visual separation from main inventory
-- **Responsive Design Enhancements**
-  - Tablet breakpoint: Inline buttons with better wrapping
-  - Mobile breakpoint: Full-width buttons with card layout
-  - Improved spacing and sizing on all devices
-  - Better label display on mobile (uppercase, cyan, with spacing)
-
-Changed
-
-- Shop item table columns reordered: Item (22%), Description (32%), Use (12%), Stock (8%), Actions (26%)
-- Table header styling unified with cyan theme color (#8bd3ff)
-- Stock column now center-aligned with badge styling
-- Item names moved to separate line above rarity badge
-- Description text muted for better visual hierarchy
-- Buttons condensed to icon-only with tooltips
-- Measurement shape persistence - shapes display while mouse button held, disappear on release
-- Battle map aura visual calculation adjusted (+0.5 cells) without changing user input
-- Shop cards now have consistent spacing and elevation
-
-1.8.9 - 2025-12-10
-Character Token Generation for Battle Map
-
-Added
-
-**Character to Battle Map Token System**
-- **Token Generation & Export**
-  - New "Send to Battle Map" button on character sheet
-  - Generates circular tokens with character portraits using custom positioning
-  - Automatic fallback to base token with character initials when no portrait exists
-  - Token generation respects circular clipping (88% radius) to fit within decorative frames
-  - Uses CharacterTokenFrame.png overlay for portrait tokens
-  - Uses BaseToken.png with initials for characters without portraits
-
-- **Interactive Token Preview Modal**
-  - Live circular preview canvas (250x250px) shows exact token appearance
-  - Zoom slider (0.5x to 3x) for adjusting portrait scale
-  - Drag-to-pan functionality for repositioning portraits within the circle
-  - Reset button to restore default zoom and position
-  - Real-time preview updates as user adjusts settings
-  - "Send to Battle Map" confirmation sends token with user-defined settings
-
-- **Battle Map Integration**
-  - Auto-import system detects pending character tokens on battle map load
-  - Tokens appear at center of current view without affecting existing tokens
-  - Preserves all existing token selections and positions
-  - Non-disruptive append mode - existing map state remains unchanged
-  - Status message confirms successful import
-
-- **CORS Protection**
-  - Upfront detection of URL-based portraits to prevent canvas tainting errors
-  - Clear error messages explaining browser security restrictions
-  - Recommends uploading image files instead of using URLs
-  - Only base64-encoded (uploaded) images supported for token generation
-
-Technical Details
-- Canvas-based token generation with HTML5 Canvas API
-- localStorage handoff between character sheet and battle map pages
-- Token settings stored separately from character portrait settings
-- Image loading with crossOrigin support for compatible sources
-- Circular clipping optimization for clean frame fit
-
-
-
-1.8.8 - 2025-12-10
-Generator Integration & Loot Expansion
-
-Added
-
-**Name Generator Enhancements**
-- **Expanded Race Support** (30+ races)
-  - Added 16 new playable races with unique naming conventions
-  - New races: Half-Orc, Hobgoblin, Kobold, Aarakocra, Tabaxi, Firbolg, Kenku, Triton, Goliath, Bugbear, Yuan-ti, Changeling, Warforged
-  - Human cultural variants: Arabic, Asian (in addition to Latin and Norse)
-  - Each race has culturally appropriate syllable patterns for authentic name generation
-- **Organized Race Dropdown with Optgroups**
-  - Races categorized into 4 logical groups: Common Races, Uncommon Races, Monstrous Races, Special Races
-  - Improved UX with visual separation between race types
-  - Consistent organization across Name Generator and NPC Generator
-- **Race Presets for All New Races**
-  - 16 new race preset configurations with appropriate syllable counts, gender leanings, and harshness/exoticness values
-  - Race-specific suffixes for enhanced authenticity
-  - Special handling for unique races (e.g., Tabaxi compound names, Warforged mechanical names)
-
-**NPC Generator → Name Generator Integration**
-- **Interactive Name Picker Modal**
-  - "Generate Name" button on each NPC card
-  - Modal displays 12 name options based on detected race
-  - Race auto-detection from NPC description using pattern matching
-  - Manual race override via dropdown selector
-  - "Regenerate" button for fresh name options without closing modal
-  - "Open Name Generator" button for advanced customization
-- **Seamless Cross-Generator Communication**
-  - URL parameter passing for race presets
-  - localStorage handoff for bidirectional data flow
-  - Selected race automatically applied in Name Generator when opened
-
-**Tavern Generator → NPC Generator Integration**
-- **Staff Expansion System**
-  - "Generate Full NPC Details" button on each tavern staff member
-  - Converts basic staff (role, description, voice, mannerism) into complete 8-field NPCs
-  - Auto-generates: enhanced mannerisms, quirks, wants, avoids, and secrets
-  - Modal preview with copy and "Open in NPC Gen" options
-- **Cross-Generator Data Flow**
-  - localStorage handoff system for tavern staff → NPC generator
-  - URL parameters preserve context (from=tavern)
-  - NPC Generator recognizes and displays tavern-sourced NPCs
-
-**Shop Generator → Negotiate Price Mechanic**
-- **Haggling System**
-  - "Negotiate" button on each shop item
-  - Modal displays Persuasion DC based on item rarity (Common: DC 12, Uncommon: DC 15, Rare: DC 18)
-  - Price outcomes table:
-    - Critical Success (Nat 20 or DC+10): 30% discount
-    - Success by 5+ (DC+5): 20% discount
-    - Success (DC): 10% discount
-    - Failure (< DC): No discount
-    - Critical Failure (Nat 1 or DC-10): +10% price increase (shopkeeper offended)
-  - Visual color coding for success/failure tiers
-
-**Initiative Tracker → Bulk HP Adjustment**
-- **Mass Healing/Damage System**
-  - "Bulk HP Adjust" button in initiative footer
-  - Filter options: PCs only, Enemies only, or All characters
-  - Action types: Heal, Damage, Full Heal
-  - Single undo point for entire bulk operation
-  - Use cases: Long rest healing, area-of-effect damage, mass healing spells
-- **Smart HP Management**
-  - Damage prioritizes temporary HP consumption
-  - Healing automatically resets death saves
-  - Full heal restores all characters to max HP
-
-**Loot Generator Expansion**
-- **Expanded Trade Goods Category** (6 → 14 items)
-  - Added 8 new valuable trade items: barrel of aged wine, exotic tea leaves, rare herbs, coffee beans, fine tobacco, spider silk, rare pigments, exotic incense
-  - Broader variety for merchant-focused campaigns
-- **Expanded Gems & Art Category** (5 → 13 items)
-  - Added 8 new art objects: ornate music box, jeweled hair comb, crystal prism, carved ivory cameo, gilded portrait frame, polished jade figurine, silver filigree locket, painted porcelain vase
-  - More diverse treasure options for dragon hoards and noble estates
-- **Massively Expanded Minor Magic Items** (8 → 47 items)
-  - **Healing & Recovery (4 items)**: Tonic of Vigor, Salve of Mending, Restorative Tea, Vial of Clarity
-  - **Combat & Defense (7 items)**: Smoke Charm, Oil of Edge, Warding Ribbon, Shield Charm, Thunderstone, Flash Powder, Tanglefoot Bag
-  - **Movement & Utility (5 items)**: Feather Token, Boots of Springing, Potion of Water Breathing, Dust of Tracelessness, Feather Fall Token
-  - **Social & Luck (4 items)**: Lucky Coin, Charm of Persuasion, Vial of Courage, Token of Truth
-  - **Exploration (5 items)**: Guide's Pin, Wayfinder's Compass, Lens of Detection, Ear Trumpet of Listening, Dowsing Rod
-  - **Knowledge & Magic (5 items)**: Scribe's Quill, Scholar's Monocle, Candle of Revealing, Chalk of Warding, Crystal of Light
-  - **Tools & Craft (4 items)**: Hammer of Mending, Rope of Climbing, Thieves' Gloves, Bag of Endless Knots
-  - **Nature & Animals (3 items)**: Beast Whistle, Druid's Seed, Weatherglass
-  - **Ongoing Items (8 items)**: Everburning Torch, Self-Heating Mug, Cleaning Cloth, Compass of True North, Tankard of Purity, Prestidigitation Ring, Warming Cloak Clasp, Cooling Hat Pin
-  - All items include clear mechanical effects, value ranges, and categorization (consumable/situational/ongoing)
-
-Changed
-
-- Name Generator dropdown structure upgraded from flat list to organized optgroups
-- NPC cards now include name field with generation button
-- Tavern staff cards include integration button for NPC expansion
-- Shop item tables include negotiate button column
-- Initiative tracker footer includes bulk HP adjustment controls
-- Loot generator Minor Magic category expanded 6x for better variety
-
-1.8.7 - 2025-12-09
-Character Creation Wizard: Comprehensive Expansion
-
-Added
-
-- **Expanded Race Selection** (9 → 33+ races)
-  - All Player's Handbook races: Human, Elf, Dwarf, Halfling, Dragonborn, Gnome, Half-Elf, Half-Orc, Tiefling
-  - Volo's Guide races (14): Aarakocra, Aasimar, Bugbear, Firbolg, Goblin, Goliath, Hobgoblin, Kenku, Kobold, Lizardfolk, Orc, Tabaxi, Triton, Yuan-ti Pureblood
-  - Elemental races (4): Air/Earth/Fire/Water Genasi
-  - Ravnica races (5): Centaur, Loxodon, Minotaur, Simic Hybrid, Vedalken
-  - Theros races (2): Leonin, Satyr
-  - Eberron races (4): Changeling, Kalashtar, Shifter, Warforged
-  - Other races (3): Tortle, Locathah, Grung
-  - Each race includes detailed description of traits and abilities
-
-- **Subrace Support System**
-  - Dynamic subrace dropdown appears when applicable race selected
-  - **Elf subraces** (5): High Elf, Wood Elf, Dark Elf (Drow), Eladrin, Sea Elf
-  - **Dwarf subraces** (3): Hill Dwarf, Mountain Dwarf, Duergar
-  - **Halfling subraces** (3): Lightfoot, Stout, Ghostwise
-  - **Gnome subraces** (3): Forest Gnome, Rock Gnome, Deep Gnome (Svirfneblin)
-  - **Dragonborn ancestries** (10): All chromatic and metallic dragons with breath weapon details
-  - **Tiefling bloodlines** (9): Asmodeus, Baalzebul, Dispater, Fierna, Glasya, Levistus, Mammon, Mephistopheles, Zariel
-  - **Aasimar types** (3): Protector, Scourge, Fallen
-  - **Shifter types** (4): Beasthide, Longtooth, Swiftstride, Wildhunt
-
-- **Class Expansion** (12 → 13 classes)
-  - Added Artificer (Eberron's magical inventor class)
-  - Reorganized into logical groups: Martial Classes, Full Spellcasters, Half-Casters
-  - Each class shows primary abilities (e.g., "Str/Con" for Barbarian)
-  - Enhanced class descriptions with playstyle details
-
-- **Background Selection Step** (Step 5)
-  - 13 official D&D backgrounds with descriptions
-  - Backgrounds: Acolyte, Charlatan, Criminal, Entertainer, Folk Hero, Guild Artisan, Hermit, Noble, Outlander, Sage, Sailor, Soldier, Urchin
-  - Each background grants 2 skill proficiencies automatically
-  - Background features and special abilities described
-
-- **Interactive Skill Proficiency Selection** (Step 6)
-  - Dynamic skill picker based on class choice
-  - Shows only available skills for selected class
-  - Enforces correct number of selections (2-4 depending on class)
-  - Prevents over-selection with smart checkbox limiting
-  - Rogue gets 4 skills, Bard/Ranger get 3, most classes get 2
-  - Visual feedback for skill selection progress
-
-- **Automatic HP & Combat Stats Calculation** (Step 7)
-  - **Hit Points**: Auto-calculated from class hit die + CON modifier
-  - **Armor Class**: Class-appropriate armor options with accurate calculations
-    - Light armor: AC + full DEX modifier
-    - Medium armor: AC + DEX modifier (max +2)
-    - Heavy armor: No DEX bonus
-    - Unarmored Defense: Special calculations for Barbarian (10 + DEX + CON) and Monk (10 + DEX + WIS)
-  - **Speed**: Race-based movement speed (25-40 ft, special speeds like Aarakocra flight)
-  - **Proficiency Bonus**: Level-based calculation (+2 at level 1-4)
-  - Armor selection based on class starting equipment options
-
-- **Character Review & Summary** (Step 8)
-  - Complete character summary before creation
-  - Shows all choices: race, class, background, alignment
-  - Displays ability scores, HP, AC, speed, proficiency bonus
-  - Lists all selected skills (class + background)
-
-- **Automatic Racial Ability Score Bonuses**
-  - All 33+ races have correct ability score modifiers
-  - Subrace bonuses automatically applied (e.g., High Elf +1 INT, Mountain Dwarf +2 STR)
-  - HP recalculated after racial CON bonuses applied
-  - Original base scores preserved, racial bonuses added transparently
-
-- **Automatic Saving Throw Proficiencies**
-  - Class-based saving throw proficiencies automatically set
-  - All 13 classes have correct save proficiencies
-  - Checkboxes auto-marked on character sheet
-
-- **Complete Character Sheet Population**
-  - **Basic info**: Name, player name, level, race (with subrace), class, background, alignment
-  - **Ability scores**: All 6 abilities with racial bonuses applied
-  - **Combat stats**: Max HP, current HP, AC, speed, hit dice
-  - **Proficiencies**: Proficiency bonus, saving throws, skills (class + background)
-  - **90% complete character** ready for immediate play
-
-Changed
-
-- Wizard steps expanded from 6 to 8 steps for comprehensive coverage
-- Race descriptions now include all racial features and traits
-- Class descriptions enhanced with hit die, primary abilities, and detailed playstyle info
-- Ability score tips updated with all 13 classes
-- Skills section converted from static recommendations to interactive selection
-- Equipment step replaced with automated HP/AC calculation step
-- Success message now shows detailed character summary with all calculated stats
-
-1.8.6 - 2025-12-09
-Character Manager: Mobile Optimization & Collapsible Sections
-
-Added
-
-- **Mobile Toast Notifications for Dice Rolls**
-  - Roll results appear as toast notifications at top of screen on mobile devices (< 768px)
-  - Color-coded toasts: green for critical hits (nat 20), red for critical failures (nat 1), gray for normal rolls
-  - Auto-dismiss after 3 seconds
-  - Displays roll description, dice rolled, modifiers, and total result
-  - Eliminates need to scroll to roll history panel on mobile
-
-- **Collapsible Card Sections**
-  - All major character sheet sections now collapsible via tap/click on header
-  - Animated chevron icons (down = expanded, right = collapsed) rotate smoothly
-  - Visual feedback on header hover
-  - Mobile hint text: "(tap to expand/collapse)" appears on mobile devices
-  - Sections intelligently default: frequently-used sections expanded, others collapsed on mobile
-  - Includes: Basic Information, Combat Snapshot, Currency, Death Saves, Resources & Rests, Ability Scores, Saving Throws, Skills, Portrait, Senses, Detailed Notes
-
-- **Mobile-Specific Enhancements**
-  - Smooth height transitions (0.25s) when expanding/collapsing sections
-  - Scroll offset accounts for fixed navbar (80px scroll margin)
-  - Toast container optimized for mobile screen widths
-  - Portrait, Death Saves, and Detailed Notes start collapsed on mobile to reduce initial scrolling
-
-Changed
-
-- **Resources & Rests Section Reorganized**
-  - Short Rest and Long Rest buttons moved from card header into card body
-  - Buttons positioned at top-right of section with moon/moon-stars icons
-  - Fixes collapse/expand functionality that was blocked by header buttons
-  - Improved mobile layout and accessibility
-
-Fixed
-
-- Resources & Rests section now properly collapses/expands (buttons no longer interfere)
-- Collapse icon rotation correctly syncs with section state on page load
-
-1.8.5 - 2025-12-09
-Character Manager: Structured Inventory System
-
-Added
-
-- **Structured Inventory Management**
-  - Replaced simple text field with full inventory table system
-  - Track item name, quantity, weight per item, equipped status, and attunement
-  - Edit and delete buttons for each inventory item
-  - Modal dialog for adding/editing items with validation
-  - Optional notes field for item descriptions
-
-- **Automatic Encumbrance Calculation**
-  - Real-time weight tracking based on D&D 5e rules (STR × 15 carrying capacity)
-  - Visual status indicators: Normal, Encumbered, Heavily Encumbered, Over Capacity
-  - Color-coded badges (green/info/warning/danger) for quick reference
-  - Displays total weight, carrying capacity, and encumbrance status
-  - Auto-updates when strength score changes or inventory is modified
-
-- **Inventory Display Features**
-  - Equipped items shown with filled check icon, unequipped with empty circle
-  - Attuned items marked with filled star icon, non-attuned with empty star
-  - Total weight calculated per item (quantity × weight per item)
-  - Responsive table layout with clear column headers
-
-Changed
-
-- Character data structure updated to include `inventoryItems` array (legacy `inventory` text field preserved for backward compatibility)
-- Character load/save functions integrated with new inventory system
-- Null-safe handling of legacy inventory field for characters without structured inventory
-
-NPC Generator: Enhanced Physical Descriptions & Secrets
-
-Added
-
-- **Height Field to Physical Descriptions**
-  - 12 height variations: very short, short, below average, average, above average, tall, very tall, unusually tall, compact, towering, diminutive, statuesque
-  - Integrated into NPC description generation
-  - Descriptions now include: age, height, build, hair, eyes, distinguishing features, attire, demeanor
-
-- **NPC Secrets System** (42 unique secrets)
-  - One secret automatically generated per NPC
-  - Categories: Financial (debts, hidden wealth), Criminal connections (thieves' guild, blackmail), Hidden knowledge (secret passages, conspiracies, cures), Identity secrets (false identity, hidden family, nobility), Dark past (witnessed crimes, poisoning, theft)
-  - Examples: "knows the location of a smuggler's cache", "is being blackmailed over a past indiscretion", "witnessed a shapeshifter replacing someone"
-  - Secrets displayed in NPC cards and included in exports
-
-Changed
-
-- NPC descriptions enhanced from 2-element format (age, build) to 3-element format (age, height, build)
-- NPC card structure updated to include Secret field
-- Copy/download exports now include secret information
-
-Note
-
-- Voice and mannerism features were already implemented with comprehensive details (tempo, timbre, pitch, accent, delivery, and 2 mannerisms per NPC)
-
-Shop Generator: Shopkeeper NPCs & Stock Management
-
-Added
-
-- **Auto-Generated Shopkeeper NPCs**
-  - Name generation with 4 name pools: generic (20 names), exotic (10 names), humble (10 names), scholarly (5 titled names)
-  - Personality system with 3 types weighted by probability:
-    - **Fitting (70%)**: Perfect for their role (e.g., blacksmith: "gruff and practical", "has burn scars")
-    - **Ironic (20%)**: Hilariously contradictory (e.g., blacksmith: "squeamish about violence despite making weapons")
-    - **Wrong Field (10%)**: Clearly in wrong profession (e.g., blacksmith: "wanted to be a baker, makes weapon-shaped bread on the side")
-  - 10+ shop types with 4 unique personality traits per type per category
-  - Shopkeeper name and personality displayed prominently in each shop card
-
-- **Limited Stock Quantities**
-  - Stock amounts vary by item rarity and settlement size
-  - **Rare items**: 1-3 in stock (always limited regardless of settlement)
-  - **Uncommon items**: Settlement stock range (village: 5-8, town: 7-12, capital: 10-16)
-  - **Common items**: Settlement range + 50% bonus for greater availability
-  - Stock quantity displayed in dedicated table column
-
-- **Settlement Size Affects Inventory**
-  - Village: 5-8 base stock, higher prices (10-35% markup), scarcer rare items
-  - Town: 7-12 base stock, balanced prices (−5% to +15%), moderate rare availability
-  - Capital: 10-16 base stock, lower prices (−15% to +20%), broader rare selection
-  - Stock ranges applied based on settlement selection in generator settings
-
-Changed
-
-- Shop card layout reorganized: header, shopkeeper section, then inventory table
-- Table columns updated: Item (24%), Description (38%), Use (13%), Stock (12%), Price (13%)
-- Copy/download functions updated to include shopkeeper information and stock quantities
-- Export format: `Shopkeeper: [Name] - [Personality]` followed by item table with stock
-
-1.8.4 - 2025-12-08
-Loot Generator: Complete Feature Overhaul
-
-Added
-
-- **Hoard vs. Individual Loot Distinction**
-  - Toggle between "Hoard" (large treasure piles) and "Individual" (pocket loot) modes
-  - Individual loot generates ~10% of items/budget for single-creature drops
-  - Automatic scaling adjustments based on loot type selection
-
-- **Mundane Adventuring Items Category** (20 new items)
-  - Essential gear: 50 ft. rope, torches (bundle of 5), bedroll, rations (1 week)
-  - Light sources: candles (10), tinderbox, lantern (hooded), oil flask
-  - Tools: grappling hook, crowbar, 10 ft. pole, chalk (10), iron spikes (10)
-  - Camping: tent (2-person), backpack, shovel
-  - Tactical: caltrops (bag of 20), chain (10 feet), fishing tackle, signal whistle
-  - All items include proper weight, cost ranges, and condition descriptors
-
-- **Monster-Specific Loot Templates** (9 monster types)
-  - **Dragon**: Favors gems (2.0x), coins (1.8x), magic items; flavor: "scorched edges", "melted slightly"
-  - **Lich**: Books (1.8x), gems (1.4x), magic (1.6x); flavor: "necromantic runes", "bone-white"
-  - **Vampire**: Gems (1.6x), clothing (1.5x), coins (1.4x); flavor: "blood-stained", "aristocratic"
-  - **Beholder**: Gems (1.7x), curios (1.5x), magic (1.8x); flavor: "alien geometry", "prismatic"
-  - **Giant**: Food (1.5x), trade goods (1.4x), mundane items (1.3x); flavor: "oversized", "massive scale"
-  - **Demon/Devil**: Gems (1.5x), magic (1.7x), curios (1.4x); flavor: "sulfurous", "infernal script"
-  - **Fey Noble**: Curios (1.8x), gems (1.5x), magic (1.6x); flavor: "rainbow-hued", "moonlit"
-  - **Aberration**: Curios (1.6x), writing (1.4x), magic (1.5x); flavor: "otherworldly", "mind-bending"
-  - **Undead Horde**: Coins (1.3x), gems (1.2x), clothing (1.2x); flavor: "grave-touched", "centuries-old"
-  - Monster type selection overrides hoard template for thematic consistency
-
-- **Custom Loot Table Import System**
-  - Import custom JSON loot tables via file picker
-  - Tables can define custom categories, templates, and generation rules
-  - Dropdown selector for active custom table
-  - JSON format requires `name` field with optional `categories` and `template` objects
-  - Multiple custom tables can be loaded in same session
-
-- **Save/Load Preset System**
-  - Save all current settings with custom preset name
-  - Presets stored in browser localStorage for persistence
-  - Saves: mode, loot type, count, budget, monster/template, all toggles, category selections
-  - Load presets from dropdown selector with one click
-  - Preset list auto-populates on page load
-
-Changed
-
-- Category weights system updated to include "Mundane Adventuring Items" (0.6 base weight)
-- Template resolution now prioritizes monster type over hoard template
-- Individual loot type applies 90% reduction to item count and budget
-- UI reorganized with monster type selector above hoard template
-- Custom table selection integrated into main settings panel
-
-Encounter Builder: Stat Block Preview System
-
-Added
-
-- **Hover Tooltips on Monster Search**
-  - Rich stat block previews appear when hovering over any monster in search results
-  - Shows complete combat information: AC, HP, Speed, CR
-  - Displays all special abilities with full descriptions
-  - Shows all actions with attack bonuses (+X to hit), save DCs, and damage dice
-  - Includes reactions and legendary actions with descriptions
-  - Smart positioning prevents tooltips from going off-screen
-  - Tooltips styled with dark theme and color-coded sections
-
-- **Expandable Stat Blocks in Encounter Roster**
-  - "Show Details" button for each monster in the encounter roster
-  - Quick action preview shows first 3 actions (e.g., "⚡ Multiattack, Bite, Claw")
-  - Expandable section reveals complete stat block with organized sections
-  - Attack information highlighted in blue: attack bonus, save DC, damage
-  - All sections color-coded: Special Abilities, Actions, Reactions, Legendary Actions
-  - Speed information displayed in expanded view
-
-- **Enhanced SRD API Data Extraction**
-  - Now fetches and displays special_abilities (Legendary Resistance, etc.)
-  - Extracts legendary_actions for end-of-turn abilities
-  - Includes reactions (Shield, Parry, etc.)
-  - All data persists when monsters added to roster
-
-Changed
-
-- Monster search results now include preview-trigger class for hover functionality
-- Roster display enhanced with action summary line showing top 3 actions
-- Attack descriptions now show damage type and dice notation prominently
-- Encounter Builder truly useful for combat prep with full stat visibility
-
-1.8.3 - 2025-12-08
-Battle Map Enhancement: Persistent Measurement Tools & Token Features
-
-Added
-- **Token Enhancement Features**
-  - **Token labels** - Toggle persistent name labels above tokens
-  - **HP tracking** - Visual HP bars with set/damage/heal/clear options
-  - **Status conditions** - Add multiple status effects (Poisoned, Stunned, etc.) displayed above tokens
-  - **Aura effects** - Customizable radius circles around tokens with adjustable color
-  - **Vision cones** - Directional vision arcs with adjustable angle and range
-  - **Compact context menu** - Streamlined 9-item menu with intelligent positioning
-  - **Full persistence** - All token features save/load with the map
-
-Changed
-
-- Context menu now uses fixed positioning with overflow detection for better mobile support
-- Token rendering optimized with three-pass system (auras → tokens → overlays) to prevent flickering
-
-1.8.1 - 2025-12-05
-Complete D&D 5e Spell Database Expansion
-
-Added
-
-- **Comprehensive Spell Database Expansion** - Added 120+ missing spells from PHB, Xanathar's Guide to Everything, and Tasha's Cauldron of Everything
-  - **Total Spells: 432** (up from 312) - now one of the most complete D&D 5e spell databases
-  - **All Xanathar's Cantrips (17 spells):** Booming Blade, Green-Flame Blade, Toll the Dead, Mind Sliver, Control Flames, Shape Water, Mold Earth, Gust, Create Bonfire, Frostbite, Infestation, Lightning Lure, Magic Stone, Primal Savagery, Sword Burst, Thunderclap, Word of Radiance
-  - **All Paladin Smite Spells (6/6 complete):** Searing Smite, Thunderous Smite, Wrathful Smite, Branding Smite, Staggering Smite, Banishing Smite
-  - **All Tasha's Summon Spells (10/10 complete):** Summon Beast, Summon Fey, Summon Elemental, Summon Construct, Summon Celestial, Summon Aberration, Summon Fiend, Summon Shadowspawn, Summon Undead, Summon Draconic Spirit
-  - **Essential Warlock Spells (22 spells):** Hex, Armor of Agathys, Arms of Hadar, Hunger of Hadar, Witch Bolt, Cause Fear, Crown of Madness, Shadow Blade, Enemies Abound, Synaptic Static, Soul Cage, Blade of Disaster, and more
-  - **Critical Ranger Combat Spells (12 spells):** Zephyr Strike, Hail of Thorns, Lightning Arrow, Steel Wind Strike, Swift Quiver, Healing Spirit, Conjure Woodland Beings, Guardian of Nature, and more
-  - **Artificer Utility Spells (15 spells):** Identify, Absorb Elements, Catapult, Snare, Tasha's Caustic Brew, Thorn Whip, and more
-  - **Popular Xanathar's Spells (28 spells):** Shadow Blade, Dragon's Breath, Ice Knife, Life Transference, Mind Spike, Melf's Minute Meteors, Erupting Earth, Tidal Wave, Storm Sphere, Watery Sphere, Whirlwind, Investiture of Flame/Ice/Stone/Wind (all 4), Vitriolic Sphere, Warding Wind, Temple of the Gods, Bones of the Earth, Primordial Ward, Mighty Fortress, Abi-Dalzim's Horrid Wilting, and more
-  - **Tasha's Signature Spells (10 spells):** Spirit Shroud, Tasha's Caustic Brew, Tasha's Mind Whip, Tasha's Otherworldly Guise, Intellect Fortress, Summon Draconic Spirit, Blade of Disaster, Dream of the Blue Veil
-  - **Universal Utility Spells:** Invisibility, Identify, Absorb Elements, Snilloc's Snowball Swarm
-- **Complete Class Spell Coverage** - All PHB classes now have comprehensive spell lists
-  - Paladin: 100% Smite spell coverage (all 6 variants) + oath spells
-  - Ranger: Complete combat and nature spell arsenal
-  - Warlock: Full signature spell list including patron-specific options
-  - Artificer: Complete utility and crafting spell collection
-  - Druid/Wizard/Sorcerer/Cleric: Enhanced with Xanathar's elemental and utility spells
-- **Modern D&D Content** - Spell database now includes popular post-PHB content
-  - All Tasha's Cauldron of Everything summon spells (most popular summoning system)
-  - Xanathar's Guide elemental cantrips and melee weapon cantrips
-  - Modern damage types and mechanics (psychic, force, etc.)
-
-Changed
-
-- Spell database expanded from 312 to 432 spells (~138% increase)
+### Fixed
+- Reverted rendering behavior to pre-1.9.2 implementation to fix black canvas flicker during token dragging
+
+---
+
+## [1.9.3] - 2025-12-12
+**Encounter Builder: DM Reference Export System**
+
+### Added
+- **Stat Block Text Export** - Generates comprehensive DM reference file with all enemy stat blocks from D&D 5e API
+- **Export Prompt** - Optional download on "Send to Initiative Tracker" with timestamp-based filenames
+- **Complete Details** - All actions, reactions, special abilities, legendary actions with attack bonuses and damage dice
+
+---
+
+## [1.9.2] - 2025-12-12
+**Quality-of-Life Enhancements**
+
+### Added
+- **NPC Combat Stats** - 5-tier difficulty system (CR 0-15) with 17 specialties, auto-calculated HP/AC/abilities, copy functionality
+- **Tavern Patron System** - Random 3-5 patrons with 27 types, 22 visual quirks, 27 activity hooks
+- **Loot Quick Bundles** - 6 one-click presets (Pocket Loot, Coin Pouch, 5 Gems, Potion Bundle, Scroll Bundle, Boss Hoard)
+- **Battle Map Token Stats** - AC/Initiative fields with "Add to Initiative" button that auto-populates Initiative Tracker via localStorage
+- **Name Generator Favorites** - Persistence already implemented (no changes needed)
+
+---
+
+## [1.9.1] - 2025-12-12
+**Tavern Events & Rumors**
+
+### Added
+- **Events System** - 1-2 random events per generation from 65+ unique tavern events
+- **Bartender Rumors** - 2-3 rumors from trusted keeper perspective (63+ unique rumors)
+- **Patron Rumors** - 2-4 overheard rumors with varying reliability (62+ unique rumors)
+- **Unsaved Changes Indicator** - Visual badge with pulsing animation, comprehensive change detection, browser navigation guard
+
+### Changed
+- README version reference replaced with dynamic link to CHANGELOG.md
+
+---
+
+## [1.9.0] - 2025-12-11
+**Shop-to-Character Integration & Battle Map Enhancements**
+
+### Added
+- **Shop to Character Inventory** - "Add to Character" button on shop items with modal interface, automatic data transfer, IndexedDB/localStorage compatibility
+- **Battle Map Multi-Shape Measurements** - Line, Cone (90°), Circle shapes with semi-transparent fills, shape-specific labels
+- **Aura Radius Auto-Adjustment** - Auras automatically add 0.5 cells to account for token's own space
+- **Right-Click Exit** - Exit measurement mode with right-click anywhere on canvas
+- **Shop UI Overhaul** - Modern card design, enhanced headers, improved tables, responsive design enhancements
+
+---
+
+## [1.8.9] - 2025-12-10
+**Character Token Generation for Battle Map**
+
+### Added
+- **Token Generation System** - "Send to Battle Map" button generates circular tokens with portraits or initials
+- **Interactive Preview Modal** - Zoom slider (0.5x-3x), drag-to-pan, reset button, real-time preview
+- **Battle Map Integration** - Auto-import at center of view, preserves existing tokens, non-disruptive append mode
+- **CORS Protection** - Upfront detection of URL-based portraits with clear error messages
+
+---
+
+## [1.8.8] - 2025-12-10
+**Generator Integration & Loot Expansion**
+
+See [GENERATORS.md](docs/GENERATORS.md) for complete generator documentation.
+
+### Added
+- **Name Generator Expansion** - 16 new races (30+ total) with culturally appropriate syllable patterns, organized dropdown with optgroups
+- **NPC to Name Generator Integration** - Interactive name picker modal with 12 options, race auto-detection, regenerate button
+- **Tavern to NPC Integration** - "Generate Full NPC Details" button expands staff into complete 8-field NPCs
+- **Shop Negotiate Mechanic** - Haggling system with Persuasion DC based on rarity, price outcomes table
+- **Initiative Bulk HP Adjust** - Mass healing/damage system with filter options (PCs/Enemies/All)
+- **Loot Category Expansion** - Trade Goods (6→14), Gems & Art (5→13), Minor Magic Items (8→47)
+
+---
+
+## [1.8.7] - 2025-12-09
+**Character Creation Wizard: Comprehensive Expansion**
+
+### Added
+- **Expanded Race Selection** - 9→33+ races including PHB, Volo's, Elemental, Ravnica, Theros, Eberron races
+- **Subrace Support** - Dynamic subrace dropdown for Elf, Dwarf, Halfling, Gnome, Dragonborn, Tiefling, Aasimar, Shifter
+- **Class Expansion** - Added Artificer (13 classes total) organized into Martial/Full Spellcasters/Half-Casters
+- **Background Selection** - 13 official backgrounds with skill proficiencies
+- **Interactive Skill Selection** - Dynamic picker based on class with proper selection enforcement
+- **Auto HP/AC Calculation** - Class-appropriate armor options with accurate AC calculations including Unarmored Defense
+- **Racial Ability Bonuses** - All 33+ races with correct modifiers and subrace bonuses
+- **Auto Saving Throws** - Class-based proficiencies automatically set
+
+---
+
+## [1.8.6] - 2025-12-09
+**Character Manager: Mobile Optimization**
+
+### Added
+- **Mobile Toast Notifications** - Roll results as toasts on mobile (<768px) with color-coding (green/red/gray)
+- **Collapsible Card Sections** - All major sections collapsible with animated chevron icons, mobile hint text
+- **Mobile-Specific Enhancements** - Smooth transitions, scroll offset for fixed navbar, intelligent defaults
+
+### Changed
+- Resources & Rests buttons moved from header to body for proper collapse functionality
+
+---
+
+## [1.8.5] - 2025-12-09
+**Character Manager: Structured Inventory System**
+
+### Added
+- **Structured Inventory Management** - Full table system tracking name, quantity, weight, equipped status, attunement
+- **Automatic Encumbrance** - Real-time weight tracking with D&D 5e rules (STR × 15), color-coded status indicators
+- **NPC Secrets System** - 42 unique secrets automatically generated per NPC
+- **NPC Height Field** - 12 height variations integrated into descriptions
+- **Shopkeeper NPCs** - Auto-generated names and personalities (Fitting 70%, Ironic 20%, Wrong Field 10%)
+- **Limited Stock Quantities** - Stock varies by rarity and settlement size
+
+---
+
+## [1.8.4] - 2025-12-08
+**Loot Generator: Complete Feature Overhaul**
+
+See [GENERATORS.md](docs/GENERATORS.md) for complete loot generator documentation.
+
+### Added
+- **Hoard vs Individual Loot** - Toggle between large treasure piles and pocket loot (10% scaling)
+- **Mundane Items Category** - 20 essential adventuring items (rope, torches, rations, tools)
+- **Monster-Specific Templates** - 9 monster types (Dragon, Lich, Vampire, Beholder, Giant, Demon/Devil, Fey Noble, Aberration, Undead) with category weights and flavor text
+- **Custom Loot Table Import** - Import custom JSON loot tables with dropdown selector
+- **Save/Load Preset System** - Save settings with custom names, localStorage persistence
+
+---
+
+## [1.8.3] - 2025-12-08
+**Battle Map Enhancement: Persistent Measurement Tools & Token Features**
+
+### Added
+- **Token Enhancement Features** - Labels, HP tracking, status conditions, aura effects, vision cones, compact context menu
+- **Full Persistence** - All token features save/load with map
+
+### Changed
+- Context menu uses fixed positioning with overflow detection
+- Token rendering optimized with three-pass system (auras → tokens → overlays)
+
+---
+
+## [1.8.1] - 2025-12-05
+**Complete D&D 5e Spell Database Expansion**
+
+See [SPELLS.md](docs/SPELLS.md) for complete spell database details.
+
+### Added
+- **Comprehensive Spell Expansion** - 120+ missing spells from PHB, Xanathar's, Tasha's (312→432 spells)
+- **Complete Class Coverage** - All Paladin Smites (6/6), all Tasha's Summons (10/10), all Xanathar's Cantrips (17)
+- **Modern D&D Content** - Post-PHB spells including popular summoning systems and elemental cantrips
+
+### Changed
 - Database completeness improved from ~70% to ~95% for PHB/Xanathar's/Tasha's content
-- All spells maintain consistent formatting with proper tags, concentration flags, and class lists
-- Version bumped to 1.9.0 for major spell database expansion
-
-Database Statistics
-
-- **By Source Book:**
-  - Player's Handbook (PHB): 100% complete
-  - Xanathar's Guide to Everything: ~90% complete (45+ spells added)
-  - Tasha's Cauldron of Everything: ~85% complete (18+ spells added)
-- **By Spell Level:**
-  - Cantrips (0): 41 spells
-  - 1st Level: 60+ spells
-  - 2nd Level: 65+ spells
-  - 3rd Level: 57+ spells
-  - 4th Level: 42+ spells
-  - 5th Level: 45+ spells
-  - 6th Level: 38+ spells
-  - 7th Level: 25+ spells
-  - 8th Level: 19+ spells
-  - 9th Level: 16+ spells
-- **By Class (Primary Coverage):**
-  - Wizard: 240+ spells
-  - Sorcerer: 145+ spells
-  - Bard: 120+ spells
-  - Cleric: 118+ spells
-  - Druid: 115+ spells
-  - Warlock: 84+ spells (up from 62)
-  - Paladin: 49+ spells (up from 37)
-  - Ranger: 50+ spells (up from 38)
-  - Artificer: 42+ spells (up from 27)
-
-1.8.0 - 2025-12-05
-Battle Map Fog Shapes Enhancement
-
-Added
-
-- **Interactive Resize Handles for Fog Shapes** - Rectangles and squares now have 8 drag handles (4 corners + 4 edges)
-  - Click and drag corner handles to resize diagonally
-  - Click and drag edge handles to resize horizontally or vertically
-  - Minimum size constraints prevent shapes from becoming too small
-  - Visual handles (8px blue squares) appear when shape is selected
-- **Improved Fog Shape Rendering** - Shapes now render on top of tokens for better visibility
-  - Previously shapes were only visible as outlines
-  - New `drawFogShapes()` function renders filled shapes in world-space
-  - Cover mode shapes display with selected color
-  - Reveal mode shapes show as semi-transparent overlays
-- **Manual Save System** - Replaced auto-save with manual saving to prevent performance issues
-  - New "Save Session" button in Session accordion
-  - Ctrl+S keyboard shortcut for quick saving
-  - Saves no longer triggered on every grid adjustment or token movement
-  - Prevents slowdown during continuous operations like dragging or fog painting
-  - Auto-save retained for major discrete operations (loading maps, importing, etc.)
-
-Changed
-
-- Fog shapes now render after tokens in the draw order
-- Help section updated with detailed fog shapes documentation
-- Saving & Loading help section updated to reflect manual save system
-- Version bumped to 1.8.0 for fog shapes feature enhancements
-
-Fixed
-
-- **Fog Shapes Visibility Issue** - Fog shapes now properly render on top layer instead of only showing outlines
-  - Root cause: Shapes rendered to fog canvas (image-space) which drew underneath grid/tokens
-  - Solution: Render filled shapes directly on main canvas in world-space after tokens
-- **Performance During Grid Adjustments** - Removed excessive save() calls that caused slowdown
-  - Eliminated auto-save from grid size, offset, color, and alpha adjustments
-  - Removed auto-save from token/shape dragging operations
-  - Removed auto-save from continuous fog painting
-
-1.7.1 - 2025-12-04
-Character Wizard Memory Leak Fix
-
-Fixed
-
-- **Memory Leak in Character Creation Wizard** - Event listeners no longer accumulate on repeated wizard navigation
-  - Root cause: `onShow` callbacks attached new event listeners every time a step was displayed without removing old ones
-  - Affected race selection, class selection, and ability score rolling handlers
-  - Solution: Store listener references on elements and remove old listeners before attaching new ones
-  - Prevents multiple handler executions and memory bloat when navigating back/forward through wizard
-
-1.7.0 - 2025-12-04
-IndexedDB Storage Implementation
-
-Added
-
-- **IndexedDB Storage System** - Replaced localStorage with IndexedDB for dramatically increased storage capacity
-  - Character portraits and battle map images now use IndexedDB (50MB-1GB+ capacity vs 5-10MB localStorage limit)
-  - Automatic migration from localStorage to IndexedDB on first load
-  - Maintains localStorage backup when possible for dual storage redundancy
-  - New `js/indexed-db-storage.js` module with centralized storage management
-  - Real-time storage quota monitoring in character manager UI
-- **Import Fallback Logic** - Smart error handling when importing large character files
-  - When storage quota exceeded, prompts user to import without portraits
-  - User can choose to proceed without images or cancel the import
-  - Prevents data loss from quota errors during character import
-- **Battle Map IndexedDB Integration** - Battle map sessions now use IndexedDB storage
-  - Single session storage with automatic migration from localStorage
-  - Supports large fog-of-war canvas images without quota issues
-  - Backward compatible with existing localStorage battle map data
-
-Changed
-
-- Character manager now displays IndexedDB quota usage with color-coded warnings
-- Storage operations converted to async/await pattern for better error handling
-- Version bumped to 1.7.0 to reflect major storage architecture change
-- Console logging improved with detailed migration status messages
-
-Fixed
-
-- **Storage Quota Exceeded Errors** - Large portrait images no longer cause "QuotaExceededError"
-  - Root cause: Base64-encoded portrait images exceeded localStorage 5-10MB limit
-  - Solution: IndexedDB provides 50MB-1GB+ capacity for storing image data
-- Characters with large portraits can now be saved and imported successfully
-- Battle map fog-of-war data no longer risks quota errors on complex maps
-
-1.6.3 - 2025-12-04
-Initiative Roller Addition
-
-Added
-
-- **Initiative Roll Button** - Added dice button next to Initiative Modifier field in Combat Snapshot
-  - Rolls 1d20 + Initiative Modifier with character's name in roll description
-  - Result appears in Roll History panel for easy reference
-  - Button integrated into input group for clean UI layout
-
-1.6.2 - 2025-12-04
-Character Save Bug Fixes
-
-Fixed
-
-- **Portrait Data Persistence** - Character portraits now properly save when clicking "Save Character" button
-  - Previously, uploaded portraits would be lost on save due to missing preservation logic
-  - Portrait data (`portraitType`, `portraitData`, `portraitSettings`) now explicitly preserved during save
-- **Wizard Integration** - Fixed undefined function error in Character Creation Wizard
-  - Changed `recalcAbilityModsFromForm()` to correct function name `recalcDerivedFromForm()`
-  - Wizard now properly calculates ability modifiers and derived stats
-- **Save Throws Pill** - Fixed the tight spcing to allow for all items to be vieable in column form
-
-1.6.1 - 2025-12-04
-Advantage/Disadvantage Button Improvements
-
-Added
-
-- **Explicit Advantage/Disadvantage Buttons**
-  - All skill rolls now have three-button layout: Green (Advantage) / White (Normal) / Red (Disadvantage)
-  - All saving throw rolls now have three-button layout with same color scheme
-  - No longer need to remember keyboard shortcuts (Shift/Ctrl) to roll with advantage/disadvantage
-  - Buttons display dice icons with clear visual distinction
-- **Mobile Optimization for Roll Buttons**
-  - Button groups stay compact and don't wrap on mobile devices
-  - Touch-friendly sizing with appropriate padding for small screens
-  - Responsive font sizes (0.75rem on mobile, normal on desktop)
-  - Save-pill containers allow flex-wrap for better mobile layout
-
-Changed
-
-- Roll button event handlers now prioritize `data-roll-type` attribute over keyboard modifiers
-- Keyboard shortcuts (Shift=advantage, Ctrl=disadvantage) still work as fallback
-- Skills table and saving throws UI updated with btn-group containers
-- Mobile CSS enhanced to handle new three-button groups elegantly
-
-Fixed
-
-- Roll buttons maintain proper spacing and alignment on all screen sizes
-- Button groups in save-pills and skill table cells display correctly on mobile
-- Touch targets remain accessible (38x38px minimum) even with three buttons
-
-1.6.0 - 2025-12-04
-Enhanced Attack & Damage Roll System
-
-Added
-
-- **Separate Damage Roll Controls**
-  - Independent roll buttons for to-hit and damage (no more auto-rolling damage)
-  - Primary damage and secondary damage can be rolled separately
-  - Color-coded button groups: Green (Advantage/Crit) / White (Normal) / Red (Disadvantage/Half)
-- **Damage Type Labels**
-  - Attack modal now includes separate fields for damage type (slashing, radiant, fire, etc.)
-  - Primary damage type and secondary damage type fields
-  - Damage types appear in roll history for clear identification
-- **Advanced Damage Options**
-  - Critical hit button doubles dice (not modifiers) for accurate 5e crit damage
-  - Half damage button for resistance (automatically halves total and adds to roll history)
-  - Separate controls for situational damage (Divine Smite, Sneak Attack, etc.)
-- **Attack Roll Enhancements**
-  - Three-button attack system: Advantage / Normal / Disadvantage
-  - Visual feedback with green/white/red color coding
-  - Helpful UI hint: "Green = Advantage/Crit · White = Normal · Red = Disadvantage/Half"
-
-Changed
-
-- Attack rolls no longer automatically roll damage - must be triggered separately
-- Attack modal UI reorganized with dice notation separated from damage type
-- Roll history now displays damage type labels (e.g., "Longsword - slashing (CRIT!)")
-- Button layout updated to show three separate action rows per attack (To Hit / Primary Damage / Extra Damage)
-
-Fixed
-
-- Players can now choose when to apply situational damage like smites
-- Critical hit damage properly doubles dice count without doubling static modifiers
-- Resistance/half damage properly rounds down and tracks in roll history
-
-1.5.7 - 2025-12-03
-Character Creation Wizard & Mobile Optimization
-
-Added
-
-- **Character Creation Wizard**
-  - 7-step guided walkthrough for creating D&D 5e characters
-  - Interactive 4d6-drop-lowest ability score roller with visual dice display
-  - Race selection with descriptions and ability bonuses (9 races)
-  - Class selection with descriptions and hit die info (12 classes)
-  - Beginner-friendly tips for ability score assignment by class
-  - Skill proficiency guidance and alignment selection
-  - Auto-populates character sheet with all entered data
-  - Optional - can skip wizard for blank character sheet
-- **Mobile-Responsive Design**
-  - Comprehensive mobile CSS for phones (<768px), tablets (768-991px), and desktop
-  - Collapsible roll history panel on mobile (tap header to expand/collapse)
-  - Horizontal scrolling tabs with touch-friendly navigation
-  - Touch-optimized buttons (38x38px minimum for all interactive elements)
-  - Compact portrait (200px on mobile, 250px on tablet, 320px on desktop)
-  - Landscape mobile optimizations for better horizontal space usage
-  - Print-friendly styles (hides buttons/navigation, clean B&W layout)
-  - Adaptive font sizes and spacing based on screen size
-
-Changed
-
-- Roll history starts collapsed on mobile screens to save vertical space
-- Portrait heights scale responsively (200px/250px/320px by breakpoint)
-- Tab navigation uses horizontal scroll on mobile instead of wrapping
-- Form inputs and tables use smaller fonts on mobile (0.85rem)
-- Touch devices get larger checkboxes (20-26px) for easier tapping
-- Button groups automatically compress text and padding on small screens
-- New character button now prompts user to choose wizard or blank sheet
-
-Fixed
-
-- Roll history panel no longer interferes with mobile scrolling
-- All interactive elements meet minimum 38x38px touch target size
-- Wizard modal properly scales to 95% width on small screens
-- Window resize correctly toggles roll history collapse state
-
-1.5.6 - 2025-12-03
-Player-Facing Features & Interactive Character Sheets
-
-Added
-
-- **Comprehensive Dice Roller System**
-  - Full dice notation parsing (d20, d4-d12, d100) with modifier support
-  - Advantage/disadvantage rolls with visual display of both dice
-  - Critical hit and fumble detection (natural 20s and 1s)
-  - Roll history panel showing last 50 rolls with timestamps and descriptions
-- **Interactive Roll Buttons**
-  - Skill rolls: All 18 skills have roll buttons (Shift=advantage, Ctrl=disadvantage)
-  - Save rolls: All 6 saving throws have roll buttons with advantage/disadvantage support
-  - Attack rolls: Auto-roll to-hit and damage with one click
-  - Death save rolls: Automatic tracking with nat 1/20 special handling
-- **Combat Features**
-  - HP adjustment buttons (Heal, Damage, Temp HP, Max HP) with quick presets
-  - Inspiration checkbox in Combat Snapshot
-  - Concentration tracker with automatic DC calculation (max(10, damage/2))
-  - Death save automation (nat 20 = regain 1 HP, nat 1 = 2 failures)
-- **Skill System Enhancements**
-  - Expertise support (double proficiency) for all skills
-  - Expertise auto-enables proficiency when checked
-  - All passive scores (Perception, Investigation, Insight) now save/load correctly
-
-Changed
-
-- Roll history displays in a sticky panel with timestamps and clear visual formatting
-- Concentration DC automatically prompts on damage taken while concentrating
-- Expertise checkboxes added to all 18 skill rows in the skills table
-- Saving throws UI updated to pill-style layout with integrated roll buttons
-- Event handling uses delegation for better performance (single listener for all roll buttons)
-
-Fixed
-
-- Passive Perception, Investigation, and Insight now properly save and restore on character load
-- All new fields (inspiration, concentration, expertise) persist correctly in character data
-- Character save/load now includes all player-facing combat features
-
-1.5.5 - 2025-12-03
-Character Sheet Refinements & Spell/Attack Systems
-
-Added
-
-- Full spell slot tracking for levels 1–9 plus pact slot tracking, including long rest reset behavior.
-- Attack list management with a modal editor for weapon attacks, spell attacks, save-based abilities, and custom damage strings.
-- Short/Long Rest helpers that restore HP, temp HP, resources, and spell slots (including pact slots) according to rest type.
-- Exhaustion tracker with rules text for each level (including extended OneD&D levels).
-- Condition toggle buttons backed by a synced text field for quick at-a-glance status management.
-
-Changed
-
-- Character spell lists now persist normalized spell objects (name, level, school, tags, classes, body, prepared) instead of plain strings.
-- Spell search upgraded to use the global spell library with matching across name/title, school, body text, tags, and classes, returning the top 25 results.
-- Prepared status for spells is now first-class on the spell objects and reflected directly in the character's saved data.
-- "Send to Initiative Tracker" from the Characters page now stages a dmtools.pendingImport payload using mode: "append" to preserve the existing initiative list while adding the selected PC.
-- Spell slot rows auto-expand based on the highest level with available slots, keeping the UI compact at low levels and revealing higher-level rows as needed.
-
-Fixed
-
-- Legacy character imports now backfill missing structures (spellSlots, pactSlots, attacks, currency, deathSaves, exhaustion, portraitSettings) to align with the new character model.
-- Passive scores (Perception, Investigation, Insight) stay in sync with ability scores, proficiency bonus, and skill bonuses when stats or proficiencies change.
-- Save and skill bonuses recalculate correctly when fields are cleared, preventing stale or inconsistent modifiers.
-- Spell list normalization correctly deduplicates entries by name (case-insensitive) and safely upgrades legacy string-only spell lists.
-
-1.5.4 - 2025-11-29
-Character Manager + Full Integration
-Added
 
-Character Manager (characters.html) with full character sheet system
-Portrait system with upload, URL input, and zoom/pan framing editor
-Spell list support with tag/class filtering and custom spell builder
-Send to Initiative Tracker button with one-click export
-DM-specific fields: party role, story hooks, at-the-table reminders, secrets
-Tabbed interface: Action Notes, Spells, Inventory, Features, Background, Notes
-Passive scores (Perception, Investigation, Insight) with special senses notes
-Multi-character management with dropdown selector
-Import/Export individual characters or full roster as JSON
-Implemented full auto-calculation for abilities, saves, skills, and passive perception across the character sheet.
+### Database Statistics
+- **By Source**: PHB 100%, Xanathar's ~90%, Tasha's ~85%
+- **By Level**: 41 Cantrips, 60+ Level 1, 65+ Level 2, 57+ Level 3, 42+ Level 4, 45+ Level 5, 38+ Level 6, 25+ Level 7, 19+ Level 8, 16+ Level 9
+- **By Class**: Wizard 240+, Sorcerer 145+, Bard 120+, Cleric 118+, Druid 115+, Warlock 84+, Paladin 49+, Ranger 50+, Artificer 42+
 
-Changed
+---
 
-Export mode now uses mode: "append" to preserve existing combat state
-Portrait editor modal with improved drag-to-reposition controls
-Updated top-level toolbar for consistent "Send to Tracker" button style
+## [1.8.0] - 2025-12-05
+**Battle Map Fog Shapes Enhancement**
 
-Fixed
+### Added
+- **Interactive Resize Handles** - Rectangles/squares have 8 drag handles (4 corners + 4 edges) with minimum size constraints
+- **Improved Fog Rendering** - Shapes render on top of tokens with filled display in world-space
+- **Manual Save System** - "Save Session" button with Ctrl+S shortcut replaces auto-save to prevent performance issues
 
-Error handling for malformed portraits and corrupted JSON imports
-Spell normalization to align with global spell library
-Character ID uniqueness across imports/exports
-UI alignment corrections across Characters page
+### Fixed
+- Fog shapes visibility issue resolved by rendering directly on main canvas in world-space
+- Performance during grid adjustments improved by removing excessive save() calls
 
+---
 
-1.5.0 - 2025-11-25
-Stability & Version Tracking
-Added
+## [1.7.1] - 2025-12-04
+**Character Wizard Memory Leak Fix**
 
-Unique character ID generation to prevent accidental cross-updates
-Console build stamps to all pages for version tracking
-MIT License and repository metadata
-Load guards to improve page stability
+### Fixed
+- Event listeners no longer accumulate on repeated wizard navigation by storing references and removing old listeners
 
-Changed
+---
 
-Refactored initiative.js and extracted rules/spells into dedicated data files
-Improved active-turn behavior to persist through sorting, reordering, and manual list updates
-Updated active turn styling for improved clarity on both DM and Player View
+## [1.7.0] - 2025-12-04
+**IndexedDB Storage Implementation**
 
-Fixed
+### Added
+- **IndexedDB Storage System** - Replaced localStorage with IndexedDB (50MB-1GB+ capacity vs 5-10MB limit)
+- **Automatic Migration** - From localStorage to IndexedDB on first load with dual storage redundancy
+- **Import Fallback Logic** - Smart error handling when quota exceeded with option to import without portraits
+- **Battle Map IndexedDB** - Sessions use IndexedDB with backward compatibility
 
-Player View security: AC column now reliably hidden
-Sensitive data properly suppressed across all modes
-Cross-page sync issues for Player View toggle and shared state
-Multiple minor UI polish issues across initiative and battlemap pages
+### Fixed
+- Storage quota exceeded errors resolved with IndexedDB capacity
+- Large portraits and fog-of-war data no longer risk quota errors
 
+---
 
-1.4.0 - 2025-11-03 to 2025-11-21
-Battle Map & Encounter Builder
-Added
+## [1.6.3] - 2025-12-04
+**Initiative Roller Addition**
 
-Battle Map MVP (battlemap.html)
+### Added
+- Initiative Roll Button next to Initiative Modifier in Combat Snapshot (rolls 1d20 + modifier)
 
-Token placement system with drag-and-drop
-Fog-of-war with reveal/cover modes
-Scale controls and map state saving to LocalStorage
-Pinch-zoom and mobile interaction support
+---
 
+## [1.6.2] - 2025-12-04
+**Character Save Bug Fixes**
 
-Encounter Builder (encounterbuilder.html)
+### Fixed
+- Portrait data now properly saves when clicking "Save Character" button
+- Wizard integration fixed with correct function name `recalcDerivedFromForm()`
+- Save Throws pill spacing fixed for column visibility
 
-Quick encounter assembly
-Export directly to Initiative Tracker
+---
 
+## [1.6.1] - 2025-12-04
+**Advantage/Disadvantage Button Improvements**
 
-Ko-fi footer link and UI integration
-Editable character names with smart duplicate numbering (Goblin, Goblin 2, etc.)
+### Added
+- **Explicit A/D Buttons** - Three-button layout for skill rolls and saving throws (Green/White/Red for Advantage/Normal/Disadvantage)
+- **Mobile Optimization** - Touch-friendly sizing, responsive font sizes, compact button groups
 
-Changed
+---
 
-Updated navigation bar for consistency across pages
-Improved mobile layout and responsiveness
-Multiple upgrades to initiative and battle map pages
+## [1.6.0] - 2025-12-04
+**Enhanced Attack & Damage Roll System**
 
-Fixed
+### Added
+- **Separate Damage Controls** - Independent buttons for to-hit and damage (no auto-roll)
+- **Damage Type Labels** - Separate fields for primary and secondary damage types
+- **Advanced Damage Options** - Critical hit button doubles dice, half damage button for resistance
+- **Attack Roll Enhancements** - Three-button system with visual feedback (Green/White/Red)
 
-0 HP / AC / Initiative logic edge cases
-Mobile nav button logic
-Various UI and layout issues
+### Changed
+- Attack rolls no longer auto-roll damage, must be triggered separately
+- Roll history displays damage type labels
 
+---
 
-1.3.0 - 2025-10-22 to 2025-10-30
-Spells & Rules Integration
-Added
+## [1.5.7] - 2025-12-03
+**Character Creation Wizard & Mobile Optimization**
 
-Spells and Rules reference integrated into Initiative Tracker
-Saved Characters modal for better storage management
-Character type color-coding for visual distinction
-site.js for centralized shared page logic
+### Added
+- **Character Creation Wizard** - 7-step guided walkthrough with 4d6-drop-lowest roller, race/class selection, skill guidance
+- **Mobile-Responsive Design** - Comprehensive mobile CSS for phones/tablets/desktop with collapsible roll history, horizontal scrolling tabs, touch-optimized buttons
 
-Changed
+---
 
-Removed old accordion layout
-Polished initiative UI with centered control buttons
-Refined overall layout flow
+## [1.5.6] - 2025-12-03
+**Player-Facing Features & Interactive Character Sheets**
 
-Fixed
+### Added
+- **Comprehensive Dice Roller** - Full dice notation parsing with advantage/disadvantage, critical hit/fumble detection, roll history panel
+- **Interactive Roll Buttons** - Skill rolls, save rolls, attack rolls, death save rolls with automatic tracking
+- **Combat Features** - HP adjustment buttons, inspiration checkbox, concentration tracker, death save automation
+- **Skill System Enhancements** - Expertise support with auto-enable proficiency
 
-Name generator button issues
-Minor bugs in Shop Generator and name generator pages
+---
 
+## [1.5.5] - 2025-12-03
+**Character Sheet Refinements & Spell/Attack Systems**
 
-1.2.0 - 2025-10-10 to 2025-10-16
-Death Saves & Temp HP
-Added
+### Added
+- Full spell slot tracking (1-9 plus pact slots) with long rest reset
+- Attack list management with modal editor for various attack types
+- Short/Long Rest helpers restoring HP, resources, spell slots
+- Exhaustion tracker with rules text for each level
+- Condition toggle buttons with synced text field
 
-Death Saves tracking system
-Temp HP Undo support
-Dice roller upgrades
-Help menu refinements
+### Changed
+- Character spell lists persist normalized spell objects instead of plain strings
+- Spell search upgraded to global library with top 25 results
+- "Send to Initiative Tracker" uses mode: "append" to preserve existing list
 
-Changed
+---
 
-Improved Concentration checks (now triggers correctly during the turn, not end of round)
-Enhanced mobile navigation behavior
+## [1.5.4] - 2025-11-29
+**Character Manager + Full Integration**
 
-Fixed
+### Added
+- Character Manager (characters.html) with full character sheet system
+- Portrait system with upload, URL input, zoom/pan framing
+- Spell list support with filtering and custom builder
+- Send to Initiative Tracker with one-click export
+- DM-specific fields, tabbed interface, passive scores
+- Multi-character management with import/export
 
-Hamburger menu bugs
-Various mobile navigation issues
+---
 
+## [1.5.0] - 2025-11-25
+**Stability & Version Tracking**
 
-1.1.0 - 2025-09-03 to 2025-10-09
-Generators Expansion
-Added
+### Added
+- Unique character ID generation
+- Console build stamps for version tracking
+- MIT License and repository metadata
+- Load guards for improved stability
 
-Generator tools globally across multiple pages
-Loot bundles and preset controls
-Improved name generator inputs and outputs
+### Changed
+- Refactored initiative.js with extracted rules/spells
+- Improved active-turn behavior persistence
 
-Changed
+### Fixed
+- Player View security with properly hidden AC column
+- Cross-page sync issues for Player View toggle
 
-Enhanced initiative tracker with editable fields
-Mobile-friendly improvements across tools
-Updated footer and global styling
+---
 
-Fixed
+## [1.4.0] - 2025-11-03 to 2025-11-21
+**Battle Map & Encounter Builder**
 
-Ongoing layout corrections across initiative tracker
-Various generator consistency issues
+### Added
+- **Battle Map MVP** - Token placement, fog-of-war, scale controls, LocalStorage saving, pinch-zoom
+- **Encounter Builder** - Quick assembly with export to Initiative Tracker
+- Ko-fi footer link
+- Editable character names with smart duplicate numbering
 
+---
 
-1.0.0 - 2025-08-27 to 2025-09-02
-Initial Release
-Added
+## [1.3.0] - 2025-10-22 to 2025-10-30
+**Spells & Rules Integration**
 
-Name Generator (name.html)
-Loot Generator (loot.html)
-Shop Generator (shop.html)
-Initial global layout and navbar
-Foundation for initiative tracker integration
-Netlify auto-deploy pipeline
+### Added
+- Spells and Rules reference integrated into Initiative Tracker
+- Saved Characters modal
+- Character type color-coding
+- site.js for centralized page logic
 
-Changed
+---
 
-Established project file structure
+## [1.2.0] - 2025-10-10 to 2025-10-16
+**Death Saves & Temp HP**
 
+### Added
+- Death Saves tracking system
+- Temp HP Undo support
+- Dice roller upgrades
+- Help menu refinements
 
-0.9.0 - 2025-02 to 2025-10
-Legacy Project (Pre-Toolbox)
+### Changed
+- Improved Concentration checks timing
+
+---
+
+## [1.1.0] - 2025-09-03 to 2025-10-09
+**Generators Expansion**
+
+### Added
+- Generator tools across multiple pages
+- Loot bundles and preset controls
+- Improved name generator
+
+### Changed
+- Enhanced initiative tracker with editable fields
+- Mobile-friendly improvements
+
+---
+
+## [1.0.0] - 2025-08-27 to 2025-09-02
+**Initial Release**
+
+### Added
+- Name Generator (name.html)
+- Loot Generator (loot.html)
+- Shop Generator (shop.html)
+- Initial global layout and navbar
+- Initiative tracker integration foundation
+- Netlify auto-deploy pipeline
+
+---
+
+## [0.9.0] - 2025-02 to 2025-10
+**Legacy Project (Pre-Toolbox)**
+
 Note: This represents the original Initiative Tracker + Wiki project that served as the foundation for The DM's Toolbox 1.0 rewrite.
-Added
 
-Early Initiative Tracker prototype
-Session Notes with save/load support
-Import/export features
-Saved characters and mobile-friendly character management
-Concentration logic and dice rolls
-Mobile card sorting
+### Added
+- Early Initiative Tracker prototype
+- Session Notes with save/load
+- Import/export features
+- Saved characters and mobile-friendly management
+- Concentration logic and dice rolls
 
-Fixed
+### Fixed
+- Delete character bugs
+- Hamburger menu issues
+- Turn progression bugs
+- Navbar unification
 
-Delete character bugs
-Hamburger menu issues
-Turn progression bugs
-Navbar unification across pages
+---
 
+## Legend
 
-Legend
-
-Added for new features
-Changed for changes in existing functionality
-Deprecated for soon-to-be removed features
-Removed for now removed features
-Fixed for any bug fixes
-Security for vulnerability fixes
+- **Added** for new features
+- **Changed** for changes in existing functionality
+- **Deprecated** for soon-to-be removed features
+- **Removed** for now removed features
+- **Fixed** for any bug fixes
+- **Security** for vulnerability fixes

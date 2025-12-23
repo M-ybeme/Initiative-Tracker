@@ -16,6 +16,7 @@ Free DM toolkit for improvisation at the table. No login, no tracking, works off
 - **Battle Map** - Lightweight VTT with fog of war, tokens, measurements, and HP tracking
 - **Character Manager** - Full character sheets with 33+ races, 432 spells, multiclassing, level-up system
 - **Encounter Builder** - Quick combat assembly with custom monsters and stat block export
+- **Journal** - Rich text editor with image support, text wrapping, and IndexedDB storage
 - **8 Generators** - NPCs, shops, taverns, loot, encounters, names (all with seeded RNG)
 
 **Built by a DM who was tired of paywalls and subscriptions.**
@@ -166,6 +167,47 @@ The DM's Toolbox respects your table, your time, and your creativity.
 - Export/import sessions as JSON for backup
 
 **Use case:** Upload a dungeon map, calibrate the grid in two clicks, add tokens, set "Fireball AoE" persistent measurement (20 ft radius circle), reveal rooms as players explore. Right-click enemies to add to Initiative Tracker when combat starts. Works on desktop or tablet at the table.
+
+---
+
+### 📔 Journal
+**Rich text editor with persistent storage for campaign notes, session logs, and world-building**
+
+- **Rich Text Formatting** powered by Quill editor
+  - Headers (H1, H2, H3), bold, italic, underline, strikethrough
+  - Numbered and bulleted lists
+  - Text and background colors
+  - Text alignment options
+  - Insert links with custom display text (hide long URLs)
+  - Insert images from local files
+
+- **Image Management**
+  - Drag-to-resize images with 8 visual handles (corners and edges)
+  - Text wrapping: float left or float right for book-like layouts
+  - Images flow naturally with text
+  - Alignment toolbar appears on image selection
+
+- **File Management**
+  - Sidebar showing all saved journal entries
+  - Default file names use timestamp (e.g., "12/22/2025 02:30 PM")
+  - Custom file names supported
+  - Sort by newest first
+  - Click to load any entry
+
+- **Persistent Storage**
+  - IndexedDB storage - all data saved in browser
+  - Entries persist across sessions
+  - Auto-save with Ctrl+S (Cmd+S on Mac)
+  - Save/Delete with confirmation dialogs
+  - Toast notifications for save/delete actions
+
+- **User Interface**
+  - Toolbar tooltips describe each formatting option
+  - Active file highlighted in sidebar
+  - Dark theme matching DM Toolbox aesthetic
+  - Responsive layout with file list and editor side-by-side
+
+**Use case:** Keep session notes with embedded maps and NPC portraits. Document world-building details with formatted text and images that flow naturally like in a book. All data stays in your browser with no accounts or cloud sync required.
 
 ---
 

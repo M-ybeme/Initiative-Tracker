@@ -1,9 +1,8 @@
 const DM_TOOLBOX_BUILD = {
     name: "The DM's Toolbox",
-    version: "1.10.9",
+    version: "1.11.0",
     recentChanges: [
-      "Loot Generator: Added 50 cursed items with risk/reward mechanics, curse severity slider, and 2 new quick bundles (Magic Items, Cursed Items)",
-      "Loot Generator: Fixed potion and scroll bundle category validation errors"
+      "Journal: New rich text editor with IndexedDB storage, image resizing, text wrapping, named links, and auto-save (Ctrl+S)"
     ],
     buildTime: new Date().toISOString(),
     author: "Maybeme"
