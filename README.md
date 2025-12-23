@@ -894,7 +894,7 @@ The DM's Toolbox respects your table, your time, and your creativity.
 ---
 
 ### 💰 Loot Generator
-**Treasure with flexible generation modes**
+**Treasure with flexible generation modes and risk/reward mechanics**
 
 **Generation Modes:**
 - **Hoard loot:** Large treasure piles for boss encounters, dragon hoards, ancient vaults
@@ -922,6 +922,15 @@ The DM's Toolbox respects your table, your time, and your creativity.
   - **Nature & Animals (3):** Beast Whistle, Druid's Seed, Weatherglass
   - **Ongoing Items (8):** Everburning Torch, Self-Heating Mug, Cleaning Cloth, Compass of True North, Tankard of Purity, Prestidigitation Ring, Warming Cloak Clasp, Cooling Hat Pin
   - All items include clear mechanical effects, value ranges, and categorization (consumable/situational/ongoing)
+- **Cursed Items:** 50 items with risk/reward mechanics across 5 severity levels:
+  - **Severity 1-2 (Minor):** Appealing benefits with subtle drawbacks (e.g., lucky coin: +1 initiative but sneeze at combat start; charming brooch: +1 Charisma but compulsively compliment strangers)
+  - **Severity 3 (Balanced):** Strong benefits with notable costs (e.g., keen dagger: +1 hit/damage but killing blows damage self; endless waterskin: refills daily but water tastes metallic)
+  - **Severity 4-5 (Dangerous):** Powerful benefits with serious consequences (e.g., boots of haste: +10 ft movement but 1d4 slip chance; bloodthirsty blade: +2 hit/damage but requires daily use or take psychic damage)
+  - All cursed items appear as masterwork quality to tempt players
+  - Curse Severity Slider (1-5) filters items by risk level
+  - Cursed items toggle enables/disables category
+  - Visual distinction: red borders, warning icons, "CURSED" labels
+  - Integrated with monster templates (lich, demon, undead get higher curse rates)
 
 **Monster-Specific Loot Templates (9 types):**
 - **Dragon:** Favors gems (2.0×), coins (1.8×), magic items; flavor: "scorched edges", "melted slightly"
@@ -935,13 +944,15 @@ The DM's Toolbox respects your table, your time, and your creativity.
 - **Undead Horde:** Coins (1.3×), gems (1.2×), clothing (1.2×); flavor: "grave-touched", "centuries-old"
 - Monster type selection overrides hoard template for thematic consistency
 
-**Quick Bundle Presets (6 one-click options):**
+**Quick Bundle Presets (8 one-click options):**
 - **Pocket Loot** (~50 gp): Individual loot, coins + mundane items (5 items)
 - **Coin Pouch** (200-500 gp): Coins only bundle (budget mode)
 - **5 Gems** (~500 gp): Gem collection (5 items, 50-200 gp each)
 - **Potion Bundle** (3 potions): Minor magic consumables
 - **Scroll Bundle** (3 scrolls): Minor magic scrolls
 - **Boss Hoard** (~2000 gp): Full treasure pile with gems, coins, trade goods, magic items (50 items, budget mode)
+- **Magic Items** (8 items): Minor magic items with broad category variety (high usefulness bias)
+- **Cursed Items** (6 items): Cursed items with balanced severity (mix of flavor curses and real risks)
 - Each bundle has pre-optimized settings (bypasses manual configuration)
 - Visual bundle grid with color-coded buttons and value estimates
 
@@ -980,6 +991,8 @@ The DM's Toolbox respects your table, your time, and your creativity.
 - Export includes item names, values, weights, descriptions
 
 **Use case:** Party defeats an ancient red dragon. Generate loot (Hoard mode, Dragon template, 2000 gp budget). Get: 850 gp in coins, 6 gems (rubies, emeralds with "scorched edges"), 2 magic items (+1 Flaming Longsword, Ring of Fire Resistance both with "melted slightly" flavor), 3 trade goods (silk bolts, rare pigments). Export to text file for distribution. Alternatively, use "Boss Hoard" quick bundle for instant generation. Or click "Coin Pouch" for simple 350 gp pocket loot after defeating a bandit.
+
+For cursed loot: Enable cursed items toggle, set severity to 3 (balanced), generate. Player finds "boots of haste" with +10 ft movement—seems great! Only after using them do they discover the 1d4 slip chance on full movement. Cursed items appear as masterwork quality to encourage discovery through use. Click "Cursed Items" quick bundle to generate 6 tempting-but-dangerous items instantly.
 
 ---
 
@@ -1538,13 +1551,13 @@ If you do donate, know that it goes toward:
 
 ## 📊 Project Stats
 
-- **Lines of code:** ~36,000+ (HTML + CSS + JS)
+- **Lines of code:** ~37,000+ (HTML + CSS + JS)
 - **Files:** 60+ (pages, scripts, styles, assets)
 - **Spells in database:** 432 (PHB, Xanathar's, Tasha's)
 - **Races supported:** 33+ (PHB, Volo's, Xanathar's, Eberron, Ravnica, Theros)
 - **Classes supported:** 13 (all official classes including Artificer)
 - **Development time:** 2+ years (since Feb 2024 pre-alpha)
-- **Version:** v1.10.6 (as of December 19, 2025)
+- **Version:** v1.10.9 (as of December 22, 2025)
 - **Coffee consumed:** Immeasurable
 - **Hours saved for DMs:** Hopefully thousands
 

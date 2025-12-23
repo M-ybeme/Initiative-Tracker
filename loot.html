@@ -100,13 +100,13 @@
                 <div class="d-grid gap-2">
                   <div class="row g-2">
                     <div class="col-6">
-                      <button class="btn btn-sm btn-outline-primary w-100 quick-bundle-btn" data-bundle="pocket">
+                      <button class="btn btn-sm btn-outline-light w-100 quick-bundle-btn" data-bundle="pocket">
                         <i class="bi bi-coin me-1"></i>Pocket Loot
                         <small class="d-block text-secondary" style="font-size: 0.7rem;">~50 gp</small>
                       </button>
                     </div>
                     <div class="col-6">
-                      <button class="btn btn-sm btn-outline-primary w-100 quick-bundle-btn" data-bundle="coinpouch">
+                      <button class="btn btn-sm btn-outline-secondary w-100 quick-bundle-btn" data-bundle="coinpouch">
                         <i class="bi bi-cash-stack me-1"></i>Coin Pouch
                         <small class="d-block text-secondary" style="font-size: 0.7rem;">200-500 gp</small>
                       </button>
@@ -137,6 +137,20 @@
                       <button class="btn btn-sm btn-outline-warning w-100 quick-bundle-btn" data-bundle="boss">
                         <i class="bi bi-trophy me-1"></i>Boss Hoard
                         <small class="d-block text-secondary" style="font-size: 0.7rem;">~2000 gp</small>
+                      </button>
+                    </div>
+                  </div>
+                  <div class="row g-2">
+                    <div class="col-6">
+                      <button class="btn btn-sm btn-outline-light w-100 quick-bundle-btn" data-bundle="magicitems">
+                        <i class="bi bi-stars me-1"></i>Magic Items
+                        <small class="d-block text-secondary" style="font-size: 0.7rem;">8 items</small>
+                      </button>
+                    </div>
+                    <div class="col-6">
+                      <button class="btn btn-sm btn-outline-danger w-100 quick-bundle-btn" data-bundle="curseditems">
+                        <i class="bi bi-exclamation-triangle me-1"></i>Cursed Items
+                        <small class="d-block text-secondary" style="font-size: 0.7rem;">6 items</small>
                       </button>
                     </div>
                   </div>
@@ -244,11 +258,25 @@
                 <label class="form-check-label" for="lg-magic">Allow minor magic (consumables & situational gear)</label>
               </div>
 
+              <!-- Cursed items toggle -->
+              <div class="form-check mt-2">
+                <input class="form-check-input" type="checkbox" id="lg-cursed">
+                <label class="form-check-label" for="lg-cursed">Include cursed items (risk & reward)</label>
+              </div>
+
+              <!-- Curse severity slider (only visible when cursed items enabled) -->
+              <div class="mt-2" id="lg-curse-severity-wrap" style="display:none;">
+                <label for="lg-curse-severity" class="form-label">Curse Severity</label>
+                <input id="lg-curse-severity" class="form-range" type="range" min="1" max="5" value="3">
+                <div class="range-label"><span>Flavor only</span><span>Balanced</span><span>Dangerous</span></div>
+                <div class="form-hint mt-1">Lower values: mostly harmless. Higher values: serious mechanical penalties.</div>
+              </div>
+
               <!-- Categories -->
               <div class="mt-2">
                 <label class="form-label">Categories</label>
                 <div class="row row-cols-2 g-1" id="lg-cats"></div>
-                <div class="form-hint mt-1">“Minor Magic” is auto-included only when the toggle is on.</div>
+                <div class="form-hint mt-1">"Minor Magic" and "Cursed Items" are auto-included only when their toggles are on.</div>
               </div>
 
               <div class="form-check mt-2">
@@ -588,6 +616,77 @@ const CATS={
     }
   },
 
+  // --- Cursed Items (gated by toggle) ---
+  "Cursed Items":{
+    base:[
+      // Severity 1: Minor trade-offs (appealing benefit, subtle drawback)
+      {n:"lucky coin (+1 to initiative, but you sneeze loudly at the start of combat)",mat:"metal",w:0.05,sp:[150,350],severity:1},
+      {n:"charming brooch (+1 to Charisma checks, but you compulsively compliment strangers)",mat:"metal",w:0.1,sp:[180,380],severity:1},
+      {n:"keen quill (advantage on Investigation to decipher text, but it occasionally writes your secrets)",mat:"wood",w:0.02,sp:[160,340],severity:1},
+      {n:"flask of warmth (keeps drinks perfect temperature, but you become mildly chatty when drinking)",mat:"metal",w:0.5,sp:[140,320],severity:1},
+      {n:"weatherproof cloak (advantage vs rain/wind discomfort, but always smells faintly of wet dog)",mat:"cloth",w:1.5,sp:[200,400],severity:1},
+      {n:"gloves of grip (+1 to climbing checks, but your hands feel uncomfortably warm)",mat:"leather",w:0.2,sp:[170,360],severity:1},
+      {n:"mirror of confidence (+1 to Performance checks, but shows you slightly more attractive than reality)",mat:"glass",w:0.5,sp:[190,390],severity:1},
+      {n:"dice of fortune (reroll 1s once per day, but must make DC 10 wisdom save to stop gambling when desired)",mat:"stone",w:0.1,sp:[220,420],severity:1},
+      {n:"bag of organization (find items 50% faster, but they occasionally rearrange themselves noisily)",mat:"cloth",w:0.5,sp:[210,410],severity:1},
+      {n:"hat of shade (advantage vs sun glare, but your hair is always messy when removed)",mat:"cloth",w:0.3,sp:[150,350],severity:1},
+
+      // Severity 2: Noticeable trade-offs (good benefit, annoying drawback)
+      {n:"boots of sure footing (+1 AC vs being knocked prone, but squeak when sneaking - disadvantage on Stealth)",mat:"leather",w:2.0,sp:[300,600],severity:2},
+      {n:"ring of arcane memory (recall one forgotten spell slot 1/day, but finger itches intensely for 1 hour after)",mat:"metal",w:0.05,sp:[350,650],severity:2},
+      {n:"cloak of many pockets (+10 lbs carry capacity, but attracts small insects that crawl out occasionally)",mat:"cloth",w:1.5,sp:[320,620],severity:2},
+      {n:"honest pendant (+2 to Insight checks, but you sneeze when you lie)",mat:"metal",w:0.1,sp:[280,580],severity:2},
+      {n:"bracelet of dexterity (+1 to Sleight of Hand, but causes harmless static shocks to allies)",mat:"metal",w:0.1,sp:[340,640],severity:2},
+      {n:"belt of strength (carry +15 lbs, but loosens during strenuous activity - DC 10 DEX save or drop items)",mat:"leather",w:0.5,sp:[310,610],severity:2},
+      {n:"spoon of sustenance (food is 25% more filling, but tastes completely bland)",mat:"metal",w:0.2,sp:[260,560],severity:2},
+      {n:"lantern of clarity (bright light radius +5 ft, but goes out in the face of danger)",mat:"metal",w:2.0,sp:[380,680],severity:2},
+      {n:"scarf of comfort (advantage vs cold weather, but occasionally tightens causing brief discomfort)",mat:"cloth",w:0.3,sp:[290,590],severity:2},
+      {n:"coin pouch of plenty (holds 50 extra coins, but 1d4 copper falls out per hour, pc might notice or not)",mat:"leather",w:0.3,sp:[270,570],severity:2},
+
+      // Severity 3: Meaningful trade-offs (strong benefit, notable drawback)
+      {n:"keen dagger (+1 to hit and damage, but on killing blow deal 1d4 damage to self and victim's name scrawls on your skin)",mat:"metal",w:1.0,sp:[500,900],severity:3},
+      {n:"amulet of preservation (food lasts twice as long, but fresh food tastes 'off' to you, causing mild nausea on 1d4 you throw up)",mat:"metal",w:0.2,sp:[450,850],severity:3},
+      {n:"rope of escape (advantage on escape artist checks, but 10%(1d10) chance to untie itself during use)",mat:"cloth",w:5.0,sp:[520,920],severity:3},
+      {n:"endless waterskin (refills with clean water at dawn, but water is always lukewarm and slightly metallic)",mat:"leather",w:2.0,sp:[480,880],severity:3},
+      {n:"torch of revealing (bright light reveals invisible creatures within 10 ft, but casts disturbing shadow-faces 5% chance(1d20) to gain fear)",mat:"wood",w:1.0,sp:[540,940],severity:3},
+      {n:"pack of holding (capacity +20 lbs, but feels 10 lbs heavier than contents)",mat:"cloth",w:6.0,sp:[600,1000],severity:3},
+      {n:"resonant shield (+1 AC, but hums audibly in combat - disadvantage on Stealth during fights)",mat:"metal",w:6.0,sp:[650,1050],severity:3},
+      {n:"helm of awareness (+2 to Perception, but causes mild headaches after 1 hour - disadvantage on CON saves)",mat:"metal",w:3.0,sp:[580,980],severity:3},
+      {n:"beast pendant (advantage on Animal Handling, but wild animals detect you from 2x distance)",mat:"metal",w:0.1,sp:[530,930],severity:3},
+      {n:"gloves of precision (+1 to ranged attacks, but everything you touch becomes slightly sticky)",mat:"leather",w:0.3,sp:[560,960],severity:3},
+
+      // Severity 4: Strong benefit with risky drawback
+      {n:"boots of haste (+10 ft movement, but on full speed movement roll 1d4: on 1 you slip and fall prone)",mat:"leather",w:3.0,sp:[800,1300],severity:4},
+      {n:"ring of vigor (ignore first level of exhaustion, but disadvantage on first ability check each day)",mat:"metal",w:0.05,sp:[750,1250],severity:4},
+      {n:"shadow cloak (+2 to Stealth in dim light, but you're more visible in shadows to darkvision)",mat:"cloth",w:2.0,sp:[850,1350],severity:4},
+      {n:"gauntlets of power (+2 to Athletics, but roll 1d20 daily: on 1 you fumble and drop held items)",mat:"metal",w:2.0,sp:[900,1400],severity:4},
+      {n:"adaptive armor (+1 AC and resist 3 cold OR fire damage, but constantly uncomfortable opposite temperature)",mat:"metal",w:20.0,sp:[1000,1500],severity:4},
+      {n:"earring of keen hearing (+3 to Perception for sounds, but disadvantage on saves vs thunder damage)",mat:"metal",w:0.05,sp:[780,1280],severity:4},
+      {n:"lucky brooch (reroll one failed save per day, but attract minor misfortune - DM adds 1 random complication)",mat:"metal",w:0.1,sp:[820,1320],severity:4},
+      {n:"bag of retrieval (retrieve specific item as bonus action, but 5% chance it swaps with random item)",mat:"cloth",w:1.0,sp:[770,1270],severity:4},
+      {n:"quenching canteen (water restores +2 HP once per day, but you require 50% more water to avoid dehydration)",mat:"metal",w:1.5,sp:[740,1240],severity:4},
+      {n:"bracers of the grave (+2 to hit vs undead, but undead sense you from 2x distance)",mat:"leather",w:1.0,sp:[810,1310],severity:4},
+
+      // Severity 5: Powerful benefit with serious consequence
+      {n:"bloodthirsty blade (+2 to hit and damage, but if not used to damage a creature daily take 2d4 psychic damage at dawn)",mat:"metal",w:3.0,sp:[1400,2000],severity:5},
+      {n:"armor of false security (+2 AC, but critical hits against you occur on 19-20)",mat:"metal",w:25.0,sp:[1600,2200],severity:5},
+      {n:"ring of triumph (turn two failed saves into success per day, but natural 20s reroll - if lower use lower result)",mat:"metal",w:0.05,sp:[1300,1900],severity:5},
+      {n:"cloak of shadows (+3 to Stealth checks, but disadvantage on all Stealth in bright light)",mat:"cloth",w:2.5,sp:[1450,2050],severity:5},
+      {n:"boots of the endless road (+15 ft movement, but must walk 5+ miles daily or gain 1 exhaustion at dawn)",mat:"leather",w:3.0,sp:[1550,2150],severity:5},
+      {n:"helm of iron mind (+2 to WIS saves, but 1/week suffer nightmares - no long rest benefits that night)",mat:"metal",w:4.0,sp:[1700,2300],severity:5},
+      {n:"amulet of destiny (advantage on death saves, but divination magic and scrying vs you has advantage)",mat:"metal",w:0.3,sp:[1500,2100],severity:5},
+      {n:"gloves of the duelist (+1 to attack rolls, but on natural 1 you fumble and fling your weapon 1d20 feet)",mat:"leather",w:0.4,sp:[1400,2000],severity:5},
+      {n:"belt of the titan (carry capacity +100 lbs, but base capacity reduced by 50 lbs - net +50)",mat:"leather",w:1.0,sp:[1350,1950],severity:5},
+      {n:"pendant of primal fury (+2 damage vs beasts and monstrosities, but they detect and prioritize you from 3x distance)",mat:"metal",w:0.2,sp:[1600,2200],severity:5}
+    ],
+    make:(rng,b)=>{
+      const m=pick(rng,MATERIALS[b.mat]);
+      const allure=pick(rng,["beautifully crafted","masterwork quality","elegantly designed","finely made","exquisitely detailed"]);
+      const severityTag = `curse-${b.severity}`;
+      return [`${toTitle(m)} ${b.n}, ${allure}`, tags("cursed",severityTag,"magical"), true]
+    }
+  },
+
   // --- Minor Magic (gated by toggle) ---
   "Minor Magic":{
     base:[
@@ -843,9 +942,17 @@ function maybeBundle(rng,item,templateKey){
 }
 
 // Compose one
-function makeOne(rng,catKey,noBundle=false,templateKey="none",magicOn=false){
+function makeOne(rng,catKey,noBundle=false,templateKey="none",magicOn=false,cursedOn=false,curseSeverity=3){
   const cat=CATS[catKey];
-  const base=pick(rng,cat.base);
+
+  // For cursed items, filter by severity
+  let basePool = cat.base;
+  if(catKey === "Cursed Items" && cursedOn){
+    basePool = cat.base.filter(b => b.severity <= curseSeverity);
+    if(basePool.length === 0) basePool = cat.base; // fallback if no items match
+  }
+
+  const base=pick(rng,basePool);
   let [desc,taglist,forceVal]=cat.make(rng,base);
 
   // Template flavor injections (light touch)
@@ -856,21 +963,22 @@ function makeOne(rng,catKey,noBundle=false,templateKey="none",magicOn=false){
   let title=toTitle(desc);
   const item={k:`${catKey}:${title}`,cat:catKey,title,value:sp,weight:wt,tags:taglist,isValuable:!!forceVal};
 
-  // Minor magic items stay low-impact; still eligible for upgrade? No — skip masterwork for magic.
-  if(catKey!=="Minor Magic") tryUpgrade(rng,item);
+  // Minor magic items and cursed items stay low-impact; skip masterwork for special items
+  if(catKey!=="Minor Magic" && catKey!=="Cursed Items") tryUpgrade(rng,item);
 
   return noBundle?item:maybeBundle(rng,item,templateKey);
 }
 
-// Weighted category pick from usefulness slider + template multipliers; include Minor Magic if allowed
-function categoryWeights(selectedCats,usefulness01,templateKey,magicOn){
+// Weighted category pick from usefulness slider + template multipliers; include Minor Magic and Cursed Items if allowed
+function categoryWeights(selectedCats,usefulness01,templateKey,magicOn,cursedOn){
   const base = {
     "Trade Goods": 0.8, "Gems & Art": 0.9, "Adventuring Gear of Note": 0.85, "Toolkits & Supplies": 0.8,
     "Coins & Purses": 0.6,
     "Clothing & Wearables": 0.4, "Tools & Utensils": 0.5, "Household & Table": 0.35,
     "Writing & Games": 0.45, "Food & Provisions": 0.35, "Curios & Charms": 0.3, "Bags & Containers": 0.5,
     "Mundane Adventuring Items": 0.6,
-    "Minor Magic": magicOn ? 0.35 : 0.0
+    "Minor Magic": magicOn ? 0.35 : 0.0,
+    "Cursed Items": cursedOn ? 0.25 : 0.0
   };
   const flavorBoost = 1 - usefulness01;
   const usefulBoost = usefulness01;
@@ -892,6 +1000,15 @@ function categoryWeights(selectedCats,usefulness01,templateKey,magicOn){
     let w = base["Minor Magic"];
     if(templateKey==="wizard") w *= 1.35;
     weights["Minor Magic"] = (weights["Minor Magic"]||0) + w;
+  }
+
+  // If cursed on, add Cursed Items implicitly (not in checkboxes)
+  if(cursedOn){
+    let w = base["Cursed Items"];
+    if(templateKey==="lich") w *= 1.5;
+    if(templateKey==="demon") w *= 1.4;
+    if(templateKey==="undead") w *= 1.3;
+    weights["Cursed Items"] = (weights["Cursed Items"]||0) + w;
   }
 
   // normalize
@@ -923,17 +1040,19 @@ function weightedPick(rng, cats, weights){
 
 // ---------- Generation core (Count mode) ----------
 function generateCount(rng, selectedCats, opts){
-  const {count,minSp,maxSp,usefulness01,templateKey,magicOn} = opts;
-  const weights=categoryWeights(selectedCats,usefulness01,templateKey,magicOn);
+  const {count,minSp,maxSp,usefulness01,templateKey,magicOn,cursedOn,curseSeverity} = opts;
+  const weights=categoryWeights(selectedCats,usefulness01,templateKey,magicOn,cursedOn);
   const seen=new Set(), list=[];
   let guard=0, maxGuard=count*100;
 
-  // include Minor Magic implicitly in selection list when enabled
-  const pickableCats = magicOn ? [...selectedCats, "Minor Magic"] : [...selectedCats];
+  // include Minor Magic and Cursed Items implicitly in selection list when enabled
+  let pickableCats = [...selectedCats];
+  if(magicOn) pickableCats.push("Minor Magic");
+  if(cursedOn) pickableCats.push("Cursed Items");
 
   while(list.length<count && guard++<maxGuard){
     const cat=weightedPick(rng,pickableCats,weights);
-    const item=makeOne(rng,cat,false,templateKey,magicOn);
+    const item=makeOne(rng,cat,false,templateKey,magicOn,cursedOn,curseSeverity);
     if(item.value<minSp || item.value>maxSp) continue;
     if(seen.has(item.k)) continue;
     seen.add(item.k);
@@ -944,15 +1063,17 @@ function generateCount(rng, selectedCats, opts){
 
 // ---------- Generation to budget (Budget mode) ----------
 function generateToBudget(rng, selectedCats, opts){
-  const {targetSp, softCount, minSp, maxSp, usefulness01, templateKey, magicOn} = opts;
-  const weights=categoryWeights(selectedCats,usefulness01,templateKey,magicOn);
-  const pickableCats = magicOn ? [...selectedCats, "Minor Magic"] : [...selectedCats];
+  const {targetSp, softCount, minSp, maxSp, usefulness01, templateKey, magicOn, cursedOn, curseSeverity} = opts;
+  const weights=categoryWeights(selectedCats,usefulness01,templateKey,magicOn,cursedOn);
+  let pickableCats = [...selectedCats];
+  if(magicOn) pickableCats.push("Minor Magic");
+  if(cursedOn) pickableCats.push("Cursed Items");
   const list=[]; let total=0; let guard=0;
 
   // Greedy fill
   while(total<targetSp*0.9 && guard++<6000){
     const cat=weightedPick(rng,pickableCats,weights);
-    const it=makeOne(rng,cat,false,templateKey,magicOn);
+    const it=makeOne(rng,cat,false,templateKey,magicOn,cursedOn,curseSeverity);
     if(it.value>maxSp || it.value<minSp) continue;
     if(softCount && list.length>=softCount && total+it.value>targetSp*1.1) break;
     if(total+it.value>targetSp*1.15 && rng()<0.7) continue;
@@ -965,7 +1086,7 @@ function generateToBudget(rng, selectedCats, opts){
     const i=Math.floor(rng()*list.length);
     const old=list[i];
     const cat=weightedPick(rng,pickableCats,weights);
-    const cand=makeOne(rng,cat,false,templateKey,magicOn);
+    const cand=makeOne(rng,cat,false,templateKey,magicOn,cursedOn,curseSeverity);
     if(cand.value>maxSp || cand.value<minSp) continue;
     const newTotal=total-old.value+cand.value;
     if(Math.abs(newTotal-targetSp) < Math.abs(total-targetSp)){
@@ -978,15 +1099,25 @@ function generateToBudget(rng, selectedCats, opts){
 // ---------- Render & meta ----------
 function renderList(list, wantWeight, wantTags){
   const out=$("lg-out"); out.innerHTML="";
-  let totalSp=0, totalWt=0, valCount=0;
+  let totalSp=0, totalWt=0, valCount=0, cursedCount=0;
   for(const it of list){
     totalSp+=it.value; totalWt+=it.weight; if(it.isValuable) valCount++;
+    const isCursed = it.cat === "Cursed Items";
+    if(isCursed) cursedCount++;
     const col=document.createElement("div"); col.className="col";
     const div=document.createElement("div"); div.className="loot-tile";
+
+    // Add special styling for cursed items
+    if(isCursed){
+      div.style.borderColor = "#dc3545";
+      div.style.backgroundColor = "rgba(220, 53, 69, 0.1)";
+    }
+
     const gp=spToGp(it.value);
+    const cursedMarker = isCursed ? ' • <span class="text-danger"><i class="bi bi-exclamation-triangle-fill"></i> CURSED</span>' : '';
     div.innerHTML=`
       <div class="loot-title">${it.title}</div>
-      <div class="loot-sub">${it.cat}${it.isValuable?' • <span class="text-warning">valuable</span>':''}</div>
+      <div class="loot-sub">${it.cat}${it.isValuable?' • <span class="text-warning">valuable</span>':''}${cursedMarker}</div>
       <div class="loot-meta">${(gp%1?gp.toFixed(2):gp)} gp (${it.value} sp)${wantWeight?` • ${it.weight} lb`:``}${wantTags?` • ${it.tags.join(", ")}`:``}</div>
     `;
     col.appendChild(div); out.appendChild(col);
@@ -998,6 +1129,9 @@ function renderList(list, wantWeight, wantTags){
     ["Total weight", `${totalWt.toFixed(2)} lb`],
     ["Valuable", `${valCount} (${Math.round((valCount/(list.length||1))*100)}%)`]
   ];
+  if(cursedCount > 0){
+    pills.push(["Cursed", `${cursedCount} (${Math.round((cursedCount/(list.length||1))*100)}%)`]);
+  }
   for(const [k,v] of pills){ const s=document.createElement("span"); s.className="pill"; s.textContent=`${k}: ${v}`; meta.appendChild(s); }
 }
 
@@ -1113,7 +1247,7 @@ const QUICK_BUNDLES = {
     template: "none",
     monster: "none",
     magic: true,
-    categories: ["Minor Magic"]
+    categories: ["Adventuring Gear of Note"]
   },
   scrolls: {
     name: "Scroll Bundle (3)",
@@ -1127,7 +1261,7 @@ const QUICK_BUNDLES = {
     template: "none",
     monster: "none",
     magic: true,
-    categories: ["Minor Magic"]
+    categories: ["Toolkits & Supplies"]
   },
   boss: {
     name: "Boss Hoard",
@@ -1141,7 +1275,39 @@ const QUICK_BUNDLES = {
     template: "none",
     monster: "none",
     magic: true,
-    categories: ["Coins & Purses", "Gems & Art", "Trade Goods", "Minor Magic", "Adventuring Gear of Note"]
+    categories: ["Coins & Purses", "Gems & Art", "Trade Goods", "Adventuring Gear of Note"]
+  },
+  magicitems: {
+    name: "Magic Items",
+    mode: "count",
+    lootType: "hoard",
+    count: 8,
+    min: 30,
+    max: 200,
+    budget: 800,
+    usefulness: 90,
+    template: "none",
+    monster: "none",
+    magic: true,
+    cursed: false,
+    curseSeverity: 3,
+    categories: ["Adventuring Gear of Note", "Toolkits & Supplies", "Gems & Art", "Trade Goods", "Bags & Containers"]
+  },
+  curseditems: {
+    name: "Cursed Items",
+    mode: "count",
+    lootType: "hoard",
+    count: 6,
+    min: 40,
+    max: 250,
+    budget: 900,
+    usefulness: 80,
+    template: "none",
+    monster: "none",
+    magic: false,
+    cursed: true,
+    curseSeverity: 3,
+    categories: ["Adventuring Gear of Note", "Toolkits & Supplies", "Clothing & Wearables", "Gems & Art", "Bags & Containers"]
   }
 };
 
@@ -1170,6 +1336,11 @@ function applyQuickBundle(bundleKey) {
   $("lg-template").value = bundle.template;
   $("lg-monster").value = bundle.monster;
   $("lg-magic").checked = bundle.magic;
+  $("lg-cursed").checked = bundle.cursed || false;
+  $("lg-curse-severity").value = bundle.curseSeverity || 3;
+
+  // Show/hide curse severity based on cursed toggle
+  $("lg-curse-severity-wrap").style.display = bundle.cursed ? "block" : "none";
 
   // Set categories - uncheck all first, then check only bundle categories
   document.querySelectorAll("#lg-cats input[type='checkbox']").forEach(cb => {
@@ -1193,6 +1364,8 @@ function doGenerate(){
   let templateKey = $("lg-template").value || "none";
   const customTableKey = $("lg-custom-table").value || "";
   const magicOn = $("lg-magic").checked;
+  const cursedOn = $("lg-cursed").checked;
+  const curseSeverity = cursedOn ? (+$("lg-curse-severity").value || 3) : 3;
 
   // Monster type overrides template
   if(monsterType !== "none"){
@@ -1232,11 +1405,11 @@ function doGenerate(){
   let list=[];
   if(mode==="budget"){
     list=generateToBudget(rng,selectedCats,{
-      targetSp: adjustedBudget, softCount: adjustedCount, minSp, maxSp, usefulness01, templateKey, magicOn
+      targetSp: adjustedBudget, softCount: adjustedCount, minSp, maxSp, usefulness01, templateKey, magicOn, cursedOn, curseSeverity
     });
   }else{
     list=generateCount(rng,selectedCats,{
-      count: adjustedCount, minSp, maxSp, usefulness01, templateKey, magicOn
+      count: adjustedCount, minSp, maxSp, usefulness01, templateKey, magicOn, cursedOn, curseSeverity
     });
   }
   renderList(list,wantWeight,wantTags);
@@ -1259,6 +1432,8 @@ function savePreset(){
     monster: $("lg-monster").value,
     template: $("lg-template").value,
     magic: $("lg-magic").checked,
+    cursed: $("lg-cursed").checked,
+    curseSeverity: $("lg-curse-severity").value,
     weight: $("lg-weight").checked,
     tags: $("lg-tags").checked,
     categories: currentSelectedCats()
@@ -1295,8 +1470,13 @@ function loadPreset(){
   $("lg-monster").value = preset.monster || "none";
   $("lg-template").value = preset.template || "none";
   $("lg-magic").checked = preset.magic || false;
+  $("lg-cursed").checked = preset.cursed || false;
+  $("lg-curse-severity").value = preset.curseSeverity || 3;
   $("lg-weight").checked = preset.weight !== false;
   $("lg-tags").checked = preset.tags !== false;
+
+  // Show/hide curse severity based on cursed toggle
+  $("lg-curse-severity-wrap").style.display = preset.cursed ? "block" : "none";
 
   // Restore categories
   document.querySelectorAll("#lg-cats input").forEach(cb => {
@@ -1360,6 +1540,12 @@ document.addEventListener("DOMContentLoaded",()=>{
 
   $("lg-preset").addEventListener("change",(e)=>{
     const v=e.target.value; (PRESETS[v]||PRESETS.custom)();
+  });
+
+  // Cursed items toggle - show/hide severity slider
+  $("lg-cursed").addEventListener("change",(e)=>{
+    const wrap = $("lg-curse-severity-wrap");
+    wrap.style.display = e.target.checked ? "block" : "none";
   });
 
   // Quick Bundle event listeners

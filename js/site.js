@@ -1,8 +1,9 @@
 const DM_TOOLBOX_BUILD = {
     name: "The DM's Toolbox",
-    version: "1.10.8",
+    version: "1.10.9",
     recentChanges: [
-      "Tavern Generator: Expanded cultural tavern menus with 4-5x more food and drink options per type"
+      "Loot Generator: Added 50 cursed items with risk/reward mechanics, curse severity slider, and 2 new quick bundles (Magic Items, Cursed Items)",
+      "Loot Generator: Fixed potion and scroll bundle category validation errors"
     ],
     buildTime: new Date().toISOString(),
     author: "Maybeme"

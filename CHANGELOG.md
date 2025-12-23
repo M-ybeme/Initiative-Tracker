@@ -3,6 +3,57 @@ All notable changes to The DM's Toolbox are documented here.
 The format is based on Keep a Changelog,
 and this project adheres to Semantic Versioning.
 
+1.10.9 - 2025-12-22
+**Loot Generator: Cursed Items System**
+
+- **Added**
+  - **Cursed Items Category** - 50 new cursed items with risk/reward mechanics
+    - Items feature appealing benefits with hidden drawbacks (e.g., boots of haste: +10 ft movement but 1d4 slip chance)
+    - 5 severity levels from minor flavor curses to serious mechanical penalties
+    - All items appear as masterwork quality to tempt players
+    - Cursed items visually distinguished with red borders, warning icons, and "CURSED" labels
+
+  - **Curse Severity Slider** - Dynamic difficulty control (1-5 scale)
+    - Level 1-2: Flavor/minor annoyances (e.g., charming brooch that makes you compliment strangers)
+    - Level 3: Balanced trade-offs (e.g., keen dagger: +1 hit/damage but killing blow damages self)
+    - Level 4-5: Strong benefits with serious consequences (e.g., bloodthirsty blade requires daily use)
+    - Slider only visible when cursed items toggle is enabled
+
+  - **Cursed Items Toggle** - Enable/disable cursed item generation
+    - Auto-included in generation when enabled (like Minor Magic)
+    - Integrated with monster templates (lich, demon, undead get higher curse rates)
+    - Saved/loaded with custom presets
+
+  - **Quick Bundle: Cursed Items** - Pre-configured cursed loot generation
+    - Generates 6 cursed items with balanced severity
+    - Broad category base for variety
+    - Red button with warning icon for visual distinction
+
+  - **Quick Bundle: Magic Items** - Pre-configured magical loot generation
+    - Generates 8 minor magic items
+    - High usefulness bias for practical items
+    - Broad category mix across gear, tools, gems, and containers
+
+- **Fixed**
+  - **Potion Bundle** - No longer fails category validation
+    - Changed from invalid "Minor Magic" category to "Adventuring Gear of Note"
+    - Magic toggle still enables minor magic item generation
+
+  - **Scroll Bundle** - No longer fails category validation
+    - Changed from invalid "Minor Magic" category to "Toolkits & Supplies"
+    - Magic toggle still enables minor magic item generation
+
+- **Enhanced**
+  - **Results Display** - Added cursed item counter to metadata pills
+  - **Category System** - Updated hints to mention cursed items auto-inclusion
+  - **Preset System** - Cursed toggle and severity now saved/loaded with presets
+  - **Template Integration** - Cursed items weighted higher for lich (1.5x), demon (1.4x), undead (1.3x)
+
+- **Technical**
+  - Cursed items use severity-based filtering in generation logic
+  - All 50 items balanced across severity spectrum with unique mechanics
+  - Masterwork appearance descriptors replace ominous descriptors for better deception
+
 1.10.8 - 2025-12-18
 **Tavern Generator: Expanded Cultural Menus**
 
