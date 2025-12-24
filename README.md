@@ -141,14 +141,20 @@ The DM's Toolbox respects your table, your time, and your creativity.
 - All fog state saves with session
 
 **Measurement Tools:**
-- **Quick measure** - Click and drag for instant distance measurement
-- **Persistent measurements** - "Persist Measure" button creates permanent measurements
+- **Quick measure** - Alt+drag (or "Measure" toggle) for instant distance measurement
   - Three shapes: Line, Cone (90°), Circle (radius)
-  - Custom colors via color picker
-  - Live preview while dragging
-  - **Interactive editing**: Move entire measurement, drag endpoints to resize, right-click to rename/delete
-  - "Clear Measures" button removes all at once
-  - All measurements save with session
+  - Live distance display with grid cell count
+  - Perfect for checking spell ranges and movement
+- **Persistent measurements** - "Persistent" toggle creates permanent measurements that stay on the map
+  - **Flicker-free rendering:** Shapes display without text by default for smooth pan/zoom performance
+  - **Interactive selection:** Click any measurement to see distance details, text label, and resize handles
+  - **Drag to move:** Reposition entire measurement by dragging when selected
+  - **Resize by handles:** Drag start/end points to adjust measurement size
+  - **Color coding:** Custom color picker enables visual identification (red for Fireball, blue for Spirit Guardians, etc.)
+  - **Auto token adjustment:** Circle measurements automatically add +0.5 cells from edge (like aura) to account for token size
+  - **Keyboard controls:** Delete key removes selected measurements, Escape deselects
+  - **Session persistence:** All measurements save with battle map session to IndexedDB/localStorage
+  - **Shape-only rendering:** Combines fog shape speed (no text flicker) with measure tool accuracy
 
 **Performance Optimizations:**
 - **Layered canvas architecture** - 4 separate layers (map, fog, tokens, UI) eliminate flickering
@@ -166,7 +172,7 @@ The DM's Toolbox respects your table, your time, and your creativity.
 - Unsaved changes indicator with browser navigation guard
 - Export/import sessions as JSON for backup
 
-**Use case:** Upload a dungeon map, calibrate the grid in two clicks, add tokens, set "Fireball AoE" persistent measurement (20 ft radius circle), reveal rooms as players explore. Right-click enemies to add to Initiative Tracker when combat starts. Works on desktop or tablet at the table.
+**Use case:** Upload a dungeon map, calibrate the grid in two clicks, add tokens. Enable "Persistent" mode and create a red circle measurement for "Fireball AoE" (drag to 4 cells = 20 ft, auto-adjusts to 4.5 cells for token size). Add blue circle for "Spirit Guardians" (3 cells = 15 ft). Click measurements to see exact distances, drag to reposition, resize by handles. Measurements stay visible during pan/zoom without flicker. Reveal rooms as players explore using fog shapes. Right-click enemies to add to Initiative Tracker when combat starts. Works on desktop or tablet at the table.
 
 ---
 
@@ -1400,8 +1406,14 @@ DM: → Right-click goblin token → "Add to Initiative"
 
 **Battle Map Operations:**
 - **Token moves** → Drag token (snap to grid if enabled)
-- **Measure spell range** → Click "Quick Measure" → Drag line → 60 ft → Confirm in range
-- **Persistent AoE** → Click "Persist Measure" → Drag circle → 20 ft radius → Color: Red → Label: "Fireball"
+- **Measure spell range** → Hold Alt → Drag line → 60 ft displayed → Confirm in range
+- **Quick check distance** → Alt+drag to any point → Live distance feedback → Release
+- **Create persistent AoE** → Enable "Persistent" toggle → Select Circle shape → Pick red color → Drag from center 4 cells → Circle auto-adjusts to 4.5 cells (20 ft + token size) → Release to create
+- **Select measurement** → Click red circle → See "25 ft radius" label and handles
+- **Move AoE** → Drag selected measurement to new position
+- **Resize AoE** → Drag start or end handle to adjust radius
+- **Delete measurement** → Select measurement → Press Delete key
+- **Multiple spell zones** → Red circle (Fireball), blue circle (Spirit Guardians), yellow cone (Burning Hands) → Color-coded for easy identification
 - **Reveal hidden room** → Switch to Reveal mode → Paint to reveal fog
 - **Update token HP** → Right-click token → "HP" → Damage: 10 → HP bar updates
 - **Mark condition** → Right-click token → "Status" → Check "Poisoned" → Green skull appears above token
@@ -1599,7 +1611,7 @@ If you do donate, know that it goes toward:
 - **Races supported:** 33+ (PHB, Volo's, Xanathar's, Eberron, Ravnica, Theros)
 - **Classes supported:** 13 (all official classes including Artificer)
 - **Development time:** 2+ years (since Feb 2024 pre-alpha)
-- **Version:** v1.10.9 (as of December 22, 2025)
+- **Version:** v1.13.0 (as of December 24, 2025)
 - **Coffee consumed:** Immeasurable
 - **Hours saved for DMs:** Hopefully thousands
 

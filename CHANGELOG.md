@@ -14,6 +14,31 @@ The DM's Toolbox has evolved through focused feature releases:
 
 ---
 
+## [1.11.2] - 2025-12-24
+**Battle Map: Persistent Measurements System**
+
+### Added
+- **Persistent Measurements** - Create permanent spell areas and ranges that stay on the map across sessions
+- **Flicker-Free Rendering** - Measurements display as colored shapes without text by default, preventing expensive text rendering during pan/zoom
+- **Interactive Selection** - Click any measurement to select and see distance details, text, and resize handles
+- **Drag & Resize** - Selected measurements can be moved by dragging or resized by dragging start/end handles
+- **Color Coding** - Color picker for measurements enables visual identification of different spell effects and zones
+- **Persistent Toggle** - New "Persistent" button to enable/disable persistent measurement mode
+- **Auto Token Adjustment** - Circle measurements automatically add +0.5 cells (like aura) to account for token size
+
+### Enhanced
+- **Save/Load Support** - Persistent measurements saved to IndexedDB and localStorage with battle map state
+- **Shape Types** - All three measurement types (line, cone, circle) supported as persistent measurements
+- **Performance** - Shape-only rendering (like fog shapes) provides smooth 60fps during pan/zoom/rotate operations
+- **Delete Functionality** - Press Delete key to remove selected measurements
+
+### Technical
+- **Rendering Architecture** - Combines fog shape rendering speed with measure tool's text-on-demand approach
+- **Hit Detection** - Smart click detection for lines (point-to-line distance), cones (angle/distance), and circles (edge/radius)
+- **State Management** - Measurements tracked separately from fog shapes with independent selection state
+
+---
+
 ## [1.11.1] - 2025-12-24
 **Navigation & Battle Map Improvements**
 

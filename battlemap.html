@@ -515,6 +515,10 @@
             <option value="circle">Circle</option>
           </select>
         </label>
+        <button id="persistentMeasureToggle" aria-pressed="false" title="Toggle persistent measure mode">Persistent</button>
+        <label class="ms-2" title="Measurement color">
+          <input type="color" id="measureColor" value="#8bd3ff" style="width:30px; height:24px; vertical-align:middle;">
+        </label>
       </div>
 
       <div class="canvas-wrap">
@@ -685,6 +689,7 @@
       measuring:false, measureStart:null,
       brushMode:false,        // NEW: mobile fog brush
       measureToggle:false,     // NEW: mobile measure
+      persistentMeasureMode:false, // NEW: persistent measure mode
       fogShapeDragId: null    // NEW: dragging fog shape
     }
   };
@@ -696,6 +701,9 @@
 
   /** @typedef {{ id:string, type:'rect'|'circle', x:number, y:number, w?:number, h?:number, r?:number, mode:'reveal'|'cover', color:string, selected?:boolean }} FogShape */
   const fogShapes = /** @type{FogShape[]} */([]);
+
+  /** @typedef {{ id:string, type:'line'|'cone'|'circle', x1:number, y1:number, x2:number, y2:number, color:string, selected?:boolean }} PersistentMeasurement */
+  const persistentMeasurements = /** @type{PersistentMeasurement[]} */([]);
 
   // --- Dirty flag tracking for unsaved changes
   let isDirty = false;
@@ -810,6 +818,16 @@
         mode: s.mode,
         color: s.color,
         selected: !!s.selected
+      })),
+      persistentMeasurements: persistentMeasurements.map(m => ({
+        id: m.id,
+        type: m.type,
+        x1: m.x1,
+        y1: m.y1,
+        x2: m.x2,
+        y2: m.y2,
+        color: m.color,
+        selected: !!m.selected
       }))
     };
 
@@ -920,6 +938,21 @@
           mode: s.mode,
           color: s.color || '#000000',
           selected: !!s.selected
+        })));
+      }
+
+      // Restore persistent measurements if present
+      if (data.persistentMeasurements) {
+        persistentMeasurements.length = 0;
+        persistentMeasurements.push(...data.persistentMeasurements.map(m => ({
+          id: m.id,
+          type: m.type,
+          x1: m.x1,
+          y1: m.y1,
+          x2: m.x2,
+          y2: m.y2,
+          color: m.color || '#8bd3ff',
+          selected: !!m.selected
         })));
       }
 
@@ -1163,6 +1196,98 @@
     tokenCtx.setTransform(1,0,0,1,0,0);
   }
 
+  // Render persistent measurements (shapes only, no text unless selected)
+  function renderPersistentMeasurements(ctx) {
+    for (const m of persistentMeasurements) {
+      const dx = m.x2 - m.x1;
+      const dy = m.y2 - m.y1;
+      const distPx = Math.hypot(dx, dy);
+
+      ctx.save();
+      ctx.lineWidth = 2 / state.view.scale;
+      ctx.strokeStyle = m.color;
+      ctx.fillStyle = m.color.replace(')', ', 0.2)').replace('rgb', 'rgba').replace('#', 'rgba(');
+
+      // Simple color to rgba conversion for hex colors
+      if (m.color.startsWith('#')) {
+        const r = parseInt(m.color.slice(1, 3), 16);
+        const g = parseInt(m.color.slice(3, 5), 16);
+        const b = parseInt(m.color.slice(5, 7), 16);
+        ctx.fillStyle = `rgba(${r}, ${g}, ${b}, 0.2)`;
+      }
+
+      if (m.type === 'line') {
+        ctx.beginPath();
+        ctx.moveTo(m.x1, m.y1);
+        ctx.lineTo(m.x2, m.y2);
+        ctx.stroke();
+      } else if (m.type === 'cone') {
+        const angle = Math.atan2(dy, dx);
+        const coneAngle = Math.PI / 2;
+
+        ctx.beginPath();
+        ctx.moveTo(m.x1, m.y1);
+        ctx.arc(m.x1, m.y1, distPx, angle - coneAngle / 2, angle + coneAngle / 2);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+      } else if (m.type === 'circle') {
+        // Add 0.5 cells to account for token size (same as aura)
+        const adjustedRadius = distPx + (0.5 * state.grid.size);
+        ctx.beginPath();
+        ctx.arc(m.x1, m.y1, adjustedRadius, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+
+        // Draw radius line
+        ctx.beginPath();
+        ctx.moveTo(m.x1, m.y1);
+        ctx.lineTo(m.x2, m.y2);
+        ctx.stroke();
+      }
+
+      // If selected, draw text and handles
+      if (m.selected) {
+        const cells = distPx / state.grid.size;
+        const units = cells * state.grid.unitsPerCell;
+
+        ctx.font = `bold ${12/state.view.scale}px sans-serif`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+
+        let labelText = '';
+        if (m.type === 'cone') {
+          labelText = `${Math.round(units)} ft cone`;
+        } else if (m.type === 'circle') {
+          // Display includes the +0.5 adjustment
+          const adjustedCells = cells + 0.5;
+          const adjustedUnits = adjustedCells * state.grid.unitsPerCell;
+          labelText = `${Math.round(adjustedUnits)} ft radius`;
+        } else {
+          labelText = `${Math.round(units)} ft`;
+        }
+
+        const midX = (m.x1 + m.x2) / 2;
+        const midY = (m.y1 + m.y2) / 2;
+
+        const pad = 4/state.view.scale;
+        const tw = ctx.measureText(labelText).width;
+        ctx.fillStyle = 'rgba(15,22,32,0.9)';
+        ctx.fillRect(midX - tw/2 - pad, midY - 8/state.view.scale, tw + pad*2, 16/state.view.scale);
+        ctx.fillStyle = m.color;
+        ctx.fillText(labelText, midX, midY);
+
+        // Draw handles
+        const handleSize = 8 / state.view.scale;
+        ctx.fillStyle = m.color;
+        ctx.fillRect(m.x1 - handleSize/2, m.y1 - handleSize/2, handleSize, handleSize);
+        ctx.fillRect(m.x2 - handleSize/2, m.y2 - handleSize/2, handleSize, handleSize);
+      }
+
+      ctx.restore();
+    }
+  }
+
   // Render measurement overlay on the UI layer
   function renderUiLayer() {
     const { width:W, height:H } = uiLayer;
@@ -1170,6 +1295,9 @@
     uiCtx.clearRect(0,0,W,H);
 
     uiCtx.setTransform(state.view.scale, 0, 0, state.view.scale, state.view.x, state.view.y);
+
+    // Render persistent measurements first (below active measurement)
+    renderPersistentMeasurements(uiCtx);
 
     // Measuring overlay
     if (state.ui.measuring && state.ui.measureStart) {
@@ -1207,8 +1335,10 @@
         uiCtx.fill();
         uiCtx.stroke();
       } else if (measureShape === 'circle') {
+        // Add 0.5 cells to account for token size (same as aura)
+        const adjustedRadius = distPx + (0.5 * state.grid.size);
         uiCtx.beginPath();
-        uiCtx.arc(mp.x, mp.y, distPx, 0, Math.PI * 2);
+        uiCtx.arc(mp.x, mp.y, adjustedRadius, 0, Math.PI * 2);
         uiCtx.fill();
         uiCtx.stroke();
 
@@ -1228,7 +1358,10 @@
       if (measureShape === 'cone') {
         measureLabel.textContent = `${Math.round(units)} ft cone (${cells.toFixed(2)} cells)`;
       } else if (measureShape === 'circle') {
-        measureLabel.textContent = `${Math.round(units)} ft radius (${cells.toFixed(2)} cells)`;
+        // Display includes the +0.5 adjustment
+        const adjustedCells = cells + 0.5;
+        const adjustedUnits = adjustedCells * state.grid.unitsPerCell;
+        measureLabel.textContent = `${Math.round(adjustedUnits)} ft radius (${adjustedCells.toFixed(2)} cells)`;
       } else {
         measureLabel.textContent = `${Math.round(units)} ft (${cells.toFixed(2)} cells)`;
       }
@@ -1376,6 +1509,72 @@
     return null;
   }
 
+  /**
+   * Check if world coordinates hit a persistent measurement
+   */
+  function hitPersistentMeasurement(wx, wy){
+    const threshold = 10 / state.view.scale; // Click threshold in world space
+
+    for(let i = persistentMeasurements.length - 1; i >= 0; i--){
+      const m = persistentMeasurements[i];
+      const dx = m.x2 - m.x1;
+      const dy = m.y2 - m.y1;
+      const distPx = Math.hypot(dx, dy);
+
+      if(m.type === 'line'){
+        // Point-to-line distance
+        const lineLengthSq = dx*dx + dy*dy;
+        if(lineLengthSq === 0) continue;
+        const t = Math.max(0, Math.min(1, ((wx - m.x1) * dx + (wy - m.y1) * dy) / lineLengthSq));
+        const projX = m.x1 + t * dx;
+        const projY = m.y1 + t * dy;
+        const dist = Math.hypot(wx - projX, wy - projY);
+        if(dist <= threshold) return m;
+      } else if(m.type === 'cone'){
+        // Check if point is inside the cone shape
+        const angle = Math.atan2(dy, dx);
+        const coneAngle = Math.PI / 2;
+        const pointAngle = Math.atan2(wy - m.y1, wx - m.x1);
+        const angleDiff = Math.abs(((pointAngle - angle + Math.PI) % (2 * Math.PI)) - Math.PI);
+        const pointDist = Math.hypot(wx - m.x1, wy - m.y1);
+        if(pointDist <= distPx && angleDiff <= coneAngle / 2) return m;
+      } else if(m.type === 'circle'){
+        // Check if point is near the circle edge or radius line (with +0.5 cell adjustment)
+        const adjustedRadius = distPx + (0.5 * state.grid.size);
+        const circleDist = Math.hypot(wx - m.x1, wy - m.y1);
+        const edgeDist = Math.abs(circleDist - adjustedRadius);
+        if(edgeDist <= threshold) return m;
+
+        // Also check radius line
+        const lineLengthSq = dx*dx + dy*dy;
+        if(lineLengthSq > 0){
+          const t = Math.max(0, Math.min(1, ((wx - m.x1) * dx + (wy - m.y1) * dy) / lineLengthSq));
+          const projX = m.x1 + t * dx;
+          const projY = m.y1 + t * dy;
+          const dist = Math.hypot(wx - projX, wy - projY);
+          if(dist <= threshold) return m;
+        }
+      }
+    }
+    return null;
+  }
+
+  /**
+   * Check if world coordinates hit a handle of a persistent measurement
+   */
+  function hitPersistentMeasurementHandle(wx, wy){
+    const handleSize = 10 / state.view.scale;
+
+    for(let i = persistentMeasurements.length - 1; i >= 0; i--){
+      const m = persistentMeasurements[i];
+      if(!m.selected) continue; // Only check selected measurements
+
+      if(Math.hypot(wx - m.x1, wy - m.y1) <= handleSize) return {measurement: m, handle: 'start'};
+      if(Math.hypot(wx - m.x2, wy - m.y2) <= handleSize) return {measurement: m, handle: 'end'};
+    }
+    return null;
+  }
+
   let isPointerDown = false, pointerId = null, last = { x:0, y:0 };
   let mouseScreen = { x:0, y:0 };
 
@@ -1486,15 +1685,45 @@
       return;
     }
 
-    // Check for fog shape handle hit first (if fog enabled and not in pan mode)
+    // Check for persistent measurement handle hit first, then fog shape handles
     const panMode = state.ui.spaceDown || e.button === 1;
-    const handleHit = fogState.enabled && !panMode ? hitFogShapeHandle(wpt.x, wpt.y) : null;
-    const fogShape = !handleHit && fogState.enabled && !panMode ? hitFogShape(wpt.x, wpt.y) : null;
+    const measurementHandleHit = !panMode ? hitPersistentMeasurementHandle(wpt.x, wpt.y) : null;
+    const measurement = !measurementHandleHit && !panMode ? hitPersistentMeasurement(wpt.x, wpt.y) : null;
+    const handleHit = !measurementHandleHit && fogState.enabled && !panMode ? hitFogShapeHandle(wpt.x, wpt.y) : null;
+    const fogShape = !measurementHandleHit && !handleHit && fogState.enabled && !panMode ? hitFogShape(wpt.x, wpt.y) : null;
     const token = hitToken(wpt.x, wpt.y);
 
-    if(!panMode && handleHit){
+    if(!panMode && measurementHandleHit){
+      // Persistent measurement handle resize
+      const {measurement, handle} = measurementHandleHit;
+      persistentMeasurements.forEach(m=> m.selected = false);
+      fogShapes.forEach(s=> s.selected = false);
+      state.tokens.forEach(t=> t.selected = false);
+      measurement.selected = true;
+      state.ui.dragMode = 'measurementResize';
+      state.ui.dragId = measurement.id;
+      state.ui.resizeHandle = handle;
+      hideMenu();
+      updateTokenList();
+      dirty.ui = true;
+      requestRender();
+    } else if(!panMode && measurement){
+      // Persistent measurement selection
+      persistentMeasurements.forEach(m=> m.selected = false);
+      fogShapes.forEach(s=> s.selected = false);
+      state.tokens.forEach(t=> t.selected = false);
+      measurement.selected = true;
+      state.ui.dragMode = 'measurement';
+      state.ui.dragId = measurement.id;
+      state.ui.dragOffset = { x: wpt.x - measurement.x1, y: wpt.y - measurement.y1 };
+      hideMenu();
+      updateTokenList();
+      dirty.ui = true;
+      requestRender();
+    } else if(!panMode && handleHit){
       // Resize handle interaction
       const {shape, handle} = handleHit;
+      persistentMeasurements.forEach(m=> m.selected = false);
       fogShapes.forEach(s=> s.selected = false);
       state.tokens.forEach(t=> t.selected = false);
       shape.selected = true;
@@ -1507,6 +1736,7 @@
       updateTokenList();
     } else if(!panMode && fogShape){
       // Fog shape interaction takes priority when fog is enabled
+      persistentMeasurements.forEach(m=> m.selected = false);
       fogShapes.forEach(s=> s.selected = false);
       state.tokens.forEach(t=> t.selected = false);
       fogShape.selected = true;
@@ -1517,6 +1747,7 @@
       hideMenu();
       updateTokenList();
     } else if(!panMode && token){
+      persistentMeasurements.forEach(m=> m.selected = false);
       state.tokens.forEach(t=> t.selected = false);
       fogShapes.forEach(s=> s.selected = false);
       token.selected = true;
@@ -1526,6 +1757,7 @@
       hideMenu();
       updateTokenList();
     } else {
+      persistentMeasurements.forEach(m=> m.selected = false);
       state.tokens.forEach(t=> t.selected = false);
       fogShapes.forEach(s=> s.selected = false);
       state.ui.dragMode = 'pan';
@@ -1581,6 +1813,38 @@
     }
 
     if(state.ui.measuring) return; // render handles the line
+
+    if(state.ui.dragMode === 'measurementResize' && state.ui.dragId){
+      const measurement = persistentMeasurements.find(m=> m.id === state.ui.dragId);
+      if(measurement){
+        const handle = state.ui.resizeHandle;
+        if(handle === 'start'){
+          measurement.x1 = wpt.x;
+          measurement.y1 = wpt.y;
+        } else if(handle === 'end'){
+          measurement.x2 = wpt.x;
+          measurement.y2 = wpt.y;
+        }
+        dirty.ui = true;
+        requestRender();
+      }
+      return;
+    }
+
+    if(state.ui.dragMode === 'measurement' && state.ui.dragId){
+      const measurement = persistentMeasurements.find(m=> m.id === state.ui.dragId);
+      if(measurement){
+        const dx = measurement.x2 - measurement.x1;
+        const dy = measurement.y2 - measurement.y1;
+        measurement.x1 = wpt.x - state.ui.dragOffset.x;
+        measurement.y1 = wpt.y - state.ui.dragOffset.y;
+        measurement.x2 = measurement.x1 + dx;
+        measurement.y2 = measurement.y1 + dy;
+        dirty.ui = true;
+        requestRender();
+      }
+      return;
+    }
 
     if(state.ui.dragMode === 'fogShapeResize' && state.ui.fogShapeDragId){
       const shape = fogShapes.find(s=> s.id === state.ui.fogShapeDragId);
@@ -1685,6 +1949,30 @@
     }
 
     if(state.ui.measuring){
+      // If persistent measure mode is on, create a persistent measurement
+      if(state.ui.persistentMeasureMode && state.ui.measureStart){
+        const rect = uiLayer.getBoundingClientRect();
+        const mx = (e.clientX - rect.left) * DPR;
+        const my = (e.clientY - rect.top) * DPR;
+        const mWorld = screenToWorld(mx, my);
+        const measureShape = document.getElementById('measureShape').value;
+        const measureColor = document.getElementById('measureColor').value;
+
+        persistentMeasurements.push({
+          id: `pm-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+          type: measureShape,
+          x1: state.ui.measureStart.x,
+          y1: state.ui.measureStart.y,
+          x2: mWorld.x,
+          y2: mWorld.y,
+          color: measureColor,
+          selected: false
+        });
+        setDirty();
+        dirty.ui = true;
+        requestRender();
+      }
+
       // If toggle is on, keep measuring until toggled off; otherwise end now.
       if(!state.ui.measureToggle){
         state.ui.measuring = false;
@@ -1701,6 +1989,10 @@
         t.y = Math.round(t.y / s) * s;
       }
       setDirty(); // Token was moved
+    }
+    if(state.ui.dragMode === 'measurement' || state.ui.dragMode === 'measurementResize'){
+      // Persistent measurement dragging/resizing completed, save changes
+      setDirty(); // Measurement was moved/resized
     }
     if(state.ui.dragMode === 'fogShape' || state.ui.dragMode === 'fogShapeResize'){
       // Fog shape dragging/resizing completed, save changes
@@ -1923,10 +2215,14 @@
     if(e.key === 'Delete' || e.key === 'Backspace') {
       deleteSelected();
       deleteSelectedFogShapes();
+      deleteSelectedPersistentMeasurements();
     }
     if(e.key === 'Escape'){
       state.tokens.forEach(t=> t.selected = false);
       fogShapes.forEach(s=> s.selected = false);
+      persistentMeasurements.forEach(m=> m.selected = false);
+      dirty.ui = true;
+      requestRender();
       updateTokenList();
       hideMenu();
     }
@@ -2079,6 +2375,12 @@
     state.ui.measuring = state.ui.measureToggle;
     if(!state.ui.measureToggle){ state.ui.measureStart = null; }
   });
+  const persistentMeasureToggleBtn = document.getElementById('persistentMeasureToggle');
+  persistentMeasureToggleBtn.addEventListener('click', (e)=>{
+    state.ui.persistentMeasureMode = !state.ui.persistentMeasureMode;
+    e.currentTarget.classList.toggle('active', state.ui.persistentMeasureMode);
+    e.currentTarget.setAttribute('aria-pressed', String(state.ui.persistentMeasureMode));
+  });
 
   // Presets
   document.getElementById('addPreset').addEventListener('click', addTokenFromPreset);
@@ -2144,6 +2446,21 @@
         })));
       }
 
+      // Restore persistent measurements if present
+      if (data.persistentMeasurements) {
+        persistentMeasurements.length = 0;
+        persistentMeasurements.push(...data.persistentMeasurements.map(m => ({
+          id: m.id,
+          type: m.type,
+          x1: m.x1,
+          y1: m.y1,
+          x2: m.x2,
+          y2: m.y2,
+          color: m.color || '#8bd3ff',
+          selected: !!m.selected
+        })));
+      }
+
       if (data.map?.imgSrc) {
         const img = await loadImage(data.map.imgSrc);
         state.map = { imgSrc: data.map.imgSrc, img, w: img.naturalWidth, h: img.naturalHeight };
@@ -2202,7 +2519,7 @@
         spaceDown:false, tool:'none',
         calib:{p1:null,p2:null},
         measuring:false, measureStart:null,
-        brushMode:false, measureToggle:false,
+        brushMode:false, measureToggle:false, persistentMeasureMode:false,
         fogShapeDragId: null
       }
     });
@@ -2215,6 +2532,7 @@
     fogState.shapeColor = '#000000';
     fogState.shapeSize = 3;
     fogShapes.length = 0;
+    persistentMeasurements.length = 0;
     setFogUI(false);
     fctx.clearRect(0,0,fog.width,fog.height);
 
@@ -2424,6 +2742,18 @@
     }
   }
 
+  function deleteSelectedPersistentMeasurements(){
+    const before = persistentMeasurements.length;
+    const newMeasurements = persistentMeasurements.filter(m=> !m.selected);
+    if(newMeasurements.length !== before){
+      persistentMeasurements.length = 0;
+      persistentMeasurements.push(...newMeasurements);
+      dirty.ui = true;
+      requestRender();
+      setDirty();
+    }
+  }
+
   function addFogShape(){
     if(!state.map.img){ alert('Please load a map first.'); return; }
     ensureFogSize();
@@ -2536,6 +2866,8 @@
   document.getElementById('fogBrushMode').setAttribute('aria-pressed', String(state.ui.brushMode));
   document.getElementById('measureToggle').classList.toggle('active', state.ui.measureToggle);
   document.getElementById('measureToggle').setAttribute('aria-pressed', String(state.ui.measureToggle));
+  document.getElementById('persistentMeasureToggle').classList.toggle('active', state.ui.persistentMeasureMode);
+  document.getElementById('persistentMeasureToggle').setAttribute('aria-pressed', String(state.ui.persistentMeasureMode));
 
   load().then(() => {
     // Check for pending character import from characters page (after load completes)
