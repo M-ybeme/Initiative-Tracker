@@ -14,6 +14,26 @@ The DM's Toolbox has evolved through focused feature releases:
 
 ---
 
+## [1.11.1] - 2025-12-24
+**Navigation & Battle Map Improvements**
+
+### Added
+- **Navigation Dropdowns** - All 10 pages now use Bootstrap dropdown menus organizing tools into Combat, Generators, and Campaign categories
+- **Fog Compositing** - Reveal fog shapes now cut through cover fog using `destination-out` compositing for dynamic fog of war
+- **Circle Resize** - Circle fog shapes can be resized by dragging the blue edge handle (perfect for spell areas and vision ranges)
+- **Help Documentation** - Updated battlemap help with fog compositing, circle resize, and practical fog of war tips
+
+### Fixed
+- **Flicker Elimination** - Removed status text element that caused layout shifts and canvas flickering during token movement
+- **Mobile Navigation** - Dropdown menus automatically collapse on mobile for better responsive design
+- **Persistence Measurement Removed** - Recent measure system caused flicker. Attempted fixes using SVG, and fabric.js implimentation. Feature removed until perminent solution can be found
+
+### Enhanced
+- **Fog Workflow** - Three-pass rendering (cover → reveal → outlines) ensures reveal shapes always cut through cover
+- **Use Cases** - Fog shapes now excellent for spell areas (Fireball, Darkness), line-of-sight windows, and persistent measurements
+
+---
+
 ## [1.11.0] - 2025-12-22
 **Journal: Rich Text Editor with Persistent Storage**
 
