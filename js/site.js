@@ -1,8 +1,8 @@
 const DM_TOOLBOX_BUILD = {
     name: "The DM's Toolbox",
-    version: "1.11.2",
+    version: "1.11.3",
     recentChanges: [
-      "Battle Map: NEW Persistent Measurements - create permanent spell areas and ranges that stay on the map"
+      "Journal: Added search term highlighting in journal entries with hotkey save functionality"
     ],
     buildTime: new Date().toISOString(),
     author: "Maybeme"

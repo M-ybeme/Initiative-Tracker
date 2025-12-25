@@ -14,6 +14,20 @@ The DM's Toolbox has evolved through focused feature releases:
 
 ---
 
+## [1.11.3] - 2025-12-25
+**Journal: Search Highlighting & Content Preview**
+
+### Added
+- **Search Text Highlighting** - Search terms are highlighted in yellow in entry names when they match
+- **Content Preview Snippets** - When search terms appear in entry body, displays contextual excerpt (50 characters before and after match) with highlighted search term
+- **Visual Search Feedback** - Yellow highlight badges make it easy to spot where search terms appear in titles and content
+
+### Enhanced
+- **Search Results Display** - More informative search results show both where the match occurs and surrounding context
+- **User Experience** - Search functionality feels more complete with clear visual indicators of matches
+
+---
+
 ## [1.11.2] - 2025-12-24
 **Battle Map: Persistent Measurements System**
 
