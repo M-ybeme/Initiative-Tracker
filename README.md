@@ -199,6 +199,29 @@ The DM's Toolbox respects your table, your time, and your creativity.
   - Custom file names supported
   - Sort by newest first
   - Click to load any entry
+  - Search entries by name or content with highlighting
+
+- **Export System**
+  - **Single Entry Export** - "Export" button with 4 format options:
+    - **Word (.docx):** Formatted document with headings and text structure
+    - **PDF:** Professional PDF with title and formatted content
+    - **Markdown (.md):** Converts HTML to Markdown syntax (headers, bold, italic, links, lists, images)
+    - **TXT:** Plain text with clean formatting and title underlines
+  - **Bulk Export** - Blue download icon in sidebar opens bulk selection modal:
+    - Search and filter entries (same search as main sidebar)
+    - Select multiple entries with checkboxes
+    - "Select All" / "Deselect All" buttons
+    - Selection counter ("N selected")
+    - Choose export format (TXT, Markdown, Word, PDF)
+    - Export options: Single combined file OR separate files (one per entry)
+  - **Format Conversion:**
+    - Preserves formatting: headers, bold, italic, strikethrough, lists, links
+    - Separate export module (`journal-export.js`) avoids Quill conflicts
+    - Libraries: jsPDF for PDF, docx.js for Word documents
+  - **Download Handling:**
+    - Automatic 300ms delay between downloads prevents browser blocking
+    - Success notifications with entry count
+    - Sanitized filenames for cross-platform compatibility
 
 - **Persistent Storage**
   - IndexedDB storage - all data saved in browser
@@ -213,7 +236,7 @@ The DM's Toolbox respects your table, your time, and your creativity.
   - Dark theme matching DM Toolbox aesthetic
   - Responsive layout with file list and editor side-by-side
 
-**Use case:** Keep session notes with embedded maps and NPC portraits. Document world-building details with formatted text and images that flow naturally like in a book. All data stays in your browser with no accounts or cloud sync required.
+**Use case:** Keep session notes with embedded maps and NPC portraits. Document world-building details with formatted text and images that flow naturally like in a book. Export individual entries or bulk-export all session notes to Word/PDF for offline sharing. Search for specific entries by keyword, select multiple, and export as a combined campaign journal. All data stays in your browser with no accounts or cloud sync required.
 
 ---
 
@@ -1611,7 +1634,7 @@ If you do donate, know that it goes toward:
 - **Races supported:** 33+ (PHB, Volo's, Xanathar's, Eberron, Ravnica, Theros)
 - **Classes supported:** 13 (all official classes including Artificer)
 - **Development time:** 2+ years (since Feb 2024 pre-alpha)
-- **Version:** v1.13.0 (as of December 24, 2025)
+- **Version:** v1.11.4 (as of December 25, 2025)
 - **Coffee consumed:** Immeasurable
 - **Hours saved for DMs:** Hopefully thousands
 

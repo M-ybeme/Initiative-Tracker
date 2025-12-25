@@ -14,6 +14,35 @@ The DM's Toolbox has evolved through focused feature releases:
 
 ---
 
+## [1.11.4] - 2025-12-25
+**Journal: Export System (Word/PDF/TXT/Markdown)**
+
+### Added
+- **Multi-Format Export** - Export individual journal entries to Word (.docx), PDF, TXT, or Markdown (.md) formats
+- **Bulk Export Modal** - Select multiple entries with checkboxes, search filtering, and select all/none controls
+- **Export Options:**
+  - **Single Entry Export** - "Export" button on each journal entry with format selection modal
+  - **Bulk Export** - Blue download icon in sidebar opens bulk selection interface with 0-N entry selection
+  - **Combined File Export** - Option to merge multiple entries into single document (Word, PDF, Markdown, TXT)
+  - **Separate Files Export** - Export each selected entry as individual file with 300ms delay to prevent browser blocking
+- **Format-Specific Features:**
+  - **TXT Export** - Plain text with entry title underlines and clean formatting
+  - **Markdown Export** - Converts Quill HTML to Markdown syntax (headers, bold, italic, strikethrough, links, lists, images)
+  - **Word Export** - Uses docx.js library to create .docx files with formatted text, headings, and paragraph structure
+  - **PDF Export** - Uses jsPDF library to generate PDF documents with title and body text
+
+### Enhanced
+- **Search Integration** - Bulk export modal includes same search functionality as main sidebar (filters by entry name and content)
+- **Selection Persistence** - Selected entries persist during search filtering for intuitive multi-select workflow
+- **Visual Feedback** - Selection counter shows "N selected" with real-time updates
+
+### Technical
+- **New file:** `js/journal-export.js` - Separate module to avoid conflicts with Quill editor
+- **External libraries:** jsPDF (2.5.1) and docx.js (8.5.0) loaded via CDN
+- **Export methods:** `handleExport()` for single entries, `handleBulkExport()` for separate files, `handleBulkExportCombined()` for merged documents
+
+---
+
 ## [1.11.3] - 2025-12-25
 **Journal: Search Highlighting & Content Preview**
 
