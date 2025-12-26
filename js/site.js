@@ -1,8 +1,9 @@
 const DM_TOOLBOX_BUILD = {
     name: "The DM's Toolbox",
-    version: "1.11.4",
+    version: "1.11.5",
     recentChanges: [
-      "Journal: Added comprehensive export system (Word, PDF, TXT, Markdown) with single and bulk export options"
+      "Battle Map: Added 'Add to Initiative Tracker' context menu with auto-import",
+      "Journal: Added import functionality for TXT and Markdown files with auto-conversion"
     ],
     buildTime: new Date().toISOString(),
     author: "Maybeme"

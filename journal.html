@@ -189,6 +189,7 @@
     /* Clickable elements get pointer cursor */
     .file-item,
     #newFileBtn,
+    #importBtn,
     #saveBtn,
     #deleteBtn,
     .ql-toolbar button,
@@ -266,10 +267,15 @@
                 <button class="btn btn-info btn-sm me-1" id="bulkExportBtn" data-bs-toggle="modal" data-bs-target="#bulkExportModal" title="Bulk Export">
                   <i class="bi bi-box-arrow-down"></i>
                 </button>
+                <button class="btn btn-warning btn-sm me-1" id="importBtn" title="Import Entry">
+                  <i class="bi bi-upload"></i>
+                </button>
                 <button class="btn btn-success btn-sm" id="newFileBtn" title="New Entry">
                   <i class="bi bi-plus-lg"></i>
                 </button>
               </div>
+              <!-- Hidden file input for import -->
+              <input type="file" id="importFileInput" accept=".txt,.md,.markdown,.docx,.pdf" style="display: none;" />
             </div>
             <div class="card-body p-0">
               <!-- Search Bar -->
@@ -1159,6 +1165,13 @@
       document.getElementById('saveBtn').addEventListener('click', saveCurrentEntry);
       document.getElementById('deleteBtn').addEventListener('click', deleteCurrentEntry);
 
+      // Import functionality
+      document.getElementById('importBtn').addEventListener('click', () => {
+        document.getElementById('importFileInput').click();
+      });
+
+      document.getElementById('importFileInput').addEventListener('change', handleFileImport);
+
       // Search functionality
       const searchInput = document.getElementById('searchInput');
       const clearSearchBtn = document.getElementById('clearSearchBtn');
@@ -1180,6 +1193,132 @@
         }
       });
     });
+
+    // Import handler function
+    async function handleFileImport(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+
+      const fileName = file.name;
+      const fileExtension = fileName.split('.').pop().toLowerCase();
+
+      try {
+        let content = '';
+        let entryName = fileName.replace(/\.[^/.]+$/, ''); // Remove extension
+
+        if (fileExtension === 'txt') {
+          // Handle plain text
+          content = await readTextFile(file);
+          content = `<p>${content.replace(/\n/g, '<br>')}</p>`;
+        } else if (fileExtension === 'md' || fileExtension === 'markdown') {
+          // Handle Markdown - convert to HTML
+          content = await readTextFile(file);
+          content = convertMarkdownToHtml(content);
+        } else if (fileExtension === 'docx') {
+          // Handle Word documents
+          showToast('Word document import is not yet supported. Please export as TXT or Markdown first.', 'warning');
+          event.target.value = ''; // Reset input
+          return;
+        } else if (fileExtension === 'pdf') {
+          // Handle PDF
+          showToast('PDF import is not yet supported. Please export as TXT or Markdown first.', 'warning');
+          event.target.value = ''; // Reset input
+          return;
+        } else {
+          showToast('Unsupported file type. Please use .txt, .md, or .markdown files.', 'danger');
+          event.target.value = ''; // Reset input
+          return;
+        }
+
+        // Create a new entry with the imported content
+        const newEntry = {
+          name: entryName,
+          content: content,
+          lastModified: new Date().toISOString()
+        };
+
+        // Save to IndexedDB
+        await saveEntry(newEntry);
+
+        // Load the new entry
+        await loadFileList();
+
+        // Find and load the newly imported entry
+        const entries = await getAllEntries();
+        const importedEntry = entries.find(e => e.name === entryName);
+        if (importedEntry) {
+          loadEntry(importedEntry.id);
+        }
+
+        showToast(`Successfully imported "${entryName}"`, 'success');
+      } catch (error) {
+        console.error('Import error:', error);
+        showToast('Failed to import file: ' + error.message, 'danger');
+      }
+
+      // Reset the file input
+      event.target.value = '';
+    }
+
+    // Helper function to read text files
+    function readTextFile(file) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = (e) => resolve(e.target.result);
+        reader.onerror = (e) => reject(new Error('Failed to read file'));
+        reader.readAsText(file);
+      });
+    }
+
+    // Simple Markdown to HTML converter
+    function convertMarkdownToHtml(markdown) {
+      let html = markdown;
+
+      // Headers
+      html = html.replace(/^### (.*$)/gim, '<h3>$1</h3>');
+      html = html.replace(/^## (.*$)/gim, '<h2>$1</h2>');
+      html = html.replace(/^# (.*$)/gim, '<h1>$1</h1>');
+
+      // Bold
+      html = html.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+      html = html.replace(/__(.*?)__/g, '<strong>$1</strong>');
+
+      // Italic
+      html = html.replace(/\*(.*?)\*/g, '<em>$1</em>');
+      html = html.replace(/_(.*?)_/g, '<em>$1</em>');
+
+      // Links
+      html = html.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2">$1</a>');
+
+      // Line breaks and paragraphs
+      html = html.replace(/\n\n/g, '</p><p>');
+      html = html.replace(/\n/g, '<br>');
+      html = '<p>' + html + '</p>';
+
+      // Unordered lists
+      html = html.replace(/<p>([*-] .*?)<\/p>/g, (match, listItems) => {
+        const items = listItems.split('<br>').map(item => {
+          return item.replace(/^[*-] /, '<li>') + '</li>';
+        }).join('');
+        return '<ul>' + items + '</ul>';
+      });
+
+      // Ordered lists
+      html = html.replace(/<p>(\d+\. .*?)<\/p>/g, (match, listItems) => {
+        const items = listItems.split('<br>').map(item => {
+          return item.replace(/^\d+\. /, '<li>') + '</li>';
+        }).join('');
+        return '<ol>' + items + '</ol>';
+      });
+
+      // Code blocks
+      html = html.replace(/```(.*?)```/gs, '<pre><code>$1</code></pre>');
+
+      // Inline code
+      html = html.replace(/`([^`]+)`/g, '<code>$1</code>');
+
+      return html;
+    }
 
     // Export handler function
     function handleExportClick(format) {

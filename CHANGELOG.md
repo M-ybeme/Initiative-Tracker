@@ -7,10 +7,40 @@ The format is based on Keep a Changelog, and this project adheres to Semantic Ve
 
 The DM's Toolbox has evolved through focused feature releases:
 
-- **1.11.x**: Journal system with rich text editor and IndexedDB persistence
+- **1.11.x**: Journal system with rich text editor, import/export (Word/PDF/TXT/Markdown), and Battle Map → Initiative Tracker integration
 - **1.10.x**: Full character manager with multiclass support, spell learning, subclass selection, and character sheet export
 - **1.9.x**: Battle map measurement tools, persistent fog shapes, and generator integration across NPC/Tavern/Shop systems
 - **1.8.x**: Spell database expansion to 432+ spells, inventory management, loot generator overhaul, and character token generation
+
+---
+
+## [1.11.5] - 2025-12-26
+**Battle Map → Initiative Tracker Integration & Journal Import**
+
+### Added
+- **Battle Map to Initiative Tracker** - Right-click context menu "Add to Initiative" option on tokens with smart data collection:
+  - **Generic Name Detection** - Automatically prompts for specific names when token has generic labels (goblin, paladin, beast, etc.) with 40+ recognized generic creature types
+  - **Data Collection Flow** - Sequential prompts gather missing Max HP, Current HP, AC (default 10), and Initiative roll (default 0)
+  - **Smart Data Reuse** - Pulls existing name and HP values from token if already set
+  - **Auto-Import & Submit** - Automatically opens Initiative Tracker (or navigates if popup blocked), populates form, and submits character
+  - **Toast Feedback** - Visual confirmation with "✨ Added [Character Name] from Battle Map!" notification
+- **Journal Import System** - Upload button in Journal sidebar imports previously exported files:
+  - **TXT Import** - Plain text files converted to HTML with proper paragraph and line break formatting
+  - **Markdown Import** - Full markdown parsing supporting headers (H1-H3), bold, italic, links, code blocks, inline code, ordered/unordered lists
+  - **Smart Naming** - Imported entries automatically named from filename (extension removed)
+  - **Auto-Loading** - Imported entry immediately loads in editor for review/editing
+  - **Format Detection** - Automatic file type detection with user-friendly warnings for unsupported formats (DOCX/PDF)
+
+### Enhanced
+- **Battle Map Context Menu** - Streamlined integration between battlemap tokens and combat tracker
+- **Initiative Tracker Auto-Import** - Works with or without `#autoimport` hash, checks localStorage on every page load for pending imports
+- **Cross-Tool Workflow** - Seamless token → initiative tracker flow with automatic form population and submission
+
+### Technical
+- **battlemap.html** - Added `addTokenToInitiativeTracker()` function with generic name array and data collection prompts
+- **js/initiative.js** - Enhanced `checkBattleMapImport()` to work without hash requirement, auto-submit form with toast notification
+- **journal.html** - Added `handleFileImport()`, `readTextFile()`, and `convertMarkdownToHtml()` functions for file import processing
+- **Import Support** - File types: .txt, .md, .markdown with plans for .docx and .pdf in future releases
 
 ---
 

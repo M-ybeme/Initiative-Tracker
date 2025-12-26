@@ -42,44 +42,65 @@ const statusEffects = [
 
   // ---------- Battle Map Auto-Import ----------
   function checkBattleMapImport() {
-    if (window.location.hash === '#autoimport') {
-      const pendingData = localStorage.getItem('dmtools.pendingInitiativeImport');
-      if (pendingData) {
-        try {
-          const data = JSON.parse(pendingData);
-          localStorage.removeItem('dmtools.pendingInitiativeImport');
-          window.location.hash = '';
+    console.log('Checking for battle map import, hash:', window.location.hash);
+
+    // Check for pending data in localStorage
+    const pendingData = localStorage.getItem('dmtools.pendingInitiativeImport');
+    console.log('Pending data found:', pendingData);
+
+    // Auto-import if there's pending data (regardless of hash)
+    if (pendingData) {
+      // If hash is #autoimport, clear it; otherwise leave hash as-is
+      if (window.location.hash === '#autoimport') {
+        window.location.hash = '';
+      }
+
+      try {
+        const data = JSON.parse(pendingData);
+        console.log('Parsed data:', data);
+        localStorage.removeItem('dmtools.pendingInitiativeImport');
 
           // Auto-populate form
           $('character-name').value = data.name || '';
           $('character-health').value = data.maxHp || 0;
           $('character-ac').value = data.ac || 10;
 
-          // Roll initiative: 1d20 + bonus
-          const d20Roll = Math.floor(Math.random() * 20) + 1;
-          const initBonus = data.initiative || 0;
-          $('initiative-roll').value = d20Roll + initBonus;
+          // Handle initiative - if useActualInitiative flag is set, use the value directly
+          // Otherwise treat it as a bonus and roll
+          if (data.useActualInitiative) {
+            $('initiative-roll').value = data.initiative || 0;
+          } else {
+            const d20Roll = Math.floor(Math.random() * 20) + 1;
+            const initBonus = data.initiative || 0;
+            $('initiative-roll').value = d20Roll + initBonus;
+          }
 
           // Set type to Enemy by default
           $('character-type').value = 'enemy';
 
-          // Focus on the add button to make it obvious
+          // Auto-submit the form after a brief delay
           setTimeout(() => {
-            const addBtn = document.querySelector('#initiative-form button[type="submit"]');
-            if (addBtn) {
-              addBtn.classList.add('btn-warning');
-              addBtn.textContent = '✨ Add from Battle Map';
-              setTimeout(() => {
-                addBtn.classList.remove('btn-warning');
-                addBtn.classList.add('btn-success');
-                addBtn.textContent = 'Add';
-              }, 3000);
+            const form = document.getElementById('initiative-form');
+            if (form) {
+              console.log('Auto-submitting form with character:', data.name);
+              form.dispatchEvent(new Event('submit', { cancelable: true, bubbles: true }));
+
+              // Show a toast notification
+              const toastMsg = `✨ Added "${data.name}" from Battle Map!`;
+              const toastEl = document.getElementById('rollToast');
+              if (toastEl) {
+                const toastBody = toastEl.querySelector('.toast-body');
+                if (toastBody) {
+                  toastBody.textContent = toastMsg;
+                  const toast = new bootstrap.Toast(toastEl, { autohide: true, delay: 2000 });
+                  toast.show();
+                }
+              }
             }
           }, 100);
 
-        } catch (e) {
-          console.error('Failed to import from Battle Map:', e);
-        }
+      } catch (e) {
+        console.error('Failed to import from Battle Map:', e);
       }
     }
   }

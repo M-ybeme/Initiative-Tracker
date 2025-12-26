@@ -535,6 +535,7 @@
           <button data-cmd="setAura">⭕ Aura</button>
           <button data-cmd="setVision">👁️ Vision</button>
           <hr style="margin:2px 0;border:none;border-top:1px solid var(--line)">
+          <button data-cmd="addToInitiative">⚔️ Add to Initiative</button>
           <button data-cmd="duplicate">📋 Duplicate</button>
           <button data-cmd="delete">🗑️ Delete</button>
         </div>
@@ -2110,6 +2111,112 @@
   }
   function hideMenu(){ ctxMenu.style.display='none'; }
 
+  // Add token to initiative tracker
+  function addTokenToInitiativeTracker(token) {
+    // List of generic creature names that should prompt for a more specific name
+    const genericNames = [
+      'goblin', 'orc', 'kobold', 'skeleton', 'zombie', 'bandit', 'guard', 'cultist',
+      'dragon', 'beast', 'wolf', 'bear', 'spider', 'rat', 'snake', 'bat',
+      'paladin', 'wizard', 'fighter', 'rogue', 'cleric', 'barbarian', 'ranger', 'druid',
+      'warrior', 'mage', 'archer', 'soldier', 'mercenary', 'assassin',
+      'demon', 'devil', 'elemental', 'golem', 'giant', 'troll', 'ogre',
+      'token', 'creature', 'enemy', 'npc', 'monster', 'minion'
+    ];
+
+    // Get current token data
+    let name = (token.name || '').trim();
+    let currentHP = token.hp || null;
+    let maxHP = token.maxHp || null;
+    let ac = null;
+    let initiative = null;
+
+    // Check if name is generic
+    const isGeneric = !name || genericNames.some(generic =>
+      name.toLowerCase() === generic ||
+      name.toLowerCase().startsWith(generic + ' ') ||
+      name.toLowerCase().endsWith(' ' + generic)
+    );
+
+    // Prompt for specific name if generic
+    if (isGeneric) {
+      const newName = prompt('This token has a generic name. Please enter a more specific name:', name || 'Creature');
+      if (newName === null) return; // User cancelled
+      name = newName.trim();
+      if (!name) {
+        alert('A name is required to add to the initiative tracker.');
+        return;
+      }
+    }
+
+    // Prompt for missing HP info
+    if (maxHP === null || maxHP === 0) {
+      const maxHpInput = prompt('Enter Max HP:', '');
+      if (maxHpInput === null) return; // User cancelled
+      maxHP = parseInt(maxHpInput) || 0;
+    }
+
+    if (currentHP === null || currentHP === 0) {
+      const currentHpInput = prompt('Enter Current HP:', maxHP || '');
+      if (currentHpInput === null) return; // User cancelled
+      currentHP = parseInt(currentHpInput) || maxHP || 0;
+    }
+
+    // Prompt for AC
+    const acInput = prompt('Enter AC (Armor Class):', '10');
+    if (acInput === null) return; // User cancelled
+    ac = parseInt(acInput) || 10;
+
+    // Prompt for initiative (default to 0)
+    const initiativeInput = prompt('Enter Initiative roll (0 to roll later):', '0');
+    if (initiativeInput === null) return; // User cancelled
+    initiative = parseInt(initiativeInput) || 0;
+
+    // Prepare data for initiative tracker
+    const initiativeData = {
+      name: name,
+      maxHp: maxHP,
+      currentHp: currentHP,
+      ac: ac,
+      initiative: initiative,
+      useActualInitiative: true  // Flag to tell tracker to use the value directly, not as a bonus
+    };
+
+    // Show confirmation
+    const confirmed = confirm(
+      `Add "${name}" to Initiative Tracker?\n\n` +
+      `HP: ${currentHP}/${maxHP}\n` +
+      `AC: ${ac}\n` +
+      `Initiative: ${initiative}\n\n` +
+      `Click OK to open the Initiative Tracker.`
+    );
+
+    if (confirmed) {
+      // Store in localStorage for the initiative tracker to pick up
+      localStorage.setItem('dmtools.pendingInitiativeImport', JSON.stringify(initiativeData));
+      console.log('Saved to localStorage:', initiativeData);
+
+      // Try to open in new tab first
+      const newWindow = window.open('index.html#autoimport', '_blank');
+
+      // Check if popup was blocked
+      if (!newWindow || newWindow.closed || typeof newWindow.closed === 'undefined') {
+        // Popup blocked - offer alternative
+        const navigateHere = confirm(
+          'Popup blocked!\n\n' +
+          'Click OK to navigate to the Initiative Tracker in this tab,\n' +
+          'or click Cancel and manually click the "Initiative Tracker" link in the navbar.\n\n' +
+          'The character will be auto-added either way.'
+        );
+
+        if (navigateHere) {
+          window.location.href = 'index.html#autoimport';
+        }
+      }
+    } else {
+      console.log('User cancelled initiative tracker import');
+    }
+  }
+
   ctxMenu.addEventListener('click', (e)=>{
     const cmd = e.target.dataset.cmd;
     const t = state.tokens.find(x=>x.selected);
@@ -2203,6 +2310,8 @@
     } else if (cmd==='send'){
       const i = state.tokens.indexOf(t); if(i>=0){ state.tokens.splice(i,1); state.tokens.unshift(t); }
       setDirty();
+    } else if (cmd==='addToInitiative'){
+      addTokenToInitiativeTracker(t);
     } else if (cmd==='delete'){
       state.tokens = state.tokens.filter(x=>!x.selected);
       setDirty();
