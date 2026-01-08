@@ -14,6 +14,36 @@ The DM's Toolbox has evolved through focused feature releases:
 
 ---
 
+## [1.11.6] - 2026-01-07
+**Journal: Comprehensive UX Improvements**
+
+### Added
+- **Last Edited Timestamp** - File list now displays both "Created" and "Last edited" timestamps, with last edited updating on every save
+- **Unsaved Changes Protection** - Confirmation dialog appears when navigating away from entries with unsaved changes
+- **Visual Unsaved Indicator** - Save button turns yellow/warning color with asterisk (*) when content has unsaved changes
+- **Sort Options** - Dropdown selector with 6 sort modes:
+  - Last Modified (Newest/Oldest)
+  - Created (Newest/Oldest)
+  - Name (A-Z/Z-A)
+- **Always-Visible Content Preview** - All entries show first 100 characters of content; search results show context around matches with highlighting
+- **Word & Character Count** - Real-time counter at bottom of editor updates as you type
+- **Copy to Clipboard** - New export option to quickly copy entry content as plain text
+- **Empty State Illustrations** - Visual icons and helpful messages for "no entries" and "no search results" states
+
+### Enhanced
+- **Toolbar Visual Separation** - Added border and background color to Quill toolbar for better visual hierarchy
+- **Improved Hover States** - File list items have more pronounced hover effects with subtle translation animation
+- **Active File Styling** - Active entries now have background color tint and increased font weight (not just border)
+- **Image Resize UX** - Images automatically show resize handles immediately after insertion (no click required)
+- **Export Modal Flow** - Export buttons trigger download/copy and then close modal (instead of closing first)
+
+### Technical
+- **IndexedDB Schema** - Added `lastModified` index to track edit timestamps separately from creation time
+- **Change Detection** - Content tracking with `hasUnsavedChanges` flag and `lastSavedContent` comparison
+- **Clipboard API** - Native clipboard support for text copy with fallback error handling
+
+---
+
 ## [1.11.5] - 2025-12-26
 **Battle Map → Initiative Tracker Integration & Journal Import**
 

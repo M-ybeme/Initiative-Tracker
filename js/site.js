@@ -1,9 +1,9 @@
 const DM_TOOLBOX_BUILD = {
     name: "The DM's Toolbox",
-    version: "1.11.5",
+    version: "1.11.6",
     recentChanges: [
-      "Battle Map: Added 'Add to Initiative Tracker' context menu with auto-import",
-      "Journal: Added import functionality for TXT and Markdown files with auto-conversion"
+      "Journal: Comprehensive UX improvements - timestamps, sort options, unsaved changes protection, word count",
+      "Journal: Enhanced visual polish - content previews, empty states, improved hover/active states, clipboard copy"
     ],
     buildTime: new Date().toISOString(),
     author: "Maybeme"

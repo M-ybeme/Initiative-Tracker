@@ -44,6 +44,12 @@
       color: #212529;
     }
 
+    /* Toolbar visual separation */
+    .ql-toolbar {
+      border-bottom: 2px solid #dee2e6 !important;
+      background-color: #f8f9fa;
+    }
+
     .file-list {
       max-height: calc(100vh - 300px);
       overflow-y: auto;
@@ -56,12 +62,14 @@
     }
 
     .file-item:hover {
-      background-color: rgba(255, 255, 255, 0.1);
+      background-color: rgba(255, 255, 255, 0.15);
+      transform: translateX(2px);
     }
 
     .file-item.active {
-      background-color: rgba(29, 158, 109, 0.3);
-      border-left: 3px solid #1d9e6d;
+      background-color: rgba(29, 158, 109, 0.2);
+      border-left: 4px solid #1d9e6d;
+      font-weight: 500;
     }
 
     .file-name-edit {
@@ -291,6 +299,22 @@
                   </button>
                 </div>
               </div>
+              <!-- Sort Options -->
+              <div class="p-2 border-bottom border-secondary">
+                <div class="input-group input-group-sm">
+                  <span class="input-group-text bg-secondary text-light border-secondary">
+                    <i class="bi bi-sort-down"></i>
+                  </span>
+                  <select class="form-select form-select-sm bg-dark text-light border-secondary" id="sortSelect">
+                    <option value="modified-desc">Last Modified (Newest)</option>
+                    <option value="modified-asc">Last Modified (Oldest)</option>
+                    <option value="created-desc">Created (Newest)</option>
+                    <option value="created-asc">Created (Oldest)</option>
+                    <option value="name-asc">Name (A-Z)</option>
+                    <option value="name-desc">Name (Z-A)</option>
+                  </select>
+                </div>
+              </div>
               <div class="file-list" id="fileList">
                 <!-- Files will be loaded here -->
               </div>
@@ -328,6 +352,10 @@
             <div class="card-body">
               <!-- Quill Editor -->
               <div id="journalEditor"></div>
+              <!-- Word/Character Count -->
+              <div class="mt-2 text-end">
+                <small class="text-muted" id="wordCount">Words: 0 | Characters: 0</small>
+              </div>
             </div>
           </div>
         </div>
@@ -348,21 +376,25 @@
         <div class="modal-body">
           <p class="mb-3">Choose a format to export your journal entry:</p>
           <div class="d-grid gap-2">
-            <button class="btn btn-outline-light btn-lg text-start" onclick="handleExportClick('txt')" data-bs-dismiss="modal">
+            <button class="btn btn-outline-light btn-lg text-start" onclick="handleExportClick('txt')">
               <i class="bi bi-file-earmark-text"></i> Plain Text (.txt)
               <small class="d-block text-muted">Simple text format without formatting</small>
             </button>
-            <button class="btn btn-outline-light btn-lg text-start" onclick="handleExportClick('markdown')" data-bs-dismiss="modal">
+            <button class="btn btn-outline-light btn-lg text-start" onclick="handleExportClick('markdown')">
               <i class="bi bi-markdown"></i> Markdown (.md)
               <small class="d-block text-muted">Markdown format for documentation</small>
             </button>
-            <button class="btn btn-outline-light btn-lg text-start" onclick="handleExportClick('word')" data-bs-dismiss="modal">
+            <button class="btn btn-outline-light btn-lg text-start" onclick="handleExportClick('word')">
               <i class="bi bi-file-earmark-word"></i> Word Document (.docx)
               <small class="d-block text-muted">Microsoft Word format</small>
             </button>
-            <button class="btn btn-outline-light btn-lg text-start" onclick="handleExportClick('pdf')" data-bs-dismiss="modal">
+            <button class="btn btn-outline-light btn-lg text-start" onclick="handleExportClick('pdf')">
               <i class="bi bi-file-earmark-pdf"></i> PDF Document (.pdf)
               <small class="d-block text-muted">Portable Document Format</small>
+            </button>
+            <button class="btn btn-outline-light btn-lg text-start" onclick="handleExportClick('clipboard')">
+              <i class="bi bi-clipboard"></i> Copy to Clipboard
+              <small class="d-block text-muted">Copy content as plain text</small>
             </button>
           </div>
         </div>
@@ -494,6 +526,8 @@
     let db;
     let quill;
     let currentFileId = null;
+    let hasUnsavedChanges = false;
+    let lastSavedContent = '';
 
     // Initialize IndexedDB
     function initDB() {
@@ -512,6 +546,7 @@
             const objectStore = db.createObjectStore(STORE_NAME, { keyPath: 'id', autoIncrement: true });
             objectStore.createIndex('timestamp', 'timestamp', { unique: false });
             objectStore.createIndex('name', 'name', { unique: false });
+            objectStore.createIndex('lastModified', 'lastModified', { unique: false });
           }
         };
       });
@@ -607,8 +642,29 @@
       const fileList = document.getElementById('fileList');
       fileList.innerHTML = '';
 
-      // Sort by timestamp, newest first
-      entries.sort((a, b) => b.timestamp - a.timestamp);
+      // Get sort option
+      const sortSelect = document.getElementById('sortSelect');
+      const sortOption = sortSelect ? sortSelect.value : 'modified-desc';
+
+      // Sort entries based on selected option
+      entries.sort((a, b) => {
+        switch (sortOption) {
+          case 'modified-desc':
+            return (b.lastModified || b.timestamp) - (a.lastModified || a.timestamp);
+          case 'modified-asc':
+            return (a.lastModified || a.timestamp) - (b.lastModified || b.timestamp);
+          case 'created-desc':
+            return b.timestamp - a.timestamp;
+          case 'created-asc':
+            return a.timestamp - b.timestamp;
+          case 'name-asc':
+            return a.name.localeCompare(b.name);
+          case 'name-desc':
+            return b.name.localeCompare(a.name);
+          default:
+            return (b.lastModified || b.timestamp) - (a.lastModified || a.timestamp);
+        }
+      });
 
       // Filter entries based on search term
       let filteredEntries = entries;
@@ -645,17 +701,17 @@
         // Highlight search term in entry name
         const highlightedName = highlightText(entry.name, searchTerm);
 
-        // Get content preview with highlighted search term
+        // Get content preview
         let contentPreview = '';
-        if (searchTerm && searchTerm.trim() !== '') {
-          const lowerSearchTerm = searchTerm.toLowerCase();
-          if (entry.content) {
-            try {
-              const tempDiv = document.createElement('div');
-              tempDiv.innerHTML = entry.content;
-              const textContent = tempDiv.textContent || tempDiv.innerText || '';
+        if (entry.content) {
+          try {
+            const tempDiv = document.createElement('div');
+            tempDiv.innerHTML = entry.content;
+            const textContent = tempDiv.textContent || tempDiv.innerText || '';
 
-              // Check if search term is in content
+            if (searchTerm && searchTerm.trim() !== '') {
+              // Show context around search match if found
+              const lowerSearchTerm = searchTerm.toLowerCase();
               const lowerContent = textContent.toLowerCase();
               const matchIndex = lowerContent.indexOf(lowerSearchTerm);
 
@@ -671,18 +727,37 @@
 
                 // Highlight the search term in the excerpt
                 contentPreview = `<small class="text-muted d-block mt-1">${highlightText(excerpt, searchTerm)}</small>`;
+              } else {
+                // Show first 100 characters even if no match (in case name matched)
+                let excerpt = textContent.substring(0, 100).trim();
+                if (textContent.length > 100) excerpt += '...';
+                contentPreview = `<small class="text-muted d-block mt-1">${excerpt}</small>`;
               }
-            } catch (e) {
-              console.error('Error parsing content for preview:', e);
+            } else {
+              // Always show first 100 characters when not searching
+              let excerpt = textContent.substring(0, 100).trim();
+              if (textContent.length > 100) excerpt += '...';
+              if (excerpt) {
+                contentPreview = `<small class="text-muted d-block mt-1">${excerpt}</small>`;
+              }
             }
+          } catch (e) {
+            console.error('Error parsing content for preview:', e);
           }
         }
+
+        // Format timestamps
+        const createdDate = formatDate(entry.timestamp);
+        const modifiedDate = entry.lastModified ? formatDate(entry.lastModified) : createdDate;
+        const timestampDisplay = entry.lastModified && entry.lastModified !== entry.timestamp
+          ? `Created: ${createdDate}<br>Last edited: ${modifiedDate}`
+          : `Created: ${createdDate}`;
 
         fileItem.innerHTML = `
           <div class="d-flex justify-content-between align-items-start">
             <div class="flex-grow-1">
               <div class="fw-bold">${highlightedName}</div>
-              <small class="text-muted">${formatDate(entry.timestamp)}</small>
+              <small class="text-muted">${timestampDisplay}</small>
               ${contentPreview}
             </div>
           </div>
@@ -694,19 +769,47 @@
 
       // If no entries exist or no matches found, show a message
       if (entries.length === 0) {
-        fileList.innerHTML = '<div class="text-center text-muted p-3">No entries yet. Click + to create one.</div>';
+        fileList.innerHTML = `
+          <div class="text-center text-muted p-4">
+            <i class="bi bi-journal-x" style="font-size: 3rem; opacity: 0.3;"></i>
+            <p class="mt-2 mb-1">No journal entries yet</p>
+            <small>Click the <i class="bi bi-plus-lg"></i> button above to create your first entry</small>
+          </div>
+        `;
       } else if (filteredEntries.length === 0) {
-        fileList.innerHTML = '<div class="text-center text-muted p-3">No entries found matching your search.</div>';
+        fileList.innerHTML = `
+          <div class="text-center text-muted p-4">
+            <i class="bi bi-search" style="font-size: 3rem; opacity: 0.3;"></i>
+            <p class="mt-2 mb-1">No entries found</p>
+            <small>Try a different search term</small>
+          </div>
+        `;
       }
+    }
+
+    // Check for unsaved changes before switching entries
+    function checkUnsavedChanges() {
+      if (hasUnsavedChanges) {
+        return confirm('You have unsaved changes. Do you want to discard them and continue?');
+      }
+      return true;
     }
 
     // Load entry into editor
     async function loadEntry(id) {
+      // Check for unsaved changes first
+      if (!checkUnsavedChanges()) {
+        return;
+      }
+
       const entry = await getEntry(id);
       if (entry) {
         currentFileId = entry.id;
         document.getElementById('fileName').value = entry.name;
         quill.root.innerHTML = entry.content;
+        lastSavedContent = entry.content;
+        hasUnsavedChanges = false;
+        updateSaveButtonState();
         document.getElementById('deleteBtn').disabled = false;
         loadFileList(); // Refresh to update active state
       }
@@ -720,11 +823,17 @@
       const entry = {
         name: name,
         content: content,
-        timestamp: Date.now()
+        lastModified: Date.now()
       };
 
       if (currentFileId) {
         entry.id = currentFileId;
+        // Keep original timestamp if it exists
+        const existingEntry = await getEntry(currentFileId);
+        entry.timestamp = existingEntry.timestamp || Date.now();
+      } else {
+        // New entry - set both timestamps
+        entry.timestamp = Date.now();
       }
 
       try {
@@ -732,6 +841,9 @@
         currentFileId = id;
         document.getElementById('fileName').value = name;
         document.getElementById('deleteBtn').disabled = false;
+        lastSavedContent = content;
+        hasUnsavedChanges = false;
+        updateSaveButtonState();
         await loadFileList();
 
         // Show success message
@@ -744,11 +856,45 @@
 
     // Create new entry
     function createNewEntry() {
+      // Check for unsaved changes first
+      if (!checkUnsavedChanges()) {
+        return;
+      }
+
       currentFileId = null;
       document.getElementById('fileName').value = '';
       quill.setText('');
+      lastSavedContent = '';
+      hasUnsavedChanges = false;
+      updateSaveButtonState();
       document.getElementById('deleteBtn').disabled = true;
       loadFileList(); // Refresh to clear active state
+    }
+
+    // Update save button state based on unsaved changes
+    function updateSaveButtonState() {
+      const saveBtn = document.getElementById('saveBtn');
+      if (hasUnsavedChanges) {
+        saveBtn.classList.add('btn-warning');
+        saveBtn.classList.remove('btn-primary');
+        saveBtn.innerHTML = '<i class="bi bi-floppy"></i> Save *';
+      } else {
+        saveBtn.classList.remove('btn-warning');
+        saveBtn.classList.add('btn-primary');
+        saveBtn.innerHTML = '<i class="bi bi-floppy"></i> Save';
+      }
+    }
+
+    // Update word and character count
+    function updateWordCount() {
+      const text = quill.getText().trim();
+      const words = text ? text.split(/\s+/).length : 0;
+      const chars = text.length;
+
+      const wordCountElement = document.getElementById('wordCount');
+      if (wordCountElement) {
+        wordCountElement.textContent = `Words: ${words} | Characters: ${chars}`;
+      }
     }
 
     // Delete current entry
@@ -799,6 +945,21 @@
             // Insert the image
             quill.insertEmbed(range.index, 'image', e.target.result);
             quill.setSelection(range.index + 1);
+
+            // Wait a bit for the image to render, then auto-select it
+            setTimeout(() => {
+              const images = quill.root.querySelectorAll('img');
+              const newImage = images[images.length - 1]; // Get the last (newest) image
+              if (newImage) {
+                // Simulate a click on the image to show resize handles
+                const clickEvent = new MouseEvent('click', {
+                  view: window,
+                  bubbles: true,
+                  cancelable: true
+                });
+                newImage.dispatchEvent(clickEvent);
+              }
+            }, 100);
           };
           reader.readAsDataURL(file);
         }
@@ -1151,6 +1312,20 @@
       // Add tooltips to toolbar buttons
       addToolbarTooltips();
 
+      // Track changes to editor content
+      quill.on('text-change', function(delta, oldDelta, source) {
+        if (source === 'user') {
+          const currentContent = quill.root.innerHTML;
+          hasUnsavedChanges = (currentContent !== lastSavedContent);
+          updateSaveButtonState();
+        }
+        // Update word count on any change
+        updateWordCount();
+      });
+
+      // Initial word count
+      updateWordCount();
+
       // Initialize database
       try {
         await initDB();
@@ -1183,6 +1358,12 @@
       clearSearchBtn.addEventListener('click', () => {
         searchInput.value = '';
         loadFileList();
+      });
+
+      // Sort functionality
+      const sortSelect = document.getElementById('sortSelect');
+      sortSelect.addEventListener('change', () => {
+        loadFileList(searchInput.value);
       });
 
       // Auto-save on Ctrl+S
@@ -1330,7 +1511,30 @@
         return;
       }
 
+      // Handle clipboard copy
+      if (format === 'clipboard') {
+        const tempDiv = document.createElement('div');
+        tempDiv.innerHTML = htmlContent;
+        const textContent = tempDiv.textContent || tempDiv.innerText || '';
+
+        navigator.clipboard.writeText(textContent).then(() => {
+          showToast('Content copied to clipboard!', 'success');
+          // Close modal
+          const modal = bootstrap.Modal.getInstance(document.getElementById('exportModal'));
+          if (modal) modal.hide();
+        }).catch(err => {
+          console.error('Failed to copy:', err);
+          showToast('Failed to copy to clipboard', 'danger');
+        });
+        return;
+      }
+
+      // Handle file exports
       JournalExport.handleExport(format, entryName, htmlContent);
+
+      // Close modal after initiating export
+      const modal = bootstrap.Modal.getInstance(document.getElementById('exportModal'));
+      if (modal) modal.hide();
     }
 
     // Bulk Export Functionality
