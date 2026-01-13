@@ -4,7 +4,7 @@
  * Phase 1: Core 12 PHB classes (no subclasses yet)
  */
 
-const LevelUpData = (function() {
+window.LevelUpData = (function() {
   'use strict';
 
   // ============================================================

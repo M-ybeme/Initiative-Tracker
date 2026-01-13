@@ -14,6 +14,24 @@ The DM's Toolbox has evolved through focused feature releases:
 
 ---
 
+## [1.11.7] - 2026-01-12
+**Character Manager: Level-Up System Fixes**
+
+### Fixed
+- **Character Creation Above Level 1** - Fixed "Level-up data not loaded" error when creating characters at level 3+ through the character creation wizard
+- **Hit Dice Update on Level-Up** - Total hit dice now properly updates to match character level (e.g., 5d8 for level 5 Wizard)
+- **Hit Dice Remaining** - Remaining hit dice pool now increases by +1 on level-up, correctly tracking available hit dice for short rests
+- **Spell Slots Replenishment** - Current spell slots now properly replenish to full when leveling up (previously only max slots were updated)
+- **Pact Slots Reset** - Warlock pact magic slots now reset to 0 used when leveling up
+
+### Technical
+- Changed `LevelUpData` from local const to `window.LevelUpData` for global accessibility in [js/level-up-data.js:7](js/level-up-data.js#L7)
+- Modified `applyLevelUp()` in [js/level-up-system.js:1657-1702](js/level-up-system.js#L1657-L1702)
+- Hit dice calculation uses class data to determine proper die size (d6, d8, d10, d12)
+- Spell slots now use correct data structure: `spellSlots[level] = { max: X, used: 0 }`
+
+---
+
 ## [1.11.6] - 2026-01-07
 **Journal: Comprehensive UX Improvements**
 

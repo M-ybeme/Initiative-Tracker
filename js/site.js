@@ -1,9 +1,10 @@
 const DM_TOOLBOX_BUILD = {
     name: "The DM's Toolbox",
-    version: "1.11.6",
+    version: "1.11.7",
     recentChanges: [
-      "Journal: Comprehensive UX improvements - timestamps, sort options, unsaved changes protection, word count",
-      "Journal: Enhanced visual polish - content previews, empty states, improved hover/active states, clipboard copy"
+      "Character MAanger: Fixed Character Creator not working above level 1",
+      "Character Manager: Fixed hit dice not updating on level-up (now properly tracks total and remaining)",
+      "Character Manager: Fixed spell slots not replenishing on level-up (current slots now reset to full)"
     ],
     buildTime: new Date().toISOString(),
     author: "Maybeme"

@@ -1658,7 +1658,11 @@ const LevelUpSystem = (function() {
     if (levelUpData.spellSlots) {
       character.spellSlots = character.spellSlots || {};
       for (let i = 1; i <= 9; i++) {
-        character.spellSlots[`slots${i}Max`] = levelUpData.spellSlots[i - 1] || 0;
+        const newMax = levelUpData.spellSlots[i - 1] || 0;
+        character.spellSlots[i] = character.spellSlots[i] || { max: 0, used: 0 };
+        character.spellSlots[i].max = newMax;
+        // Reset used slots to 0 (fully replenish spell slots on level up)
+        character.spellSlots[i].used = 0;
       }
     }
 
@@ -1666,6 +1670,35 @@ const LevelUpSystem = (function() {
     if (levelUpData.pactSlots) {
       character.pactLevel = levelUpData.pactSlots.level;
       character.pactMax = levelUpData.pactSlots.slots;
+      // Reset pact slots used to 0 (fully replenish on level up)
+      character.pactUsed = 0;
+    }
+
+    // Update hit dice
+    // Get the class data to determine hit die size
+    const className = extractClassName(character.charClass || character.class);
+    if (className) {
+      const classData = LevelUpData.getClassData(className);
+      if (classData && classData.hitDie) {
+        const hitDieSize = classData.hitDie;
+        const newLevel = levelUpData.newLevel;
+
+        // Total hit dice equals character level
+        character.hitDice = `${newLevel}d${hitDieSize}`;
+
+        // On level up, add one hit die to the remaining pool
+        // Parse current remaining hit dice
+        const currentRemaining = character.hitDiceRemaining || character.hitDice || `${newLevel - 1}d${hitDieSize}`;
+        const match = currentRemaining.match(/(\d+)d(\d+)/);
+        if (match) {
+          const remainingCount = parseInt(match[1], 10);
+          // Add 1 to remaining (gained from leveling up)
+          character.hitDiceRemaining = `${remainingCount + 1}d${hitDieSize}`;
+        } else {
+          // If parsing failed, set to total
+          character.hitDiceRemaining = character.hitDice;
+        }
+      }
     }
 
     // Apply spell learning
