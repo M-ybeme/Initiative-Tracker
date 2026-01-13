@@ -46,7 +46,7 @@ class CharacterSheetExporter {
       });
       console.log('html2canvas capture complete');
 
-      // Create PDF
+      // Create PDF with multiple pages
       const { jsPDF } = window.jspdf;
       const pdf = new jsPDF({
         orientation: 'portrait',
@@ -59,9 +59,45 @@ class CharacterSheetExporter {
       const pdfHeight = pdf.internal.pageSize.getHeight();
       const imgWidth = canvas.width;
       const imgHeight = canvas.height;
-      const ratio = Math.min(pdfWidth / imgWidth, pdfHeight / imgHeight);
 
-      pdf.addImage(imgData, 'PNG', 0, 0, imgWidth * ratio, imgHeight * ratio);
+      // Calculate how to fit width to page
+      const ratio = pdfWidth / imgWidth;
+      const scaledHeight = imgHeight * ratio;
+
+      // If content fits on one page, just add it
+      if (scaledHeight <= pdfHeight) {
+        pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, scaledHeight);
+      } else {
+        // Split across multiple pages
+        let remainingHeight = scaledHeight;
+        let sourceY = 0;
+        let pageCount = 0;
+
+        while (remainingHeight > 0) {
+          if (pageCount > 0) {
+            pdf.addPage();
+          }
+
+          const pageHeight = Math.min(pdfHeight, remainingHeight);
+          const sourceHeight = (pageHeight / ratio);
+
+          // Create a cropped section of the canvas
+          const pageCanvas = document.createElement('canvas');
+          pageCanvas.width = canvas.width;
+          pageCanvas.height = sourceHeight;
+          const pageCtx = pageCanvas.getContext('2d');
+
+          pageCtx.drawImage(canvas, 0, sourceY, canvas.width, sourceHeight, 0, 0, canvas.width, sourceHeight);
+          const pageImgData = pageCanvas.toDataURL('image/png');
+
+          pdf.addImage(pageImgData, 'PNG', 0, 0, pdfWidth, pageHeight);
+
+          sourceY += sourceHeight;
+          remainingHeight -= pageHeight;
+          pageCount++;
+        }
+      }
+
       pdf.save(`${this.sanitizeFilename(character.name || 'character')}-sheet.pdf`);
 
       document.body.removeChild(container);
@@ -375,11 +411,57 @@ class CharacterSheetExporter {
       }
 
       // Equipment/Inventory
-      if (character.inventory) {
-        children.push(new Paragraph({ text: '', spacing: { after: 200 } }));
-        children.push(new Paragraph({ text: 'Equipment & Inventory', heading: HeadingLevel.HEADING_2 }));
+      children.push(new Paragraph({ text: '', spacing: { after: 200 } }));
+      children.push(new Paragraph({ text: 'Equipment & Inventory', heading: HeadingLevel.HEADING_2 }));
+
+      if (character.inventoryItems && character.inventoryItems.length > 0) {
+        // Calculate total weight
+        const totalWeight = character.inventoryItems.reduce((sum, item) => {
+          return sum + ((item.weight || 0) * (item.quantity || 1));
+        }, 0);
+
+        children.push(new Paragraph({ text: `Total Weight: ${totalWeight} lbs`, bold: true }));
+        children.push(new Paragraph({ text: '', spacing: { after: 100 } }));
+
+        character.inventoryItems.forEach(item => {
+          const details = [];
+          details.push(item.name || 'Unnamed Item');
+          if (item.quantity && item.quantity > 1) details.push(`Qty: ${item.quantity}`);
+          if (item.weight) details.push(`Weight: ${item.weight * (item.quantity || 1)} lbs`);
+          if (item.equipped) details.push('[Equipped]');
+          if (item.attuned) details.push('[Attuned]');
+
+          children.push(new Paragraph({ text: details.join(' | ') }));
+          if (item.notes) {
+            children.push(new Paragraph({ text: `  Notes: ${item.notes}`, italics: true }));
+          }
+        });
+      } else if (character.inventory) {
         children.push(new Paragraph({ text: character.inventory }));
       }
+
+      // Space for additional equipment notes
+      children.push(new Paragraph({ text: '', spacing: { after: 100 } }));
+      children.push(new Paragraph({ text: 'Additional Equipment Notes:', bold: true }));
+      children.push(new Paragraph({ text: '_'.repeat(80) }));
+      children.push(new Paragraph({ text: '_'.repeat(80) }));
+      children.push(new Paragraph({ text: '_'.repeat(80) }));
+
+      // Conditions & Concentration
+      children.push(new Paragraph({ text: '', spacing: { after: 200 } }));
+      children.push(new Paragraph({ text: 'Conditions & Status', heading: HeadingLevel.HEADING_2 }));
+      if (character.conditions) {
+        children.push(new Paragraph({ text: `Current Conditions: ${character.conditions}` }));
+      }
+      if (character.concentrating && character.concentrationSpell) {
+        children.push(new Paragraph({ text: `Concentrating on: ${character.concentrationSpell}` }));
+      } else if (character.concentrating) {
+        children.push(new Paragraph({ text: 'Concentrating on: (spell not specified)' }));
+      }
+      children.push(new Paragraph({ text: '', spacing: { after: 100 } }));
+      children.push(new Paragraph({ text: 'Additional Conditions/Status Notes:', bold: true }));
+      children.push(new Paragraph({ text: '_'.repeat(80) }));
+      children.push(new Paragraph({ text: '_'.repeat(80) }));
 
       // Notes
       if (character.notes) {
@@ -387,6 +469,29 @@ class CharacterSheetExporter {
         children.push(new Paragraph({ text: 'Notes', heading: HeadingLevel.HEADING_2 }));
         children.push(new Paragraph({ text: character.notes }));
       }
+
+      // Table Notes
+      if (character.tableNotes) {
+        children.push(new Paragraph({ text: '', spacing: { after: 200 } }));
+        children.push(new Paragraph({ text: 'Table Notes', heading: HeadingLevel.HEADING_2 }));
+        children.push(new Paragraph({ text: character.tableNotes }));
+      }
+
+      // Extra Notes
+      if (character.extraNotes) {
+        children.push(new Paragraph({ text: '', spacing: { after: 200 } }));
+        children.push(new Paragraph({ text: 'Additional Notes', heading: HeadingLevel.HEADING_2 }));
+        children.push(new Paragraph({ text: character.extraNotes }));
+      }
+
+      // General write-in space
+      children.push(new Paragraph({ text: '', spacing: { after: 200 } }));
+      children.push(new Paragraph({ text: 'Session Notes / Additional Information', heading: HeadingLevel.HEADING_2 }));
+      children.push(new Paragraph({ text: '_'.repeat(80) }));
+      children.push(new Paragraph({ text: '_'.repeat(80) }));
+      children.push(new Paragraph({ text: '_'.repeat(80) }));
+      children.push(new Paragraph({ text: '_'.repeat(80) }));
+      children.push(new Paragraph({ text: '_'.repeat(80) }));
 
       const doc = new Document({
         sections: [{
@@ -463,7 +568,7 @@ class CharacterSheetExporter {
     const portraitHTML = '';
 
     return `
-      <div style="font-family: 'Georgia', serif; max-width: 850px; margin: 0 auto; padding: 20px; background: white; color: #000;">
+      <div style="font-family: 'Georgia', serif; width: 210mm; margin: 0 auto; padding: 20mm; background: white; color: #000; box-sizing: border-box;">
         ${portraitHTML}
 
         <h1 style="text-align: center; margin-bottom: 5px; font-size: 32px; border-bottom: 3px solid #8b0000; color: #000;">${character.name || 'Unnamed Character'}</h1>
@@ -551,10 +656,10 @@ class CharacterSheetExporter {
         ` : ''}
 
         <!-- Equipment -->
-        ${character.inventory ? `
-          <h2 style="background: #8b0000; color: white; padding: 10px; margin: 25px 0 15px 0; font-size: 18px;">Equipment & Inventory</h2>
-          <div style="padding: 12px; border: 2px solid #ccc; white-space: pre-wrap; background: #fafafa; color: #000; font-size: 14px; line-height: 1.6;">${character.inventory}</div>
-        ` : ''}
+        ${this.generateInventoryHTML(character)}
+
+        <!-- Conditions & Concentration -->
+        ${this.generateConditionsHTML(character)}
 
         <!-- Notes -->
         ${character.notes ? `
@@ -566,6 +671,26 @@ class CharacterSheetExporter {
           <h2 style="background: #8b0000; color: white; padding: 10px; margin: 25px 0 15px 0; font-size: 18px;">Roleplay Notes</h2>
           <div style="padding: 12px; border: 2px solid #ccc; white-space: pre-wrap; background: #fafafa; color: #000; font-size: 14px; line-height: 1.6;">${character.roleNotes}</div>
         ` : ''}
+
+        ${character.tableNotes ? `
+          <h2 style="background: #8b0000; color: white; padding: 10px; margin: 25px 0 15px 0; font-size: 18px;">Table Notes</h2>
+          <div style="padding: 12px; border: 2px solid #ccc; white-space: pre-wrap; background: #fafafa; color: #000; font-size: 14px; line-height: 1.6;">${character.tableNotes}</div>
+        ` : ''}
+
+        ${character.extraNotes ? `
+          <h2 style="background: #8b0000; color: white; padding: 10px; margin: 25px 0 15px 0; font-size: 18px;">Additional Notes</h2>
+          <div style="padding: 12px; border: 2px solid #ccc; white-space: pre-wrap; background: #fafafa; color: #000; font-size: 14px; line-height: 1.6;">${character.extraNotes}</div>
+        ` : ''}
+
+        <!-- Write-in Spaces -->
+        <h2 style="background: #8b0000; color: white; padding: 10px; margin: 25px 0 15px 0; font-size: 18px;">Session Notes / Additional Information</h2>
+        <div style="padding: 12px; border: 2px solid #ccc; background: #fafafa; color: #000; min-height: 150px;">
+          <div style="border-bottom: 1px solid #ccc; height: 25px; margin-bottom: 5px;"></div>
+          <div style="border-bottom: 1px solid #ccc; height: 25px; margin-bottom: 5px;"></div>
+          <div style="border-bottom: 1px solid #ccc; height: 25px; margin-bottom: 5px;"></div>
+          <div style="border-bottom: 1px solid #ccc; height: 25px; margin-bottom: 5px;"></div>
+          <div style="border-bottom: 1px solid #ccc; height: 25px; margin-bottom: 5px;"></div>
+        </div>
       </div>
     `;
   }
@@ -902,6 +1027,108 @@ class CharacterSheetExporter {
     }
 
     html += '</div>';
+    return html;
+  }
+
+  generateInventoryHTML(character) {
+    if (!character.inventoryItems || character.inventoryItems.length === 0) {
+      if (character.inventory) {
+        return `
+          <h2 style="background: #8b0000; color: white; padding: 10px; margin: 25px 0 15px 0; font-size: 18px;">Equipment & Inventory</h2>
+          <div style="padding: 12px; border: 2px solid #ccc; white-space: pre-wrap; background: #fafafa; color: #000; font-size: 14px; line-height: 1.6;">${character.inventory}</div>
+        `;
+      }
+      return '';
+    }
+
+    // Calculate total weight
+    const totalWeight = character.inventoryItems.reduce((sum, item) => {
+      return sum + ((item.weight || 0) * (item.quantity || 1));
+    }, 0);
+
+    let html = '<h2 style="background: #8b0000; color: white; padding: 10px; margin: 25px 0 15px 0; font-size: 18px;">Equipment & Inventory</h2>';
+    html += `<div style="padding: 12px; border: 2px solid #ccc; background: #fafafa; margin-bottom: 15px;">`;
+    html += `<strong style="font-size: 16px; color: #000;">Total Weight: ${totalWeight} lbs</strong>`;
+    html += `</div>`;
+
+    // Group items by equipped status
+    const equipped = character.inventoryItems.filter(i => i.equipped);
+    const notEquipped = character.inventoryItems.filter(i => !i.equipped);
+
+    if (equipped.length > 0) {
+      html += '<div style="margin-bottom: 15px;">';
+      html += '<h3 style="color: #8b0000; font-size: 16px; margin-bottom: 10px; border-bottom: 2px solid #8b0000; padding-bottom: 4px;">Equipped</h3>';
+      equipped.forEach(item => {
+        html += this.createInventoryItemHTML(item);
+      });
+      html += '</div>';
+    }
+
+    if (notEquipped.length > 0) {
+      html += '<div style="margin-bottom: 15px;">';
+      html += '<h3 style="color: #8b0000; font-size: 16px; margin-bottom: 10px; border-bottom: 2px solid #8b0000; padding-bottom: 4px;">Other Items</h3>';
+      notEquipped.forEach(item => {
+        html += this.createInventoryItemHTML(item);
+      });
+      html += '</div>';
+    }
+
+    // Add write-in space for additional equipment
+    html += `
+      <div style="margin-top: 20px; padding: 12px; border: 2px solid #ccc; background: #fafafa;">
+        <strong style="color: #000;">Additional Equipment Notes:</strong>
+        <div style="border-bottom: 1px solid #ccc; height: 25px; margin-top: 10px; margin-bottom: 5px;"></div>
+        <div style="border-bottom: 1px solid #ccc; height: 25px; margin-bottom: 5px;"></div>
+        <div style="border-bottom: 1px solid #ccc; height: 25px; margin-bottom: 5px;"></div>
+      </div>
+    `;
+
+    return html;
+  }
+
+  createInventoryItemHTML(item) {
+    const quantity = item.quantity && item.quantity > 1 ? `×${item.quantity}` : '';
+    const weight = item.weight ? ` (${item.weight * (item.quantity || 1)} lbs)` : '';
+    const attuned = item.attuned ? ' [Attuned]' : '';
+    const notes = item.notes ? `<div style="font-size: 12px; color: #555; font-style: italic; margin-top: 4px;">Notes: ${item.notes}</div>` : '';
+
+    return `
+      <div style="border: 2px solid #333; padding: 10px; margin-bottom: 8px; background: #ffffff;">
+        <div style="font-size: 15px; font-weight: bold; color: #000;">
+          ${item.name || 'Unnamed Item'} ${quantity}${weight}${attuned}
+        </div>
+        ${notes}
+      </div>
+    `;
+  }
+
+  generateConditionsHTML(character) {
+    const hasConditions = character.conditions || character.concentrating;
+    if (!hasConditions) return '';
+
+    let html = '<h2 style="background: #8b0000; color: white; padding: 10px; margin: 25px 0 15px 0; font-size: 18px;">Conditions & Status</h2>';
+    html += '<div style="padding: 12px; border: 2px solid #ccc; background: #fafafa; margin-bottom: 15px;">';
+
+    if (character.conditions) {
+      html += `<div style="margin-bottom: 10px;"><strong style="color: #000;">Current Conditions:</strong> ${character.conditions}</div>`;
+    }
+
+    if (character.concentrating) {
+      const spell = character.concentrationSpell || '(spell not specified)';
+      html += `<div style="margin-bottom: 10px;"><strong style="color: #000;">Concentrating on:</strong> ${spell}</div>`;
+    }
+
+    html += '</div>';
+
+    // Add write-in space
+    html += `
+      <div style="padding: 12px; border: 2px solid #ccc; background: #fafafa; margin-bottom: 20px;">
+        <strong style="color: #000;">Additional Conditions/Status Notes:</strong>
+        <div style="border-bottom: 1px solid #ccc; height: 25px; margin-top: 10px; margin-bottom: 5px;"></div>
+        <div style="border-bottom: 1px solid #ccc; height: 25px; margin-bottom: 5px;"></div>
+      </div>
+    `;
+
     return html;
   }
 

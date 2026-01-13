@@ -14,6 +14,39 @@ The DM's Toolbox has evolved through focused feature releases:
 
 ---
 
+## [1.11.8] - 2026-01-12
+**Character Sheet Export: Multi-Page PDFs & Complete Data**
+
+### Added
+- **Multi-Page PDF Export** - PDFs now automatically span multiple pages instead of cramping content onto one page
+- **Full Page Width** - Exports now use full A4 page width (210mm) with proper padding for better readability
+- **Structured Inventory Export** - Detailed inventory items now export with:
+  - Total weight calculation
+  - Items grouped by "Equipped" vs "Other Items"
+  - Quantity, weight, equipped status, and attunement displayed
+  - Individual item notes
+- **Additional Data Fields** - Now exports previously missing fields:
+  - Conditions & concentration status
+  - Table notes
+  - Extra notes
+  - Roleplay notes
+- **Write-In Spaces** - Added blank lined sections for handwritten notes when printing:
+  - Additional Equipment Notes (3 lines)
+  - Additional Conditions/Status Notes (2 lines)
+  - Session Notes / Additional Information (5 lines)
+
+### Changed
+- PDF generation now splits content across pages when height exceeds one page
+- All three export formats (PDF, Word, PNG) include comprehensive character data
+
+### Technical
+- Modified PDF generation in [js/character-sheet-export.js:49-101](js/character-sheet-export.js#L49-L101) to use canvas slicing for multi-page support
+- Added `generateInventoryHTML()` helper method at [js/character-sheet-export.js:908-962](js/character-sheet-export.js#L908-L962)
+- Added `generateConditionsHTML()` helper method at [js/character-sheet-export.js:980-1008](js/character-sheet-export.js#L980-L1008)
+- Changed container width from `max-width: 850px` to `width: 210mm` in [js/character-sheet-export.js:466](js/character-sheet-export.js#L466)
+
+---
+
 ## [1.11.7] - 2026-01-12
 **Character Manager: Level-Up System Fixes**
 

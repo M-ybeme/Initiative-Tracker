@@ -1,10 +1,11 @@
 const DM_TOOLBOX_BUILD = {
     name: "The DM's Toolbox",
-    version: "1.11.7",
+    version: "1.11.8",
     recentChanges: [
-      "Character MAanger: Fixed Character Creator not working above level 1",
-      "Character Manager: Fixed hit dice not updating on level-up (now properly tracks total and remaining)",
-      "Character Manager: Fixed spell slots not replenishing on level-up (current slots now reset to full)"
+      "Character Sheet Export: PDFs now span multiple pages with full page width",
+      "Character Sheet Export: Added structured inventory with weight tracking and equipped/attuned status",
+      "Character Sheet Export: Added conditions, concentration status, and all notes fields",
+      "Character Sheet Export: Added write-in spaces for handwritten notes on printed sheets"
     ],
     buildTime: new Date().toISOString(),
     author: "Maybeme"
