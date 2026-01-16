@@ -1,11 +1,13 @@
 const DM_TOOLBOX_BUILD = {
     name: "The DM's Toolbox",
-    version: "1.11.8",
+    version: "1.11.9",
     recentChanges: [
-      "Character Sheet Export: PDFs now span multiple pages with full page width",
-      "Character Sheet Export: Added structured inventory with weight tracking and equipped/attuned status",
-      "Character Sheet Export: Added conditions, concentration status, and all notes fields",
-      "Character Sheet Export: Added write-in spaces for handwritten notes on printed sheets"
+      "Character Creation: Characters created at level 4+ now receive proper ASI/Feat choices",
+      "Character Creation: Added comprehensive subclass library with 66 new subclasses",
+      "Subclasses: All Xanathar's and Tasha's subclasses now available (114 total, up from 48)",
+      "Subclasses: Added Artificer class with all 4 specialists (Alchemist, Armorer, Artillerist, Battle Smith)",
+      "Prepared Casters: Cleric, Druid, Paladin, and Artificer now select prepared spells with full spell list access",
+      "Spell Preparation: Automatic calculation based on casting stat + level for prepared spellcasters"
     ],
     buildTime: new Date().toISOString(),
     author: "Maybeme"

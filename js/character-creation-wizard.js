@@ -731,7 +731,90 @@ const CharacterCreationWizard = (function() {
       }
     },
     {
-      title: "Step 6: Choose Your Background",
+      title: "Step 6: Ability Score Improvements",
+      content: `
+        <h5>Choose your Ability Score Improvements or Feats</h5>
+        <p id="asiCountMessage">Your character qualifies for ability improvements based on your starting level.</p>
+        <div id="asiSelectionsContainer">
+          <!-- ASI/Feat selections will be dynamically populated -->
+        </div>
+      `,
+      buttons: ['Back', 'Next'],
+      validate: () => {
+        // Skip if no ASI needed
+        if (!wizardData.asiRequired || wizardData.asiRequired === 0) {
+          return true;
+        }
+
+        // Check that all ASI choices have been made
+        const asiChoices = wizardData.asiChoices || [];
+        if (asiChoices.length !== wizardData.asiRequired) {
+          alert(`Please make all ${wizardData.asiRequired} ASI/Feat choice(s).`);
+          return false;
+        }
+
+        // Validate each choice
+        for (let i = 0; i < asiChoices.length; i++) {
+          const choice = asiChoices[i];
+          if (!choice.type) {
+            alert(`Please select ASI or Feat for choice ${i + 1}.`);
+            return false;
+          }
+
+          if (choice.type === 'asi') {
+            const total = (choice.increases || []).reduce((sum, inc) => sum + inc.amount, 0);
+            if (total !== 2) {
+              alert(`ASI choice ${i + 1} must total +2 in ability scores.`);
+              return false;
+            }
+          } else if (choice.type === 'feat') {
+            if (!choice.featName) {
+              alert(`Please select a feat for choice ${i + 1}.`);
+              return false;
+            }
+          }
+        }
+
+        return true;
+      },
+      onShow: () => {
+        // Calculate how many ASI/Feats this character should have
+        const level = wizardData.level || 1;
+        const className = wizardData.class;
+
+        if (!className || !window.LevelUpData) {
+          document.getElementById('asiCountMessage').textContent = 'Unable to determine ASI requirements.';
+          return;
+        }
+
+        const asiCount = window.LevelUpData.getASICount(className, level);
+        wizardData.asiRequired = asiCount;
+
+        if (asiCount === 0) {
+          document.getElementById('asiCountMessage').textContent = `At level ${level}, your ${className} has not yet earned any Ability Score Improvements.`;
+          document.getElementById('asiSelectionsContainer').innerHTML = '<div class="alert alert-info">No ASI/Feats to select at this level. Click Next to continue.</div>';
+          return;
+        }
+
+        const asiLevels = window.LevelUpData.getASILevels(className);
+        const earnedLevels = asiLevels.filter(lvl => lvl <= level);
+
+        document.getElementById('asiCountMessage').innerHTML = `
+          At level ${level}, your ${className} has earned <strong>${asiCount}</strong> Ability Score Improvement(s) or Feat(s).
+          <div class="small text-muted mt-1">Earned at levels: ${earnedLevels.join(', ')}</div>
+        `;
+
+        // Initialize asiChoices if not already done
+        if (!wizardData.asiChoices) {
+          wizardData.asiChoices = [];
+        }
+
+        // Render ASI/Feat selection UI
+        renderASISelections(asiCount);
+      }
+    },
+    {
+      title: "Step 7: Choose Your Background",
       content: `
         <h5>Choose your background</h5>
         <p>Your background provides additional skill proficiencies, tool proficiencies, and roleplay hooks.</p>
@@ -808,7 +891,7 @@ const CharacterCreationWizard = (function() {
       }
     },
     {
-      title: "Step 7: Skills & Proficiencies",
+      title: "Step 8: Skills & Proficiencies",
       content: `
         <h5>Choose your skill proficiencies</h5>
         <p id="skillSelectionInstructions">Select the skills your class grants you.</p>
@@ -897,7 +980,7 @@ const CharacterCreationWizard = (function() {
       }
     },
     {
-      title: "Step 8: Hit Points & Combat Stats",
+      title: "Step 9: Hit Points & Combat Stats",
       content: `
         <h5>Calculate your starting stats</h5>
         <p>We'll automatically calculate your HP, AC, and other combat statistics.</p>
@@ -1111,7 +1194,7 @@ const CharacterCreationWizard = (function() {
       }
     },
     {
-      title: "Step 9: Learn Starting Spells",
+      title: "Step 10: Learn Starting Spells",
       content: `
         <h5>Select your starting spells</h5>
         <div id="spellLearningContainer">
@@ -1187,17 +1270,26 @@ const CharacterCreationWizard = (function() {
           cantripsToLearn = 2;
           maxSpellLevel = 1;
         } else if (wizardData.class === 'Cleric' || wizardData.class === 'Druid') {
-          // Prepared casters don't "learn" spells
-          container.innerHTML = `
-            <div class="alert alert-info">
-              <p><strong>${wizardData.class}s</strong> are <strong>prepared casters</strong>.</p>
-              <p>You don't choose a fixed spell list. Instead, you can prepare different spells each day from the full ${wizardData.class} spell list!</p>
-              <p class="mb-0"><small>After a long rest, you can prepare a number of ${wizardData.class} spells equal to your ${wizardData.class === 'Cleric' ? 'WIS' : 'WIS'} modifier + your ${wizardData.class} level (minimum 1).</small></p>
-            </div>
-          `;
-          wizardData.isSpellcaster = false;
+          // Prepared casters have access to all spells, but prepare a subset
           isPreparedCaster = true;
-          return;
+          const wisModifier = Math.floor((wizardData.abilityScores?.wis || 10) - 10) / 2;
+          const spellsToPrepare = Math.max(1, Math.floor(wisModifier) + wizardData.level);
+
+          spellsToLearn = spellsToPrepare;
+          cantripsToLearn = wizardData.class === 'Cleric' ? 3 : 2; // Clerics get 3 cantrips, Druids get 2
+          maxSpellLevel = 1;
+
+          // Adjust max spell level for higher levels
+          if (wizardData.level >= 17) maxSpellLevel = 9;
+          else if (wizardData.level >= 15) maxSpellLevel = 8;
+          else if (wizardData.level >= 13) maxSpellLevel = 7;
+          else if (wizardData.level >= 11) maxSpellLevel = 6;
+          else if (wizardData.level >= 9) maxSpellLevel = 5;
+          else if (wizardData.level >= 7) maxSpellLevel = 4;
+          else if (wizardData.level >= 5) maxSpellLevel = 3;
+          else if (wizardData.level >= 3) maxSpellLevel = 2;
+
+          // Continue to spell selection UI below (don't return early)
         } else if (wizardData.class === 'Paladin') {
           // Paladins don't get spells at level 1
           if (wizardData.level === 1) {
@@ -1212,14 +1304,20 @@ const CharacterCreationWizard = (function() {
           } else {
             // Level 2+ Paladins are prepared casters
             isPreparedCaster = true;
-            container.innerHTML = `
-              <div class="alert alert-info">
-                <p><strong>Paladins</strong> are <strong>prepared casters</strong>.</p>
-                <p>You can prepare different spells each day from the Paladin spell list!</p>
-              </div>
-            `;
-            wizardData.isSpellcaster = false;
-            return;
+            const chaModifier = Math.floor((wizardData.abilityScores?.cha || 10) - 10) / 2;
+            const spellsToPrepare = Math.max(1, Math.floor(chaModifier) + Math.floor(wizardData.level / 2));
+
+            spellsToLearn = spellsToPrepare;
+            cantripsToLearn = 0; // Paladins don't get cantrips
+            maxSpellLevel = 1;
+
+            // Paladins are half-casters, max spell level = 5
+            if (wizardData.level >= 17) maxSpellLevel = 5;
+            else if (wizardData.level >= 13) maxSpellLevel = 4;
+            else if (wizardData.level >= 9) maxSpellLevel = 3;
+            else if (wizardData.level >= 5) maxSpellLevel = 2;
+
+            // Continue to spell selection UI below (don't return early)
           }
         } else if (wizardData.class === 'Ranger') {
           // Rangers don't get spells at level 1
@@ -1237,17 +1335,22 @@ const CharacterCreationWizard = (function() {
             maxSpellLevel = 1;
           }
         } else if (wizardData.class === 'Artificer') {
-          spellsToLearn = 0; // Artificers prepare spells
-          cantripsToLearn = 2;
+          // Artificers are prepared casters (half-caster progression)
           isPreparedCaster = true;
-          container.innerHTML = `
-            <div class="alert alert-info">
-              <p><strong>Artificers</strong> prepare spells from the Artificer spell list.</p>
-              <p>You don't choose a fixed spell list!</p>
-            </div>
-          `;
-          wizardData.isSpellcaster = false;
-          return;
+          const intModifier = Math.floor((wizardData.abilityScores?.int || 10) - 10) / 2;
+          const spellsToPrepare = Math.max(1, Math.floor(intModifier) + Math.floor(wizardData.level / 2));
+
+          spellsToLearn = spellsToPrepare;
+          cantripsToLearn = 2;
+          maxSpellLevel = 1;
+
+          // Artificers are half-casters, max spell level = 5
+          if (wizardData.level >= 17) maxSpellLevel = 5;
+          else if (wizardData.level >= 13) maxSpellLevel = 4;
+          else if (wizardData.level >= 9) maxSpellLevel = 3;
+          else if (wizardData.level >= 5) maxSpellLevel = 2;
+
+          // Continue to spell selection UI below (don't return early)
         }
 
         // Adjust for higher starting levels
@@ -1280,12 +1383,16 @@ const CharacterCreationWizard = (function() {
         wizardData.selectedCantrips = [];
 
         // Build the spell selection UI
+        const spellAction = isPreparedCaster ? 'prepare' : 'learn';
+        const spellNoun = isPreparedCaster ? 'Preparation' : 'Learning';
+
         container.innerHTML = `
-          <div class="alert alert-primary">
-            <p><strong>${wizardData.class} Spell Learning:</strong></p>
+          <div class="alert ${isPreparedCaster ? 'alert-info' : 'alert-primary'}">
+            <p><strong>${wizardData.class} Spell ${spellNoun}:</strong></p>
+            ${isPreparedCaster ? `<p class="small mb-2">As a <strong>prepared caster</strong>, you have access to the full ${wizardData.class} spell list! You can ${spellAction} different spells after each long rest.</p>` : ''}
             <ul class="mb-0">
               ${cantripsToLearn > 0 ? `<li>Select <strong>${cantripsToLearn} cantrips</strong></li>` : ''}
-              ${spellsToLearn > 0 ? `<li>Select <strong>${spellsToLearn} spells</strong> of level ${maxSpellLevel} or lower</li>` : ''}
+              ${spellsToLearn > 0 ? `<li>${isPreparedCaster ? 'Prepare' : 'Select'} <strong>${spellsToLearn} spells</strong> of level ${maxSpellLevel} or lower ${isPreparedCaster ? '(can change daily)' : ''}</li>` : ''}
             </ul>
           </div>
 
@@ -1339,7 +1446,7 @@ const CharacterCreationWizard = (function() {
       }
     },
     {
-      title: "Step 10: Review & Finish",
+      title: "Step 11: Review & Finish",
       content: `
         <h5>Review your character</h5>
         <p>Here's a summary of your character. Click "Create Character" to finish!</p>
@@ -1614,6 +1721,211 @@ const CharacterCreationWizard = (function() {
     updateSelectedDisplay();
   }
 
+  function renderASISelections(asiCount) {
+    const container = document.getElementById('asiSelectionsContainer');
+    if (!container) return;
+
+    container.innerHTML = '';
+
+    for (let i = 0; i < asiCount; i++) {
+      const selectionDiv = document.createElement('div');
+      selectionDiv.className = 'card bg-dark border-secondary mb-3';
+      selectionDiv.innerHTML = `
+        <div class="card-header">
+          <strong>Choice ${i + 1} of ${asiCount}</strong>
+        </div>
+        <div class="card-body">
+          <div class="mb-3">
+            <div class="form-check">
+              <input class="form-check-input" type="radio" name="asi${i}Type" id="asi${i}TypeASI" value="asi">
+              <label class="form-check-label" for="asi${i}TypeASI">
+                <strong>Ability Score Improvement</strong> - Increase one ability by +2 or two abilities by +1 each
+              </label>
+            </div>
+            <div class="form-check mt-2">
+              <input class="form-check-input" type="radio" name="asi${i}Type" id="asi${i}TypeFeat" value="feat">
+              <label class="form-check-label" for="asi${i}TypeFeat">
+                <strong>Feat</strong> - Gain a special feat ability
+              </label>
+            </div>
+          </div>
+
+          <div id="asi${i}ASIOptions" class="d-none">
+            <p class="small text-muted">Choose how to distribute your +2 bonus:</p>
+            <div class="row g-2">
+              ${['str', 'dex', 'con', 'int', 'wis', 'cha'].map(ability => `
+                <div class="col-md-4">
+                  <label class="form-label small">${ability.toUpperCase()}</label>
+                  <select class="form-select form-select-sm asi-select" data-asi-index="${i}" data-ability="${ability}">
+                    <option value="0">+0</option>
+                    <option value="1">+1</option>
+                    <option value="2">+2</option>
+                  </select>
+                </div>
+              `).join('')}
+            </div>
+            <div class="mt-2"><small class="text-warning" id="asi${i}Total">Total: +0 (must equal +2)</small></div>
+          </div>
+
+          <div id="asi${i}FeatOptions" class="d-none">
+            <label for="asi${i}FeatSelect" class="form-label">Choose a Feat:</label>
+            <select class="form-select" id="asi${i}FeatSelect">
+              <option value="">Select a feat...</option>
+            </select>
+            <div id="asi${i}FeatDescription" class="alert alert-info mt-2 small" style="display:none;"></div>
+          </div>
+        </div>
+      `;
+
+      container.appendChild(selectionDiv);
+
+      // Set up event listeners for this choice
+      setupASIChoiceListeners(i);
+    }
+
+    // Populate feat dropdowns
+    if (window.LevelUpData) {
+      const allFeats = window.LevelUpData.getAllFeats();
+      for (let i = 0; i < asiCount; i++) {
+        const featSelect = document.getElementById(`asi${i}FeatSelect`);
+        if (featSelect) {
+          allFeats.forEach(featName => {
+            const option = document.createElement('option');
+            option.value = featName;
+            option.textContent = featName;
+            featSelect.appendChild(option);
+          });
+        }
+      }
+    }
+  }
+
+  function setupASIChoiceListeners(index) {
+    const asiRadio = document.getElementById(`asi${index}TypeASI`);
+    const featRadio = document.getElementById(`asi${index}TypeFeat`);
+    const asiOptions = document.getElementById(`asi${index}ASIOptions`);
+    const featOptions = document.getElementById(`asi${index}FeatOptions`);
+
+    // Radio button listeners
+    if (asiRadio) {
+      asiRadio.addEventListener('change', () => {
+        if (asiRadio.checked) {
+          asiOptions.classList.remove('d-none');
+          featOptions.classList.add('d-none');
+          updateASIChoice(index, 'asi');
+        }
+      });
+    }
+
+    if (featRadio) {
+      featRadio.addEventListener('change', () => {
+        if (featRadio.checked) {
+          asiOptions.classList.add('d-none');
+          featOptions.classList.remove('d-none');
+          updateASIChoice(index, 'feat');
+        }
+      });
+    }
+
+    // ASI select listeners
+    const asiSelects = document.querySelectorAll(`.asi-select[data-asi-index="${index}"]`);
+    asiSelects.forEach(select => {
+      select.addEventListener('change', () => {
+        updateASITotal(index);
+        saveASISelection(index);
+      });
+    });
+
+    // Feat select listener
+    const featSelect = document.getElementById(`asi${index}FeatSelect`);
+    if (featSelect) {
+      featSelect.addEventListener('change', (e) => {
+        const featName = e.target.value;
+        const descDiv = document.getElementById(`asi${index}FeatDescription`);
+
+        if (featName && window.LevelUpData) {
+          const featData = window.LevelUpData.getFeatData(featName);
+          if (featData && descDiv) {
+            descDiv.textContent = featData.description;
+            descDiv.style.display = 'block';
+          }
+        } else if (descDiv) {
+          descDiv.style.display = 'none';
+        }
+
+        saveFeatSelection(index, featName);
+      });
+    }
+  }
+
+  function updateASIChoice(index, type) {
+    if (!wizardData.asiChoices) {
+      wizardData.asiChoices = [];
+    }
+
+    while (wizardData.asiChoices.length <= index) {
+      wizardData.asiChoices.push({ type: null });
+    }
+
+    wizardData.asiChoices[index].type = type;
+  }
+
+  function updateASITotal(index) {
+    const selects = document.querySelectorAll(`.asi-select[data-asi-index="${index}"]`);
+    let total = 0;
+
+    selects.forEach(select => {
+      total += parseInt(select.value) || 0;
+    });
+
+    const totalSpan = document.getElementById(`asi${index}Total`);
+    if (totalSpan) {
+      totalSpan.textContent = `Total: +${total} (must equal +2)`;
+      totalSpan.className = total === 2 ? 'text-success' : 'text-warning';
+    }
+  }
+
+  function saveASISelection(index) {
+    if (!wizardData.asiChoices) {
+      wizardData.asiChoices = [];
+    }
+
+    while (wizardData.asiChoices.length <= index) {
+      wizardData.asiChoices.push({ type: null });
+    }
+
+    const selects = document.querySelectorAll(`.asi-select[data-asi-index="${index}"]`);
+    const increases = [];
+
+    selects.forEach(select => {
+      const ability = select.getAttribute('data-ability');
+      const amount = parseInt(select.value) || 0;
+      if (amount > 0) {
+        increases.push({ ability, amount });
+      }
+    });
+
+    wizardData.asiChoices[index] = {
+      type: 'asi',
+      increases
+    };
+  }
+
+  function saveFeatSelection(index, featName) {
+    if (!wizardData.asiChoices) {
+      wizardData.asiChoices = [];
+    }
+
+    while (wizardData.asiChoices.length <= index) {
+      wizardData.asiChoices.push({ type: null });
+    }
+
+    wizardData.asiChoices[index] = {
+      type: 'feat',
+      featName
+    };
+  }
+
   function finishWizard() {
     console.log('🧙 Wizard finishing with data:', wizardData);
 
@@ -1742,13 +2054,34 @@ const CharacterCreationWizard = (function() {
     wizardData.baseWis = wizardData.wis;
     wizardData.baseCha = wizardData.cha;
 
-    // Apply bonuses
+    // Apply racial bonuses
     wizardData.str += (baseBonuses.str || 0) + (subraceBonus.str || 0);
     wizardData.dex += (baseBonuses.dex || 0) + (subraceBonus.dex || 0);
     wizardData.con += (baseBonuses.con || 0) + (subraceBonus.con || 0);
     wizardData.int += (baseBonuses.int || 0) + (subraceBonus.int || 0);
     wizardData.wis += (baseBonuses.wis || 0) + (subraceBonus.wis || 0);
     wizardData.cha += (baseBonuses.cha || 0) + (subraceBonus.cha || 0);
+
+    // Apply ASI bonuses from character creation
+    if (wizardData.asiChoices && wizardData.asiChoices.length > 0) {
+      wizardData.asiChoices.forEach((choice, index) => {
+        if (choice.type === 'asi' && choice.increases) {
+          choice.increases.forEach(inc => {
+            const ability = inc.ability;
+            const amount = inc.amount;
+
+            if (ability === 'str') wizardData.str = Math.min(20, wizardData.str + amount);
+            else if (ability === 'dex') wizardData.dex = Math.min(20, wizardData.dex + amount);
+            else if (ability === 'con') wizardData.con = Math.min(20, wizardData.con + amount);
+            else if (ability === 'int') wizardData.int = Math.min(20, wizardData.int + amount);
+            else if (ability === 'wis') wizardData.wis = Math.min(20, wizardData.wis + amount);
+            else if (ability === 'cha') wizardData.cha = Math.min(20, wizardData.cha + amount);
+          });
+        }
+        // Note: Feats that grant ability increases or other benefits are stored in asiChoices
+        // but their mechanical benefits would need to be applied through the character sheet
+      });
+    }
 
     // Recalculate HP with new CON
     const conMod = Math.floor((wizardData.con - 10) / 2);

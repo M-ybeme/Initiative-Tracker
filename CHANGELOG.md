@@ -14,6 +14,53 @@ The DM's Toolbox has evolved through focused feature releases:
 
 ---
 
+## [1.11.9] - 2026-01-15
+**Character Creation: ASI/Feat Support, Complete Subclass Library & Prepared Spellcaster Improvements**
+
+### Added
+- **ASI/Feat for Higher-Level Characters** - Characters created at level 4+ now properly receive all earned Ability Score Improvements or Feats
+  - New "Step 6: Ability Score Improvements" in character creation wizard with interactive UI
+  - ASI calculation based on class and starting level (Fighters get extras at 6, 14; Rogues at 10)
+  - Choice between +2 ASI (split +2/+0 or +1/+1) or feat selection with live preview
+  - Feat descriptions displayed on selection with full 40+ feat library access
+  - ASI bonuses automatically applied to ability scores (respects 20 cap)
+- **Complete Subclass Library** - Added 66 new subclasses from Xanathar's Guide, Tasha's Cauldron, and other official sources:
+  - **Artificer** (NEW CLASS): Alchemist, Armorer, Artillerist, Battle Smith
+  - **Barbarian** (+5): Ancestral Guardian, Storm Herald, Zealot, Beast, Wild Magic
+  - **Bard** (+4): Glamour, Swords, Whispers, Creation, Eloquence
+  - **Cleric** (+5): Forge Domain, Grave Domain, Order Domain, Peace Domain, Twilight Domain
+  - **Druid** (+5): Dreams, Shepherd, Spores, **Circle of Stars**, Wildfire
+  - **Fighter** (+6): Arcane Archer, Cavalier, Samurai, Psi Warrior, Rune Knight, Echo Knight
+  - **Monk** (+6): Sun Soul, Long Death, Kensei, Mercy, Astral Self, Ascendant Dragon
+  - **Paladin** (+5): Conquest, Redemption, Glory, Watchers, Crown
+  - **Ranger** (+6): Gloom Stalker, Horizon Walker, Monster Slayer, Fey Wanderer, Swarmkeeper, Drakewarden
+  - **Rogue** (+6): Inquisitive, Mastermind, Scout, Swashbuckler, Phantom, Soulknife
+  - **Sorcerer** (+5): Divine Soul, Shadow Magic, Storm Sorcery, Aberrant Mind, Clockwork Soul
+  - **Warlock** (+5): Celestial, Hexblade, Fathomless, Genie, Undead
+  - **Wizard** (+3): Bladesinging, War Magic, Order of Scribes
+- **Subclass Coverage** - System now includes 114 total subclasses (up from 48), covering ~95% of official D&D 5e content
+- **Prepared Spellcaster Spell Selection** - Cleric, Druid, Paladin, and Artificer now receive full spell selection interface in character creation and level-up
+  - Automatic calculation of preparable spells based on casting stat + level (WIS for Cleric/Druid, CHA for Paladin, INT for Artificer)
+  - Full class spell list access with search and filter capabilities
+  - Initial spell preparation during character creation
+  - Re-preparation interface during level-up with updated spell counts
+  - Helpful reminders that prepared spells can be changed after each long rest
+  - Proper cantrip selection for each class (Cleric: 3, Druid: 2, Artificer: 2, Paladin: 0)
+
+### Technical
+- Added `getASICount()` and `getASILevels()` helper functions to [level-up-data.js:2243-2280](level-up-data.js#L2243-L2280)
+- Created `renderASISelections()`, `setupASIChoiceListeners()`, and related UI functions in [character-creation-wizard.js:1700-1903](character-creation-wizard.js#L1700-L1903)
+- Updated `applyRacialBonuses()` to apply ASI choices to stats in [character-creation-wizard.js:2041-2060](character-creation-wizard.js#L2041-L2060)
+- Renumbered wizard steps 6-11 (previously 6-10) to accommodate new ASI step
+- Added Artificer to SUBCLASS_DATA with all 4 specialist archetypes in [level-up-data.js:1583-1628](level-up-data.js#L1583-L1628)
+- Expanded all class subclass options across [level-up-data.js:494-1628](level-up-data.js#L494-L1628)
+- Updated prepared caster handling in [character-creation-wizard.js:1272-1339](character-creation-wizard.js#L1272-L1339) to show spell selection UI
+- Modified `getSpellLearningRules()` in [level-up-data.js:2335-2408](level-up-data.js#L2335-L2408) to calculate prepared spell counts
+- Enhanced `renderSpellLearningStep()` in [level-up-system.js:451-573](level-up-system.js#L451-L573) with prepared caster UI
+- Updated `getLevelUpChanges()` to pass character data for spell preparation calculations
+
+---
+
 ## [1.11.8] - 2026-01-12
 **Character Sheet Export: Multi-Page PDFs & Complete Data**
 

@@ -51,7 +51,7 @@ const LevelUpSystem = (function() {
     levelUpInProgress = true;
 
     const newLevel = currentLevel + 1;
-    const changes = LevelUpData.getLevelUpChanges(className, currentLevel, newLevel);
+    const changes = LevelUpData.getLevelUpChanges(className, currentLevel, newLevel, character);
 
     showLevelUpModal(character, className, currentLevel, newLevel, classData, changes);
   }
@@ -452,24 +452,38 @@ const LevelUpSystem = (function() {
    * Step: Spell Learning (if applicable)
    */
   function renderSpellLearningStep(character, spellRules, stepNum) {
-    const { newSpells, canSwap, maxSpellLevel, className } = spellRules;
+    const { type, isPreparedCaster, newSpells, preparationFormula, canSwap, maxSpellLevel, className } = spellRules;
+
+    const spellsToSelect = newSpells; // Already calculated in getSpellLearningRules
+    const actionVerb = isPreparedCaster ? 'Prepare' : 'Learn';
+    const actionNoun = isPreparedCaster ? 'Preparation' : 'Learning';
 
     return `
       <div class="accordion-item bg-dark border-secondary">
         <h2 class="accordion-header">
           <button class="accordion-button bg-dark text-light" type="button"
                   data-bs-toggle="collapse" data-bs-target="#step${stepNum}">
-            <strong>Step ${stepNum}: Learn Spells</strong>
+            <strong>Step ${stepNum}: ${actionVerb} Spells</strong>
             <span class="ms-auto me-3 badge bg-warning text-dark" id="spellBadge">Not Selected</span>
           </button>
         </h2>
         <div id="step${stepNum}" class="accordion-collapse collapse show"
              data-bs-parent="#levelUpAccordion">
           <div class="accordion-body">
+            ${isPreparedCaster ? `
+              <div class="alert alert-info mb-3">
+                <i class="bi bi-info-circle me-1"></i>
+                <strong>Prepared Caster:</strong> You have access to the full ${className} spell list!
+                You can change your prepared spells after each long rest.
+              </div>
+            ` : ''}
+
             <p class="text-muted mb-3">
               <i class="bi bi-book me-1"></i>
-              Select <strong>${newSpells}</strong> new ${className} spell${newSpells > 1 ? 's' : ''}
-              of level <strong>${maxSpellLevel}</strong> or lower.
+              ${isPreparedCaster
+                ? `Prepare <strong>${spellsToSelect}</strong> ${className} spell${spellsToSelect > 1 ? 's' : ''} of level <strong>${maxSpellLevel}</strong> or lower.`
+                : `Select <strong>${spellsToSelect}</strong> new ${className} spell${spellsToSelect > 1 ? 's' : ''} of level <strong>${maxSpellLevel}</strong> or lower.`
+              }
             </p>
 
             <!-- Filter and Search -->
@@ -513,15 +527,15 @@ const LevelUpSystem = (function() {
             <!-- Selected Spells Display -->
             <div class="alert alert-info mb-0">
               <div class="d-flex justify-content-between align-items-center mb-2">
-                <strong><i class="bi bi-check2-square me-1"></i>Selected Spells:</strong>
-                <span class="badge bg-primary" id="selectedSpellCount">0/${newSpells}</span>
+                <strong><i class="bi bi-check2-square me-1"></i>${isPreparedCaster ? 'Prepared' : 'Selected'} Spells:</strong>
+                <span class="badge bg-primary" id="selectedSpellCount">0/${spellsToSelect}</span>
               </div>
               <div id="selectedSpellsList" class="d-flex flex-wrap gap-2">
-                <span class="text-muted small">No spells selected yet</span>
+                <span class="text-muted small">No spells ${isPreparedCaster ? 'prepared' : 'selected'} yet</span>
               </div>
             </div>
 
-            ${canSwap ? `
+            ${canSwap && !isPreparedCaster ? `
               <!-- Optional: Spell Swapping Section -->
               <div class="mt-3 border-top border-secondary pt-3">
                 <label class="form-label small">

@@ -528,6 +528,72 @@ window.LevelUpData = (function() {
             15: ['Arcane Charge'],
             18: ['Improved War Magic']
           }
+        },
+        'Arcane Archer': {
+          name: 'Arcane Archer',
+          description: 'An Arcane Archer studies a unique elven method of archery that weaves magic into attacks to produce supernatural effects. Arcane Archers are some of the most elite warriors among the elves. They stand watch over the fringes of elven domains, keeping a keen eye out for trespassers and using magic-infused arrows to defeat monsters and invaders before they can reach elven settlements.',
+          features: {
+            3: ['Arcane Archer Lore', 'Arcane Shot (2 options)'],
+            7: ['Magic Arrow', 'Curving Shot'],
+            10: ['Arcane Shot (3 options)'],
+            15: ['Ever-Ready Shot'],
+            18: ['Arcane Shot (4 options)']
+          }
+        },
+        'Cavalier': {
+          name: 'Cavalier',
+          description: 'The archetypal Cavalier excels at mounted combat. Usually born among the nobility and raised at court, a Cavalier is equally at home leading a cavalry charge or exchanging repartee at a state dinner. Cavaliers also learn how to guard those in their charge from harm, often serving as the protectors of their superiors and of the weak.',
+          features: {
+            3: ['Bonus Proficiency', 'Born to the Saddle', 'Unwavering Mark'],
+            7: ['Warding Maneuver'],
+            10: ['Hold the Line'],
+            15: ['Ferocious Charger'],
+            18: ['Vigilant Defender']
+          }
+        },
+        'Samurai': {
+          name: 'Samurai',
+          description: 'The Samurai is a fighter who draws on an implacable fighting spirit to overcome enemies. A Samurai\'s resolve is nearly unbreakable, and the enemies in a Samurai\'s path have two choices: yield or die fighting.',
+          features: {
+            3: ['Bonus Proficiency', 'Fighting Spirit'],
+            7: ['Elegant Courtier'],
+            10: ['Tireless Spirit'],
+            15: ['Rapid Strike'],
+            18: ['Strength Before Death']
+          }
+        },
+        'Psi Warrior': {
+          name: 'Psi Warrior',
+          description: 'Awake to the psionic power within, a Psi Warrior is a fighter who augments their physical might with psi-infused weapon strikes, telekinetic lashes, and barriers of mental force. Many githyanki train to become such warriors, as do some of the most disciplined high elves.',
+          features: {
+            3: ['Psionic Power', 'Telekinetic Movement'],
+            7: ['Telekinetic Adept', 'Psi-Powered Leap'],
+            10: ['Guarded Mind'],
+            15: ['Bulwark of Force'],
+            18: ['Telekinetic Master']
+          }
+        },
+        'Rune Knight': {
+          name: 'Rune Knight',
+          description: 'Rune Knights enhance their martial prowess using the supernatural power of runes, an ancient practice that originated with giants. Rune cutters can be found among any family of giants, and you likely learned your methods first or second hand from such a mystical artisan.',
+          features: {
+            3: ['Bonus Proficiencies', 'Rune Carver', 'Giant\'s Might'],
+            7: ['Runic Shield'],
+            10: ['Great Stature'],
+            15: ['Master of Runes'],
+            18: ['Runic Juggernaut']
+          }
+        },
+        'Echo Knight': {
+          name: 'Echo Knight',
+          description: 'A mysterious and feared frontline warrior of the Kryn Dynasty, the Echo Knight has mastered the art of using dunamis to summon the fading shades of unrealized timelines to aid them in battle. Surrounded by echoes of their own might, they charge into the fray as a cycling swarm of shadows and strikes.',
+          features: {
+            3: ['Manifest Echo', 'Unleash Incarnation'],
+            7: ['Echo Avatar'],
+            10: ['Shadow Martyr'],
+            15: ['Reclaim Potential'],
+            18: ['Legion of One']
+          }
         }
       }
     },
@@ -615,6 +681,36 @@ window.LevelUpData = (function() {
             10: ['Shapechanger'],
             14: ['Master Transmuter']
           }
+        },
+        'Bladesinging': {
+          name: 'Bladesinging',
+          description: 'Bladesingers are elves who bravely defend their people and lands. They are elf wizards who master a school of sword fighting grounded in a tradition of arcane magic. In combat, a bladesinger uses a series of intricate, elegant maneuvers that fend off harm and allow the bladesinger to channel magic into devastating attacks and a cunning defense.',
+          features: {
+            2: ['Training in War and Song', 'Bladesong'],
+            6: ['Extra Attack'],
+            10: ['Song of Defense'],
+            14: ['Song of Victory']
+          }
+        },
+        'War Magic': {
+          name: 'War Magic',
+          description: 'A variety of arcane colleges specialize in training wizards for war. The tradition of War Magic blends principles of evocation and abjuration, rather than specializing in either of those schools. It teaches techniques that empower a caster\'s spells, while also providing methods for wizards to bolster their own defenses.',
+          features: {
+            2: ['Arcane Deflection', 'Tactical Wit'],
+            6: ['Power Surge'],
+            10: ['Durable Magic'],
+            14: ['Deflecting Shroud']
+          }
+        },
+        'Order of Scribes': {
+          name: 'Order of Scribes',
+          description: 'Magic of the book—that\'s what many folk call wizardry. The name is apt, given how much time wizards spend poring over tomes and penning theories about the nature of magic. It\'s rare to see wizards traveling without books and scrolls sprouting from their bags, and a wizard would go to great lengths to plumb an archive of ancient knowledge.',
+          features: {
+            2: ['Wizardly Quill', 'Awakened Spellbook'],
+            6: ['Manifest Mind'],
+            10: ['Master Scrivener'],
+            14: ['One with the Word']
+          }
         }
       }
     },
@@ -642,6 +738,56 @@ window.LevelUpData = (function() {
             10: ['Spirit Walker'],
             14: ['Totemic Attunement']
           }
+        },
+        'Path of the Ancestral Guardian': {
+          name: 'Path of the Ancestral Guardian',
+          description: 'Some barbarians hail from cultures that revere their ancestors. These tribes teach that the warriors of the past linger in the world as mighty spirits, who can guide and protect the living. When a barbarian who follows this path rages, the barbarian contacts the spirit world and calls on these guardian spirits for aid.',
+          features: {
+            3: ['Ancestral Protectors'],
+            6: ['Spirit Shield'],
+            10: ['Consult the Spirits'],
+            14: ['Vengeful Ancestors']
+          }
+        },
+        'Path of the Storm Herald': {
+          name: 'Path of the Storm Herald',
+          description: 'Typical barbarians harbor a fury that dwells within. Their rage grants them superior strength, durability, and speed. Barbarians who follow the Path of the Storm Herald learn instead to transform their rage into a mantle of primal magic that swirls around them. When in a fury, a barbarian of this path taps into nature to create powerful, magical effects.',
+          features: {
+            3: ['Storm Aura (choose: Desert, Sea, or Tundra)'],
+            6: ['Storm Soul'],
+            10: ['Shielding Storm'],
+            14: ['Raging Storm']
+          }
+        },
+        'Path of the Zealot': {
+          name: 'Path of the Zealot',
+          description: 'Some deities inspire their followers to pitch themselves into a ferocious battle fury. These barbarians are zealots—warriors who channel their rage into powerful displays of divine power. A variety of gods across many worlds inspire their followers to embrace this path, from Tempus the war god to the Fury and the Mockery of Eberron.',
+          features: {
+            3: ['Divine Fury', 'Warrior of the Gods'],
+            6: ['Fanatical Focus'],
+            10: ['Zealous Presence'],
+            14: ['Rage Beyond Death']
+          }
+        },
+        'Path of the Beast': {
+          name: 'Path of the Beast',
+          description: 'Barbarians who walk the Path of the Beast draw their rage from a bestial spark burning within their souls. That beast bursts forth in the throes of rage, physically transforming the barbarian. Such a barbarian might be inhabited by a primal spirit or be descended from shape-shifters. You can choose the origin of your feral might or determine it by rolling on the Origin of the Beast table.',
+          features: {
+            3: ['Form of the Beast'],
+            6: ['Bestial Soul'],
+            10: ['Infectious Fury'],
+            14: ['Call the Hunt']
+          }
+        },
+        'Path of Wild Magic': {
+          name: 'Path of Wild Magic',
+          description: 'Many places in the multiverse abound with beauty, intense emotion, and rampant magic; the Feywild, the Upper Planes, and other realms of supernatural power radiate with such forces and can profoundly influence people. As folk of deep feeling, barbarians are especially susceptible to these wild influences, with some barbarians being transformed by the magic. These magic-suffused barbarians walk the Path of Wild Magic.',
+          features: {
+            3: ['Magic Awareness', 'Wild Surge'],
+            6: ['Bolstering Magic'],
+            10: ['Unstable Backlash'],
+            14: ['Controlled Surge']
+          }
         }
       }
     },
@@ -666,6 +812,51 @@ window.LevelUpData = (function() {
             3: ['Bonus Proficiencies', 'Combat Inspiration'],
             6: ['Extra Attack'],
             14: ['Battle Magic']
+          }
+        },
+        'College of Glamour': {
+          name: 'College of Glamour',
+          description: 'The College of Glamour is the home of bards who mastered their craft in the vibrant realm of the Feywild or under the tutelage of someone who dwelled there. Tutored by satyrs, eladrin, and other fey, these bards learn to use their magic to delight and captivate others.',
+          features: {
+            3: ['Mantle of Inspiration', 'Enthralling Performance'],
+            6: ['Mantle of Majesty'],
+            14: ['Unbreakable Majesty']
+          }
+        },
+        'College of Swords': {
+          name: 'College of Swords',
+          description: 'Bards of the College of Swords are called blades, and they entertain through daring feats of weapon prowess. Their talent with weapons inspires many blades to lead double lives. One blade might use a circus troupe as cover for nefarious deeds such as assassination, robbery, and blackmail. Other blades strike at the wicked, bringing justice to bear against the cruel and powerful.',
+          features: {
+            3: ['Bonus Proficiencies', 'Fighting Style', 'Blade Flourish'],
+            6: ['Extra Attack'],
+            14: ['Master\'s Flourish']
+          }
+        },
+        'College of Whispers': {
+          name: 'College of Whispers',
+          description: 'Most folk are happy to welcome a bard into their midst. Bards of the College of Whispers use this to their advantage. They appear to be like other bards, sharing news, singing songs, and telling tales to audiences. In truth, the College of Whispers teaches its students that they are wolves among sheep. These bards use their knowledge and magic to uncover secrets and turn them against others through extortion and threats.',
+          features: {
+            3: ['Psychic Blades', 'Words of Terror'],
+            6: ['Mantle of Whispers'],
+            14: ['Shadow Lore']
+          }
+        },
+        'College of Creation': {
+          name: 'College of Creation',
+          description: 'Bards believe the cosmos is a work of art—the creation of the first dragons and gods. That creative work included harmonies that continue to resound through existence today, a power known as the Song of Creation. The bards of the College of Creation draw on that primeval song through dance, music, and poetry, and their teachers share this lesson: "Before the sun and the moon, there was the Song, and its music awoke the first dawn. Its melodies so delighted the stones and trees that some of them gained a voice of their own. And now they sing too."',
+          features: {
+            3: ['Mote of Potential', 'Performance of Creation'],
+            6: ['Animating Performance'],
+            14: ['Creative Crescendo']
+          }
+        },
+        'College of Eloquence': {
+          name: 'College of Eloquence',
+          description: 'Adherents of the College of Eloquence master the art of oratory. Persuasion is regarded as a high art, and a well-reasoned, well-spoken argument often proves more persuasive than facts. These bards wield a blend of logic and theatrical wordplay, winning over skeptics and detractors with logical arguments and plucking at heartstrings to appeal to the emotions of audiences.',
+          features: {
+            3: ['Silver Tongue', 'Unsettling Words'],
+            6: ['Unfailing Inspiration'],
+            14: ['Universal Speech']
           }
         }
       }
@@ -751,6 +942,61 @@ window.LevelUpData = (function() {
             8: ['Divine Strike'],
             17: ['Avatar of Battle']
           }
+        },
+        'Forge Domain': {
+          name: 'Forge Domain',
+          description: 'The gods of the forge are patrons of artisans who work with metal, from a humble blacksmith who keeps a village in horseshoes and plow blades to the mighty elf artisan whose diamond-tipped arrows of mithral have felled demon lords. The gods of the forge teach that, with patience and hard work, even the most intractable metal can be transformed from a lump of ore to a beautifully wrought object.',
+          features: {
+            1: ['Bonus Proficiencies', 'Blessing of the Forge'],
+            2: ['Channel Divinity: Artisan\'s Blessing'],
+            6: ['Soul of the Forge'],
+            8: ['Divine Strike'],
+            17: ['Saint of Forge and Fire']
+          }
+        },
+        'Grave Domain': {
+          name: 'Grave Domain',
+          description: 'Gods of the grave watch over the line between life and death. To these deities, death and the afterlife are a foundational part of the multiverse. To desecrate the peace of the dead is an abomination. Deities of the grave include Kelemvor, Wee Jas, the ancestral spirits of the Undying Court, Hades, Anubis, and Osiris. Followers of these deities seek to put wandering spirits to rest, destroy the undead, and ease the suffering of the dying.',
+          features: {
+            1: ['Circle of Mortality', 'Eyes of the Grave'],
+            2: ['Channel Divinity: Path to the Grave'],
+            6: ['Sentinel at Death\'s Door'],
+            8: ['Potent Spellcasting'],
+            17: ['Keeper of Souls']
+          }
+        },
+        'Order Domain': {
+          name: 'Order Domain',
+          description: 'The Order Domain represents discipline, as well as devotion to the laws that govern a society, an institution, or a philosophy. Clerics of Order meditate on logic and justice as they serve their gods, examples of which appear in the Order Deities table. Clerics of Order believe that well-crafted laws establish legitimate hierarchies, and those selected by law to lead must be obeyed.',
+          features: {
+            1: ['Bonus Proficiencies', 'Voice of Authority'],
+            2: ['Channel Divinity: Order\'s Demand'],
+            6: ['Embodiment of the Law'],
+            8: ['Divine Strike'],
+            17: ['Order\'s Wrath']
+          }
+        },
+        'Peace Domain': {
+          name: 'Peace Domain',
+          description: 'The balm of peace thrives at the heart of healthy communities, between friendly nations, and in the souls of the kindhearted. The gods of peace inspire people of all sorts to resolve conflict and to stand up against those forces that try to prevent peace from flourishing. Clerics of the Peace Domain preside over the signing of treaties, and they are often asked to arbitrate in disputes.',
+          features: {
+            1: ['Implement of Peace', 'Emboldening Bond'],
+            2: ['Channel Divinity: Balm of Peace'],
+            6: ['Protective Bond'],
+            8: ['Potent Spellcasting'],
+            17: ['Expansive Bond']
+          }
+        },
+        'Twilight Domain': {
+          name: 'Twilight Domain',
+          description: 'The twilight transition from light into darkness often brings calm and even joy, as the day\'s labors end and the hours of rest begin. The darkness can also bring terrors, but the gods of twilight guard against the horrors of the night. Clerics who serve these deities bring comfort to those who seek rest and protect them by venturing into the encroaching darkness to ensure that the dark is a comfort, not a terror.',
+          features: {
+            1: ['Bonus Proficiencies', 'Eyes of Night', 'Vigilant Blessing'],
+            2: ['Channel Divinity: Twilight Sanctuary'],
+            6: ['Steps of Night'],
+            8: ['Divine Strike'],
+            17: ['Twilight Shroud']
+          }
         }
       }
     },
@@ -777,6 +1023,56 @@ window.LevelUpData = (function() {
             6: ['Primal Strike'],
             10: ['Elemental Wild Shape'],
             14: ['Thousand Forms']
+          }
+        },
+        'Circle of Dreams': {
+          name: 'Circle of Dreams',
+          description: 'Druids who are members of the Circle of Dreams hail from regions that have strong ties to the Feywild and its dreamlike realms. The druids\' guardianship of the natural world makes for a natural alliance between them and good-aligned fey. These druids seek to fill the world with dreamy wonder.',
+          features: {
+            2: ['Balm of the Summer Court'],
+            6: ['Hearth of Moonlight and Shadow'],
+            10: ['Hidden Paths'],
+            14: ['Walker in Dreams']
+          }
+        },
+        'Circle of the Shepherd': {
+          name: 'Circle of the Shepherd',
+          description: 'Druids of the Circle of the Shepherd commune with the spirits of nature, especially the spirits of beasts and the fey, and call to those spirits for aid. These druids recognize that all living things play a role in the natural world, yet they focus on protecting animals and fey creatures that have difficulty defending themselves.',
+          features: {
+            2: ['Speech of the Woods', 'Spirit Totem'],
+            6: ['Mighty Summoner'],
+            10: ['Guardian Spirit'],
+            14: ['Faithful Summons']
+          }
+        },
+        'Circle of Spores': {
+          name: 'Circle of Spores',
+          description: 'Druids of the Circle of Spores find beauty in decay. They see within mold and other fungi the ability to transform lifeless material into abundant, albeit somewhat strange, life. These druids believe that life and death are parts of a grand cycle, with one leading to the other and then back again.',
+          features: {
+            2: ['Circle Spells', 'Halo of Spores', 'Symbiotic Entity'],
+            6: ['Fungal Infestation'],
+            10: ['Spreading Spores'],
+            14: ['Fungal Body']
+          }
+        },
+        'Circle of Stars': {
+          name: 'Circle of Stars',
+          description: 'The Circle of Stars allows druids to draw on the power of starlight. These druids have tracked heavenly patterns since time immemorial, discovering secrets hidden amid the constellations. By revealing and understanding these secrets, the Circle of the Stars seeks to harness the powers of the cosmos.',
+          features: {
+            2: ['Star Map', 'Starry Form'],
+            6: ['Cosmic Omen'],
+            10: ['Twinkling Constellations'],
+            14: ['Full of Stars']
+          }
+        },
+        'Circle of Wildfire': {
+          name: 'Circle of Wildfire',
+          description: 'Druids within the Circle of Wildfire understand that destruction is sometimes the precursor of creation, such as when a forest fire promotes later growth. These druids bond with a primal spirit that harbors both destructive and creative power, allowing the druids to create controlled flames that burn away one thing but give life to another.',
+          features: {
+            2: ['Circle Spells', 'Summon Wildfire Spirit'],
+            6: ['Enhanced Bond'],
+            10: ['Cauterizing Flames'],
+            14: ['Blazing Revival']
           }
         }
       }
@@ -815,6 +1111,66 @@ window.LevelUpData = (function() {
             11: ['Extra Elemental Disciplines'],
             17: ['Extra Elemental Disciplines']
           }
+        },
+        'Way of the Sun Soul': {
+          name: 'Way of the Sun Soul',
+          description: 'Monks of the Way of the Sun Soul learn to channel their life energy into searing bolts of light. They teach that meditation can unlock the ability to unleash the indomitable light shed by the soul of every living creature.',
+          features: {
+            3: ['Radiant Sun Bolt'],
+            6: ['Searing Arc Strike'],
+            11: ['Searing Sunburst'],
+            17: ['Sun Shield']
+          }
+        },
+        'Way of the Long Death': {
+          name: 'Way of the Long Death',
+          description: 'Monks of the Way of the Long Death are obsessed with the meaning and mechanics of dying. They capture creatures and prepare elaborate experiments to capture, record, and understand the moments of their demise. They then use this knowledge to guide their understanding of martial arts, yielding a deadly fighting style.',
+          features: {
+            3: ['Touch of Death'],
+            6: ['Hour of Reaping'],
+            11: ['Mastery of Death'],
+            17: ['Touch of the Long Death']
+          }
+        },
+        'Way of the Kensei': {
+          name: 'Way of the Kensei',
+          description: 'Monks of the Way of the Kensei train relentlessly with their weapons, to the point where the weapon becomes an extension of the body. Founded on a mastery of sword fighting, the tradition has expanded to include many different weapons.',
+          features: {
+            3: ['Path of the Kensei', 'Kensei Weapons'],
+            6: ['One with the Blade'],
+            11: ['Sharpen the Blade'],
+            17: ['Unerring Accuracy']
+          }
+        },
+        'Way of Mercy': {
+          name: 'Way of Mercy',
+          description: 'Monks of the Way of Mercy learn to manipulate the life force of others to bring aid to those in need. They are wandering physicians to the poor and hurt. However, to those beyond their help, they bring a swift end as an act of mercy.',
+          features: {
+            3: ['Implements of Mercy', 'Hand of Healing', 'Hand of Harm'],
+            6: ['Physician\'s Touch'],
+            11: ['Flurry of Healing and Harm'],
+            17: ['Hand of Ultimate Mercy']
+          }
+        },
+        'Way of the Astral Self': {
+          name: 'Way of the Astral Self',
+          description: 'A monk who follows the Way of the Astral Self believes their body is an illusion. They see their ki as a representation of their true form, an astral self. This astral self has the capacity to be a force of order or disorder, with some monasteries training students to use their power to protect the weak and other instructing aspirants in how to manifest their true selves in service to the mighty.',
+          features: {
+            3: ['Arms of the Astral Self'],
+            6: ['Visage of the Astral Self'],
+            11: ['Body of the Astral Self'],
+            17: ['Awakening of the Astral Self']
+          }
+        },
+        'Way of the Ascendant Dragon': {
+          name: 'Way of the Ascendant Dragon',
+          description: 'The fundamental teaching of this tradition holds that by emulating dragons, a monk becomes a more integrated part of the world and its magic. By altering their spirit to resonate with draconic might, monks who follow this tradition augment their prowess in battle, bolster their allies, and can even soar through the air on draconic wings.',
+          features: {
+            3: ['Draconic Disciple', 'Breath of the Dragon'],
+            6: ['Wings Unfurled'],
+            11: ['Aspect of the Wyrm'],
+            17: ['Ascendant Aspect']
+          }
         }
       }
     },
@@ -852,6 +1208,56 @@ window.LevelUpData = (function() {
             15: ['Soul of Vengeance'],
             20: ['Avenging Angel']
           }
+        },
+        'Oath of Conquest': {
+          name: 'Oath of Conquest',
+          description: 'The Oath of Conquest calls to paladins who seek glory in battle and the subjugation of their enemies. It isn\'t enough for these paladins to establish order. They must crush the forces of chaos. Sometimes called knight tyrants or iron mongers, those who swear this oath gather into grim orders that serve gods or philosophies of war and well-ordered might.',
+          features: {
+            3: ['Oath Spells', 'Channel Divinity: Conquering Presence', 'Channel Divinity: Guided Strike'],
+            7: ['Aura of Conquest'],
+            15: ['Scornful Rebuke'],
+            20: ['Invincible Conqueror']
+          }
+        },
+        'Oath of Redemption': {
+          name: 'Oath of Redemption',
+          description: 'The Oath of Redemption sets a paladin on a difficult path, one that requires a holy warrior to use violence only as a last resort. Paladins who dedicate themselves to this oath believe that any person can be redeemed and that the path of benevolence and justice is one that anyone can walk. These paladins face evil creatures in the hope of turning their foes to the light, and they slay their enemies only when such a deed will clearly save other lives.',
+          features: {
+            3: ['Oath Spells', 'Channel Divinity: Emissary of Peace', 'Channel Divinity: Rebuke the Violent'],
+            7: ['Aura of the Guardian'],
+            15: ['Protective Spirit'],
+            20: ['Emissary of Redemption']
+          }
+        },
+        'Oath of Glory': {
+          name: 'Oath of Glory',
+          description: 'Paladins who take the Oath of Glory believe they and their companions are destined to achieve glory through deeds of heroism. They train diligently and encourage their companions so they\'re all ready when destiny calls.',
+          features: {
+            3: ['Oath Spells', 'Channel Divinity: Peerless Athlete', 'Channel Divinity: Inspiring Smite'],
+            7: ['Aura of Alacrity'],
+            15: ['Glorious Defense'],
+            20: ['Living Legend']
+          }
+        },
+        'Oath of the Watchers': {
+          name: 'Oath of the Watchers',
+          description: 'The Oath of the Watchers binds paladins to protect mortal realms from the predations of extraplanar creatures, many of which can lay waste to mortal soldiers. Thus, the Watchers hone their minds, spirits, and bodies to be the ultimate weapons against such threats.',
+          features: {
+            3: ['Oath Spells', 'Channel Divinity: Watcher\'s Will', 'Channel Divinity: Abjure the Extraplanar'],
+            7: ['Aura of the Sentinel'],
+            15: ['Vigilant Rebuke'],
+            20: ['Mortal Bulwark']
+          }
+        },
+        'Oath of the Crown': {
+          name: 'Oath of the Crown',
+          description: 'The Oath of the Crown is sworn to the ideals of civilization, be it the spirit of a nation, fealty to a sovereign, or service to a deity of law and rulership. The paladins who swear this oath dedicate themselves to serving society and, in particular, the just laws that hold society together.',
+          features: {
+            3: ['Oath Spells', 'Channel Divinity: Champion Challenge', 'Channel Divinity: Turn the Tide'],
+            7: ['Divine Allegiance'],
+            15: ['Unyielding Spirit'],
+            20: ['Exalted Champion']
+          }
         }
       }
     },
@@ -878,6 +1284,66 @@ window.LevelUpData = (function() {
             7: ['Exceptional Training'],
             11: ['Bestial Fury'],
             15: ['Share Spells']
+          }
+        },
+        'Gloom Stalker': {
+          name: 'Gloom Stalker',
+          description: 'Gloom Stalkers are at home in the darkest places: deep under the earth, in gloomy alleyways, in primeval forests, and wherever else the light dims. Most folk enter such places with trepidation, but a Gloom Stalker ventures boldly into the darkness, seeking to ambush threats before they can reach the broader world.',
+          features: {
+            3: ['Dread Ambusher', 'Umbral Sight'],
+            7: ['Iron Mind'],
+            11: ['Stalker\'s Flurry'],
+            15: ['Shadowy Dodge']
+          }
+        },
+        'Horizon Walker': {
+          name: 'Horizon Walker',
+          description: 'Horizon Walkers guard the world against threats that originate from other planes or that seek to ravage the mortal realm with otherworldly magic. They seek out planar portals and keep watch over them, venturing to the Inner Planes and the Outer Planes as needed to pursue their foes.',
+          features: {
+            3: ['Detect Portal', 'Planar Warrior'],
+            7: ['Ethereal Step'],
+            11: ['Distant Strike'],
+            15: ['Spectral Defense']
+          }
+        },
+        'Monster Slayer': {
+          name: 'Monster Slayer',
+          description: 'You have dedicated yourself to hunting down creatures of the night and wielders of grim magic. A Monster Slayer seeks out vampires, dragons, evil fey, fiends, and other magical threats. Trained in supernatural techniques to overcome such monsters, slayers are experts at unearthing and defeating mighty, mystical foes.',
+          features: {
+            3: ['Hunter\'s Sense', 'Slayer\'s Prey'],
+            7: ['Supernatural Defense'],
+            11: ['Magic-User\'s Nemesis'],
+            15: ['Slayer\'s Counter']
+          }
+        },
+        'Fey Wanderer': {
+          name: 'Fey Wanderer',
+          description: 'A fey mystique surrounds you, thanks to the boon of an archfey, the shining fruit you ate from a talking tree, the magic spring you swam in, or some other auspicious event. However you acquired your fey magic, you are now a Fey Wanderer, a ranger who represents both the mortal and the fey realms. As you wander the multiverse, your joyful laughter brightens the hearts of the downtrodden, and your martial prowess strikes terror in your foes.',
+          features: {
+            3: ['Dreadful Strikes', 'Otherworldly Glamour'],
+            7: ['Beguiling Twist'],
+            11: ['Fey Reinforcements'],
+            15: ['Misty Wanderer']
+          }
+        },
+        'Swarmkeeper': {
+          name: 'Swarmkeeper',
+          description: 'Feeling a deep connection to the environment around them, some rangers reach out through their magical connection to the world and bond with a swarm of nature spirits. The swarm becomes a potent force in battle, as well as helpful company for the ranger. Some Swarmkeepers are outcasts or hermits, keeping to themselves and their attendant swarms rather than dealing with the discomfort of others.',
+          features: {
+            3: ['Gathered Swarm', 'Swarmkeeper Magic'],
+            7: ['Writhing Tide'],
+            11: ['Mighty Swarm'],
+            15: ['Swarming Dispersal']
+          }
+        },
+        'Drakewarden': {
+          name: 'Drakewarden',
+          description: 'Your connection to the natural world takes the form of a draconic spirit, which can manifest in physical form as a drake. As your powers grow, your drake grows as well, blossoming from a small four-legged companion to a majestic winged creature large and strong enough for you to ride.',
+          features: {
+            3: ['Draconic Gift', 'Drake Companion'],
+            7: ['Bond of Fang and Scale'],
+            11: ['Drake\'s Breath'],
+            15: ['Perfected Bond']
           }
         }
       }
@@ -916,6 +1382,66 @@ window.LevelUpData = (function() {
             13: ['Versatile Trickster'],
             17: ['Spell Thief']
           }
+        },
+        'Inquisitive': {
+          name: 'Inquisitive',
+          description: 'As an archetypal Inquisitive, you excel at rooting out secrets and unraveling mysteries. You rely on your sharp eye for detail, but also on your finely honed ability to read the words and deeds of other creatures to determine their true intent. You excel at defeating creatures that hide among and prey upon ordinary folk, and your mastery of lore and your keen deductions make you well equipped to expose and end hidden evils.',
+          features: {
+            3: ['Ear for Deceit', 'Eye for Detail', 'Insightful Fighting'],
+            9: ['Steady Eye'],
+            13: ['Unerring Eye'],
+            17: ['Eye for Weakness']
+          }
+        },
+        'Mastermind': {
+          name: 'Mastermind',
+          description: 'Your focus is on people and on the influence and secrets they have. Many spies, courtiers, and schemers follow this archetype, leading lives of intrigue. Words are your weapons as often as knives or poison, and secrets and favors are some of your favorite treasures.',
+          features: {
+            3: ['Master of Intrigue', 'Master of Tactics'],
+            9: ['Insightful Manipulator'],
+            13: ['Misdirection'],
+            17: ['Soul of Deceit']
+          }
+        },
+        'Scout': {
+          name: 'Scout',
+          description: 'You are skilled in stealth and surviving far from the streets of a city, allowing you to scout ahead of your companions during expeditions. Rogues who embrace this archetype are at home in the wilderness and among barbarians and rangers, and many Scouts serve as the eyes and ears of war bands.',
+          features: {
+            3: ['Skirmisher', 'Survivalist'],
+            9: ['Superior Mobility'],
+            13: ['Ambush Master'],
+            17: ['Sudden Strike']
+          }
+        },
+        'Swashbuckler': {
+          name: 'Swashbuckler',
+          description: 'You focus your training on the art of the blade, relying on speed, elegance, and charm in equal parts. While some warriors are brutes clad in heavy armor, your method of fighting looks almost like a performance. Duelists and pirates typically belong to this archetype.',
+          features: {
+            3: ['Fancy Footwork', 'Rakish Audacity'],
+            9: ['Panache'],
+            13: ['Elegant Maneuver'],
+            17: ['Master Duelist']
+          }
+        },
+        'Phantom': {
+          name: 'Phantom',
+          description: 'Many rogues walk a fine line between life and death, risking their own lives and taking the lives of others. While adventuring on that line, some rogues discover a mystical connection to death itself. These rogues take knowledge from the dead and become immersed in negative energy, eventually becoming like ghosts.',
+          features: {
+            3: ['Whispers of the Dead', 'Wails from the Grave'],
+            9: ['Tokens of the Departed'],
+            13: ['Ghost Walk'],
+            17: ['Death\'s Friend']
+          }
+        },
+        'Soulknife': {
+          name: 'Soulknife',
+          description: 'Most assassins strike with physical weapons, and many burglars and spies use thieves\' tools to infiltrate secure locations. In contrast, a Soulknife strikes and infiltrates with the mind, cutting through barriers both physical and psychic. These rogues discover psionic power within themselves and channel it to do their roguish work.',
+          features: {
+            3: ['Psionic Power', 'Psychic Blades'],
+            9: ['Soul Blades'],
+            13: ['Psychic Veil'],
+            17: ['Rend Mind']
+          }
         }
       }
     },
@@ -942,6 +1468,56 @@ window.LevelUpData = (function() {
             6: ['Bend Luck'],
             14: ['Controlled Chaos'],
             18: ['Spell Bombardment']
+          }
+        },
+        'Divine Soul': {
+          name: 'Divine Soul',
+          description: 'Sometimes the spark of magic that fuels a sorcerer comes from a divine source that glimmers within the soul. Having such a blessed soul is a sign that your innate magic might come from a distant but powerful familial connection to a divine being. Perhaps your ancestor was an angel, transformed into a mortal and sent to fight in a god\'s name. Or your birth might align with an ancient prophecy, marking you as a servant of the gods or a chosen vessel of divine magic.',
+          features: {
+            1: ['Divine Magic', 'Favored by the Gods'],
+            6: ['Empowered Healing'],
+            14: ['Otherworldly Wings'],
+            18: ['Unearthly Recovery']
+          }
+        },
+        'Shadow Magic': {
+          name: 'Shadow Magic',
+          description: 'You are a creature of shadow, for your innate magic comes from the Shadowfell itself. You might trace your lineage to an entity from that place, or perhaps you were exposed to its fell energy and transformed by it. The power of shadow magic casts a strange pall over your physical presence. The spark of life that sustains you is muffled, as if it struggles to remain viable against the dark energy that imbues your soul.',
+          features: {
+            1: ['Eyes of the Dark', 'Strength of the Grave'],
+            6: ['Hound of Ill Omen'],
+            14: ['Shadow Walk'],
+            18: ['Umbral Form']
+          }
+        },
+        'Storm Sorcery': {
+          name: 'Storm Sorcery',
+          description: 'Your innate magic comes from the power of elemental air. Many with this power can trace their magic back to a near-death experience caused by the Great Rain, but perhaps you were born during a howling gale so powerful that folk still tell stories of it, or your lineage might include the influence of potent air creatures such as djinn. Whatever the case, the magic of the storm permeates your being.',
+          features: {
+            1: ['Wind Speaker', 'Tempestuous Magic'],
+            6: ['Heart of the Storm', 'Storm Guide'],
+            14: ['Storm\'s Fury'],
+            18: ['Wind Soul']
+          }
+        },
+        'Aberrant Mind': {
+          name: 'Aberrant Mind',
+          description: 'An alien influence has wrapped its tendrils around your mind, giving you psionic power. You can now touch other minds with that power and alter the world around you by using it to control the magical energy of the multiverse. Will this power shine from you as a hopeful beacon to others? Or will you be a source of terror to those who feel the stab of your mind and witness the strange manifestations of your might?',
+          features: {
+            1: ['Psionic Spells', 'Telepathic Speech'],
+            6: ['Psionic Sorcery', 'Psychic Defenses'],
+            14: ['Revelation in Flesh'],
+            18: ['Warping Implosion']
+          }
+        },
+        'Clockwork Soul': {
+          name: 'Clockwork Soul',
+          description: 'The cosmic force of order has suffused you with magic. That power arises from Mechanus or a realm like it—a plane of existence shaped entirely by clockwork efficiency. You, or someone from your lineage, might have become entangled in the machinations of modrons, the orderly beings who inhabit Mechanus. Perhaps your ancestor even took part in the Great Modron March. Whatever its origin within you, the power of order can seem strange to others, but for you, it is part of a vast and glorious system.',
+          features: {
+            1: ['Clockwork Magic', 'Restore Balance'],
+            6: ['Bastion of Law'],
+            14: ['Trance of Order'],
+            18: ['Clockwork Cavalcade']
           }
         }
       }
@@ -979,6 +1555,103 @@ window.LevelUpData = (function() {
             6: ['Entropic Ward'],
             10: ['Thought Shield'],
             14: ['Create Thrall']
+          }
+        },
+        'The Celestial': {
+          name: 'The Celestial',
+          description: 'Your patron is a powerful being of the Upper Planes. You have bound yourself to an ancient empyrean, solar, ki-rin, unicorn, or other entity that resides in the planes of everlasting bliss. Your pact with that being allows you to experience the barest touch of the holy light that illuminates the multiverse.',
+          features: {
+            1: ['Expanded Spell List', 'Bonus Cantrips', 'Healing Light'],
+            6: ['Radiant Soul'],
+            10: ['Celestial Resilience'],
+            14: ['Searing Vengeance']
+          }
+        },
+        'The Hexblade': {
+          name: 'The Hexblade',
+          description: 'You have made your pact with a mysterious entity from the Shadowfell—a force that manifests in sentient magic weapons carved from the stuff of shadow. The mighty sword Blackrazor is the most notable of these weapons, which have been spread across the multiverse over the ages. The shadowy force behind these weapons can offer power to warlocks who form pacts with it. Many hexblade warlocks create weapons that emulate those formed in the Shadowfell.',
+          features: {
+            1: ['Expanded Spell List', 'Hexblade\'s Curse', 'Hex Warrior'],
+            6: ['Accursed Specter'],
+            10: ['Armor of Hexes'],
+            14: ['Master of Hexes']
+          }
+        },
+        'The Fathomless': {
+          name: 'The Fathomless',
+          description: 'You have plunged into a pact with the deeps. An entity of the ocean, the Elemental Plane of Water, or another otherworldly sea now allows you to draw on its thalassic power. Is it merely using you to learn about terrestrial realms, or does it want you to open cosmic floodgates and drown the world?',
+          features: {
+            1: ['Expanded Spell List', 'Tentacle of the Deeps', 'Gift of the Sea'],
+            6: ['Oceanic Soul', 'Guardian Coil'],
+            10: ['Grasping Tentacles'],
+            14: ['Fathomless Plunge']
+          }
+        },
+        'The Genie': {
+          name: 'The Genie',
+          description: 'You have made a pact with one of the rarest kinds of genie, a noble genie. Such entities rule vast fiefs on the Elemental Planes and have great influence over lesser genies and elemental creatures. Noble genies are varied in their motivations, but most are arrogant and wield power that rivals that of lesser deities. They delight in turning the table on mortals, who often bind genies into servitude, and readily enter into pacts that expand their reach.',
+          features: {
+            1: ['Expanded Spell List', 'Genie\'s Vessel', 'Genie\'s Wrath (choose: Dao, Djinni, Efreeti, or Marid)'],
+            6: ['Elemental Gift'],
+            10: ['Sanctuary Vessel'],
+            14: ['Limited Wish']
+          }
+        },
+        'The Undead': {
+          name: 'The Undead',
+          description: 'The Undead is an entity that resides in the dark corners of the multiverse. Your patron could be Acererak, Azalin, Lord Soth, Strahd, or some other ancient undead being. You may seek to gain knowledge from your patron\'s countless lifetimes of experience, while it, in turn, may desire a dutiful student to emulate and help perpetuate its legacy.',
+          features: {
+            1: ['Expanded Spell List', 'Form of Dread'],
+            6: ['Grave Touched'],
+            10: ['Necrotic Husk'],
+            14: ['Spirit Projection']
+          }
+        }
+      }
+    },
+
+    'Artificer': {
+      selectionLevel: 3,
+      name: 'Artificer Specialist',
+      options: {
+        'Alchemist': {
+          name: 'Alchemist',
+          description: 'An Alchemist is an expert at combining reagents to produce mystical effects. Alchemists use their creations to give life and to leech it away. Alchemy is the oldest of artificer traditions, and its versatility has long been valued during times of war and peace.',
+          features: {
+            3: ['Tool Proficiency', 'Alchemist Spells', 'Experimental Elixir'],
+            5: ['Alchemical Savant'],
+            9: ['Restorative Reagents'],
+            15: ['Chemical Mastery']
+          }
+        },
+        'Armorer': {
+          name: 'Armorer',
+          description: 'An artificer who specializes as an Armorer modifies armor to function almost like a second skin. The armor is enhanced to hone the artificer\'s magic, unleash potent attacks, and generate a formidable defense. The artificer bonds with this armor, becoming one with it even as they experiment with it and refine its magical capabilities.',
+          features: {
+            3: ['Tools of the Trade', 'Armorer Spells', 'Arcane Armor', 'Armor Model'],
+            5: ['Extra Attack'],
+            9: ['Armor Modifications'],
+            15: ['Perfected Armor']
+          }
+        },
+        'Artillerist': {
+          name: 'Artillerist',
+          description: 'An Artillerist specializes in using magic to hurl energy, projectiles, and explosions on a battlefield. This destructive power was valued by all the armies of the Last War. Now that the war is over, some members of this specialization have sought to build a more peaceful world by using their powers to protect and defend others.',
+          features: {
+            3: ['Tool Proficiency', 'Artillerist Spells', 'Eldritch Cannon'],
+            5: ['Arcane Firearm'],
+            9: ['Explosive Cannon'],
+            15: ['Fortified Position']
+          }
+        },
+        'Battle Smith': {
+          name: 'Battle Smith',
+          description: 'Armies require protection, and someone has to put things back together if defenses fail. A combination of protector and medic, a Battle Smith is an expert at defending others and repairing both material and personnel. Among artificers, Battle Smiths are unmatched in their ability to restore life.',
+          features: {
+            3: ['Tool Proficiency', 'Battle Smith Spells', 'Battle Ready', 'Steel Defender'],
+            5: ['Extra Attack'],
+            9: ['Arcane Jolt'],
+            15: ['Improved Defender']
           }
         }
       }
@@ -1588,7 +2261,7 @@ window.LevelUpData = (function() {
       return Object.keys(CLASS_DATA);
     },
 
-    getLevelUpChanges(className, fromLevel, toLevel) {
+    getLevelUpChanges(className, fromLevel, toLevel, character) {
       const classData = CLASS_DATA[className];
       if (!classData) return null;
 
@@ -1614,7 +2287,7 @@ window.LevelUpData = (function() {
       }
 
       // Add spell learning rules if applicable
-      changes.spellRules = this.getSpellLearningRules(className, toLevel);
+      changes.spellRules = this.getSpellLearningRules(className, toLevel, character);
 
       return changes;
     },
@@ -1659,25 +2332,72 @@ window.LevelUpData = (function() {
      * @param {number} newLevel - The level being achieved
      * @returns {Object|null} - { type, newSpells, canSwap, maxSpellLevel } or null if no spell learning
      */
-    getSpellLearningRules(className, newLevel) {
+    getSpellLearningRules(className, newLevel, character) {
       const classData = CLASS_DATA[className];
       if (!classData || !classData.spellcaster) return null;
-
-      // Prepared casters (Cleric, Druid) don't "learn" spells on level-up
-      if (className === 'Cleric' || className === 'Druid') {
-        return null;
-      }
-
-      // Half-casters start at level 2
-      const isHalfCaster = className === 'Ranger' || className === 'Paladin';
-      if (isHalfCaster && newLevel < 2) {
-        return null;
-      }
 
       // Calculate max spell level they can cast
       const maxSpellLevel = this.getMaxSpellLevel(classData, newLevel);
       if (maxSpellLevel === 0 && newLevel > 1) {
         // Can only cast cantrips, no spell learning needed
+        return null;
+      }
+
+      // Prepared casters (Cleric, Druid, Paladin, Artificer) can re-select their prepared spells
+      if (className === 'Cleric' || className === 'Druid') {
+        const wisModifier = character ? Math.floor((character.stats?.wis || 10) - 10) / 2 : 0;
+        const spellsToPrepare = Math.max(1, Math.floor(wisModifier) + newLevel);
+
+        return {
+          type: 'prepared',
+          isPreparedCaster: true,
+          preparationFormula: 'WIS modifier + level',
+          newSpells: spellsToPrepare,
+          canSwap: true, // Can change prepared spells daily
+          maxSpellLevel: maxSpellLevel,
+          className: className,
+          cantrips: className === 'Cleric' ? 3 : 2 // Clerics get more cantrips
+        };
+      }
+
+      if (className === 'Paladin') {
+        // Paladins don't get spells until level 2
+        if (newLevel < 2) return null;
+
+        const chaModifier = character ? Math.floor((character.stats?.cha || 10) - 10) / 2 : 0;
+        const spellsToPrepare = Math.max(1, Math.floor(chaModifier) + Math.floor(newLevel / 2));
+
+        return {
+          type: 'prepared',
+          isPreparedCaster: true,
+          preparationFormula: 'CHA modifier + half level',
+          newSpells: spellsToPrepare,
+          canSwap: true,
+          maxSpellLevel: maxSpellLevel,
+          className: className,
+          cantrips: 0 // Paladins don't get cantrips
+        };
+      }
+
+      if (className === 'Artificer') {
+        const intModifier = character ? Math.floor((character.stats?.int || 10) - 10) / 2 : 0;
+        const spellsToPrepare = Math.max(1, Math.floor(intModifier) + Math.floor(newLevel / 2));
+
+        return {
+          type: 'prepared',
+          isPreparedCaster: true,
+          preparationFormula: 'INT modifier + half level',
+          newSpells: spellsToPrepare,
+          canSwap: true,
+          maxSpellLevel: maxSpellLevel,
+          className: className,
+          cantrips: 2
+        };
+      }
+
+      // Half-casters (Ranger) start at level 2
+      const isHalfCaster = className === 'Ranger';
+      if (isHalfCaster && newLevel < 2) {
         return null;
       }
 
@@ -1692,7 +2412,7 @@ window.LevelUpData = (function() {
         };
       }
 
-      // Sorcerers, Bards, Warlocks, Rangers, Paladins learn 1 spell and can swap
+      // Sorcerers, Bards, Warlocks, Rangers learn 1 spell and can swap
       return {
         type: 'learned',
         newSpells: 1,
@@ -2238,6 +2958,45 @@ window.LevelUpData = (function() {
     getRacialScalingFeature(race) {
       if (!race) return null;
       return this.RACIAL_SCALING_FEATURES[race] || null;
+    },
+
+    /**
+     * Get the number of ASI/Feat opportunities a character should have at a given level
+     * @param {string} className - The character's class
+     * @param {number} level - The character's level
+     * @returns {number} - Number of ASI/Feat choices earned up to this level
+     */
+    getASICount(className, level) {
+      const classData = CLASS_DATA[className];
+      if (!classData || !classData.features) return 0;
+
+      let count = 0;
+      for (let lvl = 1; lvl <= level; lvl++) {
+        const features = classData.features[lvl] || [];
+        if (features.includes('Ability Score Improvement')) {
+          count++;
+        }
+      }
+      return count;
+    },
+
+    /**
+     * Get all levels at which a class receives ASI/Feat
+     * @param {string} className - The character's class
+     * @returns {Array<number>} - Array of levels where ASI is granted
+     */
+    getASILevels(className) {
+      const classData = CLASS_DATA[className];
+      if (!classData || !classData.features) return [];
+
+      const levels = [];
+      for (let lvl = 1; lvl <= 20; lvl++) {
+        const features = classData.features[lvl] || [];
+        if (features.includes('Ability Score Improvement')) {
+          levels.push(lvl);
+        }
+      }
+      return levels;
     }
   };
 })();
