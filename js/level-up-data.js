@@ -1758,6 +1758,7 @@ window.LevelUpData = (function() {
       skillChoices: { count: 2, from: ['History', 'Insight', 'Medicine', 'Persuasion', 'Religion'] },
       spellcaster: true,
       spellcastingAbility: 'wis',
+      preparesSpells: true, // Clerics prepare spells (WIS mod + level)
       spellSlots: {
         1: [2, 0, 0, 0, 0, 0, 0, 0, 0],
         2: [3, 0, 0, 0, 0, 0, 0, 0, 0],
@@ -1813,6 +1814,7 @@ window.LevelUpData = (function() {
       skillChoices: { count: 2, from: ['Arcana', 'Animal Handling', 'Insight', 'Medicine', 'Nature', 'Perception', 'Religion', 'Survival'] },
       spellcaster: true,
       spellcastingAbility: 'wis',
+      preparesSpells: true, // Druids prepare spells (WIS mod + level)
       spellSlots: {
         1: [2, 0, 0, 0, 0, 0, 0, 0, 0],
         2: [3, 0, 0, 0, 0, 0, 0, 0, 0],
@@ -1932,6 +1934,7 @@ window.LevelUpData = (function() {
       skillChoices: { count: 2, from: ['Athletics', 'Insight', 'Intimidation', 'Medicine', 'Persuasion', 'Religion'] },
       spellcaster: true,
       spellcastingAbility: 'cha',
+      preparesSpells: true, // Paladins prepare spells (CHA mod + half level)
       spellSlots: {
         1: [0, 0, 0, 0, 0, 0, 0, 0, 0],
         2: [2, 0, 0, 0, 0, 0, 0, 0, 0],
@@ -2185,6 +2188,7 @@ window.LevelUpData = (function() {
       skillChoices: { count: 2, from: ['Arcana', 'History', 'Insight', 'Investigation', 'Medicine', 'Religion'] },
       spellcaster: true,
       spellcastingAbility: 'int',
+      preparesSpells: true, // Wizards prepare spells (INT mod + level)
       spellSlots: {
         1: [2, 0, 0, 0, 0, 0, 0, 0, 0],
         2: [3, 0, 0, 0, 0, 0, 0, 0, 0],
@@ -2897,6 +2901,262 @@ window.LevelUpData = (function() {
     },
 
     // ============================================================
+    // SUBCLASS SPELLS
+    // ============================================================
+    /**
+     * Spells that are always prepared for specific subclasses
+     * Format: { 'ClassName': { 'SubclassName': { level: [spell names] } } }
+     * These spells are automatically prepared and don't count against spells prepared limit
+     */
+    SUBCLASS_SPELLS: {
+      'Cleric': {
+        'Knowledge Domain': {
+          1: ['Command', 'Identify'],
+          3: ['Augury', 'Suggestion'],
+          5: ['Nondetection', 'Speak with Dead'],
+          7: ['Arcane Eye', 'Confusion'],
+          9: ['Legend Lore', 'Scrying']
+        },
+        'Life Domain': {
+          1: ['Bless', 'Cure Wounds'],
+          3: ['Lesser Restoration', 'Spiritual Weapon'],
+          5: ['Beacon of Hope', 'Revivify'],
+          7: ['Death Ward', 'Guardian of Faith'],
+          9: ['Mass Cure Wounds', 'Raise Dead']
+        },
+        'Light Domain': {
+          1: ['Burning Hands', 'Faerie Fire'],
+          3: ['Flaming Sphere', 'Scorching Ray'],
+          5: ['Daylight', 'Fireball'],
+          7: ['Guardian of Faith', 'Wall of Fire'],
+          9: ['Flame Strike', 'Scrying']
+        },
+        'Nature Domain': {
+          1: ['Animal Friendship', 'Speak with Animals'],
+          3: ['Barkskin', 'Spike Growth'],
+          5: ['Plant Growth', 'Wind Wall'],
+          7: ['Dominate Beast', 'Grasping Vine'],
+          9: ['Insect Plague', 'Tree Stride']
+        },
+        'Tempest Domain': {
+          1: ['Fog Cloud', 'Thunderwave'],
+          3: ['Gust of Wind', 'Shatter'],
+          5: ['Call Lightning', 'Sleet Storm'],
+          7: ['Control Water', 'Ice Storm'],
+          9: ['Destructive Wave', 'Insect Plague']
+        },
+        'Trickery Domain': {
+          1: ['Charm Person', 'Disguise Self'],
+          3: ['Mirror Image', 'Pass without Trace'],
+          5: ['Blink', 'Dispel Magic'],
+          7: ['Dimension Door', 'Polymorph'],
+          9: ['Dominate Person', 'Modify Memory']
+        },
+        'War Domain': {
+          1: ['Divine Favor', 'Shield of Faith'],
+          3: ['Magic Weapon', 'Spiritual Weapon'],
+          5: ['Crusader\'s Mantle', 'Spirit Guardians'],
+          7: ['Freedom of Movement', 'Stoneskin'],
+          9: ['Flame Strike', 'Hold Monster']
+        },
+        'Forge Domain': {
+          1: ['Identify', 'Searing Smite'],
+          3: ['Heat Metal', 'Magic Weapon'],
+          5: ['Elemental Weapon', 'Protection from Energy'],
+          7: ['Fabricate', 'Wall of Fire'],
+          9: ['Animate Objects', 'Creation']
+        },
+        'Grave Domain': {
+          1: ['Bane', 'False Life'],
+          3: ['Gentle Repose', 'Ray of Enfeeblement'],
+          5: ['Revivify', 'Vampiric Touch'],
+          7: ['Blight', 'Death Ward'],
+          9: ['Antilife Shell', 'Raise Dead']
+        },
+        'Order Domain': {
+          1: ['Command', 'Heroism'],
+          3: ['Hold Person', 'Zone of Truth'],
+          5: ['Mass Healing Word', 'Slow'],
+          7: ['Compulsion', 'Locate Creature'],
+          9: ['Commune', 'Dominate Person']
+        },
+        'Peace Domain': {
+          1: ['Heroism', 'Sanctuary'],
+          3: ['Aid', 'Warding Bond'],
+          5: ['Beacon of Hope', 'Sending'],
+          7: ['Aura of Purity', 'Otiluke\'s Resilient Sphere'],
+          9: ['Greater Restoration', 'Rary\'s Telepathic Bond']
+        },
+        'Twilight Domain': {
+          1: ['Faerie Fire', 'Sleep'],
+          3: ['Moonbeam', 'See Invisibility'],
+          5: ['Aura of Vitality', 'Leomund\'s Tiny Hut'],
+          7: ['Aura of Life', 'Greater Invisibility'],
+          9: ['Circle of Power', 'Mislead']
+        }
+      },
+      'Druid': {
+        'Circle of the Land (Arctic)': {
+          3: ['Hold Person', 'Spike Growth'],
+          5: ['Sleet Storm', 'Slow'],
+          7: ['Freedom of Movement', 'Ice Storm'],
+          9: ['Commune with Nature', 'Cone of Cold']
+        },
+        'Circle of the Land (Coast)': {
+          3: ['Mirror Image', 'Misty Step'],
+          5: ['Water Breathing', 'Water Walk'],
+          7: ['Control Water', 'Freedom of Movement'],
+          9: ['Conjure Elemental', 'Scrying']
+        },
+        'Circle of the Land (Desert)': {
+          3: ['Blur', 'Silence'],
+          5: ['Create Food and Water', 'Protection from Energy'],
+          7: ['Blight', 'Hallucinatory Terrain'],
+          9: ['Insect Plague', 'Wall of Stone']
+        },
+        'Circle of the Land (Forest)': {
+          3: ['Barkskin', 'Spider Climb'],
+          5: ['Call Lightning', 'Plant Growth'],
+          7: ['Divination', 'Freedom of Movement'],
+          9: ['Commune with Nature', 'Tree Stride']
+        },
+        'Circle of the Land (Grassland)': {
+          3: ['Invisibility', 'Pass without Trace'],
+          5: ['Daylight', 'Haste'],
+          7: ['Divination', 'Freedom of Movement'],
+          9: ['Dream', 'Insect Plague']
+        },
+        'Circle of the Land (Mountain)': {
+          3: ['Spider Climb', 'Spike Growth'],
+          5: ['Lightning Bolt', 'Meld into Stone'],
+          7: ['Stone Shape', 'Stoneskin'],
+          9: ['Passwall', 'Wall of Stone']
+        },
+        'Circle of the Land (Swamp)': {
+          3: ['Darkness', 'Melf\'s Acid Arrow'],
+          5: ['Water Walk', 'Stinking Cloud'],
+          7: ['Freedom of Movement', 'Locate Creature'],
+          9: ['Insect Plague', 'Scrying']
+        },
+        'Circle of the Land (Underdark)': {
+          3: ['Spider Climb', 'Web'],
+          5: ['Gaseous Form', 'Stinking Cloud'],
+          7: ['Greater Invisibility', 'Stone Shape'],
+          9: ['Cloudkill', 'Insect Plague']
+        },
+        'Circle of Spores': {
+          2: ['Chill Touch'],
+          3: ['Blindness/Deafness', 'Gentle Repose'],
+          5: ['Animate Dead', 'Gaseous Form'],
+          7: ['Blight', 'Confusion'],
+          9: ['Cloudkill', 'Contagion']
+        },
+        'Circle of Wildfire': {
+          2: ['Burning Hands', 'Cure Wounds'],
+          3: ['Flaming Sphere', 'Scorching Ray'],
+          5: ['Plant Growth', 'Revivify'],
+          7: ['Aura of Life', 'Fire Shield'],
+          9: ['Flame Strike', 'Mass Cure Wounds']
+        }
+      },
+      'Paladin': {
+        'Oath of Devotion': {
+          3: ['Protection from Evil and Good', 'Sanctuary'],
+          5: ['Lesser Restoration', 'Zone of Truth'],
+          9: ['Beacon of Hope', 'Dispel Magic'],
+          13: ['Freedom of Movement', 'Guardian of Faith'],
+          17: ['Commune', 'Flame Strike']
+        },
+        'Oath of the Ancients': {
+          3: ['Ensnaring Strike', 'Speak with Animals'],
+          5: ['Moonbeam', 'Misty Step'],
+          9: ['Plant Growth', 'Protection from Energy'],
+          13: ['Ice Storm', 'Stoneskin'],
+          17: ['Commune with Nature', 'Tree Stride']
+        },
+        'Oath of Vengeance': {
+          3: ['Bane', 'Hunter\'s Mark'],
+          5: ['Hold Person', 'Misty Step'],
+          9: ['Haste', 'Protection from Energy'],
+          13: ['Banishment', 'Dimension Door'],
+          17: ['Hold Monster', 'Scrying']
+        },
+        'Oath of Conquest': {
+          3: ['Armor of Agathys', 'Command'],
+          5: ['Hold Person', 'Spiritual Weapon'],
+          9: ['Bestow Curse', 'Fear'],
+          13: ['Dominate Beast', 'Stoneskin'],
+          17: ['Cloudkill', 'Dominate Person']
+        },
+        'Oath of Redemption': {
+          3: ['Sanctuary', 'Sleep'],
+          5: ['Calm Emotions', 'Hold Person'],
+          9: ['Counterspell', 'Hypnotic Pattern'],
+          13: ['Otiluke\'s Resilient Sphere', 'Stoneskin'],
+          17: ['Hold Monster', 'Wall of Force']
+        },
+        'Oath of Glory': {
+          3: ['Guiding Bolt', 'Heroism'],
+          5: ['Enhance Ability', 'Magic Weapon'],
+          9: ['Haste', 'Protection from Energy'],
+          13: ['Compulsion', 'Freedom of Movement'],
+          17: ['Commune', 'Flame Strike']
+        },
+        'Oath of the Watchers': {
+          3: ['Alarm', 'Detect Magic'],
+          5: ['Moonbeam', 'See Invisibility'],
+          9: ['Counterspell', 'Nondetection'],
+          13: ['Aura of Purity', 'Banishment'],
+          17: ['Hold Monster', 'Scrying']
+        }
+      },
+      'Warlock': {
+        'The Archfey': {
+          1: ['Faerie Fire', 'Sleep'],
+          3: ['Calm Emotions', 'Phantasmal Force'],
+          5: ['Blink', 'Plant Growth'],
+          7: ['Dominate Beast', 'Greater Invisibility'],
+          9: ['Dominate Person', 'Seeming']
+        },
+        'The Fiend': {
+          1: ['Burning Hands', 'Command'],
+          3: ['Blindness/Deafness', 'Scorching Ray'],
+          5: ['Fireball', 'Stinking Cloud'],
+          7: ['Fire Shield', 'Wall of Fire'],
+          9: ['Flame Strike', 'Hallow']
+        },
+        'The Great Old One': {
+          1: ['Dissonant Whispers', 'Tasha\'s Hideous Laughter'],
+          3: ['Detect Thoughts', 'Phantasmal Force'],
+          5: ['Clairvoyance', 'Sending'],
+          7: ['Dominate Beast', 'Evard\'s Black Tentacles'],
+          9: ['Dominate Person', 'Telekinesis']
+        },
+        'The Celestial': {
+          1: ['Cure Wounds', 'Guiding Bolt'],
+          3: ['Flaming Sphere', 'Lesser Restoration'],
+          5: ['Daylight', 'Revivify'],
+          7: ['Guardian of Faith', 'Wall of Fire'],
+          9: ['Flame Strike', 'Greater Restoration']
+        },
+        'The Hexblade': {
+          1: ['Shield', 'Wrathful Smite'],
+          3: ['Blur', 'Branding Smite'],
+          5: ['Blink', 'Elemental Weapon'],
+          7: ['Phantasmal Killer', 'Staggering Smite'],
+          9: ['Banishing Smite', 'Cone of Cold']
+        },
+        'The Fathomless': {
+          1: ['Create or Destroy Water', 'Thunderwave'],
+          3: ['Gust of Wind', 'Silence'],
+          5: ['Lightning Bolt', 'Sleet Storm'],
+          7: ['Control Water', 'Evard\'s Black Tentacles'],
+          9: ['Bigby\'s Hand', 'Cone of Cold']
+        }
+      }
+    },
+
+    // ============================================================
     // RACIAL FEATURE HELPERS
     // ============================================================
 
@@ -2997,6 +3257,105 @@ window.LevelUpData = (function() {
         }
       }
       return levels;
+    },
+
+    // ============================================================
+    // PREPARED SPELL HELPERS
+    // ============================================================
+
+    /**
+     * Calculate maximum prepared spells for a class
+     * @param {string} className - The character's class
+     * @param {number} level - The character's level
+     * @param {number} abilityMod - The spellcasting ability modifier
+     * @returns {number} - Maximum number of spells that can be prepared (0 if class doesn't prepare spells)
+     */
+    getMaxPreparedSpells(className, level, abilityMod) {
+      const classData = CLASS_DATA[className];
+      if (!classData || !classData.preparesSpells) return 0;
+
+      // Paladin uses half level (rounded down)
+      if (className === 'Paladin') {
+        const halfLevel = Math.floor(level / 2);
+        return Math.max(1, abilityMod + halfLevel);
+      }
+
+      // Artificer uses half level (rounded up) - but Artificer not in CLASS_DATA yet
+      if (className === 'Artificer') {
+        const halfLevel = Math.ceil(level / 2);
+        return Math.max(1, abilityMod + halfLevel);
+      }
+
+      // Cleric, Druid, Wizard use full level
+      return Math.max(1, abilityMod + level);
+    },
+
+    /**
+     * Check if a class prepares spells or knows spells
+     * @param {string} className - The character's class
+     * @returns {boolean} - True if class prepares spells
+     */
+    classPreparesSpells(className) {
+      const classData = CLASS_DATA[className];
+      return classData && classData.preparesSpells === true;
+    },
+
+    // ============================================================
+    // SUBCLASS SPELL HELPERS
+    // ============================================================
+
+    /**
+     * Get subclass spells for a character up to a given level
+     * @param {string} className - The character's class
+     * @param {string} subclassName - The character's subclass
+     * @param {number} level - The character's level
+     * @returns {Array<string>} - Array of spell names
+     */
+    getSubclassSpells(className, subclassName, level) {
+      if (!className || !subclassName || !level) return [];
+
+      const classSpells = this.SUBCLASS_SPELLS[className];
+      if (!classSpells) return [];
+
+      const subclassSpells = classSpells[subclassName];
+      if (!subclassSpells) return [];
+
+      const spells = [];
+      for (let lvl = 1; lvl <= level; lvl++) {
+        const levelSpells = subclassSpells[lvl];
+        if (levelSpells && Array.isArray(levelSpells)) {
+          spells.push(...levelSpells);
+        }
+      }
+
+      return spells;
+    },
+
+    /**
+     * Get subclass spells organized by level
+     * @param {string} className - The character's class
+     * @param {string} subclassName - The character's subclass
+     * @param {number} maxLevel - Maximum character level to include
+     * @returns {Object} - Object with level keys and spell arrays
+     */
+    getSubclassSpellsByLevel(className, subclassName, maxLevel) {
+      if (!className || !subclassName || !maxLevel) return {};
+
+      const classSpells = this.SUBCLASS_SPELLS[className];
+      if (!classSpells) return {};
+
+      const subclassSpells = classSpells[subclassName];
+      if (!subclassSpells) return {};
+
+      const result = {};
+      for (let lvl = 1; lvl <= maxLevel; lvl++) {
+        const levelSpells = subclassSpells[lvl];
+        if (levelSpells && Array.isArray(levelSpells)) {
+          result[lvl] = [...levelSpells];
+        }
+      }
+
+      return result;
     }
   };
 })();

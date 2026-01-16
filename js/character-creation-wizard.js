@@ -990,7 +990,10 @@ const CharacterCreationWizard = (function() {
           <div id="hpCalculation" class="alert alert-secondary">
             <!-- Will be populated dynamically -->
           </div>
-          <div class="form-text">At 1st level, you get maximum HP from your hit die plus your Constitution modifier.</div>
+          <div id="hpMethodSelection" class="mt-3" style="display:none;">
+            <!-- HP method selection for multi-level characters -->
+          </div>
+          <div class="form-text" id="hpCalculationNote">At 1st level, you get maximum HP from your hit die plus your Constitution modifier.</div>
         </div>
 
         <div class="mb-3">
@@ -1017,6 +1020,14 @@ const CharacterCreationWizard = (function() {
       `,
       buttons: ['Back', 'Next'],
       validate: () => {
+        const level = wizardData.level || 1;
+
+        // Check if HP is properly calculated for multi-level characters
+        if (level > 1 && wizardData.hpMethod === 'roll' && (!wizardData.hpRolls || wizardData.hpRolls.length !== level - 1)) {
+          alert('Please roll for HP or select "Take Average".');
+          return false;
+        }
+
         const selectedArmor = document.querySelector('input[name="startingArmor"]:checked');
         if (!selectedArmor) {
           alert('Please select your starting armor.');
@@ -1035,14 +1046,156 @@ const CharacterCreationWizard = (function() {
 
         const conMod = Math.floor((wizardData.con - 10) / 2);
         const hitDie = hitDice[wizardData.class] || 8;
-        const maxHP = hitDie + conMod;
-        wizardData.maxHP = maxHP;
-        wizardData.currentHP = maxHP;
-        wizardData.hitDie = `1d${hitDie}`;
+        const level = wizardData.level || 1;
 
+        // Level 1 HP calculation (always max)
+        const level1HP = hitDie + conMod;
+
+        // For higher levels, show HP options
         const hpCalc = document.getElementById('hpCalculation');
-        if (hpCalc) {
-          hpCalc.innerHTML = `<strong>Maximum HP:</strong> ${maxHP} (${hitDie} from ${wizardData.class} hit die + ${conMod} CON modifier)`;
+        const hpMethodSelection = document.getElementById('hpMethodSelection');
+        const hpCalculationNote = document.getElementById('hpCalculationNote');
+
+        if (level === 1) {
+          // Simple level 1 calculation
+          wizardData.maxHP = level1HP;
+          wizardData.currentHP = level1HP;
+          wizardData.hitDie = `1d${hitDie}`;
+
+          if (hpCalc) {
+            hpCalc.innerHTML = `<strong>Maximum HP:</strong> ${level1HP} (${hitDie} from ${wizardData.class} hit die + ${conMod} CON modifier)`;
+          }
+          if (hpMethodSelection) hpMethodSelection.style.display = 'none';
+          if (hpCalculationNote) hpCalculationNote.textContent = 'At 1st level, you get maximum HP from your hit die plus your Constitution modifier.';
+        } else {
+          // Multi-level calculation with options
+          const avgPerLevel = Math.floor(hitDie / 2) + 1;
+          const rollMin = 1 + conMod;
+          const rollMax = hitDie + conMod;
+          const avgHPTotal = level1HP + ((avgPerLevel + conMod) * (level - 1));
+
+          // Initialize HP method tracking
+          if (!wizardData.hpMethod) wizardData.hpMethod = 'average'; // Default to average
+          if (!wizardData.hpRolls) wizardData.hpRolls = [];
+
+          if (hpCalc) {
+            hpCalc.innerHTML = `<strong>Level 1 HP:</strong> ${level1HP} (${hitDie} + ${conMod} CON)`;
+          }
+
+          if (hpCalculationNote) {
+            hpCalculationNote.textContent = `You're creating a level ${level} character. Choose how to calculate HP for levels 2-${level}:`;
+          }
+
+          if (hpMethodSelection) {
+            hpMethodSelection.style.display = 'block';
+            hpMethodSelection.innerHTML = `
+              <div class="row g-3">
+                <div class="col-md-6">
+                  <div class="card bg-secondary bg-opacity-25 border-secondary h-100">
+                    <div class="card-body">
+                      <h6 class="card-title">
+                        <input type="radio" name="hpMethodWizard" value="roll" id="hpMethodRollWizard"
+                               class="form-check-input me-2" ${wizardData.hpMethod === 'roll' ? 'checked' : ''} />
+                        <label for="hpMethodRollWizard">Roll Hit Dice</label>
+                      </h6>
+                      <p class="text-muted small mb-2">Roll ${level - 1}×1d${hitDie} + ${conMod} per level</p>
+                      <button type="button" class="btn btn-sm btn-outline-warning" id="rollAllHPBtn">
+                        <i class="bi bi-dice-5 me-1"></i>Roll for Levels 2-${level}
+                      </button>
+                      <div id="hpRollResults" class="mt-2 small"></div>
+                    </div>
+                  </div>
+                </div>
+                <div class="col-md-6">
+                  <div class="card bg-secondary bg-opacity-25 border-secondary h-100">
+                    <div class="card-body">
+                      <h6 class="card-title">
+                        <input type="radio" name="hpMethodWizard" value="average" id="hpMethodAverageWizard"
+                               class="form-check-input me-2" ${wizardData.hpMethod === 'average' ? 'checked' : ''} />
+                        <label for="hpMethodAverageWizard">Take Average (Recommended)</label>
+                      </h6>
+                      <p class="text-muted small mb-2">Guaranteed ${avgPerLevel} + ${conMod} per level</p>
+                      <div class="alert alert-success text-light mb-0">
+                        <strong>Total HP:</strong> ${avgHPTotal}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div id="totalHPDisplay" class="alert alert-info mt-3">
+                <strong>Total Maximum HP:</strong> <span id="totalHPValue">${avgHPTotal}</span>
+              </div>
+            `;
+
+            // Set up event listeners for HP method selection
+            const rollRadio = document.getElementById('hpMethodRollWizard');
+            const avgRadio = document.getElementById('hpMethodAverageWizard');
+            const rollBtn = document.getElementById('rollAllHPBtn');
+            const rollResults = document.getElementById('hpRollResults');
+            const totalHPValue = document.getElementById('totalHPValue');
+
+            const updateHPDisplay = () => {
+              if (wizardData.hpMethod === 'average') {
+                totalHPValue.textContent = avgHPTotal;
+                wizardData.maxHP = avgHPTotal;
+                wizardData.currentHP = avgHPTotal;
+              } else if (wizardData.hpMethod === 'roll' && wizardData.hpRolls.length === level - 1) {
+                const rolledTotal = level1HP + wizardData.hpRolls.reduce((sum, r) => sum + r.total, 0);
+                totalHPValue.textContent = rolledTotal;
+                wizardData.maxHP = rolledTotal;
+                wizardData.currentHP = rolledTotal;
+              }
+            };
+
+            rollRadio?.addEventListener('change', () => {
+              wizardData.hpMethod = 'roll';
+              rollResults.innerHTML = '';
+              wizardData.hpRolls = [];
+              totalHPValue.textContent = '(Roll Required)';
+            });
+
+            avgRadio?.addEventListener('change', () => {
+              wizardData.hpMethod = 'average';
+              rollResults.innerHTML = '';
+              wizardData.hpRolls = [];
+              updateHPDisplay();
+            });
+
+            rollBtn?.addEventListener('click', () => {
+              wizardData.hpRolls = [];
+              let resultsHTML = '<div class="alert alert-info text-light mb-0"><strong>HP Rolls:</strong><ul class="mb-0 mt-2">';
+
+              for (let i = 2; i <= level; i++) {
+                const roll = Math.floor(Math.random() * hitDie) + 1;
+                const total = roll + conMod;
+                wizardData.hpRolls.push({ level: i, roll, conMod, total });
+                resultsHTML += `<li>Level ${i}: ${roll} + ${conMod} = <strong>${total} HP</strong></li>`;
+              }
+
+              const rolledTotal = level1HP + wizardData.hpRolls.reduce((sum, r) => sum + r.total, 0);
+              resultsHTML += `</ul><div class="mt-2 pt-2 border-top"><strong>Total HP:</strong> ${rolledTotal}</div></div>`;
+
+              rollResults.innerHTML = resultsHTML;
+              updateHPDisplay();
+            });
+
+            // Initialize display
+            updateHPDisplay();
+
+            // If already rolled, display results
+            if (wizardData.hpMethod === 'roll' && wizardData.hpRolls.length === level - 1) {
+              let resultsHTML = '<div class="alert alert-info text-light mb-0"><strong>HP Rolls:</strong><ul class="mb-0 mt-2">';
+              wizardData.hpRolls.forEach(r => {
+                resultsHTML += `<li>Level ${r.level}: ${r.roll} + ${r.conMod} = <strong>${r.total} HP</strong></li>`;
+              });
+              const rolledTotal = level1HP + wizardData.hpRolls.reduce((sum, r) => sum + r.total, 0);
+              resultsHTML += `</ul><div class="mt-2 pt-2 border-top"><strong>Total HP:</strong> ${rolledTotal}</div></div>`;
+              rollResults.innerHTML = resultsHTML;
+            }
+          }
+
+          // Set hit dice count to match level
+          wizardData.hitDie = `${level}d${hitDie}`;
         }
 
         // Calculate Speed
@@ -1926,6 +2079,79 @@ const CharacterCreationWizard = (function() {
     };
   }
 
+  function gatherSubclassSpellData(spellNames) {
+    // Convert spell names to spell objects from SPELLS_DATA
+    if (!window.SPELLS_DATA || !Array.isArray(spellNames)) return [];
+
+    const spellObjects = [];
+
+    for (const spellName of spellNames) {
+      // Find the spell in SPELLS_DATA
+      const spell = window.SPELLS_DATA.find(s => s.title === spellName);
+      if (spell) {
+        spellObjects.push(spell);
+      } else {
+        console.warn(`Subclass spell not found in SPELLS_DATA: ${spellName}`);
+      }
+    }
+
+    return spellObjects;
+  }
+
+  function gatherClassFeatures(className, subclassName, level) {
+    // Get class data from LevelUpData if available
+    if (!window.LevelUpData || !window.LevelUpData.CLASS_DATA) {
+      console.warn('LevelUpData not available, cannot gather class features');
+      return '';
+    }
+
+    const classData = window.LevelUpData.CLASS_DATA[className];
+    if (!classData || !classData.features) {
+      console.warn(`No feature data found for class: ${className}`);
+      return '';
+    }
+
+    const features = [];
+
+    // Gather features from level 1 to current level
+    for (let lvl = 1; lvl <= level; lvl++) {
+      const levelFeatures = classData.features[lvl];
+      if (levelFeatures && levelFeatures.length > 0) {
+        features.push(`**Level ${lvl}:**`);
+        levelFeatures.forEach(feature => {
+          features.push(`- ${feature}`);
+        });
+      }
+    }
+
+    // Add subclass features if available
+    if (subclassName && window.LevelUpData.SUBCLASS_DATA) {
+      const subclassData = window.LevelUpData.SUBCLASS_DATA[className];
+      if (subclassData && subclassData.options) {
+        const subclass = subclassData.options[subclassName];
+        if (subclass && subclass.features) {
+          const subclassFeatures = [];
+          for (let lvl = 1; lvl <= level; lvl++) {
+            const levelFeatures = subclass.features[lvl];
+            if (levelFeatures && levelFeatures.length > 0) {
+              subclassFeatures.push(`**${subclassName} - Level ${lvl}:**`);
+              levelFeatures.forEach(feature => {
+                subclassFeatures.push(`- ${feature}`);
+              });
+            }
+          }
+          if (subclassFeatures.length > 0) {
+            features.push('');
+            features.push(`**${subclassName} Features:**`);
+            features.push(...subclassFeatures);
+          }
+        }
+      }
+    }
+
+    return features.join('\n');
+  }
+
   function finishWizard() {
     console.log('🧙 Wizard finishing with data:', wizardData);
 
@@ -1941,6 +2167,18 @@ const CharacterCreationWizard = (function() {
 
     // Calculate saving throws
     wizardData.savingThrows = getClassSavingThrows(wizardData.class);
+
+    // Gather class features for levels 1-N
+    wizardData.classFeatures = gatherClassFeatures(wizardData.class, wizardData.subclass, wizardData.level);
+
+    // Gather subclass spells (if applicable)
+    if (wizardData.subclass && window.LevelUpData && window.LevelUpData.getSubclassSpells) {
+      const subclassSpellNames = window.LevelUpData.getSubclassSpells(wizardData.class, wizardData.subclass, wizardData.level);
+      if (subclassSpellNames && subclassSpellNames.length > 0) {
+        wizardData.subclassSpells = gatherSubclassSpellData(subclassSpellNames);
+        console.log(`✨ Added ${wizardData.subclassSpells.length} subclass spells for ${wizardData.subclass}`);
+      }
+    }
 
     console.log('📋 Final wizard data:', {
       name: wizardData.name,

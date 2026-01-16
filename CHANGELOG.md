@@ -14,6 +14,42 @@ The DM's Toolbox has evolved through focused feature releases:
 
 ---
 
+## [1.11.10] - 2026-01-16
+**Character Creation: Multi-Level Character Support Improvements**
+
+### Added
+- **Multi-Level HP Calculation** - Characters created above level 1 now properly calculate HP with choice of rolling or taking average
+  - New HP method selection UI appears for characters created at level 2+
+  - "Roll Hit Dice" option allows rolling for each level 2-N with full breakdown display
+  - "Take Average (Recommended)" option calculates guaranteed HP using standard averages
+  - Level 1 HP always uses maximum hit die + CON modifier (as per D&D rules)
+  - HP rolls are tracked and displayed with per-level breakdown (e.g., "Level 2: 5 + 2 = 7 HP")
+  - Validation ensures HP method is selected before proceeding
+
+### Fixed
+- **Hit Dice Scaling** - Hit dice now correctly scale with character level (e.g., "3d8" for a level 3 Wizard)
+  - Previously all characters had "1d{hitDie}" regardless of starting level
+  - Now properly set to "{level}d{hitDie}" for accurate hit dice tracking
+- **Class Features Population** - Class features for levels 1-N are now automatically added to Features & Feats section
+  - Gathers all class features from level 1 up to starting level from LevelUpData.CLASS_DATA
+  - Includes subclass features when subclass is selected
+  - Features formatted as markdown with level headers for easy reference
+  - Example output: "**Level 1:** - Rage (2/day) - Unarmored Defense"
+- **Subclass Bonus Spells** - Subclass-granted spells are now automatically added to spell list
+  - Added comprehensive SUBCLASS_SPELLS data structure in level-up-data.js with 250+ subclass spells
+  - **Cleric Domains**: All 11 domains with spells at levels 1, 3, 5, 7, 9 (Knowledge, Life, Light, Nature, Tempest, Trickery, War, Forge, Grave, Order, Peace, Twilight)
+  - **Druid Circles**: All 10 Land terrains + Circle of Spores + Circle of Wildfire
+  - **Paladin Oaths**: All 7 oaths with spells at levels 3, 5, 9, 13, 17 (Devotion, Ancients, Vengeance, Conquest, Redemption, Glory, Watchers)
+  - **Warlock Patrons**: All 6 patrons with expanded spell lists at levels 1, 3, 5, 7, 9 (Archfey, Fiend, Great Old One, Celestial, Hexblade, Fathomless)
+  - Subclass spells marked as "always prepared" and automatically added during character creation
+  - Helper functions: `getSubclassSpells()` and `getSubclassSpellsByLevel()`
+
+### Notes
+- See [docs/ENHANCEMENT_ROADMAP.md](docs/ENHANCEMENT_ROADMAP.md) for planned enhancements including prepared spell validation, racial features, background features, equipment, attacks, resource trackers, and Wild Shape logic
+- Prepared spell foundation added (CLASS_DATA flags, helper functions) - UI implementation pending
+
+---
+
 ## [1.11.9] - 2026-01-15
 **Character Creation: ASI/Feat Support, Complete Subclass Library & Prepared Spellcaster Improvements**
 

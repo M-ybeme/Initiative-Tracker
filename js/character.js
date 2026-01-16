@@ -2363,6 +2363,25 @@
           currentSpellList = [...(currentSpellList || []), ...cantrips];
         }
 
+        // Add subclass spells (always prepared)
+        if (wizardData.subclassSpells && wizardData.subclassSpells.length > 0) {
+          const subclassSpells = wizardData.subclassSpells.map(spell => ({
+            name: spell.title,
+            level: spell.level,
+            school: spell.school,
+            castingTime: spell.casting_time,
+            range: spell.range,
+            components: spell.components,
+            duration: spell.duration,
+            concentration: spell.concentration || false,
+            ritual: spell.ritual || false,
+            description: spell.body || '',
+            alwaysPrepared: true // Mark as always prepared
+          }));
+          currentSpellList = [...(currentSpellList || []), ...subclassSpells];
+          console.log(`✨ Added ${subclassSpells.length} subclass spells (always prepared)`);
+        }
+
         // Render the spell list if spells were added
         if (currentSpellList && currentSpellList.length > 0) {
           renderCharacterSpellList();
@@ -2441,6 +2460,11 @@
               }
             }
           }
+        }
+
+        // Populate class features if provided
+        if (wizardData.classFeatures && $('charFeatures')) {
+          $('charFeatures').value = wizardData.classFeatures;
         }
 
         console.log('✅ Form population complete, scheduling save...');
