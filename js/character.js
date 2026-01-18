@@ -3888,6 +3888,7 @@
               // Switch to new character
               currentCharacterId = newId;
               fillFormFromCharacter(getCurrentCharacter());
+              renderCharacterSelect(); // Update dropdown to reflect the new selection
             }
           });
         } else {
