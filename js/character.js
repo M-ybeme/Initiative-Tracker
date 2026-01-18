@@ -1254,6 +1254,7 @@
         currentSpellList = normalized;
         window.currentSpellList = currentSpellList;
         renderCharacterSpellList();
+        updatePreparedSpellCount();
         clearSpellSearchResults();
       }
 
@@ -1384,6 +1385,7 @@
         currentSpellList.push(spell);
         window.currentSpellList = currentSpellList;
         renderCharacterSpellList();
+        updatePreparedSpellCount();
       }
 
       function removeSpellFromCurrentList(name) {
@@ -1394,12 +1396,14 @@
         );
         window.currentSpellList = currentSpellList;
         renderCharacterSpellList();
+        updatePreparedSpellCount();
       }
 
       function clearAllSpellsForCurrentCharacter() {
         currentSpellList = [];
         window.currentSpellList = currentSpellList;
         renderCharacterSpellList();
+        updatePreparedSpellCount();
         clearSpellSearchResults();
       }
 
@@ -1917,6 +1921,85 @@
         attackEl.textContent = attack >= 0 ? `+${attack}` : `${attack}`;
       }
 
+      // ---------- Prepared Spell Count ----------
+      function updatePreparedSpellCount() {
+        const alertEl = $('preparedSpellsAlert');
+        const countEl = $('preparedSpellCount');
+        const maxEl = $('maxPreparedSpells');
+        const statusEl = $('preparedSpellStatus');
+
+        if (!alertEl || !countEl || !maxEl || !statusEl) return;
+
+        // Get the current character's class
+        const char = getCurrentCharacter();
+        if (!char) {
+          alertEl.classList.add('d-none');
+          return;
+        }
+
+        // Extract base class name (without subclass in parentheses)
+        const fullClass = $('charClass')?.value || char.charClass || '';
+        const classMatch = fullClass.match(/^([^(]+)/);
+        const className = classMatch ? classMatch[1].trim() : fullClass.trim();
+
+        // Check if this class prepares spells
+        if (!window.LevelUpData || !window.LevelUpData.classPreparesSpells(className)) {
+          alertEl.classList.add('d-none');
+          return;
+        }
+
+        // Show the alert for preparing casters
+        alertEl.classList.remove('d-none');
+
+        // Get the spellcasting ability and modifier
+        const spellAbility = $('spellcastingAbility')?.value;
+        if (!spellAbility) {
+          maxEl.textContent = '?';
+          countEl.textContent = '0';
+          statusEl.textContent = 'Select Ability';
+          statusEl.className = 'badge bg-warning';
+          return;
+        }
+
+        const abilityScoreEl = $(`stat${spellAbility.charAt(0).toUpperCase() + spellAbility.slice(1)}`);
+        const abilityScore = parseInt(abilityScoreEl?.value) || 10;
+        const abilityMod = Math.floor((abilityScore - 10) / 2);
+
+        // Get character level
+        const level = parseInt($('charLevel')?.value) || 1;
+
+        // Calculate max prepared spells
+        const maxPrepared = window.LevelUpData.getMaxPreparedSpells(className, level, abilityMod);
+
+        // Count currently prepared spells (excluding "alwaysPrepared" subclass spells)
+        const preparedCount = currentSpellList.filter(spell => {
+          // Only count spells that are prepared AND not always prepared (subclass spells)
+          return spell.prepared && !spell.alwaysPrepared && spell.level > 0; // Cantrips don't count
+        }).length;
+
+        // Update UI
+        countEl.textContent = preparedCount;
+        maxEl.textContent = maxPrepared;
+
+        // Update status badge
+        if (preparedCount > maxPrepared) {
+          statusEl.textContent = 'Over Limit!';
+          statusEl.className = 'badge bg-danger';
+          alertEl.classList.remove('alert-info');
+          alertEl.classList.add('alert-warning');
+        } else if (preparedCount === maxPrepared) {
+          statusEl.textContent = 'Full';
+          statusEl.className = 'badge bg-success';
+          alertEl.classList.remove('alert-warning');
+          alertEl.classList.add('alert-info');
+        } else {
+          statusEl.textContent = 'OK';
+          statusEl.className = 'badge bg-secondary';
+          alertEl.classList.remove('alert-warning');
+          alertEl.classList.add('alert-info');
+        }
+      }
+
       // ---------- Fill form ----------
       function fillFormFromCharacter(char) {
           if (!char) return;
@@ -2376,15 +2459,53 @@
             concentration: spell.concentration || false,
             ritual: spell.ritual || false,
             description: spell.body || '',
-            alwaysPrepared: true // Mark as always prepared
+            prepared: true, // Show as prepared in UI
+            alwaysPrepared: true // Mark as always prepared (doesn't count toward limit)
           }));
           currentSpellList = [...(currentSpellList || []), ...subclassSpells];
           console.log(`✨ Added ${subclassSpells.length} subclass spells (always prepared)`);
         }
 
+        // Add racial spells (innate spellcasting from race)
+        if (wizardData.racialSpells && wizardData.racialSpells.length > 0) {
+          const racialSpells = wizardData.racialSpells.map(spell => {
+            // Build note for racial spells based on type
+            let racialNote = '';
+            if (spell.racialType === 'cantrip') {
+              racialNote = '(Racial cantrip)';
+            } else if (spell.racialType === 'once_per_long_rest') {
+              racialNote = spell.racialNote ? `(Racial: ${spell.racialNote}, 1/long rest)` : '(Racial: 1/long rest)';
+            } else if (spell.racialType === 'once_per_short_rest') {
+              racialNote = spell.racialNote ? `(Racial: ${spell.racialNote}, 1/short rest)` : '(Racial: 1/short rest)';
+            } else if (spell.racialType === 'at_will') {
+              racialNote = '(Racial: at will)';
+            }
+
+            return {
+              name: spell.title,
+              level: spell.level,
+              school: spell.school,
+              castingTime: spell.casting_time,
+              range: spell.range,
+              components: spell.components,
+              duration: spell.duration,
+              concentration: spell.concentration || false,
+              ritual: spell.ritual || false,
+              description: spell.body || '',
+              prepared: true, // Always "prepared" since it's innate
+              alwaysPrepared: true, // Doesn't count toward prepared limit
+              racialSpell: true,
+              racialNote: racialNote
+            };
+          });
+          currentSpellList = [...(currentSpellList || []), ...racialSpells];
+          console.log(`🧬 Added ${racialSpells.length} racial spells (innate spellcasting)`);
+        }
+
         // Render the spell list if spells were added
         if (currentSpellList && currentSpellList.length > 0) {
           renderCharacterSpellList();
+          updatePreparedSpellCount();
         }
 
         // Set spellcasting ability based on class
@@ -2462,9 +2583,71 @@
           }
         }
 
-        // Populate class features if provided
-        if (wizardData.classFeatures && $('charFeatures')) {
-          $('charFeatures').value = wizardData.classFeatures;
+        // Populate racial and class features if provided
+        if ($('charFeatures')) {
+          // Use allFeatures if available (includes racial + class), fallback to classFeatures only
+          const featuresText = wizardData.allFeatures || wizardData.classFeatures || '';
+          $('charFeatures').value = featuresText;
+        }
+
+        // Generate default attacks based on class and stats
+        if (wizardData.class && window.LevelUpData && typeof window.LevelUpData.generateDefaultAttacks === 'function') {
+          const stats = {
+            str: wizardData.str || 10,
+            dex: wizardData.dex || 10,
+            con: wizardData.con || 10,
+            int: wizardData.int || 10,
+            wis: wizardData.wis || 10,
+            cha: wizardData.cha || 10
+          };
+          const level = wizardData.level || 1;
+          const attacks = window.LevelUpData.generateDefaultAttacks(wizardData.class, level, stats);
+
+          if (attacks && attacks.length > 0) {
+            currentAttackList = attacks;
+            window.currentAttackList = currentAttackList;
+            renderAttackList();
+            console.log(`⚔️ Generated ${attacks.length} default attacks for ${wizardData.class}`);
+          }
+        }
+
+        // Generate class resources based on class and stats
+        if (wizardData.class && window.LevelUpData && typeof window.LevelUpData.getClassResources === 'function') {
+          const stats = {
+            str: wizardData.str || 10,
+            dex: wizardData.dex || 10,
+            con: wizardData.con || 10,
+            int: wizardData.int || 10,
+            wis: wizardData.wis || 10,
+            cha: wizardData.cha || 10
+          };
+          const level = wizardData.level || 1;
+          const resources = window.LevelUpData.getClassResources(wizardData.class, level, stats);
+
+          if (resources && resources.length > 0) {
+            // Populate up to 3 resource slots
+            for (let i = 0; i < Math.min(resources.length, 3); i++) {
+              const res = resources[i];
+              const idx = i + 1;
+              if ($(`res${idx}Name`)) $(`res${idx}Name`).value = res.name;
+              if ($(`res${idx}Current`)) $(`res${idx}Current`).value = res.current;
+              if ($(`res${idx}Max`)) $(`res${idx}Max`).value = res.max;
+            }
+            console.log(`🎯 Generated ${resources.length} class resources for ${wizardData.class}`);
+          }
+        }
+
+        // Populate starting equipment (class + background)
+        if (wizardData.startingEquipment && wizardData.startingEquipment.length > 0) {
+          // Set the inventory list
+          currentInventoryList = [...wizardData.startingEquipment];
+
+          // Render the inventory table
+          if (typeof renderInventoryTable === 'function') {
+            renderInventoryTable({ inventoryItems: currentInventoryList });
+          }
+
+          console.log(`🎒 Populated ${currentInventoryList.length} starting equipment items`);
         }
 
         console.log('✅ Form population complete, scheduling save...');
@@ -4178,6 +4361,7 @@
                 return spell;
               });
               renderCharacterSpellList();
+              updatePreparedSpellCount();
               return;
             }
         
@@ -4339,14 +4523,20 @@
         // Spellcasting ability & derived stats
         const spellAbilitySelect = $('spellcastingAbility');
         if (spellAbilitySelect) {
-          spellAbilitySelect.addEventListener('change', updateSpellDCAndAttack);
+          spellAbilitySelect.addEventListener('change', () => {
+            updateSpellDCAndAttack();
+            updatePreparedSpellCount();
+          });
         }
 
-        // Update spell DC/attack when stats or level change
+        // Update spell DC/attack and prepared count when stats or level change
         ['statInt', 'statWis', 'statCha', 'charLevel'].forEach(id => {
           const el = $(id);
           if (el) {
-            el.addEventListener('input', updateSpellDCAndAttack);
+            el.addEventListener('input', () => {
+              updateSpellDCAndAttack();
+              updatePreparedSpellCount();
+            });
           }
         });
 

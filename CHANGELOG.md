@@ -14,6 +14,156 @@ The DM's Toolbox has evolved through focused feature releases:
 
 ---
 
+## [1.11.12] - 2026-01-17
+**Artificer Class Support & Enhanced Multiclass System**
+
+### Added
+- **Full Artificer Class** - Complete Artificer implementation in CLASS_DATA
+  - Hit die (d8), saving throws (CON, INT), armor/weapon/tool proficiencies
+  - Half-caster spell progression (rounded up for multiclass per RAW)
+  - All 20 levels of class features
+  - Cantrips known progression (2 at level 1, 3 at level 10, 4 at level 14)
+  - Spell slots for all levels
+  - Infusions known and infused items scaling
+
+- **Artificer Infusions System** - `ARTIFICER_INFUSIONS` data structure with 16 infusions
+  - Level 2: Armor of Magical Strength, Enhanced Arcane Focus, Enhanced Defense, Enhanced Weapon, Homunculus Servant, Mind Sharpener, Repeating Shot, Replicate Magic Item, Returning Weapon
+  - Level 6: Boots of the Winding Path, Radiant Weapon, Repulsion Shield, Resistant Armor
+  - Level 10: Helm of Awareness, Spell-Refueling Ring
+  - Level 14: Arcane Propulsion Armor
+  - Helper functions: `getAvailableInfusions()`, `getInfusionsKnown()`, `getInfusedItemsMax()`, `formatInfusionsReference()`
+
+- **Artificer Resources & Equipment**
+  - Added to `CLASS_RESOURCES`: Flash of Genius (INT mod uses at level 7+), Infused Items tracking
+  - Added to `DEFAULT_CLASS_WEAPONS`: Light Crossbow, Fire Bolt cantrip
+  - Added to `DEFAULT_CLASS_EQUIPMENT`: Light Crossbow, Light Hammer, Scale Mail, Shield, Thieves' Tools, Tinker's Tools, Dungeoneer's Pack
+
+- **Multiclass Hit Dice Tracking** - Per-class hit dice management for multiclass characters
+  - `calculateMulticlassHitDice(classes)` - Returns breakdown like "3d10 + 2d8"
+  - `initMulticlassHitDiceState(classes)` - Initialize state object with pools by die size
+  - `spendMulticlassHitDice(state, dieSize, count)` - Spend from specific hit die pool
+  - `restoreMulticlassHitDice(state)` - Long rest restoration (half total, prioritizes larger dice per RAW)
+  - `formatMulticlassHitDice(state)` - Display string like "2/3 d10, 1/2 d8"
+
+- **Class Level vs Character Level Helpers** - Proper multiclass feature tracking
+  - `getClassLevel(classes, targetClass)` - Get level in a specific class
+  - `getTotalCharacterLevel(classes)` - Sum of all class levels
+  - `hasClassFeature(classes, className, requiredLevel)` - Check if feature is available by class level
+  - `getMulticlassFeatures(classes)` - Get all features with class attribution
+  - `getMulticlassProficiencyBonus(classes)` - Based on total character level
+  - `getMulticlassExtraAttack(classes)` - Handles Extra Attack stacking rules (Fighter 5/11/20 gets 2/3/4 attacks)
+
+### Technical
+- Added full Artificer class to `CLASS_DATA` in [level-up-data.js](js/level-up-data.js)
+- Added `ARTIFICER_INFUSIONS` data structure with 16 infusions across 4 level tiers
+- Added 5 multiclass hit dice helper functions
+- Added 6 class level vs character level helper functions
+- All new functions exported in public API
+
+---
+
+## [1.11.11] - 2026-01-17
+**Character Creation & Level-Up: Class Resources, Auto-Attacks, Racial Features & Spells**
+
+### Added
+- **Class Resource Trackers** - Auto-populates class-specific resources during character creation
+  - `CLASS_RESOURCES` data structure with resources for all 12 classes
+  - Resources scale with level and ability scores where applicable (e.g., Bardic Inspiration = CHA mod)
+  - Uses existing "Tracked Resources" UI (res1, res2, res3 slots)
+  - **Resources by class:** Barbarian (Rage), Bard (Bardic Inspiration), Cleric (Channel Divinity), Druid (Wild Shape), Fighter (Second Wind, Action Surge), Monk (Ki Points at level 2+), Paladin (Lay on Hands, Divine Sense), Sorcerer (Sorcery Points at level 2+), Wizard (Arcane Recovery)
+
+- **Auto-Generate Basic Attacks** - Characters receive class-appropriate weapon/cantrip attacks during creation
+  - `DEFAULT_CLASS_WEAPONS` data structure with weapons for all 12 classes
+  - `generateDefaultAttacks()` function creates properly formatted attack entries
+  - `getCantripDamageDice()` helper for cantrip damage scaling at levels 5, 11, 17
+  - **Examples:** Fighter gets Longsword + Longbow, Warlock gets Dagger + Eldritch Blast (with scaling)
+
+- **Spell Tooltip Info Icons** - Question mark icons next to spells in character creation and level-up wizards
+  - Shows full spell description, casting time, range, components, duration on hover
+  - Dark aesthetic matching site theme (subtle gray icon)
+  - Available in both character creation wizard and level-up spell selection
+
+- **Class Resource Auto-Update on Level-Up** - Resources automatically update when leveling up
+  - Matches existing resources by name (case-insensitive)
+  - Updates max values and replenishes to new max (like a long rest)
+  - Graceful failure with warning banner if resources can't be matched (e.g., user renamed them)
+  - Success message shows "Class resources updated and replenished"
+
+- **Comprehensive Racial Features** - Automatically populates racial traits in Features & Feats section during character creation
+  - `RACIAL_BASE_FEATURES` data structure covering 30+ races from PHB, Volo's Guide, Ravnica, Theros, and Eberron
+  - Base racial traits (speed, size, languages, darkvision, etc.) for all races
+  - Subrace-specific traits automatically included (e.g., High Elf weapon training, Lightfoot Halfling's Naturally Stealthy)
+  - Level-gated features tracked (e.g., Aasimar's Celestial Revelation at level 3)
+  - Scaling features with level-appropriate values (e.g., Dragonborn breath weapon damage)
+  - Formatted as markdown with clear headers for easy reference
+
+- **Racial Spells (Innate Spellcasting)** - Races with innate spellcasting now have their spells auto-added to spell list
+  - `RACIAL_SPELLS` data structure tracking spells granted by racial features
+  - **Tiefling**: Thaumaturgy (lvl 1), Hellish Rebuke (lvl 3), Darkness (lvl 5)
+  - **Aasimar**: Light (lvl 1)
+  - **Drow/High Elf/Forest Gnome**: Dancing Lights, cantrip choices, Minor Illusion
+  - **Genasi (Fire/Earth/Water/Air)**: Produce Flame, Pass Without Trace, Shape Water, etc.
+  - **Yuan-ti Pureblood**: Poison Spray, Animal Friendship (snakes), Suggestion
+  - **Firbolg**: Detect Magic, Disguise Self
+  - **Triton**: Fog Cloud, Gust of Wind, Wall of Water
+  - Racial spells marked with usage notes (e.g., "Racial: 2nd-level, 1/long rest")
+  - Added during both character creation and level-up when unlocked
+  - Marked as "always prepared" and excluded from prepared spell count
+
+- **Level-Up Racial Support** - Level-up system now properly handles racial progression
+  - Race name parsing fixed for formats like "Tiefling (Asmodeus)"
+  - Racial features unlocked at new levels shown in success notification
+  - Racial spells gained at new levels automatically added to spell list
+  - Success message shows "Racial feature unlocked: X" and "Racial spell gained: Y"
+
+- **Background Features** - Background features now auto-populate in Features & Feats section
+  - `BACKGROUND_DATA` structure with all 13 PHB backgrounds (Acolyte, Charlatan, Criminal, Entertainer, Folk Hero, Guild Artisan, Hermit, Noble, Outlander, Sage, Sailor, Soldier, Urchin)
+  - Full feature descriptions with mechanical benefits
+  - Skill and tool proficiencies tracked
+  - Background feature formatted as markdown and added alongside racial and class features
+
+- **Starting Equipment Auto-Population** - Characters now receive starting equipment from class and background
+  - `DEFAULT_CLASS_EQUIPMENT` structure with sensible default loadouts for all 12 classes
+  - Includes weapons, armor, and gear appropriate to each class
+  - Background equipment also added (holy symbol, tools, clothing, etc.)
+  - All items properly formatted for inventory system with weight, quantity, and notes
+  - Equipment with `equipped: true` flag for armor and shields
+
+- **Wild Shape Beast Form Reference** - Druids now get a comprehensive beast form reference in Features & Feats
+  - `BEAST_FORMS` data structure with 50+ beasts from CR 0 to CR 6
+  - Complete stat blocks: AC, HP, Speed, ability scores, skills, senses, attacks, traits
+  - Organized by Challenge Rating for easy reference
+  - Automatic filtering based on druid level and Circle of the Moon progression
+  - **Standard Druid**: CR 1/4 at level 2, CR 1/2 at level 4, CR 1 at level 8 (no fly until 8, no swim until 4)
+  - **Moon Druid**: CR 1 at level 2, up to CR 6 at level 18 (swim at 2, fly at 8)
+  - Wild Shape reference automatically updates on level-up when new forms become available
+  - Helper functions: `getWildShapeLimits()`, `getAvailableBeastForms()`, `formatWildShapeReference()`, `getWildShapeSummary()`
+
+### Technical
+- Added `CLASS_RESOURCES` and `getClassResources()` to [level-up-data.js](js/level-up-data.js)
+- Added `DEFAULT_CLASS_WEAPONS`, `generateDefaultAttacks()`, `getCantripDamageDice()` to [level-up-data.js](js/level-up-data.js)
+- Added `RACIAL_BASE_FEATURES` data structure (~1300 lines) to [level-up-data.js](js/level-up-data.js)
+- Added `RACIAL_SPELLS` data structure with helper functions `getRacialSpells()` and `getRacialSpellsAtLevel()`
+- Added `getFullRacialFeatures()`, `formatRacialFeaturesAsText()`, `getScalingFeatureValue()`, `getBaseRacialFeatures()` helpers
+- Added `BACKGROUND_DATA` structure with all 13 PHB backgrounds and helper functions:
+  - `getBackgroundData()`, `getBackgroundFeature()`, `getBackgroundEquipment()`
+  - `getBackgroundProficiencies()`, `getBackgroundStartingGold()`, `formatBackgroundFeatureAsText()`
+- Added `DEFAULT_CLASS_EQUIPMENT` structure with default loadouts for all 12 classes and helper functions:
+  - `getClassEquipmentData()`, `getStartingEquipment()`, `getAllStartingEquipment()`
+- Added `BEAST_FORMS` data structure (~800 lines) with 50+ beasts organized by CR from CR 0 to CR 6
+- Added Wild Shape helper functions: `getWildShapeLimits()`, `compareCR()`, `getAvailableBeastForms()`, `formatBeastForm()`, `formatWildShapeReference()`, `getWildShapeSummary()`
+- Added `gatherWildShapeReference()` to [character-creation-wizard.js](js/character-creation-wizard.js)
+- Wired attack and resource generation into character creation in [character.js](js/character.js)
+- Added `gatherRacialFeatures()`, `gatherRacialSpellData()`, `gatherBackgroundFeature()`, `gatherStartingEquipment()` to [character-creation-wizard.js](js/character-creation-wizard.js)
+- Added starting equipment population to `fillFormFromWizardData()` in [character.js](js/character.js)
+- Added spell tooltip helpers and UI to [character-creation-wizard.js](js/character-creation-wizard.js) and [level-up-system.js](js/level-up-system.js)
+- Added resource auto-update logic to `applyLevelUp()` in [level-up-system.js](js/level-up-system.js)
+- Added racial spell and feature handling to `applyLevelUp()` in [level-up-system.js](js/level-up-system.js)
+- Added Wild Shape reference update logic to `applyLevelUp()` in [level-up-system.js](js/level-up-system.js)
+- Fixed race string parsing to handle "Race (Subrace)" format throughout level-up system
+
+---
+
 ## [1.11.10] - 2026-01-16
 **Character Creation: Multi-Level Character Support Improvements**
 
@@ -288,7 +438,7 @@ The DM's Toolbox has evolved through focused feature releases:
 ### Fixed
 - **Flicker Elimination** - Removed status text element that caused layout shifts and canvas flickering during token movement
 - **Mobile Navigation** - Dropdown menus automatically collapse on mobile for better responsive design
-- **Persistence Measurement Removed** - Recent measure system caused flicker. Attempted fixes using SVG, and fabric.js implimentation. Feature removed until perminent solution can be found
+- **Persistence Measurement Removed** - Recent measure system caused flicker. Attempted fixes using SVG, and fabric.js implementation. Feature removed until permanent solution can be found
 
 ### Enhanced
 - **Fog Workflow** - Three-pass rendering (cover → reveal → outlines) ensures reveal shapes always cut through cover

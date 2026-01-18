@@ -9,6 +9,38 @@ const CharacterCreationWizard = (function() {
   let currentStep = 0;
   let wizardData = {};
 
+  /**
+   * Generate tooltip content for a spell
+   * @param {Object} spell - The spell object
+   * @returns {string} - HTML tooltip content
+   */
+  function getSpellTooltipContent(spell) {
+    const lines = [];
+    if (spell.casting_time) lines.push(`<strong>Casting Time:</strong> ${spell.casting_time}`);
+    if (spell.range) lines.push(`<strong>Range:</strong> ${spell.range}`);
+    if (spell.components) lines.push(`<strong>Components:</strong> ${spell.components}`);
+    if (spell.duration) lines.push(`<strong>Duration:</strong> ${spell.duration}${spell.concentration ? ' (C)' : ''}`);
+    if (spell.body) {
+      lines.push(`<hr class="my-1">${spell.body}`);
+    }
+    return lines.join('<br>');
+  }
+
+  /**
+   * Escape HTML for use in attributes
+   * @param {string} str - String to escape
+   * @returns {string} - Escaped string
+   */
+  function escapeHtml(str) {
+    if (!str) return '';
+    return str
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#039;');
+  }
+
   const steps = [
     {
       title: "Welcome to Character Creation!",
@@ -1787,20 +1819,32 @@ const CharacterCreationWizard = (function() {
 
       listEl.innerHTML = displaySpells.map(spell => {
         const isSelected = wizardData[selectedKey].some(s => s.title === spell.title);
+        const tooltipContent = escapeHtml(getSpellTooltipContent(spell));
         return `
-          <div class="form-check">
+          <div class="form-check d-flex align-items-start">
             <input class="form-check-input spell-checkbox" type="checkbox"
                    id="${type}-${spell.title.replace(/[^a-zA-Z0-9]/g, '')}"
                    data-spell-title="${spell.title}"
                    ${isSelected ? 'checked' : ''}>
-            <label class="form-check-label small" for="${type}-${spell.title.replace(/[^a-zA-Z0-9]/g, '')}">
+            <label class="form-check-label small flex-grow-1" for="${type}-${spell.title.replace(/[^a-zA-Z0-9]/g, '')}">
               <strong>${spell.title}</strong>
               ${type === 'spell' ? `<span class="badge bg-secondary ms-1">Lvl ${spell.level}</span>` : ''}
               <small class="text-muted ms-1">${spell.school || ''}</small>
             </label>
+            <i class="bi bi-question-circle text-secondary ms-2 spell-info-icon"
+               data-bs-toggle="tooltip"
+               data-bs-placement="right"
+               data-bs-html="true"
+               title="${tooltipContent}"
+               style="cursor: help; font-size: 0.85rem; opacity: 0.7;"></i>
           </div>
         `;
       }).join('');
+
+      // Initialize tooltips for spell info icons
+      listEl.querySelectorAll('[data-bs-toggle="tooltip"]').forEach(el => {
+        new bootstrap.Tooltip(el, { trigger: 'hover focus', html: true });
+      });
 
       // Add event listeners to checkboxes
       listEl.querySelectorAll('.spell-checkbox').forEach(checkbox => {
@@ -2098,6 +2142,36 @@ const CharacterCreationWizard = (function() {
     return spellObjects;
   }
 
+  /**
+   * Convert racial spell data to full spell objects
+   * @param {Array} racialSpellEntries - Array of { spell, type, note?, level } objects from getRacialSpells
+   * @returns {Array} - Array of spell objects with racial metadata
+   */
+  function gatherRacialSpellData(racialSpellEntries) {
+    if (!window.SPELLS_DATA || !Array.isArray(racialSpellEntries)) return [];
+
+    const spellObjects = [];
+
+    for (const entry of racialSpellEntries) {
+      // Find the spell in SPELLS_DATA
+      const spell = window.SPELLS_DATA.find(s => s.title === entry.spell);
+      if (spell) {
+        // Add the spell with racial metadata
+        spellObjects.push({
+          ...spell,
+          racialSpell: true,
+          racialType: entry.type, // 'cantrip', 'once_per_long_rest', 'at_will', 'once_per_short_rest'
+          racialNote: entry.note || null, // Additional notes like "2nd-level"
+          gainedAtLevel: entry.level // Level this spell was gained
+        });
+      } else {
+        console.warn(`Racial spell not found in SPELLS_DATA: ${entry.spell}`);
+      }
+    }
+
+    return spellObjects;
+  }
+
   function gatherClassFeatures(className, subclassName, level) {
     // Get class data from LevelUpData if available
     if (!window.LevelUpData || !window.LevelUpData.CLASS_DATA) {
@@ -2152,6 +2226,78 @@ const CharacterCreationWizard = (function() {
     return features.join('\n');
   }
 
+  /**
+   * Gather racial features for the character
+   * @param {string} race - Character's race
+   * @param {string} subrace - Character's subrace (optional)
+   * @param {number} level - Character's level
+   * @returns {string} - Formatted racial features text
+   */
+  function gatherRacialFeatures(race, subrace, level) {
+    // Use LevelUpData's comprehensive formatter if available
+    if (window.LevelUpData && typeof window.LevelUpData.formatRacialFeaturesAsText === 'function') {
+      return window.LevelUpData.formatRacialFeaturesAsText(race, subrace, level);
+    }
+
+    // Fallback to basic formatting if LevelUpData not available
+    console.warn('LevelUpData.formatRacialFeaturesAsText not available, using basic formatting');
+    const lines = [];
+    const raceName = subrace ? `${subrace} (${race})` : race;
+    lines.push(`**${raceName} Racial Features:**`);
+    lines.push('- See Player\'s Handbook for full racial feature details.');
+    return lines.join('\n');
+  }
+
+  /**
+   * Gather background feature for the character
+   * @param {string} background - Character's background
+   * @returns {string} - Formatted background feature text
+   */
+  function gatherBackgroundFeature(background) {
+    // Use LevelUpData's formatter if available
+    if (window.LevelUpData && typeof window.LevelUpData.formatBackgroundFeatureAsText === 'function') {
+      return window.LevelUpData.formatBackgroundFeatureAsText(background);
+    }
+
+    // Fallback to basic formatting if LevelUpData not available
+    console.warn('LevelUpData.formatBackgroundFeatureAsText not available, using basic formatting');
+    if (!background) return '';
+    return `**${background} Background Feature:**\n- See Player's Handbook for full background feature details.`;
+  }
+
+  /**
+   * Gather starting equipment for the character (class + background)
+   * @param {string} className - Character's class
+   * @param {string} background - Character's background
+   * @returns {Array} - Array of inventory items
+   */
+  function gatherStartingEquipment(className, background) {
+    // Use LevelUpData's helper if available
+    if (window.LevelUpData && typeof window.LevelUpData.getAllStartingEquipment === 'function') {
+      return window.LevelUpData.getAllStartingEquipment(className, background);
+    }
+
+    // Fallback - return empty array
+    console.warn('LevelUpData.getAllStartingEquipment not available');
+    return [];
+  }
+
+  /**
+   * Gather Wild Shape beast form reference for Druid characters
+   * @param {number} level - Character's level
+   * @param {string} subclass - Character's subclass (to check for Circle of the Moon)
+   * @returns {string} - Formatted Wild Shape reference text, or empty string if not a druid
+   */
+  function gatherWildShapeReference(level, subclass) {
+    // Use LevelUpData's helper if available
+    if (window.LevelUpData && typeof window.LevelUpData.formatWildShapeReference === 'function') {
+      return window.LevelUpData.formatWildShapeReference(level, subclass || '');
+    }
+
+    // Fallback - basic text
+    return '**Wild Shape:** See Player\'s Handbook for available beast forms.';
+  }
+
   function finishWizard() {
     console.log('🧙 Wizard finishing with data:', wizardData);
 
@@ -2168,8 +2314,45 @@ const CharacterCreationWizard = (function() {
     // Calculate saving throws
     wizardData.savingThrows = getClassSavingThrows(wizardData.class);
 
+    // Gather racial features
+    wizardData.racialFeatures = gatherRacialFeatures(wizardData.race, wizardData.subrace, wizardData.level);
+    console.log(`🧬 Gathered racial features for ${wizardData.race}${wizardData.subrace ? ` (${wizardData.subrace})` : ''}`);
+
+    // Gather background feature
+    wizardData.backgroundFeature = gatherBackgroundFeature(wizardData.background);
+    if (wizardData.backgroundFeature) {
+      console.log(`📜 Gathered background feature for ${wizardData.background}`);
+    }
+
     // Gather class features for levels 1-N
     wizardData.classFeatures = gatherClassFeatures(wizardData.class, wizardData.subclass, wizardData.level);
+
+    // Gather Wild Shape reference for Druids (level 2+)
+    if (wizardData.class === 'Druid' && wizardData.level >= 2) {
+      wizardData.wildShapeReference = gatherWildShapeReference(wizardData.level, wizardData.subclass);
+      console.log(`🐻 Gathered Wild Shape reference for level ${wizardData.level} Druid`);
+    }
+
+    // Combine racial, background, and class features
+    const featureSections = [wizardData.racialFeatures];
+    if (wizardData.backgroundFeature) {
+      featureSections.push('');
+      featureSections.push(wizardData.backgroundFeature);
+    }
+    featureSections.push('');
+    featureSections.push(wizardData.classFeatures);
+    // Add Wild Shape reference for Druids
+    if (wizardData.wildShapeReference) {
+      featureSections.push('');
+      featureSections.push(wizardData.wildShapeReference);
+    }
+    wizardData.allFeatures = featureSections.join('\n');
+
+    // Gather starting equipment (class + background)
+    wizardData.startingEquipment = gatherStartingEquipment(wizardData.class, wizardData.background);
+    if (wizardData.startingEquipment && wizardData.startingEquipment.length > 0) {
+      console.log(`🎒 Gathered ${wizardData.startingEquipment.length} starting equipment items`);
+    }
 
     // Gather subclass spells (if applicable)
     if (wizardData.subclass && window.LevelUpData && window.LevelUpData.getSubclassSpells) {
@@ -2177,6 +2360,28 @@ const CharacterCreationWizard = (function() {
       if (subclassSpellNames && subclassSpellNames.length > 0) {
         wizardData.subclassSpells = gatherSubclassSpellData(subclassSpellNames);
         console.log(`✨ Added ${wizardData.subclassSpells.length} subclass spells for ${wizardData.subclass}`);
+      }
+    }
+
+    // Gather racial spells (if applicable)
+    if (window.LevelUpData && typeof window.LevelUpData.getRacialSpells === 'function') {
+      // Parse race and subrace from the stored format
+      let race = wizardData.race;
+      let subrace = wizardData.subrace;
+
+      // Handle format like "Tiefling (Asmodeus)" if subrace wasn't separately stored
+      if (race && race.includes('(') && !subrace) {
+        const match = race.match(/^(.+?)\s*\((.+?)\)$/);
+        if (match) {
+          race = match[1].trim();
+          subrace = match[2].trim();
+        }
+      }
+
+      const racialSpellData = window.LevelUpData.getRacialSpells(race, subrace, wizardData.level);
+      if (racialSpellData && racialSpellData.length > 0) {
+        wizardData.racialSpells = gatherRacialSpellData(racialSpellData);
+        console.log(`🧬 Added ${wizardData.racialSpells.length} racial spells for ${race}${subrace ? ` (${subrace})` : ''}`);
       }
     }
 

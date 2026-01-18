@@ -9,6 +9,42 @@ const LevelUpSystem = (function() {
   const $ = (id) => document.getElementById(id);
 
   // ============================================================
+  // HELPER FUNCTIONS
+  // ============================================================
+
+  /**
+   * Generate tooltip content for a spell
+   * @param {Object} spell - The spell object
+   * @returns {string} - HTML tooltip content
+   */
+  function getSpellTooltipContent(spell) {
+    const lines = [];
+    if (spell.casting_time) lines.push(`<strong>Casting Time:</strong> ${spell.casting_time}`);
+    if (spell.range) lines.push(`<strong>Range:</strong> ${spell.range}`);
+    if (spell.components) lines.push(`<strong>Components:</strong> ${spell.components}`);
+    if (spell.duration) lines.push(`<strong>Duration:</strong> ${spell.duration}${spell.concentration ? ' (C)' : ''}`);
+    if (spell.body) {
+      lines.push(`<hr class="my-1">${spell.body}`);
+    }
+    return lines.join('<br>');
+  }
+
+  /**
+   * Escape HTML for use in attributes
+   * @param {string} str - String to escape
+   * @returns {string} - Escaped string
+   */
+  function escapeHtml(str) {
+    if (!str) return '';
+    return str
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#039;');
+  }
+
+  // ============================================================
   // STATE
   // ============================================================
   let currentCharacter = null;
@@ -1111,24 +1147,43 @@ const LevelUpSystem = (function() {
 
         availableSpellsList.innerHTML = filteredSpells.map(spell => {
           const isSelected = spellState.selectedSpells.some(s => s.title === spell.title);
+          const tooltipContent = escapeHtml(getSpellTooltipContent(spell));
           return `
-            <button type="button"
-                    class="list-group-item list-group-item-action ${isSelected ? 'active' : ''}"
-                    data-spell-name="${spell.title}"
-                    data-spell-level="${spell.level}">
-              <div class="d-flex justify-content-between align-items-start">
-                <div>
-                  <strong>${spell.title}</strong>
-                  <small class="text-muted ms-2">${spell.school}</small>
-                </div>
-                <span class="badge ${isSelected ? 'bg-light text-dark' : 'bg-primary'}">
-                  ${spell.level === 0 ? 'Cantrip' : `Level ${spell.level}`}
+            <div class="list-group-item ${isSelected ? 'active' : ''} p-0">
+              <div class="d-flex align-items-stretch">
+                <button type="button"
+                        class="flex-grow-1 btn btn-link text-start text-decoration-none p-2 ${isSelected ? 'text-white' : 'text-body'}"
+                        data-spell-name="${spell.title}"
+                        data-spell-level="${spell.level}"
+                        style="border: none;">
+                  <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                      <strong>${spell.title}</strong>
+                      <small class="${isSelected ? 'text-white-50' : 'text-muted'} ms-2">${spell.school}</small>
+                    </div>
+                    <span class="badge ${isSelected ? 'bg-light text-dark' : 'bg-primary'}">
+                      ${spell.level === 0 ? 'Cantrip' : `Level ${spell.level}`}
+                    </span>
+                  </div>
+                  ${spell.concentration ? `<small class="${isSelected ? 'text-warning-emphasis' : 'text-warning'}"><i class="bi bi-circle-fill"></i> Concentration</small>` : ''}
+                </button>
+                <span class="d-flex align-items-center px-2 ${isSelected ? 'bg-primary' : 'bg-dark bg-opacity-25'}"
+                      data-bs-toggle="tooltip"
+                      data-bs-placement="left"
+                      data-bs-html="true"
+                      title="${tooltipContent}"
+                      style="cursor: help;">
+                  <i class="bi bi-question-circle ${isSelected ? 'text-white-50' : 'text-secondary'}" style="opacity: 0.7;"></i>
                 </span>
               </div>
-              ${spell.concentration ? '<small class="text-warning"><i class="bi bi-circle-fill"></i> Concentration</small>' : ''}
-            </button>
+            </div>
           `;
         }).join('');
+
+        // Initialize tooltips for spell info icons
+        availableSpellsList.querySelectorAll('[data-bs-toggle="tooltip"]').forEach(el => {
+          new bootstrap.Tooltip(el, { trigger: 'hover focus', html: true });
+        });
 
         // Add click handlers to spell buttons
         availableSpellsList.querySelectorAll('[data-spell-name]').forEach(btn => {
@@ -1688,6 +1743,71 @@ const LevelUpSystem = (function() {
       character.pactUsed = 0;
     }
 
+    // Update class resources based on new level
+    let resourceUpdateStatus = { updated: 0, expected: 0, needsManualUpdate: false };
+    try {
+      const resourceClassName = extractClassName(character.charClass || character.class);
+      if (resourceClassName && LevelUpData.getClassResources) {
+        const stats = character.stats || {
+          str: 10, dex: 10, con: 10, int: 10, wis: 10, cha: 10
+        };
+        const updatedResources = LevelUpData.getClassResources(resourceClassName, levelUpData.newLevel, stats);
+
+        if (updatedResources && updatedResources.length > 0) {
+          resourceUpdateStatus.expected = updatedResources.length;
+          // Initialize resources object if it doesn't exist
+          character.resources = character.resources || {};
+
+          // Try to match existing resources by name and update their max values
+          for (let i = 0; i < updatedResources.length; i++) {
+            const newRes = updatedResources[i];
+            const slotKey = `res${i + 1}`;
+            const existingRes = character.resources[slotKey];
+
+            // Check if existing resource matches by name (case-insensitive)
+            if (existingRes && existingRes.name &&
+                existingRes.name.toLowerCase() === newRes.name.toLowerCase()) {
+              // Update the max value, keep current value but cap it at new max
+              const oldMax = existingRes.max || 0;
+              existingRes.max = newRes.max;
+              // If current exceeds new max, cap it
+              if (existingRes.current > newRes.max) {
+                existingRes.current = newRes.max;
+              }
+              // On level up, replenish resources to new max (like a long rest)
+              existingRes.current = newRes.max;
+              resourceUpdateStatus.updated++;
+              console.log(`📈 Updated ${newRes.name}: max ${oldMax} → ${newRes.max}`);
+            } else if (!existingRes || !existingRes.name) {
+              // Slot is empty, add the resource
+              character.resources[slotKey] = {
+                name: newRes.name,
+                current: newRes.max,
+                max: newRes.max
+              };
+              resourceUpdateStatus.updated++;
+              console.log(`➕ Added ${newRes.name} to ${slotKey}`);
+            } else {
+              // Slot has a different resource name - user customization
+              resourceUpdateStatus.needsManualUpdate = true;
+            }
+          }
+
+          if (resourceUpdateStatus.updated > 0) {
+            console.log(`🎯 Updated ${resourceUpdateStatus.updated} class resource(s) for level ${levelUpData.newLevel}`);
+          }
+          if (resourceUpdateStatus.needsManualUpdate) {
+            console.warn('⚠️ Some class resources could not be auto-updated. User may need to manually update resource max values.');
+          }
+        }
+      }
+    } catch (e) {
+      console.warn('Could not auto-update class resources:', e);
+      resourceUpdateStatus.needsManualUpdate = true;
+      // Non-critical error - continue with level up
+    }
+    levelUpData.resourceUpdateStatus = resourceUpdateStatus;
+
     // Update hit dice
     // Get the class data to determine hit die size
     const className = extractClassName(character.charClass || character.class);
@@ -1760,9 +1880,191 @@ const LevelUpSystem = (function() {
       });
     }
 
+    // Check for new racial features at this level
+    let racialFeaturesGained = [];
+    try {
+      let race = character.race;
+      let subrace = character.subrace;
+
+      // Parse race string - handle formats like "Tiefling (Asmodeus)" or "High Elf"
+      if (race && race.includes('(')) {
+        // Format: "Tiefling (Asmodeus)" -> race: "Tiefling", subrace: "Asmodeus"
+        const match = race.match(/^(.+?)\s*\((.+?)\)$/);
+        if (match) {
+          race = match[1].trim();
+          subrace = subrace || match[2].trim();
+        }
+      }
+
+      if (race && LevelUpData.getRacialFeature) {
+        // Check both race and subrace for level-gated features
+        const racesToCheck = [race];
+        if (subrace) {
+          racesToCheck.push(subrace);
+          racesToCheck.push(`${subrace} ${race}`);
+          // Also check for specific subrace entries like "Protector Aasimar"
+          racesToCheck.push(`${subrace}`);
+        }
+
+        // Remove duplicates
+        const uniqueRaces = [...new Set(racesToCheck)];
+
+        uniqueRaces.forEach(raceName => {
+          const racialFeature = LevelUpData.getRacialFeature(raceName, levelUpData.newLevel);
+          if (racialFeature) {
+            racialFeaturesGained.push({
+              race: raceName,
+              ...racialFeature
+            });
+          }
+        });
+
+        if (racialFeaturesGained.length > 0) {
+          levelUpData.racialFeaturesGained = racialFeaturesGained;
+          console.log(`🧬 Gained racial feature(s) at level ${levelUpData.newLevel}:`, racialFeaturesGained);
+        }
+      }
+    } catch (e) {
+      console.warn('Could not check for racial features:', e);
+    }
+
+    // Check for new racial spells at this level
+    let racialSpellsGained = [];
+    try {
+      let race = character.race;
+      let subrace = character.subrace;
+
+      // Parse race string - handle formats like "Tiefling (Asmodeus)"
+      if (race && race.includes('(')) {
+        const match = race.match(/^(.+?)\s*\((.+?)\)$/);
+        if (match) {
+          race = match[1].trim();
+          subrace = subrace || match[2].trim();
+        }
+      }
+
+      if (race && LevelUpData.getRacialSpellsAtLevel) {
+        const newRacialSpells = LevelUpData.getRacialSpellsAtLevel(race, subrace, levelUpData.newLevel);
+        if (newRacialSpells && newRacialSpells.length > 0) {
+          // Convert to spell list format and add to character
+          newRacialSpells.forEach(spellEntry => {
+            // Find the spell in SPELLS_DATA
+            const spellData = window.SPELLS_DATA?.find(s => s.title === spellEntry.spell);
+            if (spellData) {
+              // Check if spell already exists in character's spell list
+              const exists = (character.spellList || []).some(s =>
+                (s.name || '').toLowerCase() === spellEntry.spell.toLowerCase()
+              );
+
+              if (!exists) {
+                // Build note for racial spell
+                let racialNote = '';
+                if (spellEntry.type === 'cantrip') {
+                  racialNote = '(Racial cantrip)';
+                } else if (spellEntry.type === 'once_per_long_rest') {
+                  racialNote = spellEntry.note ? `(Racial: ${spellEntry.note}, 1/long rest)` : '(Racial: 1/long rest)';
+                } else if (spellEntry.type === 'once_per_short_rest') {
+                  racialNote = spellEntry.note ? `(Racial: ${spellEntry.note}, 1/short rest)` : '(Racial: 1/short rest)';
+                } else if (spellEntry.type === 'at_will') {
+                  racialNote = '(Racial: at will)';
+                }
+
+                const newSpell = {
+                  name: spellData.title,
+                  level: spellData.level,
+                  school: spellData.school,
+                  castingTime: spellData.casting_time,
+                  range: spellData.range,
+                  components: spellData.components,
+                  duration: spellData.duration,
+                  concentration: spellData.concentration || false,
+                  ritual: spellData.ritual || false,
+                  description: spellData.body || '',
+                  prepared: true,
+                  alwaysPrepared: true,
+                  racialSpell: true,
+                  racialNote: racialNote
+                };
+
+                // Add to character's spell list
+                if (!character.spellList) {
+                  character.spellList = [];
+                }
+                character.spellList.push(newSpell);
+                racialSpellsGained.push(spellEntry.spell);
+              }
+            } else {
+              console.warn(`Racial spell not found in SPELLS_DATA: ${spellEntry.spell}`);
+            }
+          });
+
+          if (racialSpellsGained.length > 0) {
+            levelUpData.racialSpellsGained = racialSpellsGained;
+            console.log(`🧬 Gained racial spell(s) at level ${levelUpData.newLevel}:`, racialSpellsGained);
+          }
+        }
+      }
+    } catch (e) {
+      console.warn('Could not check for racial spells:', e);
+    }
+
+    // Update Wild Shape reference for Druids (check if new forms are available)
+    let wildShapeUpdated = false;
+    try {
+      const className = extractClassName(character.charClass || character.class);
+      if (className === 'Druid' && levelUpData.newLevel >= 2 && LevelUpData.formatWildShapeReference) {
+        const subclass = character.subclass || '';
+        const newWildShapeRef = LevelUpData.formatWildShapeReference(levelUpData.newLevel, subclass);
+
+        if (newWildShapeRef) {
+          // Find and replace existing Wild Shape reference in features
+          const features = character.features || '';
+          const wildShapePattern = /\*\*Wild Shape Forms\*\*[\s\S]*?(?=\n\n===|\n\n\*\*[^W]|$)/;
+          const wildShapeBasicPattern = /\*\*Wild Shape:\*\*[^\n]*\n?/;
+
+          if (wildShapePattern.test(features)) {
+            // Replace existing Wild Shape Forms block
+            character.features = features.replace(wildShapePattern, newWildShapeRef);
+            wildShapeUpdated = true;
+            console.log(`🐻 Updated Wild Shape reference for level ${levelUpData.newLevel} Druid`);
+          } else if (wildShapeBasicPattern.test(features)) {
+            // Replace basic Wild Shape text
+            character.features = features.replace(wildShapeBasicPattern, newWildShapeRef + '\n\n');
+            wildShapeUpdated = true;
+            console.log(`🐻 Updated Wild Shape reference for level ${levelUpData.newLevel} Druid`);
+          } else if (levelUpData.newLevel === 2) {
+            // First time getting Wild Shape at level 2 - append to features
+            character.features = features + '\n\n' + newWildShapeRef;
+            wildShapeUpdated = true;
+            console.log(`🐻 Added Wild Shape reference for level 2 Druid`);
+          }
+
+          if (wildShapeUpdated) {
+            levelUpData.wildShapeUpdated = true;
+          }
+        }
+      }
+    } catch (e) {
+      console.warn('Could not update Wild Shape reference:', e);
+    }
+
     // Add features to notes (optional)
-    if (levelUpData.features.length > 0) {
-      const featuresText = `\n\n=== Level ${levelUpData.newLevel} Features ===\n${levelUpData.features.join('\n')}`;
+    if (levelUpData.features.length > 0 || racialFeaturesGained.length > 0) {
+      let featuresText = '';
+
+      // Add racial features first
+      if (racialFeaturesGained.length > 0) {
+        featuresText += `\n\n=== Level ${levelUpData.newLevel} Racial Features ===`;
+        racialFeaturesGained.forEach(feat => {
+          featuresText += `\n- **${feat.name}:** ${feat.description}`;
+        });
+      }
+
+      // Add class features
+      if (levelUpData.features.length > 0) {
+        featuresText += `\n\n=== Level ${levelUpData.newLevel} Class Features ===\n${levelUpData.features.join('\n')}`;
+      }
+
       character.features = (character.features || '') + featuresText;
     }
 
@@ -1785,6 +2087,45 @@ const LevelUpSystem = (function() {
    * Show success message after level up
    */
   function showLevelUpSuccess(character, levelUpData) {
+    // Build resource update message
+    let resourceMessage = '';
+    const resStatus = levelUpData.resourceUpdateStatus;
+    if (resStatus && resStatus.updated > 0) {
+      resourceMessage = `<li>Class resources updated and replenished</li>`;
+    }
+
+    // Build racial feature message
+    let racialFeatureMessage = '';
+    if (levelUpData.racialFeaturesGained && levelUpData.racialFeaturesGained.length > 0) {
+      const featureNames = levelUpData.racialFeaturesGained.map(f => f.name).join(', ');
+      racialFeatureMessage = `<li>Racial feature unlocked: ${featureNames}</li>`;
+    }
+
+    // Build racial spells message
+    let racialSpellsMessage = '';
+    if (levelUpData.racialSpellsGained && levelUpData.racialSpellsGained.length > 0) {
+      const spellNames = levelUpData.racialSpellsGained.join(', ');
+      racialSpellsMessage = `<li>Racial spell${levelUpData.racialSpellsGained.length > 1 ? 's' : ''} gained: ${spellNames}</li>`;
+    }
+
+    // Build Wild Shape update message
+    let wildShapeMessage = '';
+    if (levelUpData.wildShapeUpdated) {
+      wildShapeMessage = `<li>Wild Shape forms updated for level ${levelUpData.newLevel}</li>`;
+    }
+
+    // Build warning message for resources that couldn't be auto-updated
+    let warningMessage = '';
+    if (resStatus && resStatus.needsManualUpdate) {
+      warningMessage = `
+        <div class="alert alert-warning mt-2 mb-0 py-2 small">
+          <i class="bi bi-exclamation-triangle me-1"></i>
+          <strong>Note:</strong> Some class resources could not be auto-updated (resource names may have been customized).
+          Please check the <strong>Resources &amp; Rests</strong> section and manually update max values if needed.
+        </div>
+      `;
+    }
+
     const message = `
       <div class="alert alert-success alert-dismissible fade show" role="alert">
         <h5 class="alert-heading">
@@ -1795,8 +2136,13 @@ const LevelUpSystem = (function() {
           <li>Max HP: +${levelUpData.hpGain}</li>
           ${levelUpData.asi ? '<li>Ability scores increased</li>' : ''}
           ${levelUpData.feat ? `<li>Gained feat: ${levelUpData.feat}</li>` : ''}
-          ${levelUpData.features.length > 0 ? `<li>${levelUpData.features.length} new feature(s) gained</li>` : ''}
+          ${levelUpData.features.length > 0 ? `<li>${levelUpData.features.length} new class feature(s) gained</li>` : ''}
+          ${racialFeatureMessage}
+          ${racialSpellsMessage}
+          ${wildShapeMessage}
+          ${resourceMessage}
         </ul>
+        ${warningMessage}
         <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
       </div>
     `;

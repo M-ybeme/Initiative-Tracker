@@ -2233,8 +2233,824 @@ window.LevelUpData = (function() {
         19: ['Ability Score Improvement'],
         20: ['Signature Spell']
       }
+    },
+
+    'Artificer': {
+      hitDie: 8,
+      primaryAbility: ['int'],
+      savingThrows: ['con', 'int'],
+      armorProficiencies: ['Light Armor', 'Medium Armor', 'Shields'],
+      weaponProficiencies: ['Simple Weapons', 'Firearms (if available)'],
+      toolProficiencies: ['Thieves\' Tools', 'Tinker\'s Tools', 'One type of artisan\'s tools of your choice'],
+      skillChoices: { count: 2, from: ['Arcana', 'History', 'Investigation', 'Medicine', 'Nature', 'Perception', 'Sleight of Hand'] },
+      spellcaster: true,
+      spellcastingAbility: 'int',
+      preparesSpells: true, // Artificers prepare spells (INT mod + half level, rounded up)
+      halfCaster: true, // Spell slots progress at half rate (rounded up)
+      cantripsKnown: {
+        1: 2, 10: 3, 14: 4
+      },
+      spellSlots: {
+        // Artificers are half-casters with rounded-up progression
+        1: [2, 0, 0, 0, 0, 0, 0, 0, 0],
+        2: [2, 0, 0, 0, 0, 0, 0, 0, 0],
+        3: [3, 0, 0, 0, 0, 0, 0, 0, 0],
+        4: [3, 0, 0, 0, 0, 0, 0, 0, 0],
+        5: [4, 2, 0, 0, 0, 0, 0, 0, 0],
+        6: [4, 2, 0, 0, 0, 0, 0, 0, 0],
+        7: [4, 3, 0, 0, 0, 0, 0, 0, 0],
+        8: [4, 3, 0, 0, 0, 0, 0, 0, 0],
+        9: [4, 3, 2, 0, 0, 0, 0, 0, 0],
+        10: [4, 3, 2, 0, 0, 0, 0, 0, 0],
+        11: [4, 3, 3, 0, 0, 0, 0, 0, 0],
+        12: [4, 3, 3, 0, 0, 0, 0, 0, 0],
+        13: [4, 3, 3, 1, 0, 0, 0, 0, 0],
+        14: [4, 3, 3, 1, 0, 0, 0, 0, 0],
+        15: [4, 3, 3, 2, 0, 0, 0, 0, 0],
+        16: [4, 3, 3, 2, 0, 0, 0, 0, 0],
+        17: [4, 3, 3, 3, 1, 0, 0, 0, 0],
+        18: [4, 3, 3, 3, 1, 0, 0, 0, 0],
+        19: [4, 3, 3, 3, 2, 0, 0, 0, 0],
+        20: [4, 3, 3, 3, 2, 0, 0, 0, 0]
+      },
+      // Infusions known and infused items
+      infusionsKnown: {
+        2: 4, 6: 6, 10: 8, 14: 10, 18: 12
+      },
+      infusedItems: {
+        2: 2, 6: 3, 10: 4, 14: 5, 18: 6
+      },
+      features: {
+        1: ['Magical Tinkering', 'Spellcasting'],
+        2: ['Infuse Item'],
+        3: ['Artificer Specialist (Subclass)', 'The Right Tool for the Job'],
+        4: ['Ability Score Improvement'],
+        5: ['Specialist Feature'],
+        6: ['Tool Expertise'],
+        7: ['Flash of Genius'],
+        8: ['Ability Score Improvement'],
+        9: ['Specialist Feature'],
+        10: ['Magic Item Adept'],
+        11: ['Spell-Storing Item'],
+        12: ['Ability Score Improvement'],
+        13: [],
+        14: ['Magic Item Savant'],
+        15: ['Specialist Feature'],
+        16: ['Ability Score Improvement'],
+        17: [],
+        18: ['Magic Item Master'],
+        19: ['Ability Score Improvement'],
+        20: ['Soul of Artifice']
+      }
     }
   };
+
+  // ============================================================
+  // DEFAULT WEAPONS BY CLASS
+  // ============================================================
+  const DEFAULT_CLASS_WEAPONS = {
+    'Barbarian': [
+      { name: 'Greataxe', damage: '1d12', damageType: 'slashing', ability: 'str', type: 'melee-weapon', range: '5 ft', properties: 'Heavy, Two-Handed' },
+      { name: 'Handaxe', damage: '1d6', damageType: 'slashing', ability: 'str', type: 'melee-weapon', range: '5 ft', properties: 'Light, Thrown (20/60)' }
+    ],
+    'Bard': [
+      { name: 'Rapier', damage: '1d8', damageType: 'piercing', ability: 'dex', type: 'melee-weapon', range: '5 ft', properties: 'Finesse' },
+      { name: 'Dagger', damage: '1d4', damageType: 'piercing', ability: 'dex', type: 'melee-weapon', range: '5 ft', properties: 'Finesse, Light, Thrown (20/60)' }
+    ],
+    'Cleric': [
+      { name: 'Mace', damage: '1d6', damageType: 'bludgeoning', ability: 'str', type: 'melee-weapon', range: '5 ft', properties: '' },
+      { name: 'Light Crossbow', damage: '1d8', damageType: 'piercing', ability: 'dex', type: 'ranged-weapon', range: '80/320 ft', properties: 'Ammunition, Loading, Two-Handed' }
+    ],
+    'Druid': [
+      { name: 'Quarterstaff', damage: '1d6', damageType: 'bludgeoning', ability: 'str', type: 'melee-weapon', range: '5 ft', properties: 'Versatile (1d8)' },
+      { name: 'Produce Flame', damage: '1d8', damageType: 'fire', ability: 'wis', type: 'ranged-spell', range: '30 ft', properties: 'Cantrip, damage scales at levels 5, 11, 17', isCantrip: true }
+    ],
+    'Fighter': [
+      { name: 'Longsword', damage: '1d8', damageType: 'slashing', ability: 'str', type: 'melee-weapon', range: '5 ft', properties: 'Versatile (1d10)' },
+      { name: 'Longbow', damage: '1d8', damageType: 'piercing', ability: 'dex', type: 'ranged-weapon', range: '150/600 ft', properties: 'Ammunition, Heavy, Two-Handed' }
+    ],
+    'Monk': [
+      { name: 'Quarterstaff', damage: '1d6', damageType: 'bludgeoning', ability: 'dex', type: 'melee-weapon', range: '5 ft', properties: 'Versatile (1d8), Monk Weapon' },
+      { name: 'Unarmed Strike', damage: '1d4', damageType: 'bludgeoning', ability: 'dex', type: 'melee-weapon', range: '5 ft', properties: 'Martial Arts die scales with level' }
+    ],
+    'Paladin': [
+      { name: 'Longsword', damage: '1d8', damageType: 'slashing', ability: 'str', type: 'melee-weapon', range: '5 ft', properties: 'Versatile (1d10)' },
+      { name: 'Javelin', damage: '1d6', damageType: 'piercing', ability: 'str', type: 'melee-weapon', range: '5 ft', properties: 'Thrown (30/120)' }
+    ],
+    'Ranger': [
+      { name: 'Shortsword', damage: '1d6', damageType: 'piercing', ability: 'dex', type: 'melee-weapon', range: '5 ft', properties: 'Finesse, Light' },
+      { name: 'Longbow', damage: '1d8', damageType: 'piercing', ability: 'dex', type: 'ranged-weapon', range: '150/600 ft', properties: 'Ammunition, Heavy, Two-Handed' }
+    ],
+    'Rogue': [
+      { name: 'Rapier', damage: '1d8', damageType: 'piercing', ability: 'dex', type: 'melee-weapon', range: '5 ft', properties: 'Finesse' },
+      { name: 'Shortbow', damage: '1d6', damageType: 'piercing', ability: 'dex', type: 'ranged-weapon', range: '80/320 ft', properties: 'Ammunition, Two-Handed' }
+    ],
+    'Sorcerer': [
+      { name: 'Dagger', damage: '1d4', damageType: 'piercing', ability: 'dex', type: 'melee-weapon', range: '5 ft', properties: 'Finesse, Light, Thrown (20/60)' },
+      { name: 'Fire Bolt', damage: '1d10', damageType: 'fire', ability: 'cha', type: 'ranged-spell', range: '120 ft', properties: 'Cantrip, damage scales at levels 5, 11, 17', isCantrip: true }
+    ],
+    'Warlock': [
+      { name: 'Dagger', damage: '1d4', damageType: 'piercing', ability: 'dex', type: 'melee-weapon', range: '5 ft', properties: 'Finesse, Light, Thrown (20/60)' },
+      { name: 'Eldritch Blast', damage: '1d10', damageType: 'force', ability: 'cha', type: 'ranged-spell', range: '120 ft', properties: 'Cantrip, additional beams at levels 5, 11, 17', isCantrip: true }
+    ],
+    'Wizard': [
+      { name: 'Quarterstaff', damage: '1d6', damageType: 'bludgeoning', ability: 'str', type: 'melee-weapon', range: '5 ft', properties: 'Versatile (1d8)' },
+      { name: 'Fire Bolt', damage: '1d10', damageType: 'fire', ability: 'int', type: 'ranged-spell', range: '120 ft', properties: 'Cantrip, damage scales at levels 5, 11, 17', isCantrip: true }
+    ],
+    'Artificer': [
+      { name: 'Light Crossbow', damage: '1d8', damageType: 'piercing', ability: 'dex', type: 'ranged-weapon', range: '80/320 ft', properties: 'Ammunition, Loading, Two-Handed' },
+      { name: 'Fire Bolt', damage: '1d10', damageType: 'fire', ability: 'int', type: 'ranged-spell', range: '120 ft', properties: 'Cantrip, damage scales at levels 5, 11, 17', isCantrip: true }
+    ]
+  };
+
+  // Cantrip damage scaling by character level
+  const CANTRIP_DAMAGE_SCALING = {
+    1: 1,   // Levels 1-4: 1 die
+    5: 2,   // Levels 5-10: 2 dice
+    11: 3,  // Levels 11-16: 3 dice
+    17: 4   // Levels 17+: 4 dice
+  };
+
+  /**
+   * Get the number of damage dice for a cantrip based on character level
+   * @param {number} level - Character level
+   * @returns {number} - Number of damage dice
+   */
+  function getCantripDamageDice(level) {
+    if (level >= 17) return 4;
+    if (level >= 11) return 3;
+    if (level >= 5) return 2;
+    return 1;
+  }
+
+  /**
+   * Generate default attacks for a character based on class and stats
+   * @param {string} className - The character's class
+   * @param {number} level - The character's level
+   * @param {Object} stats - The character's ability scores {str, dex, con, int, wis, cha}
+   * @returns {Array} - Array of attack objects
+   */
+  function generateDefaultAttacks(className, level, stats) {
+    const weapons = DEFAULT_CLASS_WEAPONS[className];
+    if (!weapons) return [];
+
+    const profBonus = PROFICIENCY_BONUS[level] || 2;
+    const attacks = [];
+
+    weapons.forEach(weapon => {
+      const abilityScore = stats[weapon.ability] || 10;
+      const abilityMod = Math.floor((abilityScore - 10) / 2);
+      const attackBonus = profBonus + abilityMod;
+
+      let damage = weapon.damage;
+
+      // Scale cantrip damage
+      if (weapon.isCantrip) {
+        const numDice = getCantripDamageDice(level);
+        const dieMatch = weapon.damage.match(/(\d+)d(\d+)/);
+        if (dieMatch) {
+          damage = `${numDice}d${dieMatch[2]}`;
+        }
+      }
+
+      // Format damage string with modifier (only for non-cantrips or if positive)
+      let damageStr = damage;
+      if (!weapon.isCantrip && abilityMod !== 0) {
+        damageStr = abilityMod >= 0 ? `${damage}+${abilityMod}` : `${damage}${abilityMod}`;
+      }
+
+      attacks.push({
+        name: weapon.name,
+        type: weapon.type,
+        range: weapon.range,
+        bonus: attackBonus >= 0 ? `+${attackBonus}` : `${attackBonus}`,
+        damage: damageStr,
+        damageType: weapon.damageType,
+        damage2: '',
+        damageType2: '',
+        properties: weapon.properties
+      });
+    });
+
+    return attacks;
+  }
+
+  // ============================================================
+  // CLASS RESOURCES
+  // ============================================================
+  const CLASS_RESOURCES = {
+    'Barbarian': [
+      {
+        name: 'Rage',
+        resetOn: 'long',
+        getMax: (level) => {
+          if (level < 3) return 2;
+          if (level < 6) return 3;
+          if (level < 12) return 4;
+          if (level < 17) return 5;
+          if (level < 20) return 6;
+          return 999; // Level 20: unlimited
+        }
+      }
+    ],
+    'Bard': [
+      {
+        name: 'Bardic Inspiration',
+        resetOn: 'long', // Becomes short rest at level 5 (Font of Inspiration)
+        getMax: (level, stats) => Math.max(1, Math.floor((stats.cha - 10) / 2))
+      }
+    ],
+    'Cleric': [
+      {
+        name: 'Channel Divinity',
+        resetOn: 'short',
+        getMax: (level) => {
+          if (level < 6) return 1;
+          if (level < 18) return 2;
+          return 3;
+        }
+      }
+    ],
+    'Druid': [
+      {
+        name: 'Wild Shape',
+        resetOn: 'short',
+        getMax: (level) => 2 // Always 2 uses
+      }
+    ],
+    'Fighter': [
+      {
+        name: 'Second Wind',
+        resetOn: 'short',
+        getMax: (level) => 1
+      },
+      {
+        name: 'Action Surge',
+        resetOn: 'short',
+        getMax: (level) => level >= 17 ? 2 : (level >= 2 ? 1 : 0),
+        minLevel: 2
+      }
+    ],
+    'Monk': [
+      {
+        name: 'Ki Points',
+        resetOn: 'short',
+        getMax: (level) => level >= 2 ? level : 0,
+        minLevel: 2
+      }
+    ],
+    'Paladin': [
+      {
+        name: 'Lay on Hands',
+        resetOn: 'long',
+        getMax: (level) => level * 5
+      },
+      {
+        name: 'Divine Sense',
+        resetOn: 'long',
+        getMax: (level, stats) => 1 + Math.max(0, Math.floor((stats.cha - 10) / 2))
+      }
+    ],
+    'Ranger': [], // Uses spell slots
+    'Rogue': [], // No tracked resources
+    'Sorcerer': [
+      {
+        name: 'Sorcery Points',
+        resetOn: 'long',
+        getMax: (level) => level >= 2 ? level : 0,
+        minLevel: 2
+      }
+    ],
+    'Warlock': [], // Uses pact slots (already implemented separately)
+    'Wizard': [
+      {
+        name: 'Arcane Recovery',
+        resetOn: 'long',
+        getMax: (level) => 1 // Once per day
+      }
+    ],
+    'Artificer': [
+      {
+        name: 'Flash of Genius',
+        resetOn: 'long',
+        getMax: (level, stats) => level >= 7 ? Math.max(1, Math.floor((stats.int - 10) / 2)) : 0,
+        minLevel: 7
+      },
+      {
+        name: 'Infused Items',
+        resetOn: 'long',
+        getMax: (level) => {
+          if (level < 2) return 0;
+          if (level < 6) return 2;
+          if (level < 10) return 3;
+          if (level < 14) return 4;
+          if (level < 18) return 5;
+          return 6;
+        },
+        minLevel: 2
+      }
+    ]
+  };
+
+  /**
+   * Get class resources for a character
+   * @param {string} className - The character's class
+   * @param {number} level - The character's level
+   * @param {Object} stats - The character's ability scores {str, dex, con, int, wis, cha}
+   * @returns {Array} - Array of resource objects {name, current, max, resetOn}
+   */
+  function getClassResources(className, level, stats) {
+    const resourceDefs = CLASS_RESOURCES[className];
+    if (!resourceDefs || resourceDefs.length === 0) return [];
+
+    const resources = [];
+    resourceDefs.forEach(def => {
+      // Skip if character level is below minimum
+      if (def.minLevel && level < def.minLevel) return;
+
+      const max = def.getMax(level, stats || {});
+      if (max <= 0) return; // Skip resources with 0 max
+
+      resources.push({
+        name: def.name,
+        current: max,
+        max: max,
+        resetOn: def.resetOn
+      });
+    });
+
+    return resources;
+  }
+
+  // ============================================================
+  // ARTIFICER INFUSIONS
+  // ============================================================
+
+  /**
+   * Artificer Infusions available at different levels
+   * Level requirement is based on the Artificer's level, not character level
+   */
+  const ARTIFICER_INFUSIONS = {
+    // Level 2 Infusions (Base)
+    2: [
+      {
+        name: 'Armor of Magical Strength',
+        description: 'While wearing this armor, a creature can use its Intelligence modifier in place of its Strength modifier when making Strength checks and Strength saving throws. The armor has 6 charges. The wearer can expend 1 charge to negate being knocked prone.',
+        requiresAttunement: true,
+        itemType: 'armor'
+      },
+      {
+        name: 'Enhanced Arcane Focus',
+        description: 'While holding this item, a creature gains +1 bonus to spell attack rolls. Additionally, the creature ignores half cover when making a spell attack. The bonus increases to +2 when you reach 10th level in this class.',
+        requiresAttunement: true,
+        itemType: 'rod, staff, or wand'
+      },
+      {
+        name: 'Enhanced Defense',
+        description: 'A creature gains a +1 bonus to Armor Class while wearing (armor) or wielding (a shield) the infused item. The bonus increases to +2 when you reach 10th level in this class.',
+        requiresAttunement: false,
+        itemType: 'armor or shield'
+      },
+      {
+        name: 'Enhanced Weapon',
+        description: 'This magic weapon grants a +1 bonus to attack and damage rolls made with it. The bonus increases to +2 when you reach 10th level in this class.',
+        requiresAttunement: false,
+        itemType: 'simple or martial weapon'
+      },
+      {
+        name: 'Homunculus Servant',
+        description: 'You learn intricate methods for magically creating a special homunculus that serves you. You determine the homunculus\'s appearance; some artificers create miniature mechanical soldiers, others prefer winged vials or tiny constructs resembling their pets.',
+        requiresAttunement: false,
+        itemType: 'gem or crystal worth at least 100 gp'
+      },
+      {
+        name: 'Mind Sharpener',
+        description: 'The infused item can send a jolt to the wearer to refocus their mind. The item has 4 charges. When the wearer fails a Constitution saving throw to maintain concentration on a spell, the wearer can use its reaction to expend 1 of the item\'s charges to succeed instead.',
+        requiresAttunement: true,
+        itemType: 'armor or robes'
+      },
+      {
+        name: 'Repeating Shot',
+        description: 'This magic weapon grants a +1 bonus to attack and damage rolls made with it when it\'s used to make a ranged attack, and it ignores the loading property if it has it. The weapon requires no ammunition.',
+        requiresAttunement: true,
+        itemType: 'simple or martial weapon with ammunition property'
+      },
+      {
+        name: 'Replicate Magic Item',
+        description: 'Using this infusion, you replicate a particular magic item. See the Replicate Magic Item tables for the items you can make with this infusion, organized by the minimum artificer level you must be to choose the item.',
+        requiresAttunement: 'varies',
+        itemType: 'varies'
+      },
+      {
+        name: 'Returning Weapon',
+        description: 'This magic weapon grants a +1 bonus to attack and damage rolls made with it, and it returns to the wielder\'s hand immediately after it is used to make a ranged attack.',
+        requiresAttunement: false,
+        itemType: 'simple or martial weapon with thrown property'
+      }
+    ],
+
+    // Level 6 Infusions
+    6: [
+      {
+        name: 'Boots of the Winding Path',
+        description: 'While wearing these boots, a creature can teleport up to 15 feet as a bonus action to an unoccupied space the creature can see. The creature must have occupied that space at some point during the current turn.',
+        requiresAttunement: true,
+        itemType: 'boots'
+      },
+      {
+        name: 'Radiant Weapon',
+        description: 'This magic weapon grants a +1 bonus to attack and damage rolls made with it. While holding it, the wielder can take a bonus action to cause it to shed bright light in a 30-foot radius and dim light for an additional 30 feet. The weapon has 4 charges. As a reaction immediately after being hit by an attack, the wielder can expend 1 charge and cause the attacker to be blinded until the end of the attacker\'s next turn.',
+        requiresAttunement: true,
+        itemType: 'simple or martial weapon'
+      },
+      {
+        name: 'Repulsion Shield',
+        description: 'A creature gains a +1 bonus to AC while wielding this shield. The shield has 4 charges. While holding it, the wielder can use a reaction immediately after being hit by a melee attack to expend 1 of the shield\'s charges and push the attacker up to 15 feet away.',
+        requiresAttunement: true,
+        itemType: 'shield'
+      },
+      {
+        name: 'Resistant Armor',
+        description: 'While wearing this armor, a creature has resistance to one of the following damage types, which you choose when you infuse the item: acid, cold, fire, force, lightning, necrotic, poison, psychic, radiant, or thunder.',
+        requiresAttunement: true,
+        itemType: 'armor'
+      }
+    ],
+
+    // Level 10 Infusions
+    10: [
+      {
+        name: 'Helm of Awareness',
+        description: 'While wearing this helmet, a creature has advantage on initiative rolls. In addition, the wearer can\'t be surprised, provided it isn\'t incapacitated.',
+        requiresAttunement: true,
+        itemType: 'helmet'
+      },
+      {
+        name: 'Spell-Refueling Ring',
+        description: 'While wearing this ring, the creature can recover one expended spell slot as an action. The recovered slot can be of 3rd level or lower. Once used, the ring can\'t be used again until the next dawn.',
+        requiresAttunement: true,
+        itemType: 'ring'
+      }
+    ],
+
+    // Level 14 Infusions
+    14: [
+      {
+        name: 'Arcane Propulsion Armor',
+        description: 'The wearer gains a +5 bonus to walking speed. The armor includes gauntlets that deal 1d8 force damage on a hit and have the thrown property (20/60 ft). After being thrown, the gauntlet detaches and flies back to the wearer\'s hand. The armor can\'t be removed against the wearer\'s will, and if missing limbs, the armor replaces them.',
+        requiresAttunement: true,
+        itemType: 'armor (requires attunement by a creature missing one or more limbs)'
+      }
+    ]
+  };
+
+  /**
+   * Get available infusions for an Artificer at a given level
+   * @param {number} artificerLevel - The character's Artificer level
+   * @returns {Array} - Array of infusion objects
+   */
+  function getAvailableInfusions(artificerLevel) {
+    const infusions = [];
+    const levelThresholds = [2, 6, 10, 14];
+
+    for (const threshold of levelThresholds) {
+      if (artificerLevel >= threshold && ARTIFICER_INFUSIONS[threshold]) {
+        infusions.push(...ARTIFICER_INFUSIONS[threshold]);
+      }
+    }
+
+    return infusions;
+  }
+
+  /**
+   * Get the number of infusions known at a given Artificer level
+   * @param {number} artificerLevel - The character's Artificer level
+   * @returns {number} - Number of infusions known
+   */
+  function getInfusionsKnown(artificerLevel) {
+    if (artificerLevel < 2) return 0;
+    if (artificerLevel < 6) return 4;
+    if (artificerLevel < 10) return 6;
+    if (artificerLevel < 14) return 8;
+    if (artificerLevel < 18) return 10;
+    return 12;
+  }
+
+  /**
+   * Get the number of items that can be infused at a given Artificer level
+   * @param {number} artificerLevel - The character's Artificer level
+   * @returns {number} - Number of infused items allowed
+   */
+  function getInfusedItemsMax(artificerLevel) {
+    if (artificerLevel < 2) return 0;
+    if (artificerLevel < 6) return 2;
+    if (artificerLevel < 10) return 3;
+    if (artificerLevel < 14) return 4;
+    if (artificerLevel < 18) return 5;
+    return 6;
+  }
+
+  /**
+   * Format infusions as text for Features & Feats section
+   * @param {number} artificerLevel - The character's Artificer level
+   * @returns {string} - Markdown-formatted infusions reference
+   */
+  function formatInfusionsReference(artificerLevel) {
+    if (artificerLevel < 2) {
+      return '**Infusions:** Not yet available (requires Artificer level 2)';
+    }
+
+    const known = getInfusionsKnown(artificerLevel);
+    const maxItems = getInfusedItemsMax(artificerLevel);
+    const infusions = getAvailableInfusions(artificerLevel);
+
+    const lines = [];
+    lines.push(`**Artificer Infusions** (Know ${known}, can infuse ${maxItems} items)`);
+    lines.push('');
+    lines.push('**Available Infusions:**');
+
+    for (const infusion of infusions) {
+      const attune = infusion.requiresAttunement === true ? ' (requires attunement)' :
+                     infusion.requiresAttunement === 'varies' ? ' (attunement varies)' : '';
+      lines.push(`- **${infusion.name}**${attune}: ${infusion.description.substring(0, 100)}...`);
+    }
+
+    return lines.join('\n');
+  }
+
+  // ============================================================
+  // MULTICLASS HIT DICE HELPERS
+  // ============================================================
+
+  /**
+   * Calculate hit dice breakdown for a multiclass character
+   * @param {Array} classes - Array of {className, level}
+   * @returns {Object} - {breakdown: [{className, level, hitDie}], total: number, displayString: string}
+   */
+  function calculateMulticlassHitDice(classes) {
+    const breakdown = [];
+    let total = 0;
+
+    for (const classEntry of classes) {
+      const className = classEntry.className;
+      const level = classEntry.level || 0;
+      const classData = CLASS_DATA[className];
+
+      if (!classData || level <= 0) continue;
+
+      const hitDie = classData.hitDie || 8;
+      breakdown.push({
+        className,
+        level,
+        hitDie
+      });
+      total += level;
+    }
+
+    // Sort by hit die size (largest first) for display
+    breakdown.sort((a, b) => b.hitDie - a.hitDie);
+
+    // Create display string like "3d10 + 2d8"
+    const displayString = breakdown
+      .map(b => `${b.level}d${b.hitDie}`)
+      .join(' + ');
+
+    return { breakdown, total, displayString };
+  }
+
+  /**
+   * Track remaining hit dice for multiclass characters
+   * Allows spending from specific hit die pools
+   * @param {Object} hitDiceState - Current state {d6: {total, remaining}, d8: {...}, ...}
+   * @param {number} dieSize - The hit die size to spend (6, 8, 10, 12)
+   * @param {number} count - Number of dice to spend
+   * @returns {Object} - Updated state or null if invalid
+   */
+  function spendMulticlassHitDice(hitDiceState, dieSize, count) {
+    const key = `d${dieSize}`;
+    if (!hitDiceState[key] || hitDiceState[key].remaining < count) {
+      return null; // Not enough dice
+    }
+
+    const newState = JSON.parse(JSON.stringify(hitDiceState));
+    newState[key].remaining -= count;
+    return newState;
+  }
+
+  /**
+   * Restore hit dice after long rest for multiclass characters
+   * RAW: Regain a number of hit dice equal to half your total level (minimum 1)
+   * This distributes restored dice proportionally across pools
+   * @param {Object} hitDiceState - Current state {d6: {total, remaining}, d8: {...}, ...}
+   * @returns {Object} - Updated state with restored dice
+   */
+  function restoreMulticlassHitDice(hitDiceState) {
+    const newState = JSON.parse(JSON.stringify(hitDiceState));
+
+    // Calculate total level and dice to restore
+    let totalLevel = 0;
+    let totalSpent = 0;
+    for (const key of Object.keys(newState)) {
+      totalLevel += newState[key].total;
+      totalSpent += (newState[key].total - newState[key].remaining);
+    }
+
+    const toRestore = Math.max(1, Math.floor(totalLevel / 2));
+    let remaining = Math.min(toRestore, totalSpent);
+
+    // Restore dice, prioritizing larger dice first
+    const dieOrder = ['d12', 'd10', 'd8', 'd6'];
+    for (const key of dieOrder) {
+      if (!newState[key] || remaining <= 0) continue;
+
+      const spent = newState[key].total - newState[key].remaining;
+      const restore = Math.min(spent, remaining);
+      newState[key].remaining += restore;
+      remaining -= restore;
+    }
+
+    return newState;
+  }
+
+  /**
+   * Initialize hit dice state from multiclass array
+   * @param {Array} classes - Array of {className, level}
+   * @returns {Object} - Hit dice state {d6: {total, remaining}, ...}
+   */
+  function initMulticlassHitDiceState(classes) {
+    const state = {};
+
+    for (const classEntry of classes) {
+      const className = classEntry.className;
+      const level = classEntry.level || 0;
+      const classData = CLASS_DATA[className];
+
+      if (!classData || level <= 0) continue;
+
+      const hitDie = classData.hitDie || 8;
+      const key = `d${hitDie}`;
+
+      if (!state[key]) {
+        state[key] = { total: 0, remaining: 0 };
+      }
+      state[key].total += level;
+      state[key].remaining += level; // Start fully rested
+    }
+
+    return state;
+  }
+
+  /**
+   * Format hit dice state as display string
+   * @param {Object} hitDiceState - State {d6: {total, remaining}, ...}
+   * @returns {string} - Display string like "2/3 d10, 1/2 d8"
+   */
+  function formatMulticlassHitDice(hitDiceState) {
+    const dieOrder = ['d12', 'd10', 'd8', 'd6'];
+    const parts = [];
+
+    for (const key of dieOrder) {
+      if (hitDiceState[key] && hitDiceState[key].total > 0) {
+        parts.push(`${hitDiceState[key].remaining}/${hitDiceState[key].total} ${key}`);
+      }
+    }
+
+    return parts.join(', ') || 'None';
+  }
+
+  // ============================================================
+  // CLASS LEVEL VS CHARACTER LEVEL HELPERS
+  // ============================================================
+
+  /**
+   * Get the level in a specific class for a multiclass character
+   * @param {Array} classes - Array of {className, level}
+   * @param {string} targetClass - The class to find
+   * @returns {number} - Level in that class (0 if not found)
+   */
+  function getClassLevel(classes, targetClass) {
+    const classEntry = classes.find(c => c.className === targetClass);
+    return classEntry ? (classEntry.level || 0) : 0;
+  }
+
+  /**
+   * Get total character level from classes array
+   * @param {Array} classes - Array of {className, level}
+   * @returns {number} - Total character level
+   */
+  function getTotalCharacterLevel(classes) {
+    return classes.reduce((sum, c) => sum + (c.level || 0), 0);
+  }
+
+  /**
+   * Check if a feature is available based on class level (not character level)
+   * @param {Array} classes - Array of {className, level}
+   * @param {string} className - The class the feature belongs to
+   * @param {number} requiredLevel - The class level required
+   * @returns {boolean} - True if feature is available
+   */
+  function hasClassFeature(classes, className, requiredLevel) {
+    return getClassLevel(classes, className) >= requiredLevel;
+  }
+
+  /**
+   * Get all available features for a multiclass character
+   * @param {Array} classes - Array of {className, level, subclass}
+   * @returns {Array} - Array of {feature, className, classLevel}
+   */
+  function getMulticlassFeatures(classes) {
+    const features = [];
+
+    for (const classEntry of classes) {
+      const className = classEntry.className;
+      const classLevel = classEntry.level || 0;
+      const classData = CLASS_DATA[className];
+
+      if (!classData) continue;
+
+      // Get all features up to current class level
+      for (let level = 1; level <= classLevel; level++) {
+        const levelFeatures = classData.features[level] || [];
+        for (const feature of levelFeatures) {
+          features.push({
+            feature,
+            className,
+            classLevel: level
+          });
+        }
+      }
+    }
+
+    return features;
+  }
+
+  /**
+   * Get proficiency bonus based on total character level
+   * @param {Array} classes - Array of {className, level}
+   * @returns {number} - Proficiency bonus
+   */
+  function getMulticlassProficiencyBonus(classes) {
+    const totalLevel = getTotalCharacterLevel(classes);
+    return PROFICIENCY_BONUS[totalLevel] || 2;
+  }
+
+  /**
+   * Get Extra Attack status for multiclass (only one instance)
+   * Fighter 11 gets 2 extra attacks, Fighter 20 gets 3
+   * @param {Array} classes - Array of {className, level}
+   * @returns {Object} - {hasExtraAttack: boolean, attacks: number, source: string}
+   */
+  function getMulticlassExtraAttack(classes) {
+    let attacks = 1; // Base attack
+    let source = null;
+
+    for (const classEntry of classes) {
+      const className = classEntry.className;
+      const level = classEntry.level || 0;
+
+      // Fighter gets multiple extra attacks
+      if (className === 'Fighter') {
+        if (level >= 20) {
+          if (attacks < 4) {
+            attacks = 4;
+            source = 'Fighter 20';
+          }
+        } else if (level >= 11) {
+          if (attacks < 3) {
+            attacks = 3;
+            source = 'Fighter 11';
+          }
+        } else if (level >= 5) {
+          if (attacks < 2) {
+            attacks = 2;
+            source = 'Fighter 5';
+          }
+        }
+      }
+
+      // Other martial classes get one Extra Attack at level 5
+      if (['Barbarian', 'Monk', 'Paladin', 'Ranger'].includes(className) && level >= 5) {
+        if (attacks < 2) {
+          attacks = 2;
+          source = `${className} 5`;
+        }
+      }
+
+      // Bladesinger Wizard gets Extra Attack at 6
+      if (className === 'Wizard' && classEntry.subclass === 'Bladesinging' && level >= 6) {
+        if (attacks < 2) {
+          attacks = 2;
+          source = 'Bladesinger 6';
+        }
+      }
+    }
+
+    return {
+      hasExtraAttack: attacks > 1,
+      attacks,
+      source
+    };
+  }
 
   // ============================================================
   // PUBLIC API
@@ -2244,6 +3060,9 @@ window.LevelUpData = (function() {
     PROFICIENCY_BONUS,
     CLASS_DATA,
     SUBCLASS_DATA,
+    DEFAULT_CLASS_WEAPONS,
+    CLASS_RESOURCES,
+    ARTIFICER_INFUSIONS,
 
     getClassData(className) {
       return CLASS_DATA[className] || null;
@@ -2263,6 +3082,100 @@ window.LevelUpData = (function() {
 
     getClassesForLevel(level) {
       return Object.keys(CLASS_DATA);
+    },
+
+    /**
+     * Generate default attacks for a character based on class and stats
+     * @param {string} className - The character's class
+     * @param {number} level - The character's level
+     * @param {Object} stats - The character's ability scores {str, dex, con, int, wis, cha}
+     * @returns {Array} - Array of attack objects
+     */
+    generateDefaultAttacks(className, level, stats) {
+      return generateDefaultAttacks(className, level, stats);
+    },
+
+    /**
+     * Get the number of damage dice for a cantrip based on character level
+     * @param {number} level - Character level
+     * @returns {number} - Number of damage dice
+     */
+    getCantripDamageDice(level) {
+      return getCantripDamageDice(level);
+    },
+
+    /**
+     * Get class resources for a character
+     * @param {string} className - The character's class
+     * @param {number} level - The character's level
+     * @param {Object} stats - The character's ability scores {str, dex, con, int, wis, cha}
+     * @returns {Array} - Array of resource objects {name, current, max, resetOn}
+     */
+    getClassResources(className, level, stats) {
+      return getClassResources(className, level, stats);
+    },
+
+    // Artificer Infusion helpers
+    getAvailableInfusions(artificerLevel) {
+      return getAvailableInfusions(artificerLevel);
+    },
+
+    getInfusionsKnown(artificerLevel) {
+      return getInfusionsKnown(artificerLevel);
+    },
+
+    getInfusedItemsMax(artificerLevel) {
+      return getInfusedItemsMax(artificerLevel);
+    },
+
+    formatInfusionsReference(artificerLevel) {
+      return formatInfusionsReference(artificerLevel);
+    },
+
+    // Multiclass Hit Dice helpers
+    calculateMulticlassHitDice(classes) {
+      return calculateMulticlassHitDice(classes);
+    },
+
+    initMulticlassHitDiceState(classes) {
+      return initMulticlassHitDiceState(classes);
+    },
+
+    spendMulticlassHitDice(hitDiceState, dieSize, count) {
+      return spendMulticlassHitDice(hitDiceState, dieSize, count);
+    },
+
+    restoreMulticlassHitDice(hitDiceState) {
+      return restoreMulticlassHitDice(hitDiceState);
+    },
+
+    formatMulticlassHitDice(hitDiceState) {
+      return formatMulticlassHitDice(hitDiceState);
+    },
+
+    // Class Level vs Character Level helpers
+    getClassLevel(classes, targetClass) {
+      return getClassLevel(classes, targetClass);
+    },
+
+    getTotalCharacterLevel(classes) {
+      return getTotalCharacterLevel(classes);
+    },
+
+    hasClassFeature(classes, className, requiredLevel) {
+      return hasClassFeature(classes, className, requiredLevel);
+    },
+
+    getMulticlassFeatures(classes) {
+      return getMulticlassFeatures(classes);
+    },
+
+    getMulticlassProficiencyBonus(classes) {
+      return getMulticlassProficiencyBonus(classes);
+    },
+
+    getMulticlassExtraAttack(classes) {
+      return getMulticlassExtraAttack(classes);
     },
 
     getLevelUpChanges(className, fromLevel, toLevel, character) {
@@ -2450,6 +3363,1882 @@ window.LevelUpData = (function() {
       }
 
       return 0;
+    },
+
+    // ============================================================
+    // RACIAL BASE FEATURES (Level 1 features all races have)
+    // ============================================================
+
+    /**
+     * Base racial features that all characters of a race receive at level 1
+     * Format: { 'RaceName': { traits: [...], speed, size, languages, subraces? } }
+     */
+    RACIAL_BASE_FEATURES: {
+      // ==================== PHB RACES ====================
+
+      'Human': {
+        size: 'Medium',
+        speed: 30,
+        languages: ['Common', 'One extra language of your choice'],
+        traits: [
+          {
+            name: 'Ability Score Increase',
+            description: 'Your ability scores each increase by 1.'
+          },
+          {
+            name: 'Extra Language',
+            description: 'You can speak, read, and write one extra language of your choice.'
+          }
+        ]
+      },
+
+      'Elf': {
+        size: 'Medium',
+        speed: 30,
+        languages: ['Common', 'Elvish'],
+        traits: [
+          {
+            name: 'Darkvision',
+            description: 'You can see in dim light within 60 feet as if it were bright light, and in darkness as if it were dim light.'
+          },
+          {
+            name: 'Keen Senses',
+            description: 'You have proficiency in the Perception skill.'
+          },
+          {
+            name: 'Fey Ancestry',
+            description: 'You have advantage on saving throws against being charmed, and magic can\'t put you to sleep.'
+          },
+          {
+            name: 'Trance',
+            description: 'Elves don\'t need to sleep. Instead, they meditate deeply for 4 hours a day, gaining the same benefit as a human does from 8 hours of sleep.'
+          }
+        ],
+        subraces: {
+          'High Elf': {
+            traits: [
+              {
+                name: 'Elf Weapon Training',
+                description: 'You have proficiency with the longsword, shortsword, shortbow, and longbow.'
+              },
+              {
+                name: 'Cantrip',
+                description: 'You know one cantrip of your choice from the wizard spell list. Intelligence is your spellcasting ability for it.'
+              },
+              {
+                name: 'Extra Language',
+                description: 'You can speak, read, and write one extra language of your choice.'
+              }
+            ]
+          },
+          'Wood Elf': {
+            speed: 35,
+            traits: [
+              {
+                name: 'Elf Weapon Training',
+                description: 'You have proficiency with the longsword, shortsword, shortbow, and longbow.'
+              },
+              {
+                name: 'Fleet of Foot',
+                description: 'Your base walking speed increases to 35 feet.'
+              },
+              {
+                name: 'Mask of the Wild',
+                description: 'You can attempt to hide even when you are only lightly obscured by foliage, heavy rain, falling snow, mist, and other natural phenomena.'
+              }
+            ]
+          },
+          'Dark Elf (Drow)': {
+            traits: [
+              {
+                name: 'Superior Darkvision',
+                description: 'Your darkvision has a radius of 120 feet.'
+              },
+              {
+                name: 'Sunlight Sensitivity',
+                description: 'You have disadvantage on attack rolls and Wisdom (Perception) checks that rely on sight when you, the target of your attack, or whatever you are trying to perceive is in direct sunlight.'
+              },
+              {
+                name: 'Drow Magic',
+                description: 'You know the Dancing Lights cantrip. At 3rd level, you can cast Faerie Fire once per long rest. At 5th level, you can cast Darkness once per long rest. Charisma is your spellcasting ability.'
+              },
+              {
+                name: 'Drow Weapon Training',
+                description: 'You have proficiency with rapiers, shortswords, and hand crossbows.'
+              }
+            ]
+          },
+          'Eladrin': {
+            traits: [
+              {
+                name: 'Fey Step',
+                description: 'As a bonus action, you can magically teleport up to 30 feet to an unoccupied space you can see. Once you use this trait, you can\'t do so again until you finish a short or long rest. At 3rd level, this gains an additional effect based on your current season.'
+              },
+              {
+                name: 'Shifting Seasons',
+                description: 'You can change your season (Autumn, Winter, Spring, Summer) when you finish a long rest. Your season affects the secondary effect of your Fey Step at 3rd level.'
+              }
+            ]
+          },
+          'Sea Elf': {
+            traits: [
+              {
+                name: 'Sea Elf Training',
+                description: 'You have proficiency with the spear, trident, light crossbow, and net.'
+              },
+              {
+                name: 'Child of the Sea',
+                description: 'You have a swimming speed of 30 feet, and you can breathe air and water.'
+              },
+              {
+                name: 'Friend of the Sea',
+                description: 'You can communicate simple ideas with any beast that has an innate swimming speed.'
+              }
+            ]
+          }
+        }
+      },
+
+      'Dwarf': {
+        size: 'Medium',
+        speed: 25,
+        languages: ['Common', 'Dwarvish'],
+        traits: [
+          {
+            name: 'Darkvision',
+            description: 'You can see in dim light within 60 feet as if it were bright light, and in darkness as if it were dim light.'
+          },
+          {
+            name: 'Dwarven Resilience',
+            description: 'You have advantage on saving throws against poison, and you have resistance against poison damage.'
+          },
+          {
+            name: 'Dwarven Combat Training',
+            description: 'You have proficiency with the battleaxe, handaxe, light hammer, and warhammer.'
+          },
+          {
+            name: 'Tool Proficiency',
+            description: 'You gain proficiency with the artisan\'s tools of your choice: smith\'s tools, brewer\'s supplies, or mason\'s tools.'
+          },
+          {
+            name: 'Stonecunning',
+            description: 'Whenever you make an Intelligence (History) check related to the origin of stonework, you are considered proficient in the History skill and add double your proficiency bonus to the check.'
+          }
+        ],
+        subraces: {
+          'Hill Dwarf': {
+            traits: [
+              {
+                name: 'Dwarven Toughness',
+                description: 'Your hit point maximum increases by 1, and it increases by 1 every time you gain a level.'
+              }
+            ]
+          },
+          'Mountain Dwarf': {
+            traits: [
+              {
+                name: 'Dwarven Armor Training',
+                description: 'You have proficiency with light and medium armor.'
+              }
+            ]
+          },
+          'Duergar': {
+            traits: [
+              {
+                name: 'Superior Darkvision',
+                description: 'Your darkvision has a radius of 120 feet.'
+              },
+              {
+                name: 'Duergar Resilience',
+                description: 'You have advantage on saving throws against illusions and against being charmed or paralyzed.'
+              },
+              {
+                name: 'Sunlight Sensitivity',
+                description: 'You have disadvantage on attack rolls and Wisdom (Perception) checks that rely on sight when you, the target, or what you are perceiving is in direct sunlight.'
+              },
+              {
+                name: 'Duergar Magic',
+                description: 'At 3rd level, you can cast Enlarge/Reduce (enlarge only) on yourself once per long rest. At 5th level, you can cast Invisibility on yourself once per long rest.'
+              }
+            ]
+          }
+        }
+      },
+
+      'Halfling': {
+        size: 'Small',
+        speed: 25,
+        languages: ['Common', 'Halfling'],
+        traits: [
+          {
+            name: 'Lucky',
+            description: 'When you roll a 1 on the d20 for an attack roll, ability check, or saving throw, you can reroll the die and must use the new roll.'
+          },
+          {
+            name: 'Brave',
+            description: 'You have advantage on saving throws against being frightened.'
+          },
+          {
+            name: 'Halfling Nimbleness',
+            description: 'You can move through the space of any creature that is of a size larger than yours.'
+          }
+        ],
+        subraces: {
+          'Lightfoot': {
+            traits: [
+              {
+                name: 'Naturally Stealthy',
+                description: 'You can attempt to hide even when you are obscured only by a creature that is at least one size larger than you.'
+              }
+            ]
+          },
+          'Stout': {
+            traits: [
+              {
+                name: 'Stout Resilience',
+                description: 'You have advantage on saving throws against poison, and you have resistance against poison damage.'
+              }
+            ]
+          },
+          'Ghostwise': {
+            traits: [
+              {
+                name: 'Silent Speech',
+                description: 'You can speak telepathically to any creature within 30 feet of you. The creature understands you only if the two of you share a language.'
+              }
+            ]
+          }
+        }
+      },
+
+      'Dragonborn': {
+        size: 'Medium',
+        speed: 30,
+        languages: ['Common', 'Draconic'],
+        traits: [
+          {
+            name: 'Draconic Ancestry',
+            description: 'You have draconic ancestry. Choose one type of dragon from the table. Your breath weapon and damage resistance are determined by the dragon type.'
+          },
+          {
+            name: 'Breath Weapon',
+            description: 'You can use your action to exhale destructive energy. Your draconic ancestry determines the size, shape, and damage type. Each creature in the area must make a saving throw (DC = 8 + CON modifier + proficiency bonus). Damage: 2d6 at 1st level, 3d6 at 6th, 4d6 at 11th, 5d6 at 16th. Usable once per short or long rest.'
+          },
+          {
+            name: 'Damage Resistance',
+            description: 'You have resistance to the damage type associated with your draconic ancestry.'
+          }
+        ],
+        subraces: {
+          'Black': { breathWeapon: 'Acid - 5×30 ft. line (DEX save)', resistance: 'Acid' },
+          'Blue': { breathWeapon: 'Lightning - 5×30 ft. line (DEX save)', resistance: 'Lightning' },
+          'Brass': { breathWeapon: 'Fire - 5×30 ft. line (DEX save)', resistance: 'Fire' },
+          'Bronze': { breathWeapon: 'Lightning - 5×30 ft. line (DEX save)', resistance: 'Lightning' },
+          'Copper': { breathWeapon: 'Acid - 5×30 ft. line (DEX save)', resistance: 'Acid' },
+          'Gold': { breathWeapon: 'Fire - 15 ft. cone (DEX save)', resistance: 'Fire' },
+          'Green': { breathWeapon: 'Poison - 15 ft. cone (CON save)', resistance: 'Poison' },
+          'Red': { breathWeapon: 'Fire - 15 ft. cone (DEX save)', resistance: 'Fire' },
+          'Silver': { breathWeapon: 'Cold - 15 ft. cone (CON save)', resistance: 'Cold' },
+          'White': { breathWeapon: 'Cold - 15 ft. cone (CON save)', resistance: 'Cold' }
+        }
+      },
+
+      'Gnome': {
+        size: 'Small',
+        speed: 25,
+        languages: ['Common', 'Gnomish'],
+        traits: [
+          {
+            name: 'Darkvision',
+            description: 'You can see in dim light within 60 feet as if it were bright light, and in darkness as if it were dim light.'
+          },
+          {
+            name: 'Gnome Cunning',
+            description: 'You have advantage on all Intelligence, Wisdom, and Charisma saving throws against magic.'
+          }
+        ],
+        subraces: {
+          'Forest Gnome': {
+            traits: [
+              {
+                name: 'Natural Illusionist',
+                description: 'You know the Minor Illusion cantrip. Intelligence is your spellcasting ability for it.'
+              },
+              {
+                name: 'Speak with Small Beasts',
+                description: 'Through sounds and gestures, you can communicate simple ideas with Small or smaller beasts.'
+              }
+            ]
+          },
+          'Rock Gnome': {
+            traits: [
+              {
+                name: 'Artificer\'s Lore',
+                description: 'Whenever you make an Intelligence (History) check related to magic items, alchemical objects, or technological devices, you can add twice your proficiency bonus.'
+              },
+              {
+                name: 'Tinker',
+                description: 'You have proficiency with artisan\'s tools (tinker\'s tools). Using them, you can spend 1 hour and 10 gp to construct a Tiny clockwork device (AC 5, 1 HP).'
+              }
+            ]
+          },
+          'Deep Gnome (Svirfneblin)': {
+            traits: [
+              {
+                name: 'Superior Darkvision',
+                description: 'Your darkvision has a radius of 120 feet.'
+              },
+              {
+                name: 'Stone Camouflage',
+                description: 'You have advantage on Dexterity (Stealth) checks to hide in rocky terrain.'
+              }
+            ]
+          }
+        }
+      },
+
+      'Half-Elf': {
+        size: 'Medium',
+        speed: 30,
+        languages: ['Common', 'Elvish', 'One extra language of your choice'],
+        traits: [
+          {
+            name: 'Darkvision',
+            description: 'You can see in dim light within 60 feet as if it were bright light, and in darkness as if it were dim light.'
+          },
+          {
+            name: 'Fey Ancestry',
+            description: 'You have advantage on saving throws against being charmed, and magic can\'t put you to sleep.'
+          },
+          {
+            name: 'Skill Versatility',
+            description: 'You gain proficiency in two skills of your choice.'
+          }
+        ]
+      },
+
+      'Half-Orc': {
+        size: 'Medium',
+        speed: 30,
+        languages: ['Common', 'Orc'],
+        traits: [
+          {
+            name: 'Darkvision',
+            description: 'You can see in dim light within 60 feet as if it were bright light, and in darkness as if it were dim light.'
+          },
+          {
+            name: 'Menacing',
+            description: 'You gain proficiency in the Intimidation skill.'
+          },
+          {
+            name: 'Relentless Endurance',
+            description: 'When you are reduced to 0 hit points but not killed outright, you can drop to 1 hit point instead. You can\'t use this feature again until you finish a long rest.'
+          },
+          {
+            name: 'Savage Attacks',
+            description: 'When you score a critical hit with a melee weapon attack, you can roll one of the weapon\'s damage dice one additional time and add it to the extra damage of the critical hit.'
+          }
+        ]
+      },
+
+      'Tiefling': {
+        size: 'Medium',
+        speed: 30,
+        languages: ['Common', 'Infernal'],
+        traits: [
+          {
+            name: 'Darkvision',
+            description: 'You can see in dim light within 60 feet as if it were bright light, and in darkness as if it were dim light.'
+          },
+          {
+            name: 'Hellish Resistance',
+            description: 'You have resistance to fire damage.'
+          },
+          {
+            name: 'Infernal Legacy',
+            description: 'You know the Thaumaturgy cantrip. At 3rd level, you can cast Hellish Rebuke as a 2nd-level spell once per long rest. At 5th level, you can cast Darkness once per long rest. Charisma is your spellcasting ability.'
+          }
+        ],
+        subraces: {
+          'Asmodeus': {
+            note: 'Standard Infernal Legacy (Thaumaturgy, Hellish Rebuke, Darkness)'
+          },
+          'Baalzebul': {
+            traits: [
+              {
+                name: 'Legacy of Maladomini',
+                description: 'You know the Thaumaturgy cantrip. At 3rd level, you can cast Ray of Sickness once per long rest. At 5th level, you can cast Crown of Madness once per long rest. Charisma is your spellcasting ability.'
+              }
+            ]
+          },
+          'Dispater': {
+            traits: [
+              {
+                name: 'Legacy of Dis',
+                description: 'You know the Thaumaturgy cantrip. At 3rd level, you can cast Disguise Self once per long rest. At 5th level, you can cast Detect Thoughts once per long rest. Charisma is your spellcasting ability.'
+              }
+            ]
+          },
+          'Fierna': {
+            traits: [
+              {
+                name: 'Legacy of Phlegethos',
+                description: 'You know the Friends cantrip. At 3rd level, you can cast Charm Person once per long rest. At 5th level, you can cast Suggestion once per long rest. Charisma is your spellcasting ability.'
+              }
+            ]
+          },
+          'Glasya': {
+            traits: [
+              {
+                name: 'Legacy of Malbolge',
+                description: 'You know the Minor Illusion cantrip. At 3rd level, you can cast Disguise Self once per long rest. At 5th level, you can cast Invisibility once per long rest. Charisma is your spellcasting ability.'
+              }
+            ]
+          },
+          'Levistus': {
+            traits: [
+              {
+                name: 'Legacy of Stygia',
+                description: 'You know the Ray of Frost cantrip. At 3rd level, you can cast Armor of Agathys as a 2nd-level spell once per long rest. At 5th level, you can cast Darkness once per long rest. Charisma is your spellcasting ability.'
+              }
+            ]
+          },
+          'Mammon': {
+            traits: [
+              {
+                name: 'Legacy of Minauros',
+                description: 'You know the Mage Hand cantrip. At 3rd level, you can cast Tenser\'s Floating Disk once per long rest. At 5th level, you can cast Arcane Lock once per long rest. Charisma is your spellcasting ability.'
+              }
+            ]
+          },
+          'Mephistopheles': {
+            traits: [
+              {
+                name: 'Legacy of Cania',
+                description: 'You know the Mage Hand cantrip. At 3rd level, you can cast Burning Hands as a 2nd-level spell once per long rest. At 5th level, you can cast Flame Blade once per long rest. Charisma is your spellcasting ability.'
+              }
+            ]
+          },
+          'Zariel': {
+            traits: [
+              {
+                name: 'Legacy of Avernus',
+                description: 'You know the Thaumaturgy cantrip. At 3rd level, you can cast Searing Smite once per long rest. At 5th level, you can cast Branding Smite once per long rest. Charisma is your spellcasting ability.'
+              }
+            ]
+          }
+        }
+      },
+
+      // ==================== VOLO'S GUIDE RACES ====================
+
+      'Aarakocra': {
+        size: 'Medium',
+        speed: 25,
+        languages: ['Common', 'Aarakocra', 'Auran'],
+        traits: [
+          {
+            name: 'Flight',
+            description: 'You have a flying speed of 50 feet. To use this speed, you can\'t be wearing medium or heavy armor.'
+          },
+          {
+            name: 'Talons',
+            description: 'Your talons are natural weapons, which you can use to make unarmed strikes. If you hit with them, you deal slashing damage equal to 1d4 + your Strength modifier.'
+          }
+        ]
+      },
+
+      'Aasimar': {
+        size: 'Medium',
+        speed: 30,
+        languages: ['Common', 'Celestial'],
+        traits: [
+          {
+            name: 'Darkvision',
+            description: 'You can see in dim light within 60 feet as if it were bright light, and in darkness as if it were dim light.'
+          },
+          {
+            name: 'Celestial Resistance',
+            description: 'You have resistance to necrotic damage and radiant damage.'
+          },
+          {
+            name: 'Healing Hands',
+            description: 'As an action, you can touch a creature and cause it to regain a number of hit points equal to your level. Once you use this trait, you can\'t use it again until you finish a long rest.'
+          },
+          {
+            name: 'Light Bearer',
+            description: 'You know the Light cantrip. Charisma is your spellcasting ability for it.'
+          },
+          {
+            name: 'Celestial Revelation (Level 3)',
+            description: 'Starting at 3rd level, you can use a bonus action to unleash your celestial nature. Your transformation lasts for 1 minute or until you end it as a bonus action. Once per long rest.'
+          }
+        ],
+        subraces: {
+          'Protector': {
+            traits: [
+              {
+                name: 'Radiant Soul',
+                description: 'At 3rd level: Spectral wings give you flying speed equal to walking speed. Once per turn, add your level as extra radiant damage to one attack or spell.'
+              }
+            ]
+          },
+          'Scourge': {
+            traits: [
+              {
+                name: 'Radiant Consumption',
+                description: 'At 3rd level: Searing light radiates from you. At the end of each of your turns, you and each creature within 10 feet take radiant damage equal to half your level. Once per turn, add your level as extra radiant damage to one attack or spell.'
+              }
+            ]
+          },
+          'Fallen': {
+            traits: [
+              {
+                name: 'Necrotic Shroud',
+                description: 'At 3rd level: Ghostly skeletal wings sprout. Creatures within 10 feet that can see you must succeed on a Charisma save or become frightened until the end of your next turn. Once per turn, add your level as extra necrotic damage to one attack or spell.'
+              }
+            ]
+          }
+        }
+      },
+
+      'Bugbear': {
+        size: 'Medium',
+        speed: 30,
+        languages: ['Common', 'Goblin'],
+        traits: [
+          {
+            name: 'Darkvision',
+            description: 'You can see in dim light within 60 feet as if it were bright light, and in darkness as if it were dim light.'
+          },
+          {
+            name: 'Long-Limbed',
+            description: 'When you make a melee attack on your turn, your reach for it is 5 feet greater than normal.'
+          },
+          {
+            name: 'Powerful Build',
+            description: 'You count as one size larger when determining your carrying capacity and the weight you can push, drag, or lift.'
+          },
+          {
+            name: 'Sneaky',
+            description: 'You are proficient in the Stealth skill.'
+          },
+          {
+            name: 'Surprise Attack',
+            description: 'If you hit a creature that is surprised with an attack on your first turn in combat, the attack deals an extra 2d6 damage.'
+          }
+        ]
+      },
+
+      'Firbolg': {
+        size: 'Medium',
+        speed: 30,
+        languages: ['Common', 'Elvish', 'Giant'],
+        traits: [
+          {
+            name: 'Firbolg Magic',
+            description: 'You can cast Detect Magic and Disguise Self with this trait, using Wisdom as your spellcasting ability. When you use Disguise Self, you can appear up to 3 feet shorter. Once you cast either spell, you can\'t cast it again until you finish a short or long rest.'
+          },
+          {
+            name: 'Hidden Step',
+            description: 'As a bonus action, you can magically turn invisible until the start of your next turn or until you attack, make a damage roll, or force someone to make a saving throw. Once you use this trait, you can\'t use it again until you finish a short or long rest.'
+          },
+          {
+            name: 'Powerful Build',
+            description: 'You count as one size larger when determining your carrying capacity and the weight you can push, drag, or lift.'
+          },
+          {
+            name: 'Speech of Beast and Leaf',
+            description: 'You have the ability to communicate in a limited manner with beasts and plants. They can understand the meaning of your words. You have advantage on Charisma checks to influence them.'
+          }
+        ]
+      },
+
+      'Goblin': {
+        size: 'Small',
+        speed: 30,
+        languages: ['Common', 'Goblin'],
+        traits: [
+          {
+            name: 'Darkvision',
+            description: 'You can see in dim light within 60 feet as if it were bright light, and in darkness as if it were dim light.'
+          },
+          {
+            name: 'Fury of the Small',
+            description: 'When you damage a creature with an attack or spell and the creature\'s size is larger than yours, you can cause the attack or spell to deal extra damage equal to your level. Once you use this trait, you can\'t use it again until you finish a short or long rest.'
+          },
+          {
+            name: 'Nimble Escape',
+            description: 'You can take the Disengage or Hide action as a bonus action on each of your turns.'
+          }
+        ]
+      },
+
+      'Goliath': {
+        size: 'Medium',
+        speed: 30,
+        languages: ['Common', 'Giant'],
+        traits: [
+          {
+            name: 'Natural Athlete',
+            description: 'You have proficiency in the Athletics skill.'
+          },
+          {
+            name: 'Stone\'s Endurance',
+            description: 'You can focus yourself to occasionally shrug off injury. When you take damage, you can use your reaction to roll a d12. Add your Constitution modifier to the number rolled and reduce the damage by that total. You can use this trait a number of times equal to your proficiency bonus, and you regain all expended uses when you finish a long rest.'
+          },
+          {
+            name: 'Powerful Build',
+            description: 'You count as one size larger when determining your carrying capacity and the weight you can push, drag, or lift.'
+          },
+          {
+            name: 'Mountain Born',
+            description: 'You have resistance to cold damage. You\'re also acclimated to high altitude, including elevations above 20,000 feet.'
+          }
+        ]
+      },
+
+      'Hobgoblin': {
+        size: 'Medium',
+        speed: 30,
+        languages: ['Common', 'Goblin'],
+        traits: [
+          {
+            name: 'Darkvision',
+            description: 'You can see in dim light within 60 feet as if it were bright light, and in darkness as if it were dim light.'
+          },
+          {
+            name: 'Martial Training',
+            description: 'You are proficient with two martial weapons of your choice and with light armor.'
+          },
+          {
+            name: 'Saving Face',
+            description: 'If you miss with an attack roll or fail an ability check or saving throw, you can gain a bonus to the roll equal to the number of allies you can see within 30 feet (max +5). Once you use this trait, you can\'t use it again until you finish a short or long rest.'
+          }
+        ]
+      },
+
+      'Kenku': {
+        size: 'Medium',
+        speed: 30,
+        languages: ['Common', 'Auran'],
+        traits: [
+          {
+            name: 'Expert Forgery',
+            description: 'You can duplicate other creatures\' handwriting and craftwork. You have advantage on ability checks to produce forgeries or duplicates of existing objects.'
+          },
+          {
+            name: 'Kenku Training',
+            description: 'You are proficient in your choice of two of the following skills: Acrobatics, Deception, Stealth, and Sleight of Hand.'
+          },
+          {
+            name: 'Mimicry',
+            description: 'You can mimic sounds you have heard, including voices. A creature that hears the sounds can tell they are imitations with a successful Wisdom (Insight) check opposed by your Charisma (Deception) check.'
+          }
+        ]
+      },
+
+      'Kobold': {
+        size: 'Small',
+        speed: 30,
+        languages: ['Common', 'Draconic'],
+        traits: [
+          {
+            name: 'Darkvision',
+            description: 'You can see in dim light within 60 feet as if it were bright light, and in darkness as if it were dim light.'
+          },
+          {
+            name: 'Draconic Cry',
+            description: 'As a bonus action, you let out a cry at your enemies within 10 feet of you. Until the start of your next turn, you and your allies have advantage on attack rolls against any of those enemies who could hear you. You can use this trait a number of times equal to your proficiency bonus, and you regain all expended uses when you finish a long rest.'
+          },
+          {
+            name: 'Kobold Legacy',
+            description: 'Choose one: Craftiness (proficiency in one of Arcana, Investigation, Medicine, Sleight of Hand, or Survival), Defiance (advantage on saves against frightened), or Draconic Sorcery (know one sorcerer cantrip).'
+          }
+        ]
+      },
+
+      'Lizardfolk': {
+        size: 'Medium',
+        speed: 30,
+        languages: ['Common', 'Draconic'],
+        traits: [
+          {
+            name: 'Bite',
+            description: 'Your fanged maw is a natural weapon, which you can use to make unarmed strikes. If you hit with it, you deal piercing damage equal to 1d6 + your Strength modifier.'
+          },
+          {
+            name: 'Cunning Artisan',
+            description: 'As part of a short rest, you can harvest bone and hide from a creature to create a shield, club, javelin, or 1d4 darts or blowgun needles. This requires a blade.'
+          },
+          {
+            name: 'Hold Breath',
+            description: 'You can hold your breath for up to 15 minutes at a time.'
+          },
+          {
+            name: 'Hunter\'s Lore',
+            description: 'You gain proficiency with two of the following skills: Animal Handling, Nature, Perception, Stealth, and Survival.'
+          },
+          {
+            name: 'Natural Armor',
+            description: 'When you aren\'t wearing armor, your AC equals 13 + your Dexterity modifier. You can use a shield and still gain this benefit.'
+          },
+          {
+            name: 'Hungry Jaws',
+            description: 'In battle, you can throw yourself into a vicious feeding frenzy. As a bonus action, you can make a special attack with your Bite. If the attack hits, it deals its normal damage, and you gain temporary hit points equal to your Constitution modifier (minimum of 1). Once you use this trait, you can\'t use it again until you finish a short or long rest.'
+          }
+        ]
+      },
+
+      'Orc': {
+        size: 'Medium',
+        speed: 30,
+        languages: ['Common', 'Orc'],
+        traits: [
+          {
+            name: 'Darkvision',
+            description: 'You can see in dim light within 60 feet as if it were bright light, and in darkness as if it were dim light.'
+          },
+          {
+            name: 'Aggressive',
+            description: 'As a bonus action, you can move up to your speed toward an enemy of your choice that you can see or hear. You must end this move closer to the enemy than you started.'
+          },
+          {
+            name: 'Powerful Build',
+            description: 'You count as one size larger when determining your carrying capacity and the weight you can push, drag, or lift.'
+          },
+          {
+            name: 'Relentless Endurance',
+            description: 'When you are reduced to 0 hit points but not killed outright, you can drop to 1 hit point instead. Once you use this trait, you can\'t use it again until you finish a long rest.'
+          }
+        ]
+      },
+
+      'Tabaxi': {
+        size: 'Medium',
+        speed: 30,
+        languages: ['Common', 'One language of your choice'],
+        traits: [
+          {
+            name: 'Darkvision',
+            description: 'You can see in dim light within 60 feet as if it were bright light, and in darkness as if it were dim light.'
+          },
+          {
+            name: 'Feline Agility',
+            description: 'Your reflexes and agility allow you to move with a burst of speed. When you move on your turn in combat, you can double your speed until the end of the turn. Once you use this trait, you can\'t use it again until you move 0 feet on one of your turns.'
+          },
+          {
+            name: 'Cat\'s Claws',
+            description: 'You have a climbing speed of 20 feet. Additionally, your claws are natural weapons, which you can use to make unarmed strikes dealing 1d4 + Strength modifier slashing damage.'
+          },
+          {
+            name: 'Cat\'s Talent',
+            description: 'You have proficiency in the Perception and Stealth skills.'
+          }
+        ]
+      },
+
+      'Triton': {
+        size: 'Medium',
+        speed: 30,
+        languages: ['Common', 'Primordial'],
+        traits: [
+          {
+            name: 'Amphibious',
+            description: 'You can breathe air and water.'
+          },
+          {
+            name: 'Control Air and Water',
+            description: 'You can cast Fog Cloud with this trait. At 3rd level, you can cast Gust of Wind. At 5th level, you can cast Wall of Water. Each spell can be cast once per long rest. Charisma is your spellcasting ability.'
+          },
+          {
+            name: 'Darkvision',
+            description: 'You can see in dim light within 60 feet as if it were bright light, and in darkness as if it were dim light.'
+          },
+          {
+            name: 'Emissary of the Sea',
+            description: 'Aquatic beasts have an extraordinary affinity with your people. You can communicate simple ideas with beasts that can breathe water.'
+          },
+          {
+            name: 'Guardian of the Depths',
+            description: 'Adapted to the ocean depths, you have resistance to cold damage.'
+          },
+          {
+            name: 'Swim Speed',
+            description: 'You have a swimming speed of 30 feet.'
+          }
+        ]
+      },
+
+      'Yuan-ti Pureblood': {
+        size: 'Medium',
+        speed: 30,
+        languages: ['Common', 'Abyssal', 'Draconic'],
+        traits: [
+          {
+            name: 'Darkvision',
+            description: 'You can see in dim light within 60 feet as if it were bright light, and in darkness as if it were dim light.'
+          },
+          {
+            name: 'Innate Spellcasting',
+            description: 'You know the Poison Spray cantrip. At 3rd level, you can cast Animal Friendship (snakes only) at will. At 3rd level, you can also cast Suggestion once per long rest. Charisma is your spellcasting ability.'
+          },
+          {
+            name: 'Magic Resistance',
+            description: 'You have advantage on saving throws against spells and other magical effects.'
+          },
+          {
+            name: 'Poison Immunity',
+            description: 'You are immune to poison damage and the poisoned condition.'
+          }
+        ]
+      },
+
+      // ==================== ELEMENTAL RACES ====================
+
+      'Genasi (Air)': {
+        size: 'Medium',
+        speed: 30,
+        languages: ['Common', 'Primordial'],
+        traits: [
+          {
+            name: 'Unending Breath',
+            description: 'You can hold your breath indefinitely while you\'re not incapacitated.'
+          },
+          {
+            name: 'Mingle with the Wind',
+            description: 'You can cast the Levitate spell once per long rest, requiring no material components. Constitution is your spellcasting ability. This becomes available at 3rd level.'
+          }
+        ]
+      },
+
+      'Genasi (Earth)': {
+        size: 'Medium',
+        speed: 30,
+        languages: ['Common', 'Primordial'],
+        traits: [
+          {
+            name: 'Earth Walk',
+            description: 'You can move across difficult terrain made of earth or stone without expending extra movement.'
+          },
+          {
+            name: 'Merge with Stone',
+            description: 'You can cast the Pass Without Trace spell once per long rest, requiring no material components. Constitution is your spellcasting ability. This becomes available at 3rd level.'
+          }
+        ]
+      },
+
+      'Genasi (Fire)': {
+        size: 'Medium',
+        speed: 30,
+        languages: ['Common', 'Primordial'],
+        traits: [
+          {
+            name: 'Darkvision',
+            description: 'You can see in dim light within 60 feet as if it were bright light, and in darkness as if it were dim light.'
+          },
+          {
+            name: 'Fire Resistance',
+            description: 'You have resistance to fire damage.'
+          },
+          {
+            name: 'Reach to the Blaze',
+            description: 'You know the Produce Flame cantrip. At 3rd level, you can cast Burning Hands once per long rest. Constitution is your spellcasting ability.'
+          }
+        ]
+      },
+
+      'Genasi (Water)': {
+        size: 'Medium',
+        speed: 30,
+        languages: ['Common', 'Primordial'],
+        traits: [
+          {
+            name: 'Amphibious',
+            description: 'You can breathe air and water.'
+          },
+          {
+            name: 'Swim Speed',
+            description: 'You have a swimming speed of 30 feet.'
+          },
+          {
+            name: 'Acid Resistance',
+            description: 'You have resistance to acid damage.'
+          },
+          {
+            name: 'Call to the Wave',
+            description: 'You know the Shape Water cantrip. At 3rd level, you can cast Create or Destroy Water as a 2nd-level spell once per long rest. Constitution is your spellcasting ability.'
+          }
+        ]
+      },
+
+      // ==================== RAVNICA RACES ====================
+
+      'Centaur': {
+        size: 'Medium',
+        speed: 40,
+        languages: ['Common', 'Sylvan'],
+        traits: [
+          {
+            name: 'Fey',
+            description: 'Your creature type is fey, rather than humanoid.'
+          },
+          {
+            name: 'Charge',
+            description: 'If you move at least 30 feet straight toward a target and then hit it with a melee weapon attack on the same turn, you can immediately follow that attack with a bonus action, making one attack against the target with your hooves.'
+          },
+          {
+            name: 'Hooves',
+            description: 'Your hooves are natural melee weapons, which you can use to make unarmed strikes. If you hit with them, you deal bludgeoning damage equal to 1d4 + your Strength modifier.'
+          },
+          {
+            name: 'Equine Build',
+            description: 'You count as one size larger when determining your carrying capacity. Climbing costs you 4 feet per 1 foot moved. Any mount built for a Medium humanoid creature is unable to carry you.'
+          },
+          {
+            name: 'Survivor',
+            description: 'You have proficiency in one of the following skills: Animal Handling, Medicine, Nature, or Survival.'
+          }
+        ]
+      },
+
+      'Loxodon': {
+        size: 'Medium',
+        speed: 30,
+        languages: ['Common', 'Loxodon'],
+        traits: [
+          {
+            name: 'Powerful Build',
+            description: 'You count as one size larger when determining your carrying capacity and the weight you can push, drag, or lift.'
+          },
+          {
+            name: 'Loxodon Serenity',
+            description: 'You have advantage on saving throws against being charmed or frightened.'
+          },
+          {
+            name: 'Natural Armor',
+            description: 'You have thick, leathery skin. When you aren\'t wearing armor, your AC equals 12 + your Constitution modifier. You can use a shield and still gain this benefit.'
+          },
+          {
+            name: 'Trunk',
+            description: 'You can grasp things with your trunk, and you can use it as a snorkel. It has a reach of 5 feet, and it can lift a number of pounds equal to five times your Strength score.'
+          },
+          {
+            name: 'Keen Smell',
+            description: 'You have advantage on Wisdom (Perception), Wisdom (Survival), and Intelligence (Investigation) checks that involve smell.'
+          }
+        ]
+      },
+
+      'Minotaur': {
+        size: 'Medium',
+        speed: 30,
+        languages: ['Common', 'Minotaur'],
+        traits: [
+          {
+            name: 'Horns',
+            description: 'Your horns are natural melee weapons, which you can use to make unarmed strikes. If you hit with them, you deal piercing damage equal to 1d6 + your Strength modifier.'
+          },
+          {
+            name: 'Goring Rush',
+            description: 'Immediately after you use the Dash action on your turn and move at least 20 feet, you can make one melee attack with your horns as a bonus action.'
+          },
+          {
+            name: 'Hammering Horns',
+            description: 'Immediately after you hit a creature with a melee attack as part of the Attack action on your turn, you can use a bonus action to attempt to shove that target with your horns. The target must be no more than one size larger than you and within 5 feet of you.'
+          },
+          {
+            name: 'Labyrinthine Recall',
+            description: 'You can perfectly recall any path you have traveled.'
+          }
+        ]
+      },
+
+      'Simic Hybrid': {
+        size: 'Medium',
+        speed: 30,
+        languages: ['Common', 'Elvish or Vedalken'],
+        traits: [
+          {
+            name: 'Darkvision',
+            description: 'You can see in dim light within 60 feet as if it were bright light, and in darkness as if it were dim light.'
+          },
+          {
+            name: 'Animal Enhancement (1st Level)',
+            description: 'Choose one: Manta Glide (falling speed reduced, can glide), Nimble Climber (climbing speed equal to walking speed), or Underwater Adaptation (can breathe water, swimming speed equal to walking speed).'
+          },
+          {
+            name: 'Animal Enhancement (5th Level)',
+            description: 'At 5th level, choose one additional enhancement: Grappling Appendages (extra appendages for grappling), Carapace (+1 AC when not in heavy armor), or Acid Spit (ranged acid attack).'
+          }
+        ]
+      },
+
+      'Vedalken': {
+        size: 'Medium',
+        speed: 30,
+        languages: ['Common', 'Vedalken', 'One language of your choice'],
+        traits: [
+          {
+            name: 'Vedalken Dispassion',
+            description: 'You have advantage on all Intelligence, Wisdom, and Charisma saving throws.'
+          },
+          {
+            name: 'Tireless Precision',
+            description: 'You are proficient in one of the following skills: Arcana, History, Investigation, Medicine, Performance, or Sleight of Hand. You are also proficient with one tool of your choice. Whenever you make an ability check with the chosen skill or tool, roll a d4 and add it to the check\'s total.'
+          },
+          {
+            name: 'Partially Amphibious',
+            description: 'By absorbing oxygen through your skin, you can breathe underwater for up to 1 hour. Once you\'ve reached that limit, you can\'t use this trait again until you finish a long rest.'
+          }
+        ]
+      },
+
+      // ==================== THEROS RACES ====================
+
+      'Leonin': {
+        size: 'Medium',
+        speed: 35,
+        languages: ['Common', 'Leonin'],
+        traits: [
+          {
+            name: 'Darkvision',
+            description: 'You can see in dim light within 60 feet as if it were bright light, and in darkness as if it were dim light.'
+          },
+          {
+            name: 'Claws',
+            description: 'Your claws are natural weapons, which you can use to make unarmed strikes. If you hit with them, you deal slashing damage equal to 1d4 + your Strength modifier.'
+          },
+          {
+            name: 'Hunter\'s Instincts',
+            description: 'You have proficiency in one of the following skills: Athletics, Intimidation, Perception, or Survival.'
+          },
+          {
+            name: 'Daunting Roar',
+            description: 'As a bonus action, you can let out an especially menacing roar. Creatures of your choice within 10 feet that can hear you must succeed on a Wisdom saving throw (DC = 8 + proficiency bonus + Constitution modifier) or become frightened of you until the end of your next turn. Once you use this trait, you can\'t use it again until you finish a short or long rest.'
+          }
+        ]
+      },
+
+      'Satyr': {
+        size: 'Medium',
+        speed: 35,
+        languages: ['Common', 'Sylvan'],
+        traits: [
+          {
+            name: 'Fey',
+            description: 'Your creature type is fey, rather than humanoid.'
+          },
+          {
+            name: 'Ram',
+            description: 'You can use your head and horns to make unarmed strikes. If you hit with them, you deal bludgeoning damage equal to 1d4 + your Strength modifier.'
+          },
+          {
+            name: 'Magic Resistance',
+            description: 'You have advantage on saving throws against spells and other magical effects.'
+          },
+          {
+            name: 'Mirthful Leaps',
+            description: 'Whenever you make a long or high jump, you can roll a d8 and add the number rolled to the number of feet you cover, even when making a standing jump. This extra distance costs movement as normal.'
+          },
+          {
+            name: 'Reveler',
+            description: 'You have proficiency in the Performance and Persuasion skills.'
+          }
+        ]
+      },
+
+      // ==================== EBERRON RACES ====================
+
+      'Changeling': {
+        size: 'Medium',
+        speed: 30,
+        languages: ['Common', 'Two other languages of your choice'],
+        traits: [
+          {
+            name: 'Shapechanger',
+            description: 'As an action, you can change your appearance and voice. You determine the specifics of the changes, including your coloration, hair length, sex, height, and weight. You can make yourself appear as a member of another race, though none of your game statistics change.'
+          },
+          {
+            name: 'Changeling Instincts',
+            description: 'You gain proficiency with two of the following skills of your choice: Deception, Insight, Intimidation, or Persuasion.'
+          }
+        ]
+      },
+
+      'Kalashtar': {
+        size: 'Medium',
+        speed: 30,
+        languages: ['Common', 'Quori', 'One language of your choice'],
+        traits: [
+          {
+            name: 'Dual Mind',
+            description: 'You have advantage on all Wisdom saving throws.'
+          },
+          {
+            name: 'Mental Discipline',
+            description: 'You have resistance to psychic damage.'
+          },
+          {
+            name: 'Mind Link',
+            description: 'You can speak telepathically to any creature you can see within 10 feet × your level. You don\'t need to share a language, but the creature must understand at least one language to respond telepathically.'
+          },
+          {
+            name: 'Severed from Dreams',
+            description: 'Kalashtar sleep but don\'t connect to the plane of dreams. You are immune to spells and effects that require you to dream, like the Dream spell.'
+          }
+        ]
+      },
+
+      'Shifter': {
+        size: 'Medium',
+        speed: 30,
+        languages: ['Common'],
+        traits: [
+          {
+            name: 'Darkvision',
+            description: 'You can see in dim light within 60 feet as if it were bright light, and in darkness as if it were dim light.'
+          },
+          {
+            name: 'Shifting',
+            description: 'As a bonus action, you can assume a more bestial appearance. This transformation lasts for 1 minute, until you die, or until you revert to your normal appearance as a bonus action. When you shift, you gain temporary hit points equal to your level + your Constitution modifier. You can shift a number of times equal to your proficiency bonus, and you regain all expended uses when you finish a long rest.'
+          }
+        ],
+        subraces: {
+          'Beasthide': {
+            traits: [
+              {
+                name: 'Natural Athlete',
+                description: 'You have proficiency in the Athletics skill.'
+              },
+              {
+                name: 'Shifting Feature',
+                description: 'Whenever you shift, you gain 1d6 additional temporary hit points. While shifted, you have a +1 bonus to your AC.'
+              }
+            ]
+          },
+          'Longtooth': {
+            traits: [
+              {
+                name: 'Fierce',
+                description: 'You have proficiency in the Intimidation skill.'
+              },
+              {
+                name: 'Shifting Feature',
+                description: 'While shifted, you can use your elongated fangs to make an unarmed strike as a bonus action. If you hit with your fangs, you deal 1d6 + Strength modifier piercing damage.'
+              }
+            ]
+          },
+          'Swiftstride': {
+            traits: [
+              {
+                name: 'Graceful',
+                description: 'You have proficiency in the Acrobatics skill.'
+              },
+              {
+                name: 'Shifting Feature',
+                description: 'While shifted, your walking speed increases by 10 feet. Additionally, you can move up to 10 feet as a reaction when a creature ends its turn within 5 feet of you. This reactive movement doesn\'t provoke opportunity attacks.'
+              }
+            ]
+          },
+          'Wildhunt': {
+            traits: [
+              {
+                name: 'Natural Tracker',
+                description: 'You have proficiency in the Survival skill.'
+              },
+              {
+                name: 'Shifting Feature',
+                description: 'While shifted, you have advantage on Wisdom checks, and no creature within 30 feet of you can make an attack roll with advantage against you, unless you\'re incapacitated.'
+              }
+            ]
+          }
+        }
+      },
+
+      'Warforged': {
+        size: 'Medium',
+        speed: 30,
+        languages: ['Common', 'One language of your choice'],
+        traits: [
+          {
+            name: 'Constructed Resilience',
+            description: 'You were created to have remarkable fortitude: You have advantage on saving throws against being poisoned, and resistance to poison damage. You don\'t need to eat, drink, or breathe. You are immune to disease. You don\'t need to sleep and don\'t suffer exhaustion from lack of rest. Magic can\'t put you to sleep.'
+          },
+          {
+            name: 'Sentry\'s Rest',
+            description: 'When you take a long rest, you must spend at least six hours in an inactive, motionless state, rather than sleeping. In this state, you appear inert, but it doesn\'t render you unconscious, and you can see and hear as normal.'
+          },
+          {
+            name: 'Integrated Protection',
+            description: 'Your body has built-in defensive layers. You gain a +1 bonus to Armor Class. You can don only armor with which you have proficiency. To don armor, you must incorporate it into your body over the course of 1 hour. To doff armor, you must spend 1 hour removing it. You can rest while donning or doffing armor in this way. While you live, your armor can\'t be removed from your body against your will.'
+          },
+          {
+            name: 'Specialized Design',
+            description: 'You gain one skill proficiency and one tool proficiency of your choice.'
+          }
+        ]
+      },
+
+      // ==================== OTHER RACES ====================
+
+      'Tortle': {
+        size: 'Medium',
+        speed: 30,
+        languages: ['Common', 'Aquan'],
+        traits: [
+          {
+            name: 'Claws',
+            description: 'Your claws are natural weapons, which you can use to make unarmed strikes. If you hit with them, you deal slashing damage equal to 1d4 + your Strength modifier.'
+          },
+          {
+            name: 'Hold Breath',
+            description: 'You can hold your breath for up to 1 hour at a time.'
+          },
+          {
+            name: 'Natural Armor',
+            description: 'Your shell provides you a base AC of 17 (your Dexterity modifier doesn\'t affect this number). You can\'t wear armor, but if you are using a shield, you can add the shield\'s bonus as normal.'
+          },
+          {
+            name: 'Shell Defense',
+            description: 'You can withdraw into your shell as an action. Until you emerge, you gain a +4 bonus to AC, and you have advantage on Strength and Constitution saving throws. While in your shell, you are prone, your speed is 0 and can\'t increase, you have disadvantage on Dexterity saving throws, you can\'t take reactions, and the only action you can take is a bonus action to emerge from your shell.'
+          },
+          {
+            name: 'Survival Instinct',
+            description: 'You have proficiency in the Survival skill.'
+          }
+        ]
+      },
+
+      'Locathah': {
+        size: 'Medium',
+        speed: 30,
+        languages: ['Common', 'Aquan'],
+        traits: [
+          {
+            name: 'Natural Armor',
+            description: 'You have tough, scaly skin. When you aren\'t wearing armor, your AC is 12 + your Dexterity modifier. You can use your natural armor to determine your AC if worn armor would leave you with a lower AC.'
+          },
+          {
+            name: 'Observant & Athletic',
+            description: 'You have proficiency in the Athletics and Perception skills.'
+          },
+          {
+            name: 'Leviathan Will',
+            description: 'You have advantage on saving throws against being charmed, frightened, paralyzed, poisoned, stunned, or put to sleep.'
+          },
+          {
+            name: 'Limited Amphibiousness',
+            description: 'You can breathe air and water, but you need to be submerged at least once every 4 hours to avoid suffocating.'
+          },
+          {
+            name: 'Swim Speed',
+            description: 'You have a swimming speed of 30 feet.'
+          }
+        ]
+      },
+
+      'Grung': {
+        size: 'Small',
+        speed: 25,
+        languages: ['Grung'],
+        traits: [
+          {
+            name: 'Arboreal Alertness',
+            description: 'You have proficiency in the Perception skill.'
+          },
+          {
+            name: 'Amphibious',
+            description: 'You can breathe air and water.'
+          },
+          {
+            name: 'Poison Immunity',
+            description: 'You are immune to poison damage and the poisoned condition.'
+          },
+          {
+            name: 'Poisonous Skin',
+            description: 'Any creature that grapples you or otherwise comes into direct contact with your skin must succeed on a DC 12 Constitution saving throw or become poisoned for 1 minute. A poisoned creature no longer in direct contact with you can repeat the saving throw at the end of each of its turns, ending the effect on itself on a success. You can also apply this poison to any piercing weapon as part of an attack.'
+          },
+          {
+            name: 'Standing Leap',
+            description: 'Your long jump is up to 25 feet and your high jump is up to 15 feet, with or without a running start.'
+          },
+          {
+            name: 'Water Dependency',
+            description: 'If you fail to immerse yourself in water for at least 1 hour during a day, you suffer one level of exhaustion at the end of that day.'
+          }
+        ]
+      }
+    },
+
+    // ============================================================
+    // RACIAL SPELLS (Spells granted by racial features)
+    // ============================================================
+
+    /**
+     * Spells granted by racial features at specific levels
+     * Format: { 'RaceName': { level: [{ spell, type, note? }] } }
+     * type: 'cantrip', 'once_per_long_rest', 'at_will'
+     */
+    RACIAL_SPELLS: {
+      'Tiefling': {
+        1: [{ spell: 'Thaumaturgy', type: 'cantrip' }],
+        3: [{ spell: 'Hellish Rebuke', type: 'once_per_long_rest', note: '2nd-level' }],
+        5: [{ spell: 'Darkness', type: 'once_per_long_rest' }]
+      },
+      // Tiefling subraces with different spells
+      'Baalzebul': {
+        1: [{ spell: 'Thaumaturgy', type: 'cantrip' }],
+        3: [{ spell: 'Ray of Sickness', type: 'once_per_long_rest' }],
+        5: [{ spell: 'Crown of Madness', type: 'once_per_long_rest' }]
+      },
+      'Dispater': {
+        1: [{ spell: 'Thaumaturgy', type: 'cantrip' }],
+        3: [{ spell: 'Disguise Self', type: 'once_per_long_rest' }],
+        5: [{ spell: 'Detect Thoughts', type: 'once_per_long_rest' }]
+      },
+      'Fierna': {
+        1: [{ spell: 'Friends', type: 'cantrip' }],
+        3: [{ spell: 'Charm Person', type: 'once_per_long_rest' }],
+        5: [{ spell: 'Suggestion', type: 'once_per_long_rest' }]
+      },
+      'Glasya': {
+        1: [{ spell: 'Minor Illusion', type: 'cantrip' }],
+        3: [{ spell: 'Disguise Self', type: 'once_per_long_rest' }],
+        5: [{ spell: 'Invisibility', type: 'once_per_long_rest' }]
+      },
+      'Levistus': {
+        1: [{ spell: 'Ray of Frost', type: 'cantrip' }],
+        3: [{ spell: 'Armor of Agathys', type: 'once_per_long_rest', note: '2nd-level' }],
+        5: [{ spell: 'Darkness', type: 'once_per_long_rest' }]
+      },
+      'Mammon': {
+        1: [{ spell: 'Mage Hand', type: 'cantrip' }],
+        3: [{ spell: "Tenser's Floating Disk", type: 'once_per_long_rest' }],
+        5: [{ spell: 'Arcane Lock', type: 'once_per_long_rest' }]
+      },
+      'Mephistopheles': {
+        1: [{ spell: 'Mage Hand', type: 'cantrip' }],
+        3: [{ spell: 'Burning Hands', type: 'once_per_long_rest', note: '2nd-level' }],
+        5: [{ spell: 'Flame Blade', type: 'once_per_long_rest' }]
+      },
+      'Zariel': {
+        1: [{ spell: 'Thaumaturgy', type: 'cantrip' }],
+        3: [{ spell: 'Searing Smite', type: 'once_per_long_rest' }],
+        5: [{ spell: 'Branding Smite', type: 'once_per_long_rest' }]
+      },
+      // Drow
+      'Dark Elf (Drow)': {
+        1: [{ spell: 'Dancing Lights', type: 'cantrip' }],
+        3: [{ spell: 'Faerie Fire', type: 'once_per_long_rest' }],
+        5: [{ spell: 'Darkness', type: 'once_per_long_rest' }]
+      },
+      // Duergar
+      'Duergar': {
+        3: [{ spell: 'Enlarge/Reduce', type: 'once_per_long_rest', note: 'enlarge only, on self' }],
+        5: [{ spell: 'Invisibility', type: 'once_per_long_rest', note: 'on self' }]
+      },
+      // High Elf
+      'High Elf': {
+        1: [{ spell: 'Wizard Cantrip (choice)', type: 'cantrip', note: 'Choose one wizard cantrip' }]
+      },
+      // Forest Gnome
+      'Forest Gnome': {
+        1: [{ spell: 'Minor Illusion', type: 'cantrip' }]
+      },
+      // Aasimar
+      'Aasimar': {
+        1: [{ spell: 'Light', type: 'cantrip' }]
+      },
+      // Triton
+      'Triton': {
+        1: [{ spell: 'Fog Cloud', type: 'once_per_long_rest' }],
+        3: [{ spell: 'Gust of Wind', type: 'once_per_long_rest' }],
+        5: [{ spell: 'Wall of Water', type: 'once_per_long_rest' }]
+      },
+      // Yuan-ti Pureblood
+      'Yuan-ti Pureblood': {
+        1: [{ spell: 'Poison Spray', type: 'cantrip' }],
+        3: [
+          { spell: 'Animal Friendship', type: 'at_will', note: 'snakes only' },
+          { spell: 'Suggestion', type: 'once_per_long_rest' }
+        ]
+      },
+      // Genasi
+      'Genasi (Fire)': {
+        1: [{ spell: 'Produce Flame', type: 'cantrip' }],
+        3: [{ spell: 'Burning Hands', type: 'once_per_long_rest' }]
+      },
+      'Genasi (Water)': {
+        1: [{ spell: 'Shape Water', type: 'cantrip' }],
+        3: [{ spell: 'Create or Destroy Water', type: 'once_per_long_rest', note: '2nd-level' }]
+      },
+      'Genasi (Air)': {
+        3: [{ spell: 'Levitate', type: 'once_per_long_rest' }]
+      },
+      'Genasi (Earth)': {
+        3: [{ spell: 'Pass Without Trace', type: 'once_per_long_rest' }]
+      },
+      // Firbolg
+      'Firbolg': {
+        1: [
+          { spell: 'Detect Magic', type: 'once_per_short_rest' },
+          { spell: 'Disguise Self', type: 'once_per_short_rest', note: 'appear up to 3 feet shorter' }
+        ]
+      },
+      // Githyanki
+      'Githyanki': {
+        1: [{ spell: 'Mage Hand', type: 'cantrip' }],
+        3: [
+          { spell: 'Jump', type: 'at_will' },
+          { spell: 'Misty Step', type: 'once_per_long_rest' }
+        ],
+        5: [{ spell: 'Nondetection', type: 'at_will', note: 'on self' }]
+      },
+      // Githzerai
+      'Githzerai': {
+        1: [{ spell: 'Mage Hand', type: 'cantrip' }],
+        3: [{ spell: 'Shield', type: 'once_per_long_rest' }],
+        5: [{ spell: 'Detect Thoughts', type: 'once_per_long_rest' }]
+      }
+    },
+
+    // ============================================================
+    // BACKGROUND DATA
+    // ============================================================
+
+    /**
+     * Background data including features, proficiencies, and equipment
+     * Based on Player's Handbook backgrounds
+     */
+    BACKGROUND_DATA: {
+      'Acolyte': {
+        feature: {
+          name: 'Shelter of the Faithful',
+          description: 'As an acolyte, you command the respect of those who share your faith, and you can perform the religious ceremonies of your deity. You and your adventuring companions can expect to receive free healing and care at a temple, shrine, or other established presence of your faith, though you must provide any material components needed for spells. Those who share your religion will support you (but only you) at a modest lifestyle. You might also have ties to a specific temple dedicated to your chosen deity or pantheon, and you have a residence there. This could be the temple where you used to serve, if you remain on good terms with it, or a temple where you have found a new home. While near your temple, you can call upon the priests for assistance, provided the assistance you ask for is not hazardous and you remain in good standing with your temple.'
+        },
+        proficiencies: {
+          skills: ['Insight', 'Religion'],
+          tools: [],
+          languages: 2
+        },
+        equipment: [
+          { name: 'Holy Symbol', quantity: 1, weight: 1, notes: 'A gift from your temple' },
+          { name: 'Prayer Book', quantity: 1, weight: 5, notes: 'Or prayer wheel' },
+          { name: 'Incense (sticks)', quantity: 5, weight: 0, notes: '' },
+          { name: 'Vestments', quantity: 1, weight: 4, notes: '' },
+          { name: 'Common Clothes', quantity: 1, weight: 3, notes: '' },
+          { name: 'Belt Pouch', quantity: 1, weight: 1, notes: 'Contains 15 gp' }
+        ],
+        startingGold: 15
+      },
+      'Charlatan': {
+        feature: {
+          name: 'False Identity',
+          description: 'You have created a second identity that includes documentation, established acquaintances, and disguises that allow you to assume that persona. Additionally, you can forge documents including official papers and personal letters, as long as you have seen an example of the kind of document or the handwriting you are trying to copy.'
+        },
+        proficiencies: {
+          skills: ['Deception', 'Sleight of Hand'],
+          tools: ['Disguise Kit', 'Forgery Kit'],
+          languages: 0
+        },
+        equipment: [
+          { name: 'Fine Clothes', quantity: 1, weight: 6, notes: '' },
+          { name: 'Disguise Kit', quantity: 1, weight: 3, notes: '' },
+          { name: 'Con Tools', quantity: 1, weight: 1, notes: 'Ten stoppered bottles filled with colored liquid, weighted dice, deck of marked cards, or signet ring of imaginary duke' },
+          { name: 'Belt Pouch', quantity: 1, weight: 1, notes: 'Contains 15 gp' }
+        ],
+        startingGold: 15
+      },
+      'Criminal': {
+        feature: {
+          name: 'Criminal Contact',
+          description: 'You have a reliable and trustworthy contact who acts as your liaison to a network of other criminals. You know how to get messages to and from your contact, even over great distances; specifically, you know the local messengers, corrupt caravan masters, and seedy sailors who can deliver messages for you.'
+        },
+        proficiencies: {
+          skills: ['Deception', 'Stealth'],
+          tools: ['Gaming Set (one of your choice)', 'Thieves\' Tools'],
+          languages: 0
+        },
+        equipment: [
+          { name: 'Crowbar', quantity: 1, weight: 5, notes: '' },
+          { name: 'Dark Common Clothes', quantity: 1, weight: 3, notes: 'Including a hood' },
+          { name: 'Belt Pouch', quantity: 1, weight: 1, notes: 'Contains 15 gp' }
+        ],
+        startingGold: 15
+      },
+      'Entertainer': {
+        feature: {
+          name: 'By Popular Demand',
+          description: 'You can always find a place to perform, usually in an inn or tavern but possibly with a circus, at a theater, or even in a noble\'s court. At such a place, you receive free lodging and food of a modest or comfortable standard (depending on the quality of the establishment), as long as you perform each night. In addition, your performance makes you something of a local figure. When strangers recognize you in a town where you have performed, they typically take a liking to you.'
+        },
+        proficiencies: {
+          skills: ['Acrobatics', 'Performance'],
+          tools: ['Disguise Kit', 'Musical Instrument (one of your choice)'],
+          languages: 0
+        },
+        equipment: [
+          { name: 'Musical Instrument', quantity: 1, weight: 3, notes: 'One of your choice' },
+          { name: 'Favor of an Admirer', quantity: 1, weight: 0, notes: 'Love letter, lock of hair, or trinket' },
+          { name: 'Costume', quantity: 1, weight: 4, notes: '' },
+          { name: 'Belt Pouch', quantity: 1, weight: 1, notes: 'Contains 15 gp' }
+        ],
+        startingGold: 15
+      },
+      'Folk Hero': {
+        feature: {
+          name: 'Rustic Hospitality',
+          description: 'Since you come from the ranks of the common folk, you fit in among them with ease. You can find a place to hide, rest, or recuperate among other commoners, unless you have shown yourself to be a danger to them. They will shield you from the law or anyone else searching for you, though they will not risk their lives for you.'
+        },
+        proficiencies: {
+          skills: ['Animal Handling', 'Survival'],
+          tools: ['Artisan\'s Tools (one of your choice)', 'Vehicles (land)'],
+          languages: 0
+        },
+        equipment: [
+          { name: 'Artisan\'s Tools', quantity: 1, weight: 5, notes: 'One set of your choice' },
+          { name: 'Shovel', quantity: 1, weight: 5, notes: '' },
+          { name: 'Iron Pot', quantity: 1, weight: 10, notes: '' },
+          { name: 'Common Clothes', quantity: 1, weight: 3, notes: '' },
+          { name: 'Belt Pouch', quantity: 1, weight: 1, notes: 'Contains 10 gp' }
+        ],
+        startingGold: 10
+      },
+      'Guild Artisan': {
+        feature: {
+          name: 'Guild Membership',
+          description: 'As an established and respected member of a guild, you can rely on certain benefits that membership provides. Your fellow guild members will provide you with lodging and food if necessary, and pay for your funeral if needed. In some cities and towns, a guildhall offers a central place to meet other members of your profession, which can be a good place to meet potential patrons, allies, or hirelings. Guilds often wield tremendous political power. If you are accused of a crime, your guild will support you if a good case can be made for your innocence or the crime is justifiable. You can also gain access to powerful political figures through the guild, if you are a member in good standing. Such connections might require the donation of money or magic items to the guild\'s coffers. You must pay dues of 5 gp per month to the guild. If you miss payments, you must make up back dues to remain in the guild\'s good graces.'
+        },
+        proficiencies: {
+          skills: ['Insight', 'Persuasion'],
+          tools: ['Artisan\'s Tools (one of your choice)'],
+          languages: 1
+        },
+        equipment: [
+          { name: 'Artisan\'s Tools', quantity: 1, weight: 5, notes: 'One set of your choice' },
+          { name: 'Letter of Introduction', quantity: 1, weight: 0, notes: 'From your guild' },
+          { name: 'Traveler\'s Clothes', quantity: 1, weight: 4, notes: '' },
+          { name: 'Belt Pouch', quantity: 1, weight: 1, notes: 'Contains 15 gp' }
+        ],
+        startingGold: 15
+      },
+      'Hermit': {
+        feature: {
+          name: 'Discovery',
+          description: 'The quiet seclusion of your extended hermitage gave you access to a unique and powerful discovery. The exact nature of this revelation depends on the nature of your seclusion. It might be a great truth about the cosmos, the deities, the powerful beings of the outer planes, or the forces of nature. It could be a site that no one else has ever seen. You might have uncovered a fact that has long been forgotten, or unearthed some relic of the past that could rewrite history. It might be information that would be damaging to the people who consigned you to exile, and hence the reason for your return to society. Work with your DM to determine the details of your discovery and its impact on the campaign.'
+        },
+        proficiencies: {
+          skills: ['Medicine', 'Religion'],
+          tools: ['Herbalism Kit'],
+          languages: 1
+        },
+        equipment: [
+          { name: 'Scroll Case', quantity: 1, weight: 1, notes: 'Stuffed full of notes from your studies or prayers' },
+          { name: 'Winter Blanket', quantity: 1, weight: 3, notes: '' },
+          { name: 'Common Clothes', quantity: 1, weight: 3, notes: '' },
+          { name: 'Herbalism Kit', quantity: 1, weight: 3, notes: '' },
+          { name: 'Belt Pouch', quantity: 1, weight: 1, notes: 'Contains 5 gp' }
+        ],
+        startingGold: 5
+      },
+      'Noble': {
+        feature: {
+          name: 'Position of Privilege',
+          description: 'Thanks to your noble birth, people are inclined to think the best of you. You are welcome in high society, and people assume you have the right to be wherever you are. The common folk make every effort to accommodate you and avoid your displeasure, and other people of high birth treat you as a member of the same social sphere. You can secure an audience with a local noble if you need to.'
+        },
+        proficiencies: {
+          skills: ['History', 'Persuasion'],
+          tools: ['Gaming Set (one of your choice)'],
+          languages: 1
+        },
+        equipment: [
+          { name: 'Fine Clothes', quantity: 1, weight: 6, notes: '' },
+          { name: 'Signet Ring', quantity: 1, weight: 0, notes: '' },
+          { name: 'Scroll of Pedigree', quantity: 1, weight: 0, notes: '' },
+          { name: 'Purse', quantity: 1, weight: 1, notes: 'Contains 25 gp' }
+        ],
+        startingGold: 25
+      },
+      'Outlander': {
+        feature: {
+          name: 'Wanderer',
+          description: 'You have an excellent memory for maps and geography, and you can always recall the general layout of terrain, settlements, and other features around you. In addition, you can find food and fresh water for yourself and up to five other people each day, provided that the land offers berries, small game, water, and so forth.'
+        },
+        proficiencies: {
+          skills: ['Athletics', 'Survival'],
+          tools: ['Musical Instrument (one of your choice)'],
+          languages: 1
+        },
+        equipment: [
+          { name: 'Staff', quantity: 1, weight: 4, notes: '' },
+          { name: 'Hunting Trap', quantity: 1, weight: 25, notes: '' },
+          { name: 'Trophy', quantity: 1, weight: 0, notes: 'From an animal you killed' },
+          { name: 'Traveler\'s Clothes', quantity: 1, weight: 4, notes: '' },
+          { name: 'Belt Pouch', quantity: 1, weight: 1, notes: 'Contains 10 gp' }
+        ],
+        startingGold: 10
+      },
+      'Sage': {
+        feature: {
+          name: 'Researcher',
+          description: 'When you attempt to learn or recall a piece of lore, if you do not know that information, you often know where and from whom you can obtain it. Usually, this information comes from a library, scriptorium, university, or a sage or other learned person or creature. Your DM might rule that the knowledge you seek is secreted away in an almost inaccessible place, or that it simply cannot be found. Unearthing the deepest secrets of the multiverse can require an adventure or even a whole campaign.'
+        },
+        proficiencies: {
+          skills: ['Arcana', 'History'],
+          tools: [],
+          languages: 2
+        },
+        equipment: [
+          { name: 'Bottle of Black Ink', quantity: 1, weight: 0, notes: '' },
+          { name: 'Quill', quantity: 1, weight: 0, notes: '' },
+          { name: 'Small Knife', quantity: 1, weight: 0.5, notes: '' },
+          { name: 'Letter from Dead Colleague', quantity: 1, weight: 0, notes: 'With a question you have not yet been able to answer' },
+          { name: 'Common Clothes', quantity: 1, weight: 3, notes: '' },
+          { name: 'Belt Pouch', quantity: 1, weight: 1, notes: 'Contains 10 gp' }
+        ],
+        startingGold: 10
+      },
+      'Sailor': {
+        feature: {
+          name: 'Ship\'s Passage',
+          description: 'When you need to, you can secure free passage on a sailing ship for yourself and your adventuring companions. You might sail on the ship you served on, or another ship you have good relations with (perhaps one captained by a former crewmate). Because you\'re calling in a favor, you can\'t be certain of a schedule or route that will meet your every need. Your Dungeon Master will determine how long it takes to get where you need to go. In return for your free passage, you and your companions are expected to assist the crew during the voyage.'
+        },
+        proficiencies: {
+          skills: ['Athletics', 'Perception'],
+          tools: ['Navigator\'s Tools', 'Vehicles (water)'],
+          languages: 0
+        },
+        equipment: [
+          { name: 'Belaying Pin (club)', quantity: 1, weight: 2, notes: '' },
+          { name: 'Silk Rope (50 feet)', quantity: 1, weight: 5, notes: '' },
+          { name: 'Lucky Charm', quantity: 1, weight: 0, notes: 'Rabbit foot, small stone with hole, etc.' },
+          { name: 'Common Clothes', quantity: 1, weight: 3, notes: '' },
+          { name: 'Belt Pouch', quantity: 1, weight: 1, notes: 'Contains 10 gp' }
+        ],
+        startingGold: 10
+      },
+      'Soldier': {
+        feature: {
+          name: 'Military Rank',
+          description: 'You have a military rank from your career as a soldier. Soldiers loyal to your former military organization still recognize your authority and influence, and they defer to you if they are of a lower rank. You can invoke your rank to exert influence over other soldiers and requisition simple equipment or horses for temporary use. You can also usually gain access to friendly military encampments and fortresses where your rank is recognized.'
+        },
+        proficiencies: {
+          skills: ['Athletics', 'Intimidation'],
+          tools: ['Gaming Set (one of your choice)', 'Vehicles (land)'],
+          languages: 0
+        },
+        equipment: [
+          { name: 'Insignia of Rank', quantity: 1, weight: 0, notes: '' },
+          { name: 'Trophy from Fallen Enemy', quantity: 1, weight: 1, notes: 'Dagger, broken blade, or piece of a banner' },
+          { name: 'Bone Dice Set', quantity: 1, weight: 0, notes: 'Or deck of cards' },
+          { name: 'Common Clothes', quantity: 1, weight: 3, notes: '' },
+          { name: 'Belt Pouch', quantity: 1, weight: 1, notes: 'Contains 10 gp' }
+        ],
+        startingGold: 10
+      },
+      'Urchin': {
+        feature: {
+          name: 'City Secrets',
+          description: 'You know the secret patterns and flow to cities and can find passages through the urban sprawl that others would miss. When you are not in combat, you (and companions you lead) can travel between any two locations in the city twice as fast as your speed would normally allow.'
+        },
+        proficiencies: {
+          skills: ['Sleight of Hand', 'Stealth'],
+          tools: ['Disguise Kit', 'Thieves\' Tools'],
+          languages: 0
+        },
+        equipment: [
+          { name: 'Small Knife', quantity: 1, weight: 0.5, notes: '' },
+          { name: 'Map of the City', quantity: 1, weight: 0, notes: 'You grew up in' },
+          { name: 'Pet Mouse', quantity: 1, weight: 0, notes: '' },
+          { name: 'Token of Parents', quantity: 1, weight: 0, notes: 'A locket or token to remember your parents by' },
+          { name: 'Common Clothes', quantity: 1, weight: 3, notes: '' },
+          { name: 'Belt Pouch', quantity: 1, weight: 1, notes: 'Contains 10 gp' }
+        ],
+        startingGold: 10
+      }
+    },
+
+    // ============================================================
+    // DEFAULT CLASS STARTING EQUIPMENT
+    // ============================================================
+
+    /**
+     * Default starting equipment loadouts for each class
+     * Simplified from the PHB choices - gives a sensible default for quick character creation
+     */
+    DEFAULT_CLASS_EQUIPMENT: {
+      'Barbarian': {
+        weapons: [
+          { name: 'Greataxe', quantity: 1, weight: 7, notes: '1d12 slashing, heavy, two-handed' },
+          { name: 'Handaxe', quantity: 2, weight: 2, notes: '1d6 slashing, light, thrown (20/60)' },
+          { name: 'Javelin', quantity: 4, weight: 2, notes: '1d6 piercing, thrown (30/120)' }
+        ],
+        armor: [],
+        gear: [
+          { name: 'Explorer\'s Pack', quantity: 1, weight: 59, notes: 'Backpack, bedroll, mess kit, tinderbox, torches (10), rations (10 days), waterskin, hempen rope (50 ft)' }
+        ]
+      },
+      'Bard': {
+        weapons: [
+          { name: 'Rapier', quantity: 1, weight: 2, notes: '1d8 piercing, finesse' },
+          { name: 'Dagger', quantity: 1, weight: 1, notes: '1d4 piercing, finesse, light, thrown (20/60)' }
+        ],
+        armor: [
+          { name: 'Leather Armor', quantity: 1, weight: 10, notes: 'AC 11 + Dex modifier', equipped: true }
+        ],
+        gear: [
+          { name: 'Lute', quantity: 1, weight: 2, notes: 'Musical instrument' },
+          { name: 'Diplomat\'s Pack', quantity: 1, weight: 36, notes: 'Chest, 2 cases for maps/scrolls, fine clothes, bottle of ink, ink pen, lamp, 2 flasks of oil, 5 sheets of paper, vial of perfume, sealing wax, soap' }
+        ]
+      },
+      'Cleric': {
+        weapons: [
+          { name: 'Mace', quantity: 1, weight: 4, notes: '1d6 bludgeoning' },
+          { name: 'Light Crossbow', quantity: 1, weight: 5, notes: '1d8 piercing, ammunition (80/320), loading, two-handed' },
+          { name: 'Crossbow Bolts', quantity: 20, weight: 0.075, notes: '' }
+        ],
+        armor: [
+          { name: 'Scale Mail', quantity: 1, weight: 45, notes: 'AC 14 + Dex modifier (max 2), disadvantage on Stealth', equipped: true },
+          { name: 'Shield', quantity: 1, weight: 6, notes: '+2 AC', equipped: true }
+        ],
+        gear: [
+          { name: 'Holy Symbol', quantity: 1, weight: 1, notes: 'Divine focus' },
+          { name: 'Priest\'s Pack', quantity: 1, weight: 24, notes: 'Backpack, blanket, candles (10), tinderbox, alms box, incense (2 blocks), censer, vestments, rations (2 days), waterskin' }
+        ]
+      },
+      'Druid': {
+        weapons: [
+          { name: 'Wooden Shield', quantity: 1, weight: 6, notes: '+2 AC', equipped: true },
+          { name: 'Scimitar', quantity: 1, weight: 3, notes: '1d6 slashing, finesse, light' }
+        ],
+        armor: [
+          { name: 'Leather Armor', quantity: 1, weight: 10, notes: 'AC 11 + Dex modifier', equipped: true }
+        ],
+        gear: [
+          { name: 'Druidic Focus', quantity: 1, weight: 0, notes: 'Sprig of mistletoe' },
+          { name: 'Explorer\'s Pack', quantity: 1, weight: 59, notes: 'Backpack, bedroll, mess kit, tinderbox, torches (10), rations (10 days), waterskin, hempen rope (50 ft)' }
+        ]
+      },
+      'Fighter': {
+        weapons: [
+          { name: 'Longsword', quantity: 1, weight: 3, notes: '1d8 slashing, versatile (1d10)' },
+          { name: 'Longbow', quantity: 1, weight: 2, notes: '1d8 piercing, ammunition (150/600), heavy, two-handed' },
+          { name: 'Arrows', quantity: 20, weight: 0.05, notes: '' }
+        ],
+        armor: [
+          { name: 'Chain Mail', quantity: 1, weight: 55, notes: 'AC 16, disadvantage on Stealth', equipped: true },
+          { name: 'Shield', quantity: 1, weight: 6, notes: '+2 AC', equipped: true }
+        ],
+        gear: [
+          { name: 'Dungeoneer\'s Pack', quantity: 1, weight: 61.5, notes: 'Backpack, crowbar, hammer, pitons (10), torches (10), tinderbox, rations (10 days), waterskin, hempen rope (50 ft)' }
+        ]
+      },
+      'Monk': {
+        weapons: [
+          { name: 'Shortsword', quantity: 1, weight: 2, notes: '1d6 piercing, finesse, light' },
+          { name: 'Dart', quantity: 10, weight: 0.25, notes: '1d4 piercing, finesse, thrown (20/60)' }
+        ],
+        armor: [],
+        gear: [
+          { name: 'Dungeoneer\'s Pack', quantity: 1, weight: 61.5, notes: 'Backpack, crowbar, hammer, pitons (10), torches (10), tinderbox, rations (10 days), waterskin, hempen rope (50 ft)' }
+        ]
+      },
+      'Paladin': {
+        weapons: [
+          { name: 'Longsword', quantity: 1, weight: 3, notes: '1d8 slashing, versatile (1d10)' },
+          { name: 'Javelin', quantity: 5, weight: 2, notes: '1d6 piercing, thrown (30/120)' }
+        ],
+        armor: [
+          { name: 'Chain Mail', quantity: 1, weight: 55, notes: 'AC 16, disadvantage on Stealth', equipped: true },
+          { name: 'Shield', quantity: 1, weight: 6, notes: '+2 AC', equipped: true }
+        ],
+        gear: [
+          { name: 'Holy Symbol', quantity: 1, weight: 1, notes: 'Divine focus' },
+          { name: 'Priest\'s Pack', quantity: 1, weight: 24, notes: 'Backpack, blanket, candles (10), tinderbox, alms box, incense (2 blocks), censer, vestments, rations (2 days), waterskin' }
+        ]
+      },
+      'Ranger': {
+        weapons: [
+          { name: 'Shortsword', quantity: 2, weight: 2, notes: '1d6 piercing, finesse, light' },
+          { name: 'Longbow', quantity: 1, weight: 2, notes: '1d8 piercing, ammunition (150/600), heavy, two-handed' },
+          { name: 'Arrows', quantity: 20, weight: 0.05, notes: '' }
+        ],
+        armor: [
+          { name: 'Scale Mail', quantity: 1, weight: 45, notes: 'AC 14 + Dex modifier (max 2), disadvantage on Stealth', equipped: true }
+        ],
+        gear: [
+          { name: 'Explorer\'s Pack', quantity: 1, weight: 59, notes: 'Backpack, bedroll, mess kit, tinderbox, torches (10), rations (10 days), waterskin, hempen rope (50 ft)' }
+        ]
+      },
+      'Rogue': {
+        weapons: [
+          { name: 'Rapier', quantity: 1, weight: 2, notes: '1d8 piercing, finesse' },
+          { name: 'Shortbow', quantity: 1, weight: 2, notes: '1d6 piercing, ammunition (80/320), two-handed' },
+          { name: 'Arrows', quantity: 20, weight: 0.05, notes: '' },
+          { name: 'Dagger', quantity: 2, weight: 1, notes: '1d4 piercing, finesse, light, thrown (20/60)' }
+        ],
+        armor: [
+          { name: 'Leather Armor', quantity: 1, weight: 10, notes: 'AC 11 + Dex modifier', equipped: true }
+        ],
+        gear: [
+          { name: 'Thieves\' Tools', quantity: 1, weight: 1, notes: '' },
+          { name: 'Burglar\'s Pack', quantity: 1, weight: 44.5, notes: 'Backpack, bag of 1000 ball bearings, 10 feet of string, bell, 5 candles, crowbar, hammer, 10 pitons, hooded lantern, 2 flasks of oil, 5 days rations, tinderbox, waterskin, 50 feet of hempen rope' }
+        ]
+      },
+      'Sorcerer': {
+        weapons: [
+          { name: 'Light Crossbow', quantity: 1, weight: 5, notes: '1d8 piercing, ammunition (80/320), loading, two-handed' },
+          { name: 'Crossbow Bolts', quantity: 20, weight: 0.075, notes: '' },
+          { name: 'Dagger', quantity: 2, weight: 1, notes: '1d4 piercing, finesse, light, thrown (20/60)' }
+        ],
+        armor: [],
+        gear: [
+          { name: 'Component Pouch', quantity: 1, weight: 2, notes: 'Arcane focus' },
+          { name: 'Dungeoneer\'s Pack', quantity: 1, weight: 61.5, notes: 'Backpack, crowbar, hammer, pitons (10), torches (10), tinderbox, rations (10 days), waterskin, hempen rope (50 ft)' }
+        ]
+      },
+      'Warlock': {
+        weapons: [
+          { name: 'Light Crossbow', quantity: 1, weight: 5, notes: '1d8 piercing, ammunition (80/320), loading, two-handed' },
+          { name: 'Crossbow Bolts', quantity: 20, weight: 0.075, notes: '' },
+          { name: 'Dagger', quantity: 2, weight: 1, notes: '1d4 piercing, finesse, light, thrown (20/60)' }
+        ],
+        armor: [
+          { name: 'Leather Armor', quantity: 1, weight: 10, notes: 'AC 11 + Dex modifier', equipped: true }
+        ],
+        gear: [
+          { name: 'Arcane Focus', quantity: 1, weight: 0, notes: 'Pact item or component pouch' },
+          { name: 'Scholar\'s Pack', quantity: 1, weight: 10, notes: 'Backpack, book of lore, bottle of ink, ink pen, 10 sheets of parchment, little bag of sand, small knife' }
+        ]
+      },
+      'Wizard': {
+        weapons: [
+          { name: 'Quarterstaff', quantity: 1, weight: 4, notes: '1d6 bludgeoning, versatile (1d8)' },
+          { name: 'Dagger', quantity: 1, weight: 1, notes: '1d4 piercing, finesse, light, thrown (20/60)' }
+        ],
+        armor: [],
+        gear: [
+          { name: 'Component Pouch', quantity: 1, weight: 2, notes: 'Arcane focus' },
+          { name: 'Spellbook', quantity: 1, weight: 3, notes: 'Contains your wizard spells' },
+          { name: 'Scholar\'s Pack', quantity: 1, weight: 10, notes: 'Backpack, book of lore, bottle of ink, ink pen, 10 sheets of parchment, little bag of sand, small knife' }
+        ]
+      },
+      'Artificer': {
+        weapons: [
+          { name: 'Light Crossbow', quantity: 1, weight: 5, notes: '1d8 piercing, ammunition (80/320), loading, two-handed' },
+          { name: 'Crossbow Bolts', quantity: 20, weight: 0.075, notes: '' },
+          { name: 'Light Hammer', quantity: 1, weight: 2, notes: '1d4 bludgeoning, light, thrown (20/60)' }
+        ],
+        armor: [
+          { name: 'Scale Mail', quantity: 1, weight: 45, notes: 'AC 14 + Dex modifier (max 2), disadvantage on Stealth', equipped: true },
+          { name: 'Shield', quantity: 1, weight: 6, notes: '+2 AC', equipped: true }
+        ],
+        gear: [
+          { name: 'Thieves\' Tools', quantity: 1, weight: 1, notes: 'Required for Artificer spellcasting' },
+          { name: 'Tinker\'s Tools', quantity: 1, weight: 10, notes: 'Artisan tools' },
+          { name: 'Dungeoneer\'s Pack', quantity: 1, weight: 61.5, notes: 'Backpack, crowbar, hammer, pitons (10), torches (10), tinderbox, rations (10 days), waterskin, hempen rope (50 ft)' }
+        ]
+      }
     },
 
     // ============================================================
@@ -3221,6 +6010,291 @@ window.LevelUpData = (function() {
     },
 
     /**
+     * Get racial spells for a race up to a given level
+     * @param {string} race - Character's race (base race like "Tiefling")
+     * @param {string} subrace - Character's subrace (optional, like "Asmodeus")
+     * @param {number} level - Character's current level
+     * @returns {Array} - Array of spell objects { spell, type, note?, level }
+     */
+    getRacialSpells(race, subrace, level) {
+      const spells = [];
+
+      // Check subrace first (more specific), then base race
+      const racesToCheck = [];
+      if (subrace) {
+        racesToCheck.push(subrace);
+      }
+      if (race) {
+        racesToCheck.push(race);
+      }
+
+      // Track which spells we've added to avoid duplicates
+      const addedSpells = new Set();
+
+      for (const raceName of racesToCheck) {
+        const racialSpellData = this.RACIAL_SPELLS[raceName];
+        if (racialSpellData) {
+          for (let lvl = 1; lvl <= level; lvl++) {
+            const levelSpells = racialSpellData[lvl];
+            if (levelSpells) {
+              levelSpells.forEach(spellEntry => {
+                if (!addedSpells.has(spellEntry.spell)) {
+                  spells.push({
+                    ...spellEntry,
+                    level: lvl,
+                    source: raceName
+                  });
+                  addedSpells.add(spellEntry.spell);
+                }
+              });
+            }
+          }
+          // If we found spells for the subrace, don't check base race (subrace overrides)
+          if (spells.length > 0 && subrace && raceName === subrace) {
+            break;
+          }
+        }
+      }
+
+      return spells;
+    },
+
+    /**
+     * Get racial spells gained at a specific level
+     * @param {string} race - Character's race
+     * @param {string} subrace - Character's subrace (optional)
+     * @param {number} level - The specific level to check
+     * @returns {Array} - Array of spell objects gained at that level
+     */
+    getRacialSpellsAtLevel(race, subrace, level) {
+      const spells = [];
+
+      // Check subrace first, then base race
+      const racesToCheck = [];
+      if (subrace) {
+        racesToCheck.push(subrace);
+      }
+      if (race) {
+        racesToCheck.push(race);
+      }
+
+      for (const raceName of racesToCheck) {
+        const racialSpellData = this.RACIAL_SPELLS[raceName];
+        if (racialSpellData && racialSpellData[level]) {
+          racialSpellData[level].forEach(spellEntry => {
+            spells.push({
+              ...spellEntry,
+              level: level,
+              source: raceName
+            });
+          });
+          // If subrace has spells at this level, don't check base race
+          if (spells.length > 0 && subrace && raceName === subrace) {
+            break;
+          }
+        }
+      }
+
+      return spells;
+    },
+
+    /**
+     * Get base racial features for a race (level 1 features)
+     * @param {string} race - Character's race
+     * @returns {Object|null} - Base racial features data or null
+     */
+    getBaseRacialFeatures(race) {
+      if (!race) return null;
+      return this.RACIAL_BASE_FEATURES[race] || null;
+    },
+
+    /**
+     * Get comprehensive racial features for a character including base, subrace, level-gated, and scaling features
+     * @param {string} race - Character's race (e.g., "Elf", "Dwarf")
+     * @param {string} subrace - Character's subrace (e.g., "High Elf", "Hill Dwarf") - optional
+     * @param {number} level - Character's current level
+     * @returns {Object} - Complete racial feature data
+     */
+    getFullRacialFeatures(race, subrace, level) {
+      const result = {
+        race: race,
+        subrace: subrace || null,
+        size: 'Medium',
+        speed: 30,
+        languages: [],
+        traits: [],
+        levelGatedFeatures: [],
+        scalingFeature: null
+      };
+
+      if (!race) return result;
+
+      // Get base racial features
+      const baseData = this.RACIAL_BASE_FEATURES[race];
+      if (baseData) {
+        result.size = baseData.size || 'Medium';
+        result.speed = baseData.speed || 30;
+        result.languages = baseData.languages || [];
+
+        // Add base race traits
+        if (baseData.traits) {
+          baseData.traits.forEach(trait => {
+            result.traits.push({
+              ...trait,
+              source: race
+            });
+          });
+        }
+
+        // Add subrace traits if applicable
+        if (subrace && baseData.subraces && baseData.subraces[subrace]) {
+          const subraceData = baseData.subraces[subrace];
+
+          // Override speed if subrace specifies different speed
+          if (subraceData.speed) {
+            result.speed = subraceData.speed;
+          }
+
+          // Add subrace traits
+          if (subraceData.traits) {
+            subraceData.traits.forEach(trait => {
+              result.traits.push({
+                ...trait,
+                source: subrace
+              });
+            });
+          }
+
+          // Handle Dragonborn ancestry (special case)
+          if (subraceData.breathWeapon) {
+            result.traits.push({
+              name: `Draconic Ancestry: ${subrace}`,
+              description: `Breath Weapon: ${subraceData.breathWeapon}. Damage Resistance: ${subraceData.resistance}.`,
+              source: subrace
+            });
+          }
+
+          // Handle subrace notes (e.g., Asmodeus Tiefling)
+          if (subraceData.note) {
+            result.traits.push({
+              name: `${subrace} Bloodline`,
+              description: subraceData.note,
+              source: subrace
+            });
+          }
+        }
+      }
+
+      // Get level-gated features
+      // Check both the base race and subrace-specific entries in RACIAL_FEATURES
+      const racesToCheck = [race];
+      if (subrace) {
+        // For races like "Protector Aasimar" or "Duergar" that have their own entries
+        racesToCheck.push(subrace);
+        racesToCheck.push(`${subrace} ${race}`);
+        racesToCheck.push(`${race} (${subrace})`);
+      }
+
+      racesToCheck.forEach(raceName => {
+        const levelFeatures = this.RACIAL_FEATURES[raceName];
+        if (levelFeatures) {
+          for (let lvl = 1; lvl <= level; lvl++) {
+            if (levelFeatures[lvl]) {
+              result.levelGatedFeatures.push({
+                level: lvl,
+                ...levelFeatures[lvl],
+                source: raceName
+              });
+            }
+          }
+        }
+      });
+
+      // Get scaling feature
+      const scalingFeature = this.RACIAL_SCALING_FEATURES[race];
+      if (scalingFeature) {
+        result.scalingFeature = {
+          ...scalingFeature,
+          currentValue: this.getScalingFeatureValue(race, level)
+        };
+      }
+
+      return result;
+    },
+
+    /**
+     * Get the current value of a scaling racial feature based on level
+     * @param {string} race - Character's race
+     * @param {number} level - Character's current level
+     * @returns {string|null} - Current scaling value or null
+     */
+    getScalingFeatureValue(race, level) {
+      const scalingFeature = this.RACIAL_SCALING_FEATURES[race];
+      if (!scalingFeature || !scalingFeature.scaling) return null;
+
+      for (const entry of scalingFeature.scaling) {
+        const [min, max] = entry.levels.split('-').map(n => parseInt(n, 10));
+        if (level >= min && level <= max) {
+          return entry.value;
+        }
+      }
+
+      return null;
+    },
+
+    /**
+     * Format racial features as markdown text for Features & Feats section
+     * @param {string} race - Character's race
+     * @param {string} subrace - Character's subrace (optional)
+     * @param {number} level - Character's current level
+     * @returns {string} - Formatted markdown string
+     */
+    formatRacialFeaturesAsText(race, subrace, level) {
+      const features = this.getFullRacialFeatures(race, subrace, level);
+      const lines = [];
+
+      // Header
+      const raceName = subrace ? `${subrace} (${race})` : race;
+      lines.push(`**${raceName} Racial Features:**`);
+      lines.push(`- Size: ${features.size}`);
+      lines.push(`- Speed: ${features.speed} ft.`);
+      lines.push(`- Languages: ${features.languages.join(', ')}`);
+      lines.push('');
+
+      // Base traits
+      if (features.traits.length > 0) {
+        lines.push('**Traits:**');
+        features.traits.forEach(trait => {
+          lines.push(`- **${trait.name}:** ${trait.description}`);
+        });
+      }
+
+      // Level-gated features (only show ones the character has unlocked)
+      if (features.levelGatedFeatures.length > 0) {
+        lines.push('');
+        lines.push('**Level-Unlocked Features:**');
+        features.levelGatedFeatures.forEach(feat => {
+          lines.push(`- **${feat.name} (Level ${feat.level}):** ${feat.description}`);
+        });
+      }
+
+      // Scaling feature (if any)
+      if (features.scalingFeature) {
+        lines.push('');
+        lines.push('**Scaling Feature:**');
+        lines.push(`- **${features.scalingFeature.name}:** ${features.scalingFeature.description}`);
+        if (features.scalingFeature.currentValue) {
+          lines.push(`  - Current: ${features.scalingFeature.currentValue}`);
+        }
+        if (features.scalingFeature.note) {
+          lines.push(`  - Note: ${features.scalingFeature.note}`);
+        }
+      }
+
+      return lines.join('\n');
+    },
+
+    /**
      * Get the number of ASI/Feat opportunities a character should have at a given level
      * @param {string} className - The character's class
      * @param {number} level - The character's level
@@ -3356,6 +6430,1155 @@ window.LevelUpData = (function() {
       }
 
       return result;
+    },
+
+    // ============================================================
+    // BACKGROUND HELPERS
+    // ============================================================
+
+    /**
+     * Get background data by name
+     * @param {string} backgroundName - The background name
+     * @returns {Object|null} - Background data or null if not found
+     */
+    getBackgroundData(backgroundName) {
+      if (!backgroundName) return null;
+      return this.BACKGROUND_DATA[backgroundName] || null;
+    },
+
+    /**
+     * Get background feature
+     * @param {string} backgroundName - The background name
+     * @returns {Object|null} - Feature object { name, description } or null
+     */
+    getBackgroundFeature(backgroundName) {
+      const data = this.getBackgroundData(backgroundName);
+      return data ? data.feature : null;
+    },
+
+    /**
+     * Get background equipment as inventory-ready items
+     * @param {string} backgroundName - The background name
+     * @returns {Array} - Array of inventory items { name, quantity, weight, notes, equipped, attuned }
+     */
+    getBackgroundEquipment(backgroundName) {
+      const data = this.getBackgroundData(backgroundName);
+      if (!data || !data.equipment) return [];
+
+      return data.equipment.map(item => ({
+        name: item.name,
+        quantity: item.quantity || 1,
+        weight: item.weight || 0,
+        notes: item.notes || '',
+        equipped: false,
+        attuned: false
+      }));
+    },
+
+    /**
+     * Get background proficiencies
+     * @param {string} backgroundName - The background name
+     * @returns {Object} - Proficiencies { skills: [], tools: [], languages: number }
+     */
+    getBackgroundProficiencies(backgroundName) {
+      const data = this.getBackgroundData(backgroundName);
+      if (!data || !data.proficiencies) {
+        return { skills: [], tools: [], languages: 0 };
+      }
+      return data.proficiencies;
+    },
+
+    /**
+     * Get background starting gold
+     * @param {string} backgroundName - The background name
+     * @returns {number} - Starting gold amount
+     */
+    getBackgroundStartingGold(backgroundName) {
+      const data = this.getBackgroundData(backgroundName);
+      return data ? (data.startingGold || 0) : 0;
+    },
+
+    /**
+     * Format background feature as text for Features & Feats section
+     * @param {string} backgroundName - The background name
+     * @returns {string} - Markdown-formatted feature text
+     */
+    formatBackgroundFeatureAsText(backgroundName) {
+      const feature = this.getBackgroundFeature(backgroundName);
+      if (!feature) return '';
+
+      const lines = [];
+      lines.push(`**${backgroundName} Background Feature:**`);
+      lines.push(`**${feature.name}:** ${feature.description}`);
+      return lines.join('\n');
+    },
+
+    /**
+     * Get list of all available backgrounds
+     * @returns {Array<string>} - Array of background names
+     */
+    getAvailableBackgrounds() {
+      return Object.keys(this.BACKGROUND_DATA);
+    },
+
+    // ============================================================
+    // STARTING EQUIPMENT HELPERS
+    // ============================================================
+
+    /**
+     * Get class starting equipment data
+     * @param {string} className - The class name
+     * @returns {Object|null} - Equipment data { weapons: [], armor: [], gear: [] } or null
+     */
+    getClassEquipmentData(className) {
+      if (!className) return null;
+      return this.DEFAULT_CLASS_EQUIPMENT[className] || null;
+    },
+
+    /**
+     * Get all starting equipment for a class as inventory-ready items
+     * @param {string} className - The class name
+     * @returns {Array} - Array of inventory items { name, quantity, weight, notes, equipped, attuned }
+     */
+    getStartingEquipment(className) {
+      const data = this.getClassEquipmentData(className);
+      if (!data) return [];
+
+      const items = [];
+
+      // Add weapons
+      if (data.weapons) {
+        data.weapons.forEach(item => {
+          items.push({
+            name: item.name,
+            quantity: item.quantity || 1,
+            weight: item.weight || 0,
+            notes: item.notes || '',
+            equipped: item.equipped || false,
+            attuned: false
+          });
+        });
+      }
+
+      // Add armor
+      if (data.armor) {
+        data.armor.forEach(item => {
+          items.push({
+            name: item.name,
+            quantity: item.quantity || 1,
+            weight: item.weight || 0,
+            notes: item.notes || '',
+            equipped: item.equipped || false,
+            attuned: false
+          });
+        });
+      }
+
+      // Add gear
+      if (data.gear) {
+        data.gear.forEach(item => {
+          items.push({
+            name: item.name,
+            quantity: item.quantity || 1,
+            weight: item.weight || 0,
+            notes: item.notes || '',
+            equipped: false,
+            attuned: false
+          });
+        });
+      }
+
+      return items;
+    },
+
+    /**
+     * Get combined starting equipment from class and background
+     * @param {string} className - The class name
+     * @param {string} backgroundName - The background name
+     * @returns {Array} - Combined array of inventory items
+     */
+    getAllStartingEquipment(className, backgroundName) {
+      const classEquipment = this.getStartingEquipment(className);
+      const backgroundEquipment = this.getBackgroundEquipment(backgroundName);
+
+      // Combine both, class equipment first
+      return [...classEquipment, ...backgroundEquipment];
+    },
+
+    // ============================================================
+    // WILD SHAPE BEAST FORMS DATA
+    // ============================================================
+
+    /**
+     * Beast forms available for Wild Shape
+     * Organized by Challenge Rating (CR)
+     * Druids unlock forms based on level:
+     * - Level 2: CR 1/4, no flying/swimming
+     * - Level 4: CR 1/2, no flying
+     * - Level 8: CR 1
+     * Moon Druids get better forms earlier (handled in helper functions)
+     */
+    BEAST_FORMS: {
+      // CR 0 Beasts
+      'CR0': [
+        {
+          name: 'Cat',
+          cr: '0',
+          ac: 12,
+          hp: 2,
+          speed: '40 ft., climb 30 ft.',
+          str: 3, dex: 15, con: 10, int: 3, wis: 12, cha: 7,
+          skills: 'Perception +3, Stealth +4',
+          senses: 'Darkvision 30 ft.',
+          attacks: 'Claws: +0, 1 slashing',
+          traits: 'Keen Smell (advantage on Perception using smell)'
+        },
+        {
+          name: 'Rat',
+          cr: '0',
+          ac: 10,
+          hp: 1,
+          speed: '20 ft.',
+          str: 2, dex: 11, con: 9, int: 2, wis: 10, cha: 4,
+          skills: '',
+          senses: 'Darkvision 30 ft.',
+          attacks: 'Bite: +0, 1 piercing',
+          traits: 'Keen Smell (advantage on Perception using smell)'
+        },
+        {
+          name: 'Spider',
+          cr: '0',
+          ac: 12,
+          hp: 1,
+          speed: '20 ft., climb 20 ft.',
+          str: 2, dex: 14, con: 8, int: 1, wis: 10, cha: 2,
+          skills: 'Stealth +4',
+          senses: 'Darkvision 30 ft.',
+          attacks: 'Bite: +4, 1 piercing + DC 9 CON or 1d4 poison',
+          traits: 'Spider Climb, Web Sense, Web Walker'
+        },
+        {
+          name: 'Frog',
+          cr: '0',
+          ac: 11,
+          hp: 1,
+          speed: '20 ft., swim 20 ft.',
+          str: 1, dex: 13, con: 8, int: 1, wis: 8, cha: 3,
+          skills: 'Perception +1, Stealth +3',
+          senses: 'Darkvision 30 ft.',
+          attacks: 'None',
+          traits: 'Amphibious, Standing Leap (10 ft. long, 5 ft. high)',
+          hasSwimSpeed: true
+        },
+        {
+          name: 'Hawk',
+          cr: '0',
+          ac: 13,
+          hp: 1,
+          speed: '10 ft., fly 60 ft.',
+          str: 5, dex: 16, con: 8, int: 2, wis: 14, cha: 6,
+          skills: 'Perception +4',
+          senses: '',
+          attacks: 'Talons: +5, 1 slashing',
+          traits: 'Keen Sight (advantage on Perception using sight)',
+          hasFlySpeed: true
+        },
+        {
+          name: 'Owl',
+          cr: '0',
+          ac: 11,
+          hp: 1,
+          speed: '5 ft., fly 60 ft.',
+          str: 3, dex: 13, con: 8, int: 2, wis: 12, cha: 7,
+          skills: 'Perception +3, Stealth +3',
+          senses: 'Darkvision 120 ft.',
+          attacks: 'Talons: +3, 1 slashing',
+          traits: 'Flyby (no opportunity attacks when flying), Keen Hearing/Sight',
+          hasFlySpeed: true
+        },
+        {
+          name: 'Raven',
+          cr: '0',
+          ac: 12,
+          hp: 1,
+          speed: '10 ft., fly 50 ft.',
+          str: 2, dex: 14, con: 8, int: 2, wis: 12, cha: 6,
+          skills: 'Perception +3',
+          senses: '',
+          attacks: 'Beak: +4, 1 piercing',
+          traits: 'Mimicry (can mimic simple sounds)',
+          hasFlySpeed: true
+        }
+      ],
+
+      // CR 1/8 Beasts
+      'CR1/8': [
+        {
+          name: 'Blood Hawk',
+          cr: '1/8',
+          ac: 12,
+          hp: 7,
+          speed: '10 ft., fly 60 ft.',
+          str: 6, dex: 14, con: 10, int: 3, wis: 14, cha: 5,
+          skills: 'Perception +4',
+          senses: '',
+          attacks: 'Beak: +4, 1d4 piercing',
+          traits: 'Keen Sight, Pack Tactics',
+          hasFlySpeed: true
+        },
+        {
+          name: 'Flying Snake',
+          cr: '1/8',
+          ac: 14,
+          hp: 5,
+          speed: '30 ft., fly 60 ft., swim 30 ft.',
+          str: 4, dex: 18, con: 11, int: 2, wis: 12, cha: 5,
+          skills: '',
+          senses: 'Blindsight 10 ft.',
+          attacks: 'Bite: +6, 1 piercing + 3d4 poison',
+          traits: 'Flyby',
+          hasFlySpeed: true,
+          hasSwimSpeed: true
+        },
+        {
+          name: 'Giant Rat',
+          cr: '1/8',
+          ac: 12,
+          hp: 7,
+          speed: '30 ft.',
+          str: 7, dex: 15, con: 11, int: 2, wis: 10, cha: 4,
+          skills: '',
+          senses: 'Darkvision 60 ft.',
+          attacks: 'Bite: +4, 1d4 piercing',
+          traits: 'Keen Smell, Pack Tactics'
+        },
+        {
+          name: 'Giant Weasel',
+          cr: '1/8',
+          ac: 13,
+          hp: 9,
+          speed: '40 ft.',
+          str: 11, dex: 16, con: 10, int: 4, wis: 12, cha: 5,
+          skills: 'Perception +3, Stealth +5',
+          senses: 'Darkvision 60 ft.',
+          attacks: 'Bite: +5, 1d4+3 piercing',
+          traits: 'Keen Hearing/Smell'
+        },
+        {
+          name: 'Mastiff',
+          cr: '1/8',
+          ac: 12,
+          hp: 5,
+          speed: '40 ft.',
+          str: 13, dex: 14, con: 12, int: 3, wis: 12, cha: 7,
+          skills: 'Perception +3',
+          senses: '',
+          attacks: 'Bite: +3, 1d6+1 piercing, DC 11 STR or prone',
+          traits: 'Keen Hearing/Smell'
+        },
+        {
+          name: 'Poisonous Snake',
+          cr: '1/8',
+          ac: 13,
+          hp: 2,
+          speed: '30 ft., swim 30 ft.',
+          str: 2, dex: 16, con: 11, int: 1, wis: 10, cha: 3,
+          skills: '',
+          senses: 'Blindsight 10 ft.',
+          attacks: 'Bite: +5, 1 piercing + DC 10 CON 2d4 poison (half on save)',
+          traits: '',
+          hasSwimSpeed: true
+        },
+        {
+          name: 'Stirge',
+          cr: '1/8',
+          ac: 14,
+          hp: 2,
+          speed: '10 ft., fly 40 ft.',
+          str: 4, dex: 16, con: 11, int: 2, wis: 8, cha: 6,
+          skills: '',
+          senses: 'Darkvision 60 ft.',
+          attacks: 'Blood Drain: +5, 1d4+3 piercing + attaches, drains 1d4+3 HP/turn',
+          traits: '',
+          hasFlySpeed: true
+        }
+      ],
+
+      // CR 1/4 Beasts
+      'CR1/4': [
+        {
+          name: 'Boar',
+          cr: '1/4',
+          ac: 11,
+          hp: 11,
+          speed: '40 ft.',
+          str: 13, dex: 11, con: 12, int: 2, wis: 9, cha: 5,
+          skills: '',
+          senses: '',
+          attacks: 'Tusk: +3, 1d6+1 slashing',
+          traits: 'Charge (+1d6 if moves 20 ft., DC 11 STR or prone), Relentless (1/short rest: drop to 1 HP instead of 0)'
+        },
+        {
+          name: 'Constrictor Snake',
+          cr: '1/4',
+          ac: 12,
+          hp: 13,
+          speed: '30 ft., swim 30 ft.',
+          str: 15, dex: 14, con: 12, int: 1, wis: 10, cha: 3,
+          skills: '',
+          senses: 'Blindsight 10 ft.',
+          attacks: 'Bite: +4, 1d6+2 piercing; Constrict: +4, 1d8+2 bludgeoning + grappled (DC 14)',
+          traits: '',
+          hasSwimSpeed: true
+        },
+        {
+          name: 'Draft Horse',
+          cr: '1/4',
+          ac: 10,
+          hp: 19,
+          speed: '40 ft.',
+          str: 18, dex: 10, con: 12, int: 2, wis: 11, cha: 7,
+          skills: '',
+          senses: '',
+          attacks: 'Hooves: +6, 2d4+4 bludgeoning',
+          traits: ''
+        },
+        {
+          name: 'Elk',
+          cr: '1/4',
+          ac: 10,
+          hp: 13,
+          speed: '50 ft.',
+          str: 16, dex: 10, con: 12, int: 2, wis: 10, cha: 6,
+          skills: '',
+          senses: '',
+          attacks: 'Ram: +5, 1d6+3 bludgeoning; Hooves: +5, 2d4+3 bludgeoning (prone only)',
+          traits: 'Charge (+1d6 if moves 20 ft., DC 13 STR or prone)'
+        },
+        {
+          name: 'Giant Badger',
+          cr: '1/4',
+          ac: 10,
+          hp: 13,
+          speed: '30 ft., burrow 10 ft.',
+          str: 13, dex: 10, con: 15, int: 2, wis: 12, cha: 5,
+          skills: '',
+          senses: 'Darkvision 30 ft.',
+          attacks: 'Multiattack (bite + claws); Bite: +3, 1d6+1 piercing; Claws: +3, 2d4+1 slashing',
+          traits: 'Keen Smell'
+        },
+        {
+          name: 'Giant Centipede',
+          cr: '1/4',
+          ac: 13,
+          hp: 4,
+          speed: '30 ft., climb 30 ft.',
+          str: 5, dex: 14, con: 12, int: 1, wis: 7, cha: 3,
+          skills: '',
+          senses: 'Blindsight 30 ft.',
+          attacks: 'Bite: +4, 1d4+2 piercing + DC 11 CON 3d6 poison (half on save)',
+          traits: ''
+        },
+        {
+          name: 'Giant Frog',
+          cr: '1/4',
+          ac: 11,
+          hp: 18,
+          speed: '30 ft., swim 30 ft.',
+          str: 12, dex: 13, con: 11, int: 2, wis: 10, cha: 3,
+          skills: 'Perception +2, Stealth +3',
+          senses: 'Darkvision 30 ft.',
+          attacks: 'Bite: +3, 1d6+1 bludgeoning + grappled + restrained, can swallow Small or smaller',
+          traits: 'Amphibious, Standing Leap (20 ft. long, 10 ft. high)',
+          hasSwimSpeed: true
+        },
+        {
+          name: 'Giant Lizard',
+          cr: '1/4',
+          ac: 12,
+          hp: 19,
+          speed: '30 ft., climb 30 ft.',
+          str: 15, dex: 12, con: 13, int: 2, wis: 10, cha: 5,
+          skills: '',
+          senses: 'Darkvision 30 ft.',
+          attacks: 'Bite: +4, 1d8+2 piercing',
+          traits: ''
+        },
+        {
+          name: 'Giant Owl',
+          cr: '1/4',
+          ac: 12,
+          hp: 19,
+          speed: '5 ft., fly 60 ft.',
+          str: 13, dex: 15, con: 12, int: 8, wis: 13, cha: 10,
+          skills: 'Perception +5, Stealth +4',
+          senses: 'Darkvision 120 ft.',
+          attacks: 'Talons: +3, 2d6+1 slashing',
+          traits: 'Flyby, Keen Hearing/Sight',
+          hasFlySpeed: true
+        },
+        {
+          name: 'Giant Poisonous Snake',
+          cr: '1/4',
+          ac: 14,
+          hp: 11,
+          speed: '30 ft., swim 30 ft.',
+          str: 10, dex: 18, con: 13, int: 2, wis: 10, cha: 3,
+          skills: '',
+          senses: 'Blindsight 10 ft.',
+          attacks: 'Bite: +6, 1d4+4 piercing + DC 11 CON 3d6 poison (half on save)',
+          traits: '',
+          hasSwimSpeed: true
+        },
+        {
+          name: 'Giant Wolf Spider',
+          cr: '1/4',
+          ac: 13,
+          hp: 11,
+          speed: '40 ft., climb 40 ft.',
+          str: 12, dex: 16, con: 13, int: 3, wis: 12, cha: 4,
+          skills: 'Perception +3, Stealth +7',
+          senses: 'Blindsight 10 ft., Darkvision 60 ft.',
+          attacks: 'Bite: +3, 1d6+1 piercing + DC 11 CON 2d6 poison (half on save), paralyzed 1 hour if reduced to 0',
+          traits: 'Spider Climb, Web Sense, Web Walker'
+        },
+        {
+          name: 'Panther',
+          cr: '1/4',
+          ac: 12,
+          hp: 13,
+          speed: '50 ft., climb 40 ft.',
+          str: 14, dex: 15, con: 10, int: 3, wis: 14, cha: 7,
+          skills: 'Perception +4, Stealth +6',
+          senses: '',
+          attacks: 'Bite: +4, 1d6+2 piercing; Claw: +4, 1d4+2 slashing',
+          traits: 'Keen Smell, Pounce (if moves 20 ft. + bite, DC 12 STR or prone + bonus claw)'
+        },
+        {
+          name: 'Riding Horse',
+          cr: '1/4',
+          ac: 10,
+          hp: 13,
+          speed: '60 ft.',
+          str: 16, dex: 10, con: 12, int: 2, wis: 11, cha: 7,
+          skills: '',
+          senses: '',
+          attacks: 'Hooves: +5, 2d4+3 bludgeoning',
+          traits: ''
+        },
+        {
+          name: 'Wolf',
+          cr: '1/4',
+          ac: 13,
+          hp: 11,
+          speed: '40 ft.',
+          str: 12, dex: 15, con: 12, int: 3, wis: 12, cha: 6,
+          skills: 'Perception +3, Stealth +4',
+          senses: '',
+          attacks: 'Bite: +4, 2d4+2 piercing, DC 11 STR or prone',
+          traits: 'Keen Hearing/Smell, Pack Tactics'
+        }
+      ],
+
+      // CR 1/2 Beasts
+      'CR1/2': [
+        {
+          name: 'Ape',
+          cr: '1/2',
+          ac: 12,
+          hp: 19,
+          speed: '30 ft., climb 30 ft.',
+          str: 16, dex: 14, con: 14, int: 6, wis: 12, cha: 7,
+          skills: 'Athletics +5, Perception +3',
+          senses: '',
+          attacks: 'Multiattack (2 fists); Fist: +5, 1d6+3 bludgeoning; Rock: +5, 1d6+3 bludgeoning (25/50 ft.)',
+          traits: ''
+        },
+        {
+          name: 'Black Bear',
+          cr: '1/2',
+          ac: 11,
+          hp: 19,
+          speed: '40 ft., climb 30 ft.',
+          str: 15, dex: 10, con: 14, int: 2, wis: 12, cha: 7,
+          skills: 'Perception +3',
+          senses: '',
+          attacks: 'Multiattack (bite + claws); Bite: +4, 1d6+2 piercing; Claws: +4, 2d4+2 slashing',
+          traits: 'Keen Smell'
+        },
+        {
+          name: 'Crocodile',
+          cr: '1/2',
+          ac: 12,
+          hp: 19,
+          speed: '20 ft., swim 30 ft.',
+          str: 15, dex: 10, con: 13, int: 2, wis: 10, cha: 5,
+          skills: 'Stealth +2',
+          senses: '',
+          attacks: 'Bite: +4, 1d10+2 piercing + grappled (DC 12)',
+          traits: 'Hold Breath (15 min)',
+          hasSwimSpeed: true
+        },
+        {
+          name: 'Giant Goat',
+          cr: '1/2',
+          ac: 11,
+          hp: 19,
+          speed: '40 ft.',
+          str: 17, dex: 11, con: 12, int: 3, wis: 12, cha: 6,
+          skills: '',
+          senses: '',
+          attacks: 'Ram: +5, 2d4+3 bludgeoning',
+          traits: 'Charge (+2d4 if moves 20 ft., DC 13 STR or prone), Sure-Footed (advantage vs prone)'
+        },
+        {
+          name: 'Giant Sea Horse',
+          cr: '1/2',
+          ac: 13,
+          hp: 16,
+          speed: '0 ft., swim 40 ft.',
+          str: 12, dex: 15, con: 11, int: 2, wis: 12, cha: 5,
+          skills: '',
+          senses: '',
+          attacks: 'Ram: +3, 1d6+1 bludgeoning',
+          traits: 'Charge (+1d6 if moves 20 ft., DC 11 STR or prone), Water Breathing',
+          hasSwimSpeed: true
+        },
+        {
+          name: 'Giant Wasp',
+          cr: '1/2',
+          ac: 12,
+          hp: 13,
+          speed: '10 ft., fly 50 ft.',
+          str: 10, dex: 14, con: 10, int: 1, wis: 10, cha: 3,
+          skills: '',
+          senses: '',
+          attacks: 'Sting: +4, 1d6+2 piercing + DC 11 CON 3d6 poison (half on save)',
+          traits: '',
+          hasFlySpeed: true
+        },
+        {
+          name: 'Reef Shark',
+          cr: '1/2',
+          ac: 12,
+          hp: 22,
+          speed: '0 ft., swim 40 ft.',
+          str: 14, dex: 13, con: 13, int: 1, wis: 10, cha: 4,
+          skills: 'Perception +2',
+          senses: 'Blindsight 30 ft.',
+          attacks: 'Bite: +4, 1d8+2 piercing',
+          traits: 'Pack Tactics, Water Breathing',
+          hasSwimSpeed: true
+        },
+        {
+          name: 'Warhorse',
+          cr: '1/2',
+          ac: 11,
+          hp: 19,
+          speed: '60 ft.',
+          str: 18, dex: 12, con: 13, int: 2, wis: 12, cha: 7,
+          skills: '',
+          senses: '',
+          attacks: 'Hooves: +6, 2d6+4 bludgeoning',
+          traits: 'Trampling Charge (if moves 20 ft. + hooves, DC 14 STR or prone + bonus hooves)'
+        }
+      ],
+
+      // CR 1 Beasts
+      'CR1': [
+        {
+          name: 'Brown Bear',
+          cr: '1',
+          ac: 11,
+          hp: 34,
+          speed: '40 ft., climb 30 ft.',
+          str: 19, dex: 10, con: 16, int: 2, wis: 13, cha: 7,
+          skills: 'Perception +3',
+          senses: '',
+          attacks: 'Multiattack (bite + claws); Bite: +6, 1d8+4 piercing; Claws: +6, 2d6+4 slashing',
+          traits: 'Keen Smell'
+        },
+        {
+          name: 'Dire Wolf',
+          cr: '1',
+          ac: 14,
+          hp: 37,
+          speed: '50 ft.',
+          str: 17, dex: 15, con: 15, int: 3, wis: 12, cha: 7,
+          skills: 'Perception +3, Stealth +4',
+          senses: '',
+          attacks: 'Bite: +5, 2d6+3 piercing, DC 13 STR or prone',
+          traits: 'Keen Hearing/Smell, Pack Tactics'
+        },
+        {
+          name: 'Giant Eagle',
+          cr: '1',
+          ac: 13,
+          hp: 26,
+          speed: '10 ft., fly 80 ft.',
+          str: 16, dex: 17, con: 13, int: 8, wis: 14, cha: 10,
+          skills: 'Perception +4',
+          senses: '',
+          attacks: 'Multiattack (beak + talons); Beak: +5, 1d6+3 piercing; Talons: +5, 2d6+3 slashing',
+          traits: 'Keen Sight',
+          hasFlySpeed: true
+        },
+        {
+          name: 'Giant Hyena',
+          cr: '1',
+          ac: 12,
+          hp: 45,
+          speed: '50 ft.',
+          str: 16, dex: 14, con: 14, int: 2, wis: 12, cha: 7,
+          skills: 'Perception +3',
+          senses: '',
+          attacks: 'Bite: +5, 2d6+3 piercing',
+          traits: 'Rampage (when reduces creature to 0 HP, bonus action move + bite)'
+        },
+        {
+          name: 'Giant Octopus',
+          cr: '1',
+          ac: 11,
+          hp: 52,
+          speed: '10 ft., swim 60 ft.',
+          str: 17, dex: 13, con: 13, int: 4, wis: 10, cha: 4,
+          skills: 'Perception +4, Stealth +5',
+          senses: 'Darkvision 60 ft.',
+          attacks: 'Tentacles: +5, 2d6+3 bludgeoning + grappled (DC 16), restrained until grapple ends',
+          traits: 'Hold Breath (1 hour), Underwater Camouflage, Water Breathing, Ink Cloud (1/short rest)',
+          hasSwimSpeed: true
+        },
+        {
+          name: 'Giant Spider',
+          cr: '1',
+          ac: 14,
+          hp: 26,
+          speed: '30 ft., climb 30 ft.',
+          str: 14, dex: 16, con: 12, int: 2, wis: 11, cha: 4,
+          skills: 'Stealth +7',
+          senses: 'Blindsight 10 ft., Darkvision 60 ft.',
+          attacks: 'Bite: +5, 1d8+3 piercing + DC 11 CON 2d8 poison (half on save); Web (recharge 5-6): +5, restrained (DC 12 STR)',
+          traits: 'Spider Climb, Web Sense, Web Walker'
+        },
+        {
+          name: 'Giant Toad',
+          cr: '1',
+          ac: 11,
+          hp: 39,
+          speed: '20 ft., swim 40 ft.',
+          str: 15, dex: 13, con: 13, int: 2, wis: 10, cha: 3,
+          skills: '',
+          senses: 'Darkvision 30 ft.',
+          attacks: 'Bite: +4, 1d10+2 bludgeoning + 1d10 poison + grappled + restrained, swallow on hit vs grappled',
+          traits: 'Amphibious, Standing Leap (20 ft. long, 10 ft. high)',
+          hasSwimSpeed: true
+        },
+        {
+          name: 'Giant Vulture',
+          cr: '1',
+          ac: 10,
+          hp: 22,
+          speed: '10 ft., fly 60 ft.',
+          str: 15, dex: 10, con: 15, int: 6, wis: 12, cha: 7,
+          skills: 'Perception +3',
+          senses: '',
+          attacks: 'Multiattack (beak + talons); Beak: +4, 2d4+2 piercing; Talons: +4, 2d6+2 slashing',
+          traits: 'Keen Sight/Smell, Pack Tactics',
+          hasFlySpeed: true
+        },
+        {
+          name: 'Lion',
+          cr: '1',
+          ac: 12,
+          hp: 26,
+          speed: '50 ft.',
+          str: 17, dex: 15, con: 13, int: 3, wis: 12, cha: 8,
+          skills: 'Perception +3, Stealth +6',
+          senses: '',
+          attacks: 'Bite: +5, 1d8+3 piercing; Claw: +5, 1d6+3 slashing',
+          traits: 'Keen Smell, Pack Tactics, Pounce (if moves 20 ft. + claw, DC 13 STR or prone + bonus bite), Running Leap (25 ft. long with 10 ft. running start)'
+        },
+        {
+          name: 'Tiger',
+          cr: '1',
+          ac: 12,
+          hp: 37,
+          speed: '40 ft.',
+          str: 17, dex: 15, con: 14, int: 3, wis: 12, cha: 8,
+          skills: 'Perception +3, Stealth +6',
+          senses: 'Darkvision 60 ft.',
+          attacks: 'Bite: +5, 1d10+3 piercing; Claw: +5, 1d8+3 slashing',
+          traits: 'Keen Smell, Pounce (if moves 20 ft. + claw, DC 13 STR or prone + bonus bite)'
+        }
+      ],
+
+      // CR 2 Beasts (Moon Druid level 2+)
+      'CR2': [
+        {
+          name: 'Giant Boar',
+          cr: '2',
+          ac: 12,
+          hp: 42,
+          speed: '40 ft.',
+          str: 17, dex: 10, con: 16, int: 2, wis: 9, cha: 5,
+          skills: '',
+          senses: '',
+          attacks: 'Tusk: +5, 2d6+3 slashing',
+          traits: 'Charge (+2d6 if moves 20 ft., DC 13 STR or prone), Relentless (1/short rest: drop to 1 HP instead of 0)'
+        },
+        {
+          name: 'Giant Constrictor Snake',
+          cr: '2',
+          ac: 12,
+          hp: 60,
+          speed: '30 ft., swim 30 ft.',
+          str: 19, dex: 14, con: 12, int: 1, wis: 10, cha: 3,
+          skills: 'Perception +2',
+          senses: 'Blindsight 10 ft.',
+          attacks: 'Bite: +6, 2d6+4 piercing; Constrict: +6, 2d8+4 bludgeoning + grappled (DC 16) + restrained',
+          traits: '',
+          hasSwimSpeed: true
+        },
+        {
+          name: 'Giant Elk',
+          cr: '2',
+          ac: 14,
+          hp: 42,
+          speed: '60 ft.',
+          str: 19, dex: 16, con: 14, int: 7, wis: 14, cha: 10,
+          skills: 'Perception +4',
+          senses: '',
+          attacks: 'Ram: +6, 2d6+4 bludgeoning; Hooves: +6, 4d8+4 bludgeoning (prone only)',
+          traits: 'Charge (+2d6 if moves 20 ft., DC 14 STR or prone)'
+        },
+        {
+          name: 'Hunter Shark',
+          cr: '2',
+          ac: 12,
+          hp: 45,
+          speed: '0 ft., swim 40 ft.',
+          str: 18, dex: 13, con: 15, int: 1, wis: 10, cha: 4,
+          skills: 'Perception +2',
+          senses: 'Blindsight 30 ft.',
+          attacks: 'Bite: +6, 2d8+4 piercing',
+          traits: 'Blood Frenzy (advantage on bloodied creatures), Water Breathing',
+          hasSwimSpeed: true
+        },
+        {
+          name: 'Plesiosaurus',
+          cr: '2',
+          ac: 13,
+          hp: 68,
+          speed: '20 ft., swim 40 ft.',
+          str: 18, dex: 15, con: 16, int: 2, wis: 12, cha: 5,
+          skills: 'Perception +3, Stealth +4',
+          senses: '',
+          attacks: 'Bite: +6, 3d6+4 piercing',
+          traits: 'Hold Breath (1 hour)',
+          hasSwimSpeed: true
+        },
+        {
+          name: 'Polar Bear',
+          cr: '2',
+          ac: 12,
+          hp: 42,
+          speed: '40 ft., swim 30 ft.',
+          str: 20, dex: 10, con: 16, int: 2, wis: 13, cha: 7,
+          skills: 'Perception +3',
+          senses: '',
+          attacks: 'Multiattack (bite + claws); Bite: +7, 1d8+5 piercing; Claws: +7, 2d6+5 slashing',
+          traits: 'Keen Smell',
+          hasSwimSpeed: true
+        },
+        {
+          name: 'Rhinoceros',
+          cr: '2',
+          ac: 11,
+          hp: 45,
+          speed: '40 ft.',
+          str: 21, dex: 8, con: 15, int: 2, wis: 12, cha: 6,
+          skills: '',
+          senses: '',
+          attacks: 'Gore: +7, 2d8+5 bludgeoning',
+          traits: 'Charge (+2d8 if moves 20 ft., DC 15 STR or prone)'
+        },
+        {
+          name: 'Saber-Toothed Tiger',
+          cr: '2',
+          ac: 12,
+          hp: 52,
+          speed: '40 ft.',
+          str: 18, dex: 14, con: 15, int: 3, wis: 12, cha: 8,
+          skills: 'Perception +3, Stealth +6',
+          senses: '',
+          attacks: 'Bite: +6, 1d10+4 piercing; Claw: +6, 2d6+4 slashing',
+          traits: 'Keen Smell, Pounce (if moves 20 ft. + claw, DC 14 STR or prone + bonus bite)'
+        }
+      ],
+
+      // CR 3 Beasts (Moon Druid level 9+)
+      'CR3': [
+        {
+          name: 'Giant Scorpion',
+          cr: '3',
+          ac: 15,
+          hp: 52,
+          speed: '40 ft.',
+          str: 15, dex: 13, con: 15, int: 1, wis: 9, cha: 3,
+          skills: '',
+          senses: 'Blindsight 60 ft.',
+          attacks: 'Multiattack (2 claws + sting); Claw: +4, 1d8+2 bludgeoning + grappled (DC 12); Sting: +4, 1d10+2 piercing + DC 12 CON 4d10 poison (half on save)',
+          traits: ''
+        },
+        {
+          name: 'Killer Whale',
+          cr: '3',
+          ac: 12,
+          hp: 90,
+          speed: '0 ft., swim 60 ft.',
+          str: 19, dex: 10, con: 13, int: 3, wis: 12, cha: 7,
+          skills: 'Perception +3',
+          senses: 'Blindsight 120 ft.',
+          attacks: 'Bite: +6, 5d6+4 piercing',
+          traits: 'Echolocation, Hold Breath (30 min), Keen Hearing',
+          hasSwimSpeed: true
+        }
+      ],
+
+      // CR 4 Beasts (Moon Druid level 12+)
+      'CR4': [
+        {
+          name: 'Elephant',
+          cr: '4',
+          ac: 12,
+          hp: 76,
+          speed: '40 ft.',
+          str: 22, dex: 9, con: 17, int: 3, wis: 11, cha: 6,
+          skills: '',
+          senses: '',
+          attacks: 'Gore: +8, 3d8+6 piercing; Stomp: +8, 3d10+6 bludgeoning (prone only)',
+          traits: 'Trampling Charge (if moves 20 ft. + gore, DC 12 STR or prone + bonus stomp)'
+        }
+      ],
+
+      // CR 5 Beasts (Moon Druid level 15+)
+      'CR5': [
+        {
+          name: 'Giant Crocodile',
+          cr: '5',
+          ac: 14,
+          hp: 85,
+          speed: '30 ft., swim 50 ft.',
+          str: 21, dex: 9, con: 17, int: 2, wis: 10, cha: 7,
+          skills: 'Stealth +5',
+          senses: '',
+          attacks: 'Multiattack (bite + tail); Bite: +8, 3d10+5 piercing + grappled (DC 16) + restrained; Tail: +8, 2d8+5 bludgeoning, DC 16 STR or prone',
+          traits: 'Hold Breath (30 min)',
+          hasSwimSpeed: true
+        },
+        {
+          name: 'Giant Shark',
+          cr: '5',
+          ac: 13,
+          hp: 126,
+          speed: '0 ft., swim 50 ft.',
+          str: 23, dex: 11, con: 21, int: 1, wis: 10, cha: 5,
+          skills: 'Perception +3',
+          senses: 'Blindsight 60 ft.',
+          attacks: 'Bite: +9, 3d10+6 piercing',
+          traits: 'Blood Frenzy (advantage on bloodied creatures), Water Breathing',
+          hasSwimSpeed: true
+        },
+        {
+          name: 'Triceratops',
+          cr: '5',
+          ac: 13,
+          hp: 95,
+          speed: '50 ft.',
+          str: 22, dex: 9, con: 17, int: 2, wis: 11, cha: 5,
+          skills: '',
+          senses: '',
+          attacks: 'Gore: +9, 4d8+6 piercing; Stomp: +9, 3d10+6 bludgeoning (prone only)',
+          traits: 'Trampling Charge (if moves 20 ft. + gore, DC 13 STR or prone + bonus stomp)'
+        }
+      ],
+
+      // CR 6 Beasts (Moon Druid level 18+)
+      'CR6': [
+        {
+          name: 'Mammoth',
+          cr: '6',
+          ac: 13,
+          hp: 126,
+          speed: '40 ft.',
+          str: 24, dex: 9, con: 21, int: 3, wis: 11, cha: 6,
+          skills: '',
+          senses: '',
+          attacks: 'Gore: +10, 4d8+7 piercing; Stomp: +10, 4d10+7 bludgeoning (prone only)',
+          traits: 'Trampling Charge (if moves 20 ft. + gore, DC 18 STR or prone + bonus stomp)'
+        }
+      ]
+    },
+
+    // ============================================================
+    // WILD SHAPE HELPER FUNCTIONS
+    // ============================================================
+
+    /**
+     * Get maximum CR for Wild Shape based on druid level and circle
+     * @param {number} druidLevel - The druid's level
+     * @param {string} druidCircle - The druid's circle subclass (optional)
+     * @returns {Object} - { maxCR: string, canFly: boolean, canSwim: boolean }
+     */
+    getWildShapeLimits(druidLevel, druidCircle = '') {
+      const isMoonDruid = druidCircle && druidCircle.toLowerCase().includes('moon');
+
+      if (isMoonDruid) {
+        // Circle of the Moon progression
+        if (druidLevel >= 18) return { maxCR: '6', canFly: true, canSwim: true };
+        if (druidLevel >= 15) return { maxCR: '5', canFly: true, canSwim: true };
+        if (druidLevel >= 12) return { maxCR: '4', canFly: true, canSwim: true };
+        if (druidLevel >= 9) return { maxCR: '3', canFly: true, canSwim: true };
+        if (druidLevel >= 6) return { maxCR: '2', canFly: false, canSwim: true };
+        if (druidLevel >= 2) return { maxCR: '1', canFly: false, canSwim: true };
+        return { maxCR: '0', canFly: false, canSwim: false };
+      } else {
+        // Standard druid progression
+        if (druidLevel >= 8) return { maxCR: '1', canFly: true, canSwim: true };
+        if (druidLevel >= 4) return { maxCR: '1/2', canFly: false, canSwim: true };
+        if (druidLevel >= 2) return { maxCR: '1/4', canFly: false, canSwim: false };
+        return { maxCR: '0', canFly: false, canSwim: false };
+      }
+    },
+
+    /**
+     * Compare two CR values (handles fractions like "1/4", "1/2")
+     * @param {string} cr1 - First CR value
+     * @param {string} cr2 - Second CR value
+     * @returns {number} - -1 if cr1 < cr2, 0 if equal, 1 if cr1 > cr2
+     */
+    compareCR(cr1, cr2) {
+      const crToNumber = (cr) => {
+        if (cr === '0') return 0;
+        if (cr === '1/8') return 0.125;
+        if (cr === '1/4') return 0.25;
+        if (cr === '1/2') return 0.5;
+        return parseFloat(cr);
+      };
+      const n1 = crToNumber(cr1);
+      const n2 = crToNumber(cr2);
+      if (n1 < n2) return -1;
+      if (n1 > n2) return 1;
+      return 0;
+    },
+
+    /**
+     * Get all available beast forms for a druid
+     * @param {number} druidLevel - The druid's level
+     * @param {string} druidCircle - The druid's circle subclass (optional)
+     * @returns {Array} - Array of beast objects available for Wild Shape
+     */
+    getAvailableBeastForms(druidLevel, druidCircle = '') {
+      const limits = this.getWildShapeLimits(druidLevel, druidCircle);
+      const availableBeasts = [];
+
+      const crOrder = ['CR0', 'CR1/8', 'CR1/4', 'CR1/2', 'CR1', 'CR2', 'CR3', 'CR4', 'CR5', 'CR6'];
+
+      for (const crKey of crOrder) {
+        const crValue = crKey.replace('CR', '');
+        // Stop if this CR exceeds max
+        if (this.compareCR(crValue, limits.maxCR) > 0) break;
+
+        const beasts = this.BEAST_FORMS[crKey] || [];
+        for (const beast of beasts) {
+          // Check fly/swim restrictions
+          if (beast.hasFlySpeed && !limits.canFly) continue;
+          if (beast.hasSwimSpeed && !limits.canSwim) continue;
+
+          availableBeasts.push(beast);
+        }
+      }
+
+      return availableBeasts;
+    },
+
+    /**
+     * Format a single beast form as text for Features section
+     * @param {Object} beast - The beast object
+     * @returns {string} - Formatted text block
+     */
+    formatBeastForm(beast) {
+      const lines = [];
+      lines.push(`**${beast.name}** (CR ${beast.cr})`);
+      lines.push(`AC ${beast.ac} | HP ${beast.hp} | Speed: ${beast.speed}`);
+      lines.push(`STR ${beast.str} DEX ${beast.dex} CON ${beast.con} INT ${beast.int} WIS ${beast.wis} CHA ${beast.cha}`);
+      if (beast.skills) lines.push(`Skills: ${beast.skills}`);
+      if (beast.senses) lines.push(`Senses: ${beast.senses}`);
+      lines.push(`Attacks: ${beast.attacks}`);
+      if (beast.traits) lines.push(`Traits: ${beast.traits}`);
+      return lines.join('\n');
+    },
+
+    /**
+     * Format all available beast forms as text for Features section
+     * @param {number} druidLevel - The druid's level
+     * @param {string} druidCircle - The druid's circle subclass (optional)
+     * @returns {string} - Markdown-formatted text with all available forms
+     */
+    formatWildShapeReference(druidLevel, druidCircle = '') {
+      const limits = this.getWildShapeLimits(druidLevel, druidCircle);
+      const beasts = this.getAvailableBeastForms(druidLevel, druidCircle);
+
+      if (beasts.length === 0) {
+        return '**Wild Shape:** Not yet available (requires Druid level 2)';
+      }
+
+      const lines = [];
+      const isMoon = druidCircle && druidCircle.toLowerCase().includes('moon');
+
+      lines.push(`**Wild Shape Forms** (Max CR: ${limits.maxCR}${limits.canFly ? ', can fly' : ''}${limits.canSwim ? ', can swim' : ''})`);
+      lines.push(`Uses: ${Math.max(2, Math.floor(druidLevel / 2))}/short rest | Duration: ${Math.floor(druidLevel / 2)} hours`);
+      lines.push('');
+
+      // Group beasts by CR for better organization
+      const beastsByCR = {};
+      for (const beast of beasts) {
+        if (!beastsByCR[beast.cr]) beastsByCR[beast.cr] = [];
+        beastsByCR[beast.cr].push(beast);
+      }
+
+      for (const cr of Object.keys(beastsByCR).sort((a, b) => this.compareCR(a, b))) {
+        lines.push(`--- CR ${cr} ---`);
+        for (const beast of beastsByCR[cr]) {
+          lines.push(this.formatBeastForm(beast));
+          lines.push('');
+        }
+      }
+
+      return lines.join('\n');
+    },
+
+    /**
+     * Get a compact summary of Wild Shape forms (for quick reference)
+     * @param {number} druidLevel - The druid's level
+     * @param {string} druidCircle - The druid's circle subclass (optional)
+     * @returns {string} - Compact summary text
+     */
+    getWildShapeSummary(druidLevel, druidCircle = '') {
+      const limits = this.getWildShapeLimits(druidLevel, druidCircle);
+      const beasts = this.getAvailableBeastForms(druidLevel, druidCircle);
+
+      if (beasts.length === 0) {
+        return 'Wild Shape: Not yet available';
+      }
+
+      // Get top 5 beasts by CR
+      const topBeasts = beasts
+        .sort((a, b) => this.compareCR(b.cr, a.cr))
+        .slice(0, 5)
+        .map(b => `${b.name} (CR ${b.cr}, HP ${b.hp})`);
+
+      return `Wild Shape (Max CR ${limits.maxCR}): ${topBeasts.join(', ')}${beasts.length > 5 ? ` + ${beasts.length - 5} more` : ''}`;
     }
   };
 })();

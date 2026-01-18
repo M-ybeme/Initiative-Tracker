@@ -1,13 +1,13 @@
 const DM_TOOLBOX_BUILD = {
     name: "The DM's Toolbox",
-    version: "1.11.9",
+    version: "1.11.12",
     recentChanges: [
-      "Character Creation: Characters created at level 4+ now receive proper ASI/Feat choices",
-      "Character Creation: Added comprehensive subclass library with 66 new subclasses",
-      "Subclasses: All Xanathar's and Tasha's subclasses now available (114 total, up from 48)",
-      "Subclasses: Added Artificer class with all 4 specialists (Alchemist, Armorer, Artillerist, Battle Smith)",
-      "Prepared Casters: Cleric, Druid, Paladin, and Artificer now select prepared spells with full spell list access",
-      "Spell Preparation: Automatic calculation based on casting stat + level for prepared spellcasters"
+      "Artificer: Full class support in CLASS_DATA with spell progression, features 1-20, and infusions system",
+      "Artificer: 16 infusions with helper functions (getAvailableInfusions, getInfusionsKnown, formatInfusionsReference)",
+      "Multiclass: Hit dice tracking per class with spend/restore functions for short/long rests",
+      "Multiclass: Class level vs character level helpers (getClassLevel, hasClassFeature, getMulticlassFeatures)",
+      "Multiclass: Extra Attack stacking rules (Fighter gets up to 4 attacks at level 20)",
+      "Multiclass: Proficiency bonus calculation based on total character level"
     ],
     buildTime: new Date().toISOString(),
     author: "Maybeme"
