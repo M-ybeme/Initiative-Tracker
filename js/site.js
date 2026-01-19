@@ -1,16 +1,18 @@
 const DM_TOOLBOX_BUILD = {
-    name: "The DM's Toolbox",
-    version: "1.11.12",
-    recentChanges: [
-      "Artificer: Full class support in CLASS_DATA with spell progression, features 1-20, and infusions system",
-      "Artificer: 16 infusions with helper functions (getAvailableInfusions, getInfusionsKnown, formatInfusionsReference)",
-      "Multiclass: Hit dice tracking per class with spend/restore functions for short/long rests",
-      "Multiclass: Class level vs character level helpers (getClassLevel, hasClassFeature, getMulticlassFeatures)",
-      "Multiclass: Extra Attack stacking rules (Fighter gets up to 4 attacks at level 20)",
-      "Multiclass: Proficiency bonus calculation based on total character level"
-    ],
-    buildTime: new Date().toISOString(),
-    author: "Maybeme"
+  name: "The DM's Toolbox",
+  version: "2.0.0",
+  recentChanges: [
+    "Character Wizard: Starting equipment step with PHB-style packages or starting gold (class-based options, background gear always included)",
+    "High Elf: Wizard cantrip selection added with validation and proper spell list integration",
+    "Cleric (Nature Domain): Bonus druid cantrip selection wired into subclass flow",
+    "Subclass Bonus Cantrips: Central SUBCLASS_BONUS_CANTRIPS table + getSubclassBonusCantrips() helper (Light, Celestial, Circle of Spores support)",
+    "Feats: Dropdown replaced with searchable feat list in creation + level-up (tooltips for description, benefits, prerequisites)",
+    "Navigation: site.js nav reorganized into clearer Combat / Generators / Campaign groupings",
+    "Bugfix: Level 1 subclasses for Cleric/Sorcerer/Warlock now correctly prompt and save subclass choices",
+    "Bugfix: High Elf 'racial spell not found' resolved by correctly substituting chosen cantrip in gatherRacialSpellData()"
+  ],
+  buildTime: new Date().toISOString(),
+  author: "Maybeme"
 };
 
 console.log(

@@ -171,6 +171,13 @@ const CharacterCreationWizard = (function() {
           </select>
         </div>
         <div id="raceDescription" class="alert alert-info" style="display:none;"></div>
+        <div id="racialCantripSection" class="mb-3" style="display:none;">
+          <label for="wizardRacialCantrip" class="form-label">Choose Your Cantrip *</label>
+          <p class="small text-muted">High Elves learn one wizard cantrip of their choice. Intelligence is your spellcasting ability for this cantrip.</p>
+          <select class="form-select" id="wizardRacialCantrip">
+            <option value="">Choose a cantrip...</option>
+          </select>
+        </div>
         <div id="racialScalingTable" class="mt-3" style="display:none;">
           <h6 class="text-primary"><i class="bi bi-graph-up me-1"></i>Scaling Feature Reference</h6>
           <div class="card bg-dark border-secondary">
@@ -199,8 +206,22 @@ const CharacterCreationWizard = (function() {
           alert('Please choose a race.');
           return false;
         }
+        const subrace = document.getElementById('wizardSubrace')?.value || '';
+
+        // High Elf requires cantrip selection
+        if (subrace === 'High Elf') {
+          const cantrip = document.getElementById('wizardRacialCantrip')?.value;
+          if (!cantrip) {
+            alert('Please choose a cantrip for your High Elf.');
+            return false;
+          }
+          wizardData.racialCantrip = cantrip;
+        } else {
+          wizardData.racialCantrip = null;
+        }
+
         wizardData.race = race;
-        wizardData.subrace = document.getElementById('wizardSubrace')?.value || '';
+        wizardData.subrace = subrace;
         return true;
       },
       onShow: () => {
@@ -384,6 +405,51 @@ const CharacterCreationWizard = (function() {
 
           raceSelect._raceChangeHandler = newHandler;
           raceSelect.addEventListener('change', newHandler);
+
+          // Add subrace change listener for High Elf cantrip selection
+          const cantripSection = document.getElementById('racialCantripSection');
+          const cantripSelect = document.getElementById('wizardRacialCantrip');
+
+          if (cantripSection && cantripSelect) {
+            // Remove existing handler if any
+            const oldSubraceHandler = subraceSelect._subraceChangeHandler;
+            if (oldSubraceHandler) {
+              subraceSelect.removeEventListener('change', oldSubraceHandler);
+            }
+
+            const subraceHandler = (e) => {
+              const selectedSubrace = e.target.value;
+
+              if (selectedSubrace === 'High Elf') {
+                // Populate wizard cantrips
+                cantripSelect.innerHTML = '<option value="">Choose a cantrip...</option>';
+
+                // Get wizard cantrips from spell data
+                if (window.SPELLS_DATA) {
+                  const wizardCantrips = window.SPELLS_DATA.filter(spell =>
+                    spell.level === 'Cantrip' &&
+                    spell.classes &&
+                    spell.classes.includes('Wizard')
+                  ).sort((a, b) => a.title.localeCompare(b.title));
+
+                  wizardCantrips.forEach(spell => {
+                    const option = document.createElement('option');
+                    option.value = spell.title;
+                    option.textContent = `${spell.title} - ${spell.school}`;
+                    cantripSelect.appendChild(option);
+                  });
+                }
+
+                cantripSection.style.display = 'block';
+              } else {
+                cantripSection.style.display = 'none';
+                cantripSelect.innerHTML = '<option value="">Choose a cantrip...</option>';
+              }
+            };
+
+            subraceSelect._subraceChangeHandler = subraceHandler;
+            subraceSelect.addEventListener('change', subraceHandler);
+          }
         }
       }
     },
@@ -527,6 +593,15 @@ const CharacterCreationWizard = (function() {
           alert('Please select your subclass.');
           return false;
         }
+
+        // Nature Domain requires a druid cantrip choice
+        if (wizardData.class === 'Cleric' && selectedSubclass === 'Nature Domain') {
+          if (!wizardData.subclassCantrip) {
+            alert('Please choose a druid cantrip for your Nature Domain feature.');
+            return false;
+          }
+        }
+
         return true;
       },
       onShow: () => {
@@ -536,18 +611,6 @@ const CharacterCreationWizard = (function() {
 
         const className = wizardData.class;
         const level = wizardData.level || 1;
-
-        // Level 1 characters don't choose subclasses during creation
-        if (level === 1) {
-          wizardData.subclassRequired = false;
-          container.innerHTML = `
-            <div class="alert alert-info">
-              <i class="bi bi-info-circle me-2"></i>
-              Subclass selection happens at higher levels. You'll choose your specialization when you level up.
-            </div>
-          `;
-          return;
-        }
 
         // Check if subclass selection is needed at this level
         if (window.LevelUpData && typeof window.LevelUpData.getSubclassSelectionLevel === 'function') {
@@ -610,13 +673,60 @@ const CharacterCreationWizard = (function() {
                 `;
               }).join('')}
             </div>
+
+            <!-- Nature Domain Cantrip Choice -->
+            <div id="natureDomainCantripSection" class="mt-3" style="display:none;">
+              <div class="card bg-dark border-success">
+                <div class="card-header py-2 bg-success bg-opacity-25">
+                  <strong><i class="bi bi-flower1 me-2"></i>Acolyte of Nature - Choose a Druid Cantrip</strong>
+                </div>
+                <div class="card-body py-2">
+                  <p class="small text-muted mb-2">You learn one druid cantrip of your choice. Wisdom is your spellcasting ability for this cantrip.</p>
+                  <select class="form-select" id="natureDomainCantrip">
+                    <option value="">Choose a cantrip...</option>
+                  </select>
+                </div>
+              </div>
+            </div>
           `;
+
+          // Populate Nature Domain cantrip dropdown
+          const natureCantripSelect = document.getElementById('natureDomainCantrip');
+          if (natureCantripSelect && window.SPELLS_DATA) {
+            const druidCantrips = window.SPELLS_DATA.filter(spell =>
+              spell.level === 'Cantrip' &&
+              spell.classes &&
+              spell.classes.includes('Druid')
+            ).sort((a, b) => a.title.localeCompare(b.title));
+
+            druidCantrips.forEach(spell => {
+              const option = document.createElement('option');
+              option.value = spell.title;
+              option.textContent = `${spell.title} - ${spell.school}`;
+              natureCantripSelect.appendChild(option);
+            });
+
+            natureCantripSelect.addEventListener('change', (e) => {
+              wizardData.subclassCantrip = e.target.value;
+            });
+          }
 
           // Add event listeners to radio buttons
           const radios = container.querySelectorAll('.wizard-subclass-radio');
           radios.forEach(radio => {
             radio.addEventListener('change', (e) => {
               wizardData.subclass = e.target.value;
+
+              // Show/hide Nature Domain cantrip selection
+              const natureCantripSection = document.getElementById('natureDomainCantripSection');
+              if (natureCantripSection) {
+                if (className === 'Cleric' && e.target.value === 'Nature Domain') {
+                  natureCantripSection.style.display = 'block';
+                } else {
+                  natureCantripSection.style.display = 'none';
+                  wizardData.subclassCantrip = null;
+                }
+              }
             });
           });
 
@@ -922,8 +1032,110 @@ const CharacterCreationWizard = (function() {
         }
       }
     },
+    // ============================================================
+    // STEP 8: STARTING EQUIPMENT
+    // ============================================================
     {
-      title: "Step 8: Skills & Proficiencies",
+      title: "Step 8: Choose Starting Equipment",
+      content: `
+        <h5>Choose your starting equipment</h5>
+        <p>Select your equipment from the options below, or take starting gold to buy your own gear.</p>
+
+        <div class="mb-4">
+          <div class="form-check">
+            <input class="form-check-input" type="radio" name="equipmentMethod" id="equipmentMethodChoices" value="choices" checked>
+            <label class="form-check-label" for="equipmentMethodChoices">
+              <strong>Choose Equipment</strong> - Select from class equipment options
+            </label>
+          </div>
+          <div class="form-check mt-2">
+            <input class="form-check-input" type="radio" name="equipmentMethod" id="equipmentMethodGold" value="gold">
+            <label class="form-check-label" for="equipmentMethodGold">
+              <strong>Take Starting Gold</strong> - <span id="startingGoldInfo">Roll or take average gold to buy your own equipment</span>
+            </label>
+          </div>
+        </div>
+
+        <div id="equipmentChoicesSection">
+          <!-- Equipment choices rendered here by onShow -->
+        </div>
+
+        <div id="goldSection" style="display: none;">
+          <!-- Gold rolling options rendered here by onShow -->
+        </div>
+
+        <div id="backgroundEquipmentPreview" class="alert alert-info mt-3">
+          <i class="bi bi-info-circle me-1"></i>
+          <strong>From Background:</strong>
+          <span id="backgroundEquipmentList">Equipment from your background will be added automatically.</span>
+        </div>
+      `,
+      buttons: ['Back', 'Next'],
+      validate: () => {
+        const method = document.querySelector('input[name="equipmentMethod"]:checked')?.value;
+
+        if (method === 'choices') {
+          // Validate all equipment choices are made
+          const choicesData = wizardData.equipmentChoiceData;
+          if (choicesData && choicesData.choices) {
+            for (const choice of choicesData.choices) {
+              const selected = document.querySelector(`input[name="equipment_${choice.id}"]:checked`);
+              if (!selected) {
+                alert(`Please make a selection for: ${choice.label}`);
+                return false;
+              }
+
+              // If "any weapon" choice, ensure weapon is selected from dropdown
+              const selectedOption = choice.options.find(o => o.id === selected.value);
+              if (selectedOption && typeof selectedOption.items === 'string') {
+                // Check if it requires multiple weapons
+                const itemType = selectedOption.items;
+                if (itemType.includes('two_')) {
+                  // Need two weapons selected
+                  const dropdown1 = document.getElementById(`weapon_${choice.id}_${selected.value}_1`);
+                  const dropdown2 = document.getElementById(`weapon_${choice.id}_${selected.value}_2`);
+                  if (!dropdown1?.value || !dropdown2?.value) {
+                    alert(`Please select both weapons for: ${choice.label}`);
+                    return false;
+                  }
+                } else if (itemType.includes('_and_shield')) {
+                  // Need one weapon selected (shield is automatic)
+                  const dropdown = document.getElementById(`weapon_${choice.id}_${selected.value}_1`);
+                  if (!dropdown?.value) {
+                    alert(`Please select a weapon for: ${choice.label}`);
+                    return false;
+                  }
+                } else {
+                  // Single weapon choice
+                  const dropdown = document.getElementById(`weapon_${choice.id}_${selected.value}`);
+                  if (!dropdown?.value) {
+                    alert(`Please select a weapon for: ${choice.label}`);
+                    return false;
+                  }
+                }
+              }
+            }
+          }
+
+          wizardData.equipmentMethod = 'choices';
+          wizardData.equipmentSelections = gatherEquipmentSelections();
+        } else {
+          // Validate gold method choice
+          if (!wizardData.startingGoldAmount) {
+            alert('Please roll for gold or choose to take the average.');
+            return false;
+          }
+          wizardData.equipmentMethod = 'gold';
+        }
+
+        return true;
+      },
+      onShow: () => {
+        renderEquipmentStep();
+      }
+    },
+    {
+      title: "Step 9: Skills & Proficiencies",
       content: `
         <h5>Choose your skill proficiencies</h5>
         <p id="skillSelectionInstructions">Select the skills your class grants you.</p>
@@ -1012,7 +1224,7 @@ const CharacterCreationWizard = (function() {
       }
     },
     {
-      title: "Step 9: Hit Points & Combat Stats",
+      title: "Step 10: Hit Points & Combat Stats",
       content: `
         <h5>Calculate your starting stats</h5>
         <p>We'll automatically calculate your HP, AC, and other combat statistics.</p>
@@ -1030,9 +1242,12 @@ const CharacterCreationWizard = (function() {
 
         <div class="mb-3">
           <label class="form-label"><strong>Armor Class (AC)</strong></label>
-          <p class="small">Choose your starting armor:</p>
+          <div id="armorFromEquipment" class="alert alert-success" style="display:none;">
+            <!-- Shows armor from equipment selection -->
+          </div>
+          <p id="armorSelectionLabel" class="small">Choose your starting armor:</p>
           <div id="armorSelection">
-            <!-- Will be populated dynamically based on class -->
+            <!-- Will be populated dynamically based on class (hidden if armor from equipment) -->
           </div>
           <div id="acCalculation" class="alert alert-secondary mt-2" style="display:none;">
             <!-- AC will be calculated -->
@@ -1058,6 +1273,12 @@ const CharacterCreationWizard = (function() {
         if (level > 1 && wizardData.hpMethod === 'roll' && (!wizardData.hpRolls || wizardData.hpRolls.length !== level - 1)) {
           alert('Please roll for HP or select "Take Average".');
           return false;
+        }
+
+        // Skip armor selection if armor was already chosen in equipment step
+        if (wizardData.armorFromEquipment) {
+          wizardData.startingArmor = wizardData.armorFromEquipment;
+          return true;
         }
 
         const selectedArmor = document.querySelector('input[name="startingArmor"]:checked');
@@ -1321,7 +1542,79 @@ const CharacterCreationWizard = (function() {
 
         const armorOptions = classArmor[wizardData.class] || [{ name: 'Unarmored', ac: 10, desc: 'No armor (10 + DEX mod)' }];
 
-        if (armorSelection) {
+        // Check if armor was already selected in equipment step
+        const armorFromEquipmentDiv = document.getElementById('armorFromEquipment');
+        const armorSelectionLabel = document.getElementById('armorSelectionLabel');
+        let detectedArmor = null;
+        let hasShield = false;
+
+        if (wizardData.equipmentMethod === 'choices' && wizardData.equipmentSelections) {
+          const allItems = [
+            ...(wizardData.equipmentSelections.chosenItems || []),
+            ...(wizardData.equipmentSelections.fixedItems || [])
+          ];
+
+          // Look for armor in selected equipment
+          const armorKeywords = ['Chain Mail', 'Scale Mail', 'Leather Armor', 'Hide Armor', 'Studded Leather', 'Breastplate', 'Half Plate', 'Ring Mail', 'Splint', 'Plate'];
+          for (const item of allItems) {
+            for (const keyword of armorKeywords) {
+              if (item.name && item.name.includes(keyword)) {
+                detectedArmor = item;
+                break;
+              }
+            }
+            if (item.name && item.name.includes('Shield')) {
+              hasShield = true;
+            }
+            if (detectedArmor) break;
+          }
+        }
+
+        if (detectedArmor) {
+          // Hide manual armor selection, show detected armor
+          wizardData.armorFromEquipment = detectedArmor.name + (hasShield ? ' + Shield' : '');
+
+          if (armorFromEquipmentDiv) {
+            // Calculate AC from detected armor
+            const dexMod = Math.floor((wizardData.dex - 10) / 2);
+            let baseAC = 10;
+            let acDesc = '';
+
+            if (detectedArmor.name.includes('Chain Mail')) {
+              baseAC = 16;
+              acDesc = 'Heavy armor (no DEX bonus)';
+            } else if (detectedArmor.name.includes('Scale Mail')) {
+              baseAC = 14 + Math.min(dexMod, 2);
+              acDesc = `Medium armor (14 + DEX mod max 2 = ${14 + Math.min(dexMod, 2)})`;
+            } else if (detectedArmor.name.includes('Leather Armor')) {
+              baseAC = 11 + dexMod;
+              acDesc = `Light armor (11 + DEX mod = ${11 + dexMod})`;
+            } else if (detectedArmor.name.includes('Studded Leather')) {
+              baseAC = 12 + dexMod;
+              acDesc = `Light armor (12 + DEX mod = ${12 + dexMod})`;
+            } else if (detectedArmor.name.includes('Hide')) {
+              baseAC = 12 + Math.min(dexMod, 2);
+              acDesc = `Medium armor (12 + DEX mod max 2 = ${12 + Math.min(dexMod, 2)})`;
+            }
+
+            if (hasShield) baseAC += 2;
+            wizardData.ac = baseAC;
+
+            armorFromEquipmentDiv.innerHTML = `<strong>From Equipment:</strong> ${detectedArmor.name}${hasShield ? ' + Shield' : ''} - ${acDesc}${hasShield ? ' + 2 (Shield)' : ''}<br><strong>Total AC: ${baseAC}</strong>`;
+            armorFromEquipmentDiv.style.display = 'block';
+          }
+          if (armorSelection) armorSelection.style.display = 'none';
+          if (armorSelectionLabel) armorSelectionLabel.style.display = 'none';
+          if (acCalculation) acCalculation.style.display = 'none';
+        } else {
+          // No armor detected from equipment, show manual selection
+          wizardData.armorFromEquipment = null;
+          if (armorFromEquipmentDiv) armorFromEquipmentDiv.style.display = 'none';
+          if (armorSelection) armorSelection.style.display = 'block';
+          if (armorSelectionLabel) armorSelectionLabel.style.display = 'block';
+        }
+
+        if (armorSelection && !detectedArmor) {
           armorSelection.innerHTML = '';
           armorOptions.forEach((armor, index) => {
             const div = document.createElement('div');
@@ -1379,7 +1672,7 @@ const CharacterCreationWizard = (function() {
       }
     },
     {
-      title: "Step 10: Learn Starting Spells",
+      title: "Step 11: Learn Starting Spells",
       content: `
         <h5>Select your starting spells</h5>
         <div id="spellLearningContainer">
@@ -1631,7 +1924,7 @@ const CharacterCreationWizard = (function() {
       }
     },
     {
-      title: "Step 11: Review & Finish",
+      title: "Step 12: Review & Finish",
       content: `
         <h5>Review your character</h5>
         <p>Here's a summary of your character. Click "Create Character" to finish!</p>
@@ -1965,11 +2258,17 @@ const CharacterCreationWizard = (function() {
           </div>
 
           <div id="asi${i}FeatOptions" class="d-none">
-            <label for="asi${i}FeatSelect" class="form-label">Choose a Feat:</label>
-            <select class="form-select" id="asi${i}FeatSelect">
-              <option value="">Select a feat...</option>
-            </select>
-            <div id="asi${i}FeatDescription" class="alert alert-info mt-2 small" style="display:none;"></div>
+            <label class="form-label">Choose a Feat:</label>
+            <div class="input-group input-group-sm mb-2">
+              <span class="input-group-text"><i class="bi bi-search"></i></span>
+              <input type="text" id="asi${i}FeatSearch" class="form-control" placeholder="Search feats...">
+            </div>
+            <div id="asi${i}FeatList" style="max-height: 200px; overflow-y: auto; border: 1px solid #495057; border-radius: 0.25rem; padding: 0.5rem;">
+              <!-- Feats will be loaded here -->
+            </div>
+            <div class="mt-2">
+              <strong>Selected:</strong> <span id="asi${i}SelectedFeat" class="badge bg-secondary">None</span>
+            </div>
           </div>
         </div>
       `;
@@ -1980,19 +2279,106 @@ const CharacterCreationWizard = (function() {
       setupASIChoiceListeners(i);
     }
 
-    // Populate feat dropdowns
+    // Populate feat lists
     if (window.LevelUpData) {
-      const allFeats = window.LevelUpData.getAllFeats();
       for (let i = 0; i < asiCount; i++) {
-        const featSelect = document.getElementById(`asi${i}FeatSelect`);
-        if (featSelect) {
-          allFeats.forEach(featName => {
-            const option = document.createElement('option');
-            option.value = featName;
-            option.textContent = featName;
-            featSelect.appendChild(option);
-          });
-        }
+        renderFeatList(i);
+      }
+    }
+  }
+
+  /**
+   * Render the feat list for an ASI choice
+   */
+  function renderFeatList(index, searchTerm = '') {
+    const listEl = document.getElementById(`asi${index}FeatList`);
+    if (!listEl || !window.LevelUpData) return;
+
+    const allFeats = window.LevelUpData.getAllFeats();
+    let filteredFeats = allFeats;
+
+    // Apply search filter
+    if (searchTerm) {
+      const term = searchTerm.toLowerCase();
+      filteredFeats = allFeats.filter(featName => {
+        const featData = window.LevelUpData.getFeatData(featName);
+        return featName.toLowerCase().includes(term) ||
+               (featData && featData.description && featData.description.toLowerCase().includes(term));
+      });
+    }
+
+    // Get currently selected feat for this index
+    const selectedFeat = wizardData.asiChoices?.[index]?.feat || null;
+
+    listEl.innerHTML = filteredFeats.map(featName => {
+      const featData = window.LevelUpData.getFeatData(featName);
+      const isSelected = selectedFeat === featName;
+      const description = featData?.description || '';
+      const shortDesc = description.length > 100 ? description.substring(0, 100) + '...' : description;
+      const tooltipContent = escapeHtml(description);
+
+      // Build prerequisites display
+      let prereqHtml = '';
+      if (featData?.prerequisites) {
+        const prereqs = Object.entries(featData.prerequisites)
+          .map(([key, val]) => `${key.toUpperCase()}: ${val}`)
+          .join(', ');
+        prereqHtml = `<small class="text-warning d-block">Prereq: ${prereqs}</small>`;
+      }
+
+      return `
+        <div class="form-check d-flex align-items-start mb-1 ${isSelected ? 'bg-primary bg-opacity-25 rounded p-1' : ''}">
+          <input class="form-check-input feat-radio" type="radio"
+                 name="asi${index}Feat"
+                 id="feat-${index}-${featName.replace(/[^a-zA-Z0-9]/g, '')}"
+                 data-feat-name="${featName}"
+                 data-asi-index="${index}"
+                 ${isSelected ? 'checked' : ''}>
+          <label class="form-check-label small flex-grow-1 ms-1" for="feat-${index}-${featName.replace(/[^a-zA-Z0-9]/g, '')}">
+            <strong>${featName}</strong>
+            ${prereqHtml}
+            <small class="text-muted d-block">${shortDesc}</small>
+          </label>
+          <i class="bi bi-question-circle text-info ms-2 feat-info-icon"
+             data-bs-toggle="tooltip"
+             data-bs-placement="left"
+             data-bs-html="true"
+             title="${tooltipContent}"
+             style="cursor: help; font-size: 0.85rem; flex-shrink: 0;"></i>
+        </div>
+      `;
+    }).join('');
+
+    // Initialize tooltips
+    listEl.querySelectorAll('[data-bs-toggle="tooltip"]').forEach(el => {
+      new bootstrap.Tooltip(el, { trigger: 'hover focus', html: true });
+    });
+
+    // Add event listeners to radio buttons
+    listEl.querySelectorAll('.feat-radio').forEach(radio => {
+      radio.addEventListener('change', (e) => {
+        const featName = e.target.dataset.featName;
+        const asiIndex = parseInt(e.target.dataset.asiIndex);
+        saveFeatSelection(asiIndex, featName);
+        updateSelectedFeatDisplay(asiIndex, featName);
+        // Re-render to show selection highlight
+        renderFeatList(asiIndex, document.getElementById(`asi${asiIndex}FeatSearch`)?.value || '');
+      });
+    });
+  }
+
+  /**
+   * Update the selected feat badge display
+   */
+  function updateSelectedFeatDisplay(index, featName) {
+    const badge = document.getElementById(`asi${index}SelectedFeat`);
+    if (badge) {
+      if (featName) {
+        badge.textContent = featName;
+        badge.className = 'badge bg-success';
+      } else {
+        badge.textContent = 'None';
+        badge.className = 'badge bg-secondary';
       }
     }
   }
@@ -2033,24 +2419,11 @@ const CharacterCreationWizard = (function() {
       });
     });
 
-    // Feat select listener
-    const featSelect = document.getElementById(`asi${index}FeatSelect`);
-    if (featSelect) {
-      featSelect.addEventListener('change', (e) => {
-        const featName = e.target.value;
-        const descDiv = document.getElementById(`asi${index}FeatDescription`);
-
-        if (featName && window.LevelUpData) {
-          const featData = window.LevelUpData.getFeatData(featName);
-          if (featData && descDiv) {
-            descDiv.textContent = featData.description;
-            descDiv.style.display = 'block';
-          }
-        } else if (descDiv) {
-          descDiv.style.display = 'none';
-        }
-
-        saveFeatSelection(index, featName);
+    // Feat search listener
+    const featSearch = document.getElementById(`asi${index}FeatSearch`);
+    if (featSearch) {
+      featSearch.addEventListener('input', (e) => {
+        renderFeatList(index, e.target.value);
       });
     }
   }
@@ -2153,8 +2526,15 @@ const CharacterCreationWizard = (function() {
     const spellObjects = [];
 
     for (const entry of racialSpellEntries) {
+      let spellName = entry.spell;
+
+      // Handle High Elf cantrip choice - use the selected cantrip instead of placeholder
+      if (spellName === 'Wizard Cantrip (choice)' && wizardData.racialCantrip) {
+        spellName = wizardData.racialCantrip;
+      }
+
       // Find the spell in SPELLS_DATA
-      const spell = window.SPELLS_DATA.find(s => s.title === entry.spell);
+      const spell = window.SPELLS_DATA.find(s => s.title === spellName);
       if (spell) {
         // Add the spell with racial metadata
         spellObjects.push({
@@ -2164,8 +2544,11 @@ const CharacterCreationWizard = (function() {
           racialNote: entry.note || null, // Additional notes like "2nd-level"
           gainedAtLevel: entry.level // Level this spell was gained
         });
+      } else if (spellName.includes('(choice)')) {
+        // Skip placeholder entries that haven't been replaced (shouldn't happen with proper validation)
+        console.warn(`Racial spell choice not selected: ${entry.spell}`);
       } else {
-        console.warn(`Racial spell not found in SPELLS_DATA: ${entry.spell}`);
+        console.warn(`Racial spell not found in SPELLS_DATA: ${spellName}`);
       }
     }
 
@@ -2265,6 +2648,503 @@ const CharacterCreationWizard = (function() {
     return `**${background} Background Feature:**\n- See Player's Handbook for full background feature details.`;
   }
 
+  // ============================================================
+  // EQUIPMENT SELECTION STEP HELPERS
+  // ============================================================
+
+  /**
+   * Main render function for the equipment selection step
+   */
+  function renderEquipmentStep() {
+    const className = wizardData.class;
+    const background = wizardData.background;
+
+    if (!window.LevelUpData) {
+      console.warn('LevelUpData not available for equipment step');
+      return;
+    }
+
+    const choicesData = window.LevelUpData.getClassEquipmentChoices(className);
+    const goldData = window.LevelUpData.getClassStartingGold(className);
+
+    wizardData.equipmentChoiceData = choicesData;
+    wizardData.startingGoldAmount = null; // Reset gold selection
+
+    // Update gold info text
+    const goldInfo = document.getElementById('startingGoldInfo');
+    if (goldInfo && goldData) {
+      goldInfo.textContent = `Roll ${goldData.dice} x ${goldData.multiplier} gp (average: ${goldData.average} gp)`;
+    }
+
+    // Render equipment choices
+    renderEquipmentChoices(choicesData);
+
+    // Render gold section
+    renderGoldSection(goldData);
+
+    // Show background equipment preview
+    renderBackgroundEquipmentPreview(background);
+
+    // Set up toggle listeners
+    setupEquipmentMethodToggle();
+  }
+
+  /**
+   * Render the equipment choices UI
+   */
+  function renderEquipmentChoices(data) {
+    const container = document.getElementById('equipmentChoicesSection');
+    if (!container) return;
+
+    if (!data || !data.choices || data.choices.length === 0) {
+      container.innerHTML = '<div class="alert alert-warning">No equipment choices available for this class.</div>';
+      return;
+    }
+
+    let html = '';
+
+    // Render each choice group
+    data.choices.forEach(choice => {
+      // Calculate gold value for this choice (use highest value option as the gold amount)
+      const goldValues = choice.options.map(opt => window.LevelUpData.getChoiceGoldValue(opt));
+      const goldAmount = Math.max(...goldValues, 5); // At least 5 gp
+
+      html += `
+        <div class="card bg-dark border-secondary mb-3">
+          <div class="card-header py-2">
+            <strong>${choice.label}</strong>
+          </div>
+          <div class="card-body py-2">
+      `;
+
+      choice.options.forEach((option, idx) => {
+        const isWeaponChoice = typeof option.items === 'string';
+        const inputId = `equipment_${choice.id}_${option.id}`;
+
+        html += `
+          <div class="form-check mb-2">
+            <input class="form-check-input equipment-choice" type="radio"
+                   name="equipment_${choice.id}"
+                   id="${inputId}"
+                   value="${option.id}"
+                   data-choice-id="${choice.id}"
+                   ${idx === 0 ? 'checked' : ''}>
+            <label class="form-check-label" for="${inputId}">
+        `;
+
+        if (isWeaponChoice) {
+          // This is a "select weapon" option
+          html += `<span>${option.label}:</span> `;
+          html += getWeaponDropdownHtml(choice.id, option.id, option.items);
+        } else {
+          // Fixed items - add tooltips for items with notes (like packs)
+          html += option.items.map(item => {
+            const hasNotes = item.notes && item.notes.length > 10;
+            if (hasNotes) {
+              // Escape quotes for HTML attribute
+              const tooltipText = item.notes.replace(/"/g, '&quot;');
+              return `<span class="equipment-item-tooltip" data-bs-toggle="tooltip" data-bs-placement="top" title="${tooltipText}" style="border-bottom: 1px dotted #888; cursor: help;">${item.name}${item.quantity > 1 ? ` (${item.quantity})` : ''}</span>`;
+            }
+            return `${item.name}${item.quantity > 1 ? ` (${item.quantity})` : ''}`;
+          }).join(', ');
+        }
+
+        html += `
+            </label>
+          </div>
+        `;
+      });
+
+      // Add "Take Gold Instead" option for this choice
+      const goldInputId = `equipment_${choice.id}_gold`;
+      html += `
+          <div class="form-check mb-2">
+            <input class="form-check-input equipment-choice" type="radio"
+                   name="equipment_${choice.id}"
+                   id="${goldInputId}"
+                   value="gold"
+                   data-choice-id="${choice.id}"
+                   data-gold-amount="${goldAmount}">
+            <label class="form-check-label text-warning" for="${goldInputId}">
+              <i class="fas fa-coins me-1"></i>Take ${goldAmount} gp instead
+            </label>
+          </div>
+      `;
+
+      html += `</div></div>`;
+    });
+
+    // Show fixed equipment if any
+    if (data.fixed && data.fixed.length > 0) {
+      html += `
+        <div class="alert alert-secondary py-2">
+          <strong>Also Included:</strong>
+          ${data.fixed.map(item => {
+            const hasNotes = item.notes && item.notes.length > 10;
+            if (hasNotes) {
+              const tooltipText = item.notes.replace(/"/g, '&quot;');
+              return `<span class="equipment-item-tooltip" data-bs-toggle="tooltip" data-bs-placement="top" title="${tooltipText}" style="border-bottom: 1px dotted #888; cursor: help;">${item.name}${item.quantity > 1 ? ` (${item.quantity})` : ''}</span>`;
+            }
+            return `${item.name}${item.quantity > 1 ? ` (${item.quantity})` : ''}`;
+          }).join(', ')}
+        </div>
+      `;
+    }
+
+    container.innerHTML = html;
+
+    // Initialize Bootstrap tooltips for pack contents
+    setTimeout(() => {
+      const tooltipElements = container.querySelectorAll('[data-bs-toggle="tooltip"]');
+      tooltipElements.forEach(el => {
+        new bootstrap.Tooltip(el);
+      });
+    }, 100);
+  }
+
+  /**
+   * Generate HTML for weapon selection dropdowns
+   */
+  function getWeaponDropdownHtml(choiceId, optionId, weaponType) {
+    const weapons = window.LevelUpData.getWeaponList(weaponType);
+
+    // Check if we need two weapon dropdowns
+    if (weaponType.includes('two_')) {
+      return `
+        <select id="weapon_${choiceId}_${optionId}_1" class="form-select form-select-sm d-inline-block mt-1" style="width: auto; max-width: 180px;">
+          <option value="">Select first weapon...</option>
+          ${weapons.map(w => `<option value="${w.name}">${w.name} (${w.damage})</option>`).join('')}
+        </select>
+        <select id="weapon_${choiceId}_${optionId}_2" class="form-select form-select-sm d-inline-block mt-1" style="width: auto; max-width: 180px;">
+          <option value="">Select second weapon...</option>
+          ${weapons.map(w => `<option value="${w.name}">${w.name} (${w.damage})</option>`).join('')}
+        </select>
+      `;
+    } else if (weaponType.includes('_and_shield')) {
+      return `
+        <select id="weapon_${choiceId}_${optionId}_1" class="form-select form-select-sm d-inline-block mt-1" style="width: auto; max-width: 180px;">
+          <option value="">Select weapon...</option>
+          ${weapons.map(w => `<option value="${w.name}">${w.name} (${w.damage})</option>`).join('')}
+        </select>
+        <span class="badge bg-secondary ms-1">+ Shield</span>
+      `;
+    } else {
+      return `
+        <select id="weapon_${choiceId}_${optionId}" class="form-select form-select-sm d-inline-block mt-1" style="width: auto; max-width: 180px;">
+          <option value="">Select weapon...</option>
+          ${weapons.map(w => `<option value="${w.name}">${w.name} (${w.damage})</option>`).join('')}
+        </select>
+      `;
+    }
+  }
+
+  /**
+   * Render the gold section UI
+   */
+  function renderGoldSection(goldData) {
+    const container = document.getElementById('goldSection');
+    if (!container || !goldData) return;
+
+    container.innerHTML = `
+      <div class="card bg-dark border-warning">
+        <div class="card-body py-3">
+          <h6 class="mb-3">Starting Gold: ${goldData.dice} x ${goldData.multiplier} gp</h6>
+          <div class="row g-3">
+            <div class="col-6">
+              <button type="button" class="btn btn-outline-warning w-100" id="rollGoldBtn">
+                <i class="bi bi-dice-5 me-1"></i>Roll for Gold
+              </button>
+              <div id="goldRollResult" class="mt-2 text-center"></div>
+            </div>
+            <div class="col-6">
+              <button type="button" class="btn btn-outline-info w-100" id="takeAverageGoldBtn">
+                Take Average: ${goldData.average} gp
+              </button>
+            </div>
+          </div>
+          <div id="finalGoldAmount" class="alert alert-success mt-3 mb-0 py-2" style="display: none;">
+            <strong>Starting Gold:</strong> <span id="goldAmountDisplay"></span> gp
+          </div>
+        </div>
+      </div>
+    `;
+
+    // Set up roll button
+    document.getElementById('rollGoldBtn')?.addEventListener('click', () => {
+      const diceMatch = goldData.dice.match(/(\d+)d(\d+)/);
+      if (!diceMatch) return;
+
+      const numDice = parseInt(diceMatch[1]);
+      const dieSize = parseInt(diceMatch[2]);
+
+      const rolls = [];
+      for (let i = 0; i < numDice; i++) {
+        rolls.push(Math.floor(Math.random() * dieSize) + 1);
+      }
+
+      const total = rolls.reduce((a, b) => a + b, 0) * goldData.multiplier;
+
+      document.getElementById('goldRollResult').innerHTML =
+        `<span class="badge bg-warning text-dark">${rolls.join(' + ')} = ${rolls.reduce((a,b)=>a+b,0)} x ${goldData.multiplier} = ${total} gp</span>`;
+
+      wizardData.startingGoldAmount = total;
+      document.getElementById('goldAmountDisplay').textContent = total;
+      document.getElementById('finalGoldAmount').style.display = 'block';
+    });
+
+    // Set up average button
+    document.getElementById('takeAverageGoldBtn')?.addEventListener('click', () => {
+      wizardData.startingGoldAmount = goldData.average;
+      document.getElementById('goldRollResult').innerHTML = '';
+      document.getElementById('goldAmountDisplay').textContent = goldData.average;
+      document.getElementById('finalGoldAmount').style.display = 'block';
+    });
+  }
+
+  /**
+   * Show background equipment preview
+   */
+  function renderBackgroundEquipmentPreview(background) {
+    const listEl = document.getElementById('backgroundEquipmentList');
+    if (!listEl || !background) return;
+
+    if (window.LevelUpData && typeof window.LevelUpData.getBackgroundEquipment === 'function') {
+      const bgEquipment = window.LevelUpData.getBackgroundEquipment(background);
+      if (bgEquipment && bgEquipment.length > 0) {
+        const itemNames = bgEquipment.map(item =>
+          `${item.name}${item.quantity > 1 ? ` (${item.quantity})` : ''}`
+        ).join(', ');
+        listEl.textContent = itemNames;
+      } else {
+        listEl.textContent = 'No additional equipment from background.';
+      }
+    }
+  }
+
+  /**
+   * Set up toggle between equipment choices and gold sections
+   */
+  function setupEquipmentMethodToggle() {
+    const choicesRadio = document.getElementById('equipmentMethodChoices');
+    const goldRadio = document.getElementById('equipmentMethodGold');
+    const choicesSection = document.getElementById('equipmentChoicesSection');
+    const goldSection = document.getElementById('goldSection');
+
+    function updateVisibility() {
+      if (choicesRadio?.checked) {
+        if (choicesSection) choicesSection.style.display = 'block';
+        if (goldSection) goldSection.style.display = 'none';
+      } else {
+        if (choicesSection) choicesSection.style.display = 'none';
+        if (goldSection) goldSection.style.display = 'block';
+      }
+    }
+
+    choicesRadio?.addEventListener('change', updateVisibility);
+    goldRadio?.addEventListener('change', updateVisibility);
+    updateVisibility(); // Set initial state
+  }
+
+  /**
+   * Gather equipment selections from the form
+   */
+  function gatherEquipmentSelections() {
+    const selections = {
+      chosenItems: [],
+      fixedItems: [],
+      weaponData: [], // Store weapon data for attack generation
+      goldFromChoices: 0 // Track gold taken instead of items
+    };
+
+    const data = wizardData.equipmentChoiceData;
+    if (!data) return selections;
+
+    // Gather chosen items from each choice group
+    data.choices.forEach(choice => {
+      const selected = document.querySelector(`input[name="equipment_${choice.id}"]:checked`);
+      if (!selected) return;
+
+      // Check if player chose gold for this choice
+      if (selected.value === 'gold') {
+        const goldAmount = parseInt(selected.dataset.goldAmount, 10) || 0;
+        selections.goldFromChoices += goldAmount;
+        return; // Skip to next choice
+      }
+
+      const option = choice.options.find(o => o.id === selected.value);
+      if (!option) return;
+
+      if (typeof option.items === 'string') {
+        // "Any weapon" selection - get from dropdown(s)
+        const itemType = option.items;
+
+        if (itemType.includes('two_')) {
+          // Two weapons
+          const dropdown1 = document.getElementById(`weapon_${choice.id}_${selected.value}_1`);
+          const dropdown2 = document.getElementById(`weapon_${choice.id}_${selected.value}_2`);
+
+          [dropdown1, dropdown2].forEach(dropdown => {
+            if (dropdown?.value) {
+              const weaponData = window.LevelUpData.getWeaponByName(dropdown.value);
+              if (weaponData) {
+                selections.chosenItems.push({
+                  name: weaponData.name,
+                  quantity: 1,
+                  weight: weaponData.weight,
+                  notes: `${weaponData.damage} ${weaponData.damageType}, ${weaponData.properties}`,
+                  equipped: false,
+                  attuned: false
+                });
+                selections.weaponData.push(weaponData);
+              }
+            }
+          });
+        } else if (itemType.includes('_and_shield')) {
+          // Weapon + Shield
+          const dropdown = document.getElementById(`weapon_${choice.id}_${selected.value}_1`);
+          if (dropdown?.value) {
+            const weaponData = window.LevelUpData.getWeaponByName(dropdown.value);
+            if (weaponData) {
+              selections.chosenItems.push({
+                name: weaponData.name,
+                quantity: 1,
+                weight: weaponData.weight,
+                notes: `${weaponData.damage} ${weaponData.damageType}, ${weaponData.properties}`,
+                equipped: false,
+                attuned: false
+              });
+              selections.weaponData.push(weaponData);
+            }
+          }
+          // Add shield
+          selections.chosenItems.push({
+            name: 'Shield',
+            quantity: 1,
+            weight: 6,
+            notes: '+2 AC',
+            equipped: true,
+            attuned: false
+          });
+        } else {
+          // Single weapon
+          const dropdown = document.getElementById(`weapon_${choice.id}_${selected.value}`);
+          if (dropdown?.value) {
+            const weaponData = window.LevelUpData.getWeaponByName(dropdown.value);
+            if (weaponData) {
+              selections.chosenItems.push({
+                name: weaponData.name,
+                quantity: 1,
+                weight: weaponData.weight,
+                notes: `${weaponData.damage} ${weaponData.damageType}, ${weaponData.properties}`,
+                equipped: false,
+                attuned: false
+              });
+              selections.weaponData.push(weaponData);
+            }
+          }
+        }
+      } else {
+        // Fixed items from the option
+        option.items.forEach(item => {
+          selections.chosenItems.push({
+            ...item,
+            equipped: item.equipped || false,
+            attuned: false
+          });
+
+          // Check if this is a weapon (has damage in notes)
+          if (item.notes && item.notes.match(/\d+d\d+/)) {
+            // Try to find weapon data for attack generation
+            const weaponData = window.LevelUpData.getWeaponByName(item.name);
+            if (weaponData) {
+              for (let i = 0; i < (item.quantity || 1); i++) {
+                selections.weaponData.push(weaponData);
+              }
+            }
+          }
+        });
+      }
+    });
+
+    // Add fixed items
+    if (data.fixed) {
+      selections.fixedItems = data.fixed.map(item => ({
+        ...item,
+        equipped: item.equipped || false,
+        attuned: false
+      }));
+
+      // Check fixed items for weapons too
+      data.fixed.forEach(item => {
+        if (item.notes && item.notes.match(/\d+d\d+/)) {
+          const weaponData = window.LevelUpData.getWeaponByName(item.name);
+          if (weaponData) {
+            for (let i = 0; i < (item.quantity || 1); i++) {
+              selections.weaponData.push(weaponData);
+            }
+          }
+        }
+      });
+    }
+
+    return selections;
+  }
+
+  /**
+   * Generate attack entries from weapon data
+   */
+  function generateAttacksFromEquipment(weaponDataList, wizardData) {
+    const attacks = [];
+    const level = wizardData.level || 1;
+    const profBonus = Math.floor((level - 1) / 4) + 2;
+    const seenWeapons = new Set(); // Avoid duplicate attacks
+
+    weaponDataList.forEach(weapon => {
+      if (!weapon || seenWeapons.has(weapon.name)) return;
+      seenWeapons.add(weapon.name);
+
+      const isFinesse = weapon.properties && weapon.properties.includes('Finesse');
+      const isRanged = weapon.ranged || (weapon.properties && weapon.properties.includes('Thrown'));
+
+      // Determine ability modifier
+      let ability = 'str';
+      if (weapon.ranged && !weapon.properties?.includes('Thrown')) {
+        ability = 'dex';
+      } else if (isFinesse) {
+        const strMod = Math.floor((wizardData.str - 10) / 2);
+        const dexMod = Math.floor((wizardData.dex - 10) / 2);
+        ability = dexMod > strMod ? 'dex' : 'str';
+      }
+
+      const abilityMod = Math.floor((wizardData[ability] - 10) / 2);
+      const attackBonus = profBonus + abilityMod;
+
+      // Parse range from properties
+      let range = '5 ft';
+      if (weapon.ranged) {
+        const rangeMatch = weapon.properties?.match(/\((\d+\/\d+)\)/);
+        range = rangeMatch ? rangeMatch[1] : '80/320';
+      } else if (weapon.properties?.includes('Thrown')) {
+        const rangeMatch = weapon.properties?.match(/\((\d+\/\d+)\)/);
+        range = rangeMatch ? `5 ft or ${rangeMatch[1]}` : '5 ft';
+      }
+
+      attacks.push({
+        name: weapon.name,
+        type: weapon.ranged ? 'ranged-weapon' : 'melee-weapon',
+        range: range,
+        bonus: attackBonus >= 0 ? `+${attackBonus}` : `${attackBonus}`,
+        damage: abilityMod >= 0 ? `${weapon.damage}+${abilityMod}` : `${weapon.damage}${abilityMod}`,
+        damageType: weapon.damageType,
+        damage2: '',
+        damageType2: '',
+        notes: weapon.properties || ''
+      });
+    });
+
+    return attacks;
+  }
+
   /**
    * Gather starting equipment for the character (class + background)
    * @param {string} className - Character's class
@@ -2348,10 +3228,48 @@ const CharacterCreationWizard = (function() {
     }
     wizardData.allFeatures = featureSections.join('\n');
 
-    // Gather starting equipment (class + background)
-    wizardData.startingEquipment = gatherStartingEquipment(wizardData.class, wizardData.background);
-    if (wizardData.startingEquipment && wizardData.startingEquipment.length > 0) {
-      console.log(`🎒 Gathered ${wizardData.startingEquipment.length} starting equipment items`);
+    // Gather starting equipment based on selection method
+    if (wizardData.equipmentMethod === 'gold') {
+      // Player chose to take gold instead - only add background equipment
+      wizardData.startingEquipment = window.LevelUpData ?
+        window.LevelUpData.getBackgroundEquipment(wizardData.background) : [];
+      wizardData.startingCurrency = { gp: wizardData.startingGoldAmount || 0 };
+      wizardData.customAttacks = []; // No equipment-based attacks
+      console.log(`💰 Taking starting gold: ${wizardData.startingGoldAmount} gp`);
+    } else if (wizardData.equipmentMethod === 'choices' && wizardData.equipmentSelections) {
+      // Player made equipment choices
+      const selections = wizardData.equipmentSelections;
+      const backgroundEquipment = window.LevelUpData ?
+        window.LevelUpData.getBackgroundEquipment(wizardData.background) : [];
+
+      wizardData.startingEquipment = [
+        ...selections.chosenItems,
+        ...selections.fixedItems,
+        ...backgroundEquipment
+      ];
+
+      // If player took gold for some choices, add it to currency
+      if (selections.goldFromChoices > 0) {
+        wizardData.startingCurrency = { gp: selections.goldFromChoices };
+        console.log(`💰 Took ${selections.goldFromChoices} gp instead of some equipment`);
+      }
+
+      // Generate attacks from weapon choices
+      if (selections.weaponData && selections.weaponData.length > 0) {
+        wizardData.customAttacks = generateAttacksFromEquipment(selections.weaponData, wizardData);
+        console.log(`⚔️ Generated ${wizardData.customAttacks.length} attacks from equipment choices`);
+      } else {
+        wizardData.customAttacks = [];
+      }
+
+      console.log(`🎒 Gathered ${wizardData.startingEquipment.length} starting equipment items from choices`);
+    } else {
+      // Fallback to auto-gather (shouldn't happen with new wizard, but keeps backward compatibility)
+      wizardData.startingEquipment = gatherStartingEquipment(wizardData.class, wizardData.background);
+      wizardData.customAttacks = [];
+      if (wizardData.startingEquipment && wizardData.startingEquipment.length > 0) {
+        console.log(`🎒 Gathered ${wizardData.startingEquipment.length} starting equipment items (fallback)`);
+      }
     }
 
     // Gather subclass spells (if applicable)
@@ -2360,6 +3278,27 @@ const CharacterCreationWizard = (function() {
       if (subclassSpellNames && subclassSpellNames.length > 0) {
         wizardData.subclassSpells = gatherSubclassSpellData(subclassSpellNames);
         console.log(`✨ Added ${wizardData.subclassSpells.length} subclass spells for ${wizardData.subclass}`);
+      }
+    }
+
+    // Gather subclass bonus cantrips (if applicable)
+    if (wizardData.subclass && window.LevelUpData && window.LevelUpData.getSubclassBonusCantrips) {
+      const bonusCantripNames = window.LevelUpData.getSubclassBonusCantrips(
+        wizardData.class,
+        wizardData.subclass,
+        wizardData.level,
+        wizardData.subclassCantrip // For Nature Domain choice
+      );
+      if (bonusCantripNames && bonusCantripNames.length > 0) {
+        // Convert cantrip names to spell objects
+        const bonusCantrips = gatherSubclassSpellData(bonusCantripNames);
+        // Mark them as subclass cantrips
+        bonusCantrips.forEach(c => {
+          c.subclassCantrip = true;
+          c.subclassSource = wizardData.subclass;
+        });
+        wizardData.subclassBonusCantrips = bonusCantrips;
+        console.log(`🌟 Added ${bonusCantrips.length} bonus cantrip(s) from ${wizardData.subclass}: ${bonusCantripNames.join(', ')}`);
       }
     }
 

@@ -2466,6 +2466,28 @@
           console.log(`✨ Added ${subclassSpells.length} subclass spells (always prepared)`);
         }
 
+        // Add subclass bonus cantrips (e.g., Light Domain's Light, Celestial Warlock's Light + Sacred Flame)
+        if (wizardData.subclassBonusCantrips && wizardData.subclassBonusCantrips.length > 0) {
+          const bonusCantrips = wizardData.subclassBonusCantrips.map(spell => ({
+            name: spell.title,
+            level: spell.level,
+            school: spell.school,
+            castingTime: spell.casting_time,
+            range: spell.range,
+            components: spell.components,
+            duration: spell.duration,
+            concentration: spell.concentration || false,
+            ritual: spell.ritual || false,
+            description: spell.body || '',
+            prepared: true,
+            alwaysPrepared: true,
+            subclassCantrip: true,
+            subclassNote: `(Bonus from ${spell.subclassSource || wizardData.subclass})`
+          }));
+          currentSpellList = [...(currentSpellList || []), ...bonusCantrips];
+          console.log(`🌟 Added ${bonusCantrips.length} subclass bonus cantrip(s)`);
+        }
+
         // Add racial spells (innate spellcasting from race)
         if (wizardData.racialSpells && wizardData.racialSpells.length > 0) {
           const racialSpells = wizardData.racialSpells.map(spell => {
@@ -2648,6 +2670,44 @@
           }
 
           console.log(`🎒 Populated ${currentInventoryList.length} starting equipment items`);
+        }
+
+        // Handle starting currency (if player took gold instead of equipment)
+        if (wizardData.startingCurrency) {
+          const currencyInputs = {
+            cp: $('currencyCP'),
+            sp: $('currencySP'),
+            ep: $('currencyEP'),
+            gp: $('currencyGP'),
+            pp: $('currencyPP')
+          };
+
+          Object.entries(wizardData.startingCurrency).forEach(([type, amount]) => {
+            if (currencyInputs[type] && amount > 0) {
+              currencyInputs[type].value = amount;
+            }
+          });
+
+          console.log(`💰 Set starting currency: ${wizardData.startingCurrency.gp || 0} gp`);
+        }
+
+        // Handle custom attacks from equipment choices
+        if (wizardData.customAttacks && wizardData.customAttacks.length > 0) {
+          // Merge with any generated attacks, avoiding duplicates by name
+          const existingNames = new Set(currentAttackList.map(a => a.name));
+          wizardData.customAttacks.forEach(attack => {
+            if (!existingNames.has(attack.name)) {
+              currentAttackList.push(attack);
+              existingNames.add(attack.name);
+            }
+          });
+
+          window.currentAttackList = currentAttackList;
+          if (typeof renderAttackList === 'function') {
+            renderAttackList();
+          }
+
+          console.log(`⚔️ Added ${wizardData.customAttacks.length} attacks from equipment choices`);
         }
 
         console.log('✅ Form population complete, scheduling save...');

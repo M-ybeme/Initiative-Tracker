@@ -5059,6 +5059,596 @@ window.LevelUpData = (function() {
     },
 
     // ============================================================
+    // WEAPON REFERENCE DATA
+    // ============================================================
+
+    /**
+     * Simple weapons from the PHB
+     */
+    SIMPLE_WEAPONS: [
+      // Melee
+      { name: 'Club', damage: '1d4', damageType: 'bludgeoning', weight: 2, properties: 'Light' },
+      { name: 'Dagger', damage: '1d4', damageType: 'piercing', weight: 1, properties: 'Finesse, Light, Thrown (20/60)' },
+      { name: 'Greatclub', damage: '1d8', damageType: 'bludgeoning', weight: 10, properties: 'Two-Handed' },
+      { name: 'Handaxe', damage: '1d6', damageType: 'slashing', weight: 2, properties: 'Light, Thrown (20/60)' },
+      { name: 'Javelin', damage: '1d6', damageType: 'piercing', weight: 2, properties: 'Thrown (30/120)' },
+      { name: 'Light Hammer', damage: '1d4', damageType: 'bludgeoning', weight: 2, properties: 'Light, Thrown (20/60)' },
+      { name: 'Mace', damage: '1d6', damageType: 'bludgeoning', weight: 4, properties: '' },
+      { name: 'Quarterstaff', damage: '1d6', damageType: 'bludgeoning', weight: 4, properties: 'Versatile (1d8)' },
+      { name: 'Sickle', damage: '1d4', damageType: 'slashing', weight: 2, properties: 'Light' },
+      { name: 'Spear', damage: '1d6', damageType: 'piercing', weight: 3, properties: 'Thrown (20/60), Versatile (1d8)' },
+      // Ranged
+      { name: 'Light Crossbow', damage: '1d8', damageType: 'piercing', weight: 5, properties: 'Ammunition (80/320), Loading, Two-Handed', ranged: true },
+      { name: 'Shortbow', damage: '1d6', damageType: 'piercing', weight: 2, properties: 'Ammunition (80/320), Two-Handed', ranged: true },
+      { name: 'Dart', damage: '1d4', damageType: 'piercing', weight: 0.25, properties: 'Finesse, Thrown (20/60)', ranged: true },
+      { name: 'Sling', damage: '1d4', damageType: 'bludgeoning', weight: 0, properties: 'Ammunition (30/120)', ranged: true }
+    ],
+
+    /**
+     * Martial weapons from the PHB
+     */
+    MARTIAL_WEAPONS: [
+      // Melee
+      { name: 'Battleaxe', damage: '1d8', damageType: 'slashing', weight: 4, properties: 'Versatile (1d10)' },
+      { name: 'Flail', damage: '1d8', damageType: 'bludgeoning', weight: 2, properties: '' },
+      { name: 'Glaive', damage: '1d10', damageType: 'slashing', weight: 6, properties: 'Heavy, Reach, Two-Handed' },
+      { name: 'Greataxe', damage: '1d12', damageType: 'slashing', weight: 7, properties: 'Heavy, Two-Handed' },
+      { name: 'Greatsword', damage: '2d6', damageType: 'slashing', weight: 6, properties: 'Heavy, Two-Handed' },
+      { name: 'Halberd', damage: '1d10', damageType: 'slashing', weight: 6, properties: 'Heavy, Reach, Two-Handed' },
+      { name: 'Lance', damage: '1d12', damageType: 'piercing', weight: 6, properties: 'Reach, Special' },
+      { name: 'Longsword', damage: '1d8', damageType: 'slashing', weight: 3, properties: 'Versatile (1d10)' },
+      { name: 'Maul', damage: '2d6', damageType: 'bludgeoning', weight: 10, properties: 'Heavy, Two-Handed' },
+      { name: 'Morningstar', damage: '1d8', damageType: 'piercing', weight: 4, properties: '' },
+      { name: 'Pike', damage: '1d10', damageType: 'piercing', weight: 18, properties: 'Heavy, Reach, Two-Handed' },
+      { name: 'Rapier', damage: '1d8', damageType: 'piercing', weight: 2, properties: 'Finesse' },
+      { name: 'Scimitar', damage: '1d6', damageType: 'slashing', weight: 3, properties: 'Finesse, Light' },
+      { name: 'Shortsword', damage: '1d6', damageType: 'piercing', weight: 2, properties: 'Finesse, Light' },
+      { name: 'Trident', damage: '1d6', damageType: 'piercing', weight: 4, properties: 'Thrown (20/60), Versatile (1d8)' },
+      { name: 'War Pick', damage: '1d8', damageType: 'piercing', weight: 2, properties: '' },
+      { name: 'Warhammer', damage: '1d8', damageType: 'bludgeoning', weight: 2, properties: 'Versatile (1d10)' },
+      { name: 'Whip', damage: '1d4', damageType: 'slashing', weight: 3, properties: 'Finesse, Reach' },
+      // Ranged
+      { name: 'Longbow', damage: '1d8', damageType: 'piercing', weight: 2, properties: 'Ammunition (150/600), Heavy, Two-Handed', ranged: true },
+      { name: 'Hand Crossbow', damage: '1d6', damageType: 'piercing', weight: 3, properties: 'Ammunition (30/120), Light, Loading', ranged: true },
+      { name: 'Heavy Crossbow', damage: '1d10', damageType: 'piercing', weight: 18, properties: 'Ammunition (100/400), Heavy, Loading, Two-Handed', ranged: true }
+    ],
+
+    // ============================================================
+    // EQUIPMENT COSTS (PHB prices in gp)
+    // ============================================================
+
+    /**
+     * Gold piece costs for equipment items
+     * Used to calculate gold value when player takes gold instead of item
+     */
+    EQUIPMENT_COSTS: {
+      // Simple Melee Weapons
+      'Club': 0.1,
+      'Dagger': 2,
+      'Greatclub': 0.2,
+      'Handaxe': 5,
+      'Javelin': 0.5,
+      'Light Hammer': 2,
+      'Mace': 5,
+      'Quarterstaff': 0.2,
+      'Sickle': 1,
+      'Spear': 1,
+      // Simple Ranged Weapons
+      'Light Crossbow': 25,
+      'Dart': 0.05,
+      'Shortbow': 25,
+      'Sling': 0.1,
+      // Martial Melee Weapons
+      'Battleaxe': 10,
+      'Flail': 10,
+      'Glaive': 20,
+      'Greataxe': 30,
+      'Greatsword': 50,
+      'Halberd': 20,
+      'Lance': 10,
+      'Longsword': 15,
+      'Maul': 10,
+      'Morningstar': 15,
+      'Pike': 5,
+      'Rapier': 25,
+      'Scimitar': 25,
+      'Shortsword': 10,
+      'Trident': 5,
+      'War Pick': 5,
+      'Warhammer': 15,
+      'Whip': 2,
+      // Martial Ranged Weapons
+      'Longbow': 50,
+      'Hand Crossbow': 75,
+      'Heavy Crossbow': 50,
+      // Armor
+      'Padded Armor': 5,
+      'Leather Armor': 10,
+      'Studded Leather Armor': 45,
+      'Hide Armor': 10,
+      'Chain Shirt': 50,
+      'Scale Mail': 50,
+      'Breastplate': 400,
+      'Half Plate': 750,
+      'Ring Mail': 30,
+      'Chain Mail': 75,
+      'Splint Armor': 200,
+      'Plate Armor': 1500,
+      'Shield': 10,
+      // Ammunition
+      'Arrows (20)': 1,
+      'Crossbow Bolts (20)': 1,
+      // Packs & Equipment
+      "Dungeoneer's Pack": 12,
+      "Explorer's Pack": 10,
+      "Diplomat's Pack": 39,
+      "Entertainer's Pack": 40,
+      "Burglar's Pack": 16,
+      "Priest's Pack": 19,
+      "Scholar's Pack": 40,
+      // Instruments & Tools
+      'Lute': 35,
+      'Musical Instrument': 25,
+      // Misc gear
+      'Holy Symbol': 5,
+      'Component Pouch': 25,
+      'Arcane Focus': 10,
+      'Druidic Focus': 5,
+      "Thieves' Tools": 25,
+      'Wooden Shield': 10
+    },
+
+    // ============================================================
+    // STARTING GOLD BY CLASS
+    // ============================================================
+
+    /**
+     * Starting gold dice formulas for each class (alternative to equipment)
+     */
+    CLASS_STARTING_GOLD: {
+      'Barbarian': { dice: '2d4', multiplier: 10, average: 50 },
+      'Bard': { dice: '5d4', multiplier: 10, average: 125 },
+      'Cleric': { dice: '5d4', multiplier: 10, average: 125 },
+      'Druid': { dice: '2d4', multiplier: 10, average: 50 },
+      'Fighter': { dice: '5d4', multiplier: 10, average: 125 },
+      'Monk': { dice: '5d4', multiplier: 10, average: 125 },
+      'Paladin': { dice: '5d4', multiplier: 10, average: 125 },
+      'Ranger': { dice: '5d4', multiplier: 10, average: 125 },
+      'Rogue': { dice: '4d4', multiplier: 10, average: 100 },
+      'Sorcerer': { dice: '3d4', multiplier: 10, average: 75 },
+      'Warlock': { dice: '4d4', multiplier: 10, average: 100 },
+      'Wizard': { dice: '4d4', multiplier: 10, average: 100 },
+      'Artificer': { dice: '5d4', multiplier: 10, average: 125 }
+    },
+
+    // ============================================================
+    // CLASS EQUIPMENT CHOICES (PHB Style)
+    // ============================================================
+
+    /**
+     * Equipment choices for each class - allows players to pick between options
+     * Each choice has multiple options; player picks one per choice group
+     * 'items' can be an array of items OR a string like 'any_martial_melee' for weapon selection
+     */
+    CLASS_EQUIPMENT_CHOICES: {
+      'Barbarian': {
+        choices: [
+          {
+            id: 'weapon1',
+            label: 'Primary Weapon',
+            options: [
+              { id: 'greataxe', label: 'Greataxe', items: [{ name: 'Greataxe', quantity: 1, weight: 7, notes: '1d12 slashing, heavy, two-handed' }] },
+              { id: 'martial', label: 'Any martial melee weapon', items: 'any_martial_melee' }
+            ]
+          },
+          {
+            id: 'weapon2',
+            label: 'Secondary Weapons',
+            options: [
+              { id: 'handaxes', label: 'Two handaxes', items: [{ name: 'Handaxe', quantity: 2, weight: 2, notes: '1d6 slashing, light, thrown (20/60)' }] },
+              { id: 'simple', label: 'Any simple weapon', items: 'any_simple' }
+            ]
+          }
+        ],
+        fixed: [
+          { name: 'Javelin', quantity: 4, weight: 2, notes: '1d6 piercing, thrown (30/120)' },
+          { name: "Explorer's Pack", quantity: 1, weight: 59, notes: 'Backpack, bedroll, mess kit, tinderbox, torches (10), rations (10 days), waterskin, hempen rope (50 ft)' }
+        ]
+      },
+      'Bard': {
+        choices: [
+          {
+            id: 'weapon1',
+            label: 'Weapon',
+            options: [
+              { id: 'rapier', label: 'Rapier', items: [{ name: 'Rapier', quantity: 1, weight: 2, notes: '1d8 piercing, finesse' }] },
+              { id: 'longsword', label: 'Longsword', items: [{ name: 'Longsword', quantity: 1, weight: 3, notes: '1d8 slashing, versatile (1d10)' }] },
+              { id: 'simple', label: 'Any simple weapon', items: 'any_simple' }
+            ]
+          },
+          {
+            id: 'pack',
+            label: 'Equipment Pack',
+            options: [
+              { id: 'diplomat', label: "Diplomat's Pack", items: [{ name: "Diplomat's Pack", quantity: 1, weight: 36, notes: 'Chest, 2 cases for maps/scrolls, fine clothes, ink, pen, lamp, 2 flasks of oil, 5 sheets of paper, perfume, sealing wax, soap' }] },
+              { id: 'entertainer', label: "Entertainer's Pack", items: [{ name: "Entertainer's Pack", quantity: 1, weight: 38, notes: 'Backpack, bedroll, 2 costumes, 5 candles, 5 days of rations, waterskin, disguise kit' }] }
+            ]
+          },
+          {
+            id: 'instrument',
+            label: 'Musical Instrument',
+            options: [
+              { id: 'lute', label: 'Lute', items: [{ name: 'Lute', quantity: 1, weight: 2, notes: 'Musical instrument' }] },
+              { id: 'other', label: 'Any other musical instrument', items: [{ name: 'Musical Instrument', quantity: 1, weight: 2, notes: 'Your choice of instrument' }] }
+            ]
+          }
+        ],
+        fixed: [
+          { name: 'Leather Armor', quantity: 1, weight: 10, notes: 'AC 11 + Dex modifier', equipped: true },
+          { name: 'Dagger', quantity: 1, weight: 1, notes: '1d4 piercing, finesse, light, thrown (20/60)' }
+        ]
+      },
+      'Cleric': {
+        choices: [
+          {
+            id: 'weapon1',
+            label: 'Primary Weapon',
+            options: [
+              { id: 'mace', label: 'Mace', items: [{ name: 'Mace', quantity: 1, weight: 4, notes: '1d6 bludgeoning' }] },
+              { id: 'warhammer', label: 'Warhammer (if proficient)', items: [{ name: 'Warhammer', quantity: 1, weight: 2, notes: '1d8 bludgeoning, versatile (1d10)' }] }
+            ]
+          },
+          {
+            id: 'armor',
+            label: 'Armor',
+            options: [
+              { id: 'scale', label: 'Scale Mail', items: [{ name: 'Scale Mail', quantity: 1, weight: 45, notes: 'AC 14 + Dex modifier (max 2), disadvantage on Stealth', equipped: true }] },
+              { id: 'leather', label: 'Leather Armor', items: [{ name: 'Leather Armor', quantity: 1, weight: 10, notes: 'AC 11 + Dex modifier', equipped: true }] },
+              { id: 'chain', label: 'Chain Mail (if proficient)', items: [{ name: 'Chain Mail', quantity: 1, weight: 55, notes: 'AC 16, disadvantage on Stealth', equipped: true }] }
+            ]
+          },
+          {
+            id: 'weapon2',
+            label: 'Secondary Weapon',
+            options: [
+              { id: 'crossbow', label: 'Light crossbow and 20 bolts', items: [
+                { name: 'Light Crossbow', quantity: 1, weight: 5, notes: '1d8 piercing, ammunition (80/320), loading, two-handed' },
+                { name: 'Crossbow Bolts', quantity: 20, weight: 1.5, notes: '' }
+              ]},
+              { id: 'simple', label: 'Any simple weapon', items: 'any_simple' }
+            ]
+          }
+        ],
+        fixed: [
+          { name: 'Shield', quantity: 1, weight: 6, notes: '+2 AC', equipped: true },
+          { name: 'Holy Symbol', quantity: 1, weight: 1, notes: 'Divine focus' },
+          { name: "Priest's Pack", quantity: 1, weight: 24, notes: 'Backpack, blanket, candles (10), tinderbox, alms box, incense (2 blocks), censer, vestments, rations (2 days), waterskin' }
+        ]
+      },
+      'Druid': {
+        choices: [
+          {
+            id: 'shield',
+            label: 'Shield or Weapon',
+            options: [
+              { id: 'wooden_shield', label: 'Wooden Shield', items: [{ name: 'Wooden Shield', quantity: 1, weight: 6, notes: '+2 AC', equipped: true }] },
+              { id: 'simple', label: 'Any simple weapon', items: 'any_simple' }
+            ]
+          },
+          {
+            id: 'weapon1',
+            label: 'Weapon',
+            options: [
+              { id: 'scimitar', label: 'Scimitar', items: [{ name: 'Scimitar', quantity: 1, weight: 3, notes: '1d6 slashing, finesse, light' }] },
+              { id: 'simple_melee', label: 'Any simple melee weapon', items: 'any_simple_melee' }
+            ]
+          }
+        ],
+        fixed: [
+          { name: 'Leather Armor', quantity: 1, weight: 10, notes: 'AC 11 + Dex modifier', equipped: true },
+          { name: 'Druidic Focus', quantity: 1, weight: 0, notes: 'Sprig of mistletoe' },
+          { name: "Explorer's Pack", quantity: 1, weight: 59, notes: 'Backpack, bedroll, mess kit, tinderbox, torches (10), rations (10 days), waterskin, hempen rope (50 ft)' }
+        ]
+      },
+      'Fighter': {
+        choices: [
+          {
+            id: 'armor',
+            label: 'Armor',
+            options: [
+              { id: 'chain', label: 'Chain Mail', items: [{ name: 'Chain Mail', quantity: 1, weight: 55, notes: 'AC 16, disadvantage on Stealth', equipped: true }] },
+              { id: 'leather', label: 'Leather Armor, Longbow, and 20 Arrows', items: [
+                { name: 'Leather Armor', quantity: 1, weight: 10, notes: 'AC 11 + Dex modifier', equipped: true },
+                { name: 'Longbow', quantity: 1, weight: 2, notes: '1d8 piercing, ammunition (150/600), heavy, two-handed' },
+                { name: 'Arrows', quantity: 20, weight: 1, notes: '' }
+              ]}
+            ]
+          },
+          {
+            id: 'weapon1',
+            label: 'Primary Weapons',
+            options: [
+              { id: 'martial_shield', label: 'A martial weapon and a shield', items: 'any_martial_and_shield' },
+              { id: 'two_martial', label: 'Two martial weapons', items: 'any_two_martial' }
+            ]
+          },
+          {
+            id: 'weapon2',
+            label: 'Secondary Weapon',
+            options: [
+              { id: 'crossbow', label: 'Light crossbow and 20 bolts', items: [
+                { name: 'Light Crossbow', quantity: 1, weight: 5, notes: '1d8 piercing, ammunition (80/320), loading, two-handed' },
+                { name: 'Crossbow Bolts', quantity: 20, weight: 1.5, notes: '' }
+              ]},
+              { id: 'handaxes', label: 'Two handaxes', items: [{ name: 'Handaxe', quantity: 2, weight: 2, notes: '1d6 slashing, light, thrown (20/60)' }] }
+            ]
+          },
+          {
+            id: 'pack',
+            label: 'Equipment Pack',
+            options: [
+              { id: 'dungeoneer', label: "Dungeoneer's Pack", items: [{ name: "Dungeoneer's Pack", quantity: 1, weight: 61.5, notes: 'Backpack, crowbar, hammer, pitons (10), torches (10), tinderbox, rations (10 days), waterskin, hempen rope (50 ft)' }] },
+              { id: 'explorer', label: "Explorer's Pack", items: [{ name: "Explorer's Pack", quantity: 1, weight: 59, notes: 'Backpack, bedroll, mess kit, tinderbox, torches (10), rations (10 days), waterskin, hempen rope (50 ft)' }] }
+            ]
+          }
+        ],
+        fixed: []
+      },
+      'Monk': {
+        choices: [
+          {
+            id: 'weapon1',
+            label: 'Weapon',
+            options: [
+              { id: 'shortsword', label: 'Shortsword', items: [{ name: 'Shortsword', quantity: 1, weight: 2, notes: '1d6 piercing, finesse, light' }] },
+              { id: 'simple', label: 'Any simple weapon', items: 'any_simple' }
+            ]
+          },
+          {
+            id: 'pack',
+            label: 'Equipment Pack',
+            options: [
+              { id: 'dungeoneer', label: "Dungeoneer's Pack", items: [{ name: "Dungeoneer's Pack", quantity: 1, weight: 61.5, notes: 'Backpack, crowbar, hammer, pitons (10), torches (10), tinderbox, rations (10 days), waterskin, hempen rope (50 ft)' }] },
+              { id: 'explorer', label: "Explorer's Pack", items: [{ name: "Explorer's Pack", quantity: 1, weight: 59, notes: 'Backpack, bedroll, mess kit, tinderbox, torches (10), rations (10 days), waterskin, hempen rope (50 ft)' }] }
+            ]
+          }
+        ],
+        fixed: [
+          { name: 'Dart', quantity: 10, weight: 2.5, notes: '1d4 piercing, finesse, thrown (20/60)' }
+        ]
+      },
+      'Paladin': {
+        choices: [
+          {
+            id: 'weapon1',
+            label: 'Primary Weapons',
+            options: [
+              { id: 'martial_shield', label: 'A martial weapon and a shield', items: 'any_martial_and_shield' },
+              { id: 'two_martial', label: 'Two martial weapons', items: 'any_two_martial' }
+            ]
+          },
+          {
+            id: 'weapon2',
+            label: 'Secondary Weapon',
+            options: [
+              { id: 'javelins', label: 'Five javelins', items: [{ name: 'Javelin', quantity: 5, weight: 2, notes: '1d6 piercing, thrown (30/120)' }] },
+              { id: 'simple_melee', label: 'Any simple melee weapon', items: 'any_simple_melee' }
+            ]
+          },
+          {
+            id: 'pack',
+            label: 'Equipment Pack',
+            options: [
+              { id: 'priest', label: "Priest's Pack", items: [{ name: "Priest's Pack", quantity: 1, weight: 24, notes: 'Backpack, blanket, candles (10), tinderbox, alms box, incense (2 blocks), censer, vestments, rations (2 days), waterskin' }] },
+              { id: 'explorer', label: "Explorer's Pack", items: [{ name: "Explorer's Pack", quantity: 1, weight: 59, notes: 'Backpack, bedroll, mess kit, tinderbox, torches (10), rations (10 days), waterskin, hempen rope (50 ft)' }] }
+            ]
+          }
+        ],
+        fixed: [
+          { name: 'Chain Mail', quantity: 1, weight: 55, notes: 'AC 16, disadvantage on Stealth', equipped: true },
+          { name: 'Holy Symbol', quantity: 1, weight: 1, notes: 'Divine focus' }
+        ]
+      },
+      'Ranger': {
+        choices: [
+          {
+            id: 'armor',
+            label: 'Armor',
+            options: [
+              { id: 'scale', label: 'Scale Mail', items: [{ name: 'Scale Mail', quantity: 1, weight: 45, notes: 'AC 14 + Dex modifier (max 2), disadvantage on Stealth', equipped: true }] },
+              { id: 'leather', label: 'Leather Armor', items: [{ name: 'Leather Armor', quantity: 1, weight: 10, notes: 'AC 11 + Dex modifier', equipped: true }] }
+            ]
+          },
+          {
+            id: 'weapon1',
+            label: 'Weapons',
+            options: [
+              { id: 'shortswords', label: 'Two shortswords', items: [{ name: 'Shortsword', quantity: 2, weight: 2, notes: '1d6 piercing, finesse, light' }] },
+              { id: 'simple_melee', label: 'Two simple melee weapons', items: 'any_two_simple_melee' }
+            ]
+          },
+          {
+            id: 'pack',
+            label: 'Equipment Pack',
+            options: [
+              { id: 'dungeoneer', label: "Dungeoneer's Pack", items: [{ name: "Dungeoneer's Pack", quantity: 1, weight: 61.5, notes: 'Backpack, crowbar, hammer, pitons (10), torches (10), tinderbox, rations (10 days), waterskin, hempen rope (50 ft)' }] },
+              { id: 'explorer', label: "Explorer's Pack", items: [{ name: "Explorer's Pack", quantity: 1, weight: 59, notes: 'Backpack, bedroll, mess kit, tinderbox, torches (10), rations (10 days), waterskin, hempen rope (50 ft)' }] }
+            ]
+          }
+        ],
+        fixed: [
+          { name: 'Longbow', quantity: 1, weight: 2, notes: '1d8 piercing, ammunition (150/600), heavy, two-handed' },
+          { name: 'Arrows', quantity: 20, weight: 1, notes: '' }
+        ]
+      },
+      'Rogue': {
+        choices: [
+          {
+            id: 'weapon1',
+            label: 'Weapon',
+            options: [
+              { id: 'rapier', label: 'Rapier', items: [{ name: 'Rapier', quantity: 1, weight: 2, notes: '1d8 piercing, finesse' }] },
+              { id: 'shortsword', label: 'Shortsword', items: [{ name: 'Shortsword', quantity: 1, weight: 2, notes: '1d6 piercing, finesse, light' }] }
+            ]
+          },
+          {
+            id: 'weapon2',
+            label: 'Ranged Weapon',
+            options: [
+              { id: 'shortbow', label: 'Shortbow and quiver of 20 arrows', items: [
+                { name: 'Shortbow', quantity: 1, weight: 2, notes: '1d6 piercing, ammunition (80/320), two-handed' },
+                { name: 'Arrows', quantity: 20, weight: 1, notes: '' }
+              ]},
+              { id: 'shortsword', label: 'Shortsword', items: [{ name: 'Shortsword', quantity: 1, weight: 2, notes: '1d6 piercing, finesse, light' }] }
+            ]
+          },
+          {
+            id: 'pack',
+            label: 'Equipment Pack',
+            options: [
+              { id: 'burglar', label: "Burglar's Pack", items: [{ name: "Burglar's Pack", quantity: 1, weight: 44.5, notes: 'Backpack, bag of 1000 ball bearings, 10 feet of string, bell, 5 candles, crowbar, hammer, 10 pitons, hooded lantern, 2 flasks of oil, 5 days rations, tinderbox, waterskin, 50 feet of hempen rope' }] },
+              { id: 'dungeoneer', label: "Dungeoneer's Pack", items: [{ name: "Dungeoneer's Pack", quantity: 1, weight: 61.5, notes: 'Backpack, crowbar, hammer, pitons (10), torches (10), tinderbox, rations (10 days), waterskin, hempen rope (50 ft)' }] },
+              { id: 'explorer', label: "Explorer's Pack", items: [{ name: "Explorer's Pack", quantity: 1, weight: 59, notes: 'Backpack, bedroll, mess kit, tinderbox, torches (10), rations (10 days), waterskin, hempen rope (50 ft)' }] }
+            ]
+          }
+        ],
+        fixed: [
+          { name: 'Leather Armor', quantity: 1, weight: 10, notes: 'AC 11 + Dex modifier', equipped: true },
+          { name: 'Dagger', quantity: 2, weight: 1, notes: '1d4 piercing, finesse, light, thrown (20/60)' },
+          { name: "Thieves' Tools", quantity: 1, weight: 1, notes: '' }
+        ]
+      },
+      'Sorcerer': {
+        choices: [
+          {
+            id: 'weapon1',
+            label: 'Weapon',
+            options: [
+              { id: 'crossbow', label: 'Light crossbow and 20 bolts', items: [
+                { name: 'Light Crossbow', quantity: 1, weight: 5, notes: '1d8 piercing, ammunition (80/320), loading, two-handed' },
+                { name: 'Crossbow Bolts', quantity: 20, weight: 1.5, notes: '' }
+              ]},
+              { id: 'simple', label: 'Any simple weapon', items: 'any_simple' }
+            ]
+          },
+          {
+            id: 'focus',
+            label: 'Arcane Focus',
+            options: [
+              { id: 'component', label: 'Component pouch', items: [{ name: 'Component Pouch', quantity: 1, weight: 2, notes: 'Arcane focus' }] },
+              { id: 'arcane', label: 'Arcane focus', items: [{ name: 'Arcane Focus', quantity: 1, weight: 0, notes: 'Crystal, orb, rod, staff, or wand' }] }
+            ]
+          },
+          {
+            id: 'pack',
+            label: 'Equipment Pack',
+            options: [
+              { id: 'dungeoneer', label: "Dungeoneer's Pack", items: [{ name: "Dungeoneer's Pack", quantity: 1, weight: 61.5, notes: 'Backpack, crowbar, hammer, pitons (10), torches (10), tinderbox, rations (10 days), waterskin, hempen rope (50 ft)' }] },
+              { id: 'explorer', label: "Explorer's Pack", items: [{ name: "Explorer's Pack", quantity: 1, weight: 59, notes: 'Backpack, bedroll, mess kit, tinderbox, torches (10), rations (10 days), waterskin, hempen rope (50 ft)' }] }
+            ]
+          }
+        ],
+        fixed: [
+          { name: 'Dagger', quantity: 2, weight: 1, notes: '1d4 piercing, finesse, light, thrown (20/60)' }
+        ]
+      },
+      'Warlock': {
+        choices: [
+          {
+            id: 'weapon1',
+            label: 'Weapon',
+            options: [
+              { id: 'crossbow', label: 'Light crossbow and 20 bolts', items: [
+                { name: 'Light Crossbow', quantity: 1, weight: 5, notes: '1d8 piercing, ammunition (80/320), loading, two-handed' },
+                { name: 'Crossbow Bolts', quantity: 20, weight: 1.5, notes: '' }
+              ]},
+              { id: 'simple', label: 'Any simple weapon', items: 'any_simple' }
+            ]
+          },
+          {
+            id: 'focus',
+            label: 'Arcane Focus',
+            options: [
+              { id: 'component', label: 'Component pouch', items: [{ name: 'Component Pouch', quantity: 1, weight: 2, notes: 'Arcane focus' }] },
+              { id: 'arcane', label: 'Arcane focus', items: [{ name: 'Arcane Focus', quantity: 1, weight: 0, notes: 'Pact item or other focus' }] }
+            ]
+          },
+          {
+            id: 'pack',
+            label: 'Equipment Pack',
+            options: [
+              { id: 'scholar', label: "Scholar's Pack", items: [{ name: "Scholar's Pack", quantity: 1, weight: 10, notes: 'Backpack, book of lore, bottle of ink, ink pen, 10 sheets of parchment, little bag of sand, small knife' }] },
+              { id: 'dungeoneer', label: "Dungeoneer's Pack", items: [{ name: "Dungeoneer's Pack", quantity: 1, weight: 61.5, notes: 'Backpack, crowbar, hammer, pitons (10), torches (10), tinderbox, rations (10 days), waterskin, hempen rope (50 ft)' }] }
+            ]
+          }
+        ],
+        fixed: [
+          { name: 'Leather Armor', quantity: 1, weight: 10, notes: 'AC 11 + Dex modifier', equipped: true },
+          { name: 'Dagger', quantity: 2, weight: 1, notes: '1d4 piercing, finesse, light, thrown (20/60)' }
+        ]
+      },
+      'Wizard': {
+        choices: [
+          {
+            id: 'weapon1',
+            label: 'Weapon',
+            options: [
+              { id: 'quarterstaff', label: 'Quarterstaff', items: [{ name: 'Quarterstaff', quantity: 1, weight: 4, notes: '1d6 bludgeoning, versatile (1d8)' }] },
+              { id: 'dagger', label: 'Dagger', items: [{ name: 'Dagger', quantity: 1, weight: 1, notes: '1d4 piercing, finesse, light, thrown (20/60)' }] }
+            ]
+          },
+          {
+            id: 'focus',
+            label: 'Arcane Focus',
+            options: [
+              { id: 'component', label: 'Component pouch', items: [{ name: 'Component Pouch', quantity: 1, weight: 2, notes: 'Arcane focus' }] },
+              { id: 'arcane', label: 'Arcane focus', items: [{ name: 'Arcane Focus', quantity: 1, weight: 0, notes: 'Crystal, orb, rod, staff, or wand' }] }
+            ]
+          },
+          {
+            id: 'pack',
+            label: 'Equipment Pack',
+            options: [
+              { id: 'scholar', label: "Scholar's Pack", items: [{ name: "Scholar's Pack", quantity: 1, weight: 10, notes: 'Backpack, book of lore, bottle of ink, ink pen, 10 sheets of parchment, little bag of sand, small knife' }] },
+              { id: 'explorer', label: "Explorer's Pack", items: [{ name: "Explorer's Pack", quantity: 1, weight: 59, notes: 'Backpack, bedroll, mess kit, tinderbox, torches (10), rations (10 days), waterskin, hempen rope (50 ft)' }] }
+            ]
+          }
+        ],
+        fixed: [
+          { name: 'Spellbook', quantity: 1, weight: 3, notes: 'Contains your wizard spells' }
+        ]
+      },
+      'Artificer': {
+        choices: [
+          {
+            id: 'weapon1',
+            label: 'Weapon',
+            options: [
+              { id: 'simple', label: 'Any two simple weapons', items: 'any_two_simple' },
+              { id: 'crossbow', label: 'Light crossbow and 20 bolts', items: [
+                { name: 'Light Crossbow', quantity: 1, weight: 5, notes: '1d8 piercing, ammunition (80/320), loading, two-handed' },
+                { name: 'Crossbow Bolts', quantity: 20, weight: 1.5, notes: '' }
+              ]}
+            ]
+          },
+          {
+            id: 'pack',
+            label: 'Equipment Pack',
+            options: [
+              { id: 'dungeoneer', label: "Dungeoneer's Pack", items: [{ name: "Dungeoneer's Pack", quantity: 1, weight: 61.5, notes: 'Backpack, crowbar, hammer, pitons (10), torches (10), tinderbox, rations (10 days), waterskin, hempen rope (50 ft)' }] },
+              { id: 'explorer', label: "Explorer's Pack", items: [{ name: "Explorer's Pack", quantity: 1, weight: 59, notes: 'Backpack, bedroll, mess kit, tinderbox, torches (10), rations (10 days), waterskin, hempen rope (50 ft)' }] }
+            ]
+          }
+        ],
+        fixed: [
+          { name: 'Scale Mail', quantity: 1, weight: 45, notes: 'AC 14 + Dex modifier (max 2), disadvantage on Stealth', equipped: true },
+          { name: "Thieves' Tools", quantity: 1, weight: 1, notes: 'Required for Artificer spellcasting' },
+          { name: "Tinker's Tools", quantity: 1, weight: 10, notes: 'Artisan tools' }
+        ]
+      }
+    },
+
+    // ============================================================
     // DEFAULT CLASS STARTING EQUIPMENT
     // ============================================================
 
@@ -5692,6 +6282,24 @@ window.LevelUpData = (function() {
     // ============================================================
     // SUBCLASS SPELLS
     // ============================================================
+    /**
+     * Bonus cantrips granted by subclasses
+     * Format: { 'ClassName': { 'SubclassName': { cantrip: 'SpellName' OR 'choice:SpellList', level: number } } }
+     * 'choice:Druid' means player chooses from that class's cantrip list
+     */
+    SUBCLASS_BONUS_CANTRIPS: {
+      'Cleric': {
+        'Light Domain': { cantrip: 'Light', level: 1 },
+        'Nature Domain': { cantrip: 'choice:Druid', level: 1 }
+      },
+      'Druid': {
+        'Circle of Spores': { cantrip: 'Chill Touch', level: 2 }
+      },
+      'Warlock': {
+        'The Celestial': { cantrips: ['Light', 'Sacred Flame'], level: 1 }
+      }
+    },
+
     /**
      * Spells that are always prepared for specific subclasses
      * Format: { 'ClassName': { 'SubclassName': { level: [spell names] } } }
@@ -6406,6 +7014,48 @@ window.LevelUpData = (function() {
     },
 
     /**
+     * Get bonus cantrips granted by a subclass
+     * @param {string} className - The character's class
+     * @param {string} subclassName - The character's subclass
+     * @param {number} level - The character's level
+     * @param {string} chosenCantrip - For 'choice:X' subclasses, the player's chosen cantrip
+     * @returns {Array<string>} - Array of bonus cantrip names
+     */
+    getSubclassBonusCantrips(className, subclassName, level, chosenCantrip = null) {
+      if (!className || !subclassName) return [];
+
+      const classData = this.SUBCLASS_BONUS_CANTRIPS[className];
+      if (!classData) return [];
+
+      const subclassData = classData[subclassName];
+      if (!subclassData) return [];
+
+      // Check if character has reached the level for this bonus
+      if (level < subclassData.level) return [];
+
+      const cantrips = [];
+
+      // Handle multiple cantrips (like Celestial Warlock)
+      if (subclassData.cantrips && Array.isArray(subclassData.cantrips)) {
+        cantrips.push(...subclassData.cantrips);
+      }
+      // Handle single cantrip
+      else if (subclassData.cantrip) {
+        if (subclassData.cantrip.startsWith('choice:')) {
+          // This is a player choice - use the provided chosenCantrip
+          if (chosenCantrip) {
+            cantrips.push(chosenCantrip);
+          }
+        } else {
+          // Fixed cantrip
+          cantrips.push(subclassData.cantrip);
+        }
+      }
+
+      return cantrips;
+    },
+
+    /**
      * Get subclass spells organized by level
      * @param {string} className - The character's class
      * @param {string} subclassName - The character's subclass
@@ -6603,6 +7253,108 @@ window.LevelUpData = (function() {
 
       // Combine both, class equipment first
       return [...classEquipment, ...backgroundEquipment];
+    },
+
+    /**
+     * Get equipment choices for a class (PHB style selection)
+     * @param {string} className - The class name
+     * @returns {Object|null} - Object with choices array and fixed items, or null if not found
+     */
+    getClassEquipmentChoices(className) {
+      return this.CLASS_EQUIPMENT_CHOICES[className] || null;
+    },
+
+    /**
+     * Get starting gold data for a class
+     * @param {string} className - The class name
+     * @returns {Object} - Object with dice, multiplier, and average
+     */
+    getClassStartingGold(className) {
+      return this.CLASS_STARTING_GOLD[className] || { dice: '3d4', multiplier: 10, average: 75 };
+    },
+
+    /**
+     * Get a filtered list of weapons based on type
+     * @param {string} weaponType - Type like 'any_simple', 'any_martial_melee', etc.
+     * @returns {Array} - Array of weapon objects
+     */
+    getWeaponList(weaponType) {
+      switch(weaponType) {
+        case 'any_simple':
+          return [...this.SIMPLE_WEAPONS];
+        case 'any_simple_melee':
+          return this.SIMPLE_WEAPONS.filter(w => !w.ranged);
+        case 'any_simple_ranged':
+          return this.SIMPLE_WEAPONS.filter(w => w.ranged);
+        case 'any_martial':
+          return [...this.MARTIAL_WEAPONS];
+        case 'any_martial_melee':
+          return this.MARTIAL_WEAPONS.filter(w => !w.ranged);
+        case 'any_martial_ranged':
+          return this.MARTIAL_WEAPONS.filter(w => w.ranged);
+        case 'any_two_martial':
+        case 'any_martial_and_shield':
+          return this.MARTIAL_WEAPONS.filter(w => !w.ranged);
+        case 'any_two_simple':
+        case 'any_two_simple_melee':
+          return this.SIMPLE_WEAPONS.filter(w => !w.ranged);
+        default:
+          return [...this.SIMPLE_WEAPONS, ...this.MARTIAL_WEAPONS];
+      }
+    },
+
+    /**
+     * Get a weapon by name from the weapon lists
+     * @param {string} name - Weapon name
+     * @returns {Object|null} - Weapon object or null if not found
+     */
+    getWeaponByName(name) {
+      return this.SIMPLE_WEAPONS.find(w => w.name === name) ||
+             this.MARTIAL_WEAPONS.find(w => w.name === name) ||
+             null;
+    },
+
+    /**
+     * Get the gold cost of an item by name
+     * @param {string} name - Item name
+     * @returns {number} - Gold piece cost (0 if not found)
+     */
+    getItemCost(name) {
+      return this.EQUIPMENT_COSTS[name] || 0;
+    },
+
+    /**
+     * Calculate the total gold value of a choice option
+     * @param {Object} option - Equipment option with items array or string
+     * @returns {number} - Total gold piece value
+     */
+    getChoiceGoldValue(option) {
+      if (!option) return 0;
+
+      // If it's a weapon selection type (string), estimate based on average weapon cost
+      if (typeof option.items === 'string') {
+        const weaponType = option.items;
+        if (weaponType.includes('martial')) {
+          // Average martial weapon is about 15-25 gp
+          if (weaponType.includes('two') || weaponType.includes('shield')) {
+            return 25; // Two weapons or weapon + shield
+          }
+          return 15;
+        }
+        // Simple weapon average
+        return 5;
+      }
+
+      // Sum up costs of all items in the option
+      if (Array.isArray(option.items)) {
+        return option.items.reduce((total, item) => {
+          const costPerItem = this.getItemCost(item.name);
+          const quantity = item.quantity || 1;
+          return total + (costPerItem * quantity);
+        }, 0);
+      }
+
+      return 0;
     },
 
     // ============================================================

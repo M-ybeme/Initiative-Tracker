@@ -706,19 +706,92 @@ const LevelUpSystem = (function() {
 
               <div id="featOptions" class="ms-4 d-none">
                 <div class="mb-2">
-                  <label for="featSelect" class="form-label small">Choose Feat:</label>
-                  <select id="featSelect" class="form-select form-select-sm">
-                    <option value="">-- Select a feat --</option>
-                    ${allFeats.map(f => `<option value="${f}">${f}</option>`).join('')}
-                  </select>
+                  <label class="form-label small">Choose Feat:</label>
+                  <div class="input-group input-group-sm mb-2">
+                    <span class="input-group-text"><i class="bi bi-search"></i></span>
+                    <input type="text" id="featSearch" class="form-control form-control-sm" placeholder="Search feats...">
+                  </div>
+                  <div id="featList" style="max-height: 200px; overflow-y: auto; border: 1px solid #495057; border-radius: 0.25rem; padding: 0.5rem;">
+                    <!-- Feats will be loaded here -->
+                  </div>
+                  <div class="mt-2">
+                    <strong class="small">Selected:</strong> <span id="selectedFeatBadge" class="badge bg-secondary">None</span>
+                  </div>
                 </div>
-                <div id="featDescription" class="alert alert-info text-light small d-none"></div>
               </div>
             </div>
           </div>
         </div>
       </div>
     `;
+  }
+
+  /**
+   * Render the feat list for the level-up ASI step
+   */
+  function renderLevelUpFeatList(modal, searchTerm = '', selectedFeat = null) {
+    const listEl = modal.querySelector('#featList');
+    if (!listEl) return;
+
+    const allFeats = LevelUpData.getAllFeats();
+    let filteredFeats = allFeats;
+
+    // Apply search filter
+    if (searchTerm) {
+      const term = searchTerm.toLowerCase();
+      filteredFeats = allFeats.filter(featName => {
+        const featData = LevelUpData.getFeatData(featName);
+        return featName.toLowerCase().includes(term) ||
+               (featData && featData.description && featData.description.toLowerCase().includes(term));
+      });
+    }
+
+    listEl.innerHTML = filteredFeats.map(featName => {
+      const featData = LevelUpData.getFeatData(featName);
+      const isSelected = selectedFeat === featName;
+      const description = featData?.description || '';
+      const shortDesc = description.length > 100 ? description.substring(0, 100) + '...' : description;
+
+      // Escape HTML for tooltip
+      const tooltipContent = description.replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+
+      // Build prerequisites display
+      let prereqHtml = '';
+      if (featData?.prerequisites) {
+        const prereqs = Object.entries(featData.prerequisites)
+          .map(([key, val]) => `${key.toUpperCase()}: ${val}`)
+          .join(', ');
+        prereqHtml = `<small class="text-warning d-block">Prereq: ${prereqs}</small>`;
+      }
+
+      return `
+        <div class="form-check d-flex align-items-start mb-1 ${isSelected ? 'bg-primary bg-opacity-25 rounded p-1' : ''}">
+          <input class="form-check-input feat-radio" type="radio"
+                 name="levelUpFeat"
+                 id="levelup-feat-${featName.replace(/[^a-zA-Z0-9]/g, '')}"
+                 data-feat-name="${featName}"
+                 ${isSelected ? 'checked' : ''}>
+          <label class="form-check-label small flex-grow-1 ms-1" for="levelup-feat-${featName.replace(/[^a-zA-Z0-9]/g, '')}">
+            <strong>${featName}</strong>
+            ${prereqHtml}
+            <small class="text-muted d-block">${shortDesc}</small>
+          </label>
+          <i class="bi bi-question-circle text-info ms-2 feat-info-icon"
+             data-bs-toggle="tooltip"
+             data-bs-placement="left"
+             data-bs-html="true"
+             title="${tooltipContent}"
+             style="cursor: help; font-size: 0.85rem; flex-shrink: 0;"></i>
+        </div>
+      `;
+    }).join('');
+
+    // Initialize tooltips
+    listEl.querySelectorAll('[data-bs-toggle="tooltip"]').forEach(el => {
+      new bootstrap.Tooltip(el, { trigger: 'hover focus', html: true });
+    });
+
+    return listEl;
   }
 
   /**
@@ -1009,10 +1082,52 @@ const LevelUpSystem = (function() {
       const asiChoiceRadios = modal.querySelectorAll('input[name="asiChoice"]');
       const asiOptions = modal.querySelector('#asiOptions');
       const featOptions = modal.querySelector('#featOptions');
-      const featSelect = modal.querySelector('#featSelect');
-      const featDescription = modal.querySelector('#featDescription');
+      const featSearch = modal.querySelector('#featSearch');
+      const featList = modal.querySelector('#featList');
+      const selectedFeatBadge = modal.querySelector('#selectedFeatBadge');
       const asiBadge = modal.querySelector('#asiBadge');
       const asiIncreaseSelects = modal.querySelectorAll('.asi-increase');
+
+      // Track selected feat
+      let currentSelectedFeat = null;
+
+      // Initial render of feat list
+      renderLevelUpFeatList(modal, '', null);
+
+      // Set up feat radio button listeners
+      function setupFeatRadioListeners() {
+        const featRadios = modal.querySelectorAll('.feat-radio');
+        featRadios.forEach(radio => {
+          radio.addEventListener('change', (e) => {
+            const featName = e.target.dataset.featName;
+            currentSelectedFeat = featName;
+
+            // Update badge displays
+            if (selectedFeatBadge) {
+              selectedFeatBadge.textContent = featName;
+              selectedFeatBadge.className = 'badge bg-success';
+            }
+            asiBadge.textContent = featName;
+            asiBadge.className = 'ms-auto me-3 badge bg-success';
+
+            // Re-render to show selection highlight
+            renderLevelUpFeatList(modal, featSearch?.value || '', featName);
+            setupFeatRadioListeners(); // Re-attach listeners after re-render
+
+            updateSummary(modal, changes);
+          });
+        });
+      }
+
+      setupFeatRadioListeners();
+
+      // Feat search listener
+      if (featSearch) {
+        featSearch.addEventListener('input', (e) => {
+          renderLevelUpFeatList(modal, e.target.value, currentSelectedFeat);
+          setupFeatRadioListeners();
+        });
+      }
 
       asiChoiceRadios.forEach(radio => {
         radio.addEventListener('change', (e) => {
@@ -1024,8 +1139,13 @@ const LevelUpSystem = (function() {
           } else if (e.target.value === 'feat') {
             asiOptions.classList.add('d-none');
             featOptions.classList.remove('d-none');
-            asiBadge.textContent = 'Select Feat';
-            asiBadge.className = 'ms-auto me-3 badge bg-warning';
+            if (currentSelectedFeat) {
+              asiBadge.textContent = currentSelectedFeat;
+              asiBadge.className = 'ms-auto me-3 badge bg-success';
+            } else {
+              asiBadge.textContent = 'Select Feat';
+              asiBadge.className = 'ms-auto me-3 badge bg-warning';
+            }
           }
           updateSummary(modal, changes);
         });
@@ -1049,24 +1169,6 @@ const LevelUpSystem = (function() {
           }
           updateSummary(modal, changes);
         });
-      });
-
-      featSelect.addEventListener('change', (e) => {
-        const featName = e.target.value;
-        if (featName) {
-          const feat = LevelUpData.getFeatData(featName);
-          if (feat) {
-            featDescription.innerHTML = `<strong>${feat.name}</strong><p class="mb-0 mt-1">${feat.description}</p>`;
-            featDescription.classList.remove('d-none');
-            asiBadge.textContent = featName;
-            asiBadge.className = 'ms-auto me-3 badge bg-success';
-          }
-        } else {
-          featDescription.classList.add('d-none');
-          asiBadge.textContent = 'Select Feat';
-          asiBadge.className = 'ms-auto me-3 badge bg-warning';
-        }
-        updateSummary(modal, changes);
       });
     }
 
@@ -1373,7 +1475,9 @@ const LevelUpSystem = (function() {
         const total = Array.from(modal.querySelectorAll('.asi-increase')).reduce((sum, s) => sum + parseInt(s.value || 0, 10), 0);
         asiSet = total === 2;
       } else if (asiChoice.value === 'feat') {
-        asiSet = !!modal.querySelector('#featSelect').value;
+        // Check if a feat radio is selected
+        const selectedFeatRadio = modal.querySelector('input[name="levelUpFeat"]:checked');
+        asiSet = !!selectedFeatRadio;
       }
     }
 
@@ -1543,12 +1647,12 @@ const LevelUpSystem = (function() {
 
         data.asi = increases;
       } else if (asiChoice.value === 'feat') {
-        const featName = modal.querySelector('#featSelect').value;
-        if (!featName) {
+        const selectedFeatRadio = modal.querySelector('input[name="levelUpFeat"]:checked');
+        if (!selectedFeatRadio) {
           alert('Please select a feat.');
           return null;
         }
-        data.feat = featName;
+        data.feat = selectedFeatRadio.dataset.featName;
       }
     }
 

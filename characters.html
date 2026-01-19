@@ -890,10 +890,10 @@
               </div>
             </div>
 
-            <!-- Saving Throws -->
+            <!-- Checks and Saves -->
             <div class="card bg-dark border-secondary mb-3">
               <div class="card-header border-secondary d-flex justify-content-between align-items-center collapsible-header" data-bs-toggle="collapse" data-bs-target="#collapseSaves" aria-expanded="true" aria-controls="collapseSaves" style="cursor: pointer;">
-                <strong><i class="bi bi-chevron-down me-1 collapse-icon"></i>Saving Throws</strong>
+                <strong><i class="bi bi-chevron-down me-1 collapse-icon"></i>Checks and Saves</strong>
                 <small class="text-muted">Shift+Click = Advantage, Ctrl+Click = Disadvantage</small>
               </div>
               <div class="collapse show" id="collapseSaves">
@@ -2367,8 +2367,8 @@
             <span class="combat-info-value" id="combatPassivePerception">10</span>
           </div>
 
-          <!-- Saving Throws -->
-          <div class="combat-section-title">Saving Throws</div>
+          <!-- Checks and Saves -->
+          <div class="combat-section-title">Checks and Saves</div>
           <div class="combat-info-line">
             <span class="combat-info-label">STR</span>
             <span class="combat-info-value" id="combatSaveStr">+0</span>
@@ -3501,13 +3501,27 @@
         // Hit dice
         const hitDice = document.getElementById('totalHitDice')?.value || '1d8';
 
-        // Saving throws
-        const strSave = document.getElementById('strSave')?.value || '+0';
-        const dexSave = document.getElementById('dexSave')?.value || '+0';
-        const conSave = document.getElementById('conSave')?.value || '+0';
-        const intSave = document.getElementById('intSave')?.value || '+0';
-        const wisSave = document.getElementById('wisSave')?.value || '+0';
-        const chaSave = document.getElementById('chaSave')?.value || '+0';
+        // Saving throws - read from the correct input IDs (saveStrBonus, saveDexBonus, etc.)
+        const strSaveVal = document.getElementById('saveStrBonus')?.value;
+        const dexSaveVal = document.getElementById('saveDexBonus')?.value;
+        const conSaveVal = document.getElementById('saveConBonus')?.value;
+        const intSaveVal = document.getElementById('saveIntBonus')?.value;
+        const wisSaveVal = document.getElementById('saveWisBonus')?.value;
+        const chaSaveVal = document.getElementById('saveChaBonus')?.value;
+
+        // Format with + sign for positive values
+        const formatMod = (val) => {
+          const num = parseInt(val, 10);
+          if (isNaN(num)) return '+0';
+          return num >= 0 ? `+${num}` : `${num}`;
+        };
+
+        const strSave = formatMod(strSaveVal);
+        const dexSave = formatMod(dexSaveVal);
+        const conSave = formatMod(conSaveVal);
+        const intSave = formatMod(intSaveVal);
+        const wisSave = formatMod(wisSaveVal);
+        const chaSave = formatMod(chaSaveVal);
 
         // Get portrait data
         const portraitPreview = document.getElementById('portraitPreview');

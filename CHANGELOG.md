@@ -7,10 +7,76 @@ The format is based on Keep a Changelog, and this project adheres to Semantic Ve
 
 The DM's Toolbox has evolved through focused feature releases:
 
+- **2.0.x**: Starting equipment selection, subclass bonus cantrips, enhanced feat selection UI, and bug fixes
 - **1.11.x**: Journal system with rich text editor, import/export (Word/PDF/TXT/Markdown), and Battle Map → Initiative Tracker integration
 - **1.10.x**: Full character manager with multiclass support, spell learning, subclass selection, and character sheet export
 - **1.9.x**: Battle map measurement tools, persistent fog shapes, and generator integration across NPC/Tavern/Shop systems
 - **1.8.x**: Spell database expansion to 432+ spells, inventory management, loot generator overhaul, and character token generation
+
+**Current version: 2.0.0 (January 2026)**
+
+---
+
+## [2.0.0] - 2026-01-19
+**Starting Equipment Selection, Subclass Bonus Cantrips & Enhanced UI**
+
+### Added
+- **Starting Equipment Selection** - New wizard step for choosing starting equipment or gold
+  - Choose between PHB-style equipment packages or take starting gold instead
+  - Equipment choices per class with multiple options (armor, weapons, packs)
+  - "Any martial weapon", "Any simple weapon" dropdowns for flexible selection
+  - Roll for gold or take average based on class (2d4×10 to 5d4×10)
+  - Background equipment always included regardless of choice
+  - Weapons from equipment automatically generate attack entries
+
+- **High Elf Cantrip Selection** - High Elf characters now properly choose their wizard cantrip
+  - Cantrip dropdown appears when High Elf subrace is selected
+  - Full wizard cantrip list available for selection
+  - Validation ensures cantrip is chosen before proceeding
+  - Selected cantrip properly added to character's spell list
+
+- **Nature Domain Druid Cantrip** - Nature Domain Clerics can now choose their bonus druid cantrip
+  - Cantrip selection appears in subclass step for Nature Domain
+  - Full druid cantrip list available
+  - Properly integrated with subclass bonus cantrip system
+
+- **Subclass Bonus Cantrips System** - Automatic cantrip grants for subclasses
+  - `SUBCLASS_BONUS_CANTRIPS` data structure in level-up-data.js
+  - Light Domain Cleric: Light cantrip at level 1
+  - Celestial Warlock: Light and Sacred Flame cantrips at level 1
+  - Circle of Spores Druid: Chill Touch at level 2
+  - `getSubclassBonusCantrips()` helper function for retrieving bonus cantrips
+  - Bonus cantrips automatically added to spell list during character creation
+
+- **Feat Selection as Searchable List** - Replaced dropdown with searchable list UI
+  - Character creation wizard: Searchable feat list with radio buttons
+  - Level-up system: Matching searchable list interface
+  - Real-time search filtering by feat name
+  - Tooltip icons showing feat description, benefits, and prerequisites
+  - Consistent UI pattern matching spell selection interface
+
+- **Site.js Navigation Enhancement** - Improved cross-page navigation
+  - Streamlined dropdown menu organization
+  - Better tool categorization (Combat, Generators, Campaign)
+
+### Fixed
+- **Level 1 Subclass Selection** - Fixed bug where Clerics/Sorcerers/Warlocks couldn't select subclass at level 1
+  - Removed incorrect early return that skipped subclass step for all level 1 characters
+  - Classes that get subclass at level 1 now properly show subclass selection
+
+- **"Racial spell not found" Error** - Fixed error when creating High Elf characters
+  - "Wizard Cantrip (choice)" placeholder now properly replaced with selected cantrip
+  - `gatherRacialSpellData()` updated to handle cantrip choice substitution
+
+### Technical
+- Added `SUBCLASS_BONUS_CANTRIPS` data structure to [level-up-data.js](js/level-up-data.js)
+- Added `getSubclassBonusCantrips()` helper function to [level-up-data.js](js/level-up-data.js)
+- Added `renderFeatList()` function to [character-creation-wizard.js](js/character-creation-wizard.js)
+- Added `renderLevelUpFeatList()` function to [level-up-system.js](js/level-up-system.js)
+- Updated `finishWizard()` to gather subclass bonus cantrips
+- Updated `fillFormFromWizardData()` in [character.js](js/character.js) to handle bonus cantrips
+- Added High Elf cantrip selection UI and validation in race step
+- Added Nature Domain cantrip selection UI in subclass step
 
 ---
 

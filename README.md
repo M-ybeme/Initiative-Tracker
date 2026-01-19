@@ -14,7 +14,7 @@ Free DM toolkit for improvisation at the table. No login, no tracking, works off
 
 - **Initiative Tracker** - Combat management with HP/death saves/concentration/temp HP
 - **Battle Map** - Lightweight VTT with fog of war, tokens, measurements, and HP tracking
-- **Character Manager** - Full character sheets with 33+ races, 432 spells, multiclassing, level-up system
+- **Character Manager** - Full character sheets with 33+ races, 114 subclasses, 432 spells, multiclassing, level-up system, starting equipment selection
 - **Encounter Builder** - Quick combat assembly with custom monsters and stat block export
 - **Journal** - Rich text editor with image support, text wrapping, and IndexedDB storage
 - **8 Generators** - NPCs, shops, taverns, loot, encounters, names (all with seeded RNG)
@@ -37,8 +37,8 @@ All data stored locally in your browser using LocalStorage and IndexedDB. No acc
 **Option 2: Create a Character**
 1. Click "Character Manager" in nav
 2. Click "New Character" → Choose "Character Creation Wizard"
-3. Follow 8-step guided setup (race, class, abilities, skills)
-4. Done - 90% complete character ready to play
+3. Follow 10-step guided setup (race, class, subclass, background, abilities, ASI/feats, equipment, skills, HP)
+4. Done - 95%+ complete character ready to play (with equipment, attacks, features, and spells)
 
 **Option 3: Improvise a Shop**
 1. Click "Shop Generator" in nav
@@ -280,14 +280,14 @@ The DM's Toolbox respects your table, your time, and your creativity.
 ---
 
 #### **Character Creation Wizard**
-**Comprehensive 8-step guided character builder for beginners**
+**Comprehensive 10-step guided character builder for beginners**
 
 **Step 1: Basic Information**
 - Name, player name, level (1-20), alignment
 
 **Step 2: Race Selection**
 - **33+ playable races:**
-  - **Common:** Human (Latin, Norse, Arabic, Asian variants), Elf, Dwarf, Halfling, Dragonborn, Gnome, Half-Elf, Half-Orc, Tiefling
+  - **Common:** Human, Elf, Dwarf, Halfling, Dragonborn, Gnome, Half-Elf, Half-Orc, Tiefling
   - **Uncommon:** Aarakocra, Aasimar, Firbolg, Genasi (Air/Earth/Fire/Water), Goliath, Kenku, Tabaxi, Triton
   - **Monstrous:** Bugbear, Goblin, Hobgoblin, Kobold, Lizardfolk, Orc, Yuan-ti Pureblood
   - **Special:** Changeling, Kalashtar, Shifter, Warforged, Centaur, Loxodon, Minotaur, Leonin, Satyr, Tortle, Locathah, Grung
@@ -301,6 +301,7 @@ The DM's Toolbox respects your table, your time, and your creativity.
   - **Aasimar:** Protector, Scourge, Fallen
   - **Shifter:** Beasthide, Longtooth, Swiftstride, Wildhunt
 - Full descriptions of traits, abilities, and features for every race
+- **High Elf Cantrip Selection** - High Elves choose one wizard cantrip during race selection
 
 **Step 3: Class Selection**
 - **All 13 official classes:**
@@ -315,11 +316,18 @@ The DM's Toolbox respects your table, your time, and your creativity.
   - **Level 2:** Wizard (8 schools), Druid (2 circles)
   - **Level 3:** Barbarian, Bard, Fighter, Monk, Paladin, Ranger, Rogue (2-3 subclasses each)
 - Full subclass feature descriptions and previews
+- **114 total subclasses** from PHB, Xanathar's Guide, Tasha's Cauldron, and other sources
+- **Subclass Bonus Cantrips** - Automatic cantrip grants:
+  - Nature Domain Cleric: Choose one druid cantrip
+  - Light Domain Cleric: Light cantrip
+  - Celestial Warlock: Light and Sacred Flame cantrips
+  - Circle of Spores Druid: Chill Touch (at level 2)
 
 **Step 5: Background Selection**
 - **13 official backgrounds:** Acolyte, Charlatan, Criminal, Entertainer, Folk Hero, Guild Artisan, Hermit, Noble, Outlander, Sage, Sailor, Soldier, Urchin
 - Each background grants 2 skill proficiencies automatically
 - Background features and abilities described
+- Background equipment automatically included
 
 **Step 6: Ability Scores**
 - **4d6-drop-lowest roller** with visual dice display
@@ -327,14 +335,31 @@ The DM's Toolbox respects your table, your time, and your creativity.
 - **Automatic racial ability score bonuses** applied (all races + subraces)
 - Class-specific tips for ability score priorities
 
-**Step 7: Skill Proficiencies**
+**Step 7: Ability Score Improvements** *(for characters level 4+)*
+- ASI calculation based on class and starting level
+- Choice between +2 ASI (split +2/+0 or +1/+1) or feat selection
+- **Searchable feat list** with 40+ official D&D 5e feats
+- Feat tooltips showing description, benefits, and prerequisites
+- ASI bonuses automatically applied (respects 20 cap)
+
+**Step 8: Starting Equipment**
+- **Choose Equipment** - PHB-style equipment packages
+  - Multiple choice options per class (armor, weapons, packs)
+  - "Any martial weapon", "Any simple weapon" dropdowns
+  - Weapons automatically generate attack entries
+- **Take Starting Gold** - Alternative gold-based option
+  - Roll for gold based on class (2d4×10 to 5d4×10 gp)
+  - Or take guaranteed average amount
+- Background equipment always included regardless of choice
+
+**Step 9: Skill Proficiencies**
 - **Interactive skill selection** based on class
 - Enforces correct number: Rogue (4), Bard/Ranger (3), most classes (2)
 - Shows only available skills for selected class
 - Real-time selection progress feedback
 - Background skills already granted automatically
 
-**Step 8: HP & Combat Stats**
+**Step 10: HP & Combat Stats**
 - **Automatic calculations:**
   - **Hit Points:** Class hit die + CON modifier
   - **Armor Class:** Class-appropriate armor with accurate DEX bonuses
@@ -346,11 +371,20 @@ The DM's Toolbox respects your table, your time, and your creativity.
   - **Proficiency Bonus:** Level-based (+2 at level 1-4)
   - **Saving Throw Proficiencies:** Class-based (automatically checked)
 
-**Step 9: Review & Create**
+**Review & Create**
 - Complete character summary before creation
 - Shows all choices, calculated stats, and proficiencies
 - One-click character creation
-- **Creates 90% complete character ready for immediate play**
+- **Creates 95%+ complete character ready for immediate play**
+
+**Automatic Character Population:**
+- **Racial Features** - All 30+ races with base and subrace traits
+- **Racial Spells** - Innate spellcasting (Tiefling, Aasimar, Drow, Genasi, etc.)
+- **Class Features** - All features from level 1 to starting level
+- **Subclass Features** - Subclass-specific abilities and spells
+- **Class Resources** - Rage, Ki Points, Bardic Inspiration, etc.
+- **Default Attacks** - Class-appropriate weapon and cantrip attacks
+- **Wild Shape Reference** - Druid beast form compendium (50+ beasts)
 
 ---
 
@@ -511,11 +545,12 @@ The DM's Toolbox respects your table, your time, and your creativity.
   - +1 to two different ability scores
   - Ability score cap enforcement (max 20)
   - Validation ensures exactly +2 total increase
-- **Feat selection:**
+- **Feat selection with searchable list:**
   - 40+ official D&D 5e feats from PHB
+  - **Searchable interface** - Filter feats by name in real-time
+  - **Feat tooltips** - Hover for full description, benefits, and prerequisites
   - Prerequisite checking (ability scores, proficiencies)
   - Automatic ability score increases from feats (Resilient, Actor, etc.)
-  - Complete feat descriptions and benefits
   - Organized categories: Combat, Defensive, Utility, Magic, Mobility
 
 **Step 5: Spell Learning** *(for spellcasters)*
@@ -602,7 +637,7 @@ The DM's Toolbox respects your table, your time, and your creativity.
 **Use cases:**
 - **For DMs:** Track the party with quick reference for passive Perception, spell lists, and story hooks. Export all 4 PCs to Initiative Tracker before combat. Use Combat View for at-a-glance stats during encounters.
 - **For Players:** Use as your character sheet during a one-shot or campaign. Click dice buttons to roll skills/saves/attacks, track HP/resources, manage spell slots. No need to buy content - all races, classes, and spells are free.
-- **For New Players:** Character Creation Wizard guides you through every step with explanations. Creates a 90% complete character in 10 minutes.
+- **For New Players:** Character Creation Wizard guides you through every step with explanations. Creates a 95%+ complete character with equipment, attacks, features, and spells.
 
 ---
 
@@ -1292,6 +1327,7 @@ The-DMs-Toolbox/
 ├── npc.html                # NPC Generator
 ├── loot.html               # Loot Generator
 ├── name.html               # Name Generator
+├── journal.html            # Journal / Campaign Notes
 │
 ├── css/
 │   ├── site.css            # Global styles (nav, footer, utilities)
@@ -1316,7 +1352,9 @@ The-DMs-Toolbox/
 │   ├── tav.js              # Tavern Generator logic
 │   ├── npc.js              # NPC Generator logic
 │   ├── loot.js             # Loot Generator logic
-│   └── name.js             # Name Generator logic
+│   ├── name.js             # Name Generator logic
+│   ├── journal-export.js   # Journal export system (Word/PDF/TXT/Markdown)
+│   └── character-sheet-export.js  # Character sheet export (PDF/PNG/Word)
 │
 ├── images/
 │   ├── playerTokens/       # 12 player class tokens
@@ -1328,7 +1366,7 @@ The-DMs-Toolbox/
 │   └── White logo.png      # Footer logo
 │
 ├── LICENSE.md              # MIT License
-├── CHANGELOG.md            # Version history (v1.10.6 as of 2025-12-19)
+├── CHANGELOG.md            # Version history (v2.0.0 as of 2026-01-19)
 └── README.md               # This file
 ```
 
@@ -1644,13 +1682,15 @@ If you do donate, know that it goes toward:
 
 ## 📊 Project Stats
 
-- **Lines of code:** ~37,000+ (HTML + CSS + JS)
+- **Lines of code:** ~45,000+ (HTML + CSS + JS)
 - **Files:** 60+ (pages, scripts, styles, assets)
 - **Spells in database:** 432 (PHB, Xanathar's, Tasha's)
 - **Races supported:** 33+ (PHB, Volo's, Xanathar's, Eberron, Ravnica, Theros)
 - **Classes supported:** 13 (all official classes including Artificer)
+- **Subclasses supported:** 114 (PHB, Xanathar's, Tasha's, and more)
+- **Feats supported:** 40+ (PHB feats with searchable selection)
 - **Development time:** 2+ years (since Feb 2024 pre-alpha)
-- **Version:** v1.11.4 (as of December 25, 2025)
+- **Version:** v2.0.0 (as of January 19, 2026)
 - **Coffee consumed:** Immeasurable
 - **Hours saved for DMs:** Hopefully thousands
 
