@@ -329,3 +329,7 @@ The Battle Map is a tactical combat visualization tool with support for fog-of-w
 - Fog painting (brush/shape)
 - Measurement creation and editing
 - Context menu operations
+
+## Use Case
+
+Upload a dungeon map, calibrate the grid in two clicks, add tokens. Enable "Persistent" mode and create a red circle measurement for "Fireball AoE" (drag to 4 cells = 20 ft, auto-adjusts to 4.5 cells for token size). Add blue circle for "Spirit Guardians" (3 cells = 15 ft). Click measurements to see exact distances, drag to reposition, resize by handles. Measurements stay visible during pan/zoom without flicker. Reveal rooms as players explore using fog shapes. Right-click enemies to add to Initiative Tracker when combat starts. Works on desktop or tablet at the table.

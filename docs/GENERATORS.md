@@ -543,3 +543,8 @@ The DM's Toolbox includes five interconnected generators for creating D&D 5e con
 5. **v1.10.5** - Tavern cultural immersion (56 patron types, 28 events, cultural systems)
 6. **v1.10.8** - Tavern menu expansion (4-5x more variety)
 7. **v1.10.9** - Cursed items system (50 items, 5 severity levels)
+
+## Use Cases
+
+### Shop Generator
+Players walk into a village blacksmith. Generate inventory (Village, Standard quality, seed: "ironforge-blacksmith"). Shopkeeper is "gruff and practical with burn scars on his forearms." Shop has mundane weapons (15 gp Longsword, 10 gp Spear), no magic items, village pricing with limited stock. Player wants to haggle - roll Persuasion vs DC 12 for common item. Success = 10% off. Click "Add to Character" to transfer Longsword to player's inventory. Return next session—same shop, same inventory.

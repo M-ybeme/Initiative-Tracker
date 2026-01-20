@@ -407,3 +407,61 @@ See [SPELLS.md](SPELLS.md) for complete spell database details.
 10. **v1.10.3** - Racial features and comprehensive help system
 11. **v1.10.4** - Combat/DM view toggle
 12. **v1.10.7** - Character sheet export (PDF/PNG/Word/Print)
+
+## Use Cases
+
+### For DMs
+Track the party with quick reference for passive Perception, spell lists, and story hooks. Export all 4 PCs to Initiative Tracker before combat. Use Combat View for at-a-glance stats during encounters.
+
+### For Players
+Use as your character sheet during a one-shot or campaign. Click dice buttons to roll skills/saves/attacks, track HP/resources, manage spell slots. No need to buy content - all races, classes, and spells are free.
+
+### For New Players
+Character Creation Wizard guides you through every step with explanations. Creates a 95%+ complete character with equipment, attacks, features, and spells.
+
+## Why Use This Instead of another tool?
+
+**Most character manager tools lock races and spells behind paywalls:**
+- Tabaxi, Genasi, Firbolg? Pay $30 for Volo's Guide
+- Artificer class? Pay $30 for Eberron book
+- Full spell access? Pay $30 for PHB + $20 for Xanathar's + $20 for Tasha's
+- More than 6 characters? Pay $2.99/month subscription
+- **Total cost for full access: $400+**
+
+**The DM's Toolbox gives you everything for FREE:**
+- ✅ **33+ playable races** (PHB, Volo's, Xanathar's, Eberron, Ravnica, Theros) - **NO PAYWALL**
+- ✅ **All 13 official classes** including Artificer - **NO PAYWALL**
+- ✅ **432 spells** from PHB, Xanathar's, Tasha's - **NO PAYWALL**
+- ✅ **Multiclassing** with automatic spell slot calculation (full/half/third caster rules)
+- ✅ **Complete level-up system** (1-20) with ASI, feats, subclasses, spell learning
+- ✅ **Works offline** - No internet required after first load
+- ✅ **No tracking** - Your characters stay in your browser, not WotC's database
+
+## Use Cases
+
+### For DMs
+Track the party with quick reference for passive Perception, spell lists, and story hooks. Export all 4 PCs to Initiative Tracker before combat. Use Combat View for at-a-glance stats during encounters.
+
+### For Players
+Use as your character sheet during a one-shot or campaign. Click dice buttons to roll skills/saves/attacks, track HP/resources, manage spell slots. No need to buy content - all races, classes, and spells are free.
+
+### For New Players
+Character Creation Wizard guides you through every step with explanations. Creates a 95%+ complete character with equipment, attacks, features, and spells.
+
+## Why Use This Instead of another tool?
+
+**Most character manager tools lock races and spells behind paywalls:**
+- Tabaxi, Genasi, Firbolg? Pay $30 for Volo's Guide
+- Artificer class? Pay $30 for Eberron book
+- Full spell access? Pay $30 for PHB + $20 for Xanathar's + $20 for Tasha's
+- More than 6 characters? Pay $2.99/month subscription
+- **Total cost for full access: $400+**
+
+**The DM's Toolbox gives you everything for FREE:**
+- ✅ **33+ playable races** (PHB, Volo's, Xanathar's, Eberron, Ravnica, Theros) - **NO PAYWALL**
+- ✅ **All 13 official classes** including Artificer - **NO PAYWALL**
+- ✅ **432 spells** from PHB, Xanathar's, Tasha's - **NO PAYWALL**
+- ✅ **Multiclassing** with automatic spell slot calculation (full/half/third caster rules)
+- ✅ **Complete level-up system** (1-20) with ASI, feats, subclasses, spell learning
+- ✅ **Works offline** - No internet required after first load
+- ✅ **No tracking** - Your characters stay in your browser, not WotC's database
