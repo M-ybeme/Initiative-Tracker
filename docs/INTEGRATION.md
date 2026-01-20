@@ -106,7 +106,7 @@ if (fromSource) {
 
 **Destination:** [js/initiative.js](../js/initiative.js) (lines 123-181)
 
-**Navigation:** `index.html#autoinput`
+**Navigation:** `initiative.html#autoinput`
 
 **Button ID:** `sendToTrackerBtn`
 
@@ -300,7 +300,7 @@ if (fromSource) {
 
 **Destination:** [js/initiative.js](../js/initiative.js) (lines 123-181)
 
-**Navigation:** `index.html#autoinput`
+**Navigation:** `initiative.html#autoinput`
 
 **Button ID:** `eb-send-to-tracker`
 
@@ -345,7 +345,7 @@ if (fromSource) {
 
 **Destination:** [js/initiative.js](../js/initiative.js) (lines 44-85)
 
-**Navigation:** `index.html#autoimport`
+**Navigation:** `initiative.html#autoimport`
 
 **Expected Payload:**
 ```javascript

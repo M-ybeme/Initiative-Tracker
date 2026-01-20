@@ -3526,7 +3526,7 @@
         }
 
         // Navigate to the initiative tracker page
-        window.location.href = 'index.html#autoinput';
+        window.location.href = 'initiative.html#autoinput';
       }
 
       // Token preview modal state

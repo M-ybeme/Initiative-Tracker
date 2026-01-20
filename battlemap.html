@@ -146,7 +146,7 @@
               Combat
             </a>
             <ul class="dropdown-menu">
-              <li><a class="dropdown-item" href="index.html">Initiative Tracker</a></li>
+              <li><a class="dropdown-item" href="initiative.html">Initiative Tracker</a></li>
               <li><a class="dropdown-item active" aria-current="page" href="battlemap.html">Battle Map</a></li>
               <li><a class="dropdown-item" href="encounterbuilder.html">Encounter Builder</a></li>
             </ul>
@@ -2196,7 +2196,7 @@
       console.log('Saved to localStorage:', initiativeData);
 
       // Try to open in new tab first
-      const newWindow = window.open('index.html#autoimport', '_blank');
+      const newWindow = window.open('initiative.html#autoimport', '_blank');
 
       // Check if popup was blocked
       if (!newWindow || newWindow.closed || typeof newWindow.closed === 'undefined') {
@@ -2209,7 +2209,7 @@
         );
 
         if (navigateHere) {
-          window.location.href = 'index.html#autoimport';
+          window.location.href = 'initiative.html#autoimport';
         }
       }
     } else {

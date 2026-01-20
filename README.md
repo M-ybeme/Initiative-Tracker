@@ -1318,7 +1318,8 @@ You can use them for prep too, but the primary goal is **table-ready speed**.
 
 ```
 The-DMs-Toolbox/
-├── index.html              # Initiative Tracker (landing page)
+├── index.html              # Splash page (landing page with tool overview)
+├── initiative.html         # Initiative Tracker
 ├── battlemap.html          # Battle Map VTT
 ├── encounterbuilder.html   # Encounter Builder
 ├── characters.html         # Character Manager
@@ -1551,7 +1552,9 @@ git clone https://github.com/M-ybeme/The-DMs-Toolbox.git
 cd The-DMs-Toolbox
 
 # Open in browser (no build step needed)
-open index.html
+open index.html          # Opens splash page
+# or
+open initiative.html     # Opens Initiative Tracker directly
 
 # Or use a local server (optional, recommended for CORS)
 python -m http.server 8000

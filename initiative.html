@@ -1,0 +1,1054 @@
+<!DOCTYPE html>
+<html lang="en" data-bs-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>The DM's Toolbox: Initiative Tracker</title>
+
+  <!-- Bootstrap + Icons -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" crossorigin="anonymous" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" />
+
+  <!-- Custom CSS -->
+  <link href="/css/site.css" rel="stylesheet" />
+  <link href="/css/initiative.css" rel="stylesheet" />
+
+  <!-- Favicon -->
+  <link rel="icon" type="image/png" href="/images/dndFavicon (2).png" />
+  <script src="/js/site.js"></script>
+</head>
+
+<body class="bgimage">
+  <!-- Nav -->
+  <nav class="navbar navbar-expand-lg navbar-dark fixed-top text-light" id="mainNav">
+    <div class="container-fluid">
+      <a class="navbar-brand" href="index.html">
+        <img src="/images/dndFavicon (2).png" height="40" width="40" alt="App Logo" class="d-inline-block" />
+        The DM's Toolbox
+      </a>
+      <button class="navbar-toggler" type="button" data-bs-toggle="collapse"
+              data-bs-target="#navbarSupportedContent" aria-controls="navbarSupportedContent"
+              aria-expanded="false" aria-label="Toggle navigation">
+        <span class="navbar-toggler-icon"></span>
+      </button>
+
+      <div class="collapse navbar-collapse" id="navbarSupportedContent">
+        <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+          <li class="nav-item dropdown">
+            <a class="nav-link dropdown-toggle active" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+              Combat
+            </a>
+            <ul class="dropdown-menu">
+              <li><a class="dropdown-item active" aria-current="page" href="initiative.html">Initiative Tracker</a></li>
+              <li><a class="dropdown-item" href="battlemap.html">Battle Map</a></li>
+              <li><a class="dropdown-item" href="encounterbuilder.html">Encounter Builder</a></li>
+            </ul>
+          </li>
+          <li class="nav-item dropdown">
+            <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+              Generators
+            </a>
+            <ul class="dropdown-menu">
+              <li><a class="dropdown-item" href="name.html">Name Generator</a></li>
+              <li><a class="dropdown-item" href="loot.html">Loot Generator</a></li>
+              <li><a class="dropdown-item" href="shop.html">Shop Generator</a></li>
+              <li><a class="dropdown-item" href="npc.html">NPC Generator</a></li>
+              <li><a class="dropdown-item" href="tav.html">Tavern/Inn Generator</a></li>
+            </ul>
+          </li>
+          <li class="nav-item dropdown">
+            <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+              Campaign
+            </a>
+            <ul class="dropdown-menu">
+              <li><a class="dropdown-item" href="characters.html">Characters</a></li>
+              <li><a class="dropdown-item" href="journal.html">Journal</a></li>
+            </ul>
+          </li>
+        </ul>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Main -->
+  <main class="content pt-3">
+    <div class="container-fluid backdrop pb-4">
+      <!-- Hero / Header -->
+      <header class="text-center mb-3">
+        <h1 class="display-1 mb-1">Initiative Tracker</h1>
+        <p class="lead mb-1">
+          Manage turn order, HP/AC, conditions, notes, dice, and combat rounds in one place.
+        </p>
+        <p id="playerViewBanner" class="text-info fw-semibold d-none mb-0">
+          Player View is ON &mdash; sensitive info is hidden on this screen.
+        </p>
+      </header>
+
+      <!-- Top control strip -->
+      <section class="mb-4">
+        <div class="row g-3">
+          <!-- Session & Saving -->
+          <div class="col-12 col-xl-5">
+            <div class="card bg-dark border-secondary h-100">
+              <div class="card-header d-flex justify-content-between align-items-center py-2">
+                <span class="fw-semibold">
+                  <i class="bi bi-hdd-stack me-1"></i> Session &amp; Saving
+                </span>
+                <span class="badge bg-secondary text-uppercase small">Local Only</span>
+              </div>
+              <div class="card-body py-2">
+                <div class="row g-2 align-items-center">
+                  <div class="col-12 col-md-5 d-flex flex-wrap gap-2">
+                    <div class="form-check form-switch mb-0">
+                      <input class="form-check-input" type="checkbox" id="autoSaveToggle" checked>
+                      <label class="form-check-label small" for="autoSaveToggle">Auto-Save</label>
+                    </div>
+                    <div class="form-check form-switch mb-0">
+                      <input class="form-check-input" type="checkbox" id="lockOrderToggle">
+                      <label class="form-check-label small" for="lockOrderToggle">Lock Order</label>
+                    </div>
+                  </div>
+
+                  <div class="col-12 col-md-7 d-flex flex-wrap gap-2">
+                    <button id="manualSaveBtn" class="btn btn-outline-success btn-sm flex-fill">
+                      <i class="bi bi-save me-1"></i> Manual Save
+                    </button>
+                    <button id="copyOrderBtn" class="btn btn-outline-light btn-sm flex-fill">
+                      <i class="bi bi-list-ol me-1"></i> Copy Turn Order
+                    </button>
+                  </div>
+
+                  <div class="col-12">
+                    <select id="saveHistorySelect" class="form-select form-select-sm">
+                      <option disabled selected>Load Previous Save</option>
+                    </select>
+                  </div>
+
+                  <div class="col-12 d-flex flex-wrap gap-2">
+                    <button id="export-btn" class="btn btn-outline-warning btn-sm flex-fill">
+                      <i class="bi bi-box-arrow-down me-1"></i> Export Session
+                    </button>
+                    <button id="import-btn" class="btn btn-outline-secondary btn-sm flex-fill">
+                      <i class="bi bi-box-arrow-in-up me-1"></i> Import Session
+                    </button>
+
+                    <!-- Hidden import file input -->
+                    <input type="file" id="import-file" accept=".json" class="d-none" />
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- View & Reference -->
+          <div class="col-12 col-xl-4">
+            <div class="card bg-dark border-secondary h-100">
+              <div class="card-header d-flex justify-content-between align-items-center py-2">
+                <span class="fw-semibold">
+                  <i class="bi bi-display me-1"></i> View &amp; Reference
+                </span>
+              </div>
+              <div class="card-body py-2">
+                <div class="row g-2 align-items-center">
+                  <div class="col-12 col-sm-6">
+                    <div class="form-check form-switch mb-2">
+                      <input class="form-check-input" type="checkbox" id="playerViewToggle">
+                      <label class="form-check-label small" for="playerViewToggle">Player View (2nd Screen)</label>
+                    </div>
+                    <button id="helpBtn"
+                            class="btn btn-info btn-sm text-dark w-100"
+                            type="button"
+                            data-bs-toggle="offcanvas"
+                            data-bs-target="#helpCanvas"
+                            aria-controls="helpCanvas">
+                      <i class="bi bi-question-circle me-1"></i> Quick Help
+                    </button>
+                  </div>
+
+                  <div class="col-12 col-sm-6 d-flex flex-column gap-2">
+                    <button class="btn btn-outline-success btn-sm w-100"
+                            data-bs-toggle="modal"
+                            data-bs-target="#savedCharsModal">
+                      <i class="bi bi-people-fill me-1"></i> Saved Character Templates
+                    </button>
+                    <button class="btn btn-outline-light btn-sm w-100"
+                            data-bs-toggle="modal"
+                            data-bs-target="#rulesModal">
+                      <i class="bi bi-journal-bookmark me-1"></i> Rules / Spells Reference
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Round badge & quick summary -->
+          <div class="col-12 col-xl-3">
+            <div class="card bg-dark border-secondary h-100">
+              <div class="card-body d-flex flex-column justify-content-center text-center py-2">
+                <div class="text-uppercase small text-secondary mb-1">Combat Round</div>
+                <div class="display-5 mb-1">
+                  <span id="combat-round">1</span>
+                </div>
+                <div class="small text-secondary">
+                  Use <kbd>N</kbd> for Next Turn &bull; <kbd>S</kbd> for Manual Save
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Add character / turn entry -->
+      <section class="mb-3">
+        <div class="card bg-dark border-secondary">
+          <div class="card-header py-2 d-flex justify-content-between align-items-center">
+            <span class="fw-semibold">
+              <i class="bi bi-plus-circle me-1"></i> Add Combatant
+            </span>
+            <span class="small text-secondary">
+              Only <strong>Name</strong> is required; numbers default to 0.
+            </span>
+          </div>
+          <div class="card-body py-2">
+            <form id="initiative-form" class="row g-2 align-items-end">
+              <div class="col-12 col-md-3">
+                <label for="character-name" class="form-label form-label-sm mb-1">Character Name</label>
+                <input id="character-name" class="form-control form-control-sm" type="text" placeholder="e.g. Silas, Goblin 1" required>
+              </div>
+
+              <div class="col-6 col-md-2">
+                <label for="initiative-roll" class="form-label form-label-sm mb-1">Initiative</label>
+                <input id="initiative-roll" class="form-control form-control-sm" type="number" placeholder="0">
+              </div>
+
+              <div class="col-6 col-md-2">
+                <label for="character-health" class="form-label form-label-sm mb-1">Max HP</label>
+                <input id="character-health" class="form-control form-control-sm" type="number" placeholder="0">
+              </div>
+
+              <div class="col-6 col-md-2">
+                <label for="character-ac" class="form-label form-label-sm mb-1">AC</label>
+                <input id="character-ac" class="form-control form-control-sm" type="number" placeholder="0">
+              </div>
+
+              <div class="col-6 col-md-2">
+                <label for="character-type" class="form-label form-label-sm mb-1">Type</label>
+                <select id="character-type" class="form-select form-select-sm">
+                  <option>PC</option>
+                  <option>Companion</option>
+                  <option>NPC</option>
+                  <option>Enemy</option>
+                </select>
+              </div>
+
+              <div class="col-12 col-md-1">
+                <button class="btn btn-success btn-sm w-100" type="submit">
+                  Add
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </section>
+
+      <!-- Dice roller -->
+      <section class="mb-4">
+        <div class="card bg-dark border-secondary">
+          <div class="card-header py-2 d-flex justify-content-between align-items-center">
+            <span class="fw-semibold">
+              <i class="bi bi-dice-5 me-1"></i> Dice Roller
+            </span>
+            <span id="dice-result" class="small text-light fw-semibold"></span>
+          </div>
+          <div class="card-body py-2 text-light">
+            <div class="d-flex justify-content-center gap-2 flex-wrap mb-2">
+              <button class="btn btn-outline-info btn-sm dice-btn" data-dice="4">d4</button>
+              <button class="btn btn-outline-info btn-sm dice-btn" data-dice="6">d6</button>
+              <button class="btn btn-outline-info btn-sm dice-btn" data-dice="8">d8</button>
+              <button class="btn btn-outline-info btn-sm dice-btn" data-dice="10">d10</button>
+              <button class="btn btn-outline-info btn-sm dice-btn" data-dice="12">d12</button>
+              <button class="btn btn-outline-info btn-sm dice-btn" data-dice="20">d20</button>
+              <button class="btn btn-outline-info btn-sm dice-btn" data-dice="100">d100</button>
+              <button class="btn btn-outline-info btn-sm" id="roll-adv">Adv (d20)</button>
+              <button class="btn btn-outline-info btn-sm" id="roll-dis">Dis (d20)</button>
+            </div>
+
+            <div class="row g-2 align-items-center">
+              <div class="col-12 col-md-7">
+                <label for="custom-dice-input" class="form-label form-label-sm mb-1">Custom Roll</label>
+                <div class="input-group input-group-sm">
+                  <input id="custom-dice-input"
+                         type="text"
+                         class="form-control"
+                         placeholder="e.g. 2d6+1d4+3, 4d6kh3, adv"
+                         aria-label="Custom dice expression">
+                  <button id="roll-custom-dice" class="btn btn-outline-warning">
+                    Roll
+                  </button>
+                </div>
+                <div class="form-text text-secondary">
+                  Multi-terms, +/−, keep high/low (<code>kh</code>/<code>kl</code>), and <code>adv</code>/<code>dis</code> are supported.
+                </div>
+              </div>
+
+              <div class="col-12 col-md-5 mt-2 mt-md-0">
+                <div class="d-flex flex-wrap gap-2">
+                  <button class="btn btn-outline-light btn-sm"
+                          data-bs-toggle="collapse"
+                          data-bs-target="#dice-history">
+                    Roll History
+                  </button>
+                  <button class="btn btn-outline-danger btn-sm" id="clear-dice-history">
+                    Clear History
+                  </button>
+                </div>
+                <div class="collapse mt-2" id="dice-history">
+                  <div class="card card-body bg-dark text-light small"
+                       id="dice-history-log"
+                       style="max-height: 200px; overflow-y: auto;">
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Initiative table -->
+      <section class="mb-3">
+        <!-- Desktop -->
+        <div class="d-none d-md-block">
+          <div class="table-responsive">
+            <table class="table table-dark table-striped align-middle mb-0 initiative-table">
+              <thead class="small text-uppercase text-secondary">
+                <tr>
+                  <th class="col-drag"></th>
+                  <th class="col-turn">Turn</th>
+                  <th class="col-name">Character</th>
+                  <th class="col-type">Type</th>
+                  <th class="col-init">Initiative</th>
+                  <th class="col-ac">AC</th>
+                  <th class="col-health">Health</th>
+                  <th class="col-notes">Notes &amp; Effects</th>
+                  <th class="col-actions">Actions</th>
+                </tr>
+              </thead>
+              <tbody id="initiative-order"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Mobile -->
+        <div id="mobile-initiative-order" class="d-block d-md-none"></div>
+      </section>
+
+      <!-- Footer action bar -->
+      <section class="mt-3">
+        <div class="d-flex gap-2 justify-content-center flex-wrap sticky-initiative-footer">
+          <button id="next-turn" class="btn btn-success">
+            <i class="bi bi-caret-right-fill me-1"></i> Next Turn
+          </button>
+          <button id="undo-btn" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-counterclockwise me-1"></i> Undo
+          </button>
+          <button id="reset-turns" class="btn btn-outline-danger">
+            Reset Rounds
+          </button>
+          <button id="clear-all" class="btn btn-outline-light">
+            Clear All
+          </button>
+          <button id="clear-storage" class="btn btn-outline-warning">
+            Clear Saved Data
+          </button>
+          <button id="bulk-hp-btn" class="btn btn-outline-info">
+            <i class="bi bi-heart-pulse me-1"></i> Bulk HP Adjust
+          </button>
+          <button class="btn btn-outline-light"
+                  type="button"
+                  data-bs-toggle="offcanvas"
+                  data-bs-target="#sessionNotes"
+                  aria-controls="sessionNotes">
+            <i class="bi bi-journal-text me-1"></i> Session Notes
+          </button>
+        </div>
+      </section>
+    </div>
+  </main>
+  <!-- Status Modal -->
+  <div class="modal fade" id="statusModal" tabindex="-1" aria-labelledby="statusModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+      <div class="modal-content bg-dark text-light">
+        <div class="modal-header">
+          <h5 class="modal-title" id="statusModalLabel">Edit Status Effects</h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <!-- Current effects -->
+          <div id="status-badges" class="mb-3 d-flex flex-wrap gap-2"></div>
+
+          <!-- Add effect -->
+          <div class="input-group mb-2">
+            <button class="btn btn-outline-light dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+              Add Effect
+            </button>
+            <ul class="dropdown-menu dropdown-menu-dark" id="status-dropdown-list"></ul>
+            <input id="status-duration" type="number" min="0" class="form-control" placeholder="Duration (rounds, optional)">
+            <button id="add-status-btn" class="btn btn-outline-success">Add</button>
+          </div>
+          <div class="form-text text-secondary">
+            Leave duration blank for indefinite effects. Effects with a duration tick down each new round.
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Notes Modal -->
+  <div class="modal fade" id="notesModal" tabindex="-1" aria-labelledby="notesModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+      <div class="modal-content bg-dark text-light">
+        <div class="modal-header">
+          <h5 class="modal-title" id="notesModalLabel">Notes</h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <textarea id="notes-text" class="form-control" rows="8" placeholder="Enter notes..."></textarea>
+        </div>
+        <div class="modal-footer">
+          <button id="notes-save-btn" class="btn btn-success">Save Notes</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Session Notes Offcanvas -->
+  <div class="offcanvas offcanvas-end text-bg-dark" tabindex="-1" id="sessionNotes" aria-labelledby="sessionNotesLabel">
+    <div class="offcanvas-header">
+      <h5 id="sessionNotesLabel">Session Notes</h5>
+      <button type="button" class="btn-close btn-close-white" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+    </div>
+    <div class="offcanvas-body d-flex flex-column">
+      <textarea id="session-notes" class="form-control mb-3" rows="10" placeholder="Enter your session notes..."></textarea>
+      <div class="d-flex justify-content-between gap-2">
+        <button id="save-notes" class="btn btn-outline-success w-100">Save</button>
+        <button id="export-notes" class="btn btn-outline-warning w-100">Export</button>
+        <button id="import-notes" class="btn btn-outline-secondary w-100">Import</button>
+      </div>
+      <input type="file" id="import-notes-file" class="d-none" accept=".txt,.md,.json" />
+    </div>
+  </div>
+
+  <!-- Bulk HP Adjustment Modal -->
+  <div class="modal fade" id="bulkHPModal" tabindex="-1" aria-labelledby="bulkHPModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content bg-dark text-light">
+        <div class="modal-header border-secondary">
+          <h5 class="modal-title" id="bulkHPModalLabel">
+            <i class="bi bi-heart-pulse me-2"></i>Bulk HP Adjustment
+          </h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <div class="mb-3">
+            <label class="form-label fw-semibold">Apply to:</label>
+            <div class="row g-2">
+              <div class="col-6">
+                <div class="form-check">
+                  <input class="form-check-input" type="radio" name="bulkTarget" id="bulkTargetPCs" value="PC" checked>
+                  <label class="form-check-label" for="bulkTargetPCs">
+                    PCs <span class="text-secondary small" id="bulkPCCount">(0)</span>
+                  </label>
+                </div>
+              </div>
+              <div class="col-6">
+                <div class="form-check">
+                  <input class="form-check-input" type="radio" name="bulkTarget" id="bulkTargetEnemies" value="Enemy">
+                  <label class="form-check-label" for="bulkTargetEnemies">
+                    Enemies <span class="text-secondary small" id="bulkEnemyCount">(0)</span>
+                  </label>
+                </div>
+              </div>
+              <div class="col-6">
+                <div class="form-check">
+                  <input class="form-check-input" type="radio" name="bulkTarget" id="bulkTargetAll" value="All">
+                  <label class="form-check-label" for="bulkTargetAll">
+                    All <span class="text-secondary small" id="bulkAllCount">(0)</span>
+                  </label>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <hr class="border-secondary">
+
+          <div class="mb-3">
+            <label class="form-label fw-semibold">Action:</label>
+            <div class="row g-2">
+              <div class="col-6">
+                <div class="form-check">
+                  <input class="form-check-input" type="radio" name="bulkAction" id="bulkActionHeal" value="heal" checked>
+                  <label class="form-check-label" for="bulkActionHeal">
+                    <i class="bi bi-heart-fill text-success me-1"></i>Heal
+                  </label>
+                </div>
+              </div>
+              <div class="col-6">
+                <div class="form-check">
+                  <input class="form-check-input" type="radio" name="bulkAction" id="bulkActionDamage" value="damage">
+                  <label class="form-check-label" for="bulkActionDamage">
+                    <i class="bi bi-x-circle-fill text-danger me-1"></i>Damage
+                  </label>
+                </div>
+              </div>
+              <div class="col-12">
+                <div class="form-check">
+                  <input class="form-check-input" type="radio" name="bulkAction" id="bulkActionFullHeal" value="fullheal">
+                  <label class="form-check-label" for="bulkActionFullHeal">
+                    <i class="bi bi-heart-pulse-fill text-info me-1"></i>Full Heal (restore to max HP)
+                  </label>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="mb-3" id="bulkAmountSection">
+            <label for="bulkAmount" class="form-label fw-semibold">Amount (HP):</label>
+            <input type="number" class="form-control" id="bulkAmount" min="1" value="10" placeholder="Enter HP amount">
+          </div>
+
+          <div class="alert alert-info small mb-0">
+            <i class="bi bi-info-circle me-1"></i>
+            This creates a single undo point for all changes. Use <strong>Undo</strong> to revert if needed.
+          </div>
+        </div>
+        <div class="modal-footer border-secondary">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button type="button" class="btn btn-primary" id="bulkHPApply">
+            <i class="bi bi-check-circle me-1"></i>Apply
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Saved Characters Modal -->
+  <div class="modal fade" id="savedCharsModal" tabindex="-1" aria-labelledby="savedCharsModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-xl">
+      <div class="modal-content bg-dark text-light">
+        <div class="modal-header">
+          <h5 class="modal-title" id="savedCharsModalLabel">
+            Saved Character Templates (Max: <span id="savedMaxLabel">200</span>)
+          </h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+
+        <div class="modal-body">
+          <!-- Create / update template -->
+          <div class="row g-2">
+            <div class="col-md-3">
+              <input id="save-name" class="form-control" type="text" placeholder="Name" />
+            </div>
+            <div class="col-md-2">
+              <input id="save-health" class="form-control" type="number" placeholder="Max HP" />
+            </div>
+            <div class="col-md-2">
+              <input id="save-ac" class="form-control" type="number" placeholder="AC" />
+            </div>
+            <div class="col-md-3">
+              <select id="save-type" class="form-select">
+                <option>PC</option>
+                <option>Companion</option>
+                <option>NPC</option>
+                <option>Enemy</option>
+              </select>
+            </div>
+            <div class="col-md-2">
+              <button id="save-character-btn" class="btn btn-outline-success w-100">Save Template</button>
+            </div>
+          </div>
+
+          <!-- Search / filter -->
+          <div class="row g-2 mt-2">
+            <div class="col-sm-6">
+              <input id="saved-search" class="form-control" type="text" placeholder="Search saved characters..." />
+            </div>
+            <div class="col-sm-6 d-flex gap-2 justify-content-sm-end">
+              <select id="saved-type-filter" class="form-select w-auto">
+                <option value="">All Types</option>
+                <option>PC</option>
+                <option>Companion</option>
+                <option>NPC</option>
+                <option>Enemy</option>
+              </select>
+              <button id="clear-saved-btn" class="btn btn-outline-danger">Clear All</button>
+            </div>
+          </div>
+
+          <!-- Load template -->
+          <div class="row g-2 mt-2">
+            <div class="col-md-6">
+              <select id="loadCharacterSelect" class="form-select">
+                <option disabled selected>Load Saved Character</option>
+              </select>
+            </div>
+            <div class="col-md-6 d-flex gap-2">
+              <button id="load-to-form-btn" class="btn btn-outline-light w-100">Load to Form</button>
+              <button id="add-to-tracker-btn" class="btn btn-outline-success w-100">Add to Tracker</button>
+            </div>
+          </div>
+
+          <!-- List -->
+          <ul id="saved-characters-list" class="list-group mt-3"></ul>
+        </div>
+
+        <div class="modal-footer">
+          <button class="btn btn-outline-secondary" data-bs-dismiss="modal">Close</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Help Offcanvas -->
+  <div class="offcanvas offcanvas-start text-bg-dark" tabindex="-1" id="helpCanvas" aria-labelledby="helpCanvasLabel">
+    <div class="offcanvas-header">
+      <h5 id="helpCanvasLabel" class="mb-0">
+        <i class="bi bi-magic me-2"></i>How to Use
+      </h5>
+      <button type="button" class="btn-close btn-close-white" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+    </div>
+
+    <div class="offcanvas-body">
+      <!-- Toolbox Overview -->
+      <div class="card bg-dark border-info mb-3">
+        <div class="card-header bg-info text-dark fw-bold">
+          <i class="bi bi-box-seam me-2"></i>What is The DM's Toolbox?
+        </div>
+        <div class="card-body">
+          <p class="mb-2">A complete suite of integrated D&D tools for running your game:</p>
+          <ul class="mb-3">
+            <li><strong>Initiative Tracker</strong> - Manage combat with HP, conditions, death saves</li>
+            <li><strong>Battle Map</strong> - Visual combat grid with tokens and measurements</li>
+            <li><strong>Character Manager</strong> - Create and store character sheets</li>
+            <li><strong>Encounter Builder</strong> - Design balanced encounters with CR calculations</li>
+            <li><strong>Generators</strong> - NPCs, Taverns, Shops, Names, and Loot</li>
+          </ul>
+
+          <div class="alert alert-dark border-secondary mb-3">
+            <div class="fw-semibold mb-2"><i class="bi bi-signpost-2 me-1"></i>Start Here - Quick Workflows:</div>
+            <ol class="mb-0 small">
+              <li><strong>Quick Combat Test:</strong> Add a few combatants below → Click "Next Turn" → Try HP +/- and conditions</li>
+              <li><strong>Character → Combat:</strong> Go to <a href="characters.html" class="text-info">Character Manager</a> → Create a character → Export to Initiative Tracker</li>
+              <li><strong>Map + Combat:</strong> Open <a href="battlemap.html" class="text-info">Battle Map</a> → Add tokens → Use "Sync to Initiative" to connect with this tracker</li>
+            </ol>
+          </div>
+
+          <div class="d-grid gap-2">
+            <a href="characters.html" class="btn btn-sm btn-outline-primary">
+              <i class="bi bi-person-vcard me-1"></i>Character Manager
+            </a>
+            <a href="encounterbuilder.html" class="btn btn-sm btn-outline-success">
+              <i class="bi bi-calculator me-1"></i>Encounter Builder
+            </a>
+            <a href="battlemap.html" class="btn btn-sm btn-outline-warning">
+              <i class="bi bi-map me-1"></i>Battle Map
+            </a>
+          </div>
+
+          <div class="text-center mt-3">
+            <a href="README.md" class="btn btn-sm btn-outline-light" target="_blank">
+              <i class="bi bi-book me-1"></i>Read the Full README
+            </a>
+          </div>
+        </div>
+      </div>
+
+      <!-- Quick-start -->
+      <div class="alert alert-info text-light">
+        <strong>Quick Start:</strong> Add at least a name, hit <em>Add</em>, then click <em>Next Turn</em>.
+        Use the HP +/- to track damage or healing. Click the <i class="bi bi-star-fill"></i> to toggle Concentration.
+      </div>
+
+      <!-- Help Accordion -->
+      <div class="accordion" id="helpAccordion">
+        <!-- Getting Started -->
+        <div class="accordion-item bg-dark text-light border-secondary">
+          <h2 class="accordion-header">
+            <button class="accordion-button collapsed bg-dark text-light" type="button"
+                    data-bs-toggle="collapse" data-bs-target="#helpGettingStarted">
+              Getting Started
+            </button>
+          </h2>
+          <div id="helpGettingStarted" class="accordion-collapse collapse" data-bs-parent="#helpAccordion">
+            <div class="accordion-body">
+              <ol class="mb-0">
+                <li>Enter at least a <strong>Character Name</strong>. <strong>Initiative</strong>, <strong>Max HP</strong>, and <strong>AC</strong> are optional (blank values default to 0).</li>
+                <li>Repeat for each combatant. The list sorts by initiative unless <em>Lock Order</em> is enabled.</li>
+                <li>Press <strong>Next Turn</strong> to advance through the order; after everyone acts, the <em>Combat Round</em> increases.</li>
+              </ol>
+            </div>
+          </div>
+        </div>
+
+        <!-- HP / Concentration -->
+        <div class="accordion-item bg-dark text-light border-secondary">
+          <h2 class="accordion-header">
+            <button class="accordion-button collapsed bg-dark text-light" type="button"
+                    data-bs-toggle="collapse" data-bs-target="#helpHP">
+              Health, Damage, &amp; Concentration
+            </button>
+          </h2>
+          <div id="helpHP" class="accordion-collapse collapse" data-bs-parent="#helpAccordion">
+            <div class="accordion-body">
+              <ul class="mb-2">
+                <li>Use <strong>HP +/-</strong> to apply damage or healing, or type directly into the HP field.</li>
+                <li><strong>Temp HP</strong> (THP) appears as a badge next to HP with its own <em>±</em> buttons.
+                    Damage consumes THP first; only leftover damage reduces real HP.</li>
+                <li>Click the <strong>star</strong> <i class="bi bi-star"></i>/<i class="bi bi-star-fill text-warning"></i> to toggle <strong>Concentration</strong>.</li>
+                <li><strong>Concentration checks</strong> track the total real HP damage a creature takes during its turn and prompt you at the end of that turn with the correct DC.</li>
+                <li><strong>Healing</strong> above 0 HP automatically resets any death saves and removes <em>Stable</em>.</li>
+              </ul>
+              <div class="alert alert-info text-light mb-0">
+                <strong>Concentration DC:</strong> Roll <em>d20 + CON mod</em> (+ proficiency if proficient)
+                vs <strong>DC = max(10, ⌊damage this turn / 2⌋)</strong>.
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Death Saves -->
+        <div class="accordion-item bg-dark text-light border-secondary">
+          <h2 class="accordion-header">
+            <button class="accordion-button collapsed bg-dark text-light" type="button"
+                    data-bs-toggle="collapse" data-bs-target="#helpDeathSaves">
+              Death Saves
+            </button>
+          </h2>
+          <div id="helpDeathSaves" class="accordion-collapse collapse" data-bs-parent="#helpAccordion">
+            <div class="accordion-body">
+              <ul class="mb-2">
+                <li>When a creature drops to 0 HP, a <strong>Death Saves</strong> control appears:
+                    <span class="ds-pill success">S: #</span> and <span class="ds-pill fail">F: #</span>.</li>
+                <li>Use <strong>+S</strong> / <strong>+F</strong> to record successes or fails; use ↺ to reset them.</li>
+                <li>At <strong>3 successes</strong>, the creature becomes <em>Stable</em> (shown as “Stable”).</li>
+                <li><strong>Any healing</strong> that brings the creature above 0 HP clears all death saves and removes <em>Stable</em>.</li>
+              </ul>
+              <p class="small text-secondary mb-0">
+                Note: the tracker does not auto-apply instant death from massive damage; handle that manually as DM.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Status & Notes -->
+        <div class="accordion-item bg-dark text-light border-secondary">
+          <h2 class="accordion-header">
+            <button class="accordion-button collapsed bg-dark text-light" type="button"
+                    data-bs-toggle="collapse" data-bs-target="#helpStatuses">
+              Status Effects &amp; Notes
+            </button>
+          </h2>
+          <div id="helpStatuses" class="accordion-collapse collapse" data-bs-parent="#helpAccordion">
+            <div class="accordion-body">
+              <ul class="mb-0">
+                <li>Click the <strong>smiley</strong> <i class="bi bi-emoji-smile"></i> to add/remove conditions (e.g., Prone, Poisoned) with optional <strong>duration (rounds)</strong>.</li>
+                <li>Durations tick down automatically at the start of each new round; expired effects are removed.</li>
+                <li>Click <strong>Notes</strong> <i class="bi bi-journal-text"></i> to store character-specific reminders.</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+
+        <!-- Dice Roller -->
+        <div class="accordion-item bg-dark text-light border-secondary">
+          <h2 class="accordion-header">
+            <button class="accordion-button collapsed bg-dark text-light" type="button"
+                    data-bs-toggle="collapse" data-bs-target="#helpDice">
+              Dice Roller
+            </button>
+          </h2>
+          <div id="helpDice" class="accordion-collapse collapse" data-bs-parent="#helpAccordion">
+            <div class="accordion-body">
+              <ul class="mb-0">
+                <li>Use quick buttons for d4, d6, d8, d10, d12, d20, or d100.</li>
+                <li>Use the custom box for complex rolls like <code>2d6+1d4+3</code>,
+                    <code>4d6kh3</code> (keep highest 3), or <code>2d20kl1</code> (disadvantage).</li>
+                <li>Shortcuts: <code>adv</code> = 2d20 keep highest 1, <code>dis</code> = 2d20 keep lowest 1.</li>
+                <li>All rolls show a toast with the result and log into the roll history panel.</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+
+        <!-- Saved Templates -->
+        <div class="accordion-item bg-dark text-light border-secondary">
+          <h2 class="accordion-header" id="helpTemplatesHeader">
+            <button class="accordion-button collapsed bg-dark text-light" type="button"
+                    data-bs-toggle="collapse" data-bs-target="#helpTemplates"
+                    aria-expanded="false" aria-controls="helpTemplates">
+              Saved Character Templates
+            </button>
+          </h2>
+          <div id="helpTemplates" class="accordion-collapse collapse" data-bs-parent="#helpAccordion">
+            <div class="accordion-body">
+              <ul class="mb-0">
+                <li>Save up to <strong>200</strong> frequently used characters with AC/HP/type. Names must be unique; saving an existing name updates it.</li>
+                <li>Search, filter by type, and quickly <em>Load to Form</em> or <em>Add to Tracker</em>.</li>
+                <li>Use <strong>Clear All</strong> in the Saved Characters modal if you want to wipe just the templates (without touching the active encounter).</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+
+        <!-- Saving / History / Import-Export -->
+        <div class="accordion-item bg-dark text-light border-secondary">
+          <h2 class="accordion-header">
+            <button class="accordion-button collapsed bg-dark text-light" type="button"
+                    data-bs-toggle="collapse" data-bs-target="#helpSaving">
+              Saving, History, Import/Export
+            </button>
+          </h2>
+          <div id="helpSaving" class="accordion-collapse collapse" data-bs-parent="#helpAccordion">
+            <div class="accordion-body">
+              <ul class="mb-0">
+                <li><strong>Auto-Save</strong> keeps your current session in sync as you edit.</li>
+                <li><strong>Manual Save</strong> creates a timestamped backup you can reload from <em>Load Previous Save</em>.</li>
+                <li><strong>Export Session</strong> downloads a JSON; <strong>Import Session</strong> loads a previous file.</li>
+                <li><strong>Undo</strong> rolls back the most recent HP / THP change, notes edit, status tweak, reorder, etc. (about 50 steps; history is not kept after a page reload).</li>
+                <li><strong>Clear Saved Data</strong> wipes everything stored locally for this tool: sessions, templates, and session notes.</li>
+                <li><strong>Cross-tab sync:</strong> if you have this page open in multiple tabs or windows, changes in one will automatically sync to the others.</li>
+                <li><strong>From Encounter Builder / Characters:</strong> when those tools send data, the tracker can append or replace the current session based on the chosen mode.</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+
+        <!-- Initiative / Rounds -->
+        <div class="accordion-item bg-dark text-light border-secondary">
+          <h2 class="accordion-header">
+            <button class="accordion-button collapsed bg-dark text-light" type="button"
+                    data-bs-toggle="collapse" data-bs-target="#helpTurns">
+              Initiative, Turn Order &amp; Rounds
+            </button>
+          </h2>
+          <div id="helpTurns" class="accordion-collapse collapse" data-bs-parent="#helpAccordion">
+            <div class="accordion-body">
+              <ul class="mb-0">
+                <li>Edit initiative inline; order re-sorts unless <em>Lock Order</em> is on.</li>
+                <li>Drag rows (grab the ⋮⋮ handle on the left on Desktop) or use up/down (mobile) to reorder.</li>
+                <li><strong>Next Turn</strong> advances through the order; when you wrap around to the first creature, the round counter increases and status durations tick down.</li>
+                <li>While <strong>Lock Order</strong> is on, editing initiative values won’t re-sort the list and drag-reordering is disabled.</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+
+        <!-- Player View -->
+        <div class="accordion-item bg-dark text-light border-secondary">
+          <h2 class="accordion-header">
+            <button class="accordion-button collapsed bg-dark text-light" type="button"
+                    data-bs-toggle="collapse" data-bs-target="#helpPlayerView">
+              Player View / Second Screen
+            </button>
+          </h2>
+          <div id="helpPlayerView" class="accordion-collapse collapse" data-bs-parent="#helpAccordion">
+            <div class="accordion-body">
+              <ul class="mb-0">
+                <li>Use the <strong>Player View</strong> toggle to hide sensitive info (HP numbers, actions, dice roller, DM controls) and show a cleaner “scoreboard”.</li>
+                <li>For a TV or second monitor: open this page in a second window, turn on <strong>Player View</strong> there, and leave it off in your main DM window.</li>
+                <li>Both windows stay in sync automatically via the built-in cross-tab syncing: advancing turns or editing HP on the DM side updates the Player View.</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+
+        <!-- Rules / Spells -->
+        <div class="accordion-item bg-dark text-light border-secondary">
+          <h2 class="accordion-header">
+            <button class="accordion-button collapsed bg-dark text-light" type="button"
+                    data-bs-toggle="collapse" data-bs-target="#helpRulesSpells">
+              Rules &amp; Spells Reference
+            </button>
+          </h2>
+          <div id="helpRulesSpells" class="accordion-collapse collapse" data-bs-parent="#helpAccordion">
+            <div class="accordion-body">
+              <ul class="mb-0">
+                <li>Use the <strong>Rules / Spells</strong> button above the tracker to open a modal with quick rules summaries and SRD-safe spell overviews.</li>
+                <li>The <strong>Rules</strong> tab groups short, searchable rules entries by category (movement, actions, conditions, etc.).</li>
+                <li>The <strong>Spells</strong> tab lets you filter by name, class, level, school, and concentration, grouped A–Z.</li>
+                <li>Nothing is pulled from any paid rulebook; these are summaries you can pair with your own notes.</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+
+        <!-- Keyboard Shortcuts -->
+        <div class="accordion-item bg-dark text-light border-secondary">
+          <h2 class="accordion-header">
+            <button class="accordion-button collapsed bg-dark text-light" type="button"
+                    data-bs-toggle="collapse" data-bs-target="#helpShortcuts">
+              Keyboard Shortcuts
+            </button>
+          </h2>
+          <div id="helpShortcuts" class="accordion-collapse collapse" data-bs-parent="#helpAccordion">
+            <div class="accordion-body">
+              <div class="alert alert-info text-light mb-2">
+                <code>N</code> Next Turn &bull; <code>R</code> Reset Rounds &bull; <code>C</code> Copy Order &bull;
+                <code>S</code> Manual Save &bull; <code>L</code> Lock Order
+              </div>
+              <p class="mb-0 small text-secondary">Shortcuts are disabled while typing in inputs or textareas.</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Session Notes -->
+        <div class="accordion-item bg-dark text-light border-secondary">
+          <h2 class="accordion-header">
+            <button class="accordion-button collapsed bg-dark text-light" type="button"
+                    data-bs-toggle="collapse" data-bs-target="#helpNotes">
+              Session Notes
+            </button>
+          </h2>
+          <div id="helpNotes" class="accordion-collapse collapse" data-bs-parent="#helpAccordion">
+            <div class="accordion-body">
+              <ul class="mb-0">
+                <li>Use the <strong>Session Notes</strong> panel (right side) to keep general notes for the whole session.</li>
+                <li>Notes auto-save locally as you type; you can also Export/Import them as plain text.</li>
+                <li>Clearing Saved Data will also clear these notes, so export them first if you want a backup.</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </div><!-- /accordion -->
+    </div><!-- /offcanvas-body -->
+  </div><!-- /helpCanvas -->
+
+  <!-- Footer -->
+  <footer class="container-fluid mt-5 site-footer" role="contentinfo">
+    <div class="footer-main py-3">
+      <div class="container">
+        <div class="row align-items-center text-center text-md-start">
+          <!-- Left: Copyright -->
+          <div class="col-12 col-md-4 mb-2 mb-md-0 text-md-start text-center">
+            <small class="text-muted">&copy; 2025 Maybeme | The DM’s Toolbox</small>
+          </div>
+
+          <!-- Center: Logo -->
+          <div class="col-12 col-md-4 text-center mb-2 mb-md-0">
+            <img src="/images/White logo - no background.png" height="40" alt="Logo" class="footer-logo">
+          </div>
+
+          <!-- Right: Social Links -->
+          <div class="col-12 col-md-4 d-flex justify-content-center justify-content-md-end align-items-center gap-2">
+            <a href="https://www.linkedin.com/in/marlo-mayberry-930ab9b7/" class="socialicons" target="_blank" rel="noopener" aria-label="LinkedIn">
+              <i class="bi bi-linkedin"></i>
+            </a>
+            <a href="https://github.com/M-ybeme" class="socialicons" target="_blank" rel="noopener" aria-label="GitHub">
+              <i class="bi bi-github"></i>
+            </a>
+            <a href="https://ko-fi.com/maybemestoolbox" class="socialicons d-flex align-items-center"
+               target="_blank" rel="noopener" title="Support The DM’s Toolbox on Ko-fi">
+              <i class="bi bi-cup-hot"></i>
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </footer>
+
+  <!-- Roll Toast -->
+  <div id="rollToast"
+       class="toast position-fixed top-50 start-50 translate-middle"
+       role="status" aria-live="polite" aria-atomic="true"
+       data-bs-delay="900" style="z-index: 1080;">
+    <div class="toast-body fs-3 fw-bold text-center"></div>
+  </div>
+
+  <!-- Concentration Toast -->
+  <div id="concToast"
+       class="toast position-fixed bottom-0 start-50 translate-middle-x"
+       role="dialog" aria-live="assertive" aria-atomic="true"
+       data-bs-autohide="false" style="z-index:1080; min-width: 320px;">
+    <div class="toast-header bg-warning text-dark">
+      <strong class="me-auto">Concentration Check</strong>
+      <small class="text-muted" id="concToastName"></small>
+      <button type="button" class="btn-close ms-2" data-bs-dismiss="toast" aria-label="Close"></button>
+    </div>
+    <div class="toast-body">
+      <div id="concToastMsg" class="mb-2"></div>
+      <div class="d-flex gap-2 justify-content-end">
+        <button id="concPassBtn" class="btn btn-outline-success btn-sm">Pass</button>
+        <button id="concFailBtn" class="btn btn-outline-danger btn-sm">Fail</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Rules / Spells Modal -->
+  <div class="modal fade" id="rulesModal" tabindex="-1" aria-labelledby="rulesModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-fullscreen-md-down modal-xl">
+      <div class="modal-content bg-dark text-light">
+        <div class="modal-header">
+          <h5 class="modal-title" id="rulesModalLabel">Rules &amp; Spells Reference</h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+
+        <div class="modal-body">
+          <ul class="nav nav-pills mb-3" id="rulesTabs" role="tablist">
+            <li class="nav-item" role="presentation">
+              <button class="nav-link active" id="rules-tab" data-bs-toggle="pill"
+                      data-bs-target="#rules-pane" type="button" role="tab">
+                Rules
+              </button>
+            </li>
+            <li class="nav-item" role="presentation">
+              <button class="nav-link" id="spells-tab" data-bs-toggle="pill"
+                      data-bs-target="#spells-pane" type="button" role="tab" aria-controls="spells-pane">
+                Spells
+              </button>
+            </li>
+          </ul>
+
+          <div class="tab-content">
+            <!-- RULES TAB -->
+            <div class="tab-pane fade show active" id="rules-pane" role="tabpanel" aria-labelledby="rules-tab">
+              <div class="row g-3">
+                <!-- Sidebar -->
+                <div class="col-12 col-md-4 col-lg-3">
+                  <input id="rulesSearch" class="form-control form-control-sm mb-2"
+                         placeholder="Search (title, tags, text)…" />
+                  <div id="rulesCategories" class="list-group small"></div>
+                </div>
+
+                <!-- Content -->
+                <div class="col-12 col-md-8 col-lg-9">
+                  <div id="rulesContainer" class="accordion"></div>
+                  <div id="rulesEmpty" class="text-secondary small d-none">No results.</div>
+                </div>
+              </div>
+            </div>
+
+            <!-- SPELLS TAB (content is injected by JS) -->
+            <div class="tab-pane fade" id="spells-pane" role="tabpanel" aria-labelledby="spells-tab">
+              <!-- JS (initSpellsModalGrouped) will render the full grouped spells UI here -->
+            </div>
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <div class="small text-secondary me-auto">
+            Plain-language summaries. Not verbatim text from any rulebook.
+          </div>
+          <button class="btn btn-outline-secondary" data-bs-dismiss="modal">Close</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- JS -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
+  <script src="/js/rules-data.js"></script>
+  <script src="/js/spells-data.js"></script>
+  <script src="/js/initiative.js"></script>
+</body>
+</html>
