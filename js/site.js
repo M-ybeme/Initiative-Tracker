@@ -1,15 +1,15 @@
 const DM_TOOLBOX_BUILD = {
   name: "The DM's Toolbox",
-  version: "2.0.0",
+  version: "2.1.0",
   recentChanges: [
-    "Character Wizard: Starting equipment step with PHB-style packages or starting gold (class-based options, background gear always included)",
-    "High Elf: Wizard cantrip selection added with validation and proper spell list integration",
-    "Cleric (Nature Domain): Bonus druid cantrip selection wired into subclass flow",
-    "Subclass Bonus Cantrips: Central SUBCLASS_BONUS_CANTRIPS table + getSubclassBonusCantrips() helper (Light, Celestial, Circle of Spores support)",
-    "Feats: Dropdown replaced with searchable feat list in creation + level-up (tooltips for description, benefits, prerequisites)",
-    "Navigation: site.js nav reorganized into clearer Combat / Generators / Campaign groupings",
-    "Bugfix: Level 1 subclasses for Cleric/Sorcerer/Warlock now correctly prompt and save subclass choices",
-    "Bugfix: High Elf 'racial spell not found' resolved by correctly substituting chosen cantrip in gatherRacialSpellData()"
+    "Testing Suite: Comprehensive test coverage with 614 tests (342 unit, 202 integration, 70 E2E)",
+    "Unit Tests: Pure function modules extracted to js/modules/ for testability (dice, character-calculations, initiative-calculations, spell-utils, storage, validation, generators, export-utils, level-up-calculations)",
+    "Integration Tests: Character creation flow, level-up system, combat mechanics, cross-tool communication, storage operations",
+    "E2E Tests: Playwright tests for navigation, initiative tracker, character sheet, character wizard",
+    "CI/CD: GitHub Actions workflow for automated testing on push/PR",
+    "Pre-commit Hooks: Husky + lint-staged runs related tests on staged files",
+    "Coverage: 95%+ statement coverage, 82%+ branch coverage with enforced thresholds",
+    "Documentation: CONTRIBUTING.md with test requirements and patterns"
   ],
   buildTime: new Date().toISOString(),
   author: "Maybeme"

@@ -1,0 +1,47 @@
+{
+  "name": "initiative-tracker",
+  "version": "1.0.0",
+  "description": "**A comprehensive, browser-based suite of tools for tabletop RPG Game Masters**",
+  "main": "index.js",
+  "directories": {
+    "doc": "docs"
+  },
+  "scripts": {
+    "test": "vitest",
+    "test:run": "vitest run",
+    "test:coverage": "vitest run --coverage",
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui",
+    "test:e2e:headed": "playwright test --headed",
+    "prepare": "husky"
+  },
+  "lint-staged": {
+    "js/modules/*.js": [
+      "vitest related --run"
+    ],
+    "tests/**/*.js": [
+      "vitest related --run"
+    ]
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/M-ybeme/Initiative-Tracker.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/M-ybeme/Initiative-Tracker/issues"
+  },
+  "homepage": "https://github.com/M-ybeme/Initiative-Tracker#readme",
+  "devDependencies": {
+    "@playwright/test": "^1.57.0",
+    "@testing-library/dom": "^10.4.1",
+    "@vitest/coverage-v8": "^4.0.17",
+    "happy-dom": "^20.3.4",
+    "husky": "^9.1.7",
+    "lint-staged": "^16.2.7",
+    "vitest": "^4.0.17"
+  }
+}

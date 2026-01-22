@@ -7,13 +7,84 @@ The format is based on Keep a Changelog, and this project adheres to Semantic Ve
 
 The DM's Toolbox has evolved through focused feature releases:
 
+- **2.1.x**: Comprehensive testing suite with 614 tests (unit, integration, E2E), CI/CD automation, and coverage enforcement
 - **2.0.x**: Starting equipment selection, subclass bonus cantrips, enhanced feat selection UI, and bug fixes
 - **1.11.x**: Journal system with rich text editor, import/export (Word/PDF/TXT/Markdown), and Battle Map → Initiative Tracker integration
 - **1.10.x**: Full character manager with multiclass support, spell learning, subclass selection, and character sheet export
 - **1.9.x**: Battle map measurement tools, persistent fog shapes, and generator integration across NPC/Tavern/Shop systems
 - **1.8.x**: Spell database expansion to 432+ spells, inventory management, loot generator overhaul, and character token generation
 
-**Current version: 2.0.0 (January 2026)**
+**Current version: 2.1.0 (January 2026)**
+
+---
+
+## [2.1.0] - 2026-01-21
+**Comprehensive Testing Suite Implementation**
+
+### Added
+- **Testing Suite** - 614 total tests providing comprehensive coverage across the codebase
+  - **Unit Tests (342 tests)** - Pure function testing with extracted modules
+  - **Integration Tests (202 tests)** - Cross-component workflow testing
+  - **E2E Tests (70 tests)** - Playwright browser automation tests
+
+- **Pure Function Modules** - Extracted testable logic to `js/modules/` directory
+  - `dice.js` - Dice parsing and rolling (d20, advantage/disadvantage, modifiers)
+  - `character-calculations.js` - Ability modifiers, proficiency bonus, AC, HP calculations
+  - `initiative-calculations.js` - Initiative sorting, tie-breaking, turn management
+  - `spell-utils.js` - Spell slot management, prepared spell calculations, spell lookups
+  - `storage.js` - LocalStorage/IndexedDB abstraction with fallback logic
+  - `validation.js` - Input validation for character data, forms, imports
+  - `generators.js` - Name, loot, NPC, and tavern generation logic
+  - `export-utils.js` - PDF/Word/PNG export formatting utilities
+  - `level-up-calculations.js` - HP rolling, ASI allocation, multiclass spell slots
+
+- **Integration Test Coverage** - Comprehensive workflow testing
+  - Character creation flow (wizard steps, validation, data persistence)
+  - Level-up system (HP calculation, feature unlocks, spell learning)
+  - Combat mechanics (initiative ordering, damage/healing, death saves)
+  - Cross-tool communication (Battle Map → Initiative Tracker, Shop → Inventory)
+  - Storage operations (save/load cycles, import/export, migration)
+
+- **E2E Test Coverage** - Browser automation with Playwright
+  - Navigation tests (homepage, dropdowns, cross-page links, footer)
+  - Initiative Tracker tests (form interactions, dice roller, view options)
+  - Character Sheet tests (page elements, buttons, dropdowns)
+  - Character Wizard tests (trigger elements, import functionality)
+
+- **CI/CD Pipeline** - GitHub Actions workflow for automated testing
+  - Unit and integration tests run on push to main/develop branches
+  - E2E tests run on pull requests
+  - Coverage reports uploaded as artifacts
+  - Playwright reports and screenshots on failure
+
+- **Pre-commit Hooks** - Husky + lint-staged for quality gates
+  - Related tests run automatically on staged files
+  - Prevents commits with failing tests
+
+- **Coverage Enforcement** - Vitest coverage thresholds
+  - Statements: 70% minimum (current: 95.80%)
+  - Branches: 60% minimum (current: 82.74%)
+  - Functions: 70% minimum (current: 99.10%)
+  - Lines: 70% minimum (current: 97.15%)
+
+- **Documentation** - Contributing guidelines for test requirements
+  - [CONTRIBUTING.md](CONTRIBUTING.md) - Test patterns, code style, PR requirements
+  - [docs/TESTING_ROADMAP.md](docs/TESTING_ROADMAP.md) - Complete implementation record
+
+### Technical
+- **Test Framework**: Vitest with happy-dom environment for unit/integration tests
+- **E2E Framework**: Playwright with Chromium for browser automation
+- **Coverage Provider**: V8 with HTML, text, and lcov reporters
+- **Module System**: ES modules in `js/modules/` with CommonJS compatibility shims
+- **File Protocol Support**: E2E tests work with `file://` protocol (no web server required)
+
+### Testing Statistics
+| Category | Tests | Files |
+|----------|-------|-------|
+| Unit Tests | 342 | 9 |
+| Integration Tests | 202 | 5 |
+| E2E Tests | 70 | 4 |
+| **Total** | **614** | **18** |
 
 ---
 

@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm install:*)",
+      "Bash(npm run test:run:*)",
+      "Bash(npm run test:coverage:*)",
+      "Bash(npx playwright install:*)",
+      "Bash(npx playwright test:*)",
+      "Bash(npx husky init)",
+      "Bash(npm run test:e2e:*)"
+    ]
+  }
+}
