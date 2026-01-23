@@ -116,8 +116,9 @@
 
       function addToRollHistory(result) {
         rollHistory.unshift(result);
-        if (rollHistory.length > MAX_ROLL_HISTORY) {
-          rollHistory = rollHistory.slice(0, MAX_ROLL_HISTORY);
+        // Trim array in place to maintain reference
+        while (rollHistory.length > MAX_ROLL_HISTORY) {
+          rollHistory.pop();
         }
         renderRollHistory();
 
@@ -127,41 +128,71 @@
         }
       }
 
-      function showRollToast(result) {
+      // showRollToast can be called two ways:
+      // 1. showRollToast(resultObject) - from internal dice functions
+      // 2. showRollToast(label, total, extra) - simple call from combat view
+      function showRollToast(labelOrResult, total, extra) {
         const toastElement = document.getElementById('rollToast');
         const toastBody = document.getElementById('rollToastBody');
         if (!toastElement || !toastBody) return;
 
         let resultClass = '';
         let bgClass = 'bg-secondary';
-        if (result.isCritical) {
-          resultClass = 'text-success fw-bold';
-          bgClass = 'bg-success';
-        } else if (result.isFumble) {
-          resultClass = 'text-danger fw-bold';
-          bgClass = 'bg-danger';
-        }
+        let description = '';
+        let details = '';
+        let displayTotal = 0;
 
-        let rollDisplay = '';
-        if (result.isAdvantage || result.isDisadvantage) {
-          rollDisplay = `[${result.rolls[0]}, ${result.rolls[1]}] → ${result.chosen}`;
+        // Check if called with result object or simple parameters
+        if (typeof labelOrResult === 'object' && labelOrResult !== null) {
+          // Called with result object (internal dice functions)
+          const result = labelOrResult;
+          if (result.isCritical) {
+            resultClass = 'text-success fw-bold';
+            bgClass = 'bg-success';
+          } else if (result.isFumble) {
+            resultClass = 'text-danger fw-bold';
+            bgClass = 'bg-danger';
+          }
+
+          let rollDisplay = '';
+          if (result.isAdvantage || result.isDisadvantage) {
+            rollDisplay = `[${result.rolls[0]}, ${result.rolls[1]}] → ${result.chosen}`;
+          } else {
+            rollDisplay = result.rolls.length > 1
+              ? `[${result.rolls.join(', ')}]`
+              : `${result.rolls[0]}`;
+          }
+
+          const modDisplay = result.modifier !== 0
+            ? ` ${result.modifier >= 0 ? '+' : ''}${result.modifier}`
+            : '';
+
+          description = result.description || '';
+          details = `${rollDisplay}${modDisplay} = <span class="${resultClass}">${result.total}</span>`;
+          displayTotal = result.total;
         } else {
-          rollDisplay = result.rolls.length > 1
-            ? `[${result.rolls.join(', ')}]`
-            : `${result.rolls[0]}`;
-        }
+          // Called with simple parameters (combat view)
+          description = labelOrResult || '';
+          displayTotal = total || 0;
+          details = extra || '';
 
-        const modDisplay = result.modifier !== 0
-          ? ` ${result.modifier >= 0 ? '+' : ''}${result.modifier}`
-          : '';
+          // Check for crit/fumble in extra text
+          if (extra && (extra.includes('20') || extra.includes('Crit'))) {
+            resultClass = 'text-success fw-bold';
+            bgClass = 'bg-success';
+          } else if (extra && (extra.includes('1') || extra.includes('Fumble'))) {
+            resultClass = 'text-danger fw-bold';
+            bgClass = 'bg-danger';
+          }
+        }
 
         toastBody.innerHTML = `
           <div class="d-flex align-items-center justify-content-between gap-2">
             <div class="flex-grow-1">
-              ${result.description ? `<div class="fw-bold">${result.description}</div>` : ''}
-              <div class="small">${rollDisplay}${modDisplay} = <span class="${resultClass}">${result.total}</span></div>
+              ${description ? `<div class="fw-bold">${description}</div>` : ''}
+              ${details ? `<div class="small ${resultClass}">${details}</div>` : ''}
             </div>
-            <div class="badge ${bgClass} fs-5">${result.total}</div>
+            <div class="badge ${bgClass} fs-5">${displayTotal}</div>
           </div>
         `;
 
@@ -231,9 +262,15 @@
       }
 
       function clearRollHistory() {
-        rollHistory = [];
+        rollHistory.length = 0; // Clear array without reassigning
         renderRollHistory();
       }
+
+      // Expose dice rolling functions globally for combat view
+      window.rollHistory = rollHistory;
+      window.addToRollHistory = addToRollHistory;
+      window.showRollToast = showRollToast;
+      window.renderRollHistory = renderRollHistory;
 
       // ---------- Player Action Functions ----------
 
@@ -462,7 +499,8 @@
         } else if (type === 'damage') {
           const amount = prompt('Take how much damage?', '');
           if (amount === null) return;
-          let damageAmount = Number(amount) || 0;
+          const originalDamage = Number(amount) || 0;
+          let damageAmount = originalDamage;
 
           // Apply temp HP first
           if (tempHP > 0) {
@@ -480,10 +518,9 @@
             currentHPEl.value = Math.max(0, currentHP - damageAmount);
           }
 
-          // Check concentration
-          if ($('charConcentrating')?.checked) {
-            const concentrationDC = Math.max(10, Math.floor(Number(amount) / 2));
-            alert(`Concentration Check Required!\n\nDC: ${concentrationDC}\n(Half damage, minimum 10)\n\nRoll a Constitution save.`);
+          // Check concentration using the new system
+          if (originalDamage > 0 && isConcentrating()) {
+            handleConcentrationCheck(originalDamage);
           }
         } else if (type === 'temp') {
           const amount = prompt('Set temporary HP to:', '');
@@ -494,7 +531,28 @@
         } else if (type === 'max') {
           currentHPEl.value = maxHP;
         }
+
+        // Reset death saves if HP is now above 0
+        const newHP = Number(currentHPEl.value) || 0;
+        if (newHP > 0) {
+          resetDeathSaves();
+        }
       }
+
+      // Reset all death save checkboxes
+      function resetDeathSaves() {
+        for (let i = 1; i <= 3; i++) {
+          const successEl = $(`deathSaveSuccess${i}`);
+          const failureEl = $(`deathSaveFailure${i}`);
+          if (successEl) successEl.checked = false;
+          if (failureEl) failureEl.checked = false;
+        }
+        const stableEl = $('deathSaveStable');
+        if (stableEl) stableEl.checked = false;
+      }
+
+      // Expose globally for combat view
+      window.resetDeathSaves = resetDeathSaves;
 
       function rollInitiative() {
         const char = getCurrentCharacter();
@@ -1271,10 +1329,10 @@
           return;
         }
 
-        currentSpellList.forEach(spell => {
+        currentSpellList.forEach((spell, index) => {
           const li = document.createElement('li');
           li.className = 'list-group-item bg-transparent small';
-                
+
           const title = spell.title || spell.name || 'Unknown spell';
           const levelText = spell.level === 0 ? 'Cantrip' : `Level ${spell.level ?? 0}`;
           const schoolText = spell.school || '';
@@ -1283,11 +1341,13 @@
             schoolText,
             spell.concentration ? 'Concentration' : null
           ].filter(Boolean).join(' · ');
-        
+
           const bodyText = (spell.body || '').trim();
           const preview = bodyText.length > 160 ? bodyText.slice(0, 160) + '…' : bodyText;
           const prepared = !!spell.prepared;
-        
+          const isCantrip = spell.level === 0;
+          const showCastButton = prepared || isCantrip;
+
           li.innerHTML = `
             <div class="d-flex justify-content-between align-items-start">
               <div class="me-2">
@@ -1319,8 +1379,19 @@
                   ? `<div class="mt-1 text-muted small">Classes: ${spell.classes.join(', ')}</div>`
                   : ''
                 }
+                <div class="spell-cast-feedback mt-1" data-spell-index="${index}"></div>
               </div>
               <div class="ms-2 d-flex flex-column align-items-end gap-1">
+                ${showCastButton ? `
+                  <button type="button"
+                          class="btn btn-sm btn-outline-warning spell-cast-btn"
+                          data-spell-index="${index}"
+                          data-spell-level="${spell.level ?? 0}"
+                          data-spell-name="${(spell.name || title).replace(/"/g, '&quot;')}"
+                          title="${isCantrip ? 'Cast cantrip' : 'Cast using spell slot'}">
+                    <i class="bi bi-magic"></i> Cast
+                  </button>
+                ` : ''}
                 <div class="form-check form-check-sm">
                   <input class="form-check-input spell-prepared-toggle"
                          type="checkbox"
@@ -1336,7 +1407,7 @@
               </div>
             </div>
           `;
-            
+
           listEl.appendChild(li);
         });
       }
@@ -1405,6 +1476,93 @@
         renderCharacterSpellList();
         updatePreparedSpellCount();
         clearSpellSearchResults();
+      }
+
+      // Cast spell from the main character sheet
+      function castSpellFromSheet(spellIndex, spellLevel, spellName) {
+        const level = spellLevel;
+        const isCantrip = level === 0;
+
+        // Get the spell from the list to check if it requires concentration
+        const spell = currentSpellList[spellIndex];
+        const requiresConcentration = spell?.concentration || false;
+
+        // Show feedback in the spell item
+        const showFeedback = (message, type) => {
+          const feedbackEl = document.querySelector(`.spell-cast-feedback[data-spell-index="${spellIndex}"]`);
+          if (feedbackEl) {
+            feedbackEl.innerHTML = `<span class="badge bg-${type === 'success' ? 'success' : 'warning'} bg-opacity-75"><i class="bi bi-check-circle me-1"></i>${message}</span>`;
+            setTimeout(() => { feedbackEl.innerHTML = ''; }, 3000);
+          }
+        };
+
+        // Check if already concentrating on a different spell
+        if (requiresConcentration && isConcentrating()) {
+          const currentSpell = window.currentConcentrationSpell || 'another spell';
+          const proceed = confirm(
+            `You are currently concentrating on ${currentSpell}.\n\n` +
+            `Casting ${spellName} will end your concentration on ${currentSpell}.\n\n` +
+            `Continue?`
+          );
+          if (!proceed) return;
+          // Will set new concentration below
+        }
+
+        // Cantrip - just show feedback (cantrips don't require concentration checks)
+        if (isCantrip) {
+          showFeedback(`Cast ${spellName}!`, 'success');
+          if (typeof showRollToast === 'function') {
+            showRollToast('Spell Cast', spellName, 'Cantrip');
+          }
+          return;
+        }
+
+        // Get slot status
+        const maxEl = $(`slots${level}Max`);
+        const usedEl = $(`slots${level}Used`);
+        if (!maxEl || !usedEl) {
+          alert(`No spell slot tracking for level ${level}.`);
+          return;
+        }
+
+        const max = parseInt(maxEl.value, 10) || 0;
+        const used = parseInt(usedEl.value, 10) || 0;
+        const remaining = Math.max(0, max - used);
+
+        // No slots available
+        if (remaining === 0) {
+          alert(`No level ${level} spell slots remaining!\n\nYou have used all ${max} slots.`);
+          return;
+        }
+
+        // Last slot warning
+        if (remaining === 1) {
+          const proceed = confirm(`This is your last level ${level} spell slot!\n\nCast ${spellName}?`);
+          if (!proceed) return;
+        }
+
+        // Use the slot
+        usedEl.value = used + 1;
+        usedEl.dispatchEvent(new Event('input', { bubbles: true }));
+
+        const newRemaining = remaining - 1;
+        let feedbackMsg = `Cast ${spellName}! (${newRemaining}/${max} slots left)`;
+
+        // Handle concentration
+        if (requiresConcentration) {
+          setConcentration(true, spellName);
+          feedbackMsg += ' [Concentrating]';
+        }
+
+        showFeedback(feedbackMsg, 'success');
+
+        if (typeof showRollToast === 'function') {
+          const extra = requiresConcentration ? `Level ${level} - Concentrating` : `Level ${level} (${newRemaining}/${max} slots)`;
+          showRollToast('Spell Cast', spellName, extra);
+        }
+
+        // Save character
+        saveCurrentCharacter();
       }
 
       // ---------- Attack management ----------
@@ -1889,6 +2047,93 @@
         });
       }
 
+      // ---------- Concentration Management ----------
+
+      // Track currently concentrating spell
+      window.currentConcentrationSpell = null;
+
+      // Check if currently concentrating
+      function isConcentrating() {
+        const btn = document.querySelector('.condition-btn[data-condition="Concentrating"]');
+        return btn?.classList.contains('active') || false;
+      }
+
+      // Set concentration state
+      function setConcentration(active, spellName = null) {
+        const btn = document.querySelector('.condition-btn[data-condition="Concentrating"]');
+        const spellInput = $('charConcentrationSpell');
+
+        if (active) {
+          if (btn) btn.classList.add('active');
+          window.currentConcentrationSpell = spellName;
+          // Update the spell name input and button tooltip
+          if (spellInput && spellName) {
+            spellInput.value = spellName;
+          }
+          if (btn && spellName) {
+            btn.title = `Concentrating on: ${spellName}`;
+          }
+        } else {
+          if (btn) {
+            btn.classList.remove('active');
+            btn.title = '';
+          }
+          window.currentConcentrationSpell = null;
+          if (spellInput) {
+            spellInput.value = '';
+          }
+        }
+        syncConditionsToField();
+        saveCurrentCharacter();
+
+        // Dispatch event for combat view to update
+        document.dispatchEvent(new CustomEvent('concentrationChanged', {
+          detail: { active, spellName }
+        }));
+      }
+
+      // Expose functions globally
+      window.isConcentrating = isConcentrating;
+      window.setConcentration = setConcentration;
+
+      // Handle concentration check when taking damage
+      function handleConcentrationCheck(damage) {
+        if (!isConcentrating()) return true; // Not concentrating, no check needed
+
+        const dc = Math.max(10, Math.floor(damage / 2));
+        const conSaveBonus = parseInt($('saveConBonus')?.value, 10) || 0;
+
+        const spellName = window.currentConcentrationSpell || 'a spell';
+        const message = `Concentration Check Required!\n\n` +
+          `You took ${damage} damage while concentrating on ${spellName}.\n` +
+          `DC: ${dc} (10 or half damage, whichever is higher)\n` +
+          `Your CON save bonus: ${conSaveBonus >= 0 ? '+' : ''}${conSaveBonus}\n\n` +
+          `Click "Pass" if you succeeded, or "Fail" if you failed.`;
+
+        // Use a custom prompt approach - prompt returns null on cancel, string on OK
+        const result = prompt(message, 'Pass');
+
+        // User typed something starting with 'p' (pass) or clicked OK with default
+        const passed = result !== null && result.toLowerCase().startsWith('p');
+
+        if (!passed) {
+          setConcentration(false);
+          if (typeof showRollToast === 'function') {
+            showRollToast('Concentration', 'Lost!', `Failed DC ${dc}`);
+          }
+          alert(`Concentration on ${spellName} has been lost!`);
+          return false;
+        } else {
+          if (typeof showRollToast === 'function') {
+            showRollToast('Concentration', 'Maintained', `Passed DC ${dc}`);
+          }
+          return true;
+        }
+      }
+
+      // Expose globally
+      window.handleConcentrationCheck = handleConcentrationCheck;
+
       // ---------- Spell DC / Attack calculation ----------
       function updateSpellDCAndAttack() {
         const abilitySelect = $('spellcastingAbility');
@@ -2034,6 +2279,21 @@
           $('charInspiration').checked = !!char.inspiration;
           $('charConcentrating').checked = !!char.concentrating;
           $('charConcentrationSpell').value = char.concentrationSpell || '';
+
+          // Restore concentration spell to global state and update button tooltip
+          if (char.concentrating && char.concentrationSpell) {
+            window.currentConcentrationSpell = char.concentrationSpell;
+            const concBtn = document.querySelector('.condition-btn[data-condition="Concentrating"]');
+            if (concBtn) {
+              concBtn.title = `Concentrating on: ${char.concentrationSpell}`;
+            }
+          } else {
+            window.currentConcentrationSpell = null;
+            const concBtn = document.querySelector('.condition-btn[data-condition="Concentrating"]');
+            if (concBtn) {
+              concBtn.title = '';
+            }
+          }
 
           // Currency
           const currency = char.currency || {};
@@ -2195,6 +2455,8 @@
           // Clear loading flag after a small delay to allow all event handlers to settle
           setTimeout(() => {
             isLoadingCharacter = false;
+            // Dispatch event to notify other parts of the app that character data is ready
+            document.dispatchEvent(new CustomEvent('characterLoaded', { detail: { character: char } }));
           }, 100);
         }
 
@@ -4410,6 +4672,17 @@
         }
         if (characterSpellListEl) {
           characterSpellListEl.addEventListener('click', e => {
+            // Cast spell button
+            const castBtn = e.target.closest('.spell-cast-btn');
+            if (castBtn) {
+              e.preventDefault();
+              const spellIndex = parseInt(castBtn.dataset.spellIndex, 10);
+              const spellLevel = parseInt(castBtn.dataset.spellLevel, 10);
+              const spellName = castBtn.dataset.spellName;
+              castSpellFromSheet(spellIndex, spellLevel, spellName);
+              return;
+            }
+
             // Toggle prepared
             const prepToggle = e.target.closest('.spell-prepared-toggle');
             if (prepToggle) {
@@ -4425,7 +4698,7 @@
               updatePreparedSpellCount();
               return;
             }
-        
+
             // Remove spell
             const removeBtn = e.target.closest('button[data-spell-remove]');
             if (removeBtn) {
@@ -4571,9 +4844,51 @@
           btn.addEventListener('click', e => {
             e.preventDefault();
             btn.classList.toggle('active');
+
+            // Special handling for Concentrating button
+            if (btn.dataset.condition === 'Concentrating') {
+              if (btn.classList.contains('active')) {
+                // When manually turning on concentration, check if spell name is set
+                const spellName = $('charConcentrationSpell')?.value || null;
+                window.currentConcentrationSpell = spellName;
+                if (spellName) {
+                  btn.title = `Concentrating on: ${spellName}`;
+                }
+              } else {
+                // When turning off concentration, clear spell name
+                window.currentConcentrationSpell = null;
+                btn.title = '';
+                const spellInput = $('charConcentrationSpell');
+                if (spellInput) spellInput.value = '';
+              }
+              // Dispatch event for combat view
+              document.dispatchEvent(new CustomEvent('concentrationChanged', {
+                detail: { active: btn.classList.contains('active'), spellName: window.currentConcentrationSpell }
+              }));
+            }
+
             syncConditionsToField();
           });
         });
+
+        // Sync concentration spell input changes to global state
+        const concSpellInput = $('charConcentrationSpell');
+        if (concSpellInput) {
+          concSpellInput.addEventListener('input', () => {
+            const spellName = concSpellInput.value || null;
+            window.currentConcentrationSpell = spellName;
+            const concBtn = document.querySelector('.condition-btn[data-condition="Concentrating"]');
+            if (concBtn && spellName) {
+              concBtn.title = `Concentrating on: ${spellName}`;
+            } else if (concBtn) {
+              concBtn.title = '';
+            }
+            // Dispatch event for combat view
+            document.dispatchEvent(new CustomEvent('concentrationChanged', {
+              detail: { active: concBtn?.classList.contains('active') || false, spellName }
+            }));
+          });
+        }
 
         // Sync conditions field back to toggles when manually edited
         const conditionsField = $('charConditions');

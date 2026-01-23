@@ -637,12 +637,18 @@ function generate(){
       <div class="npc-field"><b>Wants:</b> ${wants}</div>
       <div class="npc-field"><b>Wants to Avoid:</b> ${avoids}</div>
       <div class="npc-field"><b>Secret:</b> ${secret}</div>
-      <div class="mt-2 d-grid gap-2 d-sm-flex">
+      <div class="mt-2 d-grid gap-2 d-sm-flex flex-wrap">
         <button class="btn btn-outline-warning btn-sm npc-stat-gen-btn" title="Generate Combat Stats">
           <i class="bi bi-shield-fill-check me-1"></i>Generate Stats
         </button>
         <button class="btn btn-outline-info btn-sm npc-copy-btn" title="Copy this NPC">
           <i class="bi bi-clipboard me-1"></i>Copy
+        </button>
+        <button class="btn btn-outline-success btn-sm npc-initiative-btn" title="Send to Initiative Tracker" style="display:none;">
+          <i class="bi bi-arrow-right-circle me-1"></i>Initiative
+        </button>
+        <button class="btn btn-outline-secondary btn-sm npc-download-btn" title="Download Stats as Text" style="display:none;">
+          <i class="bi bi-file-text me-1"></i>Download
         </button>
       </div>
       <div class="npc-stats-display mt-2" style="display:none;"></div>
@@ -1090,8 +1096,17 @@ function showStatBlockModal(npcTile) {
     const copyBtn = currentNPCTile.querySelector(".npc-copy-btn");
     copyBtn.style.display = "inline-block";
 
-    // Store stat block data for copying
+    // Store stat block data for copying and initiative export
     currentNPCTile.dataset.statBlock = formatted;
+    currentNPCTile.dataset.statBlockData = JSON.stringify(statBlock);
+
+    // Show the "Send to Initiative" button on the card
+    const initiativeBtn = currentNPCTile.querySelector(".npc-initiative-btn");
+    if (initiativeBtn) initiativeBtn.style.display = "inline-block";
+
+    // Show the "Download Stats" button on the card
+    const downloadBtn = currentNPCTile.querySelector(".npc-download-btn");
+    if (downloadBtn) downloadBtn.style.display = "inline-block";
 
     bootstrap.Modal.getInstance(modal).hide();
   };
@@ -1186,6 +1201,87 @@ function applyPreset(presetKey){
   $("npc-autoName").checked = preset.autoName;
 }
 
+// ---------- Initiative Tracker Integration ----------
+function sendNPCToInitiative(npcTile) {
+  const nameEl = npcTile.querySelector(".npc-name-display");
+  const name = nameEl ? nameEl.textContent : "[Unnamed NPC]";
+
+  const statBlockDataStr = npcTile.dataset.statBlockData;
+  if (!statBlockDataStr) {
+    alert('Generate stats first before sending to Initiative Tracker.');
+    return;
+  }
+
+  const statBlock = JSON.parse(statBlockDataStr);
+  const dexMod = statBlock.mods.dex || 0;
+
+  const initiativeData = {
+    name: name,
+    maxHp: statBlock.hp,
+    ac: statBlock.ac,
+    initiative: dexMod,
+    useActualInitiative: false,
+    type: 'npc',
+    source: 'NPC Generator'
+  };
+
+  // Show confirmation with stats summary
+  const modStr = dexMod >= 0 ? `+${dexMod}` : `${dexMod}`;
+  const confirmed = confirm(
+    `Add "${name}" to Initiative Tracker?\n\n` +
+    `HP: ${statBlock.hp}\n` +
+    `AC: ${statBlock.ac}\n` +
+    `Initiative Bonus: ${modStr}\n\n` +
+    `Click OK to open the Initiative Tracker.`
+  );
+
+  if (confirmed) {
+    localStorage.setItem('dmtools.pendingInitiativeImport', JSON.stringify(initiativeData));
+
+    // Open in new tab
+    const newWindow = window.open('initiative.html#autoimport', '_blank');
+
+    // Handle popup blocker
+    if (!newWindow || newWindow.closed || typeof newWindow.closed === 'undefined') {
+      const navigateHere = confirm(
+        'Popup blocked!\n\n' +
+        'Click OK to navigate to the Initiative Tracker in this tab,\n' +
+        'or Cancel to stay here (data is saved for when you visit manually).'
+      );
+
+      if (navigateHere) {
+        window.location.href = 'initiative.html#autoimport';
+      }
+    }
+  }
+}
+
+function downloadNPCStatsTxt(npcTile) {
+  const nameEl = npcTile.querySelector(".npc-name-display");
+  const name = nameEl ? nameEl.textContent : "NPC";
+  const statBlock = npcTile.dataset.statBlock;
+
+  if (!statBlock) {
+    alert('Generate stats first before downloading.');
+    return;
+  }
+
+  // Extract NPC description text
+  const desc = npcTile.innerText.split("Generate Stats")[0].replace(/Name:.*?Generate Name/s, "").replace(/\n{2,}/g,"\n").trim();
+
+  const fullText = `Name: ${name}\n${desc}\n\n${'━'.repeat(26)}\nCOMBAT STATS:\n${statBlock}`;
+
+  const blob = new Blob([fullText], { type: 'text/plain;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `${name.replace(/[^a-zA-Z0-9 ]/g, '').replace(/\s+/g, '_')}_stats.txt`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
 // Wire up
 document.addEventListener("DOMContentLoaded", ()=>{
   $("npc-generate").addEventListener("click", generate);
@@ -1235,6 +1331,20 @@ document.addEventListener("DOMContentLoaded", ()=>{
         btn.innerHTML = '<i class="bi bi-check me-1"></i>Copied!';
         setTimeout(()=>{ btn.innerHTML = '<i class="bi bi-clipboard me-1"></i>Copy'; }, 2000);
       });
+    }
+
+    // Send to Initiative Tracker
+    if(e.target.closest(".npc-initiative-btn")){
+      const btn = e.target.closest(".npc-initiative-btn");
+      const tile = btn.closest(".npc-tile");
+      sendNPCToInitiative(tile);
+    }
+
+    // Download individual NPC stats
+    if(e.target.closest(".npc-download-btn")){
+      const btn = e.target.closest(".npc-download-btn");
+      const tile = btn.closest(".npc-tile");
+      downloadNPCStatsTxt(tile);
     }
   });
 

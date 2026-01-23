@@ -30,6 +30,12 @@
       font-weight: bold;
     }
     #saveHistorySelect { min-width: 200px; }
+
+    /* Simple/Advanced mode toggle */
+    .advanced-setting { display: none; }
+    .advanced-mode .advanced-setting { display: block; }
+    .advanced-setting.row { display: none; }
+    .advanced-mode .advanced-setting.row { display: flex; }
   </style>
 </head>
 <body class="bgimage">
@@ -87,8 +93,14 @@
   <!-- Settings -->
   <div class="col-12 col-lg-4">
     <div class="card bg-dark border-secondary h-100">
-      <div class="card-header border-secondary"><h5 class="mb-0">Shop Settings</h5></div>
-      <div class="card-body">
+      <div class="card-header border-secondary d-flex justify-content-between align-items-center">
+        <h5 class="mb-0">Shop Settings</h5>
+        <div class="form-check form-switch mb-0">
+          <input class="form-check-input" type="checkbox" id="advancedModeToggle" role="switch">
+          <label class="form-check-label small" for="advancedModeToggle">Advanced</label>
+        </div>
+      </div>
+      <div class="card-body" id="shopSettingsBody">
         <div class="mb-2">
           <label for="sg-settlement" class="form-label">Settlement</label>
           <select id="sg-settlement" class="form-select">
@@ -98,7 +110,7 @@
           </select>
         </div>
 
-        <div class="row g-2">
+        <div class="row g-2 advanced-setting">
           <div class="col-6">
             <label for="sg-itemsPerShop" class="form-label">Items per shop</label>
             <input id="sg-itemsPerShop" class="form-control" type="number" inputmode="numeric" min="5" max="20" value="9">
@@ -109,7 +121,7 @@
           </div>
         </div>
 
-        <div class="row g-2 mt-1">
+        <div class="row g-2 mt-1 advanced-setting">
           <div class="col-6">
             <label for="sg-seed" class="form-label">Seed (optional)</label>
             <input id="sg-seed" class="form-control" type="text" placeholder="e.g. session-13">
@@ -133,7 +145,7 @@
         </div>
 
 
-        <div class="mt-3">
+        <div class="mt-3 advanced-setting">
           <div class="d-flex justify-content-between align-items-center">
             <label class="form-label mb-0">Shop Types</label>
             <div class="btn-group btn-group-sm">
@@ -1228,8 +1240,8 @@ function generate(){
     const shop = document.createElement("div");
     shop.className = "sg-shopcard";
     shop.innerHTML = `
-      <div class="p-3 border-bottom border-secondary d-flex justify-content-between align-items-start flex-wrap gap-2">
-        <div>
+      <div class="p-3 border-bottom border-secondary d-flex justify-content-center align-items-start flex-wrap gap-2">
+        <div class="text-center">
           <div class="fw-bold fs-5"><i class="bi bi-shop me-2"></i>${type}</div>
           <div class="text-muted small mt-1">
             <i class="bi bi-geo-alt-fill me-1"></i>${settlement.charAt(0).toUpperCase() + settlement.slice(1)}
@@ -1239,7 +1251,7 @@ function generate(){
         </div>
       </div>
       <div class="p-3 border-bottom border-secondary bg-dark bg-opacity-25">
-        <div class="d-flex align-items-start gap-2">
+        <div class="d-flex justify-content-center align-items-start gap-2">
           <i class="bi bi-person-circle text-info fs-5"></i>
           <div>
             <div class="fw-semibold text-light">${shopkeeper.name}</div>
@@ -1695,6 +1707,25 @@ async function confirmAddItemToCharacter(itemName, description, use) {
 
 // Wire up
 document.addEventListener("DOMContentLoaded", ()=>{
+  // Simple/Advanced mode toggle
+  const advancedKey = 'dmtools.advancedMode.shop';
+  const advancedToggle = $('advancedModeToggle');
+  const settingsBody = $('shopSettingsBody');
+
+  const isAdvanced = localStorage.getItem(advancedKey) === 'true';
+  advancedToggle.checked = isAdvanced;
+  if (isAdvanced) settingsBody.classList.add('advanced-mode');
+
+  advancedToggle.addEventListener('change', () => {
+    if (advancedToggle.checked) {
+      settingsBody.classList.add('advanced-mode');
+      localStorage.setItem(advancedKey, 'true');
+    } else {
+      settingsBody.classList.remove('advanced-mode');
+      localStorage.setItem(advancedKey, 'false');
+    }
+  });
+
   initPresets();
   $("sg-generate").addEventListener("click", generate);
   $("sg-copy").addEventListener("click", copyOut);

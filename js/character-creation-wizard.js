@@ -427,7 +427,7 @@ const CharacterCreationWizard = (function() {
                 // Get wizard cantrips from spell data
                 if (window.SPELLS_DATA) {
                   const wizardCantrips = window.SPELLS_DATA.filter(spell =>
-                    spell.level === 'Cantrip' &&
+                    spell.level === 0 &&
                     spell.classes &&
                     spell.classes.includes('Wizard')
                   ).sort((a, b) => a.title.localeCompare(b.title));

@@ -36,6 +36,12 @@
     .pill{border:1px solid rgba(255,255,255,.15);border-radius:50rem;padding:.15rem .5rem}
     .range-label{display:flex;justify-content:space-between;font-size:.85rem;color:#9aa0a6;margin-top:.25rem}
     .form-hint{font-size:.85rem;color:#9aa0a6}
+
+    /* Simple/Advanced mode toggle */
+    .advanced-setting { display: none; }
+    .advanced-mode .advanced-setting { display: block; }
+    .advanced-setting.row { display: none; }
+    .advanced-mode .advanced-setting.row { display: flex; }
   </style>
 </head>
 <body class="bgimage">
@@ -96,10 +102,14 @@
         <!-- Settings -->
         <div class="col-12 col-lg-4">
           <div class="card bg-dark border-secondary h-100">
-            <div class="card-header border-secondary">
+            <div class="card-header border-secondary d-flex justify-content-between align-items-center">
               <h5 class="mb-0">Loot Settings</h5>
+              <div class="form-check form-switch mb-0">
+                <input class="form-check-input" type="checkbox" id="advancedModeToggle" role="switch">
+                <label class="form-check-label small" for="advancedModeToggle">Advanced</label>
+              </div>
             </div>
-            <div class="card-body">
+            <div class="card-body" id="lootSettingsBody">
 
               <!-- Presets -->
               <div class="mb-2">
@@ -181,7 +191,7 @@
               </div>
 
               <!-- Monster Type -->
-              <div class="mb-2">
+              <div class="mb-2 advanced-setting">
                 <label for="lg-monster" class="form-label">Monster Type (Optional)</label>
                 <select id="lg-monster" class="form-select">
                   <option value="none">None (use hoard template below)</option>
@@ -199,7 +209,7 @@
               </div>
 
               <!-- Hoard Template -->
-              <div class="mb-2">
+              <div class="mb-2 advanced-setting">
                 <label for="lg-template" class="form-label">Hoard Template</label>
                 <select id="lg-template" class="form-select">
                   <option value="none">None (generic mix)</option>
@@ -214,7 +224,7 @@
               </div>
 
               <!-- Loot Type -->
-              <div class="mb-2">
+              <div class="mb-2 advanced-setting">
                 <label class="form-label d-block">Loot Type</label>
                 <div class="btn-group w-100" role="group" aria-label="Loot Type">
                   <input type="radio" class="btn-check" name="lg-loot-type" id="lg-loot-hoard" value="hoard" checked>
@@ -226,7 +236,7 @@
               </div>
 
               <!-- Mode -->
-              <div class="mb-2">
+              <div class="mb-2 advanced-setting">
                 <label class="form-label d-block">Generation Mode</label>
                 <div class="btn-group w-100" role="group" aria-label="Mode">
                   <input type="radio" class="btn-check" name="lg-mode" id="lg-mode-count" value="count" checked>
@@ -237,7 +247,7 @@
               </div>
 
               <!-- Common controls -->
-              <div class="row g-2">
+              <div class="row g-2 advanced-setting">
                 <div class="col-6">
                   <label for="lg-count" class="form-label">Count</label>
                   <input id="lg-count" class="form-control" type="number" inputmode="numeric" min="1" max="5000" value="50">
@@ -249,7 +259,7 @@
                 </div>
               </div>
 
-              <div class="row g-2 mt-1">
+              <div class="row g-2 mt-1 advanced-setting">
                 <div class="col-6">
                   <label for="lg-min" class="form-label">Min value (sp)</label>
                   <input id="lg-min" class="form-control" type="number" inputmode="numeric" min="0" max="500" value="1">
@@ -261,33 +271,33 @@
               </div>
 
               <!-- Budget -->
-              <div class="mt-2">
+              <div class="mt-2 advanced-setting">
                 <label for="lg-budget" class="form-label">Target Budget (gp)</label>
                 <input id="lg-budget" class="form-control" type="number" inputmode="numeric" min="1" max="100000" value="150">
                 <div class="form-hint">Used when Mode = Budget (aims ±10%).</div>
               </div>
 
               <!-- Usefulness slider -->
-              <div class="mt-2">
+              <div class="mt-2 advanced-setting">
                 <label for="lg-use" class="form-label">Usefulness Bias</label>
                 <input id="lg-use" class="form-range" type="range" min="0" max="100" value="50">
                 <div class="range-label"><span>Flavor-heavy</span><span>Balanced</span><span>Valuable/usable</span></div>
               </div>
 
               <!-- Minor magic toggle -->
-              <div class="form-check mt-2">
+              <div class="form-check mt-2 advanced-setting">
                 <input class="form-check-input" type="checkbox" id="lg-magic">
                 <label class="form-check-label" for="lg-magic">Allow minor magic (consumables & situational gear)</label>
               </div>
 
               <!-- Cursed items toggle -->
-              <div class="form-check mt-2">
+              <div class="form-check mt-2 advanced-setting">
                 <input class="form-check-input" type="checkbox" id="lg-cursed">
                 <label class="form-check-label" for="lg-cursed">Include cursed items (risk & reward)</label>
               </div>
 
               <!-- Curse severity slider (only visible when cursed items enabled) -->
-              <div class="mt-2" id="lg-curse-severity-wrap" style="display:none;">
+              <div class="mt-2 advanced-setting" id="lg-curse-severity-wrap" style="display:none;">
                 <label for="lg-curse-severity" class="form-label">Curse Severity</label>
                 <input id="lg-curse-severity" class="form-range" type="range" min="1" max="5" value="3">
                 <div class="range-label"><span>Flavor only</span><span>Balanced</span><span>Dangerous</span></div>
@@ -295,23 +305,23 @@
               </div>
 
               <!-- Categories -->
-              <div class="mt-2">
+              <div class="mt-2 advanced-setting">
                 <label class="form-label">Categories</label>
                 <div class="row row-cols-2 g-1" id="lg-cats"></div>
                 <div class="form-hint mt-1">"Minor Magic" and "Cursed Items" are auto-included only when their toggles are on.</div>
               </div>
 
-              <div class="form-check mt-2">
+              <div class="form-check mt-2 advanced-setting">
                 <input class="form-check-input" type="checkbox" id="lg-weight" checked>
                 <label class="form-check-label" for="lg-weight">Show weight estimate</label>
               </div>
-              <div class="form-check">
+              <div class="form-check advanced-setting">
                 <input class="form-check-input" type="checkbox" id="lg-tags" checked>
                 <label class="form-check-label" for="lg-tags">Show tags</label>
               </div>
 
               <!-- Custom Loot Table -->
-              <div class="mt-2">
+              <div class="mt-2 advanced-setting">
                 <label class="form-label d-flex justify-content-between align-items-center">
                   Custom Loot Tables
                   <button class="btn btn-sm btn-outline-light" id="lg-import-custom"><i class="bi bi-upload me-1"></i>Import JSON</button>
@@ -323,7 +333,7 @@
               </div>
 
               <!-- Save/Load Presets -->
-              <div class="mt-2">
+              <div class="mt-2 advanced-setting">
                 <label class="form-label">Save/Load Preset</label>
                 <div class="input-group">
                   <input type="text" id="lg-preset-name" class="form-control" placeholder="Preset name...">
@@ -1555,6 +1565,25 @@ function importCustomTable(){
 }
 
 document.addEventListener("DOMContentLoaded",()=>{
+  // Simple/Advanced mode toggle
+  const advancedKey = 'dmtools.advancedMode.loot';
+  const advancedToggle = $('advancedModeToggle');
+  const settingsBody = $('lootSettingsBody');
+
+  const isAdvanced = localStorage.getItem(advancedKey) === 'true';
+  advancedToggle.checked = isAdvanced;
+  if (isAdvanced) settingsBody.classList.add('advanced-mode');
+
+  advancedToggle.addEventListener('change', () => {
+    if (advancedToggle.checked) {
+      settingsBody.classList.add('advanced-mode');
+      localStorage.setItem(advancedKey, 'true');
+    } else {
+      settingsBody.classList.remove('advanced-mode');
+      localStorage.setItem(advancedKey, 'false');
+    }
+  });
+
   $("lg-generate").addEventListener("click",doGenerate);
   $("lg-copy").addEventListener("click",copyOut);
   $("lg-download").addEventListener("click",downloadOut);

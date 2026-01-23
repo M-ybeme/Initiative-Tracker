@@ -1,15 +1,15 @@
 const DM_TOOLBOX_BUILD = {
   name: "The DM's Toolbox",
-  version: "2.1.0",
+  version: "2.1.1",
   recentChanges: [
-    "Testing Suite: Comprehensive test coverage with 614 tests (342 unit, 202 integration, 70 E2E)",
-    "Unit Tests: Pure function modules extracted to js/modules/ for testability (dice, character-calculations, initiative-calculations, spell-utils, storage, validation, generators, export-utils, level-up-calculations)",
-    "Integration Tests: Character creation flow, level-up system, combat mechanics, cross-tool communication, storage operations",
-    "E2E Tests: Playwright tests for navigation, initiative tracker, character sheet, character wizard",
-    "CI/CD: GitHub Actions workflow for automated testing on push/PR",
-    "Pre-commit Hooks: Husky + lint-staged runs related tests on staged files",
-    "Coverage: 95%+ statement coverage, 82%+ branch coverage with enforced thresholds",
-    "Documentation: CONTRIBUTING.md with test requirements and patterns"
+    "Interactive Combat View: Cast buttons, dice roller, HP controls, death saves, hit dice",
+    "Death Save Rolling: Auto-tracks successes/failures, handles nat 1 and nat 20",
+    "Hit Dice Healing: Roll hit dice to heal, auto-applies CON modifier",
+    "Concentration Tracking: Auto-set on cast, clickable badge to end, damage DC checks",
+    "Dice History Modal: View last 50 rolls with crit/fumble highlighting",
+    "Clickable Saves & Initiative: Roll saving throws and initiative from combat view",
+    "Cast Buttons: Quick casting on both combat view and main character sheet",
+    "NPC Initiative Fix: NPCs from generator now default to NPC type"
   ],
   buildTime: new Date().toISOString(),
   author: "Maybeme"

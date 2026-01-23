@@ -7,14 +7,81 @@ The format is based on Keep a Changelog, and this project adheres to Semantic Ve
 
 The DM's Toolbox has evolved through focused feature releases:
 
-- **2.1.x**: Comprehensive testing suite with 614 tests (unit, integration, E2E), CI/CD automation, and coverage enforcement
+- **2.1.x**: Interactive combat view with dice roller, cast buttons, HP controls, concentration tracking, and comprehensive testing suite
 - **2.0.x**: Starting equipment selection, subclass bonus cantrips, enhanced feat selection UI, and bug fixes
 - **1.11.x**: Journal system with rich text editor, import/export (Word/PDF/TXT/Markdown), and Battle Map → Initiative Tracker integration
 - **1.10.x**: Full character manager with multiclass support, spell learning, subclass selection, and character sheet export
 - **1.9.x**: Battle map measurement tools, persistent fog shapes, and generator integration across NPC/Tavern/Shop systems
 - **1.8.x**: Spell database expansion to 432+ spells, inventory management, loot generator overhaul, and character token generation
 
-**Current version: 2.1.0 (January 2026)**
+**Current version: 2.1.1 (January 2026)**
+
+---
+
+## [2.1.1] - 2026-01-23
+**Interactive Combat View & Concentration Tracking**
+
+### Added
+- **Interactive Combat View Enhancements** - Fully functional combat companion
+  - **Cast Spell Buttons** - Cast button on each spell with slot tracking
+    - Cantrips cast with visual feedback (no slot used)
+    - Leveled spells decrement appropriate spell slot
+    - Warning dialog when using last slot of a level
+    - Color-coded slot indicators (green/yellow/red based on usage)
+  - **Dice Roller Integration** - Roll buttons on attacks and saves
+    - Hit and damage roll buttons on each attack
+    - Advantage/disadvantage/critical roll options
+    - Inline roll result display with crit/fumble highlighting
+    - Clickable saving throw and ability check boxes
+  - **Clickable Initiative** - Roll initiative directly from combat view
+    - Click initiative box to roll with Dexterity modifier
+    - Visual feedback showing roll result
+  - **Dice History Modal** - View all recent dice rolls
+    - Bootstrap modal showing last 50 rolls
+    - Visual indicators for critical hits and fumbles
+    - Timestamps on each roll entry
+    - Clear history button
+  - **Interactive HP Management** - Click HP to reveal controls
+    - Damage/Heal/Temp HP quick buttons
+    - HP bar with color gradient (green→yellow→red)
+    - Temp HP display and tracking
+  - **Death Save Rolling** - Roll death saves with auto-tracking
+    - Natural 20: Regain 1 HP and become conscious
+    - Natural 1: Two failures (critical fail)
+    - 10+: Success tracked; 3 successes = stable
+    - 1-9: Failure tracked; 3 failures = death
+  - **Hit Dice Rolling** - Spend hit dice to heal
+    - Click hit dice button to roll and heal
+    - Choose how many dice to spend
+    - Auto-applies CON modifier per die
+    - Updates HP and remaining hit dice
+  - **Clickable Concentration Badge** - End concentration with one click
+    - Shows spell name directly on badge
+    - Click to end concentration
+
+- **Concentration Tracking System** - Automatic concentration management
+  - Casting concentration spells auto-sets concentration status
+  - Visual indicator shows current concentration spell
+  - Damage triggers concentration saving throw prompt
+  - DC calculated as max(10, damage÷2) per D&D 5e rules
+  - Pass/fail handling with automatic concentration drop on failure
+  - Works in both combat view and main character sheet
+
+- **Cast Buttons on Main Character Sheet** - Quick casting from spell list
+  - Cast button appears on prepared spells and cantrips
+  - Same slot tracking and warnings as combat view
+  - Concentration spells automatically set concentration
+
+### Fixed
+- **NPC Type in Initiative Tracker** - NPCs added from NPC Generator now correctly default to "NPC" type instead of "PC"
+- **Combat View Initialization** - Combat view now properly populates when returning to page with combat mode enabled
+- **Dice Roll History Integration** - All combat view rolls now properly appear in dice history
+
+### Technical
+- Event delegation for dynamically rendered combat view elements
+- Custom `characterLoaded` event for async data loading coordination
+- Window object exposure for cross-script dice function communication
+- Try/catch error handling with fallback alerts for roll functions
 
 ---
 

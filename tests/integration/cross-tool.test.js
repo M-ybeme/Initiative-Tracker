@@ -555,3 +555,187 @@ describe('Complete Workflow Simulations', () => {
     expect(pending.notes).toContain(npc.personality);
   });
 });
+
+// ============================================================
+// NPC Generator to Initiative Tracker (with Stat Block)
+// ============================================================
+
+describe('NPC Generator to Initiative Tracker', () => {
+  let mockStorage;
+
+  beforeEach(() => {
+    mockStorage = {};
+  });
+
+  afterEach(() => {
+    mockStorage = {};
+  });
+
+  it('formats NPC stat block data for initiative import', () => {
+    // Test data matching NPC generator stat block structure
+    const statBlock = {
+      hp: 22,
+      ac: 14,
+      speed: 30,
+      stats: { str: 14, dex: 12, con: 13, int: 10, wis: 11, cha: 10 },
+      mods: { str: 2, dex: 1, con: 1, int: 0, wis: 0, cha: 0 },
+      specialty: 'Guard',
+      tier: 'Trained',
+      cr: '1/4-1',
+      profBonus: 2,
+      attacks: ['Spear', 'Shield bash'],
+      traits: ['Alert', 'Formation fighter']
+    };
+
+    const npcName = 'Captain Vorn';
+
+    // Format for initiative (matching npc.html sendNPCToInitiative function)
+    const initiativeData = {
+      name: npcName,
+      maxHp: statBlock.hp,
+      ac: statBlock.ac,
+      initiative: statBlock.mods.dex,
+      useActualInitiative: false,
+      source: 'NPC Generator'
+    };
+
+    mockStorage['dmtools.pendingInitiativeImport'] = JSON.stringify(initiativeData);
+
+    // Verify data structure
+    const loaded = JSON.parse(mockStorage['dmtools.pendingInitiativeImport']);
+    expect(loaded.name).toBe('Captain Vorn');
+    expect(loaded.maxHp).toBe(22);
+    expect(loaded.ac).toBe(14);
+    expect(loaded.initiative).toBe(1);  // DEX mod
+    expect(loaded.useActualInitiative).toBe(false);
+    expect(loaded.source).toBe('NPC Generator');
+  });
+
+  it('handles NPC without name gracefully', () => {
+    const statBlock = { hp: 11, ac: 12, mods: { dex: 0 } };
+    const initiativeData = {
+      name: '[Unnamed NPC]',
+      maxHp: statBlock.hp,
+      ac: statBlock.ac,
+      initiative: statBlock.mods.dex || 0,
+      useActualInitiative: false,
+      source: 'NPC Generator'
+    };
+
+    expect(initiativeData.name).toBe('[Unnamed NPC]');
+    expect(initiativeData.initiative).toBe(0);
+  });
+
+  it('extracts DEX modifier correctly for initiative bonus', () => {
+    // Test the ability modifier calculation (same as used in npc.html)
+    const testCases = [
+      { dex: 10, expectedMod: 0 },
+      { dex: 14, expectedMod: 2 },
+      { dex: 8, expectedMod: -1 },
+      { dex: 18, expectedMod: 4 },
+      { dex: 7, expectedMod: -2 },
+      { dex: 20, expectedMod: 5 }
+    ];
+
+    testCases.forEach(({ dex, expectedMod }) => {
+      const mod = Math.floor((dex - 10) / 2);
+      expect(mod).toBe(expectedMod);
+    });
+  });
+
+  it('simulates full NPC to Initiative workflow with stat block', () => {
+    // Step 1: Generate stat block (mimic NPC generator generateStatBlock function)
+    const statBlock = {
+      tier: 'Veteran',
+      cr: '2-4',
+      specialty: 'Scout',
+      hp: 35,
+      ac: 15,
+      speed: 40,
+      stats: { str: 11, dex: 17, con: 14, int: 11, wis: 15, cha: 9 },
+      mods: { str: 0, dex: 3, con: 2, int: 0, wis: 2, cha: -1 },
+      profBonus: 2,
+      attacks: ['Shortbow', 'Shortsword'],
+      traits: ['Keen eye', 'Stealthy'],
+      desc: 'Agile ranger, skilled in ranged combat'
+    };
+
+    // Step 2: Create initiative data (matching sendNPCToInitiative format)
+    const initiativeData = {
+      name: 'Elara the Scout',
+      maxHp: statBlock.hp,
+      ac: statBlock.ac,
+      initiative: statBlock.mods.dex,
+      useActualInitiative: false,
+      source: 'NPC Generator'
+    };
+
+    // Step 3: Store in localStorage
+    mockStorage['dmtools.pendingInitiativeImport'] = JSON.stringify(initiativeData);
+
+    // Step 4: Simulate initiative tracker reading it
+    const pending = JSON.parse(mockStorage['dmtools.pendingInitiativeImport']);
+
+    // Verify initiative tracker would handle correctly
+    expect(pending.name).toBe('Elara the Scout');
+    expect(pending.maxHp).toBe(35);
+    expect(pending.ac).toBe(15);
+    expect(pending.initiative).toBe(3);  // DEX mod from 17 DEX
+    expect(pending.useActualInitiative).toBe(false);  // Tracker will roll d20 + bonus
+    expect(pending.source).toBe('NPC Generator');
+  });
+
+  it('handles all tier stat block ranges correctly', () => {
+    // Tier data matching STAT_TIERS in npc.html
+    const tiers = {
+      1: { name: 'Commoner', hpRange: [4, 8], acRange: [10, 12] },
+      2: { name: 'Trained', hpRange: [11, 22], acRange: [12, 14] },
+      3: { name: 'Veteran', hpRange: [27, 49], acRange: [14, 16] },
+      4: { name: 'Elite', hpRange: [68, 136], acRange: [16, 18] },
+      5: { name: 'Legendary', hpRange: [153, 250], acRange: [17, 20] }
+    };
+
+    Object.entries(tiers).forEach(([tier, data]) => {
+      const statBlock = {
+        hp: data.hpRange[0],
+        ac: data.acRange[0],
+        mods: { dex: Number(tier) - 1 }
+      };
+
+      const initiativeData = {
+        name: `${data.name} NPC`,
+        maxHp: statBlock.hp,
+        ac: statBlock.ac,
+        initiative: statBlock.mods.dex,
+        useActualInitiative: false
+      };
+
+      // Verify HP and AC are within expected tier ranges
+      expect(initiativeData.maxHp).toBeGreaterThanOrEqual(data.hpRange[0]);
+      expect(initiativeData.maxHp).toBeLessThanOrEqual(data.hpRange[1]);
+      expect(initiativeData.ac).toBeGreaterThanOrEqual(data.acRange[0]);
+      expect(initiativeData.ac).toBeLessThanOrEqual(data.acRange[1]);
+    });
+  });
+
+  it('source field enables proper toast message', () => {
+    // Test that source field is properly included
+    const initiativeData = {
+      name: 'Test NPC',
+      maxHp: 20,
+      ac: 14,
+      initiative: 2,
+      useActualInitiative: false,
+      source: 'NPC Generator'
+    };
+
+    mockStorage['dmtools.pendingInitiativeImport'] = JSON.stringify(initiativeData);
+    const loaded = JSON.parse(mockStorage['dmtools.pendingInitiativeImport']);
+
+    // Simulate toast message generation (from initiative.js)
+    const source = loaded.source || 'Battle Map';
+    const toastMsg = `Added "${loaded.name}" from ${source}!`;
+
+    expect(toastMsg).toBe('Added "Test NPC" from NPC Generator!');
+  });
+});

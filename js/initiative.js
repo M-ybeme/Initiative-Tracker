@@ -75,8 +75,8 @@ const statusEffects = [
             $('initiative-roll').value = d20Roll + initBonus;
           }
 
-          // Set type to Enemy by default
-          $('character-type').value = 'enemy';
+          // Set type - use provided type or default to 'npc'
+          $('character-type').value = data.type || 'npc';
 
           // Auto-submit the form after a brief delay
           setTimeout(() => {
@@ -86,7 +86,8 @@ const statusEffects = [
               form.dispatchEvent(new Event('submit', { cancelable: true, bubbles: true }));
 
               // Show a toast notification
-              const toastMsg = `✨ Added "${data.name}" from Battle Map!`;
+              const source = data.source || 'Battle Map';
+              const toastMsg = `✨ Added "${data.name}" from ${source}!`;
               const toastEl = document.getElementById('rollToast');
               if (toastEl) {
                 const toastBody = toastEl.querySelector('.toast-body');

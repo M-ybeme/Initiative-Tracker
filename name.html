@@ -118,6 +118,14 @@
     .code-block { background: rgba(255,255,255,.05); border: 1px solid rgba(255,255,255,.1); border-radius: .5rem; padding: .75rem; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace; font-size: .9rem; overflow:auto;}
     #ng-out .col { display: flex; }
     #ng-out .ng-tile {width: 100%; height: 100%;}
+
+    /* Simple/Advanced mode toggle */
+    .advanced-setting { display: none; }
+    .advanced-mode .advanced-setting { display: block; }
+    .advanced-setting.row { display: none; }
+    .advanced-mode .advanced-setting.row { display: flex; }
+    .advanced-setting.settings-section { display: none; }
+    .advanced-mode .advanced-setting.settings-section { display: block; }
   </style>
 </head>
 <body class="bgimage">
@@ -221,7 +229,13 @@
         <!-- Desktop/LG+ Settings panel -->
         <div class="col-lg-4 d-none d-lg-block">
           <div class="card bg-dark border-secondary h-100">
-            <div class="card-header border-secondary"><h5 class="mb-0">Generator Settings</h5></div>
+            <div class="card-header border-secondary d-flex justify-content-between align-items-center">
+              <h5 class="mb-0">Generator Settings</h5>
+              <div class="form-check form-switch mb-0">
+                <input class="form-check-input" type="checkbox" id="advancedModeToggleDesktop" role="switch">
+                <label class="form-check-label small" for="advancedModeToggleDesktop">Advanced</label>
+              </div>
+            </div>
             <div class="card-body" id="settingsCardBody"><!-- settings form gets injected --></div>
           </div>
         </div>
@@ -270,7 +284,13 @@
     <div class="offcanvas offcanvas-end" tabindex="-1" id="settingsOffcanvas" aria-labelledby="settingsOffcanvasLabel">
       <div class="offcanvas-header">
         <h5 id="settingsOffcanvasLabel" class="mb-0">Generator Settings</h5>
-        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+        <div class="d-flex align-items-center gap-3">
+          <div class="form-check form-switch mb-0">
+            <input class="form-check-input" type="checkbox" id="advancedModeToggleMobile" role="switch">
+            <label class="form-check-label small" for="advancedModeToggleMobile">Advanced</label>
+          </div>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+        </div>
       </div>
       <div class="offcanvas-body" id="settingsOffcanvasBody"><!-- settings form gets injected --></div>
     </div>
@@ -675,13 +695,13 @@
             <label for="ng-count" class="form-label small">Count</label>
             <input id="ng-count" type="number" inputmode="numeric" min="1" max="200" value="20" class="form-control form-control-sm" />
           </div>
-          <div class="col-6">
+          <div class="col-6 advanced-setting">
             <label for="ng-seed" class="form-label small">Seed</label>
             <input id="ng-seed" type="text" placeholder="optional" class="form-control form-control-sm" />
           </div>
         </div>
 
-        <div class="row g-2 mt-2">
+        <div class="row g-2 mt-2 advanced-setting">
           <div class="col-6">
             <label for="ng-minSyl" class="form-label small">Min syllables</label>
             <input id="ng-minSyl" type="number" inputmode="numeric" min="1" max="6" value="2" class="form-control form-control-sm" />
@@ -701,7 +721,7 @@
               <option value="masculine">Masculine</option>
             </select>
           </div>
-          <div class="col-6">
+          <div class="col-6 advanced-setting">
             <label for="ng-allit" class="form-label small">Alliteration</label>
             <input id="ng-allit" type="text" maxlength="1" placeholder="e.g. R" class="form-control form-control-sm" />
           </div>
@@ -709,7 +729,7 @@
       </div>
 
       <!-- Flavor Settings -->
-      <div class="settings-section">
+      <div class="settings-section advanced-setting">
         <div class="settings-section-title">Flavor</div>
         <div class="mb-2">
           <label for="ng-harsh" class="form-label small d-flex justify-content-between">
@@ -738,7 +758,7 @@
       </div>
 
       <!-- Surname Options -->
-      <div class="settings-section">
+      <div class="settings-section advanced-setting">
         <div class="settings-section-title">Surnames</div>
         <div class="form-check small mb-2">
           <input class="form-check-input" type="checkbox" id="ng-surname" />
@@ -768,7 +788,7 @@
       </div>
 
       <!-- Advanced tables -->
-      <details class="mt-3">
+      <details class="mt-3 advanced-setting">
         <summary class="text-secondary">Custom Tables (advanced)
           <span class="badge rounded-pill text-bg-secondary ms-2">JSON</span>
         </summary>
@@ -1221,6 +1241,38 @@
     });
     
     document.addEventListener('DOMContentLoaded', mountSettingsForms);
+
+    // Simple/Advanced mode toggle
+    document.addEventListener('DOMContentLoaded', () => {
+      const advancedKey = 'dmtools.advancedMode.name';
+      const desktopToggle = document.getElementById('advancedModeToggleDesktop');
+      const mobileToggle = document.getElementById('advancedModeToggleMobile');
+      const desktopBody = document.getElementById('settingsCardBody');
+      const mobileBody = document.getElementById('settingsOffcanvasBody');
+
+      // Initialize from localStorage (default: false = Simple)
+      const isAdvanced = localStorage.getItem(advancedKey) === 'true';
+
+      function setAdvancedMode(enabled) {
+        desktopToggle.checked = enabled;
+        mobileToggle.checked = enabled;
+        if (enabled) {
+          desktopBody.classList.add('advanced-mode');
+          mobileBody.classList.add('advanced-mode');
+        } else {
+          desktopBody.classList.remove('advanced-mode');
+          mobileBody.classList.remove('advanced-mode');
+        }
+        localStorage.setItem(advancedKey, enabled ? 'true' : 'false');
+      }
+
+      // Set initial state
+      setAdvancedMode(isAdvanced);
+
+      // Sync toggles
+      desktopToggle.addEventListener('change', () => setAdvancedMode(desktopToggle.checked));
+      mobileToggle.addEventListener('change', () => setAdvancedMode(mobileToggle.checked));
+    });
   })();
 
   </script>
