@@ -743,50 +743,136 @@ const CharacterCreationWizard = (function() {
     {
       title: "Step 5: Ability Scores",
       content: `
-        <h5>Roll your ability scores</h5>
-        <p>The six ability scores define your character's core attributes. Roll 4d6, drop the lowest die, and assign the results.</p>
-        <div class="text-center mb-3">
-          <button type="button" class="btn btn-primary btn-lg" id="rollAbilitiesBtn">
-            <i class="bi bi-dice-5"></i> Roll All Ability Scores
-          </button>
-          <p class="text-muted small mt-2">Standard method: Roll 4d6, drop lowest, 6 times</p>
+        <h5>Choose your ability scores</h5>
+        <p>The six ability scores define your character's core attributes. Choose how you want to determine them:</p>
+
+        <div class="btn-group w-100 mb-3" role="group" aria-label="Ability score method">
+          <input type="radio" class="btn-check" name="abilityMethod" id="methodRoll" value="roll" checked>
+          <label class="btn btn-outline-primary" for="methodRoll">
+            <i class="bi bi-dice-5"></i> Roll for Stats
+          </label>
+          <input type="radio" class="btn-check" name="abilityMethod" id="methodPointBuy" value="pointbuy">
+          <label class="btn btn-outline-success" for="methodPointBuy">
+            <i class="bi bi-calculator"></i> Point Buy
+          </label>
         </div>
-        <div id="abilityRolls" class="row g-2 mb-3" style="display:none;">
-          <div class="col-12"><h6>Your Rolls (assign these to abilities below):</h6></div>
-          <div class="col-12" id="rollResults"></div>
+
+        <!-- Rolling Method -->
+        <div id="rollMethodSection">
+          <div class="text-center mb-3">
+            <button type="button" class="btn btn-primary btn-lg btn-roll-stats" id="rollAbilitiesBtn">
+              <i class="bi bi-dice-5"></i> Click to Roll Ability Scores!
+            </button>
+            <p class="text-muted small mt-2">Standard method: Roll 4d6, drop lowest, 6 times</p>
+          </div>
+          <div id="abilityRolls" class="row g-2 mb-3" style="display:none;">
+            <div class="col-12"><h6>Your Rolls (assign these to abilities below):</h6></div>
+            <div class="col-12" id="rollResults"></div>
+          </div>
+          <div class="row g-3" id="rollInputs">
+            <div class="col-md-6">
+              <label for="wizardStr" class="form-label">Strength (STR)</label>
+              <input type="number" class="form-control" id="wizardStr" min="3" max="18" placeholder="Physical power">
+              <div class="form-text small">Melee attacks, carrying capacity</div>
+            </div>
+            <div class="col-md-6">
+              <label for="wizardDex" class="form-label">Dexterity (DEX)</label>
+              <input type="number" class="form-control" id="wizardDex" min="3" max="18" placeholder="Agility & reflexes">
+              <div class="form-text small">AC, ranged attacks, initiative</div>
+            </div>
+            <div class="col-md-6">
+              <label for="wizardCon" class="form-label">Constitution (CON)</label>
+              <input type="number" class="form-control" id="wizardCon" min="3" max="18" placeholder="Endurance">
+              <div class="form-text small">Hit points, stamina</div>
+            </div>
+            <div class="col-md-6">
+              <label for="wizardInt" class="form-label">Intelligence (INT)</label>
+              <input type="number" class="form-control" id="wizardInt" min="3" max="18" placeholder="Reasoning & memory">
+              <div class="form-text small">Wizard spells, investigation</div>
+            </div>
+            <div class="col-md-6">
+              <label for="wizardWis" class="form-label">Wisdom (WIS)</label>
+              <input type="number" class="form-control" id="wizardWis" min="3" max="18" placeholder="Awareness & intuition">
+              <div class="form-text small">Cleric/Druid spells, perception</div>
+            </div>
+            <div class="col-md-6">
+              <label for="wizardCha" class="form-label">Charisma (CHA)</label>
+              <input type="number" class="form-control" id="wizardCha" min="3" max="18" placeholder="Force of personality">
+              <div class="form-text small">Bard/Sorcerer/Warlock spells, persuasion</div>
+            </div>
+          </div>
         </div>
-        <div class="row g-3">
-          <div class="col-md-6">
-            <label for="wizardStr" class="form-label">Strength (STR)</label>
-            <input type="number" class="form-control" id="wizardStr" min="3" max="18" placeholder="Physical power">
-            <div class="form-text small">Melee attacks, carrying capacity</div>
+
+        <!-- Point Buy Method -->
+        <div id="pointBuySection" style="display:none;">
+          <div class="alert alert-secondary mb-3">
+            <strong>Point Buy Rules:</strong> You have <span class="points-remaining text-success" id="pointsRemaining">27</span> points to spend.
+            All scores start at 8. Increasing a score costs points (higher scores cost more).
           </div>
-          <div class="col-md-6">
-            <label for="wizardDex" class="form-label">Dexterity (DEX)</label>
-            <input type="number" class="form-control" id="wizardDex" min="3" max="18" placeholder="Agility & reflexes">
-            <div class="form-text small">AC, ranged attacks, initiative</div>
-          </div>
-          <div class="col-md-6">
-            <label for="wizardCon" class="form-label">Constitution (CON)</label>
-            <input type="number" class="form-control" id="wizardCon" min="3" max="18" placeholder="Endurance">
-            <div class="form-text small">Hit points, stamina</div>
-          </div>
-          <div class="col-md-6">
-            <label for="wizardInt" class="form-label">Intelligence (INT)</label>
-            <input type="number" class="form-control" id="wizardInt" min="3" max="18" placeholder="Reasoning & memory">
-            <div class="form-text small">Wizard spells, investigation</div>
-          </div>
-          <div class="col-md-6">
-            <label for="wizardWis" class="form-label">Wisdom (WIS)</label>
-            <input type="number" class="form-control" id="wizardWis" min="3" max="18" placeholder="Awareness & intuition">
-            <div class="form-text small">Cleric/Druid spells, perception</div>
-          </div>
-          <div class="col-md-6">
-            <label for="wizardCha" class="form-label">Charisma (CHA)</label>
-            <input type="number" class="form-control" id="wizardCha" min="3" max="18" placeholder="Force of personality">
-            <div class="form-text small">Bard/Sorcerer/Warlock spells, persuasion</div>
+          <div class="row g-3" id="pointBuyInputs">
+            <div class="col-md-6">
+              <label class="form-label">Strength (STR)</label>
+              <div class="point-buy-control">
+                <button type="button" class="btn btn-outline-secondary" data-ability="str" data-action="decrease">−</button>
+                <span class="point-buy-score" id="pbStr">8</span>
+                <button type="button" class="btn btn-outline-secondary" data-ability="str" data-action="increase">+</button>
+                <small class="text-muted ms-2">Cost: <span id="costStr">0</span></small>
+              </div>
+              <div class="form-text small">Melee attacks, carrying capacity</div>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Dexterity (DEX)</label>
+              <div class="point-buy-control">
+                <button type="button" class="btn btn-outline-secondary" data-ability="dex" data-action="decrease">−</button>
+                <span class="point-buy-score" id="pbDex">8</span>
+                <button type="button" class="btn btn-outline-secondary" data-ability="dex" data-action="increase">+</button>
+                <small class="text-muted ms-2">Cost: <span id="costDex">0</span></small>
+              </div>
+              <div class="form-text small">AC, ranged attacks, initiative</div>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Constitution (CON)</label>
+              <div class="point-buy-control">
+                <button type="button" class="btn btn-outline-secondary" data-ability="con" data-action="decrease">−</button>
+                <span class="point-buy-score" id="pbCon">8</span>
+                <button type="button" class="btn btn-outline-secondary" data-ability="con" data-action="increase">+</button>
+                <small class="text-muted ms-2">Cost: <span id="costCon">0</span></small>
+              </div>
+              <div class="form-text small">Hit points, stamina</div>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Intelligence (INT)</label>
+              <div class="point-buy-control">
+                <button type="button" class="btn btn-outline-secondary" data-ability="int" data-action="decrease">−</button>
+                <span class="point-buy-score" id="pbInt">8</span>
+                <button type="button" class="btn btn-outline-secondary" data-ability="int" data-action="increase">+</button>
+                <small class="text-muted ms-2">Cost: <span id="costInt">0</span></small>
+              </div>
+              <div class="form-text small">Wizard spells, investigation</div>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Wisdom (WIS)</label>
+              <div class="point-buy-control">
+                <button type="button" class="btn btn-outline-secondary" data-ability="wis" data-action="decrease">−</button>
+                <span class="point-buy-score" id="pbWis">8</span>
+                <button type="button" class="btn btn-outline-secondary" data-ability="wis" data-action="increase">+</button>
+                <small class="text-muted ms-2">Cost: <span id="costWis">0</span></small>
+              </div>
+              <div class="form-text small">Cleric/Druid spells, perception</div>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Charisma (CHA)</label>
+              <div class="point-buy-control">
+                <button type="button" class="btn btn-outline-secondary" data-ability="cha" data-action="decrease">−</button>
+                <span class="point-buy-score" id="pbCha">8</span>
+                <button type="button" class="btn btn-outline-secondary" data-ability="cha" data-action="increase">+</button>
+                <small class="text-muted ms-2">Cost: <span id="costCha">0</span></small>
+              </div>
+              <div class="form-text small">Bard/Sorcerer/Warlock spells, persuasion</div>
+            </div>
           </div>
         </div>
+
         <div class="alert alert-info mt-3" id="abilityTips">
           <strong>Tip:</strong> Put your highest scores in the abilities your class uses most!
           <ul class="small mb-0 mt-2">
@@ -808,16 +894,31 @@ const CharacterCreationWizard = (function() {
       `,
       buttons: ['Back', 'Next'],
       validate: () => {
-        const str = parseInt(document.getElementById('wizardStr')?.value) || 0;
-        const dex = parseInt(document.getElementById('wizardDex')?.value) || 0;
-        const con = parseInt(document.getElementById('wizardCon')?.value) || 0;
-        const int = parseInt(document.getElementById('wizardInt')?.value) || 0;
-        const wis = parseInt(document.getElementById('wizardWis')?.value) || 0;
-        const cha = parseInt(document.getElementById('wizardCha')?.value) || 0;
+        const isPointBuy = document.getElementById('methodPointBuy')?.checked;
 
-        if (str < 3 || dex < 3 || con < 3 || int < 3 || wis < 3 || cha < 3) {
-          alert('Please enter all ability scores (minimum 3).');
-          return false;
+        let str, dex, con, int, wis, cha;
+
+        if (isPointBuy) {
+          // Get values from point buy
+          str = parseInt(document.getElementById('pbStr')?.textContent) || 8;
+          dex = parseInt(document.getElementById('pbDex')?.textContent) || 8;
+          con = parseInt(document.getElementById('pbCon')?.textContent) || 8;
+          int = parseInt(document.getElementById('pbInt')?.textContent) || 8;
+          wis = parseInt(document.getElementById('pbWis')?.textContent) || 8;
+          cha = parseInt(document.getElementById('pbCha')?.textContent) || 8;
+        } else {
+          // Get values from roll inputs
+          str = parseInt(document.getElementById('wizardStr')?.value) || 0;
+          dex = parseInt(document.getElementById('wizardDex')?.value) || 0;
+          con = parseInt(document.getElementById('wizardCon')?.value) || 0;
+          int = parseInt(document.getElementById('wizardInt')?.value) || 0;
+          wis = parseInt(document.getElementById('wizardWis')?.value) || 0;
+          cha = parseInt(document.getElementById('wizardCha')?.value) || 0;
+
+          if (str < 3 || dex < 3 || con < 3 || int < 3 || wis < 3 || cha < 3) {
+            alert('Please enter all ability scores (minimum 3).');
+            return false;
+          }
         }
 
         wizardData.str = str;
@@ -829,15 +930,84 @@ const CharacterCreationWizard = (function() {
         return true;
       },
       onShow: () => {
+        // Point buy cost table (score -> cumulative cost from 8)
+        const pointCosts = { 8: 0, 9: 1, 10: 2, 11: 3, 12: 4, 13: 5, 14: 7, 15: 9 };
+        let pointBuyScores = { str: 8, dex: 8, con: 8, int: 8, wis: 8, cha: 8 };
+        let totalPointsSpent = 0;
+        const maxPoints = 27;
+
+        // Update point buy display
+        const updatePointBuyDisplay = () => {
+          totalPointsSpent = 0;
+          for (const ability of ['str', 'dex', 'con', 'int', 'wis', 'cha']) {
+            const score = pointBuyScores[ability];
+            const cost = pointCosts[score];
+            totalPointsSpent += cost;
+
+            const scoreEl = document.getElementById('pb' + ability.charAt(0).toUpperCase() + ability.slice(1));
+            const costEl = document.getElementById('cost' + ability.charAt(0).toUpperCase() + ability.slice(1));
+            if (scoreEl) scoreEl.textContent = score;
+            if (costEl) costEl.textContent = cost;
+          }
+
+          const remaining = maxPoints - totalPointsSpent;
+          const remainingEl = document.getElementById('pointsRemaining');
+          if (remainingEl) {
+            remainingEl.textContent = remaining;
+            remainingEl.className = 'points-remaining ' + (remaining < 0 ? 'text-danger' : remaining === 0 ? 'text-warning' : 'text-success');
+          }
+        };
+
+        // Handle method toggle
+        const methodRoll = document.getElementById('methodRoll');
+        const methodPointBuy = document.getElementById('methodPointBuy');
+        const rollSection = document.getElementById('rollMethodSection');
+        const pointBuySection = document.getElementById('pointBuySection');
+
+        const toggleMethod = () => {
+          if (methodPointBuy?.checked) {
+            rollSection.style.display = 'none';
+            pointBuySection.style.display = 'block';
+            updatePointBuyDisplay();
+          } else {
+            rollSection.style.display = 'block';
+            pointBuySection.style.display = 'none';
+          }
+        };
+
+        methodRoll?.addEventListener('change', toggleMethod);
+        methodPointBuy?.addEventListener('change', toggleMethod);
+
+        // Handle point buy buttons
+        document.querySelectorAll('#pointBuyInputs button').forEach(btn => {
+          btn.addEventListener('click', () => {
+            const ability = btn.dataset.ability;
+            const action = btn.dataset.action;
+            const currentScore = pointBuyScores[ability];
+
+            if (action === 'increase' && currentScore < 15) {
+              const newScore = currentScore + 1;
+              const newCost = pointCosts[newScore];
+              const currentCost = pointCosts[currentScore];
+              if (totalPointsSpent + (newCost - currentCost) <= maxPoints) {
+                pointBuyScores[ability] = newScore;
+              }
+            } else if (action === 'decrease' && currentScore > 8) {
+              pointBuyScores[ability] = currentScore - 1;
+            }
+
+            updatePointBuyDisplay();
+          });
+        });
+
+        // Roll button handler
         const rollBtn = document.getElementById('rollAbilitiesBtn');
         if (rollBtn) {
-          // Remove any existing listener to prevent memory leaks and duplicate handlers
           const oldListener = rollBtn._rollClickHandler;
           if (oldListener) {
             rollBtn.removeEventListener('click', oldListener);
           }
 
-          // Create new handler and store reference for later removal
           const newHandler = () => {
             const rolls = [];
             for (let i = 0; i < 6; i++) {
@@ -848,7 +1018,7 @@ const CharacterCreationWizard = (function() {
                 Math.floor(Math.random() * 6) + 1
               ];
               dice.sort((a, b) => b - a);
-              const total = dice[0] + dice[1] + dice[2]; // Drop lowest (dice[3])
+              const total = dice[0] + dice[1] + dice[2];
               rolls.push({ dice: [...dice], total, dropped: dice[3] });
             }
 
@@ -1872,6 +2042,12 @@ const CharacterCreationWizard = (function() {
               ${cantripsToLearn > 0 ? `<li>Select <strong>${cantripsToLearn} cantrips</strong></li>` : ''}
               ${spellsToLearn > 0 ? `<li>${isPreparedCaster ? 'Prepare' : 'Select'} <strong>${spellsToLearn} spells</strong> of level ${maxSpellLevel} or lower ${isPreparedCaster ? '(can change daily)' : ''}</li>` : ''}
             </ul>
+          </div>
+
+          <div class="alert alert-warning mb-3">
+            <h6 class="alert-heading"><i class="bi bi-lightbulb"></i> New to Spellcasting?</h6>
+            <p class="small mb-2"><strong>Cantrips vs Spells:</strong> Cantrips are minor magical tricks you can cast <em>unlimited times</em> without using spell slots. Regular spells are more powerful but use spell slots, which you recover after resting.</p>
+            <p class="small mb-0"><strong>Concentration:</strong> Some spells require <em>concentration</em> to maintain (marked with <span class="badge bg-secondary">Concentration</span> in their duration). You can only concentrate on <strong>one spell at a time</strong>, and taking damage may break your concentration.</p>
           </div>
 
           ${cantripsToLearn > 0 ? `

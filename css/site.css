@@ -211,3 +211,86 @@ main.content {
   border-color: var(--mdm-secondary-color) !important;
   background-color: var(--mdm-primary-color) !important;
 }
+
+/* Animated roll button for character creation */
+.btn-roll-stats {
+  position: relative;
+  animation: pulse-glow 2s ease-in-out infinite;
+  box-shadow: 0 0 10px var(--mdm-secondary-color);
+  border: 2px solid var(--mdm-secondary-color) !important;
+  cursor: pointer;
+}
+
+.btn-roll-stats:hover {
+  animation: none;
+  transform: scale(1.05);
+  box-shadow: 0 0 20px var(--mdm-secondary-color);
+}
+
+.btn-roll-stats .bi-dice-5 {
+  animation: dice-shake 1s ease-in-out infinite;
+  display: inline-block;
+}
+
+.btn-roll-stats:hover .bi-dice-5 {
+  animation: dice-spin 0.3s ease-in-out;
+}
+
+@keyframes pulse-glow {
+  0%, 100% {
+    box-shadow: 0 0 10px var(--mdm-secondary-color);
+  }
+  50% {
+    box-shadow: 0 0 25px var(--mdm-secondary-color), 0 0 40px var(--mdm-highlight-color);
+  }
+}
+
+@keyframes dice-shake {
+  0%, 100% { transform: rotate(0deg); }
+  25% { transform: rotate(-5deg); }
+  75% { transform: rotate(5deg); }
+}
+
+@keyframes dice-spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* Point buy system styles */
+.point-buy-control {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.point-buy-control .btn {
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+}
+
+.point-buy-score {
+  min-width: 40px;
+  text-align: center;
+  font-weight: bold;
+  font-size: 1.25rem;
+}
+
+.points-remaining {
+  font-size: 1.5rem;
+  font-weight: bold;
+}
+
+.points-remaining.text-danger {
+  animation: shake 0.5s ease-in-out;
+}
+
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-5px); }
+  75% { transform: translateX(5px); }
+}

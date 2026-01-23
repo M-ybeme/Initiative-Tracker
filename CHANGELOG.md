@@ -7,18 +7,46 @@ The format is based on Keep a Changelog, and this project adheres to Semantic Ve
 
 The DM's Toolbox has evolved through focused feature releases:
 
-- **2.1.x**: Interactive combat view with dice roller, cast buttons, HP controls, concentration tracking, and comprehensive testing suite
-- **2.0.x**: Starting equipment selection, subclass bonus cantrips, enhanced feat selection UI, and bug fixes
+
+- **2.0.x**: Starting equipment selection, subclass bonus cantrips, enhanced feat selection UI, and bug fixes and introducing test and engeneering polish to the app
 - **1.11.x**: Journal system with rich text editor, import/export (Word/PDF/TXT/Markdown), and Battle Map → Initiative Tracker integration
 - **1.10.x**: Full character manager with multiclass support, spell learning, subclass selection, and character sheet export
 - **1.9.x**: Battle map measurement tools, persistent fog shapes, and generator integration across NPC/Tavern/Shop systems
 - **1.8.x**: Spell database expansion to 432+ spells, inventory management, loot generator overhaul, and character token generation
 
-**Current version: 2.1.1 (January 2026)**
+**Current version: 2.1.2 (January 2026)**
 
 ---
 
-## [2.1.1] - 2026-01-23
+## [2.0.3] - 2026-01-23
+**Character Creation UX Improvements**
+
+### Added
+- **Animated Roll Button** - Ability score roll button now features a pulsing golden glow and shaking dice icon to make it obvious it's clickable
+  - Hover effects include scale-up and dice spin animation
+  - Button text changed to "Click to Roll Ability Scores!" for clarity
+
+- **Point Buy System** - New toggle to switch between rolling and point buy for ability scores
+  - Standard 27-point allocation system per D&D 5e rules
+  - All scores start at 8, maximum of 15
+  - +/- buttons for each ability with live cost tracking
+  - Color-coded remaining points indicator (green/yellow/red)
+
+- **Spell Selection Hints** - New hint box on spell selection step for new players
+  - Explains difference between cantrips (unlimited use) and leveled spells (use spell slots)
+  - Explains concentration mechanic (one spell at a time, damage can break it)
+
+### Technical
+- Added `.btn-roll-stats` CSS class with `pulse-glow` and `dice-shake` keyframe animations
+- Added `.point-buy-control` and `.points-remaining` CSS classes for point buy UI
+- Updated Step 5 (Ability Scores) in character creation wizard with method toggle and point buy logic
+- Updated Step 11 (Spells) with explanatory alert box for new players
+- Ran all Unit/Integration tests and e2e tests and all pass (620/620 Pass).
+
+
+---
+
+## [2.0.2] - 2026-01-23
 **Interactive Combat View & Concentration Tracking**
 
 ### Added
@@ -85,7 +113,7 @@ The DM's Toolbox has evolved through focused feature releases:
 
 ---
 
-## [2.1.0] - 2026-01-21
+## [2.0.1] - 2026-01-21
 **Comprehensive Testing Suite Implementation**
 
 ### Added
