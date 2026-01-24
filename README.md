@@ -8,7 +8,7 @@
 
 ## 🎯 TL;DR
 
-Free DM toolkit for improvisation at the table. No login, no tracking, works offline.
+Free DM toolkit for improvisation at the table. No login, no personal tracking, works offline.
 
 * **[Initiative Tracker](docs/INITIATIVE_TRACKER.md)** – Combat management with damage history and automation
 * **[Battle Map](docs/BATTLEMAP.md)** – Lightweight VTT with fog of war and tokens
@@ -83,6 +83,15 @@ The DM's Toolbox is designed with three principles:
 * **Assist, don’t dictate** — Generators help you improvise, not railroad players.
 * **Privacy first** — All data stays in the browser.
 * **Frictionless gameplay** — Built for actual tables, not theoretical workflows.
+
+## 🔒 Privacy & Analytics
+
+The DM’s Toolbox does not collect personal data and does not use cookies, accounts, or trackers.
+
+To understand how many people use the tool, the site uses GoatCounter, a privacy-focused, cookie-free analytics service.
+It records anonymous page visit counts only — no IP addresses, no fingerprints, no user identifiers, no telemetry.
+
+All characters, maps, journals, encounter data, and preferences remain stored entirely in your browser via LocalStorage and IndexedDB. Nothing is ever uploaded or shared.
 
 ---
 
