@@ -21,6 +21,8 @@ Free DM toolkit for improvisation at the table. No login, no tracking, works off
 
 All data stored locally in your browser using LocalStorage and IndexedDB. No accounts, no tracking, complete privacy, full offline capability after first load.
 
+Press **Ctrl+Alt+D** anywhere in the app to open the local diagnostics panel with version info, storage stats, and last error details—no telemetry, entirely client-side.
+
 ---
 
 ## ⚡ Quick Start (30 Seconds)
@@ -91,9 +93,10 @@ The DM's Toolbox is designed with three principles:
 * HTML + Bootstrap UI
 * LocalStorage + IndexedDB persistence
 * Modularized logic under `js/modules/`
-* **614 tests** (342 unit, 202 integration, 70 E2E)
+* **550+ automated tests** (unit + integration via Vitest, Playwright suites for E2E)
 * Vitest + happy-dom for unit & integration tests
 * Playwright for end-to-end tests
+* ESLint + Prettier enforce the documented coding standards
 * GitHub Actions CI/CD with coverage enforcement
 * Fully static deployment via Netlify
 
@@ -127,6 +130,9 @@ npm run test:run
 # Unit + integration tests with coverage report
 npm run test:coverage
 
+# Linting (ESLint via flat config)
+npm run lint
+
 # E2E tests (headless)
 npm run test:e2e
 
@@ -152,6 +158,11 @@ Full documentation lives in the `/docs` directory:
 * [Initiative Tracker](docs/INITIATIVE_TRACKER.md)
 * [Journal](docs/JOURNAL.md)
 * [Integration Guide](docs/INTEGRATION.md)
+* [Architecture Overview](docs/ARCHITECTURE.md)
+* [Codebase Overview](docs/CODEBASE_OVERVIEW.md)
+* [Coding Standards](docs/CODING_STANDARDS.md)
+* [Data Schemas](docs/DATA_SCHEMAS.md)
+* [Release Checklist](docs/RELEASE_CHECKLIST.md)
 
 ---
 
