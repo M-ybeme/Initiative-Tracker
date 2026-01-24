@@ -1,3 +1,6 @@
+// @ts-check
+/// <reference path="../types.js" />
+
 /**
  * Storage Module
  * Pure functions for character data storage operations
@@ -6,8 +9,8 @@
 
 /**
  * Serialize character data for storage
- * @param {Object} character - Character object
- * @returns {string} - JSON string
+ * @param {import('../types.js').Character} character - Character object
+ * @returns {string|null} - JSON string or null if invalid
  */
 export function serializeCharacter(character) {
   if (!character) return null;
@@ -17,7 +20,7 @@ export function serializeCharacter(character) {
 /**
  * Deserialize character data from storage
  * @param {string} jsonString - JSON string
- * @returns {Object|null} - Character object or null if invalid
+ * @returns {import('../types.js').Character|null} - Character object or null if invalid
  */
 export function deserializeCharacter(jsonString) {
   if (!jsonString || typeof jsonString !== 'string') return null;
@@ -31,7 +34,7 @@ export function deserializeCharacter(jsonString) {
 
 /**
  * Serialize character list for storage
- * @param {Array} characters - Array of character objects
+ * @param {import('../types.js').Character[]} characters - Array of character objects
  * @returns {string} - JSON string
  */
 export function serializeCharacterList(characters) {
@@ -42,7 +45,7 @@ export function serializeCharacterList(characters) {
 /**
  * Deserialize character list from storage
  * @param {string} jsonString - JSON string
- * @returns {Array} - Array of character objects (empty if invalid)
+ * @returns {import('../types.js').Character[]} - Array of character objects (empty if invalid)
  */
 export function deserializeCharacterList(jsonString) {
   if (!jsonString || typeof jsonString !== 'string') return [];
@@ -67,8 +70,8 @@ export function generateCharacterId(randomFn = Math.random) {
 
 /**
  * Validate character has required fields
- * @param {Object} character - Character to validate
- * @returns {Object} - {valid: boolean, errors: string[]}
+ * @param {import('../types.js').Character} character - Character to validate
+ * @returns {import('../types.js').ValidationResult} - Validation result
  */
 export function validateCharacterForStorage(character) {
   const errors = [];
@@ -141,8 +144,8 @@ export function createLocalStorageAdapter(storage, key) {
 
 /**
  * Migrate old format character data to new format
- * @param {Object} oldCharacter - Character in old format
- * @returns {Object} - Character in new format
+ * @param {Partial<import('../types.js').Character>} oldCharacter - Character in old format
+ * @returns {import('../types.js').Character|null} - Character in new format
  */
 export function migrateCharacterData(oldCharacter) {
   if (!oldCharacter) return null;
@@ -181,8 +184,8 @@ export function migrateCharacterData(oldCharacter) {
 
 /**
  * Check if character data appears corrupted
- * @param {Object} character - Character to check
- * @returns {Object} - {corrupted: boolean, issues: string[]}
+ * @param {import('../types.js').Character} character - Character to check
+ * @returns {import('../types.js').CorruptionCheckResult} - Corruption check result
  */
 export function checkCharacterCorruption(character) {
   const issues = [];

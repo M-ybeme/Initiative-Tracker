@@ -3,6 +3,8 @@ node_modules/
 
 # Test coverage
 coverage/
+playwright-report/
+test-results/
 
 # OS files
 .DS_Store
@@ -11,7 +13,12 @@ Thumbs.db
 # IDE
 .vscode/
 .idea/
+.claude/
 
 # Logs
 *.log
 npm-debug.log*
+
+# Local env/config
+.env
+*.local.*

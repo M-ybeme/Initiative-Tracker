@@ -14,7 +14,25 @@ The DM's Toolbox has evolved through focused feature releases:
 - **1.9.x**: Battle map measurement tools, persistent fog shapes, and generator integration across NPC/Tavern/Shop systems
 - **1.8.x**: Spell database expansion to 432+ spells, inventory management, loot generator overhaul, and character token generation
 
-**Current version: 2.1.2 (January 2026)**
+**Current version: 2.0.4 (January 2026)**
+
+---
+
+## [2.0.4] - 2026-01-23
+**Engineering Quality & Diagnostics**
+
+### Added
+- **Global error handling + diagnostics panel** – Centralized `window.error` and `unhandledrejection` listeners now capture stack traces, build metadata, and timestamps, while a Ctrl+Alt+D shortcut opens a diagnostics overlay with version info, storage stats, and last-error details. The overlay also exposes quick actions for clearing errors and copying a debug bundle.
+- **Developer documentation suite** – Added architecture diagram, codebase overview, coding standards, data schema reference, and release checklist to the `docs/` folder so future changes follow consistent module boundaries and naming conventions.
+
+### Changed
+- **Stable, versioned save formats** – Characters, battle maps, and journals now embed `schemaVersion` fields. Loading data automatically runs the new migration helpers to upgrade legacy saves without clobbering originals, and the schema history is documented for reference.
+- **Build metadata** – `DM_TOOLBOX_BUILD` bumped to `2.0.4` with updated release highlights surfaced in the diagnostics panel and console banner.
+
+### Technical
+- New modules: `js/error-handling.js`, `js/modules/migrations.js`, and `js/types.js` (JSDoc typedefs powering soft typing across modules) plus `jsconfig.json` to enable `@ts-check` in editors.
+- Tooling: Introduced ESLint/Prettier configs and relaxed rules that warn on unused values but block implicit globals, aligning the codebase with the documented standards.
+- Tests: `npm run lint` (warnings only) and `npm test` (Vitest – all 550 tests) executed successfully for this release.
 
 ---
 

@@ -1,3 +1,6 @@
+// @ts-check
+/// <reference path="../types.js" />
+
 /**
  * Initiative Calculations Module
  * Pure functions for combat/initiative calculations
@@ -6,8 +9,8 @@
 
 /**
  * Sort combatants by initiative (descending order)
- * @param {Array} combatants - Array of combatant objects with initiative property
- * @returns {Array} - Sorted array (does not mutate original)
+ * @param {import('../types.js').InitiativeEntry[]} combatants - Array of combatants
+ * @returns {import('../types.js').InitiativeEntry[]} - Sorted array (does not mutate original)
  */
 export function sortByInitiative(combatants) {
   return [...combatants].sort((a, b) => b.initiative - a.initiative);
@@ -15,8 +18,8 @@ export function sortByInitiative(combatants) {
 
 /**
  * Sort combatants with tie-breaking using DEX modifier
- * @param {Array} combatants - Array with {initiative, dexMod} properties
- * @returns {Array} - Sorted array
+ * @param {import('../types.js').InitiativeEntry[]} combatants - Array of combatants
+ * @returns {import('../types.js').InitiativeEntry[]} - Sorted array
  */
 export function sortByInitiativeWithTieBreaker(combatants) {
   return [...combatants].sort((a, b) => {
@@ -31,8 +34,8 @@ export function sortByInitiativeWithTieBreaker(combatants) {
 /**
  * Process a death saving throw
  * @param {number} roll - The d20 roll result (1-20)
- * @param {Object} currentSaves - {successes: number, failures: number}
- * @returns {Object} - {successes, failures, stable, dead, regainedHP}
+ * @param {import('../types.js').DeathSaves} [currentSaves] - Current death saves
+ * @returns {{successes: number, failures: number, stable: boolean, dead: boolean, regainedHP: number}} - Updated death save state
  */
 export function processDeathSave(roll, currentSaves = { successes: 0, failures: 0 }) {
   let successes = currentSaves.successes || 0;

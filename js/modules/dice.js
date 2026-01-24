@@ -1,3 +1,6 @@
+// @ts-check
+/// <reference path="../types.js" />
+
 /**
  * Dice Module
  * Pure functions for dice rolling and notation parsing
@@ -7,7 +10,7 @@
 /**
  * Roll a single die
  * @param {number} sides - Number of sides on the die
- * @param {function} randomFn - Random function (for testing), defaults to Math.random
+ * @param {() => number} [randomFn=Math.random] - Random function (for testing)
  * @returns {number} - Roll result (1 to sides)
  */
 export function rollDie(sides, randomFn = Math.random) {
@@ -18,7 +21,7 @@ export function rollDie(sides, randomFn = Math.random) {
  * Parse dice notation string
  * Supports: "2d6+3", "1d20", "d8+2", "4d6kh3" (keep highest 3), "2d20kl1" (keep lowest 1)
  * @param {string} notation - Dice notation string
- * @returns {Object|null} - {count, sides, modifier, keepHighest, keepLowest} or null if invalid
+ * @returns {import('../types.js').ParsedDice|null} - Parsed dice or null if invalid
  */
 export function parseDiceNotation(notation) {
   if (!notation || typeof notation !== 'string') return null;
@@ -51,7 +54,7 @@ export function parseDiceNotation(notation) {
  * Roll dice based on parsed notation
  * @param {number} count - Number of dice
  * @param {number} sides - Sides per die
- * @param {function} randomFn - Random function (for testing)
+ * @param {() => number} [randomFn=Math.random] - Random function (for testing)
  * @returns {number[]} - Array of roll results
  */
 export function rollMultipleDice(count, sides, randomFn = Math.random) {
@@ -65,8 +68,8 @@ export function rollMultipleDice(count, sides, randomFn = Math.random) {
 /**
  * Roll dice from notation string
  * @param {string} notation - Dice notation (e.g., "2d6+3")
- * @param {function} randomFn - Random function (for testing)
- * @returns {Object|null} - {rolls, kept, modifier, total, notation} or null if invalid
+ * @param {() => number} [randomFn=Math.random] - Random function (for testing)
+ * @returns {import('../types.js').DiceRollResult|null} - Roll result or null if invalid
  */
 export function rollDiceNotation(notation, randomFn = Math.random) {
   const parsed = parseDiceNotation(notation);
