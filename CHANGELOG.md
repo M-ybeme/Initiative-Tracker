@@ -14,7 +14,27 @@ The DM's Toolbox has evolved through focused feature releases:
 - **1.9.x**: Battle map measurement tools, persistent fog shapes, and generator integration across NPC/Tavern/Shop systems
 - **1.8.x**: Spell database expansion to 432+ spells, inventory management, loot generator overhaul, and character token generation
 
-**Current version: 2.0.4 (January 2026)**
+**Current version: 2.0.5 (January 2026)**
+
+---
+
+## [2.0.5] - 2026-01-24
+**Loot Generator Expansion & Wizard HP Fix**
+
+### Added
+- **Massive loot dataset growth** – Quick bundle pools now draw from builder functions that generate 100+ entries for coins, provisions, tools, mundane gear, adventuring gear, toolkits, bags, clothing, potions, scrolls, and gemstones/art objects. Each builder layers premium picks with rustic or “well-used” variants so every category comfortably exceeds the requested 50+ items.
+- **Potion & scroll catalogs** – Introduced dedicated categories for potions/elixirs and arcane scrolls, adding 30 handcrafted tonics/remedies plus all 6th–8th level spells so themed bundles surface the right magic items.
+
+### Changed
+- **Quick bundle balance** – Rewired presets to these richer datasets and added low/mid-value fillers (e.g., humble purses, patched satchels, basic toolkits) to keep results from skewing overly valuable while still supporting high-tier pulls.
+
+### Fixed
+- **Character creation HP regression** – `applyRacialBonuses()` now adjusts hit points based on Constitution modifier deltas instead of resetting to level-1 HP, resolving reports of level 5 wizards falling back to 10 HP after choosing a race.
+
+### Testing
+- `npm test` (Vitest) – 15/15 files, 550/550 tests passed.
+- `npm run lint` – warnings only (unused vars/`let`→`const`).
+- `npm run test:e2e` (Playwright) – 70/70 browser tests passed.
 
 ---
 

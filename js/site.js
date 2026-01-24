@@ -1,7 +1,8 @@
 const DM_TOOLBOX_BUILD = {
   name: "The DM's Toolbox",
-  version: "2.0.4",
+  version: "2.0.5",
   recentChanges: [
+    "Expanded loot generator datasets so each quick bundle has a broad mixed-value pool",
     "Added global error handling plus an in-app diagnostics panel (Ctrl+Alt+D)",
     "Implemented versioned save-data migrations for characters, battle maps, and journals",
     "Documented architecture, coding standards, and new JSDoc type definitions"

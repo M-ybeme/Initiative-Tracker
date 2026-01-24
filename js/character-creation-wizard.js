@@ -3641,15 +3641,35 @@ const CharacterCreationWizard = (function() {
       });
     }
 
-    // Recalculate HP with new CON
-    const conMod = Math.floor((wizardData.con - 10) / 2);
+    // Recalculate HP with new CON without discarding previously determined hit dice
+    const level = wizardData.level || 1;
+    const previousCon = typeof wizardData.baseCon === 'number' ? wizardData.baseCon : wizardData.con;
+    const previousConMod = Math.floor((previousCon - 10) / 2);
+    const newConMod = Math.floor((wizardData.con - 10) / 2);
+    const conDelta = newConMod - previousConMod;
+
     const hitDice = {
       'Artificer': 8, 'Barbarian': 12, 'Bard': 8, 'Cleric': 8, 'Druid': 8,
       'Fighter': 10, 'Monk': 8, 'Paladin': 10, 'Ranger': 10, 'Rogue': 8,
       'Sorcerer': 6, 'Warlock': 8, 'Wizard': 6
     };
     const hitDie = hitDice[wizardData.class] || 8;
-    wizardData.maxHP = hitDie + conMod;
+    const level1HP = hitDie + newConMod;
+
+    if (Number.isFinite(wizardData.maxHP)) {
+      if (conDelta !== 0) {
+        wizardData.maxHP = Math.max(1, wizardData.maxHP + (conDelta * level));
+      }
+    } else if (level === 1) {
+      wizardData.maxHP = level1HP;
+    } else if (wizardData.hpMethod === 'roll' && Array.isArray(wizardData.hpRolls) && wizardData.hpRolls.length === level - 1) {
+      const rolledTotal = wizardData.hpRolls.reduce((sum, entry) => sum + entry.roll + newConMod, 0);
+      wizardData.maxHP = level1HP + rolledTotal;
+    } else {
+      const avgPerLevel = Math.floor(hitDie / 2) + 1;
+      wizardData.maxHP = level1HP + ((avgPerLevel + newConMod) * (level - 1));
+    }
+
     wizardData.currentHP = wizardData.maxHP;
   }
 
