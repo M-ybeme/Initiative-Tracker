@@ -2,6 +2,10 @@
 
 **Rich text editor with persistent storage for campaign notes, session logs, and world-building**
 
+## SRD Content Scope
+
+The bundled journal ships with no prewritten adventures or lore. All default formatting presets, example titles, and export templates reference only material that is explicitly part of the 5e Systems Reference Document (SRD) or is user-authored during editing. If you maintain private compendiums (e.g., paid books or homebrew), load them locally through import/export flows and keep them out of the public repo to preserve SRD-only distribution. Any screenshots or documentation snippets should likewise avoid quoting non-SRD text verbatim.
+
 ## Features
 
 - **Rich Text Formatting** powered by Quill editor

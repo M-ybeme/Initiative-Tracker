@@ -1,146 +1,54 @@
 # Spell Database Documentation
 
-This document provides detailed information about the DM's Toolbox spell database implementation.
+This document describes how the SRD-only spell database works inside The DM's Toolbox and how it interacts with the SRD gating runtime.
 
 ## Overview
 
-The DM's Toolbox includes a comprehensive D&D 5e spell database with **432 spells** from the Player's Handbook, Xanathar's Guide to Everything, and Tasha's Cauldron of Everything.
+The public build now ships exclusively with spells that appear in the System Reference Document 5.1. Non-SRD spells remain in the historical data files for private-pack users, but the runtime only surfaces entries that exist in the SRD allowlist. This keeps the repository compliant while preserving the existing data model for people who legally own other books and choose to load them locally.
 
-## Version History
+## SRD Coverage
 
-### 1.8.1 - Complete D&D 5e Spell Database Expansion (2025-12-05)
+- Base catalogue mirrors the SRD spell appendix (cantrips through 9th level).
+- Each spell carries standardized metadata: school, casting time, range, components, duration, tags, concentration/ritual flags, and class lists.
+- Prepared-caster rules read directly from the SRD subset so Cleric/Druid/Paladin spell counts stay accurate without referencing gated material.
+- The Character Manager and Level-Up system both query the SRD allowlist before displaying search results, so non-SRD spells never appear unless a private content pack merges them client-side.
 
-**Major Expansion**: Added 120+ missing spells, increasing total from 312 to 432 spells (~138% increase).
+## Filtering Pipeline
 
-#### Added Spell Collections
+1. **Source data** lives in `data/srd/spells-data.js`, formatted as an array of spell objects.
+2. **Allowlist generation** happens during the build that produces `js/generated/srd-allowlist.js`. Only spells tagged as `srd: true` (or explicitly enumerated) make it into the array consumed at runtime.
+3. **Runtime gating** in `js/site.js` exposes `window.SRDContentFilter`, which removes any non-allowed spell IDs before UI layers render them.
+4. **DOM safeguards** mark spell rows with `data-srd-block` so tooltips and selectors show "Requires private content pack" when the allowlist rejects an entry.
 
-**Xanathar's Cantrips (17 spells)**
-- Booming Blade, Green-Flame Blade, Toll the Dead, Mind Sliver
-- Control Flames, Shape Water, Mold Earth, Gust
-- Create Bonfire, Frostbite, Infestation, Lightning Lure
-- Magic Stone, Primal Savagery, Sword Burst, Thunderclap, Word of Radiance
+This four-step path ensures older data can coexist with the SRD surface while keeping the shipped experience compliant.
 
-**Paladin Smite Spells (6/6 complete)**
-- Searing Smite, Thunderous Smite, Wrathful Smite
-- Branding Smite, Staggering Smite, Banishing Smite
+## Private Content Packs
 
-**Tasha's Summon Spells (10/10 complete)**
-- Summon Beast, Summon Fey, Summon Elemental, Summon Construct
-- Summon Celestial, Summon Aberration, Summon Fiend
-- Summon Shadowspawn, Summon Undead, Summon Draconic Spirit
+Upcoming tooling lets tables load a private JSON/IndexedDB payload that adds back the spells they personally licensed. When that happens:
 
-**Essential Warlock Spells (22 spells)**
-- Hex, Armor of Agathys, Arms of Hadar, Hunger of Hadar
-- Witch Bolt, Cause Fear, Crown of Madness, Shadow Blade
-- Enemies Abound, Synaptic Static, Soul Cage, Blade of Disaster
-- Plus additional patron-specific options
+- The local pack registers additional spell IDs with `SRDContentFilter.registerPrivateContent()`.
+- UI controls automatically re-render, revealing the extra spells without any repository edits.
+- No non-SRD text ever ships from this repo—the content lives only in the player's browser.
 
-**Critical Ranger Combat Spells (12 spells)**
-- Zephyr Strike, Hail of Thorns, Lightning Arrow
-- Steel Wind Strike, Swift Quiver, Healing Spirit
-- Conjure Woodland Beings, Guardian of Nature
-- Plus additional nature and combat spells
+Until the pack workflow lands, the UI clearly explains why certain spells are hidden and points users toward the private-pack import flow in development.
 
-**Artificer Utility Spells (15 spells)**
-- Identify, Absorb Elements, Catapult, Snare
-- Tasha's Caustic Brew, Thorn Whip
-- Plus additional crafting and utility spells
+## Integration Points
 
-**Popular Xanathar's Spells (28 spells)**
-- Shadow Blade, Dragon's Breath, Ice Knife, Life Transference
-- Mind Spike, Melf's Minute Meteors, Erupting Earth
-- Tidal Wave, Storm Sphere, Watery Sphere, Whirlwind
-- Investiture of Flame, Investiture of Ice, Investiture of Stone, Investiture of Wind
-- Vitriolic Sphere, Warding Wind, Temple of the Gods
-- Bones of the Earth, Primordial Ward, Mighty Fortress
-- Abi-Dalzim's Horrid Wilting
+- **Character Manager**: `js/character.js` and `js/character-creation-wizard.js` request spell data through the SRD filter so dropdowns remain compliant.
+- **Level-Up System**: `js/level-up-system.js` uses the same helper to show only legal options when learning or preparing spells.
+- **Exports**: `js/character-sheet-export.js` prints the filtered spell list and appends the SRD attribution required by CC BY 4.0.
 
-**Tasha's Signature Spells (10 spells)**
-- Spirit Shroud, Tasha's Caustic Brew, Tasha's Mind Whip
-- Tasha's Otherworldly Guise, Intellect Fortress
-- Summon Draconic Spirit, Blade of Disaster
-- Dream of the Blue Veil
+## Testing & Validation
 
-**Universal Utility Spells**
-- Invisibility, Identify, Absorb Elements, Snilloc's Snowball Swarm
+- Vitest unit suites cover spell filtering helpers and ensure the allowlist never returns barred spell IDs.
+- Playwright E2E tests for the Character Creation Wizard assert that only SRD spells appear during selection.
+- Manual spot checks leverage the diagnostics panel (`Ctrl+Alt+D`) to confirm the SRD filter status and the count of visible spells.
 
-## Database Statistics
+## File Reference
 
-### By Source Book
-- **Player's Handbook (PHB)**: 100% complete
-- **Xanathar's Guide to Everything**: ~90% complete (45+ spells added)
-- **Tasha's Cauldron of Everything**: ~85% complete (18+ spells added)
+- `data/srd/spells-data.js` – canonical spell object definitions.
+- `js/generated/srd-allowlist.js` – compiled SRD ID list consumed in production.
+- `js/site.js` – SRD filtering helpers and DOM gating utilities.
+- `js/character-creation-wizard.js`, `js/level-up-system.js` – primary consumers of the filtered spell data.
 
-### By Spell Level
-- **Cantrips (0)**: 41 spells
-- **1st Level**: 60+ spells
-- **2nd Level**: 65+ spells
-- **3rd Level**: 57+ spells
-- **4th Level**: 42+ spells
-- **5th Level**: 45+ spells
-- **6th Level**: 38+ spells
-- **7th Level**: 25+ spells
-- **8th Level**: 19+ spells
-- **9th Level**: 16+ spells
-
-### By Class (Primary Coverage)
-- **Wizard**: 240+ spells
-- **Sorcerer**: 145+ spells
-- **Bard**: 120+ spells
-- **Cleric**: 118+ spells
-- **Druid**: 115+ spells
-- **Warlock**: 84+ spells (up from 62)
-- **Paladin**: 49+ spells (up from 37)
-- **Ranger**: 50+ spells (up from 38)
-- **Artificer**: 42+ spells (up from 27)
-
-## Complete Class Spell Coverage
-
-### Paladin
-- 100% Smite spell coverage (all 6 variants)
-- Complete oath spell collection
-
-### Ranger
-- Complete combat spell arsenal
-- Full nature spell collection
-
-### Warlock
-- Full signature spell list
-- Patron-specific options included
-
-### Artificer
-- Complete utility spell collection
-- All crafting-related spells
-
-### Druid / Wizard / Sorcerer / Cleric
-- Enhanced with Xanathar's elemental and utility spells
-- Modern damage types and mechanics (psychic, force, etc.)
-
-## Modern D&D Content
-
-The spell database includes popular post-PHB content:
-- All Tasha's Cauldron of Everything summon spells (most popular summoning system)
-- Xanathar's Guide elemental cantrips and melee weapon cantrips
-- Modern damage types and mechanics
-
-## Implementation Details
-
-- All spells maintain consistent formatting with proper tags
-- Concentration flags properly set
-- Class lists accurately maintained
-- Database completeness improved from ~70% to ~95% for PHB/Xanathar's/Tasha's content
-
-## Integration with Character Manager
-
-The spell database integrates seamlessly with the Character Manager system:
-- Spell slot tracking for all 9 levels plus Pact Magic
-- Spellcasting ability tracking (INT/WIS/CHA)
-- Spell list organization by level
-- Complete spell details including:
-  - Name and school of magic
-  - Casting time, range, components (V/S/M)
-  - Duration and concentration requirements
-  - Ritual and prepared status
-  - Full spell description text
-
-See [CHARACTER_MANAGER.md](CHARACTER_MANAGER.md) for details on character sheet spell system integration.
+Keep documentation changes synced with these files whenever the SRD allowlist or private-pack workflow evolves.

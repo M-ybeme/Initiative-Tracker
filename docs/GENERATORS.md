@@ -6,6 +6,12 @@ This document provides comprehensive information about all generator tools in Th
 
 The DM's Toolbox includes five interconnected generators for creating D&D 5e content: Loot, Tavern, NPC, Name, and Shop generators. These tools feature cross-generator integration, preset systems, and extensive customization options.
 
+### SRD Scope
+
+- Magic items, scrolls, and spell scroll metadata in the Shop/Loot generators reference only SRD 5.1 entries by default.
+- NPC templates avoid quoting non-SRD lore verbatim; flavorful text is original copy.
+- Private content packs can inject additional datasets (e.g., custom spell scrolls) without touching the repository, and the generators will merge them automatically once registered with `SRDContentFilter.registerPrivateContent()`.
+
 ## Table of Contents
 
 - [Loot Generator](#loot-generator)
@@ -18,6 +24,10 @@ The DM's Toolbox includes five interconnected generators for creating D&D 5e con
 ---
 
 ## Loot Generator
+
+### SRD Scope
+
+The preset tables, magic item blurbs, and scroll payloads all come from SRD 5.1 references or original descriptions. Keep any mention of non-SRD treasure (e.g., named artifacts, adventure-specific loot) in private packs; the default generator should only emit SRD-friendly text and generic flavor.
 
 ### Cursed Items System (v1.10.9)
 
@@ -210,6 +220,10 @@ The DM's Toolbox includes five interconnected generators for creating D&D 5e con
 
 ## Tavern Generator
 
+### SRD Scope
+
+Even though each cultural profile has tons of detail, every menu item, rumor, and NPC hook uses original text or SRD terminology. If you need setting-specific references (named cities, factions, etc.), layer them in via private packs or local overrides rather than editing this doc or the public data file.
+
 ### Cultural Immersion System (v1.10.5)
 
 **7 Cultural Tavern Types:**
@@ -381,6 +395,10 @@ The DM's Toolbox includes five interconnected generators for creating D&D 5e con
 
 ## NPC Generator
 
+### SRD Scope
+
+Ancestries, stat suggestions, and presets are limited to SRD options by default. Additional ancestries or NPC archetypes from other books can be merged through private packs, but keep the shipped presets SRD-compliant.
+
 ### Combat Stat Block System (v1.9.2)
 
 **5-Tier Difficulty System:**
@@ -442,6 +460,10 @@ The DM's Toolbox includes five interconnected generators for creating D&D 5e con
 
 ## Name Generator
 
+### SRD Scope
+
+The default race lists and syllable banks live entirely in SRD-friendly territory or bespoke wordlists. When distributing new race presets that cite closed content, do it through packs so the public repo stays SRD-only.
+
 ### Expanded Race Support (v1.8.8)
 
 **30+ Races:**
@@ -476,6 +498,10 @@ The DM's Toolbox includes five interconnected generators for creating D&D 5e con
 ---
 
 ## Shop Generator
+
+### SRD Scope
+
+Shop inventories pull from SRD magic items, consumables, and adventuring gear plus original descriptions. Leave any non-SRD goods in downstream packs and keep this documentation focused on the SRD subset.
 
 ### Negotiate Price Mechanic (v1.8.8)
 

@@ -4,6 +4,12 @@
 
 ## Features
 
+### SRD Scope
+
+- The monster search, roster previews, and stat-block exports all read from the SRD subset of the 5e API mirror.
+- Non-SRD monsters stay hidden in the default build; private content packs can register additional stat blocks which the Encounter Builder will then include in search results and exports.
+- When a private pack is active, the UI labels those entries so it is clear which monsters came from user-supplied data.
+
 ### Monster Search
 - **Searchable D&D 5e SRD monster database** from API
 - **Hover tooltips** with rich stat block previews:

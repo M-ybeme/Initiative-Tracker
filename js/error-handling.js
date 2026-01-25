@@ -192,11 +192,11 @@ function showFallbackToast(message, severity, duration = 5000) {
 
   // Style based on severity
   const colors = {
-    error: { bg: '#dc3545', border: '#c82333' },
-    warning: { bg: '#ffc107', border: '#e0a800', text: '#212529' },
-    info: { bg: '#17a2b8', border: '#138496' }
+    error: { bg: '#1b1b1b', border: '#ff6b6b', text: '#fff' },
+    warning: { bg: '#302400', border: '#ffcc66', text: '#fff' },
+    info: { bg: '#001f3f', border: '#66c2ff', text: '#fff' }
   };
-  const color = colors[severity];
+  const color = colors[severity] || colors.error;
 
   toast.style.cssText = `
     position: fixed;
@@ -319,6 +319,90 @@ export function handleExportError(error, operation, format = 'file') {
 // ============================================================
 // DIAGNOSTICS PANEL
 // ============================================================
+
+const DIAGNOSTICS_LICENSE_PHRASE = 'Creative Commons Attribution 4.0 International License';
+const SRD_PDF_URL = 'https://media.wizards.com/2016/downloads/DND/SRD-OGL_V5.1.pdf';
+const DIAGNOSTICS_LICENSE_DEFAULTS = {
+  attributionText: 'This work includes material from the System Reference Document 5.1 by Wizards of the Coast LLC and is licensed for our use under the Creative Commons Attribution 4.0 International License.',
+  productIdentityDisclaimer: 'The DM\'s Toolbox references rules and mechanics from the Dungeons & Dragons 5e System Reference Document 5.1. Wizards of the Coast, Dungeons & Dragons, Forgotten Realms, Ravenloft, Eberron, the dragon ampersand, beholders, githyanki, githzerai, mind flayers, yuan-ti, and all other Wizards of the Coast product identity are trademarks of Wizards of the Coast LLC in the U.S.A. and other countries. The DM\'s Toolbox is not affiliated with, endorsed, sponsored, or specifically approved by Wizards of the Coast LLC.',
+  licenseUrl: 'https://creativecommons.org/licenses/by/4.0/',
+  srdUrl: SRD_PDF_URL
+};
+
+function resolveDiagnosticsLicenseInfo() {
+  if (typeof window !== 'undefined') {
+    if (typeof window.getSrdLicenseNotices === 'function') {
+      return window.getSrdLicenseNotices();
+    }
+    if (window.SRDLicensing) {
+      return {
+        attributionText: window.SRDLicensing.attributionText || DIAGNOSTICS_LICENSE_DEFAULTS.attributionText,
+        productIdentityDisclaimer: window.SRDLicensing.productIdentityDisclaimer || DIAGNOSTICS_LICENSE_DEFAULTS.productIdentityDisclaimer,
+        licenseUrl: window.SRDLicensing.licenseUrl || DIAGNOSTICS_LICENSE_DEFAULTS.licenseUrl,
+        srdUrl: window.SRDLicensing.srdUrl || DIAGNOSTICS_LICENSE_DEFAULTS.srdUrl
+      };
+    }
+  }
+  return { ...DIAGNOSTICS_LICENSE_DEFAULTS };
+}
+
+function diagnosticsEscapeHtml(text = '') {
+  const entities = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
+  return text.replace(/[&<>"']/g, (char) => entities[char] || char);
+}
+
+function formatDiagnosticsAttribution(text, url) {
+  const safeText = diagnosticsEscapeHtml(text);
+  if (!url) {
+    return safeText;
+  }
+  const encodedPhrase = diagnosticsEscapeHtml(DIAGNOSTICS_LICENSE_PHRASE);
+  if (!safeText.includes(encodedPhrase)) {
+    return `${safeText} <a href="${url}" target="_blank" rel="noopener noreferrer" style="color:#6fe7d2;">${encodedPhrase}</a>`;
+  }
+  return safeText.replace(
+    encodedPhrase,
+    `<a href="${url}" target="_blank" rel="noopener noreferrer" style="color:#6fe7d2;">${encodedPhrase}</a>`
+  );
+}
+
+function formatDiagnosticsTimestamp(value) {
+  if (!value) {
+    return 'unknown';
+  }
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return 'unknown';
+  }
+  return date.toLocaleString();
+}
+
+async function getContentPackDiagnostics() {
+  if (typeof window === 'undefined') {
+    return { available: false, summary: null, packs: [], error: 'Window is unavailable' };
+  }
+
+  const manager = window.ContentPackManager;
+  if (!manager) {
+    return { available: false, summary: null, packs: [], error: 'ContentPackManager not initialized' };
+  }
+
+  try {
+    if (typeof manager.initialize === 'function') {
+      await manager.initialize();
+    }
+    const summary = typeof manager.getSummary === 'function' ? manager.getSummary() : null;
+    const packs = typeof manager.getPacks === 'function' ? manager.getPacks() : [];
+    return { available: true, summary, packs, error: null };
+  } catch (err) {
+    return {
+      available: false,
+      summary: null,
+      packs: [],
+      error: err instanceof Error ? err.message : String(err)
+    };
+  }
+}
 
 /**
  * Get storage statistics
@@ -489,7 +573,71 @@ async function showDiagnosticsPanel() {
   const build = getBuildInfo();
   const page = getCurrentPage();
   const stats = await getStorageStats();
+  const packDiagnostics = await getContentPackDiagnostics();
   const error = getLastError();
+  const licenseInfo = resolveDiagnosticsLicenseInfo();
+  const licenseAttributionHtml = formatDiagnosticsAttribution(licenseInfo.attributionText, licenseInfo.licenseUrl);
+  const licenseDisclaimerHtml = diagnosticsEscapeHtml(licenseInfo.productIdentityDisclaimer);
+  const srdPdfLinkHtml = licenseInfo.srdUrl
+    ? `<div style="font-size: 11px; line-height: 1.5; margin-top: 6px;">SRD 5.1 Reference PDF: <a href="${diagnosticsEscapeHtml(licenseInfo.srdUrl)}" target="_blank" rel="noopener noreferrer" style="color:#6fe7d2;">Download from Wizards</a></div>`
+    : '';
+
+  const packSectionHtml = (() => {
+    if (!packDiagnostics.available) {
+      const detail = packDiagnostics.error ? ` (${diagnosticsEscapeHtml(packDiagnostics.error)})` : '';
+      return `<div style="color: #888;">Unavailable${detail}</div>`;
+    }
+    const summary = packDiagnostics.summary;
+    if (!summary) {
+      return '<div style="color: #888;">No content pack data yet.</div>';
+    }
+    const summaryHtml = `
+      <div>Total: ${summary.totalPacks}</div>
+      <div>Enabled: ${summary.enabledPacks} (${summary.enabledRecords} records)</div>
+      <div>Storage: ${diagnosticsEscapeHtml(summary.storageDriver || 'unknown')}</div>`;
+    if (!packDiagnostics.packs.length) {
+      return summaryHtml + '<div style="color: #888; margin-top: 4px;">No packs installed.</div>';
+    }
+    const listItems = packDiagnostics.packs
+      .map((entry) => {
+        const metadata = entry.pack?.metadata || {};
+        const name = diagnosticsEscapeHtml(metadata.name || entry.id);
+        const version = metadata.version ? ` v${diagnosticsEscapeHtml(metadata.version)}` : '';
+        const status = entry.enabled ? 'Enabled' : 'Disabled';
+        const recordCount = entry.recordCount ?? (entry.pack?.records?.length || 0);
+        const hash = entry.sha256 ? `${diagnosticsEscapeHtml(entry.sha256.slice(0, 12))}…` : 'n/a';
+        const importedAt = formatDiagnosticsTimestamp(entry.importedAt);
+        const updatedAt = formatDiagnosticsTimestamp(entry.updatedAt);
+        const timelineBits = [];
+        if (importedAt !== 'unknown') {
+          timelineBits.push(`Imported ${importedAt}`);
+        }
+        if (updatedAt !== 'unknown' && updatedAt !== importedAt) {
+          timelineBits.push(`Updated ${updatedAt}`);
+        }
+        if (entry.sourceName) {
+          timelineBits.push(`Source file: ${diagnosticsEscapeHtml(entry.sourceName)}`);
+        }
+        const metadataBits = [];
+        if (metadata.source) {
+          metadataBits.push(`Source: ${diagnosticsEscapeHtml(metadata.source)}`);
+        }
+        if (Array.isArray(metadata.authors) && metadata.authors.length) {
+          metadataBits.push(`Authors: ${metadata.authors.map((author) => diagnosticsEscapeHtml(author)).join(', ')}`);
+        }
+        if (metadata.license) {
+          metadataBits.push(`License: ${diagnosticsEscapeHtml(metadata.license)}`);
+        }
+        return `<li style="margin-bottom: 10px;">
+            <div>${name}${version ? `<span style="color:#888;">${version}</span>` : ''}</div>
+            <div style="color:#ccc; font-size: 11px;">${status} · ${recordCount} records · hash ${hash}</div>
+            ${timelineBits.length ? `<div style="color:#888; font-size: 11px; margin-top: 2px;">${timelineBits.join(' · ')}</div>` : ''}
+            ${metadataBits.length ? `<div style="color:#777; font-size: 11px; margin-top: 2px;">${metadataBits.join(' · ')}</div>` : ''}
+          </li>`;
+      })
+      .join('');
+    return `${summaryHtml}<ul style="list-style:none; padding-left: 0; margin: 6px 0 0;">${listItems}</ul>`;
+  })();
 
   const panel = document.createElement('div');
   panel.id = 'dm-toolbox-diagnostics';
@@ -549,9 +697,26 @@ async function showDiagnosticsPanel() {
       </div>
 
       <div style="margin-bottom: 12px;">
+        <div style="color: #888; font-size: 10px; text-transform: uppercase; margin-bottom: 4px;">Content Packs</div>
+        ${packSectionHtml}
+        <div style="margin-top: 8px;">
+          <button data-content-pack-open type="button" style="background: #0f3d5c; color: #fff; border: 1px solid #1fa4d1; padding: 4px 8px; border-radius: 4px; cursor: pointer;">
+            Open Content Pack Manager
+          </button>
+        </div>
+      </div>
+
+      <div style="margin-bottom: 12px;">
         <div style="color: #888; font-size: 10px; text-transform: uppercase; margin-bottom: 4px;">Actions</div>
         <button id="dm-diag-clear-error" style="background: #333; color: #fff; border: 1px solid #555; padding: 4px 8px; border-radius: 4px; cursor: pointer; margin-right: 4px;">Clear Error</button>
         <button id="dm-diag-copy" style="background: #333; color: #fff; border: 1px solid #555; padding: 4px 8px; border-radius: 4px; cursor: pointer;">Copy Info</button>
+      </div>
+
+      <div style="margin-bottom: 12px;">
+        <div style="color: #888; font-size: 10px; text-transform: uppercase; margin-bottom: 4px;">Licensing</div>
+        <div style="font-size: 11px; line-height: 1.5;">${licenseAttributionHtml}</div>
+        <div style="font-size: 11px; line-height: 1.5; margin-top: 6px;">${licenseDisclaimerHtml}</div>
+        ${srdPdfLinkHtml}
       </div>
 
       <div style="color: #666; font-size: 10px; text-align: center; margin-top: 8px;">
@@ -582,7 +747,19 @@ async function showDiagnosticsPanel() {
       error ? `Last Error: ${error.message} (${error.type})` : 'No errors'
     ].join('\n');
 
-    navigator.clipboard.writeText(info).then(() => {
+    const infoLines = [info];
+    if (packDiagnostics.available && packDiagnostics.summary) {
+      infoLines.push(`Content Packs: ${packDiagnostics.summary.totalPacks} installed, ${packDiagnostics.summary.enabledPacks} enabled`);
+      packDiagnostics.packs.forEach((entry) => {
+        const name = entry.pack?.metadata?.name || entry.id;
+        const recordCount = entry.recordCount ?? (entry.pack?.records?.length || 0);
+        infoLines.push(` - ${name}: ${entry.enabled ? 'enabled' : 'disabled'}, ${recordCount} records, hash ${entry.sha256 || 'n/a'}`);
+      });
+    } else {
+      infoLines.push('Content Packs: unavailable');
+    }
+
+    navigator.clipboard.writeText(infoLines.join('\n')).then(() => {
       showUserError('Diagnostic info copied to clipboard', { severity: 'info', duration: 2000 });
     });
   });

@@ -22,6 +22,10 @@ The DM's Toolbox uses three primary integration patterns:
 2. **Direct Storage Modification** - Modify shared storage without navigation
 3. **URL Parameters** - Pass data via query string
 
+### SRD Content Scope
+
+Cross-tool payloads must contain only SRD-approved data or user-authored content that originates in the browser session. Never serialize closed-content stat blocks, flavor text, or art assets into shared storage. If you maintain a private content pack, inject it locally at runtime and ensure its storage keys stay outside of the `dmtools.*` namespace documented here. Integrations that fetch data from public APIs must request SRD datasets (or filter results through the allowlist) before writing to storage.
+
 ### Common Conventions
 
 **Version Flag:** All payloads include `__dmtoolsVersion: 1` for future compatibility
@@ -333,7 +337,7 @@ if (fromSource) {
 **Special Features:**
 - Prompts to download stat block text file
 - Auto-numbers duplicate monsters
-- Fetches full stat blocks from D&D 5e API
+- Fetches stat blocks from the public 5e SRD API endpoints only; results are filtered through the local SRD allowlist before persisting
 
 ---
 

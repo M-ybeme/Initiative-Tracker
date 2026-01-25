@@ -44,6 +44,52 @@ const LevelUpSystem = (function() {
       .replace(/'/g, '&#039;');
   }
 
+  /**
+   * Build a deduped snapshot of the character's known spells.
+   * Combines saved data with any unsaved edits currently in the form.
+   */
+  function getKnownSpellsSnapshot(character) {
+    const seen = new Set();
+    const snapshot = [];
+    const sources = [];
+
+    if (Array.isArray(character?.spellList)) {
+      sources.push(character.spellList);
+    }
+    if (Array.isArray(window.currentSpellList)) {
+      sources.push(window.currentSpellList);
+    }
+
+    const normalizeSpell = (spell) => {
+      if (!spell) return null;
+      if (typeof spell === 'string') {
+        return { name: spell, title: spell };
+      }
+      if (typeof spell === 'object') {
+        const name = (spell.name || spell.title || '').trim();
+        if (!name) return null;
+        return Object.assign({}, spell, {
+          name,
+          title: spell.title || spell.name || name
+        });
+      }
+      return null;
+    };
+
+    sources.forEach(list => {
+      list.forEach(rawSpell => {
+        const spell = normalizeSpell(rawSpell);
+        if (!spell) return;
+        const key = spell.name.toLowerCase();
+        if (seen.has(key)) return;
+        seen.add(key);
+        snapshot.push(spell);
+      });
+    });
+
+    return snapshot;
+  }
+
   // ============================================================
   // STATE
   // ============================================================
@@ -82,6 +128,8 @@ const LevelUpSystem = (function() {
       alert(`Class "${className}" is not currently supported in the level-up system.`);
       return;
     }
+
+    character.spellList = getKnownSpellsSnapshot(character);
 
     currentCharacter = character;
     levelUpInProgress = true;
@@ -138,8 +186,11 @@ const LevelUpSystem = (function() {
         if (spell.level > maxSpellLevel) return false;
 
         // Not already known
-        const spellName = spell.title.toLowerCase();
-        if (knownSpells.some(s => (s.name || '').toLowerCase() === spellName)) return false;
+        const spellName = (spell.title || spell.name || '').toLowerCase();
+        if (knownSpells.some(s => {
+          const knownName = (s.name || s.title || '').toLowerCase();
+          return knownName === spellName;
+        })) return false;
 
         // Level filter
         if (levelFilter !== 'all' && spell.level !== parseInt(levelFilter, 10)) return false;
@@ -826,6 +877,8 @@ const LevelUpSystem = (function() {
    */
   function renderSpellSlotsStep(character, classData, changes, stepNum) {
     let slotsInfo = '';
+    const currentLevel = parseInt(character.level, 10) || 1;
+    const newLevel = parseInt(changes.level, 10) || (currentLevel + 1);
 
     if (changes.pactSlots) {
       // Warlock pact magic
@@ -837,17 +890,47 @@ const LevelUpSystem = (function() {
       `;
     } else if (changes.spellSlots) {
       // Regular spell slots
-      slotsInfo = '<div class="table-responsive"><table class="table table-sm table-dark"><thead><tr><th>Level</th>';
-      for (let i = 1; i <= 9; i++) {
-        slotsInfo += `<th class="text-center">${i}</th>`;
-      }
-      slotsInfo += '</tr></thead><tbody><tr><td>Slots</td>';
+      const previousSlots = Array.from({ length: 9 }, (_, i) => {
+        return character.spellSlots?.[i + 1]?.max ?? 0;
+      });
+      const newSlots = Array.from({ length: 9 }, (_, i) => changes.spellSlots[i] || 0);
 
-      for (let i = 0; i < 9; i++) {
-        const slots = changes.spellSlots[i];
-        slotsInfo += `<td class="text-center ${slots > 0 ? 'text-success fw-bold' : 'text-muted'}">${slots || '—'}</td>`;
-      }
-      slotsInfo += '</tr></tbody></table></div>';
+      slotsInfo = `
+        <p class="text-muted small mb-1">Columns show spell slot level (1-9).</p>
+        <div class="table-responsive">
+          <table class="table table-sm table-dark align-middle text-center">
+            <thead>
+              <tr>
+                <th scope="col" class="text-start">Spell Level</th>
+                ${Array.from({ length: 9 }, (_, i) => `<th scope="col">${i + 1}</th>`).join('')}
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <th scope="row" class="text-start">Before (Level ${currentLevel})</th>
+                ${previousSlots.map(value => `<td>${value > 0 ? value : '—'}</td>`).join('')}
+              </tr>
+              <tr>
+                <th scope="row" class="text-start">After (Level ${newLevel})</th>
+                ${newSlots.map(value => `<td class="${value > 0 ? 'text-success fw-bold' : 'text-muted'}">${value > 0 ? value : '—'}</td>`).join('')}
+              </tr>
+              <tr>
+                <th scope="row" class="text-start">Change</th>
+                ${newSlots.map((value, idx) => {
+                  const diff = value - (previousSlots[idx] || 0);
+                  if (diff > 0) {
+                    return `<td class="text-success">+${diff}</td>`;
+                  }
+                  if (diff < 0) {
+                    return `<td class="text-danger">${diff}</td>`;
+                  }
+                  return '<td class="text-muted">—</td>';
+                }).join('')}
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      `;
     }
 
     return `
@@ -1214,7 +1297,7 @@ const LevelUpSystem = (function() {
           availableSpellsList.innerHTML = `
             <div class="text-center text-danger py-3">
               <i class="bi bi-exclamation-triangle"></i> Error: Spell database not loaded.
-              <br><small>Please ensure spells-data.js is loaded before using level-up.</small>
+              <br><small>Ensure <code>/data/srd/spells-data.js</code> loads before using level-up.</small>
             </div>
           `;
           console.error('SPELLS_DATA not available:', window.SPELLS_DATA);

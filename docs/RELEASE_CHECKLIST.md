@@ -14,6 +14,7 @@ Use this checklist before deploying a new version.
 - [ ] **Update recent changes** - Add release highlights to `DM_TOOLBOX_BUILD.recentChanges`
 - [ ] **Run full test suite** - `npm test` (all 550+ tests should pass)
 - [ ] **Run linter** - `npm run lint` (no errors, warnings acceptable)
+- [ ] **SRD audit** - Spot check new copy/data for SRD-only content and confirm private content packs stay excluded from the public build
 - [ ] **Check for console errors** - Open each major page in browser DevTools
 
 ### Functional Testing

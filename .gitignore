@@ -5,6 +5,10 @@ node_modules/
 coverage/
 playwright-report/
 test-results/
+dist/
+
+# Generated runtime artifacts
+js/generated/
 
 # OS files
 .DS_Store
@@ -22,3 +26,6 @@ npm-debug.log*
 # Local env/config
 .env
 *.local.*
+
+# Internal notes
+internal-roadmaps/

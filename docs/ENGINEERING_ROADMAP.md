@@ -53,6 +53,15 @@ Each phase is broken into actionable tasks with checkboxes for tracking progress
 * Stable save formats with versioning and migration helpers
 * Minimal friction for future you to maintain and extend features
 
+### SRD Compliance Guardrails
+
+Every phase assumes the shipped build only contains SRD-allowed data and copy. When scoping tasks, verify that:
+
+* New modules read from the shared SRD allowlist (see `site.js` bootstrapping notes) and never embed protected lore or stat blocks.
+* Documentation, comments, and UX strings stay generic or cite SRD entities exclusively.
+* Private content packs live in downstream builds or user imports; their tooling (migration steps, bundling, QA) should be documented separately and kept out of the public repo.
+* Any automation (linters, CI, generators) enforces or tests the SRD gating rules so future phases do not regress compliance.
+
 ---
 
 ## Phase 1: Codebase Inventory & Standards

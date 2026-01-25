@@ -31,6 +31,11 @@ This document provides a step-by-step roadmap for implementing a comprehensive t
 - ✅ E2E tests for critical user flows
 - ⬜ Automated test runs on commit
 
+### SRD Compliance Testing
+- Build fixtures that rely solely on SRD monsters, spells, and classes (or obvious mock data) so the public test suite never embeds restricted text.
+- Add regression tests that confirm the SRD allowlist filters (spell search, monster search, generators) only surface permitted entries.
+- When touching import/export code, add assertions that private content packs are ignored unless the user supplies them locally at runtime.
+
 ### Technology Stack
 
 | Tool | Purpose | Status |

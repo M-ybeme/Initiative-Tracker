@@ -151,6 +151,29 @@ test.describe('Feature Name', () => {
 4. Request review from maintainers
 5. Address any feedback
 
+## SRD Content Compliance
+
+We only ship SRD 5.1 rules plus original homebrew that you author yourself. Every contribution must prove it stays inside that boundary, otherwise it will be rejected or redirected to the future content-pack workflow.
+
+### Required Checklist (copy into your PR description)
+
+- [ ] **Source tagging** – Every new race, class, spell, feat, background, monster, or rules blurb includes `source`, `srdCitation`, and (if applicable) `nonSrdReason` metadata inside `internal-roadmaps/manifests/srd-audit.json` or related data modules. Cite the SRD section/page or mark it as "Homebrew".
+- [ ] **Text review** – No verbatim excerpts from non-SRD books. Summaries are rewritten in original language unless the wording is straight from the SRD PDF.
+- [ ] **Data surfaces** – Check dropdowns, tooltips, docs, exports, diagnostics, and screenshots to ensure they only reference SRD-allowlisted IDs by default. If you add a new dataset, wire it through the runtime filter in `js/site.js`.
+- [ ] **Automation hooks** – Updated the SRD allowlist manifest and ran the relevant tests/lint scripts (e.g., `npm run test:run`, targeted unit suites) so CI will catch non-SRD IDs.
+- [ ] **Product identity guardrails** – Do not use Wizards of the Coast trademarks, logos, or product-identity-only monsters (beholders, mind flayers, etc.). When in doubt, treat it as disallowed.
+- [ ] **Attribution & exports** – Confirm UI surfaces (footer, diagnostics, modals) still display the CC-BY notice and that any new export format reuses the attribution/disclaimer helpers (see `js/modules/export-utils.js`, `js/journal-export.js`, and `js/character-sheet-export.js`).
+
+### Escalation Path
+
+Stop immediately and escalate if you cannot positively identify the source of a contribution or you suspect an SRD violation:
+
+1. Convert your PR to "Draft" (or do not open one yet) and open an issue titled `[Content Audit] <feature>` describing the question. Link to offending files/lines and include screenshots if UI text is involved.
+2. Tag `@Maybeme` (project owner) and add the `content-audit` label so it stays on the SRD review queue.
+3. Provide the citation you were expecting (book/page) and clearly state whether you believe it is SRD or non-SRD. The maintainer will update the manifest, reject the change, or move it into the private content-pack backlog.
+
+Never merge a PR with an unchecked compliance box. If automation or review later finds a violation, the change will be reverted and the contributor may lose review privileges.
+
 ## Project Structure
 
 ```

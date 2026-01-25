@@ -32,6 +32,12 @@ This document provides a high-level view of **The DM's Toolbox** architecture, s
 │  └─────────────┘  └─────────────┘  └─────────────┘  └─────────────┘        │
 │                              GENERATORS                                     │
 └─────────────────────────────────────────────────────────────────────────────┘
+
+### SRD Gating & Private Packs
+
+- Only SRD 5.1 data ships in `/data/srd/`. Runtime lookups pass through `window.SRDContentFilter`, which reads from `js/generated/srd-allowlist.js` to ensure UI layers render SRD-safe content by default.
+- Historical non-SRD data lives in `/data/packs/` or user-supplied packs. When a private pack is loaded, it registers additional IDs with the filter so pages can opt into the extra races/spells/classes locally without altering the public bundle.
+- Diagnostics in `site.js` expose which packs are active, making it easy to verify compliance in any running build.
                                      │
                                      ▼
 ┌─────────────────────────────────────────────────────────────────────────────┐
@@ -70,15 +76,22 @@ This document provides a high-level view of **The DM's Toolbox** architecture, s
 │  ┌─────────────────────┐  ┌─────────────────────┐  ┌─────────────────────┐ │
 │  │     IndexedDB       │  │    localStorage     │  │    Static Data      │ │
 │  ├─────────────────────┤  ├─────────────────────┤  ├─────────────────────┤ │
-│  │ DMToolboxDB         │  │ Initiative state    │  │ spells-data.js      │ │
-│  │ - characters store  │  │ Session notes       │  │ - 500+ spells       │ │
-│  │ - battlemaps store  │  │ Templates           │  │                     │ │
-│  │                     │  │ UI preferences      │  │ level-up-data.js    │ │
-│  │ JournalDB           │  │                     │  │ - class features    │ │
-│  │ - entries store     │  │                     │  │ - subclasses        │ │
-│  │                     │  │                     │  │ - feats             │ │
+│  │ DMToolboxDB         │  │ Initiative state    │  │ data/srd/spells-    │ │
+│  │ - characters store  │  │ Session notes       │  │ data.js             │ │
+│  │ - battlemaps store  │  │ Templates           │  │  - SRD spell list   │ │
+│  │                     │  │ UI preferences      │  │ data/srd/level-up-  │ │
+│  │ JournalDB           │  │                     │  │ data.js             │ │
+│  │ - entries store     │  │                     │  │ - SRD subclasses    │ │
+│  │                     │  │                     │  │ - SRD feats         │ │
 │  └─────────────────────┘  └─────────────────────┘  └─────────────────────┘ │
+|  │                     │  │                     │  │ - feats (SRD subset)│ │
+|  └─────────────────────┘  └─────────────────────┘  └─────────────────────┘ │
+
 │                                                                             │
+
+- Only SRD 5.1 data ships in `/data/srd/`. Runtime lookups pass through `window.SRDContentFilter`, which reads from `js/generated/srd-allowlist.js` to ensure UI layers render SRD-safe content by default.
+- Historical non-SRD data lives in `/data/packs/` or user-supplied packs. When a private pack is loaded, it registers additional IDs with the filter so pages can opt into the extra races/spells/classes locally without altering the public bundle.
+- Diagnostics in `site.js` expose which packs are active, making it easy to verify compliance in any running build.
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
 

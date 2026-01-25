@@ -6,6 +6,65 @@
 
 import { getAbilityModifier, getProficiencyBonus } from './character-calculations.js';
 
+const EXPORT_LICENSE_PHRASE = 'Creative Commons Attribution 4.0 International License';
+const SRD_PDF_URL = 'https://media.wizards.com/2016/downloads/DND/SRD-OGL_V5.1.pdf';
+const EXPORT_LICENSE_DEFAULTS = {
+  attributionText: 'This work includes material from the System Reference Document 5.1 by Wizards of the Coast LLC and is licensed for our use under the Creative Commons Attribution 4.0 International License.',
+  productIdentityDisclaimer: 'The DM\'s Toolbox references rules and mechanics from the Dungeons & Dragons 5e System Reference Document 5.1. Wizards of the Coast, Dungeons & Dragons, Forgotten Realms, Ravenloft, Eberron, the dragon ampersand, beholders, githyanki, githzerai, mind flayers, yuan-ti, and all other Wizards of the Coast product identity are trademarks of Wizards of the Coast LLC in the U.S.A. and other countries. The DM\'s Toolbox is not affiliated with, endorsed, sponsored, or specifically approved by Wizards of the Coast LLC.',
+  licenseUrl: 'https://creativecommons.org/licenses/by/4.0/',
+  srdUrl: SRD_PDF_URL
+};
+
+function getExportLicenseInfo() {
+  const globalScope = typeof globalThis !== 'undefined' ? globalThis : {};
+  if (typeof globalScope.getSrdLicenseNotices === 'function') {
+    return globalScope.getSrdLicenseNotices();
+  }
+  if (globalScope.SRDLicensing) {
+    return {
+      attributionText: globalScope.SRDLicensing.attributionText || EXPORT_LICENSE_DEFAULTS.attributionText,
+      productIdentityDisclaimer: globalScope.SRDLicensing.productIdentityDisclaimer || EXPORT_LICENSE_DEFAULTS.productIdentityDisclaimer,
+      licenseUrl: globalScope.SRDLicensing.licenseUrl || EXPORT_LICENSE_DEFAULTS.licenseUrl,
+      srdUrl: globalScope.SRDLicensing.srdUrl || EXPORT_LICENSE_DEFAULTS.srdUrl
+    };
+  }
+  return { ...EXPORT_LICENSE_DEFAULTS };
+}
+
+function buildPlainTextLicenseBlock() {
+  const info = getExportLicenseInfo();
+  const lines = ['LICENSE & ATTRIBUTION', '---------------------', info.attributionText];
+  if (info.licenseUrl) {
+    lines.push(`License: ${info.licenseUrl}`);
+  }
+  if (info.srdUrl) {
+    lines.push(`SRD 5.1 PDF: ${info.srdUrl}`);
+  }
+  lines.push(info.productIdentityDisclaimer);
+  return lines.join('\n');
+}
+
+function buildMarkdownLicenseBlock() {
+  const info = getExportLicenseInfo();
+  const lines = ['---', '## License & Attribution', formatMarkdownAttribution(info)];
+  if (info.srdUrl) {
+    lines.push('', `[SRD 5.1 Reference PDF](${info.srdUrl})`);
+  }
+  lines.push('', info.productIdentityDisclaimer);
+  return lines.join('\n');
+}
+
+function formatMarkdownAttribution(info) {
+  if (!info.licenseUrl) {
+    return info.attributionText;
+  }
+  const phrase = EXPORT_LICENSE_PHRASE;
+  if (!info.attributionText.includes(phrase)) {
+    return `${info.attributionText} (${info.licenseUrl})`;
+  }
+  return info.attributionText.replace(phrase, `[${phrase}](${info.licenseUrl})`);
+}
+
 /**
  * Format ability modifier for display
  * @param {number} score - Ability score
@@ -86,6 +145,9 @@ export function generateCharacterText(character) {
     lines.push('');
   }
 
+  lines.push('');
+  lines.push(buildPlainTextLicenseBlock());
+
   return lines.join('\n');
 }
 
@@ -162,6 +224,8 @@ export function generateCharacterMarkdown(character) {
     });
     lines.push('');
   }
+
+  lines.push(buildMarkdownLicenseBlock());
 
   return lines.join('\n');
 }

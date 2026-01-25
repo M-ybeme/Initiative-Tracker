@@ -91,10 +91,28 @@ main.content {
   text-decoration: none;
 }
 
+.srd-license-block {
+  font-size: 0.75rem;
+  line-height: 1.5;
+  color: rgba(255, 255, 255, 0.75);
+}
+
+.srd-license-block a {
+  color: var(--mdm-highlight-color);
+  text-decoration: underline;
+}
+
+.srd-license-block p {
+  margin-bottom: 0.25rem;
+}
+
 /* Small screens: stack cleanly */
 @media (max-width: 767.98px) {
   .site-footer .footer-main { padding: .75rem 0; }
   .site-footer img { height: 36px; }
+  .srd-license-block {
+    text-align: center;
+  }
 }
 
 /* Character cards */
@@ -293,4 +311,30 @@ main.content {
   0%, 100% { transform: translateX(0); }
   25% { transform: translateX(-5px); }
   75% { transform: translateX(5px); }
+}
+
+/* Content Pack Manager UI */
+.content-pack-modal .modal-content {
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(18, 18, 18, 0.95);
+}
+
+.content-pack-modal textarea {
+  font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+}
+
+.content-pack-card {
+  background: rgba(0, 0, 0, 0.45);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25);
+}
+
+.content-pack-card .badge {
+  font-size: 0.75rem;
+}
+
+.content-pack-modal .form-text,
+.content-pack-modal .small,
+.content-pack-modal p {
+  color: rgba(255, 255, 255, 0.75);
 }

@@ -1,0 +1,76 @@
+{
+  "metadata": {
+    "id": "com.example.source-book",
+    "name": "Replace with Pack Name",
+    "version": "1.0.0",
+    "authors": ["Your Name"],
+    "source": "Title of the book or homebrew reference you personally own",
+    "license": "Private use only",
+    "createdAt": "2026-01-24T00:00:00.000Z",
+    "updatedAt": "2026-01-24T00:00:00.000Z",
+    "toolVersion": "2.0.5",
+    "homepage": "https://example.com/optional"
+  },
+  "dependencies": [],
+  "allowlist": {
+    "class": ["Artificer"],
+    "subclass": ["Wizard:Bladesinging"],
+    "spell": [
+      "Tashas Caustic Brew",
+      "Booming Blade"
+    ],
+    "feat": ["Fey Touched"],
+    "background": []
+  },
+  "records": [
+    {
+      "type": "class",
+      "id": "Artificer",
+      "operation": "add",
+      "payload": {
+        "hitDice": "d8",
+        "primaryAbility": "int",
+        "spellcastingProgression": "half",
+        "equipment": [
+          "A set of tools you own",
+          "Light armor"
+        ],
+        "featuresByLevel": {
+          "1": ["Magical Tinkering", "Spellcasting"],
+          "2": ["Infuse Item"],
+          "3": ["Specialist"],
+          "4": ["Ability Score Improvement"]
+        }
+      }
+    },
+    {
+      "type": "spell",
+      "id": "Tashas Caustic Brew",
+      "operation": "add",
+      "payload": {
+        "title": "Tasha's Caustic Brew",
+        "level": 1,
+        "school": "Conjuration",
+        "casting": "1 action",
+        "range": "60 feet",
+        "components": "V, S, M (a bit of spoiled food)",
+        "duration": "Concentration, up to 1 minute",
+        "description": "Write a short summary in your own words that reminds you what the spell does. Do not paste book text."
+      }
+    },
+    {
+      "type": "feat",
+      "id": "Fey Touched",
+      "operation": "add",
+      "payload": {
+        "name": "Fey Touched",
+        "description": "Summarize the benefit in your own words.",
+        "source": "Tasha's Cauldron of Everything"
+      }
+    }
+  ],
+  "notes": [
+    "List any pages or ISBN numbers for personal reference.",
+    "Remind yourself who owns the physical/digital book."
+  ]
+}

@@ -6,6 +6,12 @@ This document provides detailed information about the DM's Toolbox Battle Map fe
 
 The Battle Map is a tactical combat visualization tool with support for fog-of-war, tokens, measurements, and interactive session management. It provides DMs with powerful tools for managing visual combat encounters in D&D 5e and similar tabletop RPGs.
 
+### SRD Scope
+
+- The battle map itself works with custom art/uploads, but any rules text that surfaces (tooltips, quick adds to Initiative Tracker) runs through `window.SRDContentFilter` so only SRD entities render in the public build.
+- When you right-click a token to "Add to Initiative", the downstream import respects the SRD allowlist—non-SRD stat blocks stay hidden unless a private content pack is active in the browser.
+- Private packs can register additional monsters/spells locally without changing this documentation; the map simply reflects whatever the runtime allowlist approves.
+
 ## Table of Contents
 
 - [Core Features](#core-features)

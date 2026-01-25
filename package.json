@@ -17,6 +17,7 @@
     "lint:fix": "eslint js/ --fix",
     "format": "prettier --write \"js/**/*.js\"",
     "format:check": "prettier --check \"js/**/*.js\"",
+    "build:pack": "node ./scripts/build-private-bundle.mjs",
     "prepare": "husky"
   },
   "lint-staged": {

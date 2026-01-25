@@ -17,6 +17,10 @@ This document describes the data schemas used by **The DM's Toolbox** for persis
 
 ## Overview
 
+### SRD Content Scope
+
+Saved objects only capture SRD-legal identifiers (class names, spells, stat blocks) alongside user-authored text. Do not add proprietary fields or preload restricted compendium entries into these schema definitions. If you maintain a private content pack, keep its migrations, schema deltas, and seed data outside of this repository and load them via import at runtime. When extending schemas, verify every default value, enum, and comment references SRD entities or generic placeholders.
+
 ### Schema Versioning
 
 All persistent data structures include a `schemaVersion` field:

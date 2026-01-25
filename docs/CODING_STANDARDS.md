@@ -16,6 +16,12 @@ This document defines the coding conventions for **The DM's Toolbox** codebase. 
 
 ---
 
+## SRD Content Scope
+
+All first-party code, data, fixtures, and documentation must stick to the SRD allowlist. When adding examples, sample data, or inline comments, only reference open SRD entities (e.g., SRD classes, subclasses, monsters, items). Anything from proprietary books must live in a private content pack that stays out of this repo. The same rule applies to tests—fixtures should be either generated data or SRD-friendly stand-ins. If a feature needs optional premium data, gate it behind user-supplied imports and document that flow instead of committing the content here.
+
+---
+
 ## File Organization
 
 ### File Naming
@@ -24,7 +30,7 @@ This document defines the coding conventions for **The DM's Toolbox** codebase. 
 |------|---------|---------|
 | Page scripts | `kebab-case.js` | `character.js`, `level-up-system.js` |
 | Modules | `kebab-case.js` | `character-calculations.js`, `spell-utils.js` |
-| Data files | `kebab-case.js` | `spells-data.js`, `level-up-data.js` |
+| Data files | `kebab-case.js` | `data/srd/spells-data.js`, `data/srd/level-up-data.js` |
 | Tests | `*.test.js` | `dice.test.js`, `character-calculations.test.js` |
 
 ### Directory Structure
@@ -32,9 +38,13 @@ This document defines the coding conventions for **The DM's Toolbox** codebase. 
 ```
 js/
 ├── [page].js              # Page-level scripts (touch DOM)
-├── [feature]-data.js      # Large data tables
-└── modules/
-    └── [domain].js        # Pure logic modules (no DOM)
+├── modules/
+│   └── [domain].js        # Pure logic modules (no DOM)
+└── ...
+
+data/
+└── srd/
+  └── [feature]-data.js  # Large SRD tables loaded via script tags
 ```
 
 ### Module Types
@@ -51,10 +61,10 @@ js/
 - Handle event binding and UI updates
 - Example: `character.js`, `initiative.js`
 
-**Data Files** (`js/`):
+**Data Files** (`data/srd/`):
 - Export data tables/constants
 - Use IIFE with `window` assignment for global access
-- Example: `spells-data.js`, `level-up-data.js`
+- Example: `data/srd/spells-data.js`, `data/srd/level-up-data.js`
 
 ---
 

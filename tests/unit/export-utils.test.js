@@ -95,6 +95,12 @@ describe('generateCharacterText', () => {
   it('returns empty string for null', () => {
     expect(generateCharacterText(null)).toBe('');
   });
+
+  it('appends licensing notice to text export', () => {
+    const text = generateCharacterText(testCharacter);
+    expect(text).toContain('LICENSE & ATTRIBUTION');
+    expect(text).toContain('System Reference Document 5.1');
+  });
 });
 
 describe('generateCharacterMarkdown', () => {
@@ -143,6 +149,12 @@ describe('generateCharacterMarkdown', () => {
 
   it('returns empty string for null', () => {
     expect(generateCharacterMarkdown(null)).toBe('');
+  });
+
+  it('appends licensing notice to markdown export', () => {
+    const md = generateCharacterMarkdown(testCharacter);
+    expect(md).toContain('## License & Attribution');
+    expect(md).toContain('Creative Commons Attribution 4.0 International License');
   });
 });
 

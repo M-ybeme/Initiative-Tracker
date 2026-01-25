@@ -104,65 +104,74 @@ const CharacterCreationWizard = (function() {
         <h5>Pick your character's race</h5>
         <p>Your race determines your heritage and provides ability score bonuses and special traits.</p>
         <div class="mb-3">
-          <label for="wizardRace" class="form-label">Race *</label>
+          <label for="wizardRace" class="form-label">
+            Race *
+            <span class="ms-2 align-middle text-warning d-none" data-srd-notice-for="wizard-races" data-srd-tooltip="Additional races (Aasimar, Genasi, Warforged, etc.) require a private content pack.">
+              <i class="bi bi-lock-fill" aria-hidden="true"></i>
+              <span class="visually-hidden">Additional races locked in SRD build</span>
+            </span>
+          </label>
           <select class="form-select" id="wizardRace">
             <option value="">Choose a race...</option>
             <optgroup label="Common Races (PHB)">
               <option value="Human">Human - Versatile, +1 to all abilities</option>
               <option value="Elf">Elf - Graceful, +2 Dex, darkvision, keen senses</option>
-              <option value="Dwarf">Dwarf - Sturdy, +2 Con, darkvision, resilient</option>
+              <option value="Dwarf" data-srd-block="race:Dwarf" data-srd-block-group="wizard-races">Dwarf - Sturdy, +2 Con, darkvision, resilient</option>
               <option value="Halfling">Halfling - Lucky, +2 Dex, brave, nimble</option>
               <option value="Dragonborn">Dragonborn - Draconic, +2 Str +1 Cha, breath weapon</option>
-              <option value="Gnome">Gnome - Clever, +2 Int, darkvision, cunning</option>
-              <option value="Half-Elf">Half-Elf - Charismatic, +2 Cha +1 to two others, versatile</option>
-              <option value="Half-Orc">Half-Orc - Strong, +2 Str +1 Con, relentless, savage</option>
+              <option value="Gnome" data-srd-block="race:Gnome" data-srd-block-group="wizard-races">Gnome - Clever, +2 Int, darkvision, cunning</option>
+              <option value="Half-Elf" data-srd-block="race:Half-Elf" data-srd-block-group="wizard-races">Half-Elf - Charismatic, +2 Cha +1 to two others, versatile</option>
+              <option value="Half-Orc" data-srd-block="race:Half-Orc" data-srd-block-group="wizard-races">Half-Orc - Strong, +2 Str +1 Con, relentless, savage</option>
               <option value="Tiefling">Tiefling - Infernal, +2 Cha +1 Int, darkvision, fire resistance</option>
             </optgroup>
             <optgroup label="Exotic Races (Volo's Guide)">
-              <option value="Aarakocra">Aarakocra - Bird-like, +2 Dex +1 Wis, flight</option>
-              <option value="Aasimar">Aasimar - Celestial, +2 Cha +1 Wis, healing hands, light bearer</option>
-              <option value="Bugbear">Bugbear - Sneaky brute, +2 Str +1 Dex, long-limbed, surprise attack</option>
-              <option value="Firbolg">Firbolg - Gentle giant, +2 Wis +1 Str, druidic magic, hidden step</option>
-              <option value="Goblin">Goblin - Small trickster, +2 Dex +1 Con, nimble escape, fury of the small</option>
-              <option value="Goliath">Goliath - Mountain warrior, +2 Str +1 Con, powerful build, stone's endurance</option>
-              <option value="Hobgoblin">Hobgoblin - Disciplined warrior, +2 Con +1 Int, martial training, saving face</option>
-              <option value="Kenku">Kenku - Crow-like mimic, +2 Dex +1 Wis, expert forgery, mimicry</option>
-              <option value="Kobold">Kobold - Small dragon-kin, +2 Dex -2 Str, pack tactics, sunlight sensitivity</option>
-              <option value="Lizardfolk">Lizardfolk - Reptilian survivor, +2 Con +1 Wis, natural armor, hold breath</option>
-              <option value="Orc">Orc - Savage warrior, +2 Str +1 Con, aggressive, powerful build</option>
-              <option value="Tabaxi">Tabaxi - Cat-like wanderer, +2 Dex +1 Cha, feline agility, cat's claws</option>
-              <option value="Triton">Triton - Sea guardian, +1 Str +1 Con +1 Cha, amphibious, control water/air</option>
-              <option value="Yuan-ti Pureblood">Yuan-ti Pureblood - Serpentine, +2 Cha +1 Int, magic resistance, poison immunity</option>
+              <option value="Aarakocra" data-srd-block="race:Aarakocra" data-srd-block-group="wizard-races">Aarakocra - Bird-like, +2 Dex +1 Wis, flight</option>
+              <option value="Aasimar" data-srd-block="race:Aasimar" data-srd-block-group="wizard-races">Aasimar - Celestial, +2 Cha +1 Wis, healing hands, light bearer</option>
+              <option value="Bugbear" data-srd-block="race:Bugbear" data-srd-block-group="wizard-races">Bugbear - Sneaky brute, +2 Str +1 Dex, long-limbed, surprise attack</option>
+              <option value="Firbolg" data-srd-block="race:Firbolg" data-srd-block-group="wizard-races">Firbolg - Gentle giant, +2 Wis +1 Str, druidic magic, hidden step</option>
+              <option value="Goblin" data-srd-block="race:Goblin" data-srd-block-group="wizard-races">Goblin - Small trickster, +2 Dex +1 Con, nimble escape, fury of the small</option>
+              <option value="Goliath" data-srd-block="race:Goliath" data-srd-block-group="wizard-races">Goliath - Mountain warrior, +2 Str +1 Con, powerful build, stone's endurance</option>
+              <option value="Hobgoblin" data-srd-block="race:Hobgoblin" data-srd-block-group="wizard-races">Hobgoblin - Disciplined warrior, +2 Con +1 Int, martial training, saving face</option>
+              <option value="Kenku" data-srd-block="race:Kenku" data-srd-block-group="wizard-races">Kenku - Crow-like mimic, +2 Dex +1 Wis, expert forgery, mimicry</option>
+              <option value="Kobold" data-srd-block="race:Kobold" data-srd-block-group="wizard-races">Kobold - Small dragon-kin, +2 Dex -2 Str, pack tactics, sunlight sensitivity</option>
+              <option value="Lizardfolk" data-srd-block="race:Lizardfolk" data-srd-block-group="wizard-races">Lizardfolk - Reptilian survivor, +2 Con +1 Wis, natural armor, hold breath</option>
+              <option value="Orc" data-srd-block="race:Orc" data-srd-block-group="wizard-races">Orc - Savage warrior, +2 Str +1 Con, aggressive, powerful build</option>
+              <option value="Tabaxi" data-srd-block="race:Tabaxi" data-srd-block-group="wizard-races">Tabaxi - Cat-like wanderer, +2 Dex +1 Cha, feline agility, cat's claws</option>
+              <option value="Triton" data-srd-block="race:Triton" data-srd-block-group="wizard-races">Triton - Sea guardian, +1 Str +1 Con +1 Cha, amphibious, control water/air</option>
+              <option value="Yuan-ti Pureblood" data-srd-block="race:Yuan-ti Pureblood" data-srd-block-group="wizard-races">Yuan-ti Pureblood - Serpentine, +2 Cha +1 Int, magic resistance, poison immunity</option>
             </optgroup>
             <optgroup label="Elemental Races">
-              <option value="Genasi (Air)">Air Genasi - Wind-touched, +2 Con +1 Dex, unending breath, levitate</option>
-              <option value="Genasi (Earth)">Earth Genasi - Stone-touched, +2 Con +1 Str, earth walk, pass without trace</option>
-              <option value="Genasi (Fire)">Fire Genasi - Flame-touched, +2 Con +1 Int, darkvision, fire resistance, burning hands</option>
-              <option value="Genasi (Water)">Water Genasi - Wave-touched, +2 Con +1 Wis, amphibious, acid resistance, shape water</option>
+              <option value="Genasi (Air)" data-srd-block="race:Genasi (Air)" data-srd-block-group="wizard-races">Air Genasi - Wind-touched, +2 Con +1 Dex, unending breath, levitate</option>
+              <option value="Genasi (Earth)" data-srd-block="race:Genasi (Earth)" data-srd-block-group="wizard-races">Earth Genasi - Stone-touched, +2 Con +1 Str, earth walk, pass without trace</option>
+              <option value="Genasi (Fire)" data-srd-block="race:Genasi (Fire)" data-srd-block-group="wizard-races">Fire Genasi - Flame-touched, +2 Con +1 Int, darkvision, fire resistance, burning hands</option>
+              <option value="Genasi (Water)" data-srd-block="race:Genasi (Water)" data-srd-block-group="wizard-races">Water Genasi - Wave-touched, +2 Con +1 Wis, amphibious, acid resistance, shape water</option>
             </optgroup>
             <optgroup label="Ravnica Races">
-              <option value="Centaur">Centaur - Horse-bodied, +2 Str +1 Wis, charge, hooves, equine build</option>
-              <option value="Loxodon">Loxodon - Elephant-like, +2 Con +1 Wis, powerful build, natural armor, trunk</option>
-              <option value="Minotaur">Minotaur - Bull-headed, +2 Str +1 Con, horns, goring rush, hammering horns</option>
-              <option value="Simic Hybrid">Simic Hybrid - Bio-engineered, +2 Con +1 to one other, animal enhancement</option>
-              <option value="Vedalken">Vedalken - Blue-skinned, +2 Int +1 Wis, tireless precision, partially amphibious</option>
+              <option value="Centaur" data-srd-block="race:Centaur" data-srd-block-group="wizard-races">Centaur - Horse-bodied, +2 Str +1 Wis, charge, hooves, equine build</option>
+              <option value="Loxodon" data-srd-block="race:Loxodon" data-srd-block-group="wizard-races">Loxodon - Elephant-like, +2 Con +1 Wis, powerful build, natural armor, trunk</option>
+              <option value="Minotaur" data-srd-block="race:Minotaur" data-srd-block-group="wizard-races">Minotaur - Bull-headed, +2 Str +1 Con, horns, goring rush, hammering horns</option>
+              <option value="Simic Hybrid" data-srd-block="race:Simic Hybrid" data-srd-block-group="wizard-races">Simic Hybrid - Bio-engineered, +2 Con +1 to one other, animal enhancement</option>
+              <option value="Vedalken" data-srd-block="race:Vedalken" data-srd-block-group="wizard-races">Vedalken - Blue-skinned, +2 Int +1 Wis, tireless precision, partially amphibious</option>
             </optgroup>
             <optgroup label="Theros Races">
-              <option value="Leonin">Leonin - Lion-like, +2 Con +1 Str, claws, roar, hunter's instinct</option>
-              <option value="Satyr">Satyr - Fey goat-folk, +2 Cha +1 Dex, magic resistance, mirthful leaps, reveler</option>
+              <option value="Leonin" data-srd-block="race:Leonin" data-srd-block-group="wizard-races">Leonin - Lion-like, +2 Con +1 Str, claws, roar, hunter's instinct</option>
+              <option value="Satyr" data-srd-block="race:Satyr" data-srd-block-group="wizard-races">Satyr - Fey goat-folk, +2 Cha +1 Dex, magic resistance, mirthful leaps, reveler</option>
             </optgroup>
             <optgroup label="Eberron Races">
-              <option value="Changeling">Changeling - Shapeshifter, +2 Cha +1 to one other, change appearance, unsettling</option>
-              <option value="Kalashtar">Kalashtar - Dream-touched, +2 Wis +1 Cha, telepathy, psychic resistance</option>
-              <option value="Shifter">Shifter - Were-touched, +2 Dex +1 to one other, shifting feature, darkvision</option>
-              <option value="Warforged">Warforged - Construct, +2 Con +1 to one other, integrated protection, constructed resilience</option>
+              <option value="Changeling" data-srd-block="race:Changeling" data-srd-block-group="wizard-races">Changeling - Shapeshifter, +2 Cha +1 to one other, change appearance, unsettling</option>
+              <option value="Kalashtar" data-srd-block="race:Kalashtar" data-srd-block-group="wizard-races">Kalashtar - Dream-touched, +2 Wis +1 Cha, telepathy, psychic resistance</option>
+              <option value="Shifter" data-srd-block="race:Shifter" data-srd-block-group="wizard-races">Shifter - Were-touched, +2 Dex +1 to one other, shifting feature, darkvision</option>
+              <option value="Warforged" data-srd-block="race:Warforged" data-srd-block-group="wizard-races">Warforged - Construct, +2 Con +1 to one other, integrated protection, constructed resilience</option>
             </optgroup>
             <optgroup label="Other Races">
-              <option value="Tortle">Tortle - Turtle-like, +2 Str +1 Wis, natural armor, shell defense, hold breath</option>
-              <option value="Locathah">Locathah - Fish-like, +2 Dex +1 Wis, natural armor, limited amphibiousness</option>
-              <option value="Grung">Grung - Poison frog, +2 Dex +1 Con, poison skin, standing leap, water dependency</option>
+              <option value="Tortle" data-srd-block="race:Tortle" data-srd-block-group="wizard-races">Tortle - Turtle-like, +2 Str +1 Wis, natural armor, shell defense, hold breath</option>
+              <option value="Locathah" data-srd-block="race:Locathah" data-srd-block-group="wizard-races">Locathah - Fish-like, +2 Dex +1 Wis, natural armor, limited amphibiousness</option>
+              <option value="Grung" data-srd-block="race:Grung" data-srd-block-group="wizard-races">Grung - Poison frog, +2 Dex +1 Con, poison skin, standing leap, water dependency</option>
             </optgroup>
           </select>
+          <div class="alert alert-warning small mt-2 d-none" data-srd-notice-for="wizard-races">
+            Looking for races from Volo's, Eberron, or other supplements? Load a private content pack to enable them in this SRD-safe build.
+          </div>
         </div>
         <div id="subraceSection" class="mb-3" style="display:none;">
           <label for="wizardSubrace" class="form-label">Subrace</label>
@@ -234,10 +243,7 @@ const CharacterCreationWizard = (function() {
         const subraces = {
           'Elf': [
             { value: 'High Elf', label: 'High Elf - Extra cantrip, weapon training, extra language' },
-            { value: 'Wood Elf', label: 'Wood Elf - Increased speed, mask of the wild, weapon training' },
-            { value: 'Dark Elf (Drow)', label: 'Dark Elf (Drow) - Superior darkvision, sunlight sensitivity, drow magic' },
-            { value: 'Eladrin', label: 'Eladrin - Fey step, seasonal abilities' },
-            { value: 'Sea Elf', label: 'Sea Elf - Swim speed, amphibious, friend of the sea' }
+            { value: 'Wood Elf', label: 'Wood Elf - Increased speed, mask of the wild, weapon training' }
           ],
           'Dwarf': [
             { value: 'Hill Dwarf', label: 'Hill Dwarf - Extra HP, dwarven toughness' },
@@ -246,8 +252,7 @@ const CharacterCreationWizard = (function() {
           ],
           'Halfling': [
             { value: 'Lightfoot', label: 'Lightfoot - +1 Cha, naturally stealthy' },
-            { value: 'Stout', label: 'Stout - +1 Con, poison resistance' },
-            { value: 'Ghostwise', label: 'Ghostwise - +1 Wis, silent speech telepathy' }
+            { value: 'Stout', label: 'Stout - +1 Con, poison resistance' }
           ],
           'Gnome': [
             { value: 'Forest Gnome', label: 'Forest Gnome - +1 Dex, natural illusionist, speak with small beasts' },
@@ -267,15 +272,7 @@ const CharacterCreationWizard = (function() {
             { value: 'White', label: 'White Dragon Ancestry - Cold breath (cone)' }
           ],
           'Tiefling': [
-            { value: 'Asmodeus', label: 'Asmodeus Bloodline - Fire spells' },
-            { value: 'Baalzebul', label: 'Baalzebul Bloodline - Corruption spells' },
-            { value: 'Dispater', label: 'Dispater Bloodline - Disguise spells' },
-            { value: 'Fierna', label: 'Fierna Bloodline - Charm spells' },
-            { value: 'Glasya', label: 'Glasya Bloodline - Illusion spells' },
-            { value: 'Levistus', label: 'Levistus Bloodline - Ice spells' },
-            { value: 'Mammon', label: 'Mammon Bloodline - Trickery spells' },
-            { value: 'Mephistopheles', label: 'Mephistopheles Bloodline - Arcane spells' },
-            { value: 'Zariel', label: 'Zariel Bloodline - Combat spells' }
+            { value: 'Asmodeus', label: 'Asmodeus Bloodline - Fire spells' }
           ],
           'Aasimar': [
             { value: 'Protector', label: 'Protector - Flight, radiant damage' },
@@ -299,7 +296,7 @@ const CharacterCreationWizard = (function() {
           'Gnome': 'Gnomes are small, intelligent, and inventive. They have advantage against magic, darkvision, and keen intellect. Choose a subrace.',
           'Half-Elf': 'Half-elves combine human ambition with elven grace. They are versatile, charismatic, and get +2 to Charisma plus +1 to two other abilities.',
           'Half-Orc': 'Half-orcs are strong and intimidating, with fierce determination. They can endure death and deal devastating critical hits.',
-          'Tiefling': 'Tieflings have infernal heritage, giving them a devilish appearance and innate fire resistance. Choose a bloodline for specific magical abilities.',
+          'Tiefling': 'Tieflings have infernal heritage, giving them a devilish appearance and innate fire resistance. This SRD build defaults to the classic Asmodeus bloodline for innate spells.',
           'Aarakocra': 'Bird-like humanoids with the gift of flight. They soar through the skies and have talons for natural weapons. Flight speed of 50 feet.',
           'Aasimar': 'Touched by celestial power, aasimar are mortals who carry the light of heaven. They have healing hands and can reveal their divine soul.',
           'Bugbear': 'Large goblinoids known for surprising attacks. Their long arms give them extra reach, and they excel at ambush tactics.',
@@ -457,15 +454,21 @@ const CharacterCreationWizard = (function() {
       title: "Step 3: Choose Your Class",
       content: `
         <h5>Pick your character's class</h5>
-        <p>Your class determines your role in the party and what abilities you'll have.</p>
+        <p>Your class determines your role in the party and what abilities you'll have. This SRD build includes the core SRD classes by default; additional options appear when you load a private content pack.</p>
         <div class="mb-3">
-          <label for="wizardClass" class="form-label">Class *</label>
+          <label for="wizardClass" class="form-label">
+            Class *
+            <span class="ms-2 align-middle text-warning d-none" data-srd-notice-for="wizard-classes" data-srd-tooltip="Artificer, Monk, Paladin, and other non-SRD classes unlock via private content packs.">
+              <i class="bi bi-lock-fill" aria-hidden="true"></i>
+              <span class="visually-hidden">Additional classes locked in SRD build</span>
+            </span>
+          </label>
           <select class="form-select" id="wizardClass">
             <option value="">Choose a class...</option>
             <optgroup label="Martial Classes">
               <option value="Barbarian">Barbarian - Fierce warrior who rages in battle (Str/Con)</option>
               <option value="Fighter">Fighter - Master of weapons and armor (Str or Dex)</option>
-              <option value="Monk">Monk - Unarmed martial artist with ki powers (Dex/Wis)</option>
+              <option value="Monk" data-srd-block="class:Monk" data-srd-block-group="wizard-classes">Monk - Unarmed martial artist with ki powers (Dex/Wis)</option>
               <option value="Ranger">Ranger - Wilderness warrior and tracker (Dex/Wis)</option>
               <option value="Rogue">Rogue - Stealthy, skillful, sneaky (Dex)</option>
             </optgroup>
@@ -478,10 +481,13 @@ const CharacterCreationWizard = (function() {
               <option value="Wizard">Wizard - Arcane scholar with vast spell knowledge (Int)</option>
             </optgroup>
             <optgroup label="Half-Casters (Martial + Magic)">
-              <option value="Artificer">Artificer - Magical inventor with infusions (Int)</option>
-              <option value="Paladin">Paladin - Holy warrior with divine magic (Str/Cha)</option>
+              <option value="Artificer" data-srd-block="class:Artificer" data-srd-block-group="wizard-classes">Artificer - Magical inventor with infusions (Int)</option>
+              <option value="Paladin" data-srd-block="class:Paladin" data-srd-block-group="wizard-classes">Paladin - Holy warrior with divine magic (Str/Cha)</option>
             </optgroup>
           </select>
+          <div class="alert alert-warning small mt-2 d-none" data-srd-notice-for="wizard-classes">
+            Need Paladins, Monks, or Artificers? Load a private content pack to re-enable non-SRD classes in this builder.
+          </div>
         </div>
         <div id="classDescription" class="alert alert-info" style="display:none;"></div>
         <div id="classHitDie" class="alert alert-warning" style="display:none;"></div>

@@ -28,7 +28,11 @@ export default [
         Blob: 'readonly',
         FileReader: 'readonly',
         Image: 'readonly',
+        structuredClone: 'readonly',
+        TextEncoder: 'readonly',
+        TextDecoder: 'readonly',
         HTMLElement: 'readonly',
+        HTMLInputElement: 'readonly',
         HTMLCanvasElement: 'readonly',
         CanvasRenderingContext2D: 'readonly',
         Event: 'readonly',
@@ -120,6 +124,18 @@ export default [
         name: 'window',
         message: 'Modules should not access window directly. Use dependency injection.'
       }],
+    },
+  },
+  {
+    // Content-pack runtime glue modules intentionally interact with DOM globals
+    files: [
+      'js/modules/content-pack-manager.js',
+      'js/modules/content-pack-runtime.js',
+      'js/modules/content-pack-ui.js',
+      'js/modules/srd-content-filter.js',
+    ],
+    rules: {
+      'no-restricted-globals': 'off',
     },
   },
   {

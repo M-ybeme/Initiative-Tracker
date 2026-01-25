@@ -19,6 +19,12 @@
 - **Rules & Spells reference** integrated into interface
 - **One-click integration** with Encounter Builder, Character Manager, and Battle Map
 
+### SRD Scope
+
+- The built-in rules/snippet reference loads only SRD 5.1 mechanics through `window.SRDContentFilter`.
+- Any encounter data sent from other tools passes through the same allowlist so stat blocks and spell cards never display non-SRD text unless a private content pack is loaded locally.
+- Diagnostics panel (Ctrl+Alt+D) shows the active SRD filter so DMs can confirm whether the tracker is running in SRD-only mode.
+
 ## Use Case
 
 Run combat without juggling notebooks. Track 6 PCs + 12 enemies with damage history, death saves, and concentration—all visible at a glance. Display Player View on TV for transparency.

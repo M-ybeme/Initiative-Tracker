@@ -1,7 +1,109 @@
 // Journal Export Functionality
 // Separate from Quill to avoid conflicts
 
+const JOURNAL_LICENSE_PHRASE = 'Creative Commons Attribution 4.0 International License';
+const SRD_PDF_URL = 'https://media.wizards.com/2016/downloads/DND/SRD-OGL_V5.1.pdf';
+const JOURNAL_LICENSE_DEFAULTS = {
+  attributionText: 'This work includes material from the System Reference Document 5.1 by Wizards of the Coast LLC and is licensed for our use under the Creative Commons Attribution 4.0 International License.',
+  productIdentityDisclaimer: 'The DM\'s Toolbox references rules and mechanics from the Dungeons & Dragons 5e System Reference Document 5.1. Wizards of the Coast, Dungeons & Dragons, Forgotten Realms, Ravenloft, Eberron, the dragon ampersand, beholders, githyanki, githzerai, mind flayers, yuan-ti, and all other Wizards of the Coast product identity are trademarks of Wizards of the Coast LLC in the U.S.A. and other countries. The DM\'s Toolbox is not affiliated with, endorsed, sponsored, or specifically approved by Wizards of the Coast LLC.',
+  licenseUrl: 'https://creativecommons.org/licenses/by/4.0/',
+  srdUrl: SRD_PDF_URL
+};
+
 const JournalExport = {
+  getLicenseNotices() {
+    if (typeof window !== 'undefined') {
+      if (typeof window.getSrdLicenseNotices === 'function') {
+        return window.getSrdLicenseNotices();
+      }
+      if (window.SRDLicensing) {
+        return {
+          attributionText: window.SRDLicensing.attributionText || JOURNAL_LICENSE_DEFAULTS.attributionText,
+          productIdentityDisclaimer: window.SRDLicensing.productIdentityDisclaimer || JOURNAL_LICENSE_DEFAULTS.productIdentityDisclaimer,
+          licenseUrl: window.SRDLicensing.licenseUrl || JOURNAL_LICENSE_DEFAULTS.licenseUrl,
+          srdUrl: window.SRDLicensing.srdUrl || JOURNAL_LICENSE_DEFAULTS.srdUrl
+        };
+      }
+    }
+    return { ...JOURNAL_LICENSE_DEFAULTS };
+  },
+
+  buildPlainTextLicenseSection() {
+    const info = this.getLicenseNotices();
+    const lines = ['', 'License & Attribution', '---------------------', info.attributionText];
+    if (info.licenseUrl) {
+      lines.push(`License: ${info.licenseUrl}`);
+    }
+    if (info.srdUrl) {
+      lines.push(`SRD 5.1 PDF: ${info.srdUrl}`);
+    }
+    lines.push(info.productIdentityDisclaimer);
+    return lines.join('\n');
+  },
+
+  buildMarkdownLicenseSection() {
+    const info = this.getLicenseNotices();
+    const attribution = this.wrapLicensePhrase(info.attributionText, info.licenseUrl, 'markdown');
+    const lines = ['\n---', '## License & Attribution', attribution];
+    if (info.srdUrl) {
+      lines.push('', `[SRD 5.1 Reference PDF](${info.srdUrl})`);
+    }
+    lines.push('', info.productIdentityDisclaimer);
+    return lines.join('\n');
+  },
+
+  buildDocxLicenseParagraphs({ Paragraph, HeadingLevel }) {
+    const info = this.getLicenseNotices();
+    const attribution = info.licenseUrl ? `${info.attributionText} (${info.licenseUrl})` : info.attributionText;
+    const paragraphs = [
+      new Paragraph({ text: '', spacing: { after: 200 } }),
+      new Paragraph({ text: 'License & Attribution', heading: HeadingLevel.HEADING_2 }),
+      new Paragraph({ text: attribution }),
+      new Paragraph({ text: info.productIdentityDisclaimer })
+    ];
+    if (info.srdUrl) {
+      paragraphs.push(new Paragraph({ text: `SRD 5.1 Reference PDF: ${info.srdUrl}` }));
+    }
+    return paragraphs;
+  },
+
+  appendPdfLicense(doc, heading = 'License & Attribution') {
+    const info = this.getLicenseNotices();
+    const attribution = info.licenseUrl ? `${info.attributionText} (${info.licenseUrl})` : info.attributionText;
+    doc.addPage();
+    let yPosition = 20;
+    doc.setFontSize(16);
+    doc.setFont(undefined, 'bold');
+    doc.text(heading, 20, yPosition);
+    yPosition += 10;
+    doc.setFontSize(11);
+    doc.setFont(undefined, 'normal');
+    const attributionLines = doc.splitTextToSize(attribution, 170);
+    doc.text(attributionLines, 20, yPosition);
+    yPosition += attributionLines.length * 6;
+    const disclaimerLines = doc.splitTextToSize(info.productIdentityDisclaimer, 170);
+    yPosition += 6;
+    doc.text(disclaimerLines, 20, yPosition);
+    if (info.srdUrl) {
+      const srdLines = doc.splitTextToSize(`SRD 5.1 Reference PDF: ${info.srdUrl}`, 170);
+      yPosition += 6;
+      doc.text(srdLines, 20, yPosition);
+    }
+  },
+
+  wrapLicensePhrase(text, url, format) {
+    if (!url) {
+      return text;
+    }
+    if (!text.includes(JOURNAL_LICENSE_PHRASE)) {
+      return `${text} (${url})`;
+    }
+    if (format === 'markdown') {
+      return text.replace(JOURNAL_LICENSE_PHRASE, `[${JOURNAL_LICENSE_PHRASE}](${url})`);
+    }
+    return text.replace(JOURNAL_LICENSE_PHRASE, `${JOURNAL_LICENSE_PHRASE} (${url})`);
+  },
+
   // Convert Quill Delta/HTML to plain text
   toPlainText(htmlContent) {
     const tempDiv = document.createElement('div');
@@ -99,14 +201,14 @@ const JournalExport = {
 
   // Export as TXT
   exportAsTXT(entryName, htmlContent) {
-    const text = `${entryName}\n${'='.repeat(entryName.length)}\n\n${this.toPlainText(htmlContent)}`;
+    const text = `${entryName}\n${'='.repeat(entryName.length)}\n\n${this.toPlainText(htmlContent)}${this.buildPlainTextLicenseSection()}`;
     const blob = new Blob([text], { type: 'text/plain' });
     this.download(blob, `${entryName}.txt`);
   },
 
   // Export as Markdown
   exportAsMarkdown(entryName, htmlContent) {
-    const markdown = this.toMarkdown(htmlContent, entryName);
+    const markdown = this.toMarkdown(htmlContent, entryName) + this.buildMarkdownLicenseSection();
     const blob = new Blob([markdown], { type: 'text/markdown' });
     this.download(blob, `${entryName}.md`);
   },
@@ -249,6 +351,8 @@ const JournalExport = {
       }
     });
 
+    children.push(...this.buildDocxLicenseParagraphs({ Paragraph, HeadingLevel }));
+
     const doc = new Document({
       sections: [{
         properties: {},
@@ -287,6 +391,7 @@ const JournalExport = {
     const splitText = doc.splitTextToSize(plainText, 170);
     doc.text(splitText, 20, 35);
 
+    this.appendPdfLicense(doc);
     doc.save(`${entryName}.pdf`);
   },
 
@@ -402,6 +507,7 @@ const JournalExport = {
             combinedText += `${entry.name}\n${'='.repeat(entry.name.length)}\n\n`;
             combinedText += this.toPlainText(entry.content);
           });
+          combinedText += this.buildPlainTextLicenseSection();
           const blob = new Blob([combinedText], { type: 'text/plain' });
           this.download(blob, `${sanitizedName}.txt`);
           break;
@@ -413,6 +519,7 @@ const JournalExport = {
             if (index > 0) combinedMarkdown += '\n\n---\n\n';
             combinedMarkdown += this.toMarkdown(entry.content, entry.name) + '\n';
           });
+          combinedMarkdown += this.buildMarkdownLicenseSection();
           const blob = new Blob([combinedMarkdown], { type: 'text/markdown' });
           this.download(blob, `${sanitizedName}.md`);
           break;
@@ -462,6 +569,8 @@ const JournalExport = {
             });
           });
 
+          children.push(...this.buildDocxLicenseParagraphs({ Paragraph, HeadingLevel }));
+
           const doc = new Document({
             sections: [{ properties: {}, children: children }]
           });
@@ -510,6 +619,7 @@ const JournalExport = {
             doc.text(splitText, 20, yPosition);
           });
 
+          this.appendPdfLicense(doc, 'Journal Export – License & Attribution');
           doc.save(`${sanitizedName}.pdf`);
           break;
         }

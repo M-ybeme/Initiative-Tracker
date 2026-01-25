@@ -43,9 +43,7 @@ This document provides a comprehensive inventory of **The DM's Toolbox** codebas
 │   ├── character-sheet-export.js      # Export to PDF/PNG/Word
 │   ├── journal-export.js              # Journal export utilities
 │   ├── indexed-db-storage.js          # IndexedDB storage layer
-│   ├── spells-data.js                 # Spell database
 │   ├── rules-data.js                  # Rules reference data
-│   ├── level-up-data.js               # Class progressions, feats
 │   └── modules/
 │       ├── dice.js                    # Dice rolling engine
 │       ├── storage.js                 # Character serialization
@@ -56,6 +54,13 @@ This document provides a comprehensive inventory of **The DM's Toolbox** codebas
 │       ├── spell-utils.js             # Spell slot management
 │       ├── generators.js              # Random generation utilities
 │       └── export-utils.js            # Export formatting
+├── data/
+│   ├── README.md                      # Data bundle conventions
+│   ├── srd/
+│   │   ├── spells-data.js             # SRD spell database
+│   │   └── level-up-data.js           # SRD classes/feats/backgrounds
+│   └── packs/
+│       └── experimental/              # Placeholder for non-SRD packs
 ├── tests/                  # Test suites (unit, integration, E2E)
 └── docs/                   # Documentation
 ```
@@ -76,6 +81,7 @@ These scripts are loaded directly by HTML pages and contain UI logic.
 - Initializes IndexedDB connection
 - Sets up cross-tab synchronization
 - Provides shared utilities for all pages
+- Bootstraps `window.SRDContentFilter` (allowlist enforcement + `data-srd-block` observers)
 
 **Globals:**
 - `DM_TOOLBOX_BUILD` (version, build time, recent changes)
@@ -110,7 +116,7 @@ These scripts are loaded directly by HTML pages and contain UI logic.
 - `js/modules/dice.js` - Dice rolling
 - `js/modules/validation.js` - Input validation
 - `js/rules-data.js` - Rules reference data
-- `js/spells-data.js` - Spell database
+- `data/srd/spells-data.js` - Spell database
 
 ---
 
@@ -139,8 +145,8 @@ These scripts are loaded directly by HTML pages and contain UI logic.
 - `js/modules/character-calculations.js` - D&D mechanics
 - `js/modules/export-utils.js` - Export formatting
 - `js/indexed-db-storage.js` - Portrait storage
-- `js/spells-data.js` - Spell database
-- `js/level-up-data.js` - Class/feat data
+- `data/srd/spells-data.js` - Spell database
+- `data/srd/level-up-data.js` - Class/feat data
 
 ---
 
@@ -160,7 +166,7 @@ These scripts are loaded directly by HTML pages and contain UI logic.
 **Globals:** None (self-contained module)
 
 **Dependencies:**
-- `js/level-up-data.js` - Class and race data
+- `data/srd/level-up-data.js` - Class and race data
 - `js/modules/validation.js` - Input validation
 - `js/modules/character-calculations.js` - Modifier calculations
 
@@ -184,7 +190,7 @@ These scripts are loaded directly by HTML pages and contain UI logic.
 **Dependencies:**
 - `js/modules/character-calculations.js` - Mechanics
 - `js/modules/level-up-calculations.js` - Leveling math
-- `js/level-up-data.js` - Feat/class data
+- `data/srd/level-up-data.js` - Feat/class data
 
 ---
 
@@ -468,18 +474,19 @@ Pure logic modules under `js/modules/`. These do not touch the DOM.
 
 ## Data Files
 
-Large data tables loaded as separate scripts.
+Large data tables loaded as separate scripts. The public repo only ships SRD 5.1 data under `/data/srd/`; non-SRD payloads are expected to live in private packs (untracked) and register themselves at runtime via `SRDContentFilter`.
 
 ### spells-data.js
 
-**Location:** `/js/spells-data.js`
+**Location:** `/data/srd/spells-data.js`
 **Loaded by:** `initiative.html`, `characters.html`
 
 **Contents:**
-- `SPELLS_DATA` - Complete SRD-safe spell database
+- `SPELLS_DATA` - SRD 5.1 spell database (public build)
 - Each spell: title, level, school, casting time, range, components, duration, concentration, classes, description, tags
+- Private content packs can register additional spells, but they never ship in this directory
 
-**Size:** ~3000+ spells
+**Size:** ~400 SRD spells
 
 ---
 
@@ -497,12 +504,12 @@ Large data tables loaded as separate scripts.
 
 ### level-up-data.js
 
-**Location:** `/js/level-up-data.js`
+**Location:** `/data/srd/level-up-data.js`
 **Loaded by:** `characters.html`
 
 **Contents:**
-- `FEATS` - Complete feat database with prerequisites
-- `CLASS_DATA` - Class progression tables (features by level)
+- `FEATS` - SRD feat subset with prerequisites (private packs extend this set)
+- `CLASS_DATA` - Class progression tables for SRD classes
 - `MULTICLASS_PREREQUISITES` - Ability requirements
 - `CASTER_TYPES` - Full/half/third caster classification
 - `MULTICLASS_SPELL_SLOTS` - Multiclass slot rules
@@ -581,8 +588,8 @@ Pages (UI Layer)
 ├── characters.html
 │   ├── site.js
 │   ├── indexed-db-storage.js
-│   ├── spells-data.js
-│   ├── level-up-data.js
+│   ├── data/srd/spells-data.js
+│   ├── data/srd/level-up-data.js
 │   ├── character-creation-wizard.js
 │   │   └── modules/validation.js
 │   │   └── modules/character-calculations.js
@@ -602,7 +609,7 @@ Pages (UI Layer)
 ├── initiative.html
 │   ├── site.js
 │   ├── rules-data.js
-│   ├── spells-data.js
+│   ├── data/srd/spells-data.js
 │   └── initiative.js
 │       └── modules/initiative-calculations.js
 │       └── modules/dice.js

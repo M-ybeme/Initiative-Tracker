@@ -4,6 +4,17 @@
  * Includes character portrait with proper cropping/framing
  */
 
+(() => {
+
+const CHARACTER_EXPORT_LICENSE_PHRASE = 'Creative Commons Attribution 4.0 International License';
+const SRD_PDF_URL = 'https://media.wizards.com/2016/downloads/DND/SRD-OGL_V5.1.pdf';
+const CHARACTER_EXPORT_LICENSE_DEFAULTS = {
+  attributionText: 'This work includes material from the System Reference Document 5.1 by Wizards of the Coast LLC and is licensed for our use under the Creative Commons Attribution 4.0 International License.',
+  productIdentityDisclaimer: 'The DM\'s Toolbox references rules and mechanics from the Dungeons & Dragons 5e System Reference Document 5.1. Wizards of the Coast, Dungeons & Dragons, Forgotten Realms, Ravenloft, Eberron, the dragon ampersand, beholders, githyanki, githzerai, mind flayers, yuan-ti, and all other Wizards of the Coast product identity are trademarks of Wizards of the Coast LLC in the U.S.A. and other countries. The DM\'s Toolbox is not affiliated with, endorsed, sponsored, or specifically approved by Wizards of the Coast LLC.',
+  licenseUrl: 'https://creativecommons.org/licenses/by/4.0/',
+  srdUrl: SRD_PDF_URL
+};
+
 class CharacterSheetExporter {
   constructor() {
     this.printWindow = null;
@@ -493,6 +504,18 @@ class CharacterSheetExporter {
       children.push(new Paragraph({ text: '_'.repeat(80) }));
       children.push(new Paragraph({ text: '_'.repeat(80) }));
 
+      const licenseInfo = this.getLicenseNotices();
+      children.push(new Paragraph({ text: '', spacing: { after: 200 } }));
+      children.push(new Paragraph({ text: 'License & Attribution', heading: HeadingLevel.HEADING_2 }));
+      const attributionParagraph = licenseInfo.licenseUrl
+        ? `${licenseInfo.attributionText} (${licenseInfo.licenseUrl})`
+        : licenseInfo.attributionText;
+      children.push(new Paragraph({ text: attributionParagraph }));
+      children.push(new Paragraph({ text: licenseInfo.productIdentityDisclaimer }));
+      if (licenseInfo.srdUrl) {
+        children.push(new Paragraph({ text: `SRD 5.1 Reference PDF: ${licenseInfo.srdUrl}` }));
+      }
+
       const doc = new Document({
         sections: [{
           properties: {},
@@ -691,6 +714,8 @@ class CharacterSheetExporter {
           <div style="border-bottom: 1px solid #ccc; height: 25px; margin-bottom: 5px;"></div>
           <div style="border-bottom: 1px solid #ccc; height: 25px; margin-bottom: 5px;"></div>
         </div>
+
+        ${this.generateLicenseSectionHTML()}
       </div>
     `;
   }
@@ -1295,10 +1320,65 @@ class CharacterSheetExporter {
     }
   }
 
+  generateLicenseSectionHTML() {
+    const info = this.getLicenseNotices();
+    const attribution = this.formatLicenseAttribution(info.attributionText, info.licenseUrl);
+    const disclaimer = this.escapeHtml(info.productIdentityDisclaimer);
+    const srdUrl = info.srdUrl ? this.escapeHtml(info.srdUrl) : '';
+    const srdLink = srdUrl
+      ? `<p style="margin: 0;">SRD 5.1 Reference PDF: <a href="${srdUrl}" target="_blank" rel="noopener noreferrer">Download from Wizards</a></p>`
+      : '';
+    return `
+        <section style="margin-top: 30px; padding-top: 12px; border-top: 1px solid #e2e8f0; font-size: 12px; color: #4a5568; line-height: 1.5;">
+          <strong style="display: block; text-transform: uppercase; letter-spacing: 0.08em;">License &amp; Attribution</strong>
+          <p style="margin: 8px 0 4px 0;">${attribution}</p>
+          <p style="margin: 0;">${disclaimer}</p>
+          ${srdLink}
+        </section>
+    `;
+  }
+
+  getLicenseNotices() {
+    if (typeof window !== 'undefined') {
+      if (typeof window.getSrdLicenseNotices === 'function') {
+        return window.getSrdLicenseNotices();
+      }
+      if (window.SRDLicensing) {
+        return {
+          attributionText: window.SRDLicensing.attributionText || CHARACTER_EXPORT_LICENSE_DEFAULTS.attributionText,
+          productIdentityDisclaimer: window.SRDLicensing.productIdentityDisclaimer || CHARACTER_EXPORT_LICENSE_DEFAULTS.productIdentityDisclaimer,
+          licenseUrl: window.SRDLicensing.licenseUrl || CHARACTER_EXPORT_LICENSE_DEFAULTS.licenseUrl,
+          srdUrl: window.SRDLicensing.srdUrl || CHARACTER_EXPORT_LICENSE_DEFAULTS.srdUrl
+        };
+      }
+    }
+    return { ...CHARACTER_EXPORT_LICENSE_DEFAULTS };
+  }
+
+  escapeHtml(text = '') {
+    const entities = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
+    return text.replace(/[&<>"']/g, (char) => entities[char] || char);
+  }
+
+  formatLicenseAttribution(text, url) {
+    const safeText = this.escapeHtml(text);
+    if (!url) {
+      return safeText;
+    }
+    const encodedPhrase = this.escapeHtml(CHARACTER_EXPORT_LICENSE_PHRASE);
+    const anchor = `<a href="${this.escapeHtml(url)}" target="_blank" rel="noopener noreferrer">${encodedPhrase}</a>`;
+    if (!safeText.includes(encodedPhrase)) {
+      return `${safeText} ${anchor}`;
+    }
+    return safeText.replace(encodedPhrase, anchor);
+  }
+
   sanitizeFilename(name) {
     return name.replace(/[^a-z0-9]/gi, '_').toLowerCase();
   }
 }
 
 // Create global instance
+window.CharacterSheetExporter = CharacterSheetExporter;
 window.characterSheetExporter = new CharacterSheetExporter();
+})();

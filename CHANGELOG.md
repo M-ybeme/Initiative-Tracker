@@ -14,7 +14,19 @@ The DM's Toolbox has evolved through focused feature releases:
 - **1.9.x**: Battle map measurement tools, persistent fog shapes, and generator integration across NPC/Tavern/Shop systems
 - **1.8.x**: Spell database expansion to 432+ spells, inventory management, loot generator overhaul, and character token generation
 
-**Current version: 2.0.5 (January 2026)**
+**Current version: 2.0.6 (January 2026)**
+
+---
+
+## [2.0.6] - 2026-01-24
+
+### Changed
+- **SRD documentation scrub** – README plus SPELLS/CHARACTER_MANAGER/LEVEL_UP_SYSTEM docs now describe the SRD-only baseline, call out the `data-srd-block` UX, and point contributors to the upcoming private content-pack workflow. This aligns the public messaging with the new gating runtime completed earlier in Phase 1.
+- **Lint configuration tuning** – Expanded the ESLint global allowlist with modern browser APIs (e.g., `structuredClone`, `TextEncoder`, `HTMLInputElement`) and exempted the new content-pack runtime modules from the `no-restricted-globals` rule so their DOM interactions stop blocking lint.
+
+### Testing
+- `npm run lint` – warnings only (unused vars and `let`→`const` suggestions remain).
+- `npm run test:run` (Vitest) – 15 files / 552 tests passed locally.
 
 ---
 
@@ -273,8 +285,8 @@ The DM's Toolbox has evolved through focused feature releases:
   - `gatherRacialSpellData()` updated to handle cantrip choice substitution
 
 ### Technical
-- Added `SUBCLASS_BONUS_CANTRIPS` data structure to [level-up-data.js](js/level-up-data.js)
-- Added `getSubclassBonusCantrips()` helper function to [level-up-data.js](js/level-up-data.js)
+- Added `SUBCLASS_BONUS_CANTRIPS` data structure to [level-up-data.js](data/srd/level-up-data.js)
+- Added `getSubclassBonusCantrips()` helper function to [level-up-data.js](data/srd/level-up-data.js)
 - Added `renderFeatList()` function to [character-creation-wizard.js](js/character-creation-wizard.js)
 - Added `renderLevelUpFeatList()` function to [level-up-system.js](js/level-up-system.js)
 - Updated `finishWizard()` to gather subclass bonus cantrips
@@ -324,7 +336,7 @@ The DM's Toolbox has evolved through focused feature releases:
   - `getMulticlassExtraAttack(classes)` - Handles Extra Attack stacking rules (Fighter 5/11/20 gets 2/3/4 attacks)
 
 ### Technical
-- Added full Artificer class to `CLASS_DATA` in [level-up-data.js](js/level-up-data.js)
+- Added full Artificer class to `CLASS_DATA` in [level-up-data.js](data/srd/level-up-data.js)
 - Added `ARTIFICER_INFUSIONS` data structure with 16 infusions across 4 level tiers
 - Added 5 multiclass hit dice helper functions
 - Added 6 class level vs character level helper functions
@@ -360,7 +372,7 @@ The DM's Toolbox has evolved through focused feature releases:
   - Success message shows "Class resources updated and replenished"
 
 - **Comprehensive Racial Features** - Automatically populates racial traits in Features & Feats section during character creation
-  - `RACIAL_BASE_FEATURES` data structure covering 30+ races from PHB, Volo's Guide, Ravnica, Theros, and Eberron
+  - `RACIAL_BASE_FEATURES` data structure originally covered 30+ races from PHB, Volo's Guide, Ravnica, Theros, and Eberron; the SRD allowlist now exposes only SRD races by default, with the rest available through private content packs
   - Base racial traits (speed, size, languages, darkvision, etc.) for all races
   - Subrace-specific traits automatically included (e.g., High Elf weapon training, Lightfoot Halfling's Naturally Stealthy)
   - Level-gated features tracked (e.g., Aasimar's Celestial Revelation at level 3)
@@ -379,6 +391,7 @@ The DM's Toolbox has evolved through focused feature releases:
   - Racial spells marked with usage notes (e.g., "Racial: 2nd-level, 1/long rest")
   - Added during both character creation and level-up when unlocked
   - Marked as "always prepared" and excluded from prepared spell count
+  - Default SRD builds show only spells tied to SRD races; non-SRD entries stay hidden unless a private pack opts in
 
 - **Level-Up Racial Support** - Level-up system now properly handles racial progression
   - Race name parsing fixed for formats like "Tiefling (Asmodeus)"
@@ -408,11 +421,12 @@ The DM's Toolbox has evolved through focused feature releases:
   - **Moon Druid**: CR 1 at level 2, up to CR 6 at level 18 (swim at 2, fly at 8)
   - Wild Shape reference automatically updates on level-up when new forms become available
   - Helper functions: `getWildShapeLimits()`, `getAvailableBeastForms()`, `formatWildShapeReference()`, `getWildShapeSummary()`
+  - SRD gating ensures the default public build lists only SRD beast stat blocks; additional forms activate when a private pack is loaded
 
 ### Technical
-- Added `CLASS_RESOURCES` and `getClassResources()` to [level-up-data.js](js/level-up-data.js)
-- Added `DEFAULT_CLASS_WEAPONS`, `generateDefaultAttacks()`, `getCantripDamageDice()` to [level-up-data.js](js/level-up-data.js)
-- Added `RACIAL_BASE_FEATURES` data structure (~1300 lines) to [level-up-data.js](js/level-up-data.js)
+- Added `CLASS_RESOURCES` and `getClassResources()` to [level-up-data.js](data/srd/level-up-data.js)
+- Added `DEFAULT_CLASS_WEAPONS`, `generateDefaultAttacks()`, `getCantripDamageDice()` to [level-up-data.js](data/srd/level-up-data.js)
+- Added `RACIAL_BASE_FEATURES` data structure (~1300 lines) to [level-up-data.js](data/srd/level-up-data.js)
 - Added `RACIAL_SPELLS` data structure with helper functions `getRacialSpells()` and `getRacialSpellsAtLevel()`
 - Added `getFullRacialFeatures()`, `formatRacialFeaturesAsText()`, `getScalingFeatureValue()`, `getBaseRacialFeatures()` helpers
 - Added `BACKGROUND_DATA` structure with all 13 PHB backgrounds and helper functions:
@@ -561,7 +575,7 @@ The DM's Toolbox has evolved through focused feature releases:
 - **Pact Slots Reset** - Warlock pact magic slots now reset to 0 used when leveling up
 
 ### Technical
-- Changed `LevelUpData` from local const to `window.LevelUpData` for global accessibility in [js/level-up-data.js:7](js/level-up-data.js#L7)
+- Changed `LevelUpData` from local const to `window.LevelUpData` for global accessibility in [data/srd/level-up-data.js:7](data/srd/level-up-data.js#L7)
 - Modified `applyLevelUp()` in [js/level-up-system.js:1657-1702](js/level-up-system.js#L1657-L1702)
 - Hit dice calculation uses class data to determine proper die size (d6, d8, d10, d12)
 - Spell slots now use correct data structure: `spellSlots[level] = { max: X, used: 0 }`
@@ -875,7 +889,7 @@ See [CHARACTER_MANAGER.md](docs/CHARACTER_MANAGER.md) for full feature documenta
 - **Class Features Display** - New features shown at each level with descriptions
 
 ### Technical
-- New files: `js/level-up-data.js`, `js/level-up-system.js`
+- New files: `data/srd/level-up-data.js`, `js/level-up-system.js`
 - Documentation: `LEVEL_UP_SYSTEM.md`, `LEVEL_UP_TESTING.md`
 
 ---
@@ -966,9 +980,9 @@ See [GENERATORS.md](docs/GENERATORS.md) for complete generator documentation.
 **Character Creation Wizard: Comprehensive Expansion**
 
 ### Added
-- **Expanded Race Selection** - 9→33+ races including PHB, Volo's, Elemental, Ravnica, Theros, Eberron races
-- **Subrace Support** - Dynamic subrace dropdown for Elf, Dwarf, Halfling, Gnome, Dragonborn, Tiefling, Aasimar, Shifter
-- **Class Expansion** - Added Artificer (13 classes total) organized into Martial/Full Spellcasters/Half-Casters
+- **Expanded Race Selection** - Data set grew from 9→33+ races spanning PHB, Elemental, and other books; the SRD build now shows only the SRD subset while private packs can re-enable the rest
+- **Subrace Support** - Dynamic subrace dropdown for Elf, Dwarf, Halfling, Gnome, Dragonborn, Tiefling, Aasimar, Shifter; non-SRD lines stay hidden in the default build until a private pack authorizes them
+- **Class Expansion** - Added Artificer (13 classes total) organized into Martial/Full Spellcasters/Half-Casters; SRD builds gate Artificer until a private pack provides the data
 - **Background Selection** - 13 official backgrounds with skill proficiencies
 - **Interactive Skill Selection** - Dynamic picker based on class with proper selection enforcement
 - **Auto HP/AC Calculation** - Class-appropriate armor options with accurate AC calculations including Unarmored Defense
@@ -1036,15 +1050,15 @@ See [GENERATORS.md](docs/GENERATORS.md) for complete loot generator documentatio
 See [SPELLS.md](docs/SPELLS.md) for complete spell database details.
 
 ### Added
-- **Comprehensive Spell Expansion** - 120+ missing spells from PHB, Xanathar's, Tasha's (312→432 spells)
-- **Complete Class Coverage** - All Paladin Smites (6/6), all Tasha's Summons (10/10), all Xanathar's Cantrips (17)
-- **Modern D&D Content** - Post-PHB spells including popular summoning systems and elemental cantrips
+- **Comprehensive Spell Expansion** - Historical release added 120+ missing spells from PHB, Xanathar's, and Tasha's (312→432 spells); the SRD build now exposes only SRD-legal spells while private packs can re-enable the rest
+- **Complete Class Coverage** - All Paladin Smites (6/6), Tasha's Summons (10/10), and Xanathar's Cantrips (17) live in the data set even though the public bundle filters to SRD IDs
+- **Modern D&D Content** - Post-PHB spells remain available to players who load their own packs
 
 ### Changed
-- Database completeness improved from ~70% to ~95% for PHB/Xanathar's/Tasha's content
+- Database completeness improved from ~70% to ~95% for PHB/Xanathar's/Tasha's content; SRD gating now dictates which entries appear in the default UI
 
 ### Database Statistics
-- **By Source**: PHB 100%, Xanathar's ~90%, Tasha's ~85%
+- **By Source**: PHB 100%, Xanathar's ~90%, Tasha's ~85% (stats describe the underlying data; SRD builds surface only SRD spells)
 - **By Level**: 41 Cantrips, 60+ Level 1, 65+ Level 2, 57+ Level 3, 42+ Level 4, 45+ Level 5, 38+ Level 6, 25+ Level 7, 19+ Level 8, 16+ Level 9
 - **By Class**: Wizard 240+, Sorcerer 145+, Bard 120+, Cleric 118+, Druid 115+, Warlock 84+, Paladin 49+, Ranger 50+, Artificer 42+
 
@@ -1289,3 +1303,4 @@ Note: This represents the original Initiative Tracker + Wiki project that served
 - **Removed** for now removed features
 - **Fixed** for any bug fixes
 - **Security** for vulnerability fixes
+

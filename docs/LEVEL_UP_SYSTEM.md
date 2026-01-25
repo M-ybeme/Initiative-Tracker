@@ -11,6 +11,10 @@ The Level-Up System provides a comprehensive, guided leveling experience for D&D
 - ✅ **Class features** (informative display)
 - ✅ **Proficiency bonus** (automatic)
 
+## SRD Content Scope
+
+The public build exposes only SRD classes, subclasses, feats, and spell lists. Anything outside the SRD (e.g., Artificer, Xanathar feats, supplemental archetypes) remains in the private-pack pipeline and never ships in this repo. When you author help text, examples, or screenshots for this system, stick to SRD references—no quoting restricted class features verbatim. Tables that legally own other books can re-enable them locally by loading a private content pack, but that workflow lives outside the open-source distribution.
+
 ## Phase 1: Core Implementation (Current)
 
 ### Included Classes
@@ -120,9 +124,8 @@ window.loadCharacterIntoForm()  // Refresh UI after level-up
 - [ ] **Level-up history** tracking
 
 ### Additional Feat Sources
-- Tasha's Cauldron of Everything
-- Xanathar's Guide to Everything
-- Other official supplements
+- Private content packs can register additional feat definitions for tables that own other books.
+- The default repository build remains SRD-only; any non-SRD entries stay hidden until a pack enables them locally.
 
 ## Implementation Notes
 

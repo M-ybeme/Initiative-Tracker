@@ -55,8 +55,8 @@ Press **Ctrl+Alt+D** anywhere in the app to open the local diagnostics panel wit
 
 ## 💬 Why This Exists
 
-> *"I wanted to play a Tabaxi Ranger, but Volo's Guide costs $30 on my preferred manager. This tool gave me every race, every spell, completely free."*
-> — Player from my campaign
+> *"I needed an SRD-safe toolkit I could run offline and extend privately without leaking my books."*
+> — Tabletop DM feedback
 
 ### Problems with most tools:
 
@@ -67,12 +67,23 @@ Press **Ctrl+Alt+D** anywhere in the app to open the local diagnostics panel wit
 
 ### The DM's Toolbox fixes all of that:
 
-* **All rules content accessible for free**
+* **All SRD rules content accessible for free**
+* **Private content packs keep any non-SRD options on your device**
 * **No logins or accounts**
 * **Offline after first load**
 * **Tools built for improvisation**
 
 This started as a personal combat tool and grew into a full GM toolkit used by thousands.
+
+---
+
+## 📘 SRD Scope & Content Packs
+
+The public site and repository only bundle rules text released in the System Reference Document 5.1 under CC-BY 4.0. Historical data for other WotC books now stays gated behind the SRD allowlist in `js/site.js`, so anything outside the SRD (Xanathar's, Tasha's, Eberron, etc.) never renders unless you opt in locally.
+
+Planned private content packs load through IndexedDB/localStorage so you can re-enable your licensed material without redistributing it. Until that workflow lands, UI elements marked with `data-srd-block` explain that the option requires a private pack.
+
+Want the doc-by-doc status of that scrub? Start with [docs/README.md](docs/README.md) for a compliance summary, links to every guide, and references to the SRD licensing notes. Ready to build your own data? Use the user-facing [Content Pack Authoring Guide](docs/CONTENT_PACK_AUTHORING.md) and dive deeper into schemas/lifecycle details in [docs/CONTENT_PACKS.md](docs/CONTENT_PACKS.md). Need a private bundle with your own packs? Follow [docs/PRIVATE_BUILD.md](docs/PRIVATE_BUILD.md).
 
 ---
 
@@ -154,19 +165,27 @@ npm run test:e2e:ui
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for test patterns and requirements.
 
+## 🚀 SRD Deployments
+
+- `.github/workflows/srd-build.yml` runs lint/tests on every push to `main` and, on success, deploys the SRD-only bundle to Netlify using `NETLIFY_AUTH_TOKEN` and `NETLIFY_SITE_ID` secrets.
+- The existing `test.yml` workflow continues to guard pull requests with the full suite (unit, integration, E2E).
+- For private/local bundles with your own packs, run `npm run build:pack -- --packs path/to/file.json` and follow [docs/PRIVATE_BUILD.md](docs/PRIVATE_BUILD.md).
+
 ---
 
 ## 📚 Documentation
 
-Full documentation lives in the `/docs` directory:
+Every guide under `/docs` reflects the SRD-only build. Start with the index for scope notes and quick summaries, then hop straight to the system you need:
 
-* [Battle Map](docs/BATTLEMAP.md)
-* [Character Manager](docs/CHARACTER_MANAGER.md)
-* [Encounter Builder](docs/ENCOUNTER_BUILDER.md)
-* [Generators](docs/GENERATORS.md)
-* [Initiative Tracker](docs/INITIATIVE_TRACKER.md)
-* [Journal](docs/JOURNAL.md)
-* [Integration Guide](docs/INTEGRATION.md)
+* [Documentation Index](docs/README.md) – SRD scope overview plus pointers to every guide.
+* [Battle Map](docs/BATTLEMAP.md) – Lightweight VTT usage with SRD-safe assets.
+* [Character Manager](docs/CHARACTER_MANAGER.md) – Wizard flows, level-up rules, and export coverage.
+* [Encounter Builder](docs/ENCOUNTER_BUILDER.md) – Encounter math, CR budgeting, and SRD stat sources.
+* [Generators](docs/GENERATORS.md) – Loot, tavern, shop, NPC, and name coverage after the data scrub.
+* [Initiative Tracker](docs/INITIATIVE_TRACKER.md) – Turn automation, damage logging, and gating behavior.
+* [Journal](docs/JOURNAL.md) – Rich text tips plus how exports embed the license block.
+* [Integration Guide](docs/INTEGRATION.md) – Embed or extend modules without breaking the SRD boundary.
+* [Private Build Workflow](docs/PRIVATE_BUILD.md) – Generate a local bundle plus your own packs without committing private data.
 * [Architecture Overview](docs/ARCHITECTURE.md)
 * [Codebase Overview](docs/CODEBASE_OVERVIEW.md)
 * [Coding Standards](docs/CODING_STANDARDS.md)
@@ -213,6 +232,8 @@ The DM's Toolbox includes accessibility features:
 
 ---
 
-## 📝 License
+## 📝 License & Attribution
 
-MIT License — free to use, modify, fork, or extend.
+- **Code & original assets:** MIT License — free to use, modify, fork, or extend.
+- **SRD-derived rules text:** Creative Commons Attribution 4.0 International (see [docs/licensing/SRD-5.1-CC-BY-4.0.md](docs/licensing/SRD-5.1-CC-BY-4.0.md)). The app footer and exports include the required attribution: “This work includes material from the System Reference Document 5.1 by Wizards of the Coast LLC and is licensed for our use under the Creative Commons Attribution 4.0 International License.”
+- **Product identity disclaimer:** Wizards of the Coast, Dungeons & Dragons, Forgotten Realms, Ravenloft, Eberron, the dragon ampersand, beholders, githyanki, githzerai, mind flayers, yuan-ti, and all other Wizards of the Coast product identity are trademarks of Wizards of the Coast LLC in the U.S.A. and other countries. The DM’s Toolbox is not affiliated with, endorsed, sponsored, or specifically approved by Wizards of the Coast LLC.

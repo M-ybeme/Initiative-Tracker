@@ -17,6 +17,8 @@
 
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" crossorigin="anonymous"></script>
   <script src="/js/site.js"></script>
+  <script src="/js/generated/srd-allowlist.js"></script>
+  <script src="/js/modules/srd-content-filter.js"></script>
 
   <style>
     .bgimage{
@@ -843,6 +845,16 @@
   <main class="content pt-4">
     <div class="container-fluid mt-5 pt-3">
       <div class="container backdrop text-light">
+        <div class="alert alert-warning text-start" role="status">
+          <div class="fw-semibold"><i class="bi bi-shield-lock me-1"></i>SRD Scope</div>
+          <small>
+            Races, subclasses, feats, and spells shown here are limited to SRD 5.1 unless you load a private content pack locally.
+            Keep any non-SRD references in private packs rather than the public repo.
+            <span class="ms-1 text-decoration-underline" data-bs-toggle="tooltip" data-bs-placement="top" title="Press Ctrl+Alt+D to open the diagnostics panel, then use Manage Content Packs to import purchased or homebrew data for the wizards.">
+              How to load private packs
+            </span>
+          </small>
+        </div>
         <!-- Header + Character Selector / Actions -->
         <div class="d-flex flex-column flex-md-row align-items-md-center mb-3 gap-3">
           <div>
@@ -3980,13 +3992,11 @@
                       </ul>
 
                       <h6>Feat</h6>
-                      <p>Choose from 60+ feats including:</p>
-                      <ul>
-                        <li><strong>PHB:</strong> Alert, Lucky, War Caster, Great Weapon Master, etc.</li>
-                        <li><strong>Tasha's:</strong> Fey Touched, Shadow Touched, Crusher, Slasher, etc.</li>
-                        <li><strong>Xanathar's:</strong> Elven Accuracy, Orcish Fury, racial feats, etc.</li>
-                      </ul>
-                      <p class="text-muted">Many feats also grant +1 to an ability score!</p>
+                      <p>Choose from the SRD-ready feat list including standbys like Alert, Lucky, War Caster, Great Weapon Master, Sentinel, Sharpshooter, and more. Many feats also grant +1 to an ability score.</p>
+                      <div class="alert alert-warning small mb-0" role="status">
+                        <i class="bi bi-lock-fill me-1" aria-hidden="true"></i>
+                        Looking for Tasha's or Xanathar's feats? Those non-SRD options stay hidden until you load a private content pack.
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -4001,16 +4011,19 @@
                     <div class="accordion-body">
                       <p>Some races unlock features at specific levels:</p>
                       <ul>
-                        <li><strong>Aasimar (Level 3):</strong> Choose celestial transformation</li>
-                        <li><strong>Tiefling (Levels 3 & 5):</strong> Gain Hellish Rebuke and Darkness spells</li>
-                        <li><strong>Genasi (Levels 3 or 5):</strong> Unlock elemental spells</li>
-                        <li><strong>Githyanki/Githzerai (Levels 3 & 5):</strong> Psionic spells</li>
+                        <li><strong>Tiefling (Levels 3 & 5):</strong> Gain Hellish Rebuke and Darkness spells automatically.</li>
+                        <li><strong>Dragonborn:</strong> Breath weapon damage and save DC scale every few levels.</li>
                       </ul>
                       <p>These appear automatically during level-up when you reach the appropriate level!</p>
 
+                      <div class="alert alert-warning small" role="status">
+                        <i class="bi bi-info-circle me-1" aria-hidden="true"></i>
+                        Additional level-based racial unlocks (Aasimar transformations, Genasi spells, etc.) require a private content pack and stay hidden in the SRD-only build.
+                      </div>
+
                       <div class="alert alert-success">
                         <i class="bi bi-graph-up me-1"></i>
-                        <strong>Scaling Features:</strong> Some racial features (Dragonborn Breath Weapon, Goliath Stone's Endurance) scale with level. Reference tables are shown during character creation!
+                        <strong>Scaling Features:</strong> Some racial features (like the Dragonborn Breath Weapon) scale with level. Reference tables are shown during character creation!
                       </div>
                     </div>
                   </div>
@@ -4139,8 +4152,8 @@
   </div>
 
   <script src="/js/indexed-db-storage.js"></script>
-  <script src="/js/spells-data.js"></script>
-  <script src="/js/level-up-data.js"></script>
+  <script src="/data/srd/spells-data.js"></script>
+  <script src="/data/srd/level-up-data.js"></script>
   <script src="/js/character-creation-wizard.js"></script>
   <script src="/js/level-up-system.js"></script>
   <script src="/js/character.js"></script>
