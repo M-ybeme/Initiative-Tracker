@@ -62,7 +62,7 @@ jobs:
         run: npm ci
 
       - name: Netlify production deploy
-        uses: netlify/actions/cli@v4
+        uses: netlify/actions/cli@v3
         with:
           args: deploy --dir=. --prod
         env:

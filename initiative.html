@@ -366,6 +366,9 @@
           <button id="bulk-hp-btn" class="btn btn-outline-info">
             <i class="bi bi-heart-pulse me-1"></i> Bulk HP Adjust
           </button>
+          <button class="btn btn-outline-warning" type="button" data-bs-toggle="modal" data-bs-target="#combatLogModal">
+            <i class="bi bi-clipboard2-data me-1"></i> Combat Log
+          </button>
           <button class="btn btn-outline-light"
                   type="button"
                   data-bs-toggle="offcanvas"
@@ -529,6 +532,39 @@
           <button type="button" class="btn btn-primary" id="bulkHPApply">
             <i class="bi bi-check-circle me-1"></i>Apply
           </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Combat Log Modal -->
+  <div class="modal fade" id="combatLogModal" tabindex="-1" aria-labelledby="combatLogModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-scrollable">
+      <div class="modal-content bg-dark text-light">
+        <div class="modal-header flex-wrap gap-2">
+          <div>
+            <h5 class="modal-title mb-0" id="combatLogModalLabel">Combat Log</h5>
+            <p class="small text-secondary mb-0">The most recent 100 events grouped by round and turn.</p>
+          </div>
+          <div class="ms-auto d-flex flex-wrap gap-2">
+            <button class="btn btn-outline-success btn-sm" id="export-log-json">
+              <i class="bi bi-download me-1"></i> Export JSON
+            </button>
+            <button class="btn btn-outline-light btn-sm" id="export-log-text">
+              <i class="bi bi-file-earmark-text me-1"></i> Export TXT
+            </button>
+            <button type="button" class="btn-close btn-close-white ms-2" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+        </div>
+        <div class="modal-body">
+          <p class="small text-secondary">
+            Showing <span id="combat-log-count">0</span> entries · grouped newest round first.
+          </p>
+          <div id="combat-log-empty" class="alert alert-secondary text-dark small mb-3">No combat history yet. Apply damage, healing, or status changes to populate this log.</div>
+          <div class="accordion" id="combat-log-accordion"></div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-outline-secondary" data-bs-dismiss="modal">Close</button>
         </div>
       </div>
     </div>

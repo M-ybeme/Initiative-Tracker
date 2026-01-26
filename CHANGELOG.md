@@ -18,6 +18,26 @@ The DM's Toolbox has evolved through focused feature releases:
 
 ---
 
+## [2.0.7] - 2026-01-26
+
+### Added
+- **Tag-aware NPC generator** – `npc.html` now defines life-stage and social tags for every role, plus curated age, attire, and demeanor buckets keyed to those tags. Description assembly pulls exclusively from the permitted buckets so phrases like "elderly arcane student" or "noble in mud-streaked rags" no longer occur.
+- **Role preset gating** – Settlement presets (nobles, guards, merchants, villagers, bandits, cultists, guild) now declare `allowedTags`, ensuring each preset only samples roles that fit the intended vibe (e.g., nobles avoid laborer tags, bandits stay within outlaw pools).
+- **NPC smoke harness** – Added `tmp/npc-smoke/README.md` and `tmp/npc-smoke/run-smoke.mjs`, a Playwright-driven script that opens `npc.html`, iterates presets, captures generated descriptions, and flags heuristic mismatches for rapid regression checks.
+- **Initiative tracker quality-of-life** – Added a direct damage subtraction control plus a rolling combat log that captures every turn change, major action, and timestamp so post-round auditing is trivial.
+- **Shop generator navigation** – Introduced a dismissible floating table of contents that follows the viewport, letting users jump directly to any generated shop section without endless scrolling.
+
+### Changed
+- **Battlemap navbar layout** – Reworked the Battlemap top bar so it sits above the collapsible side panel, preventing the tools/search strip from getting hidden whenever the panel is open.
+
+### Fixed
+- **Loot quick bundle filters** – Addressed data bleed between bundle categories so quick bundles now only surface the expected item pools (no more stray potions sneaking into mundane kits).
+
+### Testing
+- `node tmp/npc-smoke/run-smoke.mjs --presets nobles,guards,merchants,villagers,bandits,cultists,guild --runs=20` – 760 NPCs sampled; zero heuristic mismatches reported (see `tmp/npc-smoke/report.txt`).
+
+---
+
 ## [2.0.6] - 2026-01-24
 
 ### Changed

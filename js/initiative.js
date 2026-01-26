@@ -141,6 +141,8 @@ const statusEffects = [
   let modalCharacterIndex = null; 
   let undoStack = [];             
   const UNDO_LIMIT = 50;          
+  const COMBAT_LOG_LIMIT = 100;
+  let combatLog = [];
   // ----- Cross-page handoff (append or replace) -----
   function tryRehydrateFromBuilder(){
     try {
@@ -246,7 +248,7 @@ const statusEffects = [
   }
   function saveState(manual=false){
     const key = manual ? `initiativeTrackerData_${new Date().toISOString()}` : 'initiativeTrackerData';
-    const payload = { characters, currentTurn, combatRound, diceHistory };
+    const payload = { characters, currentTurn, combatRound, diceHistory, combatLog };
     localStorage.setItem(key, JSON.stringify(payload));
     if (manual) updateSaveHistory();
   }
@@ -259,12 +261,13 @@ const statusEffects = [
       currentTurn = data.currentTurn||0;
       combatRound = data.combatRound||1;
       diceHistory = Array.isArray(data.diceHistory) ? data.diceHistory : [];
+      combatLog = Array.isArray(data.combatLog) ? data.combatLog.slice(-COMBAT_LOG_LIMIT) : [];
     }catch(e){ console.warn('Load failed', e); }
   }
   // ---------- Undo ----------
   function snapshot() {
     // Deep copy core game state
-    return JSON.parse(JSON.stringify({ characters, currentTurn, combatRound }));
+    return JSON.parse(JSON.stringify({ characters, currentTurn, combatRound, combatLog }));
   }
   function pushHistory(label='') {
     undoStack.push({ state: snapshot(), label, ts: Date.now() });
@@ -277,6 +280,7 @@ const statusEffects = [
     characters = (state.characters || []).map(normalizeChar);
     currentTurn = state.currentTurn ?? 0;
     combatRound = state.combatRound ?? 1;
+    combatLog = Array.isArray(state.combatLog) ? state.combatLog : [];
     buildTable();
   }
   
@@ -579,6 +583,10 @@ $('clear-dice-history').addEventListener('click', ()=>{
     const failBtn = document.getElementById('concFailBtn');
     passBtn.dataset.idx = String(item.idx);
     failBtn.dataset.idx = String(item.idx);
+    passBtn.dataset.dmg = String(item.dmg);
+    passBtn.dataset.dc = String(item.dc);
+    failBtn.dataset.dmg = String(item.dmg);
+    failBtn.dataset.dc = String(item.dc);
   
     // Show toast
     concToast.show();
@@ -587,7 +595,20 @@ $('clear-dice-history').addEventListener('click', ()=>{
   document.getElementById('concPassBtn')?.addEventListener('click', (e) => {
     const idx = +e.currentTarget.dataset.idx;
     const c = characters[idx];
-    if (c) c.concDamagePending = 0;
+    const dmg = parseInt(e.currentTarget.dataset.dmg || '0', 10) || 0;
+    const dc = parseInt(e.currentTarget.dataset.dc || '10', 10) || 10;
+    if (c) {
+      c.concDamagePending = 0;
+      logEvent({
+        type: 'concentration',
+        summary: 'Concentration Check Passed',
+        targetId: c.id,
+        targetName: c.name,
+        source: 'concentration-check',
+        details: `Damage ${dmg} • DC ${dc}`,
+        concentration: 'Maintained concentration'
+      });
+    }
     concToast.hide();
     // allow Bootstrap fade-out then continue
     setTimeout(() => { drainConcentrationQueue(); }, 120);
@@ -598,6 +619,17 @@ $('clear-dice-history').addEventListener('click', ()=>{
     if (c) {
       c.concDamagePending = 0;
       c.concentration = false;     // auto-break
+      const dmg = parseInt(e.currentTarget.dataset.dmg || '0', 10) || 0;
+      const dc = parseInt(e.currentTarget.dataset.dc || '10', 10) || 10;
+      logEvent({
+        type: 'concentration',
+        summary: 'Concentration Check Failed',
+        targetId: c.id,
+        targetName: c.name,
+        source: 'concentration-check',
+        details: `Damage ${dmg} • DC ${dc}`,
+        concentration: 'Concentration lost'
+      });
     }
     buildTable();                  // reflect star-off immediately
     concToast.hide();
@@ -654,6 +686,258 @@ $('clear-dice-history').addEventListener('click', ()=>{
   
     return concChip + effectChips;
   }
+    // ---------- Combat log utilities ----------
+    function getTurnContext() {
+      const acting = characters[currentTurn];
+      return {
+        round: combatRound,
+        turnIndex: characters.length ? currentTurn : null,
+        turnName: acting?.name || null,
+        turnId: acting?.id || null,
+        actorName: acting?.name || null
+      };
+    }
+
+    function formatSourceLabel(src) {
+      const map = {
+        'quick-adjust': 'Quick Adjust',
+        'manual-input': 'Manual Edit',
+        'bulk-hp': 'Bulk HP',
+        'temp-hp': 'Temp HP',
+        'status-modal': 'Status Modal',
+        'status-auto': 'Auto Tick',
+        'death-save': 'Death Save',
+        'concentration': 'Concentration',
+        'concentration-check': 'Conc. Check'
+      };
+      return map[src] || (src ? src.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase()) : 'Manual');
+    }
+
+    function logEvent(detail = {}) {
+      const ctx = getTurnContext();
+      const entry = {
+        id: window.crypto?.randomUUID ? crypto.randomUUID() : `log-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+        timestamp: new Date().toISOString(),
+        ...ctx,
+        type: detail.type || 'info',
+        summary: detail.summary || detail.type || 'Event',
+        targetId: detail.targetId || null,
+        targetName: detail.targetName || null,
+        actorName: detail.actorName || ctx.actorName || null,
+        hpBefore: detail.hpBefore ?? null,
+        hpAfter: detail.hpAfter ?? null,
+        thpBefore: detail.thpBefore ?? null,
+        thpAfter: detail.thpAfter ?? null,
+        hpDelta: detail.hpDelta ?? ((detail.hpBefore != null && detail.hpAfter != null) ? detail.hpAfter - detail.hpBefore : null),
+        thpDelta: detail.thpDelta ?? ((detail.thpBefore != null && detail.thpAfter != null) ? detail.thpAfter - detail.thpBefore : null),
+        details: detail.details || '',
+        deathSaves: detail.deathSaves || null,
+        statusPayload: detail.statusPayload || null,
+        concentration: detail.concentration ?? null,
+        sources: Array.isArray(detail.sources)
+          ? detail.sources.filter(Boolean)
+          : [detail.source || 'manual'].filter(Boolean)
+      };
+
+      combatLog.push(entry);
+      if (combatLog.length > COMBAT_LOG_LIMIT) combatLog.shift();
+      buildCombatLog();
+      if (autoSaveEnabled) saveState();
+    }
+
+    function logHpChange(target, payload = {}) {
+      if (!target) return;
+      logEvent({
+        type: payload.type || (payload.hpAfter < payload.hpBefore ? 'damage' : 'heal'),
+        summary: payload.summary || (payload.type === 'temp' ? 'Temp HP Adjust' : (payload.hpAfter < payload.hpBefore ? 'Damage' : 'Heal')),
+        targetId: target.id,
+        targetName: target.name,
+        hpBefore: payload.hpBefore,
+        hpAfter: payload.hpAfter,
+        thpBefore: payload.thpBefore,
+        thpAfter: payload.thpAfter,
+        source: payload.source,
+        details: payload.details,
+        deathSaves: payload.deathSaves,
+        concentration: payload.concentration
+      });
+    }
+
+    function applyHpDelta(idx, delta, options = {}) {
+      if (!Number.isFinite(delta) || delta === 0) return;
+      const c = characters[idx];
+      if (!c) return;
+
+      if (!options.skipHistory) {
+        const histLabel = options.history || `HP ${delta >= 0 ? '+' : ''}${delta} for ${c.name}`;
+        pushHistory(histLabel);
+      }
+
+      const beforeHP = c.currentHP;
+      const beforeTHP = c.tempHP || 0;
+      let usedThp = 0;
+
+      if (delta < 0) {
+        let dmg = -delta;
+        usedThp = Math.min(c.tempHP || 0, dmg);
+        c.tempHP = (c.tempHP || 0) - usedThp;
+        dmg -= usedThp;
+        if (dmg > 0) {
+          const prev = c.currentHP;
+          c.currentHP = Math.max(0, Math.min(c.maxHP, c.currentHP - dmg));
+          const taken = Math.max(0, prev - c.currentHP);
+          if (taken > 0) c.concDamagePending = (c.concDamagePending || 0) + taken;
+        }
+      } else {
+        c.currentHP = Math.max(0, c.currentHP + delta);
+        if (c.currentHP > 0) c.deathSaves = { s: 0, f: 0, stable: false };
+        elevateMaxHp(c);
+      }
+
+      const afterHP = c.currentHP;
+      const afterTHP = c.tempHP || 0;
+      if (beforeHP === afterHP && beforeTHP === afterTHP) {
+        buildTable();
+        return;
+      }
+
+      const hpLoss = Math.max(0, beforeHP - afterHP);
+      const hpGain = Math.max(0, afterHP - beforeHP);
+      const detailBits = [];
+      if (usedThp) detailBits.push(`${usedThp} absorbed by THP`);
+      if (beforeHP > 0 && afterHP <= 0) detailBits.push('Dropped to 0 HP');
+      if (beforeHP <= 0 && afterHP > 0) detailBits.push('Back above 0 HP (death saves reset)');
+      if (options.extraDetails) detailBits.push(options.extraDetails);
+
+      const summary = options.summary || (delta < 0
+        ? `Damage ${hpLoss + usedThp}`
+        : `Heal ${hpGain}`);
+
+      logHpChange(c, {
+        type: delta < 0 ? 'damage' : 'heal',
+        summary,
+        hpBefore: beforeHP,
+        hpAfter: afterHP,
+        thpBefore: beforeTHP,
+        thpAfter: afterTHP,
+        source: options.source || 'quick-adjust',
+        details: detailBits.length ? detailBits.join(' • ') : undefined,
+        deathSaves: (beforeHP <= 0 && afterHP > 0) ? { ...c.deathSaves } : undefined
+      });
+
+      buildTable();
+    }
+
+    function buildCombatLog() {
+      const accordion = $('combat-log-accordion');
+      const emptyState = $('combat-log-empty');
+      const countEl = $('combat-log-count');
+      if (countEl) countEl.textContent = combatLog.length;
+      if (!accordion || !emptyState) return;
+
+      if (!combatLog.length) {
+        accordion.innerHTML = '';
+        emptyState.classList.remove('d-none');
+        return;
+      }
+
+      emptyState.classList.add('d-none');
+
+      const grouped = combatLog.reduce((acc, entry) => {
+        const key = entry.round ?? '—';
+        if (!acc[key]) acc[key] = [];
+        acc[key].push(entry);
+        return acc;
+      }, {});
+
+      const rounds = Object.keys(grouped)
+        .map(v => (v === '—' ? v : Number(v)))
+        .sort((a, b) => {
+          if (a === '—') return 1;
+          if (b === '—') return -1;
+          return b - a;
+        });
+
+      accordion.innerHTML = '';
+
+      rounds.forEach((roundKey, idx) => {
+        const entries = grouped[roundKey].slice().sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+        const collapseId = `combat-log-round-${roundKey}-${idx}`;
+        const wrapper = document.createElement('div');
+        wrapper.className = 'accordion-item bg-dark border-secondary';
+        wrapper.innerHTML = `
+          <h2 class="accordion-header" id="${collapseId}-header">
+            <button class="accordion-button ${idx === 0 ? '' : 'collapsed'} bg-dark text-light" type="button" data-bs-toggle="collapse" data-bs-target="#${collapseId}" aria-expanded="${idx === 0}">
+              Round ${roundKey} <span class="badge bg-secondary ms-2">${entries.length} entries</span>
+            </button>
+          </h2>
+          <div id="${collapseId}" class="accordion-collapse collapse ${idx === 0 ? 'show' : ''}" data-bs-parent="#combat-log-accordion">
+            <div class="accordion-body p-0">
+              <div class="table-responsive">
+                <table class="table table-sm table-dark table-striped mb-0">
+                  <thead>
+                    <tr>
+                      <th style="min-width: 120px;">Turn</th>
+                      <th style="min-width: 140px;">Action Owner</th>
+                      <th style="min-width: 140px;">Target</th>
+                      <th style="min-width: 160px;">Action</th>
+                      <th style="min-width: 110px;">HP</th>
+                      <th style="min-width: 110px;">THP</th>
+                      <th style="min-width: 200px;">Details</th>
+                      <th style="min-width: 120px;">Source</th>
+                      <th style="min-width: 110px;">Logged</th>
+                    </tr>
+                  </thead>
+                  <tbody></tbody>
+                </table>
+              </div>
+            </div>
+          </div>`;
+
+        const tbody = wrapper.querySelector('tbody');
+        entries.forEach(entry => {
+          const turnLabel = (entry.turnName ?? '—') + (Number.isFinite(entry.turnIndex) ? ` (#${(entry.turnIndex ?? 0) + 1})` : '');
+          const hpText = (entry.hpBefore != null && entry.hpAfter != null)
+            ? `${entry.hpBefore} → ${entry.hpAfter}${entry.hpDelta != null && entry.hpDelta !== 0 ? ` (${entry.hpDelta > 0 ? '+' : ''}${entry.hpDelta})` : ''}`
+            : '—';
+          const thpText = (entry.thpBefore != null && entry.thpAfter != null)
+            ? `${entry.thpBefore} → ${entry.thpAfter}${entry.thpDelta != null && entry.thpDelta !== 0 ? ` (${entry.thpDelta > 0 ? '+' : ''}${entry.thpDelta})` : ''}`
+            : '—';
+          const detailText = [entry.details, entry.statusPayload, entry.deathSaves ? `Death Saves — S:${entry.deathSaves.s} F:${entry.deathSaves.f}${entry.deathSaves.stable ? ' (Stable)' : ''}` : '', entry.concentration ?? '']
+            .filter(Boolean)
+            .join(' • ');
+          const sourceBadges = (entry.sources || []).map(flag => `<span class="badge bg-secondary me-1">${formatSourceLabel(flag)}</span>`).join('') || '—';
+          let loggedTime = '—';
+          if (entry.timestamp) {
+            const entryDate = new Date(entry.timestamp);
+            const today = new Date();
+            const sameDay = entryDate.toDateString() === today.toDateString();
+            const timePart = entryDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            if (sameDay) {
+              loggedTime = timePart;
+            } else {
+              const datePart = entryDate.toLocaleDateString([], { month: 'short', day: 'numeric' });
+              loggedTime = `${datePart} ${timePart}`;
+            }
+          }
+
+          const row = document.createElement('tr');
+          row.innerHTML = `
+            <td>${turnLabel}</td>
+            <td>${entry.actorName || entry.turnName || '—'}</td>
+            <td>${entry.targetName || '—'}</td>
+            <td>${entry.summary}</td>
+            <td>${hpText}</td>
+            <td>${thpText}</td>
+            <td>${detailText || '—'}</td>
+            <td>${sourceBadges}</td>
+            <td>${loggedTime}</td>`;
+          tbody.appendChild(row);
+        });
+
+        accordion.appendChild(wrapper);
+      });
+    }
   // ---------- Build UI ----------
   function buildTable(){
     $('combat-round').textContent = combatRound;
@@ -687,6 +971,11 @@ $('clear-dice-history').addEventListener('click', ()=>{
               <button class="btn btn-outline-light hit-btn" data-delta="-1" data-index="${i}">-1</button>
               <button class="btn btn-outline-light hit-btn" data-delta="1" data-index="${i}">+1</button>
               <button class="btn btn-outline-light hit-btn" data-delta="5" data-index="${i}">+5</button>
+            </div>
+            <div class="input-group input-group-sm ms-2 precision-control" style="max-width:11rem;">
+              <input type="number" min="1" class="form-control precision-amount" data-index="${i}" placeholder="Amount">
+              <button class="btn btn-outline-danger precision-damage" data-index="${i}" title="Apply damage"><i class="bi bi-dash-circle"></i></button>
+              <button class="btn btn-outline-success precision-heal" data-index="${i}" title="Apply healing"><i class="bi bi-plus-circle"></i></button>
             </div>
             <div class="tempHP ms-2 temphp-wrap">
               <span class="temphp-badge">THP: <span class="temphp-val">${c.tempHP||0}</span></span>
@@ -753,6 +1042,11 @@ $('clear-dice-history').addEventListener('click', ()=>{
               <button class="btn btn-outline-light hit-btn" data-delta="1" data-index="${i}">+1</button>
               <button class="btn btn-outline-light hit-btn" data-delta="5" data-index="${i}">+5</button>
             </div>
+            <div class="input-group input-group-sm mt-1 precision-control">
+              <input type="number" min="1" class="form-control precision-amount" data-index="${i}" placeholder="Amount">
+              <button class="btn btn-outline-danger precision-damage" data-index="${i}" title="Apply damage"><i class="bi bi-dash-circle"></i></button>
+              <button class="btn btn-outline-success precision-heal" data-index="${i}" title="Apply healing"><i class="bi bi-plus-circle"></i></button>
+            </div>
           </div>
           <div class="d-flex align-items-center justify-content-between">
             <div class="status-icon-row" data-bs-toggle="tooltip" title="${statusTooltipText(c)}">
@@ -788,31 +1082,42 @@ $('clear-dice-history').addEventListener('click', ()=>{
       b.addEventListener('click', function() {
         const idx = +this.dataset.index;
         const delta = +this.dataset.delta;
-        const c = characters[idx];
-      
-        pushHistory(`HP ${delta>=0?'+':''}${delta} for ${c.name}`);
-      
-        if (delta < 0) {
-          // Damage: consume temp HP first
-          let dmg = -delta;
-          const usedThp = Math.min(c.tempHP || 0, dmg);
-          c.tempHP = (c.tempHP || 0) - usedThp;
-          dmg -= usedThp;
-          if (dmg > 0) {
-            const oldHP = c.currentHP;
-            c.currentHP = Math.max(0, Math.min(c.maxHP, c.currentHP - dmg));
-            const taken = Math.max(0, oldHP - c.currentHP);
-            c.concDamagePending = (c.concDamagePending || 0) + taken;
-          }
-        } else {
-          // Healing
-          const oldHP = c.currentHP;
-          c.currentHP = Math.max(0, c.currentHP + delta);
-          // Any healing resets death saves & stable
-          if (c.currentHP > 0) c.deathSaves = { s:0, f:0, stable:false };
-          elevateMaxHp(c);
-        }
-        buildTable();
+        applyHpDelta(idx, delta, { source: 'quick-adjust' });
+      });
+    });
+    const readPrecisionAmount = (triggerEl) => {
+      const wrap = triggerEl.closest('.precision-control');
+      const input = wrap ? wrap.querySelector('.precision-amount') : null;
+      if (!input) return { amount: 0, input: null };
+      const raw = parseInt(input.value, 10);
+      return { amount: Math.max(0, Math.abs(raw || 0)), input };
+    };
+    document.querySelectorAll('.precision-damage').forEach(btn => {
+      btn.addEventListener('click', function() {
+        const idx = +this.dataset.index;
+        const { amount, input } = readPrecisionAmount(this);
+        if (!amount) { alert('Enter a positive amount to apply.'); return; }
+        const name = characters[idx]?.name || 'Target';
+        if (input) input.value = '';
+        applyHpDelta(idx, -amount, {
+          source: 'precision-adjust',
+          history: `Damage ${amount} for ${name}`,
+          extraDetails: 'Precision damage'
+        });
+      });
+    });
+    document.querySelectorAll('.precision-heal').forEach(btn => {
+      btn.addEventListener('click', function() {
+        const idx = +this.dataset.index;
+        const { amount, input } = readPrecisionAmount(this);
+        if (!amount) { alert('Enter a positive amount to apply.'); return; }
+        const name = characters[idx]?.name || 'Target';
+        if (input) input.value = '';
+        applyHpDelta(idx, amount, {
+          source: 'precision-adjust',
+          history: `Heal ${amount} for ${name}`,
+          extraDetails: 'Precision heal'
+        });
       });
     });
     document.querySelectorAll('.temphp-btn').forEach(btn=>{
@@ -820,8 +1125,21 @@ $('clear-dice-history').addEventListener('click', ()=>{
         const idx = +this.dataset.index;
         const d  = +this.dataset.delta;
         const c  = characters[idx];
+        const beforeTHP = c.tempHP || 0;
         pushHistory(`TempHP ${d>=0?'+':''}${d} for ${c.name}`);
         c.tempHP = Math.max(0, (c.tempHP||0) + d);
+        const afterTHP = c.tempHP || 0;
+        if (beforeTHP !== afterTHP) {
+          logHpChange(c, {
+            type: 'temp',
+            summary: `Temp HP ${afterTHP - beforeTHP >= 0 ? '+' : ''}${afterTHP - beforeTHP}`,
+            hpBefore: c.currentHP,
+            hpAfter: c.currentHP,
+            thpBefore: beforeTHP,
+            thpAfter: afterTHP,
+            source: 'temp-hp'
+          });
+        }
         buildTable();
       });
     });
@@ -838,10 +1156,31 @@ $('clear-dice-history').addEventListener('click', ()=>{
     const c = characters[idx];
     const isDowned = (c.maxHP > 0 && c.currentHP <= 0);
       if (!isDowned) return; // only when actually downed
+        const prevDS = { ...c.deathSaves };
         pushHistory(`Death Save +${kind.toUpperCase()} for ${c.name}`);
         if (kind === 's') c.deathSaves.s = Math.min(3, (c.deathSaves.s||0) + 1);
         else c.deathSaves.f = Math.min(3, (c.deathSaves.f||0) + 1);
         updateDeathState(c);
+        logEvent({
+          type: 'death-save',
+          summary: kind === 's' ? '+ Success' : '+ Failure',
+          targetId: c.id,
+          targetName: c.name,
+          source: 'death-save',
+          details: `S:${c.deathSaves.s} • F:${c.deathSaves.f}${c.deathSaves.stable ? ' • Stable' : ''}`,
+          deathSaves: { ...c.deathSaves }
+        });
+        if (!prevDS.stable && c.deathSaves.stable) {
+          logEvent({
+            type: 'death-save',
+            summary: 'Stabilized',
+            targetId: c.id,
+            targetName: c.name,
+            source: 'death-save',
+            details: 'Reached 3 successes (Stable)',
+            deathSaves: { ...c.deathSaves }
+          });
+        }
         buildTable();
       });
     });
@@ -851,6 +1190,15 @@ $('clear-dice-history').addEventListener('click', ()=>{
         const c = characters[idx];
         pushHistory(`Death Saves reset for ${c.name}`);
         c.deathSaves = { s:0, f:0, stable:false };
+        logEvent({
+          type: 'death-save',
+          summary: 'Death Saves Reset',
+          targetId: c.id,
+          targetName: c.name,
+          source: 'death-save',
+          details: 'Cleared successes and failures',
+          deathSaves: { ...c.deathSaves }
+        });
         buildTable();
       });
     });
@@ -885,6 +1233,7 @@ $('clear-dice-history').addEventListener('click', ()=>{
         const idx = +this.dataset.index;
         const newHP = Math.max(0, parseInt(this.value, 10) || 0); 
         const oldHP = characters[idx].currentHP;
+        const beforeTHP = characters[idx].tempHP || 0;
         if (!pushed && newHP !== oldHP) pushHistory(`HP set for ${characters[idx].name}`);
         if (newHP < oldHP) {
           characters[idx].concDamagePending = (characters[idx].concDamagePending || 0) + (oldHP - newHP);
@@ -894,6 +1243,22 @@ $('clear-dice-history').addEventListener('click', ()=>{
         }
         characters[idx].currentHP = newHP;
         elevateMaxHp(characters[idx]); 
+        if (newHP !== oldHP) {
+          const details = [];
+          if (oldHP > 0 && newHP <= 0) details.push('Dropped to 0 HP');
+          if (oldHP <= 0 && newHP > 0) details.push('Back above 0 HP (death saves reset)');
+          logHpChange(characters[idx], {
+            type: newHP < oldHP ? 'damage' : 'heal',
+            summary: newHP < oldHP ? `Damage ${oldHP - newHP}` : `Heal ${newHP - oldHP}`,
+            hpBefore: oldHP,
+            hpAfter: newHP,
+            thpBefore: beforeTHP,
+            thpAfter: beforeTHP,
+            source: 'manual-input',
+            details: details.join(' • ') || undefined,
+            deathSaves: (oldHP <= 0 && newHP > 0) ? { ...characters[idx].deathSaves } : undefined
+          });
+        }
         buildTable();
       });
       inp.addEventListener('input', function(){
@@ -963,6 +1328,14 @@ $('clear-dice-history').addEventListener('click', ()=>{
         const idx = +this.dataset.index;
         pushHistory(`Toggle Concentration for ${characters[idx].name}`);
         characters[idx].concentration = !characters[idx].concentration;
+        logEvent({
+          type: 'concentration',
+          summary: characters[idx].concentration ? 'Concentration On' : 'Concentration Off',
+          targetId: characters[idx].id,
+          targetName: characters[idx].name,
+          source: 'concentration',
+          concentration: characters[idx].concentration ? 'Maintaining concentration' : 'Concentration dropped'
+        });
         buildTable();
       });
     });
@@ -1100,6 +1473,7 @@ $('clear-dice-history').addEventListener('click', ()=>{
       sortableInstance.option('disabled', $('lockOrderToggle')?.checked === true);
     }
     buildDiceHistory();
+    buildCombatLog();
     if (autoSaveEnabled) saveState();
   }
   // First-visit helper: show the Help panel once
@@ -1126,6 +1500,14 @@ $('clear-dice-history').addEventListener('click', ()=>{
       const eff = this.dataset.eff;
       pushHistory(`Remove ${eff} from ${c.name}`);
       c.status = c.status.filter(ss => ss.name !== eff);
+      logEvent({
+        type: 'status-remove',
+        summary: `Removed ${eff}`,
+        targetId: c.id,
+        targetName: c.name,
+        source: 'status-modal',
+        statusPayload: `Removed ${eff}`
+      });
       buildTable();
       openStatusModal(i);
     });
@@ -1154,6 +1536,14 @@ $('clear-dice-history').addEventListener('click', ()=>{
       if (!isNaN(durVal) && durVal >= 0) eff.remaining = durVal;
       pushHistory(`Add ${pendingEffect} to ${c.name}`);
       c.status.push(eff);
+      logEvent({
+        type: 'status-add',
+        summary: `Added ${pendingEffect}`,
+        targetId: c.id,
+        targetName: c.name,
+        source: 'status-modal',
+        statusPayload: `Added ${pendingEffect}${typeof eff.remaining === 'number' ? ` (${eff.remaining} rnds)` : ''}`
+      });
       $('status-duration').value = '';
       // keep modal open
       statusModal = bootstrap.Modal.getOrCreateInstance(document.getElementById('statusModal'));
@@ -1173,26 +1563,49 @@ $('clear-dice-history').addEventListener('click', ()=>{
   // ---------- Round & durations ----------
   function tickStatusDurationsOnNewRound(){
     characters.forEach(c=>{
-      c.status = (c.status||[])
-        .map(s=>{
-          if (typeof s.remaining === 'number' && s.remaining > 0){
-            return {...s, remaining: s.remaining - 1};
+      const nextStatuses = [];
+      (c.status || []).forEach(s => {
+        if (typeof s.remaining === 'number') {
+          const nextRemaining = s.remaining - 1;
+          if (nextRemaining <= 0) {
+            logEvent({
+              type: 'status-expire',
+              summary: `${s.name} expired`,
+              targetId: c.id,
+              targetName: c.name,
+              source: 'status-auto',
+              statusPayload: `${s.name} expired`
+            });
+          } else {
+            nextStatuses.push({ ...s, remaining: nextRemaining });
           }
-          return s;
-        })
-        .filter(s=> s.remaining === undefined || s.remaining > 0);
+        } else {
+          nextStatuses.push(s);
+        }
+      });
+      c.status = nextStatuses;
     });
   }
-  function handleEndOfTurnConcentration() {
-    // Enqueue a toast for every concentrating creature that took real HP damage this turn.
-    characters.forEach((c, idx) => {
-      const dmg = c.concDamagePending || 0;
-      if (c.concentration && dmg > 0) {
-        const dc = Math.max(10, Math.floor(dmg / 2));
-        enqueueConcentrationPrompt(idx, dmg, dc);
-        // IMPORTANT: do NOT zero-out here; we clear on Pass/Fail to avoid losing prompts.
-      }
-    });
+  function queueConcentrationCheck(idx){
+    if (idx == null) return;
+    const c = characters[idx];
+    if (!c) return;
+    const dmg = c.concDamagePending || 0;
+    if (!c.concentration || dmg <= 0) return;
+    const dc = Math.max(10, Math.floor(dmg / 2));
+    enqueueConcentrationPrompt(idx, dmg, dc);
+    c.concDamagePending = 0;
+  }
+
+  function handleEndOfTurnConcentration(primaryIdx = currentTurn) {
+    const seen = new Set();
+    const tryQueue = idx => {
+      if (idx == null || seen.has(idx)) return;
+      seen.add(idx);
+      queueConcentrationCheck(idx);
+    };
+    tryQueue(primaryIdx);
+    characters.forEach((_, idx) => tryQueue(idx));
   }
   // ---------- Controls ----------
     $('initiative-form').addEventListener('submit', e=>{
@@ -1236,7 +1649,8 @@ $('clear-dice-history').addEventListener('click', ()=>{
   $('next-turn').addEventListener('click', ()=>{
     if (!characters.length) return;
     const len = characters.length;
-    handleEndOfTurnConcentration();
+    const endingIdx = currentTurn;
+    handleEndOfTurnConcentration(endingIdx);
     let attempts = 0;
     do{
       currentTurn = (currentTurn + 1) % len;
@@ -1250,7 +1664,7 @@ $('clear-dice-history').addEventListener('click', ()=>{
     buildTable();  
   });
   $('reset-turns').addEventListener('click', ()=>{ currentTurn=0; combatRound=1; buildTable(); });
-  $('clear-all').addEventListener('click', ()=>{ characters=[]; currentTurn=0; combatRound=1; buildTable(); });
+  $('clear-all').addEventListener('click', ()=>{ characters=[]; currentTurn=0; combatRound=1; combatLog = []; buildTable(); });
   $('clear-storage').addEventListener('click', () => {
     if (!confirm('Clear ALL saved data for the Initiative Tracker (sessions, templates, notes)?')) return;
     // Main auto-save state
@@ -1268,6 +1682,7 @@ $('clear-dice-history').addEventListener('click', ()=>{
     characters = [];
     currentTurn = 0;
     combatRound = 1;
+    combatLog = [];
     buildSavedUI();
     buildTable();
     alert('All Initiative Tracker data cleared.');
@@ -1335,6 +1750,8 @@ $('clear-dice-history').addEventListener('click', ()=>{
 
     // Apply to all targets
     targets.forEach(c => {
+      const beforeHP = c.currentHP;
+      const beforeTHP = c.tempHP || 0;
       if (action === 'fullheal') {
         c.currentHP = c.maxHP;
         if (c.currentHP > 0) c.deathSaves = { s:0, f:0, stable:false };
@@ -1354,6 +1771,30 @@ $('clear-dice-history').addEventListener('click', ()=>{
           const taken = oldHP - c.currentHP;
           c.concDamagePending = (c.concDamagePending || 0) + taken;
         }
+      }
+
+      const afterHP = c.currentHP;
+      const afterTHP = c.tempHP || 0;
+      if (beforeHP !== afterHP || beforeTHP !== afterTHP) {
+        const summary = action === 'fullheal'
+          ? 'Bulk Full Heal'
+          : action === 'heal'
+            ? `Bulk Heal +${amount}`
+            : `Bulk Damage ${amount}`;
+        const detailBits = [`Target filter: ${targetType}`];
+        if (beforeHP > 0 && afterHP <= 0) detailBits.push('Dropped to 0 HP');
+        if (beforeHP <= 0 && afterHP > 0) detailBits.push('Back above 0 HP (death saves reset)');
+        logHpChange(c, {
+          type: action === 'damage' ? 'damage' : 'heal',
+          summary,
+          hpBefore: beforeHP,
+          hpAfter: afterHP,
+          thpBefore: beforeTHP,
+          thpAfter: afterTHP,
+          source: 'bulk-hp',
+          details: detailBits.join(' • '),
+          deathSaves: (beforeHP <= 0 && afterHP > 0) ? { ...c.deathSaves } : undefined
+        });
       }
     });
 
@@ -1396,12 +1837,21 @@ $('clear-dice-history').addEventListener('click', ()=>{
       currentTurn = data.currentTurn||0;
       combatRound = data.combatRound||1;
       diceHistory = Array.isArray(data.diceHistory) ? data.diceHistory : [];
+      combatLog = Array.isArray(data.combatLog) ? data.combatLog.slice(-COMBAT_LOG_LIMIT) : [];
       buildTable();
     }catch(e){ alert('Failed to load that save.'); }
   });
   // Export/Import session
   $('export-btn').addEventListener('click', ()=>{
-    const blob = new Blob([JSON.stringify({characters,currentTurn,combatRound,diceHistory}, null, 2)], { type:'application/json' });
+    const payload = {
+      characters,
+      currentTurn,
+      combatRound,
+      diceHistory,
+      combatLog,
+      savedTemplates: getSaved()
+    };
+    const blob = new Blob([JSON.stringify(payload, null, 2)], { type:'application/json' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a'); a.href=url; a.download=`initiativeTracker_${new Date().toISOString()}.json`;
     document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
@@ -1416,11 +1866,49 @@ $('clear-dice-history').addEventListener('click', ()=>{
         characters = (d.characters||[]).map(normalizeChar);
         currentTurn = d.currentTurn||0;
         combatRound = d.combatRound||1;
-        diceHistory = d.diceHistory||[];
+        diceHistory = Array.isArray(d.diceHistory) ? d.diceHistory : [];
+        combatLog = Array.isArray(d.combatLog) ? d.combatLog.slice(-COMBAT_LOG_LIMIT) : [];
+        if (Array.isArray(d.savedTemplates)) {
+          setSaved(d.savedTemplates.slice(0, MAX_SAVED));
+          buildSavedUI();
+        }
         buildTable(); alert('Session imported successfully.');
       }catch(err){ alert('Failed to import session. Invalid file.'); }
     };
     r.readAsText(f); this.value='';
+  });
+  $('export-log-json')?.addEventListener('click', () => {
+    if (!combatLog.length) { alert('Combat log is empty.'); return; }
+    const blob = new Blob([JSON.stringify(combatLog, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `combat-log_${new Date().toISOString()}.json`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  });
+  $('export-log-text')?.addEventListener('click', () => {
+    if (!combatLog.length) { alert('Combat log is empty.'); return; }
+    const lines = combatLog.map(entry => {
+      const time = entry.timestamp ? new Date(entry.timestamp).toLocaleString() : '';
+      const turnNum = Number.isFinite(entry.turnIndex) ? entry.turnIndex + 1 : '—';
+      const hpText = (entry.hpBefore != null && entry.hpAfter != null) ? `HP ${entry.hpBefore}→${entry.hpAfter}` : '';
+      const thpText = (entry.thpBefore != null && entry.thpAfter != null) ? `THP ${entry.thpBefore}→${entry.thpAfter}` : '';
+      const detailText = [entry.details, entry.statusPayload, entry.deathSaves ? `Deathsaves S:${entry.deathSaves.s}/F:${entry.deathSaves.f}${entry.deathSaves.stable ? ' stable' : ''}` : '', entry.concentration].filter(Boolean).join(' | ');
+      const sources = (entry.sources || []).map(formatSourceLabel).join(', ');
+      return `[${time}] Round ${entry.round ?? '—'} | Turn ${entry.turnName || '—'} (#${turnNum}) | ${entry.summary} → Target: ${entry.targetName || '—'} | ${hpText} ${thpText} | ${detailText || 'No extra details'} | Source: ${sources || 'Manual'}`.replace(/\s+/g, ' ').trim();
+    }).join('\n');
+    const blob = new Blob([lines], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `combat-log_${new Date().toISOString()}.txt`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
   });
   // Keyboard shortcuts (not when typing)
   document.addEventListener('keydown', e=>{

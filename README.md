@@ -235,5 +235,18 @@ The DM's Toolbox includes accessibility features:
 ## 📝 License & Attribution
 
 - **Code & original assets:** MIT License — free to use, modify, fork, or extend.
-- **SRD-derived rules text:** Creative Commons Attribution 4.0 International (see [docs/licensing/SRD-5.1-CC-BY-4.0.md](docs/licensing/SRD-5.1-CC-BY-4.0.md)). The app footer and exports include the required attribution: “This work includes material from the System Reference Document 5.1 by Wizards of the Coast LLC and is licensed for our use under the Creative Commons Attribution 4.0 International License.”
+- **SRD-derived rules text:** Creative Commons Attribution 4.0 International (see [docs/licensing/SRD-5.1-CC-BY-4.0.md](docs/licensing/SRD-5.1-CC-BY-4.0.md)). Exported PDFs/printouts still embed the compliance block automatically, but the live pages now link here instead of repeating the full copy.
 - **Product identity disclaimer:** Wizards of the Coast, Dungeons & Dragons, Forgotten Realms, Ravenloft, Eberron, the dragon ampersand, beholders, githyanki, githzerai, mind flayers, yuan-ti, and all other Wizards of the Coast product identity are trademarks of Wizards of the Coast LLC in the U.S.A. and other countries. The DM’s Toolbox is not affiliated with, endorsed, sponsored, or specifically approved by Wizards of the Coast LLC.
+
+### SRD Attribution Text
+
+This work includes material from the System Reference Document 5.1 by Wizards of the Coast LLC and is licensed for our use under the Creative Commons Attribution 4.0 International License.
+
+### Product Identity Disclaimer
+
+The DM's Toolbox references rules and mechanics from the Dungeons & Dragons 5e System Reference Document 5.1. Wizards of the Coast, Dungeons & Dragons, Forgotten Realms, Ravenloft, Eberron, the dragon ampersand, beholders, githyanki, githzerai, mind flayers, yuan-ti, and all other Wizards of the Coast product identity are trademarks of Wizards of the Coast LLC in the U.S.A. and other countries. The DM's Toolbox is not affiliated with, endorsed, sponsored, or specifically approved by Wizards of the Coast LLC.
+
+### Reference Materials
+
+- [Creative Commons Attribution 4.0 International License](https://creativecommons.org/licenses/by/4.0/)
+- [D&D 5e System Reference Document 5.1 PDF](https://media.wizards.com/2016/downloads/DND/SRD-OGL_V5.1.pdf)

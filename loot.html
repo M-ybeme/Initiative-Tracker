@@ -7,7 +7,7 @@
 
   <!-- Bootstrap CSS + Icons -->
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" crossorigin="anonymous" />
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.8.3/font/bootstrap-icons.css" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" />
 
   <!-- Custom CSS -->
   <link href="/css/site.css" rel="stylesheet" />
@@ -212,6 +212,11 @@
               <div class="mb-2 advanced-setting">
                 <label for="lg-template" class="form-label">Hoard Template</label>
                 <select id="lg-template" class="form-select">
+                    <option value="custom">Custom (no preset)</option>
+                    <option value="t1">Tier I (Lv 1–4 / CR 1–4)</option>
+                    <option value="t2">Tier II (Lv 5–10 / CR 5–10)</option>
+                    <option value="t3">Tier III (Lv 11–16 / CR 11–16)</option>
+                    <option value="t4">Tier IV (Lv 17–20 / CR 17+)</option>
                   <option value="none">None (generic mix)</option>
                   <option value="bandit">Bandit cache</option>
                   <option value="cult">Cult sanctum</option>
@@ -1553,7 +1558,28 @@ const CATS={
       {n:"tankard of purity (detects poison in drink)",mat:"metal",w:0.6,sp:[750,1500],kind:"ongoing"},
       {n:"prestidigitation ring (create minor sensory effects)",mat:"metal",w:0.05,sp:[800,1600],kind:"ongoing"},
       {n:"warming cloak clasp (wearer comfortable in cold)",mat:"metal",w:0.1,sp:[700,1400],kind:"ongoing"},
-      {n:"cooling hat pin (wearer comfortable in heat)",mat:"metal",w:0.05,sp:[700,1400],kind:"ongoing"}
+      {n:"cooling hat pin (wearer comfortable in heat)",mat:"metal",w:0.05,sp:[700,1400],kind:"ongoing"},
+      // Baldur's Gate inspired curios
+      {n:"smoldercoil circlet (spark a torch on command)",mat:"metal",w:0.15,sp:[700,1400],kind:"gear"},
+      {n:"umbrawhisper boots (muffle footsteps for 1 minute)",mat:"leather",w:1.1,sp:[720,1450],kind:"gear"},
+      {n:"silverstrike ring (add +1 to one weapon attack per rest)",mat:"metal",w:0.05,sp:[720,1500],kind:"gear"},
+      {n:"glimmerfen cloak clasp (advantage on one Stealth check)",mat:"metal",w:0.08,sp:[700,1400],kind:"gear"},
+      {n:"astral attunement charm (reroll a failed Arcana check once)",mat:"stone",w:0.1,sp:[750,1500],kind:"gear"},
+      {n:"harper signal chord (emit a soft note audible to allies)",mat:"cloth",w:0.05,sp:[680,1300],kind:"gear"},
+      {n:"redrook courier sash (dash as bonus action once)",mat:"cloth",w:0.2,sp:[760,1500],kind:"gear"},
+      {n:"illuminator's quill (scribe glowing text for 1 hour)",mat:"wood",w:0.05,sp:[680,1350],kind:"gear"},
+      {n:"duskward rosary (advantage on one Wisdom save vs charm)",mat:"stone",w:0.12,sp:[780,1550],kind:"gear"},
+      {n:"hellspark vial (burst of harmless fireworks distraction)",mat:"glass",w:0.3,sp:[700,1300],kind:"consumable"},
+      {n:"forgehand wraps (steady grip in freezing temps)",mat:"cloth",w:0.25,sp:[720,1400],kind:"ongoing"},
+      {n:"wyrm-etched brooch (sense nearest dragon for 1 minute)",mat:"metal",w:0.1,sp:[780,1500],kind:"gear"},
+      {n:"songsteel tuning fork (advantage on next Performance check)",mat:"metal",w:0.2,sp:[680,1350],kind:"gear"},
+      {n:"moorbound lantern shard (emit dim blue light on command)",mat:"glass",w:0.35,sp:[650,1200],kind:"ongoing"},
+      {n:"emerald veil visor (ignore bright light penalties briefly)",mat:"metal",w:0.3,sp:[720,1400],kind:"gear"},
+      {n:"archfey whisperleaf (understand Sylvan for 10 minutes)",mat:"cloth",w:0.05,sp:[760,1500],kind:"consumable"},
+      {n:"gauntlet of steady aim (once add +2 to a ranged attack)",mat:"metal",w:0.6,sp:[780,1500],kind:"gear"},
+      {n:"psalm-toned bell (calm frightened allies within 10 ft)",mat:"metal",w:0.4,sp:[700,1300],kind:"gear"},
+      {n:"miststep sandals (reduce fall damage by 1d6 once per day)",mat:"cloth",w:0.9,sp:[780,1500],kind:"gear"},
+      {n:"ebonroot charm (advantage on one Nature check)",mat:"wood",w:0.08,sp:[650,1200],kind:"gear"}
     ],
     make:(rng,b)=>{
       const m=pick(rng,MATERIALS[b.mat]);
@@ -1772,7 +1798,7 @@ function makeOne(rng,catKey,noBundle=false,templateKey="none",magicOn=false,curs
 }
 
 // Weighted category pick from usefulness slider + template multipliers; include Minor Magic and Cursed Items if allowed
-function categoryWeights(selectedCats,usefulness01,templateKey,magicOn,cursedOn){
+function categoryWeights(selectedCats,usefulness01,templateKey,magicOn,cursedOn,allowMinorMagicPool=true,allowCursedPool=true){
   const base = {
     "Trade Goods": 0.8, "Gems & Art": 0.9, "Adventuring Gear of Note": 0.85, "Toolkits & Supplies": 0.8,
     "Coins & Purses": 0.6,
@@ -1799,14 +1825,14 @@ function categoryWeights(selectedCats,usefulness01,templateKey,magicOn,cursedOn)
     weights[c]=Math.max(0.0001,w);
   }
   // If magic on, add Minor Magic implicitly (not in checkboxes)
-  if(magicOn){
+  if(magicOn && allowMinorMagicPool){
     let w = base["Minor Magic"];
     if(templateKey==="wizard") w *= 1.35;
     weights["Minor Magic"] = (weights["Minor Magic"]||0) + w;
   }
 
   // If cursed on, add Cursed Items implicitly (not in checkboxes)
-  if(cursedOn){
+  if(cursedOn && allowCursedPool){
     let w = base["Cursed Items"];
     if(templateKey==="lich") w *= 1.5;
     if(templateKey==="demon") w *= 1.4;
@@ -1843,15 +1869,15 @@ function weightedPick(rng, cats, weights){
 
 // ---------- Generation core (Count mode) ----------
 function generateCount(rng, selectedCats, opts){
-  const {count,minSp,maxSp,usefulness01,templateKey,magicOn,cursedOn,curseSeverity} = opts;
-  const weights=categoryWeights(selectedCats,usefulness01,templateKey,magicOn,cursedOn);
+  const {count,minSp,maxSp,usefulness01,templateKey,magicOn,cursedOn,curseSeverity,allowMinorMagicPool=true,allowCursedPool=true} = opts;
+  const weights=categoryWeights(selectedCats,usefulness01,templateKey,magicOn,cursedOn,allowMinorMagicPool,allowCursedPool);
   const seen=new Set(), list=[];
   let guard=0, maxGuard=count*100;
 
   // include Minor Magic and Cursed Items implicitly in selection list when enabled
-  let pickableCats = [...selectedCats];
-  if(magicOn) pickableCats.push("Minor Magic");
-  if(cursedOn) pickableCats.push("Cursed Items");
+  let pickableCats = [...new Set(selectedCats)];
+  if(magicOn && allowMinorMagicPool && !pickableCats.includes("Minor Magic")) pickableCats.push("Minor Magic");
+  if(cursedOn && allowCursedPool && !pickableCats.includes("Cursed Items")) pickableCats.push("Cursed Items");
 
   while(list.length<count && guard++<maxGuard){
     const cat=weightedPick(rng,pickableCats,weights);
@@ -1866,11 +1892,11 @@ function generateCount(rng, selectedCats, opts){
 
 // ---------- Generation to budget (Budget mode) ----------
 function generateToBudget(rng, selectedCats, opts){
-  const {targetSp, softCount, minSp, maxSp, usefulness01, templateKey, magicOn, cursedOn, curseSeverity} = opts;
-  const weights=categoryWeights(selectedCats,usefulness01,templateKey,magicOn,cursedOn);
-  let pickableCats = [...selectedCats];
-  if(magicOn) pickableCats.push("Minor Magic");
-  if(cursedOn) pickableCats.push("Cursed Items");
+  const {targetSp, softCount, minSp, maxSp, usefulness01, templateKey, magicOn, cursedOn, curseSeverity, allowMinorMagicPool=true, allowCursedPool=true} = opts;
+  const weights=categoryWeights(selectedCats,usefulness01,templateKey,magicOn,cursedOn,allowMinorMagicPool,allowCursedPool);
+  let pickableCats = [...new Set(selectedCats)];
+  if(magicOn && allowMinorMagicPool && !pickableCats.includes("Minor Magic")) pickableCats.push("Minor Magic");
+  if(cursedOn && allowCursedPool && !pickableCats.includes("Cursed Items")) pickableCats.push("Cursed Items");
   const list=[]; let total=0; let guard=0;
 
   // Greedy fill
@@ -2050,7 +2076,9 @@ const QUICK_BUNDLES = {
     template: "none",
     monster: "none",
     magic: true,
-    categories: ["Potions & Elixirs"]
+    categories: ["Potions & Elixirs"],
+    overrideCategories: ["Potions & Elixirs"],
+    allowImplicitMinorMagic: false
   },
   scrolls: {
     name: "Scroll Bundle (3)",
@@ -2064,7 +2092,9 @@ const QUICK_BUNDLES = {
     template: "none",
     monster: "none",
     magic: true,
-    categories: ["Arcane Scrolls"]
+    categories: ["Arcane Scrolls"],
+    overrideCategories: ["Arcane Scrolls"],
+    allowImplicitMinorMagic: false
   },
   boss: {
     name: "Boss Hoard",
@@ -2094,7 +2124,10 @@ const QUICK_BUNDLES = {
     magic: true,
     cursed: false,
     curseSeverity: 3,
-    categories: ["Adventuring Gear of Note", "Toolkits & Supplies", "Gems & Art", "Trade Goods", "Bags & Containers"]
+    categories: ["Adventuring Gear of Note"],
+    overrideCategories: ["Minor Magic"],
+    allowImplicitMinorMagic: true,
+    allowImplicitCursed: false
   },
   curseditems: {
     name: "Cursed Items",
@@ -2110,13 +2143,42 @@ const QUICK_BUNDLES = {
     magic: false,
     cursed: true,
     curseSeverity: 3,
-    categories: ["Adventuring Gear of Note", "Toolkits & Supplies", "Clothing & Wearables", "Gems & Art", "Bags & Containers"]
+    categories: ["Adventuring Gear of Note", "Toolkits & Supplies", "Clothing & Wearables", "Gems & Art", "Bags & Containers"],
+    overrideCategories: ["Cursed Items"],
+    allowImplicitMinorMagic: false,
+    allowImplicitCursed: true
   }
 };
+
+let activeQuickBundle = null;
+
+function setActiveQuickBundle(bundleKey) {
+  const bundle = QUICK_BUNDLES[bundleKey];
+  if (!bundle) {
+    activeQuickBundle = null;
+    return;
+  }
+  const override = (bundle.overrideCategories && bundle.overrideCategories.length)
+    ? bundle.overrideCategories
+    : (bundle.categories || []);
+  const filtered = override.filter(cat => !!CATS[cat]);
+  activeQuickBundle = {
+    key: bundleKey,
+    categories: filtered.length ? Array.from(new Set(filtered)) : null,
+    allowImplicitMinorMagic: bundle.allowImplicitMinorMagic !== false,
+    allowImplicitCursed: bundle.allowImplicitCursed !== false
+  };
+}
+
+function clearActiveQuickBundle() {
+  activeQuickBundle = null;
+}
 
 function applyQuickBundle(bundleKey) {
   const bundle = QUICK_BUNDLES[bundleKey];
   if (!bundle) return;
+
+  setActiveQuickBundle(bundleKey);
 
   // Set all form values
   if (bundle.mode === "budget") {
@@ -2169,6 +2231,7 @@ function doGenerate(){
   const magicOn = $("lg-magic").checked;
   const cursedOn = $("lg-cursed").checked;
   const curseSeverity = cursedOn ? (+$("lg-curse-severity").value || 3) : 3;
+  const bundleCtx = activeQuickBundle;
 
   // Monster type overrides template
   if(monsterType !== "none"){
@@ -2188,6 +2251,9 @@ function doGenerate(){
   }
 
   let selectedCats=currentSelectedCats();
+  if(bundleCtx?.categories?.length){
+    selectedCats = bundleCtx.categories;
+  }
 
   // Use custom loot table if selected
   if(customTableKey && customLootTables[customTableKey]){
@@ -2199,20 +2265,23 @@ function doGenerate(){
       TEMPLATE[customTableKey] = customTable.template;
       templateKey = customTableKey;
     }
+    clearActiveQuickBundle();
   }
 
   if(!selectedCats.length){ alert("Select at least one category."); return; }
 
   const wantWeight=$("lg-weight").checked, wantTags=$("lg-tags").checked;
+  const allowMinorMagicPool = magicOn && (bundleCtx ? bundleCtx.allowImplicitMinorMagic : true);
+  const allowCursedPool = cursedOn && (bundleCtx ? bundleCtx.allowImplicitCursed : true);
 
   let list=[];
   if(mode==="budget"){
     list=generateToBudget(rng,selectedCats,{
-      targetSp: adjustedBudget, softCount: adjustedCount, minSp, maxSp, usefulness01, templateKey, magicOn, cursedOn, curseSeverity
+      targetSp: adjustedBudget, softCount: adjustedCount, minSp, maxSp, usefulness01, templateKey, magicOn, cursedOn, curseSeverity, allowMinorMagicPool, allowCursedPool
     });
   }else{
     list=generateCount(rng,selectedCats,{
-      count: adjustedCount, minSp, maxSp, usefulness01, templateKey, magicOn, cursedOn, curseSeverity
+      count: adjustedCount, minSp, maxSp, usefulness01, templateKey, magicOn, cursedOn, curseSeverity, allowMinorMagicPool, allowCursedPool
     });
   }
   renderList(list,wantWeight,wantTags);
@@ -2250,6 +2319,7 @@ function savePreset(){
 }
 
 function loadPreset(){
+  clearActiveQuickBundle();
   const name = $("lg-saved-presets").value;
   if(!name){ alert("Select a preset to load."); return; }
 
@@ -2361,6 +2431,7 @@ document.addEventListener("DOMContentLoaded",()=>{
   $("lg-clear").addEventListener("click",()=>{ $("lg-out").innerHTML=""; $("lg-meta").innerHTML=""; });
 
   $("lg-preset").addEventListener("change",(e)=>{
+    clearActiveQuickBundle();
     const v=e.target.value; (PRESETS[v]||PRESETS.custom)();
   });
 
@@ -2377,6 +2448,10 @@ document.addEventListener("DOMContentLoaded",()=>{
       const bundleKey = btn.dataset.bundle;
       applyQuickBundle(bundleKey);
     });
+  });
+
+  document.querySelectorAll("#lg-cats input").forEach(cb => {
+    cb.addEventListener("change", clearActiveQuickBundle);
   });
 
   // New event handlers

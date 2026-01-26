@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>The DM's Toolbox: NPC Generator</title>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" crossorigin="anonymous" />
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.8.3/font/bootstrap-icons.css" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" />
   <!-- Custom CSS -->
   <link href="/css/site.css" rel="stylesheet" />
   <!-- Dev Icons -->
@@ -221,6 +221,15 @@ const AGE = [
   "silver-haired","long-in-the-tooth","fresh-faced","timeworn","stooped","youthful-looking"
 ];
 
+const LIFE_STAGE_TAGS = ["junior","adult","elder"];
+
+const AGE_BUCKETS = {
+  junior: ["young adult","early adult","fresh-faced","youthful-looking","recently apprenticed"],
+  adult: ["middle-aged","prime of life","seasoned","late adult","weathered"],
+  elder: ["older","elderly","silver-haired","long-in-the-tooth","timeworn","stooped","spry elder"],
+  default: AGE
+};
+
 const BUILD = [
   "slight","lean","average","sturdy","broad-shouldered","lithe","stocky",
   "willowy","wiry","lanky","compact","athletic","barrel-chested","paunchy",
@@ -266,12 +275,42 @@ const ATTIRE = [
   "reinforced coat","patched knees","polished buckle"
 ];
 
+const ATTIRE_BUCKETS = {
+  noble: ["velvet court coat","brocade doublet","embroidered mantle","polished signet accessories"],
+  bureaucrat: ["neatly pressed tabard","ledger-striped waistcoat","ink-stained but tidy robe"],
+  scholar: ["ink-splattered study robe","lecture coat with quill loops","book-laden satchel and vest"],
+  clergy: ["simple vestments","prayer stole over modest robes","temple whites with subtle trim"],
+  martial: ["polished brigandine over travel tunic","watch tabard and utility belt","sturdy gambeson with pauldrons"],
+  labor: ["work-stained apron","tool belt and vest","rolled-up sleeves and sturdy boots"],
+  underworld: ["hooded cloak with hidden pockets","dark oilskin coat","travel-worn coat with concealed lining"],
+  rural: ["sun-bleached work shirt","patched cloak with woven trim","weathered jacket and field hat"],
+  urban: ["neat tunic with layered shawl","simple uniform with polished buckle","tailored coat with cravat"],
+  default: ATTIRE
+};
+
+const ATTIRE_TAG_PRIORITY = ["noble","bureaucrat","scholar","clergy","martial","underworld","labor","urban","rural"];
+
 const DEMEANOR = [
   "brisk","courteous","distracted","cheerful","wary","even-tempered","no-nonsense","patient",
   "eager","world-weary","soft-spoken","forthright",
   "brusque","amiable","fidgety","methodical","stoic","sardonic","warm","proud",
   "anxious","unflappable","obliging","perky","gruff","deadpan"
 ];
+
+const DEMEANOR_BUCKETS = {
+  noble: ["courteous","formal","even-tempered"],
+  bureaucrat: ["methodical","no-nonsense","patient"],
+  scholar: ["distracted","thoughtful","soft-spoken"],
+  clergy: ["serene","compassionate","patient"],
+  martial: ["brisk","alert","no-nonsense"],
+  labor: ["practical","workmanlike","forthright"],
+  underworld: ["wary","sardonic","guarded"],
+  rural: ["amiable","warm","patient"],
+  urban: ["brisk","courteous","even-tempered"],
+  default: DEMEANOR
+};
+
+const DEMEANOR_TAG_PRIORITY = ["noble","bureaucrat","scholar","clergy","martial","underworld","labor","urban","rural"];
 
 const VOICE_TEMPO = [
   "measured","quick","slow","unhurried","brisk",
@@ -537,6 +576,104 @@ INT ${block.stats.int} (${modStr(block.mods.int)})  WIS ${block.stats.wis} (${mo
 }
 
 // Roles by settlement (used only inside the description if enabled)
+const ROLE_DEFS = {
+  "farmer": roleDef("adult", ["rural","labor"]),
+  "herder": roleDef("adult", ["rural","labor"]),
+  "miller": roleDef("adult", ["rural","labor"]),
+  "fisher": roleDef("adult", ["rural","labor"]),
+  "herbalist": roleDef("adult", ["rural","scholar"]),
+  "carpenter": roleDef("adult", ["rural","labor"]),
+  "tanner": roleDef("adult", ["rural","labor"]),
+  "hunter": roleDef("adult", ["rural","martial","underworld"]),
+  "stable hand": roleDef("junior", ["rural","labor"]),
+  "village guard": roleDef("adult", ["rural","martial"]),
+  "innkeeper": roleDef("adult", ["rural","urban"]),
+  "baker": roleDef("adult", ["rural","labor"]),
+  "weaver": roleDef("adult", ["rural","labor"]),
+  "potter": roleDef("adult", ["rural","labor"]),
+  "beekeeper": roleDef("adult", ["rural","labor"]),
+  "shepherd": roleDef("adult", ["rural","labor"]),
+  "swineherd": roleDef("adult", ["rural","labor"]),
+  "goatherd": roleDef("adult", ["rural","labor"]),
+  "thatcher": roleDef("adult", ["rural","labor"]),
+  "thresher": roleDef("adult", ["rural","labor"]),
+  "wool-spinner": roleDef("adult", ["rural","labor"]),
+  "cooper": roleDef("adult", ["labor","rural","urban"]),
+  "carter": roleDef("adult", ["rural","labor"]),
+  "reed-cutter": roleDef("adult", ["rural","labor"]),
+  "charcoal-burner": roleDef("adult", ["rural","labor","underworld"]),
+  "net maker": roleDef("adult", ["rural","labor"]),
+  "woodcutter": roleDef("adult", ["rural","labor"]),
+  "stonecutter": roleDef("adult", ["rural","labor"]),
+  "basket-weaver": roleDef("adult", ["rural","labor"]),
+  "midwife": roleDef("elder", ["rural"]),
+  "broom-maker": roleDef("adult", ["rural","labor"]),
+  "fieldhand": roleDef("junior", ["rural","labor"]),
+  "drover": roleDef("adult", ["rural","labor","underworld"]),
+  "blacksmith": roleDef("adult", ["urban","labor","martial"]),
+  "apothecary clerk": roleDef("junior", ["urban","scholar"]),
+  "dockhand": roleDef("adult", ["urban","labor","underworld"]),
+  "shopkeeper": roleDef("adult", ["urban"]),
+  "scribe": roleDef("adult", ["urban","scholar"]),
+  "courier": roleDef("adult", ["urban","underworld"]),
+  "guard corporal": roleDef("adult", ["urban","martial"]),
+  "ferryman": roleDef("adult", ["urban","labor","rural"]),
+  "brewer": roleDef("adult", ["urban","labor"]),
+  "tailor": roleDef("adult", ["urban","labor"]),
+  "cobbler": roleDef("adult", ["urban","labor"]),
+  "mason": roleDef("adult", ["urban","labor"]),
+  "cartwright": roleDef("adult", ["urban","labor"]),
+  "bookbinder": roleDef("adult", ["urban","scholar"]),
+  "glassworker": roleDef("adult", ["urban","labor"]),
+  "chandler (candlemaker)": roleDef("adult", ["urban","labor"]),
+  "dyer": roleDef("adult", ["urban","labor"]),
+  "ropemaker": roleDef("adult", ["urban","labor"]),
+  "tinker": roleDef("adult", ["urban","labor","underworld"]),
+  "wagoner": roleDef("adult", ["urban","labor"]),
+  "porter": roleDef("adult", ["urban","labor","underworld"]),
+  "engraver": roleDef("adult", ["urban","labor"]),
+  "furrier": roleDef("adult", ["urban","labor"]),
+  "plasterer": roleDef("adult", ["urban","labor"]),
+  "glazier": roleDef("adult", ["urban","labor"]),
+  "sawyer": roleDef("adult", ["urban","labor"]),
+  "barber": roleDef("adult", ["urban"]),
+  "cook": roleDef("adult", ["urban","labor"]),
+  "inn server": roleDef("junior", ["urban","labor"]),
+  "printer": roleDef("adult", ["urban","scholar"]),
+  "teamster": roleDef("adult", ["urban","labor","underworld"]),
+  "warehouse tallyman": roleDef("adult", ["urban","labor","underworld"]),
+  "guild clerk": roleDef("adult", ["urban","bureaucrat"]),
+  "factor": roleDef("adult", ["urban","bureaucrat"]),
+  "archivist": roleDef("adult", ["urban","bureaucrat","scholar"]),
+  "court messenger": roleDef("adult", ["urban","bureaucrat","martial"]),
+  "city watch sergeant": roleDef("adult", ["urban","martial"]),
+  "street vendor": roleDef("adult", ["urban","labor","underworld"]),
+  "stage performer": roleDef("adult", ["urban"]),
+  "temple attendant": roleDef("adult", ["urban","clergy"]),
+  "arcane student": roleDef("junior", ["urban","scholar"]),
+  "moneychanger teller": roleDef("adult", ["urban","bureaucrat"]),
+  "court scribe": roleDef("adult", ["urban","bureaucrat","scholar","noble"]),
+  "restaurateur": roleDef("adult", ["urban"]),
+  "notary": roleDef("adult", ["urban","bureaucrat"]),
+  "customs inspector": roleDef("adult", ["urban","bureaucrat"]),
+  "tax office aide": roleDef("junior", ["urban","bureaucrat"]),
+  "armorer journeyman": roleDef("adult", ["urban","labor","martial"]),
+  "stablemaster": roleDef("adult", ["urban","labor"]),
+  "coachman": roleDef("adult", ["urban","labor"]),
+  "perfumer": roleDef("adult", ["urban"]),
+  "magistrate’s aide": roleDef("adult", ["urban","bureaucrat","noble"]),
+  "courier dispatcher": roleDef("adult", ["urban","bureaucrat"]),
+  "stagehand": roleDef("adult", ["urban","labor","underworld"]),
+  "house steward": roleDef("elder", ["urban","bureaucrat","noble"]),
+  "guild examiner": roleDef("elder", ["urban","bureaucrat","noble","scholar"]),
+  "astronomer’s assistant": roleDef("junior", ["urban","scholar"]),
+  "map-room attendant": roleDef("adult", ["urban","bureaucrat","scholar"]),
+  "cathedral cantor": roleDef("adult", ["urban","clergy"]),
+  "royal gardener": roleDef("elder", ["urban","labor"]),
+  "ledger auditor": roleDef("adult", ["urban","bureaucrat"]),
+  "apartment concierge": roleDef("adult", ["urban"])
+};
+
 const ROLES = {
   village: [
     "farmer","herder","miller","fisher","herbalist","carpenter","tanner","hunter","stable hand",
@@ -559,18 +696,68 @@ const ROLES = {
   ]
 };
 
+function roleDef(life, tags){
+  return {
+    life: LIFE_STAGE_TAGS.includes(life) ? life : "adult",
+    tags: Array.isArray(tags) ? [...new Set(tags)] : []
+  };
+}
+
+function getRoleInfo(label){
+  const def = ROLE_DEFS[label] || roleDef("adult", ["urban"]);
+  const life = def.life || "adult";
+  const social = (def.tags || []).filter(tag => !LIFE_STAGE_TAGS.includes(tag));
+  return { label, life, social, tags: [life, ...social] };
+}
+
+function getRolePoolForSettlement(settlement, allowedTags){
+  const base = ROLES[settlement] || [];
+  if(!allowedTags || !allowedTags.length) return base;
+  const filtered = base.filter(label => {
+    const info = getRoleInfo(label);
+    return info.social.some(tag => allowedTags.includes(tag));
+  });
+  return filtered.length ? filtered : base;
+}
+
+function pickAgeForRole(rng, life){
+  const pool = AGE_BUCKETS[life] || AGE_BUCKETS.default;
+  return pick(rng, pool);
+}
+
+function pickAttireForRole(rng, socialTags){
+  return pickFromTagBuckets(rng, socialTags, ATTIRE_BUCKETS, ATTIRE_TAG_PRIORITY);
+}
+
+function pickDemeanorForRole(rng, socialTags){
+  return pickFromTagBuckets(rng, socialTags, DEMEANOR_BUCKETS, DEMEANOR_TAG_PRIORITY);
+}
+
+function pickFromTagBuckets(rng, roleTags, bucketMap, priority){
+  const tags = roleTags || [];
+  const order = priority && priority.length ? priority : tags;
+  for(const tag of order){
+    if(tags.includes(tag) && bucketMap[tag] && bucketMap[tag].length){
+      return pick(rng, bucketMap[tag]);
+    }
+  }
+  return pick(rng, bucketMap.default);
+}
+
 // ---------- NPC assembly ----------
-function makeDescription(rng, settlement, mentionRole){
-  const role = pick(rng, ROLES[settlement]);
-  const age = pick(rng, AGE);
+function makeDescription(rng, rolePool, mentionRole){
+  const pool = rolePool && rolePool.length ? rolePool : (ROLES.town || []);
+  const chosen = pool.length ? pick(rng, pool) : "townsfolk";
+  const roleInfo = getRoleInfo(chosen);
+  const age = pickAgeForRole(rng, roleInfo.life);
   const height = pick(rng, HEIGHT);
   const build = pick(rng, BUILD);
   const hair = `${pick(rng, HAIR_STYLE)} ${pick(rng, HAIR_COLOR)} hair`;
   const eyes = `${pick(rng, EYES)} eyes`;
   const feat = pick(rng, FEATURES);
-  const attire = pick(rng, ATTIRE);
-  const demeanor = pick(rng, DEMEANOR);
-  const roleBit = mentionRole ? ` ${role}` : "";
+  const attire = pickAttireForRole(rng, roleInfo.social);
+  const demeanor = pickDemeanorForRole(rng, roleInfo.social);
+  const roleBit = mentionRole ? ` ${roleInfo.label}` : "";
   return `A ${age}, ${height}, ${build}${roleBit} with ${hair}, ${eyes}, and ${feat}. Wears a ${attire}; ${demeanor} manner.`;
 }
 function makeVoice(rng){
@@ -592,6 +779,9 @@ function generate(){
   const seed = $("npc-seed").value.trim();
   const roleInDesc = $("npc-roleInDesc").checked;
   const autoName = $("npc-autoName").checked;
+  const presetKey = $("npc-preset").value;
+  const allowedTags = PRESETS[presetKey]?.allowedTags || null;
+  const rolePool = getRolePoolForSettlement(settlement, allowedTags);
 
   const rng = prand(seed);
   const out = $("npc-out"); out.innerHTML = "";
@@ -602,7 +792,7 @@ function generate(){
 
   const rows = [];
   for(let i=0;i<count;i++){
-    const desc = makeDescription(rng, settlement, roleInDesc);
+    const desc = makeDescription(rng, rolePool, roleInDesc);
     const voice = makeVoice(rng);
     const mans = makeMannerisms(rng);
     const quirk = makeQuirk(rng);
@@ -1123,56 +1313,64 @@ const PRESETS = {
     settlement: "town",
     seed: "guards",
     roleInDesc: true,
-    autoName: false
+    autoName: false,
+    allowedTags: ["martial"]
   },
   merchants: {
     count: 6,
     settlement: "town",
     seed: "merchants",
     roleInDesc: true,
-    autoName: false
+    autoName: false,
+    allowedTags: ["urban","labor"]
   },
   tavern: {
     count: 4,
     settlement: "town",
     seed: "tavern",
     roleInDesc: true,
-    autoName: false
+    autoName: false,
+    allowedTags: ["urban","labor"]
   },
   nobles: {
     count: 3,
     settlement: "capital",
     seed: "nobles",
     roleInDesc: true,
-    autoName: false
+    autoName: false,
+    allowedTags: ["noble","bureaucrat"]
   },
   bandits: {
     count: 8,
     settlement: "village",
     seed: "bandits",
     roleInDesc: true,
-    autoName: false
+    autoName: false,
+    allowedTags: ["underworld","martial","rural"]
   },
   cultists: {
     count: 6,
     settlement: "town",
     seed: "cultists",
     roleInDesc: true,
-    autoName: false
+    autoName: false,
+    allowedTags: ["clergy","underworld","scholar"]
   },
   guild: {
     count: 5,
     settlement: "town",
     seed: "thieves",
     roleInDesc: true,
-    autoName: false
+    autoName: false,
+    allowedTags: ["underworld","urban"]
   },
   villagers: {
     count: 10,
     settlement: "village",
     seed: "villagers",
     roleInDesc: true,
-    autoName: false
+    autoName: false,
+    allowedTags: ["rural","labor"]
   },
   party: {
     count: 4,

@@ -1,11 +1,11 @@
 const DM_TOOLBOX_BUILD = {
   name: "The DM's Toolbox",
-  version: "2.0.6",
+  version: "2.0.7",
   recentChanges: [
-    "Expanded loot generator datasets so each quick bundle has a broad mixed-value pool",
-    "Added global error handling plus an in-app diagnostics panel (Ctrl+Alt+D)",
-    "Implemented versioned save-data migrations for characters, battle maps, and journals",
-    "Documented architecture, coding standards, and new JSDoc type definitions"
+    "NPC generator now enforces tag-aware role, age, attire, and demeanor buckets",
+    "Initiative tracker adds direct damage subtraction plus a rolling combat log",
+    "Shop generator sports a floating, dismissible table of contents for quick jumps",
+    "Battlemap navbar stays above the side panel so navigation is never hidden"
   ],
   buildTime: new Date().toISOString(),
   author: "Maybeme"
@@ -15,7 +15,6 @@ console.log(
   `${DM_TOOLBOX_BUILD.name} v${DM_TOOLBOX_BUILD.version} – built ${DM_TOOLBOX_BUILD.buildTime} by ${DM_TOOLBOX_BUILD.author}`
 );
 
-const LICENSE_PHRASE = 'Creative Commons Attribution 4.0 International License';
 const SRD_PDF_URL = 'https://media.wizards.com/2016/downloads/DND/SRD-OGL_V5.1.pdf';
 const SRD_LICENSE_DEFAULTS = {
   attributionText: 'This work includes material from the System Reference Document 5.1 by Wizards of the Coast LLC and is licensed for our use under the Creative Commons Attribution 4.0 International License.',
@@ -47,81 +46,6 @@ window.SRDLicensing = resolveLicenseInfo(window.SRDLicensing);
 window.getSrdLicenseNotices = function getSrdLicenseNotices() {
   return resolveLicenseInfo(window.SRDLicensing);
 };
-
-function escapeLicenseHtml(text = '') {
-  const entities = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
-  return text.replace(/[&<>"']/g, (char) => entities[char] || char);
-}
-
-function formatLicenseAttributionHtml(text, url) {
-  const safeText = escapeLicenseHtml(text);
-  if (!url) {
-    return safeText;
-  }
-  const encodedPhrase = escapeLicenseHtml(LICENSE_PHRASE);
-  if (!safeText.includes(encodedPhrase)) {
-    return `${safeText} <a href="${url}" target="_blank" rel="noopener noreferrer">${encodedPhrase}</a>`;
-  }
-  return safeText.replace(
-    encodedPhrase,
-    `<a href="${url}" target="_blank" rel="noopener noreferrer">${encodedPhrase}</a>`
-  );
-}
-
-function buildLicenseBlock(doc, info) {
-  const wrapper = doc.createElement('div');
-  wrapper.className = 'srd-license-block small text-muted mt-3';
-
-  const attribution = doc.createElement('p');
-  attribution.className = 'mb-1';
-  attribution.innerHTML = formatLicenseAttributionHtml(info.attributionText, info.licenseUrl);
-
-  const disclaimer = doc.createElement('p');
-  disclaimer.className = 'mb-0';
-  disclaimer.textContent = info.productIdentityDisclaimer;
-
-  wrapper.appendChild(attribution);
-  wrapper.appendChild(disclaimer);
-  if (info.srdUrl) {
-    const srdLink = doc.createElement('p');
-    srdLink.className = 'mb-0';
-    srdLink.appendChild(doc.createTextNode('SRD 5.1 Reference PDF: '));
-    const link = doc.createElement('a');
-    link.href = info.srdUrl;
-    link.target = '_blank';
-    link.rel = 'noopener noreferrer';
-    link.textContent = 'Download from Wizards';
-    srdLink.appendChild(link);
-    wrapper.appendChild(srdLink);
-  }
-  return wrapper;
-}
-
-function injectLicenseFooters() {
-  if (typeof document === 'undefined') {
-    return;
-  }
-  const footers = document.querySelectorAll('.site-footer');
-  if (!footers.length) {
-    return;
-  }
-  const info = window.getSrdLicenseNotices();
-  footers.forEach((footer) => {
-    if (footer.querySelector('.srd-license-block')) {
-      return;
-    }
-    const host = footer.querySelector('.footer-main .container') || footer;
-    host.appendChild(buildLicenseBlock(footer.ownerDocument, info));
-  });
-}
-
-if (typeof document !== 'undefined') {
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', injectLicenseFooters, { once: true });
-  } else {
-    injectLicenseFooters();
-  }
-}
 
 // Initialize global error handling and diagnostics panel
 // Uses dynamic import since site.js is loaded as a regular script
