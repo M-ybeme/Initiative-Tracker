@@ -14,7 +14,73 @@ The DM's Toolbox has evolved through focused feature releases:
 - **1.9.x**: Battle map measurement tools, persistent fog shapes, and generator integration across NPC/Tavern/Shop systems
 - **1.8.x**: Spell database expansion to 432+ spells, inventory management, loot generator overhaul, and character token generation
 
-**Current version: 2.0.6 (January 2026)**
+**Current version: 2.0.8 (January 2026)**
+
+
+## [2.0.8] - 2026-01-28
+**SRD 5.2 Compliance Overhaul / 2024 PHB Updates / Diagnostics Enhancements**
+
+### Changed
+- **SRD 5.2 allowlist alignment** – Updated the content manifest to match the 2024 PHB System Reference Document. This involved 302 changes: 41 items added to the allowlist and 261 removed. The filter now targets SRD 5.2 rather than SRD 5.1.
+- **Exhaustion system updated to 2024 PHB rules** – The exhaustion mechanic now uses the simplified 2024 rule: each level applies a −2 penalty to all d20 rolls (ability checks, attack rolls, saving throws). The old 2014 PHB tiered system (disadvantage → speed halved → etc.) has been replaced. Level 6 still means death.
+- **Subclass blocking** – All subclasses are now blocked by default (SRD 5.2 contains no subclass text or features). The character creation wizard and level-up system show an info notice pointing users to content packs.
+- **Background filtering** – Only 4 SRD backgrounds remain available: Acolyte, Criminal, Sage, and Soldier. Non-SRD backgrounds (Charlatan, Entertainer, Folk Hero, etc.) are now gated with `data-srd-block` attributes.
+- **Class feature filtering** – Added SRD filtering for Fighting Styles (6 SRD / 7 non-SRD), Pact Boons (3 SRD / 1 non-SRD), Eldritch Invocations (23 SRD / 3 non-SRD), and Metamagic (8 SRD / 2 non-SRD). Non-SRD options from Tasha's and other sources are now properly gated.
+- **Subrace filtering** – Added SRD filtering for subraces (19 SRD / 21 non-SRD). Character creation wizard now dynamically loads subraces from filtered SUBRACE_DATA instead of hardcoded lists. SRD subraces include High Elf, Wood Elf, Hill Dwarf, Mountain Dwarf, all 10 Dragonborn ancestries, and others. Non-SRD subraces like Drow, Eladrin, Duergar, and Tiefling variants are gated.
+- **Modal positioning** – Fixed modals on Initiative and Characters pages that were opening too close to the top and being obscured by the fixed navbar.
+- **Species terminology** – Updated character creation wizard to use "Species" instead of "Race" per 2024 PHB terminology. Step 2 now reads "Choose Your Species" with updated labels, tooltips, and validation messages.
+- **Background ability score increases** – Backgrounds now grant +2 to one ability and +1 to another ability (player choice) following 2024 PHB rules. New wizard step added for selecting where to apply these bonuses. Bonuses can increase abilities above 20 during character creation.
+- **Origin feats** – Each background automatically grants an origin feat: Acolyte grants Magic Initiate (Cleric), Criminal grants Alert, Sage grants Magic Initiate (Wizard), Soldier grants Savage Attacker.
+
+### Fixed
+- **Spell lookup timing bug** – Character sheet spell search now properly uses filtered spell data. Previously, `ALL_SPELLS` was captured at module load before `pruneSpells()` ran, causing unfiltered spells to appear. Converted to lazy-loaded `getAllSpells()` with cache invalidation on `window.load` and `dmtoolbox:packs-applied` events.
+- **Empty allowlist filter bug** – When a content type had blocklist entries but no allowlist entries (like subclasses), the filter incorrectly returned `true` (allow all). Fixed by ensuring empty arrays are created in the allowlist for blocked-only types.
+- **Vitest 4.0.17 Windows drive letter bug** – Fixed "No test suite found" error on Windows caused by vitest's case-sensitive drive letter matching. Added root path normalization to vitest.config.js that converts lowercase drive letters (c:/) to uppercase (C:/) on Windows. All 632 tests now pass successfully.
+- **Content pack toggle/removal not reverting to SRD state** – Fixed issue where disabling or removing content packs did not properly revert data to SRD 5.2 state. The `dmtoolbox:packs-applied` event handler now re-filters spells and level-up data (`pruneSpells`, `pruneLevelUpData`) in addition to refreshing DOM nodes. When packs are toggled off or deleted, non-SRD content is now correctly removed and the application returns to pure SRD 5.2 compliance.
+
+### Added
+- **Class feature data structures** – New comprehensive data in `level-up-data.js` for Fighting Styles (`FIGHTING_STYLE_DATA`), Pact Boons (`PACT_BOON_DATA`), Eldritch Invocations (`ELDRITCH_INVOCATION_DATA`), and Metamagic (`METAMAGIC_DATA`). Each entry includes `srd: true/false` flags for filtering.
+- **Subrace data structure** – New `SUBRACE_DATA` in `level-up-data.js` with 40 subrace entries (19 SRD, 21 non-SRD). Each entry includes race, description, and `srd` flag. Replaces hardcoded subrace lists in character creation wizard.
+- **Class feature helper functions** – `getFightingStylesForClass()`, `getPactBoonOptions()`, `getEldritchInvocationOptions()`, `getAvailableInvocationsForLevel()`, `getMetamagicOptions()` added to LevelUpData API.
+- **Subrace helper functions** – `getSubracesForRace()`, `getSubraceData()`, `getSubraceByName()`, `getAllSubraceKeys()`, `getRacesWithSubraces()` added to LevelUpData API.
+- **Exhaustion penalty calculation** – New `getExhaustionPenalty()` and `isDeadFromExhaustion()` functions in character-calculations module for 2024 PHB exhaustion rules.
+- **Content pack authoring documentation** – Updated authoring guide with SRD 5.2 references, new content types (fighting-style, pact-boon, eldritch-invocation, metamagic), and pure homebrew examples. Template now includes examples for all content types.
+- **SRD filtering unit tests** – 24 new tests covering `isAllowed()`, `filterArray()`, `filterObject()`, edge cases, and SRD 5.2 compliance verification.
+- **Class feature filtering tests** – 16 new tests verifying filtering for Fighting Styles, Pact Boons, Eldritch Invocations, and Metamagic options.
+- **Subrace filtering tests** – 9 new tests verifying SRD compliance for elf, dwarf, dragonborn, halfling, gnome, tiefling, aasimar, and shifter subraces.
+- **Content pack integration tests** – 27 new tests covering pack validation, allowlist merging, JSON parsing, and regression pack structure.
+- **E2E filtering tests** – Browser tests verifying race/background filtering, `SRDContentFilter` global availability, and subclass blocking.
+- **Exhaustion unit tests** – 10 new tests for exhaustion penalty calculation and death-from-exhaustion checks.
+- **Step 8: Background Ability Scores** – New character creation wizard step for assigning background's +2 and +1 ability score increases after background selection.  Subsequent steps renumbered (Equipment is now Step 9, final Review is now Step 13).
+- **Background ASI structure** – Added `abilityScoreIncreases` and `originFeat` fields to all 4 SRD backgrounds (Acolyte, Criminal, Sage, Soldier) in BACKGROUND_DATA.
+- **applyBackgroundASIs()** – New function applies background ability score increases during character finalization.
+- **grantOriginFeat()** – New function automatically grants the origin feat from the selected background to character's feat list.
+- **Footer settings button** – Gear icon in the page footer opens the diagnostics panel, providing mobile-friendly access (Ctrl+Alt+D doesn't work on touch devices).
+- **Export All Data** – New button in diagnostics panel exports all characters, journal entries, and settings to a single JSON backup file.
+- **Import All Data** – New button in diagnostics panel restores a complete backup from a previously exported JSON file.
+- **Fog shape rotation** – Rectangle and square fog shapes on the Battle Map can now be rotated. When selected, a circular orange rotation handle appears above the shape. Drag it to rotate the shape to any angle. Rotation is preserved when saving/loading sessions.
+
+### Technical
+- Moved internal scripts (`generate-srd-regression-pack.mjs`, `apply-srd-5.2-corrections.mjs`) to `internal-roadmaps/scripts/` (gitignored) to keep content-generating tools out of public repo.
+- Updated `generate-srd-allowlist.mjs` to create empty allowlist arrays for types with only blocklist entries.
+- Updated `dump-content-ids.mjs` with extractors for new content types (fighting-style, pact-boon, eldritch-invocation, metamagic, subrace).
+- Added 93 new entries to `srd-audit.json` manifest (53 class features + 40 subraces).
+- Updated `generate-srd-allowlist.mjs` to use `metadata.srd` flags for content types with SRD flags (fighting-style, pact-boon, eldritch-invocation, metamagic, subrace).
+- Runtime filtering in `site.js` extended to prune non-SRD class features and subraces at load time.
+- Character creation wizard (`character-creation-wizard.js`) now dynamically loads subraces from `LevelUpData.SUBRACE_DATA` instead of hardcoded arrays.
+- Regression pack updated to SRD 5.2 format (535 records, no subclasses).
+- Character creation wizard now has 13 steps (was 12) due to new background ASI selection step.
+- Background ability score increases are applied after species bonuses in `finishWizard()`.
+- Origin feats are automatically added during character creation and stored in `wizardData.feats` array.
+- **Terminology updates** – Updated all UI labels from "Race" → "Species" and comments from "RACIAL" → "SPECIES" per 2024 PHB.
+- **Function renames** – `applyRacialBonuses()` → `applySpeciesBonuses()`, `gatherRacialFeatures()` → `gatherSpeciesFeatures()`, `gatherRacialSpellData()` → `gatherSpeciesSpellData()`.
+- **LevelUpData API renames** – `getRacialSpells()` → `getSpeciesSpells()`, `getRacialSpellsAtLevel()` → `getSpeciesSpellsAtLevel()`, `formatRacialFeaturesAsText()` → `formatSpeciesFeaturesAsText()`, `getFullRacialFeatures()` → `getFullSpeciesFeatures()`.
+- **Data structure comments** – Updated section headers in level-up-data.js from "RACIAL BASE FEATURES", "RACIAL SPELLS", etc. to "SPECIES BASE FEATURES", "SPECIES SPELLS", etc.
+
+### Testing
+- `npm run test:run` – All unit and integration tests pass (60 new tests added: 51 class features + 9 subraces).
+- `npm run test:e2e` – E2E tests verify filtering works in browser.
+- All 632 tests pass. New testing guide to be found in `docs/Content_Pack_Testing.md` with manual test procedures included.
 
 ---
 

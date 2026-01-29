@@ -713,6 +713,13 @@ async function showDiagnosticsPanel() {
       </div>
 
       <div style="margin-bottom: 12px;">
+        <div style="color: #888; font-size: 10px; text-transform: uppercase; margin-bottom: 4px;">Data Backup</div>
+        <button id="dm-diag-export-all" style="background: #1d4d1d; color: #fff; border: 1px solid #2d7d2d; padding: 4px 8px; border-radius: 4px; cursor: pointer; margin-right: 4px;">Export All Data</button>
+        <button id="dm-diag-import-all" style="background: #4d3d1d; color: #fff; border: 1px solid #7d6d2d; padding: 4px 8px; border-radius: 4px; cursor: pointer;">Import All Data</button>
+        <div style="color: #888; font-size: 10px; margin-top: 6px;">Export/import all characters, journal entries, and settings as a single backup file.</div>
+      </div>
+
+      <div style="margin-bottom: 12px;">
         <div style="color: #888; font-size: 10px; text-transform: uppercase; margin-bottom: 4px;">Licensing</div>
         <div style="font-size: 11px; line-height: 1.5;">${licenseAttributionHtml}</div>
         <div style="font-size: 11px; line-height: 1.5; margin-top: 6px;">${licenseDisclaimerHtml}</div>
@@ -763,6 +770,333 @@ async function showDiagnosticsPanel() {
       showUserError('Diagnostic info copied to clipboard', { severity: 'info', duration: 2000 });
     });
   });
+
+  // Export All Data handler
+  document.getElementById('dm-diag-export-all')?.addEventListener('click', async () => {
+    try {
+      const allData = await gatherAllData();
+      const blob = new Blob([JSON.stringify(allData, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `dm-toolbox-backup-${new Date().toISOString().slice(0, 10)}.json`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      showUserError('Backup exported successfully!', { severity: 'info', duration: 3000 });
+    } catch (err) {
+      showUserError('Failed to export data. See console for details.', {
+        error: err instanceof Error ? err : new Error(String(err)),
+        severity: 'error'
+      });
+    }
+  });
+
+  // Import All Data handler
+  document.getElementById('dm-diag-import-all')?.addEventListener('click', () => {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = '.json';
+    input.onchange = async (e) => {
+      const file = e.target?.files?.[0];
+      if (!file) return;
+
+      try {
+        const text = await file.text();
+        const data = JSON.parse(text);
+        await restoreAllData(data);
+        showUserError('Backup restored successfully! Refreshing page...', { severity: 'info', duration: 2000 });
+        setTimeout(() => window.location.reload(), 2000);
+      } catch (err) {
+        showUserError('Failed to import data. The file may be corrupted or invalid.', {
+          error: err instanceof Error ? err : new Error(String(err)),
+          severity: 'error'
+        });
+      }
+    };
+    input.click();
+  });
+}
+
+// ============================================================
+// EXPORT/IMPORT ALL DATA HELPERS
+// ============================================================
+
+/**
+ * Gather all user data from IndexedDB and localStorage
+ * @returns {Promise<Object>}
+ */
+async function gatherAllData() {
+  const backup = {
+    version: 1,
+    exportedAt: new Date().toISOString(),
+    appVersion: getBuildInfo().version,
+    characters: [],
+    journalEntries: [],
+    localStorage: {},
+    initiativeData: null,
+    battlemapData: null
+  };
+
+  // Gather characters from DMToolboxDB
+  try {
+    backup.characters = await getAllCharacters();
+  } catch (e) {
+    console.warn('Could not export characters:', e);
+  }
+
+  // Gather journal entries from JournalDB
+  try {
+    backup.journalEntries = await getAllJournalEntries();
+  } catch (e) {
+    console.warn('Could not export journal entries:', e);
+  }
+
+  // Gather relevant localStorage items
+  const lsKeys = [
+    'dmtoolboxCharactersV1',
+    'initiativeRoster',
+    'initiativeCurrentTurn',
+    'initiativeRound',
+    'initiativeHistory',
+    'battlemapState',
+    'encounterRoster',
+    'srdFilterSettings'
+  ];
+
+  for (const key of lsKeys) {
+    try {
+      const value = localStorage.getItem(key);
+      if (value !== null) {
+        backup.localStorage[key] = value;
+      }
+    } catch (e) {
+      console.warn(`Could not export localStorage key ${key}:`, e);
+    }
+  }
+
+  return backup;
+}
+
+/**
+ * Get all characters from DMToolboxDB
+ * @returns {Promise<Array>}
+ */
+function getAllCharacters() {
+  return new Promise((resolve, reject) => {
+    try {
+      const request = indexedDB.open('DMToolboxDB', 1);
+
+      request.onerror = () => resolve([]);
+
+      request.onsuccess = () => {
+        const db = request.result;
+        if (!db.objectStoreNames.contains('characters')) {
+          db.close();
+          resolve([]);
+          return;
+        }
+
+        const transaction = db.transaction(['characters'], 'readonly');
+        const store = transaction.objectStore('characters');
+        const getAllRequest = store.getAll();
+
+        getAllRequest.onsuccess = () => {
+          db.close();
+          resolve(getAllRequest.result || []);
+        };
+
+        getAllRequest.onerror = () => {
+          db.close();
+          resolve([]);
+        };
+      };
+
+      request.onupgradeneeded = () => {
+        request.transaction?.abort();
+      };
+    } catch (e) {
+      resolve([]);
+    }
+  });
+}
+
+/**
+ * Get all journal entries from JournalDB
+ * @returns {Promise<Array>}
+ */
+function getAllJournalEntries() {
+  return new Promise((resolve, reject) => {
+    try {
+      const request = indexedDB.open('JournalDB', 1);
+
+      request.onerror = () => resolve([]);
+
+      request.onsuccess = () => {
+        const db = request.result;
+        if (!db.objectStoreNames.contains('entries')) {
+          db.close();
+          resolve([]);
+          return;
+        }
+
+        const transaction = db.transaction(['entries'], 'readonly');
+        const store = transaction.objectStore('entries');
+        const getAllRequest = store.getAll();
+
+        getAllRequest.onsuccess = () => {
+          db.close();
+          resolve(getAllRequest.result || []);
+        };
+
+        getAllRequest.onerror = () => {
+          db.close();
+          resolve([]);
+        };
+      };
+
+      request.onupgradeneeded = () => {
+        request.transaction?.abort();
+      };
+    } catch (e) {
+      resolve([]);
+    }
+  });
+}
+
+/**
+ * Restore all user data from a backup
+ * @param {Object} backup
+ */
+async function restoreAllData(backup) {
+  if (!backup || typeof backup !== 'object') {
+    throw new Error('Invalid backup data');
+  }
+
+  // Validate backup version
+  if (backup.version !== 1) {
+    throw new Error('Unsupported backup version');
+  }
+
+  // Restore characters to DMToolboxDB
+  if (Array.isArray(backup.characters) && backup.characters.length > 0) {
+    await restoreCharacters(backup.characters);
+  }
+
+  // Restore journal entries to JournalDB
+  if (Array.isArray(backup.journalEntries) && backup.journalEntries.length > 0) {
+    await restoreJournalEntries(backup.journalEntries);
+  }
+
+  // Restore localStorage items
+  if (backup.localStorage && typeof backup.localStorage === 'object') {
+    for (const [key, value] of Object.entries(backup.localStorage)) {
+      try {
+        localStorage.setItem(key, value);
+      } catch (e) {
+        console.warn(`Could not restore localStorage key ${key}:`, e);
+      }
+    }
+  }
+}
+
+/**
+ * Restore characters to DMToolboxDB
+ * @param {Array} characters
+ */
+function restoreCharacters(characters) {
+  return new Promise((resolve, reject) => {
+    const request = indexedDB.open('DMToolboxDB', 1);
+
+    request.onerror = () => reject(new Error('Could not open DMToolboxDB'));
+
+    request.onupgradeneeded = (event) => {
+      const db = event.target.result;
+      if (!db.objectStoreNames.contains('characters')) {
+        db.createObjectStore('characters', { keyPath: 'id' });
+      }
+    };
+
+    request.onsuccess = () => {
+      const db = request.result;
+      const transaction = db.transaction(['characters'], 'readwrite');
+      const store = transaction.objectStore('characters');
+
+      let completed = 0;
+      for (const char of characters) {
+        const putRequest = store.put(char);
+        putRequest.onsuccess = () => {
+          completed++;
+          if (completed === characters.length) {
+            db.close();
+            resolve();
+          }
+        };
+        putRequest.onerror = () => {
+          completed++;
+          if (completed === characters.length) {
+            db.close();
+            resolve();
+          }
+        };
+      }
+
+      if (characters.length === 0) {
+        db.close();
+        resolve();
+      }
+    };
+  });
+}
+
+/**
+ * Restore journal entries to JournalDB
+ * @param {Array} entries
+ */
+function restoreJournalEntries(entries) {
+  return new Promise((resolve, reject) => {
+    const request = indexedDB.open('JournalDB', 1);
+
+    request.onerror = () => reject(new Error('Could not open JournalDB'));
+
+    request.onupgradeneeded = (event) => {
+      const db = event.target.result;
+      if (!db.objectStoreNames.contains('entries')) {
+        db.createObjectStore('entries', { keyPath: 'id' });
+      }
+    };
+
+    request.onsuccess = () => {
+      const db = request.result;
+      const transaction = db.transaction(['entries'], 'readwrite');
+      const store = transaction.objectStore('entries');
+
+      let completed = 0;
+      for (const entry of entries) {
+        const putRequest = store.put(entry);
+        putRequest.onsuccess = () => {
+          completed++;
+          if (completed === entries.length) {
+            db.close();
+            resolve();
+          }
+        };
+        putRequest.onerror = () => {
+          completed++;
+          if (completed === entries.length) {
+            db.close();
+            resolve();
+          }
+        };
+      }
+
+      if (entries.length === 0) {
+        db.close();
+        resolve();
+      }
+    };
+  });
 }
 
 /**
@@ -780,6 +1114,9 @@ export function initDiagnosticsPanel() {
 
   // Store toggle function for external access
   diagnosticsPanelToggle = showDiagnosticsPanel;
+
+  // Expose toggle function globally for footer settings button
+  window.toggleDiagnosticsPanel = showDiagnosticsPanel;
 }
 
 /**

@@ -474,7 +474,7 @@ Pure logic modules under `js/modules/`. These do not touch the DOM.
 
 ## Data Files
 
-Large data tables loaded as separate scripts. The public repo only ships SRD 5.1 data under `/data/srd/`; non-SRD payloads are expected to live in private packs (untracked) and register themselves at runtime via `SRDContentFilter`.
+Large data tables loaded as separate scripts. The public repo only ships SRD 5.2 (2024 PHB) data under `/data/srd/`; non-SRD payloads are expected to live in private packs (untracked) and register themselves at runtime via `SRDContentFilter`.
 
 ### spells-data.js
 
@@ -482,7 +482,7 @@ Large data tables loaded as separate scripts. The public repo only ships SRD 5.1
 **Loaded by:** `initiative.html`, `characters.html`
 
 **Contents:**
-- `SPELLS_DATA` - SRD 5.1 spell database (public build)
+- `SPELLS_DATA` - SRD 5.2 spell database (public build)
 - Each spell: title, level, school, casting time, range, components, duration, concentration, classes, description, tags
 - Private content packs can register additional spells, but they never ship in this directory
 

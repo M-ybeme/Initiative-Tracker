@@ -839,39 +839,60 @@
       window.currentAttackList = currentAttackList;
 
       // ---------- Spells data + helpers ----------
-      const RAW_SPELLS = (window.SPELLS_DATA || window.SPELLS || []);
+      // Lazy-load spell data to ensure SRD filtering has occurred before we read it.
+      // The old approach captured window.SPELLS_DATA at module load time, before
+      // site.js pruneSpells() ran on window.load, causing unfiltered spells to appear.
+      let _cachedSpells = null;
 
-      const ALL_SPELLS = RAW_SPELLS
-        .map(s => {
-          if (typeof s === 'string') {
+      function getAllSpells() {
+        if (_cachedSpells !== null) return _cachedSpells;
+
+        const raw = (window.SPELLS_DATA || window.SPELLS || []);
+        _cachedSpells = raw
+          .map(s => {
+            if (typeof s === 'string') {
+              return {
+                name: s,
+                title: s,
+                level: 0,
+                school: '',
+                casting_time: '',
+                range: '',
+                components: '',
+                duration: '',
+                concentration: false,
+                classes: [],
+                body: '',
+                tags: []
+              };
+            }
+            if (!s) return null;
             return {
-              name: s,
-              title: s,
-              level: 0,
-              school: '',
-              casting_time: '',
-              range: '',
-              components: '',
-              duration: '',
-              concentration: false,
-              classes: [],
-              body: '',
-              tags: []
+              ...s,
+              name: s.name || s.title || ''
             };
-          }
-          if (!s) return null;
-          return {
-            ...s,
-            name: s.name || s.title || ''
-          };
-        })
-        .filter(s => s && s.name);
+          })
+          .filter(s => s && s.name);
+
+        return _cachedSpells;
+      }
+
+      // Allow cache invalidation when content packs are applied
+      window.addEventListener('dmtoolbox:packs-applied', () => {
+        _cachedSpells = null;
+      });
+
+      // Also invalidate cache after window.load to ensure we pick up SRD-filtered data
+      // (site.js pruneSpells runs on load, so any cache before that is stale)
+      window.addEventListener('load', () => {
+        _cachedSpells = null;
+      });
 
       function searchSpells(term) {
         const q = (term || '').trim().toLowerCase();
         if (!q) return [];
 
-        return ALL_SPELLS.filter(spell => {
+        return getAllSpells().filter(spell => {
           const name    = (spell.name || '').toLowerCase();
           const title   = (spell.title || '').toLowerCase();
           const school  = (spell.school || '').toLowerCase();
@@ -1223,7 +1244,7 @@
 
         // Legacy: name string only
         if (typeof spellLike === 'string') {
-          const fromLib = ALL_SPELLS.find(s =>
+          const fromLib = getAllSpells().find(s =>
             (s.name || '').toLowerCase() === spellLike.toLowerCase() ||
             (s.title || '').toLowerCase() === spellLike.toLowerCase()
           );
@@ -1269,7 +1290,7 @@
         const baseName = spellLike.name || spellLike.title || '';
         if (!baseName) return null;
 
-        const fromLib = ALL_SPELLS.find(s =>
+        const fromLib = getAllSpells().find(s =>
           (s.name || '').toLowerCase() === baseName.toLowerCase() ||
           (s.title || '').toLowerCase() === baseName.toLowerCase()
         );
@@ -1999,21 +2020,16 @@
           input.value = 10;
         }
 
-        const descriptions = [
-          '0 = No exhaustion',
-          '1 = Disadvantage on ability checks',
-          '2 = Speed halved',
-          '3 = Disadvantage on attacks & saves',
-          '4 = HP maximum halved',
-          '5 = Speed reduced to 0',
-          '6 = Death'
-        ];
-
-        // OneD&D extends to 10
-        if (level > 6 && level <= 10) {
-          desc.textContent = `${level} = Severe exhaustion (OneD&D)`;
-        } else if (level >= 0 && level <= 6) {
-          desc.textContent = descriptions[level] || '';
+        // 2024 PHB exhaustion: -2 penalty to d20 rolls per level
+        if (level === 0) {
+          desc.textContent = '0 = No exhaustion';
+        } else if (level >= 1 && level <= 5) {
+          const penalty = level * 2;
+          desc.textContent = `${level} = −${penalty} to all d20 rolls`;
+        } else if (level === 6) {
+          desc.textContent = '6 = Dead';
+        } else if (level > 6 && level <= 10) {
+          desc.textContent = `${level} = Dead (level 6+)`;
         } else {
           desc.textContent = '';
         }

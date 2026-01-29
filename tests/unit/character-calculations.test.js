@@ -4,6 +4,8 @@ import {
   getProficiencyBonus,
   getSkillBonus,
   getPassivePerception,
+  getExhaustionPenalty,
+  isDeadFromExhaustion,
   getBarbarianUnarmoredAC,
   getMonkUnarmoredAC,
   getArmoredAC,
@@ -245,5 +247,55 @@ describe('getMulticlassHP', () => {
   it('handles single class in array format', () => {
     const classes = [{ hitDie: 10, level: 5 }];
     expect(getMulticlassHP(classes, 14)).toBe(44);
+  });
+});
+
+describe('getExhaustionPenalty (2024 PHB rules)', () => {
+  it('returns 0 for no exhaustion', () => {
+    expect(getExhaustionPenalty(0)).toBe(0);
+  });
+
+  it('returns -2 per level of exhaustion', () => {
+    expect(getExhaustionPenalty(1)).toBe(-2);
+    expect(getExhaustionPenalty(2)).toBe(-4);
+    expect(getExhaustionPenalty(3)).toBe(-6);
+    expect(getExhaustionPenalty(4)).toBe(-8);
+    expect(getExhaustionPenalty(5)).toBe(-10);
+  });
+
+  it('returns null for level 6 (dead)', () => {
+    expect(getExhaustionPenalty(6)).toBeNull();
+  });
+
+  it('handles invalid input', () => {
+    expect(getExhaustionPenalty(-1)).toBe(0); // Clamped to 0
+    expect(getExhaustionPenalty(null)).toBe(0);
+    expect(getExhaustionPenalty(undefined)).toBe(0);
+    expect(getExhaustionPenalty('invalid')).toBe(0);
+  });
+
+  it('clamps values above 6 to dead', () => {
+    expect(getExhaustionPenalty(7)).toBeNull();
+    expect(getExhaustionPenalty(10)).toBeNull();
+  });
+});
+
+describe('isDeadFromExhaustion', () => {
+  it('returns false for levels 0-5', () => {
+    expect(isDeadFromExhaustion(0)).toBe(false);
+    expect(isDeadFromExhaustion(1)).toBe(false);
+    expect(isDeadFromExhaustion(5)).toBe(false);
+  });
+
+  it('returns true for level 6+', () => {
+    expect(isDeadFromExhaustion(6)).toBe(true);
+    expect(isDeadFromExhaustion(7)).toBe(true);
+    expect(isDeadFromExhaustion(10)).toBe(true);
+  });
+
+  it('handles invalid input', () => {
+    expect(isDeadFromExhaustion(null)).toBe(false);
+    expect(isDeadFromExhaustion(undefined)).toBe(false);
+    expect(isDeadFromExhaustion('invalid')).toBe(false);
   });
 });

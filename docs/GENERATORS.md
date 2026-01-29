@@ -8,7 +8,7 @@ The DM's Toolbox includes five interconnected generators for creating D&D 5e con
 
 ### SRD Scope
 
-- Magic items, scrolls, and spell scroll metadata in the Shop/Loot generators reference only SRD 5.1 entries by default.
+- Magic items, scrolls, and spell scroll metadata in the Shop/Loot generators reference only SRD 5.2 (2024 PHB) entries by default.
 - NPC templates avoid quoting non-SRD lore verbatim; flavorful text is original copy.
 - Private content packs can inject additional datasets (e.g., custom spell scrolls) without touching the repository, and the generators will merge them automatically once registered with `SRDContentFilter.registerPrivateContent()`.
 
@@ -27,7 +27,7 @@ The DM's Toolbox includes five interconnected generators for creating D&D 5e con
 
 ### SRD Scope
 
-The preset tables, magic item blurbs, and scroll payloads all come from SRD 5.1 references or original descriptions. Keep any mention of non-SRD treasure (e.g., named artifacts, adventure-specific loot) in private packs; the default generator should only emit SRD-friendly text and generic flavor.
+The preset tables, magic item blurbs, and scroll payloads all come from SRD 5.2 references or original descriptions. Keep any mention of non-SRD treasure (e.g., named artifacts, adventure-specific loot) in private packs; the default generator should only emit SRD-friendly text and generic flavor.
 
 ### Cursed Items System (v1.10.9)
 

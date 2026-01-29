@@ -62,7 +62,7 @@ When data is loaded from storage, the migrations module checks the `schemaVersio
 
 | Field | Type | Default | Description |
 |-------|------|---------|-------------|
-| `race` | string | `''` | Character race |
+| `race` | string | `''` | Character species (stored as 'race' for backward compatibility) |
 | `charClass` | string | `''` | Primary class (display) |
 | `subclass` | string | `''` | Primary subclass |
 | `subclassLevel` | number | `0` | Level subclass was chosen |
@@ -160,7 +160,7 @@ When data is loaded from storage, the migrations module checks the `schemaVersio
 |-------|------|---------|-------------|
 | `resources` | Resource[] | `[]` | Class resources (Rage, Ki, etc.) |
 | `deathSaves` | DeathSaves | see below | Death save tracking |
-| `exhaustion` | number | `0` | Exhaustion level (0-6) |
+| `exhaustion` | number | `0` | Exhaustion level (0-6). 2024 PHB: −2 to d20 rolls per level; level 6 = death |
 | `conditions` | string | `''` | Current conditions |
 | `inspiration` | boolean | `false` | Has inspiration |
 

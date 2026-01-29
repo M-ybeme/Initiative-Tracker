@@ -86,11 +86,12 @@
       cat: "Survival",
       items: [
         {
-          title: "Exhaustion (quick ladder)",
+          title: "Exhaustion (2024 rules)",
           body: `
-            Climbing levels adds stacking penalties: skill checks suffer first, then speed, then attacks/saves, etc., until collapse.
-            Finishing a long rest and eating/drinking properly typically removes 1 level.
-            A long rest with adequate food and water typically removes 1 level.`,
+            Each level of exhaustion gives a −2 penalty to all d20 rolls (ability checks, attack rolls, saving throws).
+            Penalties stack: level 2 = −4, level 3 = −6, etc.
+            At 6 levels of exhaustion, you die.
+            A long rest with adequate food and water removes 1 level.`,
           tags: ["exhaustion","rest","survival"]
         },
         {

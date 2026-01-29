@@ -21,7 +21,7 @@ This guide captures the Phase 2 plan for private content packs: how they are str
 3. **Validation** – We validate against [schemas/content-pack.schema.json](schemas/content-pack.schema.json), check record types, scan for restricted prose, and compute a SHA-256 fingerprint for diagnostics.
 4. **Storage** – Valid packs are persisted in IndexedDB (fallback to localStorage) with their metadata, enabled flag, and fingerprint.
 5. **Activation (Phase 3.5)** – Enabling a pack should merge its allowlist, inject data into the relevant registries (`LevelUpData`, `SPELLS_DATA`, generators, etc.), and trigger SRD DOM re-evaluation so hidden buttons reappear. This wiring was missed in Phase 3 and is now being implemented as a hotfix.
-6. **Diagnostics** – The Ctrl+Alt+D panel lists loaded packs with record counts and hashes to make remote debugging possible without the data itself.
+6. **Diagnostics** – The diagnostics panel (Ctrl+Alt+D or footer gear icon) lists loaded packs with record counts and hashes to make remote debugging possible without the data itself.
 7. **Removal** – Disabling or deleting a pack reverses the merges and re-applies the SRD filters. Clearing browser storage removes every pack.
 
 ---

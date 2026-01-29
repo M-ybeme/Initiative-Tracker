@@ -418,7 +418,13 @@ const LevelUpSystem = (function() {
     const subclassData = LevelUpData.getSubclassData(className);
     if (!subclassData) return '';
 
-    const options = Object.keys(subclassData.options);
+    // Filter subclass options by SRD allowlist
+    const allOptions = Object.keys(subclassData.options);
+    const filter = window.SRDContentFilter;
+    const options = filter
+      ? allOptions.filter(optionName => filter.isAllowed('subclass', `${className}:${optionName}`))
+      : allOptions;
+    const hasHiddenOptions = options.length < allOptions.length;
 
     return `
       <div class="accordion-item bg-dark border-secondary">
@@ -437,6 +443,13 @@ const LevelUpSystem = (function() {
               Choose your <strong>${subclassData.name}</strong>. This choice is permanent and defines
               your character's path going forward.
             </p>
+
+            ${hasHiddenOptions ? `
+              <div class="alert alert-info py-2 mb-3">
+                <i class="bi bi-info-circle me-2"></i>
+                <small>Additional ${subclassData.name.toLowerCase()} options are available via content packs.</small>
+              </div>
+            ` : ''}
 
             <div class="list-group">
               ${options.map(optionName => {
@@ -2130,11 +2143,11 @@ const LevelUpSystem = (function() {
         }
       }
 
-      if (race && LevelUpData.getRacialSpellsAtLevel) {
-        const newRacialSpells = LevelUpData.getRacialSpellsAtLevel(race, subrace, levelUpData.newLevel);
-        if (newRacialSpells && newRacialSpells.length > 0) {
+      if (race && LevelUpData.getSpeciesSpellsAtLevel) {
+        const newSpeciesSpells = LevelUpData.getSpeciesSpellsAtLevel(race, subrace, levelUpData.newLevel);
+        if (newSpeciesSpells && newSpeciesSpells.length > 0) {
           // Convert to spell list format and add to character
-          newRacialSpells.forEach(spellEntry => {
+          newSpeciesSpells.forEach(spellEntry => {
             // Find the spell in SPELLS_DATA
             const spellData = window.SPELLS_DATA?.find(s => s.title === spellEntry.spell);
             if (spellData) {

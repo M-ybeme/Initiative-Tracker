@@ -34,28 +34,28 @@ The Character Manager is a complete D&D 5e character sheet system integrated int
 
 1. **Basic Information** - Name, player, alignment
 2. **Ability Scores** - Interactive 4d6-drop-lowest roller with visual dice display
-3. **Race Selection** - SRD races/subraces with clear lock states for anything outside the SRD
+3. **Species Selection** - SRD species/subspecies with clear lock states for anything outside the SRD
 4. **Class Selection** - 12 PHB classes included in SRD; Artificer and other expansions unlock only through a private content pack
-5. **Background** - 13 official D&D backgrounds with skill proficiencies
+5. **Background** - 4 SRD backgrounds with skill proficiencies, ability score increases (+2/+1), and origin feats
 6. **Skills** - Interactive proficiency selection (2-4 based on class)
 7. **HP & Combat Stats** - Automatic AC/HP/Speed calculation
 8. **Review & Summary** - Complete character preview
 
-### Race Support
+### Species Support
 
-**SRD Playable Races:** Dwarf, Elf, Halfling, Human, Dragonborn, Gnome, Half-Elf, Half-Orc, and Tiefling. These appear by default with their SRD subraces (e.g., Hill/Mountain Dwarves, High/Wood Elves, Lightfoot/Stout Halflings, Forest/Rock Gnomes, and the SRD dragonborn ancestry options).
+**SRD Playable Species:** Dwarf, Elf, Halfling, Human, Dragonborn, Gnome, Half-Elf, Half-Orc, and Tiefling. These appear by default with their SRD subspecies (e.g., Hill/Mountain Dwarves, High/Wood Elves, Lightfoot/Stout Halflings, Forest/Rock Gnomes, and the SRD dragonborn ancestry options).
 
-**Subrace System:**
-- Dynamic dropdowns surface only the SRD-legal subraces, and each option carries summary text for speed.
-- Locked subraces display a tooltip explaining that they require a private pack; selecting them is blocked until the pack is loaded.
+**Subspecies System:**
+- Dynamic dropdowns surface only the SRD-legal subspecies, and each option carries summary text for speed.
+- Locked subspecies display a tooltip explaining that they require a private pack; selecting them is blocked until the pack is loaded.
 
 **Private Content Packs:**
-- Legacy races from Volo's, Ravnica, Theros, Eberron, etc. stay in the data model so users can merge them locally.
-- When a pack registers additional races, the UI automatically removes the lock badge and enables the normal workflow without needing to fork the repo.
+- Additional species from Volo's, Ravnica, Theros, Eberron, etc. stay in the data model so users can merge them locally.
+- When a pack registers additional species, the UI automatically removes the lock badge and enables the normal workflow without needing to fork the repo.
 
-### Racial Features (v1.10.3)
+### Species Features (v1.10.3)
 
-- SRD races automatically populate their traits (speed, size, languages, darkvision, resistances) during creation.
+- SRD species automatically populate their traits (speed, size, languages, darkvision, resistances) during creation.
 - Level-gated features (e.g., Dragonborn breath weapon scaling) track the character's level so features stay accurate after leveling.
 - When a private pack adds more races, the same pipeline processes them—`gatherRacialFeatures()` simply receives a larger dataset while the SRD allowlist keeps the default build compliant.
 
@@ -83,15 +83,15 @@ The Character Manager is a complete D&D 5e character sheet system integrated int
 ### Feat System (v1.10.0)
 
 **SRD-Compliant Feat Library:**
-- The default build exposes only the feats that appear in SRD 5.1 as well as any original utility feats authored for the app.
+- The default build exposes only the feats that appear in SRD 5.2 (2024 PHB) as well as any original utility feats authored for the app.
 - Each feat includes prerequisite validation, optional ability score bumps, and structured rules text for exports.
 - Additional PHB/Tasha's/Xanathar's feats stay in the data files but are hidden until a private content pack whitelists them.
 
 ### Subclass System (v1.10.1)
 
-- SRD archetypes (e.g., Champion Fighter, Life Domain Cleric, Thief Rogue) are available out of the box.
-- Each subclass step appears at the SRD-prescribed level with descriptive text, feature previews, and validation.
-- Non-SRD archetypes remain defined in `data/srd/level-up-data.js`, but the SRD allowlist marks them as locked until a private content pack enables them.
+- **Note:** SRD 5.2 does not include any subclasses. All subclass content is blocked by default.
+- Each subclass step appears at the class-prescribed level with descriptive text, feature previews, and validation.
+- Subclasses remain defined in `data/srd/level-up-data.js`, but the SRD allowlist blocks them until a private content pack enables them.
 - Once a pack is loaded, the existing UI simply unhides the entries—no additional code paths are required.
 
 ### Multiclassing System (v1.10.1)
@@ -169,7 +169,7 @@ The Character Manager is a complete D&D 5e character sheet system integrated int
 - Inspiration checkbox
 - Concentration tracker with DC calculation
 - Death save automation
-- Exhaustion tracker (levels 0-6)
+- Exhaustion tracker (levels 0-6, using 2024 PHB rules: −2 to d20 rolls per level)
 - Condition toggle buttons
 
 ### Combat/DM View (v1.10.4)

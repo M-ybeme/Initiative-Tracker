@@ -1,10 +1,10 @@
 # Data Bundles
 
-This directory stores the raw content bundles that feed the toolbox. The structure keeps the SRD 5.1 baseline physically separate from any future content packs so we can ship a safe public build while letting private packs live side by side.
+This directory stores the raw content bundles that feed the toolbox. The structure keeps the SRD 5.2 (2024 PHB) baseline physically separate from any future content packs so we can ship a safe public build while letting private packs live side by side.
 
 ```
 data/
-├── srd/                # Canonical SRD 5.1 datasets loaded by default
+├── srd/                # Canonical SRD 5.2 datasets loaded by default
 │   ├── spells-data.js  # Spell definitions exposed as window.SPELLS_DATA
 │   └── level-up-data.js# Class/feat/background/etc. tables (window.LevelUpData)
 └── packs/

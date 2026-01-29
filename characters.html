@@ -848,9 +848,13 @@
         <div class="alert alert-warning text-start" role="status">
           <div class="fw-semibold"><i class="bi bi-shield-lock me-1"></i>SRD Scope</div>
           <small>
-            Races, subclasses, feats, and spells shown here are limited to SRD 5.1 unless you load a private content pack locally.
+            Races, subclasses, feats, and spells shown here are limited to SRD 5.2 (2024 PHB) unless you load a private content pack locally.
             Keep any non-SRD references in private packs rather than the public repo.
-            <span class="ms-1 text-decoration-underline" data-bs-toggle="tooltip" data-bs-placement="top" title="Press Ctrl+Alt+D to open the diagnostics panel, then use Manage Content Packs to import purchased or homebrew data for the wizards.">
+            <a href="docs/CONTENT_PACK_AUTHORING.md" target="_blank" class="text-warning text-decoration-underline">
+              <i class="bi bi-file-earmark-text me-1"></i>Create Your Own Content Pack
+            </a>
+            <span class="mx-2">|</span>
+            <span class="text-decoration-underline" data-bs-toggle="tooltip" data-bs-placement="top" title="Press Ctrl+Alt+D to open the diagnostics panel, then use Manage Content Packs to import purchased or homebrew data for the wizards.">
               How to load private packs
             </span>
           </small>
@@ -3093,7 +3097,7 @@
             <img src="/images/White logo - no background.png" height="40" alt="Logo" class="footer-logo">
           </div>
 
-          <!-- Right: Social Links -->
+          <!-- Right: Social Links + Settings -->
           <div class="col-12 col-md-4 d-flex justify-content-center justify-content-md-end align-items-center gap-2">
             <a href="https://www.linkedin.com/in/marlo-mayberry-930ab9b7/" class="socialicons" target="_blank" rel="noopener" aria-label="LinkedIn">
               <i class="bi bi-linkedin"></i>
@@ -3101,9 +3105,13 @@
             <a href="https://github.com/M-ybeme" class="socialicons" target="_blank" rel="noopener" aria-label="GitHub">
               <i class="bi bi-github"></i>
             </a>
-            <a href="https://ko-fi.com/maybemestoolbox" class="socialicons d-flex align-items-center" target="_blank" rel="noopener" title="Support The DM’s Toolbox on Ko-fi">
+            <a href="https://ko-fi.com/maybemestoolbox" class="socialicons d-flex align-items-center" target="_blank" rel="noopener" title="Support The DM's Toolbox on Ko-fi">
               <i class="bi bi-cup-hot"></i>
             </a>
+            <button type="button" class="socialicons" onclick="window.toggleDiagnosticsPanel?.()"
+                    title="Open Settings &amp; Diagnostics" aria-label="Open Settings and Diagnostics panel">
+              <i class="bi bi-gear"></i>
+            </button>
           </div>
         </div>
       </div>

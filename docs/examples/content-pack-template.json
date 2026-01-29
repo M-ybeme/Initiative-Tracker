@@ -1,76 +1,190 @@
 {
   "metadata": {
-    "id": "com.example.source-book",
-    "name": "Replace with Pack Name",
+    "id": "com.yourname.homebrew-pack",
+    "name": "My Homebrew Content Pack",
     "version": "1.0.0",
     "authors": ["Your Name"],
-    "source": "Title of the book or homebrew reference you personally own",
+    "source": "Original homebrew or personal book reference",
     "license": "Private use only",
-    "createdAt": "2026-01-24T00:00:00.000Z",
-    "updatedAt": "2026-01-24T00:00:00.000Z",
-    "toolVersion": "2.0.5",
+    "createdAt": "2026-01-26T00:00:00.000Z",
+    "updatedAt": "2026-01-26T00:00:00.000Z",
+    "toolVersion": "2.0.8",
     "homepage": "https://example.com/optional"
   },
   "dependencies": [],
   "allowlist": {
-    "class": ["Artificer"],
-    "subclass": ["Wizard:Bladesinging"],
+    "class": ["Chronomancer"],
+    "subclass": ["Wizard:Arcane Geometer", "Fighter:Vanguard"],
     "spell": [
-      "Tashas Caustic Brew",
-      "Booming Blade"
+      "Arcane Surge",
+      "Temporal Anchor"
     ],
-    "feat": ["Fey Touched"],
-    "background": []
+    "feat": ["Tactical Genius"],
+    "background": ["Merchant Prince"],
+    "fighting-style": ["Sentinel Stance"],
+    "pact-boon": ["Pact of the Grimoire"],
+    "eldritch-invocation": ["Eldritch Barrier"],
+    "metamagic": ["Redirected Spell"],
+    "subrace": ["Elf:Starlight Elf"]
   },
   "records": [
     {
       "type": "class",
-      "id": "Artificer",
+      "id": "Chronomancer",
       "operation": "add",
       "payload": {
-        "hitDice": "d8",
+        "hitDice": "d6",
         "primaryAbility": "int",
-        "spellcastingProgression": "half",
+        "spellcastingProgression": "full",
         "equipment": [
-          "A set of tools you own",
-          "Light armor"
+          "A quarterstaff or dagger",
+          "A component pouch or arcane focus",
+          "A scholar's pack"
         ],
         "featuresByLevel": {
-          "1": ["Magical Tinkering", "Spellcasting"],
-          "2": ["Infuse Item"],
-          "3": ["Specialist"],
+          "1": ["Time Sense", "Spellcasting"],
+          "2": ["Temporal Ward"],
+          "3": ["Chronomancy Specialization"],
           "4": ["Ability Score Improvement"]
         }
       }
     },
     {
-      "type": "spell",
-      "id": "Tashas Caustic Brew",
+      "type": "subclass",
+      "id": "Wizard:Arcane Geometer",
       "operation": "add",
       "payload": {
-        "title": "Tasha's Caustic Brew",
-        "level": 1,
-        "school": "Conjuration",
+        "name": "Arcane Geometer",
+        "description": "Wizards who study the mathematical patterns underlying magic.",
+        "features": {
+          "2": ["Geometric Insights", "Pattern Recognition"],
+          "6": ["Calculated Precision"],
+          "10": ["Fractal Defense"],
+          "14": ["Perfect Formula"]
+        }
+      }
+    },
+    {
+      "type": "spell",
+      "id": "Arcane Surge",
+      "operation": "add",
+      "payload": {
+        "title": "Arcane Surge",
+        "level": 2,
+        "school": "Evocation",
         "casting": "1 action",
-        "range": "60 feet",
-        "components": "V, S, M (a bit of spoiled food)",
-        "duration": "Concentration, up to 1 minute",
-        "description": "Write a short summary in your own words that reminds you what the spell does. Do not paste book text."
+        "range": "Self (30-foot cone)",
+        "components": "V, S",
+        "duration": "Instantaneous",
+        "description": "A wave of raw arcane energy bursts from your hands. Each creature in the area must make a Dexterity saving throw or take 3d8 force damage.",
+        "classes": ["Wizard", "Sorcerer"]
+      }
+    },
+    {
+      "type": "spell",
+      "id": "Temporal Anchor",
+      "operation": "add",
+      "payload": {
+        "title": "Temporal Anchor",
+        "level": 3,
+        "school": "Transmutation",
+        "casting": "1 action",
+        "range": "Self",
+        "components": "V, S, M (a small hourglass)",
+        "duration": "1 minute",
+        "description": "You mark your current position in time. Until the spell ends, you can use your reaction to return to that moment, regaining hit points equal to any damage taken since casting.",
+        "classes": ["Wizard", "Chronomancer"]
       }
     },
     {
       "type": "feat",
-      "id": "Fey Touched",
+      "id": "Tactical Genius",
       "operation": "add",
       "payload": {
-        "name": "Fey Touched",
-        "description": "Summarize the benefit in your own words.",
-        "source": "Tasha's Cauldron of Everything"
+        "name": "Tactical Genius",
+        "description": "You have a keen mind for battlefield strategy. You gain +1 to Intelligence, and allies within 30 feet gain advantage on their first attack roll each combat.",
+        "prerequisites": "Intelligence 13 or higher"
+      }
+    },
+    {
+      "type": "background",
+      "id": "Merchant Prince",
+      "operation": "add",
+      "payload": {
+        "name": "Merchant Prince",
+        "description": "You were born into a wealthy trading family and learned the art of negotiation from an early age.",
+        "skillProficiencies": ["Insight", "Persuasion"],
+        "toolProficiencies": ["One type of gaming set"],
+        "languages": ["One of your choice"],
+        "equipment": [
+          "A set of fine clothes",
+          "A signet ring",
+          "A letter of credit worth 25 gp",
+          "A belt pouch containing 15 gp"
+        ],
+        "feature": {
+          "name": "Trade Connections",
+          "description": "You have contacts in major trading cities who can provide lodging and information about local markets."
+        }
+      }
+    },
+    {
+      "type": "fighting-style",
+      "id": "Sentinel Stance",
+      "operation": "add",
+      "payload": {
+        "name": "Sentinel Stance",
+        "description": "When you are wielding a melee weapon in one hand and no other weapons, you gain +1 to AC and can use your reaction to make an opportunity attack when a creature within 5 feet of you attacks a target other than you.",
+        "classes": ["Fighter", "Paladin"]
+      }
+    },
+    {
+      "type": "pact-boon",
+      "id": "Pact of the Grimoire",
+      "operation": "add",
+      "payload": {
+        "name": "Pact of the Grimoire",
+        "description": "Your patron grants you a magical grimoire containing forbidden knowledge. You learn two additional cantrips from any spell list, and once per long rest you can cast a spell you don't know as a ritual if it appears in your grimoire."
+      }
+    },
+    {
+      "type": "eldritch-invocation",
+      "id": "Eldritch Barrier",
+      "operation": "add",
+      "payload": {
+        "name": "Eldritch Barrier",
+        "description": "When you cast eldritch blast, you can forgo one beam to create a barrier of force. Until the start of your next turn, you have half cover against ranged attacks.",
+        "prerequisites": {
+          "level": 5,
+          "other": "Eldritch Blast cantrip"
+        }
+      }
+    },
+    {
+      "type": "metamagic",
+      "id": "Redirected Spell",
+      "operation": "add",
+      "payload": {
+        "name": "Redirected Spell",
+        "description": "When a spell you cast that targets only one creature misses or the target succeeds on its saving throw, you can spend 2 sorcery points to redirect the spell to a different target within range.",
+        "cost": 2
+      }
+    },
+    {
+      "type": "subrace",
+      "id": "Elf:Starlight Elf",
+      "operation": "add",
+      "payload": {
+        "name": "Starlight Elf",
+        "race": "Elf",
+        "description": "Elves who dwell in observatories atop mountain peaks, studying celestial phenomena. They gain Starlight Vision and a connection to the night sky."
       }
     }
   ],
   "notes": [
-    "List any pages or ISBN numbers for personal reference.",
-    "Remind yourself who owns the physical/digital book."
+    "This is a template with example homebrew content.",
+    "Replace the examples with your own creations or content you own.",
+    "Remember: do not paste copyrighted text verbatim - summarize in your own words.",
+    "Add page references here for your personal use."
   ]
 }

@@ -198,3 +198,24 @@ body.player-view .card .health-input {
   font-size: 0.9rem;
   line-height: 1;
 }
+
+/* Keep modals clear of the fixed navbar */
+#statusModal .modal-dialog,
+#notesModal .modal-dialog,
+#bulkHPModal .modal-dialog,
+#combatLogModal .modal-dialog,
+#savedCharsModal .modal-dialog,
+#rulesModal .modal-dialog {
+  margin-top: 5.5rem;
+}
+
+@media (max-width: 576px) {
+  #statusModal .modal-dialog,
+  #notesModal .modal-dialog,
+  #bulkHPModal .modal-dialog,
+  #combatLogModal .modal-dialog,
+  #savedCharsModal .modal-dialog,
+  #rulesModal .modal-dialog {
+    margin-top: 4.5rem;
+  }
+}

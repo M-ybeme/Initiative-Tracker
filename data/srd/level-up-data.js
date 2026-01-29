@@ -2306,6 +2306,623 @@ window.LevelUpData = (function() {
   };
 
   // ============================================================
+  // FIGHTING STYLES (Fighter, Paladin, Ranger)
+  // ============================================================
+  const FIGHTING_STYLE_DATA = {
+    'Archery': {
+      name: 'Archery',
+      description: 'You gain a +2 bonus to attack rolls you make with ranged weapons.',
+      classes: ['Fighter', 'Ranger'],
+      srd: true
+    },
+    'Blind Fighting': {
+      name: 'Blind Fighting',
+      description: 'You have blindsight with a range of 10 feet. Within that range, you can effectively see anything that isn\'t behind total cover, even if you\'re blinded or in darkness.',
+      classes: ['Fighter', 'Paladin', 'Ranger'],
+      srd: false
+    },
+    'Defense': {
+      name: 'Defense',
+      description: 'While you are wearing armor, you gain a +1 bonus to AC.',
+      classes: ['Fighter', 'Paladin', 'Ranger'],
+      srd: true
+    },
+    'Dueling': {
+      name: 'Dueling',
+      description: 'When you are wielding a melee weapon in one hand and no other weapons, you gain a +2 bonus to damage rolls with that weapon.',
+      classes: ['Fighter', 'Paladin', 'Ranger'],
+      srd: true
+    },
+    'Great Weapon Fighting': {
+      name: 'Great Weapon Fighting',
+      description: 'When you roll a 1 or 2 on a damage die for an attack you make with a melee weapon that you are wielding with two hands, you can reroll the die and must use the new roll, even if the new roll is a 1 or a 2.',
+      classes: ['Fighter', 'Paladin'],
+      srd: true
+    },
+    'Interception': {
+      name: 'Interception',
+      description: 'When a creature you can see hits a target, other than you, within 5 feet of you with an attack, you can use your reaction to reduce the damage the target takes by 1d10 + your proficiency bonus.',
+      classes: ['Fighter', 'Paladin'],
+      srd: false
+    },
+    'Protection': {
+      name: 'Protection',
+      description: 'When a creature you can see attacks a target other than you that is within 5 feet of you, you can use your reaction to impose disadvantage on the attack roll. You must be wielding a shield.',
+      classes: ['Fighter', 'Paladin'],
+      srd: true
+    },
+    'Superior Technique': {
+      name: 'Superior Technique',
+      description: 'You learn one maneuver of your choice from among those available to the Battle Master archetype. You gain one superiority die (d6). This die is used to fuel your maneuvers.',
+      classes: ['Fighter'],
+      srd: false
+    },
+    'Thrown Weapon Fighting': {
+      name: 'Thrown Weapon Fighting',
+      description: 'You can draw a weapon that has the thrown property as part of the attack you make with the weapon. In addition, when you hit with a ranged attack using a thrown weapon, you gain a +2 bonus to the damage roll.',
+      classes: ['Fighter', 'Ranger'],
+      srd: false
+    },
+    'Two-Weapon Fighting': {
+      name: 'Two-Weapon Fighting',
+      description: 'When you engage in two-weapon fighting, you can add your ability modifier to the damage of the second attack.',
+      classes: ['Fighter', 'Ranger'],
+      srd: true
+    },
+    'Unarmed Fighting': {
+      name: 'Unarmed Fighting',
+      description: 'Your unarmed strikes can deal bludgeoning damage equal to 1d6 + your Strength modifier on a hit. If you aren\'t wielding any weapons or a shield, the d6 becomes a d8.',
+      classes: ['Fighter'],
+      srd: false
+    },
+    'Blessed Warrior': {
+      name: 'Blessed Warrior',
+      description: 'You learn two cantrips of your choice from the cleric spell list. They count as paladin spells for you.',
+      classes: ['Paladin'],
+      srd: false
+    },
+    'Druidic Warrior': {
+      name: 'Druidic Warrior',
+      description: 'You learn two cantrips of your choice from the druid spell list. They count as ranger spells for you.',
+      classes: ['Ranger'],
+      srd: false
+    }
+  };
+
+  // ============================================================
+  // PACT BOONS (Warlock)
+  // ============================================================
+  const PACT_BOON_DATA = {
+    'Pact of the Blade': {
+      name: 'Pact of the Blade',
+      description: 'You can use your action to create a pact weapon in your empty hand. You can choose the form that this melee weapon takes each time you create it. You are proficient with it while you wield it.',
+      srd: true
+    },
+    'Pact of the Chain': {
+      name: 'Pact of the Chain',
+      description: 'You learn the find familiar spell and can cast it as a ritual. When you cast the spell, you can choose one of the normal forms for your familiar or one of the following special forms: imp, pseudodragon, quasit, or sprite.',
+      srd: true
+    },
+    'Pact of the Tome': {
+      name: 'Pact of the Tome',
+      description: 'Your patron gives you a grimoire called a Book of Shadows. When you gain this feature, choose three cantrips from any class\'s spell list. The cantrips count as warlock spells for you.',
+      srd: true
+    },
+    'Pact of the Talisman': {
+      name: 'Pact of the Talisman',
+      description: 'Your patron gives you an amulet, a talisman that can aid the wearer when the need is great. When the wearer fails an ability check, they can add a d4 to the roll, potentially turning the roll into a success.',
+      srd: false
+    }
+  };
+
+  // ============================================================
+  // ELDRITCH INVOCATIONS (Warlock)
+  // ============================================================
+  const ELDRITCH_INVOCATION_DATA = {
+    'Agonizing Blast': {
+      name: 'Agonizing Blast',
+      description: 'When you cast eldritch blast, add your Charisma modifier to the damage it deals on a hit.',
+      prerequisites: 'eldritch blast cantrip',
+      srd: true
+    },
+    'Armor of Shadows': {
+      name: 'Armor of Shadows',
+      description: 'You can cast mage armor on yourself at will, without expending a spell slot or material components.',
+      prerequisites: null,
+      srd: true
+    },
+    'Beast Speech': {
+      name: 'Beast Speech',
+      description: 'You can cast speak with animals at will, without expending a spell slot.',
+      prerequisites: null,
+      srd: true
+    },
+    'Beguiling Influence': {
+      name: 'Beguiling Influence',
+      description: 'You gain proficiency in the Deception and Persuasion skills.',
+      prerequisites: null,
+      srd: true
+    },
+    'Book of Ancient Secrets': {
+      name: 'Book of Ancient Secrets',
+      description: 'You can now inscribe magical rituals in your Book of Shadows. Choose two 1st-level spells that have the ritual tag from any class\'s spell list.',
+      prerequisites: 'Pact of the Tome',
+      srd: true
+    },
+    'Devil\'s Sight': {
+      name: 'Devil\'s Sight',
+      description: 'You can see normally in darkness, both magical and nonmagical, to a distance of 120 feet.',
+      prerequisites: null,
+      srd: true
+    },
+    'Eldritch Mind': {
+      name: 'Eldritch Mind',
+      description: 'You have advantage on Constitution saving throws that you make to maintain your concentration on a spell.',
+      prerequisites: null,
+      srd: false
+    },
+    'Eldritch Sight': {
+      name: 'Eldritch Sight',
+      description: 'You can cast detect magic at will, without expending a spell slot.',
+      prerequisites: null,
+      srd: true
+    },
+    'Eldritch Spear': {
+      name: 'Eldritch Spear',
+      description: 'When you cast eldritch blast, its range is 300 feet.',
+      prerequisites: 'eldritch blast cantrip',
+      srd: true
+    },
+    'Eyes of the Rune Keeper': {
+      name: 'Eyes of the Rune Keeper',
+      description: 'You can read all writing.',
+      prerequisites: null,
+      srd: true
+    },
+    'Fiendish Vigor': {
+      name: 'Fiendish Vigor',
+      description: 'You can cast false life on yourself at will as a 1st-level spell, without expending a spell slot or material components.',
+      prerequisites: null,
+      srd: true
+    },
+    'Gaze of Two Minds': {
+      name: 'Gaze of Two Minds',
+      description: 'You can use your action to touch a willing humanoid and perceive through its senses until the end of your next turn.',
+      prerequisites: null,
+      srd: true
+    },
+    'Gift of the Ever-Living Ones': {
+      name: 'Gift of the Ever-Living Ones',
+      description: 'Whenever you regain hit points while your familiar is within 100 feet of you, treat any dice rolled to determine the hit points you regain as having rolled their maximum value for you.',
+      prerequisites: 'Pact of the Chain',
+      srd: false
+    },
+    'Grasp of Hadar': {
+      name: 'Grasp of Hadar',
+      description: 'Once on each of your turns when you hit a creature with your eldritch blast, you can move that creature in a straight line 10 feet closer to you.',
+      prerequisites: 'eldritch blast cantrip',
+      srd: false
+    },
+    'Improved Pact Weapon': {
+      name: 'Improved Pact Weapon',
+      description: 'You can use any weapon you summon with your Pact of the Blade feature as a spellcasting focus. The weapon gains a +1 bonus to attack and damage rolls.',
+      prerequisites: 'Pact of the Blade',
+      srd: false
+    },
+    'Investment of the Chain Master': {
+      name: 'Investment of the Chain Master',
+      description: 'When you cast find familiar, you infuse the summoned familiar with a measure of your eldritch power, granting the creature special benefits.',
+      prerequisites: 'Pact of the Chain',
+      srd: false
+    },
+    'Lance of Lethargy': {
+      name: 'Lance of Lethargy',
+      description: 'Once on each of your turns when you hit a creature with your eldritch blast, you can reduce that creature\'s speed by 10 feet until the end of your next turn.',
+      prerequisites: 'eldritch blast cantrip',
+      srd: false
+    },
+    'Mask of Many Faces': {
+      name: 'Mask of Many Faces',
+      description: 'You can cast disguise self at will, without expending a spell slot.',
+      prerequisites: null,
+      srd: true
+    },
+    'Misty Visions': {
+      name: 'Misty Visions',
+      description: 'You can cast silent image at will, without expending a spell slot or material components.',
+      prerequisites: null,
+      srd: true
+    },
+    'One with Shadows': {
+      name: 'One with Shadows',
+      description: 'When you are in an area of dim light or darkness, you can use your action to become invisible until you move or take an action or a reaction.',
+      prerequisites: '5th level',
+      srd: true
+    },
+    'Otherworldly Leap': {
+      name: 'Otherworldly Leap',
+      description: 'You can cast jump on yourself at will, without expending a spell slot or material components.',
+      prerequisites: '9th level',
+      srd: true
+    },
+    'Repelling Blast': {
+      name: 'Repelling Blast',
+      description: 'When you hit a creature with eldritch blast, you can push the creature up to 10 feet away from you in a straight line.',
+      prerequisites: 'eldritch blast cantrip',
+      srd: true
+    },
+    'Sculptor of Flesh': {
+      name: 'Sculptor of Flesh',
+      description: 'You can cast polymorph once using a warlock spell slot. You can\'t do so again until you finish a long rest.',
+      prerequisites: '7th level',
+      srd: true
+    },
+    'Sign of Ill Omen': {
+      name: 'Sign of Ill Omen',
+      description: 'You can cast bestow curse once using a warlock spell slot. You can\'t do so again until you finish a long rest.',
+      prerequisites: '5th level',
+      srd: true
+    },
+    'Thief of Five Fates': {
+      name: 'Thief of Five Fates',
+      description: 'You can cast bane once using a warlock spell slot. You can\'t do so again until you finish a long rest.',
+      prerequisites: null,
+      srd: true
+    },
+    'Thirsting Blade': {
+      name: 'Thirsting Blade',
+      description: 'You can attack with your pact weapon twice, instead of once, whenever you take the Attack action on your turn.',
+      prerequisites: '5th level, Pact of the Blade',
+      srd: true
+    },
+    'Voice of the Chain Master': {
+      name: 'Voice of the Chain Master',
+      description: 'You can communicate telepathically with your familiar and perceive through your familiar\'s senses as long as you are on the same plane of existence.',
+      prerequisites: 'Pact of the Chain',
+      srd: true
+    },
+    'Whispers of the Grave': {
+      name: 'Whispers of the Grave',
+      description: 'You can cast speak with dead at will, without expending a spell slot.',
+      prerequisites: '9th level',
+      srd: true
+    },
+    'Witch Sight': {
+      name: 'Witch Sight',
+      description: 'You can see the true form of any shapechanger or creature concealed by illusion or transmutation magic while the creature is within 30 feet of you and within line of sight.',
+      prerequisites: '15th level',
+      srd: true
+    }
+  };
+
+  // ============================================================
+  // METAMAGIC OPTIONS (Sorcerer)
+  // ============================================================
+  const METAMAGIC_DATA = {
+    'Careful Spell': {
+      name: 'Careful Spell',
+      description: 'When you cast a spell that forces other creatures to make a saving throw, you can protect some of those creatures from the spell\'s full force. Spend 1 sorcery point and choose a number of creatures up to your Charisma modifier. A chosen creature automatically succeeds on its saving throw against the spell.',
+      cost: '1 sorcery point',
+      srd: true
+    },
+    'Distant Spell': {
+      name: 'Distant Spell',
+      description: 'When you cast a spell that has a range of 5 feet or greater, you can spend 1 sorcery point to double the range of the spell. When you cast a spell that has a range of touch, you can spend 1 sorcery point to make the range of the spell 30 feet.',
+      cost: '1 sorcery point',
+      srd: true
+    },
+    'Empowered Spell': {
+      name: 'Empowered Spell',
+      description: 'When you roll damage for a spell, you can spend 1 sorcery point to reroll a number of the damage dice up to your Charisma modifier. You must use the new rolls.',
+      cost: '1 sorcery point',
+      srd: true
+    },
+    'Extended Spell': {
+      name: 'Extended Spell',
+      description: 'When you cast a spell that has a duration of 1 minute or longer, you can spend 1 sorcery point to double its duration, to a maximum duration of 24 hours.',
+      cost: '1 sorcery point',
+      srd: true
+    },
+    'Heightened Spell': {
+      name: 'Heightened Spell',
+      description: 'When you cast a spell that forces a creature to make a saving throw to resist its effects, you can spend 3 sorcery points to give one target of the spell disadvantage on its first saving throw made against the spell.',
+      cost: '3 sorcery points',
+      srd: true
+    },
+    'Quickened Spell': {
+      name: 'Quickened Spell',
+      description: 'When you cast a spell that has a casting time of 1 action, you can spend 2 sorcery points to change the casting time to 1 bonus action for this casting.',
+      cost: '2 sorcery points',
+      srd: true
+    },
+    'Seeking Spell': {
+      name: 'Seeking Spell',
+      description: 'If you make an attack roll for a spell and miss, you can spend 2 sorcery points to reroll the d20, and you must use the new roll. You can use Seeking Spell even if you have already used a different Metamagic option during the casting of the spell.',
+      cost: '2 sorcery points',
+      srd: false
+    },
+    'Subtle Spell': {
+      name: 'Subtle Spell',
+      description: 'When you cast a spell, you can spend 1 sorcery point to cast it without any somatic or verbal components.',
+      cost: '1 sorcery point',
+      srd: true
+    },
+    'Transmuted Spell': {
+      name: 'Transmuted Spell',
+      description: 'When you cast a spell that deals a type of damage from the following list, you can spend 1 sorcery point to change that damage type to one of the other listed types: acid, cold, fire, lightning, poison, thunder.',
+      cost: '1 sorcery point',
+      srd: false
+    },
+    'Twinned Spell': {
+      name: 'Twinned Spell',
+      description: 'When you cast a spell that targets only one creature and doesn\'t have a range of self, you can spend a number of sorcery points equal to the spell\'s level to target a second creature in range with the same spell (1 sorcery point if the spell is a cantrip).',
+      cost: 'spell level sorcery points',
+      srd: true
+    }
+  };
+
+  // ============================================================
+  // SUBRACE DATA
+  // ============================================================
+  const SUBRACE_DATA = {
+    // Elf subraces
+    'Elf:High Elf': {
+      name: 'High Elf',
+      race: 'Elf',
+      description: 'High elves have keen minds and a mastery of basic magic. You gain weapon training, a wizard cantrip, and an extra language.',
+      srd: true
+    },
+    'Elf:Wood Elf': {
+      name: 'Wood Elf',
+      race: 'Elf',
+      description: 'Wood elves have keen senses and intuition, with swift feet that carry them through their native forests. Increased speed and Mask of the Wild.',
+      srd: true
+    },
+    'Elf:Dark Elf (Drow)': {
+      name: 'Dark Elf (Drow)',
+      race: 'Elf',
+      description: 'Drow have superior darkvision, sunlight sensitivity, and innate spellcasting including Dancing Lights, Faerie Fire, and Darkness.',
+      srd: false
+    },
+    'Elf:Eladrin': {
+      name: 'Eladrin',
+      race: 'Elf',
+      description: 'Eladrin are elves of the Feywild with Fey Step teleportation and shifting seasonal aspects that change the effect of their teleportation.',
+      srd: false
+    },
+    'Elf:Sea Elf': {
+      name: 'Sea Elf',
+      race: 'Elf',
+      description: 'Sea elves are adapted to underwater life with a swimming speed, ability to breathe underwater, and communication with sea creatures.',
+      srd: false
+    },
+
+    // Dwarf subraces
+    'Dwarf:Hill Dwarf': {
+      name: 'Hill Dwarf',
+      race: 'Dwarf',
+      description: 'Hill dwarves have keen senses, deep intuition, and remarkable resilience. Dwarven Toughness grants extra hit points.',
+      srd: true
+    },
+    'Dwarf:Mountain Dwarf': {
+      name: 'Mountain Dwarf',
+      race: 'Dwarf',
+      description: 'Mountain dwarves are strong and hardy, accustomed to life in rugged terrain. You gain proficiency with light and medium armor.',
+      srd: true
+    },
+    'Dwarf:Duergar': {
+      name: 'Duergar',
+      race: 'Dwarf',
+      description: 'Duergar, or gray dwarves, have superior darkvision, sunlight sensitivity, and innate spellcasting including Enlarge and Invisibility.',
+      srd: false
+    },
+
+    // Halfling subraces
+    'Halfling:Lightfoot': {
+      name: 'Lightfoot',
+      race: 'Halfling',
+      description: 'Lightfoot halflings are adept at staying out of sight, able to hide behind creatures larger than themselves.',
+      srd: true
+    },
+    'Halfling:Stout': {
+      name: 'Stout',
+      race: 'Halfling',
+      description: 'Stout halflings are hardier than average, with resistance to poison and advantage on saves against being poisoned.',
+      srd: true
+    },
+    'Halfling:Ghostwise': {
+      name: 'Ghostwise',
+      race: 'Halfling',
+      description: 'Ghostwise halflings can communicate telepathically with creatures within 30 feet that share a language with them.',
+      srd: false
+    },
+
+    // Gnome subraces
+    'Gnome:Forest Gnome': {
+      name: 'Forest Gnome',
+      race: 'Gnome',
+      description: 'Forest gnomes have a natural knack for illusion magic and can communicate with small beasts.',
+      srd: true
+    },
+    'Gnome:Rock Gnome': {
+      name: 'Rock Gnome',
+      race: 'Gnome',
+      description: 'Rock gnomes have a natural inventiveness and hardiness, with expertise in magical item history and tinker abilities.',
+      srd: true
+    },
+    'Gnome:Deep Gnome (Svirfneblin)': {
+      name: 'Deep Gnome (Svirfneblin)',
+      race: 'Gnome',
+      description: 'Deep gnomes, or svirfneblin, live far beneath the surface with superior darkvision and stone camouflage abilities.',
+      srd: false
+    },
+
+    // Dragonborn ancestries (all SRD)
+    'Dragonborn:Black': {
+      name: 'Black',
+      race: 'Dragonborn',
+      description: 'Black dragon ancestry: Acid breath weapon (5×30 ft. line, DEX save) and acid resistance.',
+      srd: true
+    },
+    'Dragonborn:Blue': {
+      name: 'Blue',
+      race: 'Dragonborn',
+      description: 'Blue dragon ancestry: Lightning breath weapon (5×30 ft. line, DEX save) and lightning resistance.',
+      srd: true
+    },
+    'Dragonborn:Brass': {
+      name: 'Brass',
+      race: 'Dragonborn',
+      description: 'Brass dragon ancestry: Fire breath weapon (5×30 ft. line, DEX save) and fire resistance.',
+      srd: true
+    },
+    'Dragonborn:Bronze': {
+      name: 'Bronze',
+      race: 'Dragonborn',
+      description: 'Bronze dragon ancestry: Lightning breath weapon (5×30 ft. line, DEX save) and lightning resistance.',
+      srd: true
+    },
+    'Dragonborn:Copper': {
+      name: 'Copper',
+      race: 'Dragonborn',
+      description: 'Copper dragon ancestry: Acid breath weapon (5×30 ft. line, DEX save) and acid resistance.',
+      srd: true
+    },
+    'Dragonborn:Gold': {
+      name: 'Gold',
+      race: 'Dragonborn',
+      description: 'Gold dragon ancestry: Fire breath weapon (15 ft. cone, DEX save) and fire resistance.',
+      srd: true
+    },
+    'Dragonborn:Green': {
+      name: 'Green',
+      race: 'Dragonborn',
+      description: 'Green dragon ancestry: Poison breath weapon (15 ft. cone, CON save) and poison resistance.',
+      srd: true
+    },
+    'Dragonborn:Red': {
+      name: 'Red',
+      race: 'Dragonborn',
+      description: 'Red dragon ancestry: Fire breath weapon (15 ft. cone, DEX save) and fire resistance.',
+      srd: true
+    },
+    'Dragonborn:Silver': {
+      name: 'Silver',
+      race: 'Dragonborn',
+      description: 'Silver dragon ancestry: Cold breath weapon (15 ft. cone, CON save) and cold resistance.',
+      srd: true
+    },
+    'Dragonborn:White': {
+      name: 'White',
+      race: 'Dragonborn',
+      description: 'White dragon ancestry: Cold breath weapon (15 ft. cone, CON save) and cold resistance.',
+      srd: true
+    },
+
+    // Tiefling subraces (only Asmodeus/standard is SRD)
+    'Tiefling:Asmodeus': {
+      name: 'Asmodeus',
+      race: 'Tiefling',
+      description: 'Standard Infernal Legacy: Thaumaturgy cantrip, Hellish Rebuke at 3rd level, Darkness at 5th level.',
+      srd: true
+    },
+    'Tiefling:Baalzebul': {
+      name: 'Baalzebul',
+      race: 'Tiefling',
+      description: 'Legacy of Maladomini: Thaumaturgy cantrip, Ray of Sickness at 3rd level, Crown of Madness at 5th level.',
+      srd: false
+    },
+    'Tiefling:Dispater': {
+      name: 'Dispater',
+      race: 'Tiefling',
+      description: 'Legacy of Dis: Thaumaturgy cantrip, Disguise Self at 3rd level, Detect Thoughts at 5th level.',
+      srd: false
+    },
+    'Tiefling:Fierna': {
+      name: 'Fierna',
+      race: 'Tiefling',
+      description: 'Legacy of Phlegethos: Friends cantrip, Charm Person at 3rd level, Suggestion at 5th level.',
+      srd: false
+    },
+    'Tiefling:Glasya': {
+      name: 'Glasya',
+      race: 'Tiefling',
+      description: 'Legacy of Malbolge: Minor Illusion cantrip, Disguise Self at 3rd level, Invisibility at 5th level.',
+      srd: false
+    },
+    'Tiefling:Levistus': {
+      name: 'Levistus',
+      race: 'Tiefling',
+      description: 'Legacy of Stygia: Ray of Frost cantrip, Armor of Agathys at 3rd level, Darkness at 5th level.',
+      srd: false
+    },
+    'Tiefling:Mammon': {
+      name: 'Mammon',
+      race: 'Tiefling',
+      description: 'Legacy of Minauros: Mage Hand cantrip, Tenser\'s Floating Disk at 3rd level, Arcane Lock at 5th level.',
+      srd: false
+    },
+    'Tiefling:Mephistopheles': {
+      name: 'Mephistopheles',
+      race: 'Tiefling',
+      description: 'Legacy of Cania: Mage Hand cantrip, Burning Hands at 3rd level, Flame Blade at 5th level.',
+      srd: false
+    },
+    'Tiefling:Zariel': {
+      name: 'Zariel',
+      race: 'Tiefling',
+      description: 'Legacy of Avernus: Thaumaturgy cantrip, Searing Smite at 3rd level, Branding Smite at 5th level.',
+      srd: false
+    },
+
+    // Aasimar subraces (non-SRD - Volo's Guide)
+    'Aasimar:Protector': {
+      name: 'Protector',
+      race: 'Aasimar',
+      description: 'Radiant Soul: At 3rd level, spectral wings grant flying speed. Once per turn, add level as extra radiant damage.',
+      srd: false
+    },
+    'Aasimar:Scourge': {
+      name: 'Scourge',
+      race: 'Aasimar',
+      description: 'Radiant Consumption: At 3rd level, radiate searing light that damages you and nearby creatures. Add level as extra radiant damage.',
+      srd: false
+    },
+    'Aasimar:Fallen': {
+      name: 'Fallen',
+      race: 'Aasimar',
+      description: 'Necrotic Shroud: At 3rd level, skeletal wings frighten nearby creatures. Add level as extra necrotic damage.',
+      srd: false
+    },
+
+    // Shifter subraces (non-SRD - Eberron)
+    'Shifter:Beasthide': {
+      name: 'Beasthide',
+      race: 'Shifter',
+      description: 'Natural Athlete with Athletics proficiency. While shifted, gain extra temporary HP and +1 AC.',
+      srd: false
+    },
+    'Shifter:Longtooth': {
+      name: 'Longtooth',
+      race: 'Shifter',
+      description: 'Fierce with Intimidation proficiency. While shifted, can bite as a bonus action for 1d6+Str piercing damage.',
+      srd: false
+    },
+    'Shifter:Swiftstride': {
+      name: 'Swiftstride',
+      race: 'Shifter',
+      description: 'Graceful with Acrobatics proficiency. While shifted, +10 feet speed and can move 10 feet as reaction.',
+      srd: false
+    },
+    'Shifter:Wildhunt': {
+      name: 'Wildhunt',
+      race: 'Shifter',
+      description: 'Natural Tracker with Survival proficiency. While shifted, advantage on Wisdom checks and enemies can\'t have advantage against you.',
+      srd: false
+    }
+  };
+
+  // ============================================================
   // DEFAULT WEAPONS BY CLASS
   // ============================================================
   const DEFAULT_CLASS_WEAPONS = {
@@ -3060,6 +3677,11 @@ window.LevelUpData = (function() {
     PROFICIENCY_BONUS,
     CLASS_DATA,
     SUBCLASS_DATA,
+    FIGHTING_STYLE_DATA,
+    PACT_BOON_DATA,
+    ELDRITCH_INVOCATION_DATA,
+    METAMAGIC_DATA,
+    SUBRACE_DATA,
     DEFAULT_CLASS_WEAPONS,
     CLASS_RESOURCES,
     ARTIFICER_INFUSIONS,
@@ -3243,6 +3865,217 @@ window.LevelUpData = (function() {
       return newLevel >= selectionLevel;
     },
 
+    // ============================================================
+    // FIGHTING STYLE HELPERS
+    // ============================================================
+
+    /**
+     * Get all fighting styles available to a class
+     * @param {string} className - The class name (Fighter, Paladin, Ranger)
+     * @returns {Object} - Object of fighting style data keyed by name
+     */
+    getFightingStylesForClass(className) {
+      const result = {};
+      for (const [name, data] of Object.entries(FIGHTING_STYLE_DATA)) {
+        if (data.classes.includes(className)) {
+          result[name] = data;
+        }
+      }
+      return result;
+    },
+
+    /**
+     * Get a specific fighting style's data
+     */
+    getFightingStyleData(styleName) {
+      return FIGHTING_STYLE_DATA[styleName] || null;
+    },
+
+    /**
+     * Get all fighting style names
+     */
+    getAllFightingStyles() {
+      return Object.keys(FIGHTING_STYLE_DATA).sort();
+    },
+
+    // ============================================================
+    // PACT BOON HELPERS (Warlock)
+    // ============================================================
+
+    /**
+     * Get all pact boon options
+     */
+    getPactBoonOptions() {
+      return PACT_BOON_DATA;
+    },
+
+    /**
+     * Get a specific pact boon's data
+     */
+    getPactBoonData(boonName) {
+      return PACT_BOON_DATA[boonName] || null;
+    },
+
+    /**
+     * Get all pact boon names
+     */
+    getAllPactBoons() {
+      return Object.keys(PACT_BOON_DATA).sort();
+    },
+
+    // ============================================================
+    // ELDRITCH INVOCATION HELPERS (Warlock)
+    // ============================================================
+
+    /**
+     * Get all eldritch invocations
+     */
+    getEldritchInvocationOptions() {
+      return ELDRITCH_INVOCATION_DATA;
+    },
+
+    /**
+     * Get a specific eldritch invocation's data
+     */
+    getEldritchInvocationData(invocationName) {
+      return ELDRITCH_INVOCATION_DATA[invocationName] || null;
+    },
+
+    /**
+     * Get all eldritch invocation names
+     */
+    getAllEldritchInvocations() {
+      return Object.keys(ELDRITCH_INVOCATION_DATA).sort();
+    },
+
+    /**
+     * Get invocations available at a given warlock level (considering prerequisites)
+     * @param {number} warlockLevel - The warlock's level
+     * @param {string} pactBoon - The warlock's pact boon (if any)
+     * @param {boolean} hasEldritchBlast - Whether the warlock knows eldritch blast
+     * @returns {Object} - Available invocations
+     */
+    getAvailableInvocationsForLevel(warlockLevel, pactBoon = null, hasEldritchBlast = false) {
+      const result = {};
+      for (const [name, data] of Object.entries(ELDRITCH_INVOCATION_DATA)) {
+        let available = true;
+        const prereq = data.prerequisites;
+
+        if (prereq) {
+          // Check level prerequisites
+          const levelMatch = prereq.match(/(\d+)(?:th|st|nd|rd)?\s*level/i);
+          if (levelMatch && warlockLevel < parseInt(levelMatch[1])) {
+            available = false;
+          }
+
+          // Check pact boon prerequisites
+          if (prereq.includes('Pact of the Blade') && pactBoon !== 'Pact of the Blade') {
+            available = false;
+          }
+          if (prereq.includes('Pact of the Chain') && pactBoon !== 'Pact of the Chain') {
+            available = false;
+          }
+          if (prereq.includes('Pact of the Tome') && pactBoon !== 'Pact of the Tome') {
+            available = false;
+          }
+
+          // Check eldritch blast prerequisite
+          if (prereq.includes('eldritch blast') && !hasEldritchBlast) {
+            available = false;
+          }
+        }
+
+        if (available) {
+          result[name] = data;
+        }
+      }
+      return result;
+    },
+
+    // ============================================================
+    // METAMAGIC HELPERS (Sorcerer)
+    // ============================================================
+
+    /**
+     * Get all metamagic options
+     */
+    getMetamagicOptions() {
+      return METAMAGIC_DATA;
+    },
+
+    /**
+     * Get a specific metamagic option's data
+     */
+    getMetamagicData(metamagicName) {
+      return METAMAGIC_DATA[metamagicName] || null;
+    },
+
+    /**
+     * Get all metamagic option names
+     */
+    getAllMetamagic() {
+      return Object.keys(METAMAGIC_DATA).sort();
+    },
+
+    // ============================================================
+    // SUBRACE HELPERS
+    // ============================================================
+
+    /**
+     * Get all subraces for a given race
+     * @param {string} raceName - The race name (Elf, Dwarf, etc.)
+     * @returns {Object} - Object of subrace data keyed by subrace name
+     */
+    getSubracesForRace(raceName) {
+      const result = {};
+      for (const data of Object.values(SUBRACE_DATA)) {
+        if (data.race === raceName) {
+          result[data.name] = data;
+        }
+      }
+      return result;
+    },
+
+    /**
+     * Get a specific subrace's data by its full key (Race:Subrace)
+     * @param {string} subraceKey - The subrace key (e.g., 'Elf:High Elf')
+     * @returns {Object|null} - Subrace data or null
+     */
+    getSubraceData(subraceKey) {
+      return SUBRACE_DATA[subraceKey] || null;
+    },
+
+    /**
+     * Get a specific subrace's data by race and subrace name
+     * @param {string} raceName - The race name
+     * @param {string} subraceName - The subrace name
+     * @returns {Object|null} - Subrace data or null
+     */
+    getSubraceByName(raceName, subraceName) {
+      const key = `${raceName}:${subraceName}`;
+      return SUBRACE_DATA[key] || null;
+    },
+
+    /**
+     * Get all subrace keys
+     * @returns {string[]} - Array of all subrace keys
+     */
+    getAllSubraceKeys() {
+      return Object.keys(SUBRACE_DATA).sort();
+    },
+
+    /**
+     * Get all races that have subraces
+     * @returns {string[]} - Array of race names that have subraces
+     */
+    getRacesWithSubraces() {
+      const races = new Set();
+      for (const data of Object.values(SUBRACE_DATA)) {
+        races.add(data.race);
+      }
+      return Array.from(races).sort();
+    },
+
     /**
      * Get spell learning rules for a class at a specific level
      * @param {string} className - The class name
@@ -3366,7 +4199,7 @@ window.LevelUpData = (function() {
     },
 
     // ============================================================
-    // RACIAL BASE FEATURES (Level 1 features all races have)
+    // SPECIES BASE FEATURES (Level 1 features all species have)
     // ============================================================
 
     /**
@@ -4672,7 +5505,7 @@ window.LevelUpData = (function() {
     },
 
     // ============================================================
-    // RACIAL SPELLS (Spells granted by racial features)
+    // SPECIES SPELLS (Spells granted by species features)
     // ============================================================
 
     /**
@@ -4813,6 +5646,15 @@ window.LevelUpData = (function() {
      */
     BACKGROUND_DATA: {
       'Acolyte': {
+        abilityScoreIncreases: {
+          // 2024 PHB: Player chooses which abilities get +2 and +1
+          flexible: true,
+          choices: [
+            { ability: 'choice', bonus: 2 },
+            { ability: 'choice', bonus: 1 }
+          ]
+        },
+        originFeat: 'Magic Initiate (Cleric)',
         feature: {
           name: 'Shelter of the Faithful',
           description: 'As an acolyte, you command the respect of those who share your faith, and you can perform the religious ceremonies of your deity. You and your adventuring companions can expect to receive free healing and care at a temple, shrine, or other established presence of your faith, though you must provide any material components needed for spells. Those who share your religion will support you (but only you) at a modest lifestyle. You might also have ties to a specific temple dedicated to your chosen deity or pantheon, and you have a residence there. This could be the temple where you used to serve, if you remain on good terms with it, or a temple where you have found a new home. While near your temple, you can call upon the priests for assistance, provided the assistance you ask for is not hazardous and you remain in good standing with your temple.'
@@ -4851,6 +5693,15 @@ window.LevelUpData = (function() {
         startingGold: 15
       },
       'Criminal': {
+        abilityScoreIncreases: {
+          // 2024 PHB: Player chooses which abilities get +2 and +1
+          flexible: true,
+          choices: [
+            { ability: 'choice', bonus: 2 },
+            { ability: 'choice', bonus: 1 }
+          ]
+        },
+        originFeat: 'Alert',
         feature: {
           name: 'Criminal Contact',
           description: 'You have a reliable and trustworthy contact who acts as your liaison to a network of other criminals. You know how to get messages to and from your contact, even over great distances; specifically, you know the local messengers, corrupt caravan masters, and seedy sailors who can deliver messages for you.'
@@ -4979,6 +5830,15 @@ window.LevelUpData = (function() {
         startingGold: 10
       },
       'Sage': {
+        abilityScoreIncreases: {
+          // 2024 PHB: Player chooses which abilities get +2 and +1
+          flexible: true,
+          choices: [
+            { ability: 'choice', bonus: 2 },
+            { ability: 'choice', bonus: 1 }
+          ]
+        },
+        originFeat: 'Magic Initiate (Wizard)',
         feature: {
           name: 'Researcher',
           description: 'When you attempt to learn or recall a piece of lore, if you do not know that information, you often know where and from whom you can obtain it. Usually, this information comes from a library, scriptorium, university, or a sage or other learned person or creature. Your DM might rule that the knowledge you seek is secreted away in an almost inaccessible place, or that it simply cannot be found. Unearthing the deepest secrets of the multiverse can require an adventure or even a whole campaign.'
@@ -5018,6 +5878,15 @@ window.LevelUpData = (function() {
         startingGold: 10
       },
       'Soldier': {
+        abilityScoreIncreases: {
+          // 2024 PHB: Player chooses which abilities get +2 and +1
+          flexible: true,
+          choices: [
+            { ability: 'choice', bonus: 2 },
+            { ability: 'choice', bonus: 1 }
+          ]
+        },
+        originFeat: 'Savage Attacker',
         feature: {
           name: 'Military Rank',
           description: 'You have a military rank from your career as a soldier. Soldiers loyal to your former military organization still recognize your authority and influence, and they defer to you if they are of a lower rank. You can invoke your rank to exert influence over other soldiers and requisition simple equipment or horses for temporary use. You can also usually gain access to friendly military encampments and fortresses where your rank is recognized.'
@@ -5832,7 +6701,7 @@ window.LevelUpData = (function() {
     },
 
     // ============================================================
-    // RACIAL LEVEL FEATURES
+    // SPECIES LEVEL FEATURES
     // ============================================================
 
     /**
@@ -6011,7 +6880,7 @@ window.LevelUpData = (function() {
     },
 
     // ============================================================
-    // RACIAL SCALING FEATURES (Level 1 features that scale)
+    // SPECIES SCALING FEATURES (Level 1 features that scale)
     // ============================================================
 
     /**
@@ -6554,7 +7423,7 @@ window.LevelUpData = (function() {
     },
 
     // ============================================================
-    // RACIAL FEATURE HELPERS
+    // SPECIES FEATURE HELPERS
     // ============================================================
 
     /**
@@ -6618,13 +7487,13 @@ window.LevelUpData = (function() {
     },
 
     /**
-     * Get racial spells for a race up to a given level
-     * @param {string} race - Character's race (base race like "Tiefling")
-     * @param {string} subrace - Character's subrace (optional, like "Asmodeus")
+     * Get species spells for a species up to a given level
+     * @param {string} race - Character's species (base species like "Tiefling")
+     * @param {string} subrace - Character's subspecies (optional, like "Asmodeus")
      * @param {number} level - Character's current level
      * @returns {Array} - Array of spell objects { spell, type, note?, level }
      */
-    getRacialSpells(race, subrace, level) {
+    getSpeciesSpells(race, subrace, level) {
       const spells = [];
 
       // Check subrace first (more specific), then base race
@@ -6668,13 +7537,13 @@ window.LevelUpData = (function() {
     },
 
     /**
-     * Get racial spells gained at a specific level
-     * @param {string} race - Character's race
-     * @param {string} subrace - Character's subrace (optional)
+     * Get species spells gained at a specific level
+     * @param {string} race - Character's species
+     * @param {string} subrace - Character's subspecies (optional)
      * @param {number} level - The specific level to check
      * @returns {Array} - Array of spell objects gained at that level
      */
-    getRacialSpellsAtLevel(race, subrace, level) {
+    getSpeciesSpellsAtLevel(race, subrace, level) {
       const spells = [];
 
       // Check subrace first, then base race
@@ -6717,13 +7586,13 @@ window.LevelUpData = (function() {
     },
 
     /**
-     * Get comprehensive racial features for a character including base, subrace, level-gated, and scaling features
-     * @param {string} race - Character's race (e.g., "Elf", "Dwarf")
-     * @param {string} subrace - Character's subrace (e.g., "High Elf", "Hill Dwarf") - optional
+     * Get comprehensive species features for a character including base, subspecies, level-gated, and scaling features
+     * @param {string} race - Character's species (e.g., "Elf", "Dwarf")
+     * @param {string} subrace - Character's subspecies (e.g., "High Elf", "Hill Dwarf") - optional
      * @param {number} level - Character's current level
-     * @returns {Object} - Complete racial feature data
+     * @returns {Object} - Complete species feature data
      */
-    getFullRacialFeatures(race, subrace, level) {
+    getFullSpeciesFeatures(race, subrace, level) {
       const result = {
         race: race,
         subrace: subrace || null,
@@ -6851,19 +7720,19 @@ window.LevelUpData = (function() {
     },
 
     /**
-     * Format racial features as markdown text for Features & Feats section
-     * @param {string} race - Character's race
-     * @param {string} subrace - Character's subrace (optional)
+     * Format species features as markdown text for Features & Feats section
+     * @param {string} race - Character's species
+     * @param {string} subrace - Character's subspecies (optional)
      * @param {number} level - Character's current level
      * @returns {string} - Formatted markdown string
      */
-    formatRacialFeaturesAsText(race, subrace, level) {
-      const features = this.getFullRacialFeatures(race, subrace, level);
+    formatSpeciesFeaturesAsText(race, subrace, level) {
+      const features = this.getFullSpeciesFeatures(race, subrace, level);
       const lines = [];
 
       // Header
-      const raceName = subrace ? `${subrace} (${race})` : race;
-      lines.push(`**${raceName} Racial Features:**`);
+      const speciesName = subrace ? `${subrace} (${race})` : race;
+      lines.push(`**${speciesName} Species Features:**`);
       lines.push(`- Size: ${features.size}`);
       lines.push(`- Speed: ${features.speed} ft.`);
       lines.push(`- Languages: ${features.languages.join(', ')}`);

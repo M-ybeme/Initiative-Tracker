@@ -61,7 +61,7 @@ Test each major feature manually:
 ### Post-Release
 
 - [ ] **Verify deployment** - Check live site loads correctly
-- [ ] **Check diagnostics panel** - Ctrl+Alt+D shows correct version
+- [ ] **Check diagnostics panel** - Ctrl+Alt+D or footer gear icon shows correct version
 - [ ] **Monitor for errors** - Check browser console on live site
 
 ---

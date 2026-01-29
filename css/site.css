@@ -87,6 +87,14 @@ main.content {
   box-shadow: 0 0 0 2px rgba(111,203,198,.15);
 }
 
+.site-footer button.socialicons {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  font-size: 1rem;
+}
+
 .site-footer a {
   text-decoration: none;
 }
@@ -338,4 +346,43 @@ main.content {
 .content-pack-modal .small,
 .content-pack-modal p {
   color: rgba(255, 255, 255, 0.75);
+}
+
+/* ==========================================================================
+   Modal Positioning - Keep modals clear of the fixed navbar
+   ========================================================================== */
+
+/* Characters page modals */
+#characterCreationModal .modal-dialog,
+#characterWizardModal .modal-dialog,
+#attackModal .modal-dialog,
+#portraitModal .modal-dialog,
+#inventoryItemModal .modal-dialog,
+#tokenPreviewModal .modal-dialog,
+#hitDiceModal .modal-dialog,
+#multiclassModal .modal-dialog,
+#helpModal .modal-dialog,
+#diceHistoryModal .modal-dialog {
+  margin-top: 5rem;
+}
+
+/* Large modals (wizard) need more space */
+#characterCreationModal .modal-dialog.modal-lg,
+#characterWizardModal .modal-dialog.modal-lg {
+  margin-top: 4rem;
+}
+
+@media (max-width: 576px) {
+  #characterCreationModal .modal-dialog,
+  #characterWizardModal .modal-dialog,
+  #attackModal .modal-dialog,
+  #portraitModal .modal-dialog,
+  #inventoryItemModal .modal-dialog,
+  #tokenPreviewModal .modal-dialog,
+  #hitDiceModal .modal-dialog,
+  #multiclassModal .modal-dialog,
+  #helpModal .modal-dialog,
+  #diceHistoryModal .modal-dialog {
+    margin-top: 4rem;
+  }
 }

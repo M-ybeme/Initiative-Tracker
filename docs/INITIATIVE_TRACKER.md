@@ -21,9 +21,9 @@
 
 ### SRD Scope
 
-- The built-in rules/snippet reference loads only SRD 5.1 mechanics through `window.SRDContentFilter`.
+- The built-in rules/snippet reference loads only SRD 5.2 (2024 PHB) mechanics through `window.SRDContentFilter`.
 - Any encounter data sent from other tools passes through the same allowlist so stat blocks and spell cards never display non-SRD text unless a private content pack is loaded locally.
-- Diagnostics panel (Ctrl+Alt+D) shows the active SRD filter so DMs can confirm whether the tracker is running in SRD-only mode.
+- Diagnostics panel (Ctrl+Alt+D or footer gear icon) shows the active SRD filter so DMs can confirm whether the tracker is running in SRD-only mode.
 
 ## Use Case
 

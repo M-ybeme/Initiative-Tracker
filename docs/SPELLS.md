@@ -42,7 +42,7 @@ Until the pack workflow lands, the UI clearly explains why certain spells are hi
 
 - Vitest unit suites cover spell filtering helpers and ensure the allowlist never returns barred spell IDs.
 - Playwright E2E tests for the Character Creation Wizard assert that only SRD spells appear during selection.
-- Manual spot checks leverage the diagnostics panel (`Ctrl+Alt+D`) to confirm the SRD filter status and the count of visible spells.
+- Manual spot checks leverage the diagnostics panel (`Ctrl+Alt+D` or footer gear icon) to confirm the SRD filter status and the count of visible spells.
 
 ## File Reference
 

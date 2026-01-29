@@ -3,7 +3,7 @@
 This is the player-facing cookbook for building private content packs that re-enable material you personally own. Packs never leave your browser: the JSON file lives on your machine, the toolbox stores it in IndexedDB/localStorage, and you can clear everything to return to the SRD baseline at any time.
 
 Use this guide if you want to:
-- Load additional classes, spells, feats, tables, or items that are not part of the SRD 5.1 release.
+- Load additional classes, spells, feats, tables, or items that are not part of the SRD 5.2 (2024 PHB) release.
 - Keep those records private to your table while staying in line with the repository's licensing rules.
 - Share a structured reminder of where each option came from without copying proprietary prose.
 
@@ -20,7 +20,7 @@ Use this guide if you want to:
 
 ## Step 1 — Copy the Starter Template
 
-Download or duplicate [docs/examples/content-pack-template.json](examples/content-pack-template.json). Rename it to something meaningful (for example, `eberron-pack.json`). The template already contains every top-level section the loader understands:
+Download or duplicate [docs/examples/content-pack-template.json](examples/content-pack-template.json). Rename it to something meaningful (for example, `my-homebrew-pack.json`). The template already contains every top-level section the loader understands:
 
 ```text
 metadata      → Who owns this pack?
@@ -40,11 +40,11 @@ Populate the `metadata` object so diagnostics can identify the pack:
 
 | Field | Required | Description |
 |-------|----------|-------------|
-| `id` | ✅ | Use a reverse-domain or slugged id (`com.marlo.eberron`). Must be unique across all packs you import. |
+| `id` | ✅ | Use a reverse-domain or slugged id (`com.yourname.homebrew`). Must be unique across all packs you import. |
 | `name` | ✅ | Friendly name shown in the modal. |
 | `version` | ✅ | Semver-style string so you can track revisions. |
 | `authors` | ✅ | Array of names or initials of the people who prepared the pack. |
-| `source` | ✅ | Cite the book/PDF you own (“Eberron: Rising from the Last War”). |
+| `source` | ✅ | Cite your source ("My Campaign Homebrew" or the book/PDF you own). |
 | `license` | ✅ | Reminder that this is for personal use only. |
 | `toolVersion` | ⛔ | Optional reference to the app version that exported/imported the pack. |
 | `createdAt` / `updatedAt` | ⛔ | ISO-8601 timestamps for your own audit trail. |
@@ -60,12 +60,17 @@ Keep this section short—no rules text belongs here.
 
 | Type | Example ID | Notes |
 |------|------------|-------|
-| `class` | `Artificer` | Matches `LevelUpData.CLASS_DATA` keys. |
-| `subclass` | `Wizard:Bladesinging` | `${ClassName}:${SubclassName}`. |
-| `spell` | `Tashas Caustic Brew` | Use the spell title as displayed in the SRD data. |
-| `feat` | `Fey Touched` | Exact feat names. |
-| `background` | `Investigator` | Aligns with `LevelUpData.BACKGROUND_DATA`. |
-| `generator-table` | `loot:ravnica-artifacts` | Custom table identifiers from generators. |
+| `class` | `Chronomancer` | Matches `LevelUpData.CLASS_DATA` keys. Use for homebrew classes. |
+| `subclass` | `Wizard:Arcane Geometer` | `${ClassName}:${SubclassName}`. All subclasses are blocked in SRD 5.2. |
+| `spell` | `Arcane Surge` | Use the spell title exactly as you want it displayed. |
+| `feat` | `Tactical Genius` | Exact feat names for your homebrew feats. |
+| `background` | `Merchant Prince` | Aligns with `LevelUpData.BACKGROUND_DATA`. Only 4 backgrounds are in SRD 5.2. |
+| `fighting-style` | `Blind Fighting` | Fighting styles for Fighter, Paladin, Ranger. Only 6 are in SRD 5.2. |
+| `pact-boon` | `Pact of the Talisman` | Warlock pact boons. Only 3 are in SRD 5.2 (Blade, Chain, Tome). |
+| `eldritch-invocation` | `Eldritch Mind` | Warlock invocations. Many are SRD, but Tasha's additions are not. |
+| `metamagic` | `Seeking Spell` | Sorcerer metamagic options. 8 are SRD, Tasha's additions are not. |
+| `subrace` | `Elf:Dark Elf (Drow)` | `${RaceName}:${SubraceName}`. Core PHB subraces are SRD; expansions like Drow are not. |
+| `generator-table` | `loot:custom-artifacts` | Custom table identifiers from generators. |
 
 Only list the IDs you actually include in `records`. The UI will warn you if an allowlisted id lacks a matching record.
 
@@ -78,17 +83,18 @@ Each entry inside `records` represents data the runtime merges into its registri
 ```json
 {
   "type": "spell",
-  "id": "Tashas Caustic Brew",
+  "id": "Arcane Surge",
   "operation": "add",
   "payload": {
-    "title": "Tasha's Caustic Brew",
-    "level": 1,
-    "school": "Conjuration",
+    "title": "Arcane Surge",
+    "level": 2,
+    "school": "Evocation",
     "casting": "1 action",
-    "range": "60 feet",
-    "components": "V, S, M (a bit of spoiled food)",
-    "duration": "Concentration, up to 1 minute",
-    "description": "Describe the effect in your own words."
+    "range": "Self (30-foot cone)",
+    "components": "V, S",
+    "duration": "Instantaneous",
+    "description": "A wave of raw arcane energy bursts from your hands. Each creature in the area must make a Dexterity saving throw or take 3d8 force damage.",
+    "classes": ["Wizard", "Sorcerer"]
   }
 }
 ```
@@ -111,6 +117,11 @@ Each entry inside `records` represents data the runtime merges into its registri
 | `class` / `subclass` | Mirrors the shapes inside `data/srd/level-up-data.js` (`featuresByLevel`, `spellcastingProgression`, etc.). |
 | `feat` | `LevelUpData.FEATS` entries (`name`, `description`, `prerequisites`). |
 | `background` | `LevelUpData.BACKGROUND_DATA`. |
+| `fighting-style` | `LevelUpData.FIGHTING_STYLE_DATA` entries (`name`, `description`, `classes` array). |
+| `pact-boon` | `LevelUpData.PACT_BOON_DATA` entries (`name`, `description`). |
+| `eldritch-invocation` | `LevelUpData.ELDRITCH_INVOCATION_DATA` entries (`name`, `description`, `prerequisites`). |
+| `metamagic` | `LevelUpData.METAMAGIC_DATA` entries (`name`, `description`, `cost`). |
+| `subrace` | `LevelUpData.SUBRACE_DATA` entries (`name`, `race`, `description`). ID format: `Race:SubraceName`. |
 | `generator-table` | Objects with `table`, `entries`, and optional `weight` arrays, just like the existing loot/shop/tavern generators. |
 
 Use the [schemas/content-pack.schema.json](../schemas/content-pack.schema.json) file as the authoritative source for field requirements. Most editors can validate JSON against a schema automatically.
@@ -120,7 +131,7 @@ Use the [schemas/content-pack.schema.json](../schemas/content-pack.schema.json) 
 ## Step 5 — Validate and Import
 
 1. Open The DM's Toolbox.
-2. Press `Ctrl + Alt + D` to open the diagnostics panel, then click **Open Content Pack Manager**.
+2. Press `Ctrl + Alt + D` or click the gear icon in the footer to open the diagnostics panel, then click **Open Content Pack Manager**.
 3. Choose either **Paste JSON** or **Upload File** and import your pack.
 4. Fix any validation errors reported in the status banner (missing metadata, unknown types, duplicate IDs, etc.).
 5. Toggle the pack on. Locked UI sections will refresh automatically; re-open the diagnostics panel to confirm record counts and fingerprints.

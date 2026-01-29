@@ -1935,7 +1935,7 @@ document.addEventListener("DOMContentLoaded", ()=>{
             <img src="/images/White logo - no background.png" height="40" alt="Logo" class="footer-logo">
           </div>
 
-          <!-- Right: Social Links -->
+          <!-- Right: Social Links + Settings -->
           <div class="col-12 col-md-4 d-flex justify-content-center justify-content-md-end align-items-center gap-2">
             <a href="https://www.linkedin.com/in/marlo-mayberry-930ab9b7/" class="socialicons" target="_blank" rel="noopener" aria-label="LinkedIn">
               <i class="bi bi-linkedin"></i>
@@ -1943,9 +1943,13 @@ document.addEventListener("DOMContentLoaded", ()=>{
             <a href="https://github.com/M-ybeme" class="socialicons" target="_blank" rel="noopener" aria-label="GitHub">
               <i class="bi bi-github"></i>
             </a>
-            <a href="https://ko-fi.com/maybemestoolbox" class="socialicons d-flex align-items-center" target="_blank" rel="noopener" title="Support The DM’s Toolbox on Ko-fi">
+            <a href="https://ko-fi.com/maybemestoolbox" class="socialicons d-flex align-items-center" target="_blank" rel="noopener" title="Support The DM's Toolbox on Ko-fi">
               <i class="bi bi-cup-hot"></i>
             </a>
+            <button type="button" class="socialicons" onclick="window.toggleDiagnosticsPanel?.()"
+                    title="Open Settings &amp; Diagnostics" aria-label="Open Settings and Diagnostics panel">
+              <i class="bi bi-gear"></i>
+            </button>
           </div>
         </div>
       </div>

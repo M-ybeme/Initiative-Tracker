@@ -13,6 +13,15 @@ const OUTPUT_PATH = path.join(ROOT_DIR, 'js', 'generated', 'srd-allowlist.js');
 const ALLOWED_STATUSES = new Set(['srd-ok', 'original']);
 const BLOCKED_STATUSES = new Set(['non-srd']);
 
+// Types that have metadata.srd flags for SRD determination
+const TYPES_WITH_SRD_FLAGS = new Set([
+  'fighting-style',
+  'pact-boon',
+  'eldritch-invocation',
+  'metamagic',
+  'subrace'
+]);
+
 async function main() {
   const raw = await readFile(MANIFEST_PATH, 'utf8');
   const manifest = JSON.parse(raw);
@@ -22,14 +31,35 @@ async function main() {
   const blocklist = {};
 
   for (const entry of entries) {
-    const { id, type, status } = entry;
+    const { id, type, status, metadata } = entry;
     if (!id || !type) continue;
+
+    // For types with metadata.srd flags, use that flag directly
+    if (TYPES_WITH_SRD_FLAGS.has(type) && metadata && typeof metadata.srd === 'boolean') {
+      if (metadata.srd) {
+        pushValue(allowlist, type, id);
+      } else {
+        pushValue(blocklist, type, id);
+      }
+      continue;
+    }
+
+    // For other types, use the status field
     if (ALLOWED_STATUSES.has(status)) {
       pushValue(allowlist, type, id);
     } else if (BLOCKED_STATUSES.has(status)) {
       pushValue(blocklist, type, id);
     }
   }
+
+  // Ensure types with blocklist entries but no allowlist entries get an empty array
+  // This is critical: the filter returns true if there's no allowlist for a type,
+  // so we need an empty array to properly block all items of that type
+  Object.keys(blocklist).forEach((key) => {
+    if (!allowlist[key]) {
+      allowlist[key] = [];
+    }
+  });
 
   // Sort values for deterministic output
   Object.keys(allowlist).forEach((key) => allowlist[key].sort());

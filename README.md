@@ -8,20 +8,29 @@
 
 ## 🎯 TL;DR
 
-Free DM toolkit for improvisation at the table. No login, no personal tracking, works offline.
+Free D&D 5e toolkit using **2024 PHB rules (SRD 5.2)**. No login, no tracking, works offline.
 
-* **[Initiative Tracker](docs/INITIATIVE_TRACKER.md)** – Combat management with damage history and automation
-* **[Battle Map](docs/BATTLEMAP.md)** – Lightweight VTT with fog of war and tokens
-* **[Character Manager](docs/CHARACTER_MANAGER.md)** – Complete character sheets with no paywalls
-* **[Encounter Builder](docs/ENCOUNTER_BUILDER.md)** – Quick combat assembly and monster stat blocks
-* **[Journal](docs/JOURNAL.md)** – Rich text editor with persistent storage
-* **[Generators](docs/GENERATORS.md)** – Shops, Taverns, Loot, NPCs, and Names
+### Core Tools
 
-**Built by a DM who was tired of paywalls and subscriptions.**
+* **[Initiative Tracker](docs/INITIATIVE_TRACKER.md)** – Combat management with HP tracking, damage history, conditions, and turn automation
+* **[Battle Map](docs/BATTLEMAP.md)** – Lightweight VTT with fog of war, tokens, and grid overlay
+* **[Character Manager](docs/CHARACTER_MANAGER.md)** – Full character sheets with guided creation wizard and level-up system
+* **[Encounter Builder](docs/ENCOUNTER_BUILDER.md)** – CR budgeting, monster stat blocks, and one-click initiative export
+* **[Journal](docs/JOURNAL.md)** – Rich text campaign notes with persistent storage
+* **[Generators](docs/GENERATORS.md)** – Random shops, taverns, loot tables, NPCs, and names
 
-All data stored locally in your browser using LocalStorage and IndexedDB. No accounts, no tracking, complete privacy, full offline capability after first load.
+### Out of the Box
 
-Press **Ctrl+Alt+D** anywhere in the app to open the local diagnostics panel with version info, storage stats, and last error details—no telemetry, entirely client-side.
+* **9 SRD species** (Dwarf, Elf, Halfling, Human, Dragonborn, Gnome, Half-Elf, Half-Orc, Tiefling) with subspecies
+* **12 classes** with full progression tables, spell slots, and class features
+* **4 backgrounds** with 2024 PHB ability score increases (+2/+1) and origin feats
+* **300+ SRD spells** searchable by class, level, school, and ritual tag
+* **400+ monsters** with full stat blocks for encounter building
+* **2024 PHB exhaustion rules** (−2 per level to all d20 rolls)
+
+All data stored locally via LocalStorage and IndexedDB. No accounts, no server, complete privacy, full offline capability after first load.
+
+Press **Ctrl+Alt+D** or click the gear icon in the footer to open the diagnostics panel with version info, storage stats, and data backup options.
 
 ---
 
@@ -53,47 +62,58 @@ Press **Ctrl+Alt+D** anywhere in the app to open the local diagnostics panel wit
 
 ---
 
-## 💬 Why This Exists
+## 💬 What You Get
 
-> *"I needed an SRD-safe toolkit I could run offline and extend privately without leaking my books."*
-> — Tabletop DM feedback
+### Character Creation & Management
 
-### Problems with most tools:
+* **13-step character wizard** – Guided creation from species selection through equipment
+* **Species selection** with SRD subspecies (High Elf, Hill Dwarf, etc.)
+* **Background bonuses** – 2024 PHB system with flexible +2/+1 ability increases
+* **Origin feats** – Automatic feat from background (Magic Initiate, Alert, etc.)
+* **Level-up system** – HP rolls, ASI/feat choices, spell slot progression
+* **Exportable sheets** – PDF and JSON export for backup or sharing
 
-* $400+ cost to unlock races/classes/spells
-* Subscriptions for basic features
-* Online-only tools with no offline mode
-* Tracking and analytics on gameplay
+### Combat & Encounters
 
-### The DM's Toolbox fixes all of that:
+* **Initiative tracking** with automatic turn order and round counter
+* **HP management** – Damage, healing, temp HP, and death saves
+* **Condition tracking** – All 2024 PHB conditions with exhaustion penalties
+* **Encounter balancing** – CR calculator with difficulty ratings
+* **Monster stat blocks** – Full SRD bestiary with searchable filters
 
-* **All SRD rules content accessible for free**
-* **Private content packs keep any non-SRD options on your device**
-* **No logins or accounts**
-* **Offline after first load**
-* **Tools built for improvisation**
+### Improvisation Tools
 
-This started as a personal combat tool and grew into a full GM toolkit used by thousands.
+* **Shop generator** – Inventory based on settlement size and shop type
+* **Tavern generator** – Names, menus, rumors, and NPCs
+* **Loot tables** – Treasure by CR with magic item rolls
+* **NPC generator** – Personality traits, bonds, flaws, and appearance
+* **Name generator** – Fantasy names by culture and gender
+
+### Privacy & Offline
+
+* **Zero accounts** – No login, no email, no signup
+* **Local storage only** – All data stays in your browser
+* **Offline capable** – Works without internet after first load
+* **No tracking** – Only anonymous page counts via GoatCounter
 
 ---
 
 ## 📘 SRD Scope & Content Packs
 
-The public site and repository only bundle rules text released in the System Reference Document 5.1 under CC-BY 4.0. Historical data for other WotC books now stays gated behind the SRD allowlist in `js/site.js`, so anything outside the SRD (Xanathar's, Tasha's, Eberron, etc.) never renders unless you opt in locally.
+The public site and repository only bundle rules text released in the System Reference Document 5.2 (2024 PHB) under CC-BY 4.0. Historical data for other WotC books stays gated behind the SRD allowlist in `js/site.js`, so anything outside the SRD (Xanathar's, Tasha's, Eberron, etc.) never renders unless you opt in locally.
 
-Planned private content packs load through IndexedDB/localStorage so you can re-enable your licensed material without redistributing it. Until that workflow lands, UI elements marked with `data-srd-block` explain that the option requires a private pack.
+Private content packs load through IndexedDB/localStorage so you can re-enable your licensed material without redistributing it. Import JSON packs via the Content Pack Manager (Ctrl+Alt+D or footer gear icon → "Open Content Pack Manager") to unlock non-SRD species, subclasses, spells, and more. UI elements marked with `data-srd-block` indicate options that require a content pack.
 
 Want the doc-by-doc status of that scrub? Start with [docs/README.md](docs/README.md) for a compliance summary, links to every guide, and references to the SRD licensing notes. Ready to build your own data? Use the user-facing [Content Pack Authoring Guide](docs/CONTENT_PACK_AUTHORING.md) and dive deeper into schemas/lifecycle details in [docs/CONTENT_PACKS.md](docs/CONTENT_PACKS.md). Need a private bundle with your own packs? Follow [docs/PRIVATE_BUILD.md](docs/PRIVATE_BUILD.md).
 
 ---
 
-## 🎲 Philosophy
+## 🎲 Design Principles
 
-The DM's Toolbox is designed with three principles:
-
-* **Assist, don’t dictate** — Generators help you improvise, not railroad players.
-* **Privacy first** — All data stays in the browser.
-* **Frictionless gameplay** — Built for actual tables, not theoretical workflows.
+* **Ready at the table** – Every tool is designed for mid-session use. Generate a shop in 2 clicks, roll initiative instantly, look up a spell without leaving the page.
+* **Your data, your device** – Characters, maps, and notes never leave your browser. No cloud sync means no vendor lock-in.
+* **Extend privately** – Own books you want to use? Import them as content packs without redistributing copyrighted material.
+* **SRD-first** – The public build uses only freely licensed content. Everything else stays gated until you opt in.
 
 ## 🔒 Privacy & Analytics
 
@@ -113,7 +133,7 @@ All characters, maps, journals, encounter data, and preferences remain stored en
 * HTML + Bootstrap UI
 * LocalStorage + IndexedDB persistence
 * Modularized logic under `js/modules/`
-* **550+ automated tests** (unit + integration via Vitest, Playwright suites for E2E)
+* **630+ automated tests** (unit + integration via Vitest, Playwright suites for E2E)
 * Vitest + happy-dom for unit & integration tests
 * Playwright for end-to-end tests
 * ESLint + Prettier enforce the documented coding standards
@@ -126,8 +146,8 @@ All characters, maps, journals, encounter data, and preferences remain stored en
 
 ```bash
 # Clone the repo
-git clone https://github.com/Maybeme/dms-toolbox.git
-cd dms-toolbox
+git clone https://github.com/M-ybeme/Initiative-Tracker.git
+cd Initiative-Tracker
 
 # Install dev dependencies
 npm install
@@ -186,10 +206,13 @@ Every guide under `/docs` reflects the SRD-only build. Start with the index for 
 * [Journal](docs/JOURNAL.md) – Rich text tips plus how exports embed the license block.
 * [Integration Guide](docs/INTEGRATION.md) – Embed or extend modules without breaking the SRD boundary.
 * [Private Build Workflow](docs/PRIVATE_BUILD.md) – Generate a local bundle plus your own packs without committing private data.
+* [Content Pack Authoring](docs/CONTENT_PACK_AUTHORING.md) – Create your own JSON content packs.
+* [Content Pack Testing](docs/CONTENT_PACK_TESTING.md) – Verify pack toggle/removal behavior.
 * [Architecture Overview](docs/ARCHITECTURE.md)
 * [Codebase Overview](docs/CODEBASE_OVERVIEW.md)
 * [Coding Standards](docs/CODING_STANDARDS.md)
 * [Data Schemas](docs/DATA_SCHEMAS.md)
+* [Level-Up System](docs/LEVEL_UP_SYSTEM.md) – Character progression mechanics.
 * [Release Checklist](docs/RELEASE_CHECKLIST.md)
 
 ---
@@ -235,18 +258,18 @@ The DM's Toolbox includes accessibility features:
 ## 📝 License & Attribution
 
 - **Code & original assets:** MIT License — free to use, modify, fork, or extend.
-- **SRD-derived rules text:** Creative Commons Attribution 4.0 International (see [docs/licensing/SRD-5.1-CC-BY-4.0.md](docs/licensing/SRD-5.1-CC-BY-4.0.md)). Exported PDFs/printouts still embed the compliance block automatically, but the live pages now link here instead of repeating the full copy.
+- **SRD-derived rules text:** Creative Commons Attribution 4.0 International (see [docs/licensing/](docs/licensing/)). The application uses SRD 5.2 (2024 PHB) rules. Exported PDFs/printouts still embed the compliance block automatically, but the live pages now link here instead of repeating the full copy.
 - **Product identity disclaimer:** Wizards of the Coast, Dungeons & Dragons, Forgotten Realms, Ravenloft, Eberron, the dragon ampersand, beholders, githyanki, githzerai, mind flayers, yuan-ti, and all other Wizards of the Coast product identity are trademarks of Wizards of the Coast LLC in the U.S.A. and other countries. The DM’s Toolbox is not affiliated with, endorsed, sponsored, or specifically approved by Wizards of the Coast LLC.
 
 ### SRD Attribution Text
 
-This work includes material from the System Reference Document 5.1 by Wizards of the Coast LLC and is licensed for our use under the Creative Commons Attribution 4.0 International License.
+This work includes material from the System Reference Document 5.2 by Wizards of the Coast LLC and is licensed for our use under the Creative Commons Attribution 4.0 International License.
 
 ### Product Identity Disclaimer
 
-The DM's Toolbox references rules and mechanics from the Dungeons & Dragons 5e System Reference Document 5.1. Wizards of the Coast, Dungeons & Dragons, Forgotten Realms, Ravenloft, Eberron, the dragon ampersand, beholders, githyanki, githzerai, mind flayers, yuan-ti, and all other Wizards of the Coast product identity are trademarks of Wizards of the Coast LLC in the U.S.A. and other countries. The DM's Toolbox is not affiliated with, endorsed, sponsored, or specifically approved by Wizards of the Coast LLC.
+The DM's Toolbox references rules and mechanics from the Dungeons & Dragons 5e System Reference Document 5.2. Wizards of the Coast, Dungeons & Dragons, Forgotten Realms, Ravenloft, Eberron, the dragon ampersand, beholders, githyanki, githzerai, mind flayers, yuan-ti, and all other Wizards of the Coast product identity are trademarks of Wizards of the Coast LLC in the U.S.A. and other countries. The DM's Toolbox is not affiliated with, endorsed, sponsored, or specifically approved by Wizards of the Coast LLC.
 
 ### Reference Materials
 
 - [Creative Commons Attribution 4.0 International License](https://creativecommons.org/licenses/by/4.0/)
-- [D&D 5e System Reference Document 5.1 PDF](https://media.wizards.com/2016/downloads/DND/SRD-OGL_V5.1.pdf)
+- [D&D 5.2 System Reference Document (2024)](https://www.dndbeyond.com/resources/1781-systems-reference-document-52)

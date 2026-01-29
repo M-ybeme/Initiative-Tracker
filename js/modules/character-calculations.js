@@ -58,6 +58,29 @@ export function getPassivePerception(wisdomScore, proficient, level, expertise =
 }
 
 /**
+ * Calculate exhaustion penalty to d20 rolls (2024 PHB rules)
+ * Each level of exhaustion applies a -2 penalty to all d20 rolls
+ * (ability checks, attack rolls, saving throws)
+ * @param {number} exhaustionLevel - Current exhaustion level (0-6)
+ * @returns {number} - Penalty to apply to d20 rolls (negative number or 0)
+ */
+export function getExhaustionPenalty(exhaustionLevel) {
+  const level = Math.max(0, Math.min(6, Number(exhaustionLevel) || 0));
+  if (level >= 6) return null; // Dead - no penalty, just dead
+  if (level === 0) return 0; // Avoid -0
+  return level * -2;
+}
+
+/**
+ * Check if a creature is dead from exhaustion
+ * @param {number} exhaustionLevel - Current exhaustion level
+ * @returns {boolean} - True if dead from exhaustion (level 6+)
+ */
+export function isDeadFromExhaustion(exhaustionLevel) {
+  return (Number(exhaustionLevel) || 0) >= 6;
+}
+
+/**
  * Calculate AC for unarmored defense (Barbarian)
  * @param {number} dexScore - Dexterity score
  * @param {number} conScore - Constitution score

@@ -1,11 +1,11 @@
 # Documentation Index
 
-This folder is the canonical reference for every system that powers The DM's Toolbox. Each guide assumes the public, SRD-only build that ships from this repository, so every data table, example, and screenshot aligns with the 5.1 Creative Commons release plus original homebrew.
+This folder is the canonical reference for every system that powers The DM's Toolbox. Each guide assumes the public, SRD-only build that ships from this repository, so every data table, example, and screenshot aligns with the SRD 5.2 (2024 PHB) Creative Commons release plus original homebrew.
 
 Use this page as the launchpad for deeper dives:
 
 ## SRD Scope & Content Packs
-- **Baseline:** Only SRD 5.1 data ships with the app. The allowlist and DOM gating runtime in `js/site.js` prevent anything outside that license from rendering by default.
+- **Baseline:** Only SRD 5.2 (2024 PHB) data ships with the app. The allowlist and DOM gating runtime in `js/site.js` prevent anything outside that license from rendering by default.
 - **What if I own other books?** Phase 2 of the roadmap (content packs) will let you import private data back into your browser. Until then, UI elements marked with `data-srd-block` explain why a choice is hidden and where content packs will slot in.
 - **Need the legal text?** The complete license copy, attribution snippet, and placement checklist live in [docs/licensing](licensing/README.md). Every surface (README, docs, footers, exports) now links to the official SRD PDF so tables can trace sources quickly.
 - **Ready to ship a private bundle?** Follow the [Private Build Workflow](PRIVATE_BUILD.md) to create a password-protected copy of the site plus your own packs.

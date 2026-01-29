@@ -134,17 +134,15 @@
  */
 
 /**
- * Spell slots tracking
- * @typedef {Object} SpellSlots
- * @property {number} [1] - 1st level slots (max/current)
- * @property {number} [2] - 2nd level slots
- * @property {number} [3] - 3rd level slots
- * @property {number} [4] - 4th level slots
- * @property {number} [5] - 5th level slots
- * @property {number} [6] - 6th level slots
- * @property {number} [7] - 7th level slots
- * @property {number} [8] - 8th level slots
- * @property {number} [9] - 9th level slots
+ * Spell slot usage for a single level
+ * @typedef {Object} SpellSlotLevel
+ * @property {number} max - Maximum available slots at this level
+ * @property {number} used - Slots currently expended
+ */
+
+/**
+ * Spell slots tracking keyed by spell level ("1"-"9")
+ * @typedef {Object.<number, SpellSlotLevel>} SpellSlots
  */
 
 /**

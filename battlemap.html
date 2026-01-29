@@ -702,7 +702,7 @@
   const fctx = fog.getContext('2d', { alpha:true });
   const fogState = { enabled:false, brush:80, mode:'reveal', painting:false, shapeType:'rect', shapeColor:'#000000', shapeSize:3 };
 
-  /** @typedef {{ id:string, type:'rect'|'circle', x:number, y:number, w?:number, h?:number, r?:number, mode:'reveal'|'cover', color:string, selected?:boolean }} FogShape */
+  /** @typedef {{ id:string, type:'rect'|'circle', x:number, y:number, w?:number, h?:number, r?:number, rot?:number, mode:'reveal'|'cover', color:string, selected?:boolean }} FogShape */
   const fogShapes = /** @type{FogShape[]} */([]);
 
   /** @typedef {{ id:string, type:'line'|'cone'|'circle', x1:number, y1:number, x2:number, y2:number, color:string, selected?:boolean }} PersistentMeasurement */
@@ -818,6 +818,7 @@
         w: s.w,
         h: s.h,
         r: s.r,
+        rot: s.rot || 0,
         mode: s.mode,
         color: s.color,
         selected: !!s.selected
@@ -938,6 +939,7 @@
           w: s.w,
           h: s.h,
           r: s.r,
+          rot: s.rot || 0,
           mode: s.mode,
           color: s.color || '#000000',
           selected: !!s.selected
@@ -1452,8 +1454,20 @@
       const shape = fogShapes[i];
 
       if(shape.type === 'rect'){
-        if(ip.x >= shape.x && ip.x <= shape.x + shape.w &&
-           ip.y >= shape.y && ip.y <= shape.y + shape.h){
+        // Transform click point into shape's local coordinate system (accounting for rotation)
+        const centerX = shape.x + shape.w / 2;
+        const centerY = shape.y + shape.h / 2;
+        const rot = shape.rot || 0;
+
+        const dx = ip.x - centerX;
+        const dy = ip.y - centerY;
+        const cos = Math.cos(-rot);
+        const sin = Math.sin(-rot);
+        const localX = dx * cos - dy * sin;
+        const localY = dx * sin + dy * cos;
+
+        // Check if point is inside the unrotated rectangle (centered at origin)
+        if(Math.abs(localX) <= shape.w / 2 && Math.abs(localY) <= shape.h / 2){
           return shape;
         }
       } else if(shape.type === 'circle'){
@@ -1469,36 +1483,53 @@
   }
 
   /**
-   * Check if world coordinates hit a resize handle of a fog shape
-   * Returns: {shape, handle} where handle is: 'nw', 'ne', 'sw', 'se', 'n', 's', 'e', 'w', or null
+   * Check if world coordinates hit a resize or rotation handle of a fog shape
+   * Returns: {shape, handle} where handle is: 'nw', 'ne', 'sw', 'se', 'n', 's', 'e', 'w', 'rotate', 'edge', or null
    */
   function hitFogShapeHandle(wx, wy){
     const ip = worldToImage(wx, wy);
     const handleSize = 10 / state.view.scale / state.mapTransform.scale; // Handle size in image space
+    const rotateHandleOffset = 25 / state.view.scale / state.mapTransform.scale; // Offset for rotation handle
 
     // Check shapes in reverse order (check both rectangles and circles)
     for(let i = fogShapes.length - 1; i >= 0; i--){
       const shape = fogShapes[i];
 
       if(shape.type === 'rect'){
-        const x1 = shape.x;
-        const y1 = shape.y;
-        const x2 = shape.x + shape.w;
-        const y2 = shape.y + shape.h;
-        const centerX = (x1 + x2) / 2;
-        const centerY = (y1 + y2) / 2;
+        const centerX = shape.x + shape.w / 2;
+        const centerY = shape.y + shape.h / 2;
+        const rot = shape.rot || 0;
 
-        // Check corner handles first
-        if(Math.hypot(ip.x - x1, ip.y - y1) <= handleSize) return {shape, handle: 'nw'};
-        if(Math.hypot(ip.x - x2, ip.y - y1) <= handleSize) return {shape, handle: 'ne'};
-        if(Math.hypot(ip.x - x1, ip.y - y2) <= handleSize) return {shape, handle: 'sw'};
-        if(Math.hypot(ip.x - x2, ip.y - y2) <= handleSize) return {shape, handle: 'se'};
+        // Transform click point into shape's local coordinate system
+        const dx = ip.x - centerX;
+        const dy = ip.y - centerY;
+        const cos = Math.cos(-rot);
+        const sin = Math.sin(-rot);
+        const localX = dx * cos - dy * sin;
+        const localY = dx * sin + dy * cos;
 
-        // Check edge handles
-        if(Math.abs(ip.x - centerX) <= handleSize && Math.abs(ip.y - y1) <= handleSize) return {shape, handle: 'n'};
-        if(Math.abs(ip.x - centerX) <= handleSize && Math.abs(ip.y - y2) <= handleSize) return {shape, handle: 's'};
-        if(Math.abs(ip.y - centerY) <= handleSize && Math.abs(ip.x - x1) <= handleSize) return {shape, handle: 'w'};
-        if(Math.abs(ip.y - centerY) <= handleSize && Math.abs(ip.x - x2) <= handleSize) return {shape, handle: 'e'};
+        // Local coordinates of corners/edges (relative to center)
+        const hw = shape.w / 2;
+        const hh = shape.h / 2;
+
+        // Check rotation handle first (above top center, in rotated space)
+        const rotHandleLocalX = 0;
+        const rotHandleLocalY = -hh - rotateHandleOffset;
+        if(Math.hypot(localX - rotHandleLocalX, localY - rotHandleLocalY) <= handleSize) {
+          return {shape, handle: 'rotate'};
+        }
+
+        // Check corner handles (in local coords)
+        if(Math.hypot(localX - (-hw), localY - (-hh)) <= handleSize) return {shape, handle: 'nw'};
+        if(Math.hypot(localX - hw, localY - (-hh)) <= handleSize) return {shape, handle: 'ne'};
+        if(Math.hypot(localX - (-hw), localY - hh) <= handleSize) return {shape, handle: 'sw'};
+        if(Math.hypot(localX - hw, localY - hh) <= handleSize) return {shape, handle: 'se'};
+
+        // Check edge handles (in local coords)
+        if(Math.abs(localX) <= handleSize && Math.abs(localY - (-hh)) <= handleSize) return {shape, handle: 'n'};
+        if(Math.abs(localX) <= handleSize && Math.abs(localY - hh) <= handleSize) return {shape, handle: 's'};
+        if(Math.abs(localY) <= handleSize && Math.abs(localX - (-hw)) <= handleSize) return {shape, handle: 'w'};
+        if(Math.abs(localY) <= handleSize && Math.abs(localX - hw) <= handleSize) return {shape, handle: 'e'};
       } else if(shape.type === 'circle'){
         // Check handle on the right edge of the circle
         const centerX = shape.x + shape.r;
@@ -1724,17 +1755,22 @@
       dirty.ui = true;
       requestRender();
     } else if(!panMode && handleHit){
-      // Resize handle interaction
+      // Resize or rotation handle interaction
       const {shape, handle} = handleHit;
       persistentMeasurements.forEach(m=> m.selected = false);
       fogShapes.forEach(s=> s.selected = false);
       state.tokens.forEach(t=> t.selected = false);
       shape.selected = true;
-      state.ui.dragMode = 'fogShapeResize';
       state.ui.fogShapeDragId = shape.id;
       state.ui.resizeHandle = handle;
       state.ui.resizeStart = worldToImage(wpt.x, wpt.y);
-      state.ui.originalShape = {x: shape.x, y: shape.y, w: shape.w, h: shape.h, r: shape.r};
+      state.ui.originalShape = {x: shape.x, y: shape.y, w: shape.w, h: shape.h, r: shape.r, rot: shape.rot || 0};
+
+      if(handle === 'rotate'){
+        state.ui.dragMode = 'fogShapeRotate';
+      } else {
+        state.ui.dragMode = 'fogShapeResize';
+      }
       hideMenu();
       updateTokenList();
     } else if(!panMode && fogShape){
@@ -1903,6 +1939,20 @@
         renderFogShapes(); // Re-render fog canvas
       }
     }
+    if(state.ui.dragMode === 'fogShapeRotate' && state.ui.fogShapeDragId){
+      const shape = fogShapes.find(s=> s.id === state.ui.fogShapeDragId);
+      if(shape && shape.type === 'rect'){
+        const ip = worldToImage(wpt.x, wpt.y);
+        // Calculate center of shape
+        const centerX = shape.x + shape.w / 2;
+        const centerY = shape.y + shape.h / 2;
+        // Calculate angle from center to mouse position
+        const angle = Math.atan2(ip.y - centerY, ip.x - centerX);
+        // Rotation handle is at top center, so offset by -PI/2 to make that the 0 position
+        shape.rot = angle + Math.PI / 2;
+        renderFogShapes(); // Re-render fog canvas
+      }
+    }
     if(state.ui.dragMode === 'fogShape' && state.ui.fogShapeDragId){
       const shape = fogShapes.find(s=> s.id === state.ui.fogShapeDragId);
       if(shape){
@@ -1997,10 +2047,10 @@
       // Persistent measurement dragging/resizing completed, save changes
       setDirty(); // Measurement was moved/resized
     }
-    if(state.ui.dragMode === 'fogShape' || state.ui.dragMode === 'fogShapeResize'){
-      // Fog shape dragging/resizing completed, save changes
+    if(state.ui.dragMode === 'fogShape' || state.ui.dragMode === 'fogShapeResize' || state.ui.dragMode === 'fogShapeRotate'){
+      // Fog shape dragging/resizing/rotating completed, save changes
       renderFogShapes();
-      setDirty(); // Fog shape was moved/resized
+      setDirty(); // Fog shape was modified
     }
     state.ui.dragMode = 'none';
     state.ui.dragId = null;
@@ -2551,6 +2601,7 @@
           w: s.w,
           h: s.h,
           r: s.r,
+          rot: s.rot || 0,
           mode: s.mode,
           color: s.color || '#000000',
           selected: !!s.selected
@@ -2677,7 +2728,19 @@
       }
 
       if (shape.type === 'rect') {
-        fctx.fillRect(shape.x, shape.y, shape.w, shape.h);
+        const rot = shape.rot || 0;
+        if (rot !== 0) {
+          // Apply rotation around center of rectangle
+          const cx = shape.x + shape.w / 2;
+          const cy = shape.y + shape.h / 2;
+          fctx.save();
+          fctx.translate(cx, cy);
+          fctx.rotate(rot);
+          fctx.fillRect(-shape.w / 2, -shape.h / 2, shape.w, shape.h);
+          fctx.restore();
+        } else {
+          fctx.fillRect(shape.x, shape.y, shape.w, shape.h);
+        }
       } else if (shape.type === 'circle') {
         fctx.beginPath();
         fctx.arc(shape.x + shape.r, shape.y + shape.r, shape.r, 0, Math.PI * 2);
@@ -2697,14 +2760,18 @@
     for (const shape of fogShapes) {
       if (shape.mode !== 'cover') continue;
 
-      const worldPos = imageToWorld(shape.x, shape.y);
       ctx.save();
       ctx.fillStyle = shape.color || '#000000';
 
       if (shape.type === 'rect') {
         const worldW = shape.w * state.mapTransform.scale;
         const worldH = shape.h * state.mapTransform.scale;
-        ctx.fillRect(worldPos.x, worldPos.y, worldW, worldH);
+        const centerWorld = imageToWorld(shape.x + shape.w / 2, shape.y + shape.h / 2);
+        const rot = shape.rot || 0;
+
+        ctx.translate(centerWorld.x, centerWorld.y);
+        ctx.rotate(rot);
+        ctx.fillRect(-worldW / 2, -worldH / 2, worldW, worldH);
       } else if (shape.type === 'circle') {
         const worldR = shape.r * state.mapTransform.scale;
         const centerWorld = imageToWorld(shape.x + shape.r, shape.y + shape.r);
@@ -2719,7 +2786,6 @@
     for (const shape of fogShapes) {
       if (shape.mode !== 'reveal') continue;
 
-      const worldPos = imageToWorld(shape.x, shape.y);
       ctx.save();
 
       // Use destination-out to "erase" the fog underneath
@@ -2729,7 +2795,12 @@
       if (shape.type === 'rect') {
         const worldW = shape.w * state.mapTransform.scale;
         const worldH = shape.h * state.mapTransform.scale;
-        ctx.fillRect(worldPos.x, worldPos.y, worldW, worldH);
+        const centerWorld = imageToWorld(shape.x + shape.w / 2, shape.y + shape.h / 2);
+        const rot = shape.rot || 0;
+
+        ctx.translate(centerWorld.x, centerWorld.y);
+        ctx.rotate(rot);
+        ctx.fillRect(-worldW / 2, -worldH / 2, worldW, worldH);
       } else if (shape.type === 'circle') {
         const worldR = shape.r * state.mapTransform.scale;
         const centerWorld = imageToWorld(shape.x + shape.r, shape.y + shape.r);
@@ -2744,8 +2815,6 @@
   function drawFogShapeOutlines(ctx) {
     // Draw outlines for fog shapes in world space (for selection feedback)
     for (const shape of fogShapes) {
-      const worldPos = imageToWorld(shape.x, shape.y);
-
       ctx.save();
       ctx.strokeStyle = shape.selected ? '#8bd3ff' : 'rgba(138, 211, 255, 0.4)';
       ctx.lineWidth = 2 / state.view.scale;
@@ -2754,25 +2823,54 @@
       if (shape.type === 'rect') {
         const worldW = shape.w * state.mapTransform.scale;
         const worldH = shape.h * state.mapTransform.scale;
-        ctx.strokeRect(worldPos.x, worldPos.y, worldW, worldH);
+        const centerWorld = imageToWorld(shape.x + shape.w / 2, shape.y + shape.h / 2);
+        const rot = shape.rot || 0;
 
-        // Draw resize handles if selected
+        // Apply rotation transform
+        ctx.translate(centerWorld.x, centerWorld.y);
+        ctx.rotate(rot);
+
+        // Draw rotated rectangle outline
+        ctx.strokeRect(-worldW / 2, -worldH / 2, worldW, worldH);
+
+        // Draw resize and rotation handles if selected
         if (shape.selected) {
           ctx.setLineDash([]);
           ctx.fillStyle = '#8bd3ff';
           const handleSize = 8 / state.view.scale;
+          const rotateHandleOffset = 25 / state.view.scale;
 
-          // Corner handles
-          ctx.fillRect(worldPos.x - handleSize/2, worldPos.y - handleSize/2, handleSize, handleSize); // NW
-          ctx.fillRect(worldPos.x + worldW - handleSize/2, worldPos.y - handleSize/2, handleSize, handleSize); // NE
-          ctx.fillRect(worldPos.x - handleSize/2, worldPos.y + worldH - handleSize/2, handleSize, handleSize); // SW
-          ctx.fillRect(worldPos.x + worldW - handleSize/2, worldPos.y + worldH - handleSize/2, handleSize, handleSize); // SE
+          // Corner handles (in rotated space, relative to center)
+          ctx.fillRect(-worldW/2 - handleSize/2, -worldH/2 - handleSize/2, handleSize, handleSize); // NW
+          ctx.fillRect(worldW/2 - handleSize/2, -worldH/2 - handleSize/2, handleSize, handleSize); // NE
+          ctx.fillRect(-worldW/2 - handleSize/2, worldH/2 - handleSize/2, handleSize, handleSize); // SW
+          ctx.fillRect(worldW/2 - handleSize/2, worldH/2 - handleSize/2, handleSize, handleSize); // SE
 
-          // Edge handles
-          ctx.fillRect(worldPos.x + worldW/2 - handleSize/2, worldPos.y - handleSize/2, handleSize, handleSize); // N
-          ctx.fillRect(worldPos.x + worldW/2 - handleSize/2, worldPos.y + worldH - handleSize/2, handleSize, handleSize); // S
-          ctx.fillRect(worldPos.x - handleSize/2, worldPos.y + worldH/2 - handleSize/2, handleSize, handleSize); // W
-          ctx.fillRect(worldPos.x + worldW - handleSize/2, worldPos.y + worldH/2 - handleSize/2, handleSize, handleSize); // E
+          // Edge handles (in rotated space)
+          ctx.fillRect(-handleSize/2, -worldH/2 - handleSize/2, handleSize, handleSize); // N
+          ctx.fillRect(-handleSize/2, worldH/2 - handleSize/2, handleSize, handleSize); // S
+          ctx.fillRect(-worldW/2 - handleSize/2, -handleSize/2, handleSize, handleSize); // W
+          ctx.fillRect(worldW/2 - handleSize/2, -handleSize/2, handleSize, handleSize); // E
+
+          // Rotation handle - circle above the top center
+          const rotHandleY = -worldH/2 - rotateHandleOffset;
+
+          // Draw connector line from top edge to rotation handle
+          ctx.strokeStyle = '#8bd3ff';
+          ctx.lineWidth = 2 / state.view.scale;
+          ctx.beginPath();
+          ctx.moveTo(0, -worldH/2);
+          ctx.lineTo(0, rotHandleY);
+          ctx.stroke();
+
+          // Draw rotation handle as a circle
+          ctx.fillStyle = '#ffb347'; // Orange to distinguish from resize handles
+          ctx.beginPath();
+          ctx.arc(0, rotHandleY, handleSize * 0.75, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.strokeStyle = '#ff8c00';
+          ctx.lineWidth = 1.5 / state.view.scale;
+          ctx.stroke();
         }
       } else if (shape.type === 'circle') {
         const worldR = shape.r * state.mapTransform.scale;
@@ -2890,6 +2988,7 @@
         y: imgCenter.y - defaultSize/2,
         w: defaultSize,
         h: defaultSize,
+        rot: 0,
         mode: fogState.mode,
         color: shapeColor,
         selected: true
@@ -2902,6 +3001,7 @@
         y: imgCenter.y - defaultSize/2,
         w: defaultSize * 2,
         h: defaultSize,
+        rot: 0,
         mode: fogState.mode,
         color: shapeColor,
         selected: true
@@ -3055,7 +3155,7 @@
         dirty.tokens = true;
       }
       // Fog shape operations affect fog layer
-      else if (state.ui.dragMode === 'fogShape' || state.ui.dragMode === 'fogShapeResize') {
+      else if (state.ui.dragMode === 'fogShape' || state.ui.dragMode === 'fogShapeResize' || state.ui.dragMode === 'fogShapeRotate') {
         dirty.fog = true;
       }
 

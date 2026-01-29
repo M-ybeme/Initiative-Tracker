@@ -153,7 +153,7 @@ test.describe('Feature Name', () => {
 
 ## SRD Content Compliance
 
-We only ship SRD 5.1 rules plus original homebrew that you author yourself. Every contribution must prove it stays inside that boundary, otherwise it will be rejected or redirected to the future content-pack workflow.
+We only ship SRD 5.2 (2024 PHB) rules plus original homebrew that you author yourself. Every contribution must prove it stays inside that boundary, otherwise it will be rejected or redirected to the future content-pack workflow.
 
 ### Required Checklist (copy into your PR description)
 

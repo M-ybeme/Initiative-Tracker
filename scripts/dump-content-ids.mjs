@@ -111,6 +111,31 @@ const SOURCES = [
     type: 'subclass-cantrip',
     file: path.join(ROOT_DIR, 'data', 'srd', 'level-up-data.js'),
     extractor: extractSubclassBonusCantrips
+  },
+  {
+    type: 'fighting-style',
+    file: path.join(ROOT_DIR, 'data', 'srd', 'level-up-data.js'),
+    extractor: extractFightingStyles
+  },
+  {
+    type: 'pact-boon',
+    file: path.join(ROOT_DIR, 'data', 'srd', 'level-up-data.js'),
+    extractor: extractPactBoons
+  },
+  {
+    type: 'eldritch-invocation',
+    file: path.join(ROOT_DIR, 'data', 'srd', 'level-up-data.js'),
+    extractor: extractEldritchInvocations
+  },
+  {
+    type: 'metamagic',
+    file: path.join(ROOT_DIR, 'data', 'srd', 'level-up-data.js'),
+    extractor: extractMetamagic
+  },
+  {
+    type: 'subrace',
+    file: path.join(ROOT_DIR, 'data', 'srd', 'level-up-data.js'),
+    extractor: extractSubraces
   }
 ];
 
@@ -663,6 +688,90 @@ function extractSubclassBonusCantrips(fileContents, filePath) {
   });
 
   return entries;
+}
+
+function extractFightingStyles(fileContents, filePath) {
+  const levelUpData = getLevelUpDataInstance(fileContents, filePath);
+  const styles = levelUpData.FIGHTING_STYLE_DATA || {};
+
+  return Object.entries(styles).map(([name, data]) => ({
+    id: name,
+    label: name,
+    displayText: name,
+    groupHint: 'Fighting Styles',
+    metadata: {
+      classes: data.classes,
+      srd: data.srd,
+      description: data.description
+    }
+  }));
+}
+
+function extractPactBoons(fileContents, filePath) {
+  const levelUpData = getLevelUpDataInstance(fileContents, filePath);
+  const boons = levelUpData.PACT_BOON_DATA || {};
+
+  return Object.entries(boons).map(([name, data]) => ({
+    id: name,
+    label: name,
+    displayText: name,
+    groupHint: 'Pact Boons',
+    metadata: {
+      srd: data.srd,
+      description: data.description
+    }
+  }));
+}
+
+function extractEldritchInvocations(fileContents, filePath) {
+  const levelUpData = getLevelUpDataInstance(fileContents, filePath);
+  const invocations = levelUpData.ELDRITCH_INVOCATION_DATA || {};
+
+  return Object.entries(invocations).map(([name, data]) => ({
+    id: name,
+    label: name,
+    displayText: name,
+    groupHint: 'Eldritch Invocations',
+    metadata: {
+      srd: data.srd,
+      prerequisites: data.prerequisites,
+      description: data.description
+    }
+  }));
+}
+
+function extractMetamagic(fileContents, filePath) {
+  const levelUpData = getLevelUpDataInstance(fileContents, filePath);
+  const metamagic = levelUpData.METAMAGIC_DATA || {};
+
+  return Object.entries(metamagic).map(([name, data]) => ({
+    id: name,
+    label: name,
+    displayText: name,
+    groupHint: 'Metamagic Options',
+    metadata: {
+      srd: data.srd,
+      cost: data.cost,
+      description: data.description
+    }
+  }));
+}
+
+function extractSubraces(fileContents, filePath) {
+  const levelUpData = getLevelUpDataInstance(fileContents, filePath);
+  const subraces = levelUpData.SUBRACE_DATA || {};
+
+  return Object.entries(subraces).map(([key, data]) => ({
+    id: key,
+    label: data.name,
+    displayText: `${data.name} (${data.race})`,
+    groupHint: `${data.race} Subraces`,
+    metadata: {
+      race: data.race,
+      srd: data.srd,
+      description: data.description
+    }
+  }));
 }
 
 main().catch((err) => {

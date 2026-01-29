@@ -1,11 +1,14 @@
 const DM_TOOLBOX_BUILD = {
   name: "The DM's Toolbox",
-  version: "2.0.7",
+  version: "2.0.8",
   recentChanges: [
-    "NPC generator now enforces tag-aware role, age, attire, and demeanor buckets",
-    "Initiative tracker adds direct damage subtraction plus a rolling combat log",
-    "Shop generator sports a floating, dismissible table of contents for quick jumps",
-    "Battlemap navbar stays above the side panel so navigation is never hidden"
+    "Fog shape rotation – drag the orange handle to rotate rectangle/square fog shapes",
+    "Footer settings button for mobile access to diagnostics panel",
+    "Export/Import All Data buttons for complete backup and restoration",
+    "SRD 5.2 compliance overhaul – allowlist updated to match 2024 PHB rules",
+    "Fog of war shapes can now be rotated by dragging the orange handle",
+    "Fixed bug where some content pack features were not properly gated by SRD allowlist",
+    "Mass Export/Import options added to Debug Panel and Button added to Footer for easier access on mobile"
   ],
   buildTime: new Date().toISOString(),
   author: "Maybeme"
@@ -231,6 +234,27 @@ if (typeof IndexedDBStorage !== 'undefined' && IndexedDBStorage.isSupported()) {
       filter.filterObject('background', data.BACKGROUND_DATA, (name) => name);
     }
 
+    // Filter class feature options by SRD allowlist
+    if (data.FIGHTING_STYLE_DATA) {
+      filter.filterObject('fighting-style', data.FIGHTING_STYLE_DATA, (name) => name);
+    }
+
+    if (data.PACT_BOON_DATA) {
+      filter.filterObject('pact-boon', data.PACT_BOON_DATA, (name) => name);
+    }
+
+    if (data.ELDRITCH_INVOCATION_DATA) {
+      filter.filterObject('eldritch-invocation', data.ELDRITCH_INVOCATION_DATA, (name) => name);
+    }
+
+    if (data.METAMAGIC_DATA) {
+      filter.filterObject('metamagic', data.METAMAGIC_DATA, (name) => name);
+    }
+
+    if (data.SUBRACE_DATA) {
+      filter.filterObject('subrace', data.SUBRACE_DATA, (key) => key);
+    }
+
     pruneBeasts(filter, data);
     pruneArtificerInfusions(filter, data);
   }
@@ -351,6 +375,10 @@ if (typeof IndexedDBStorage !== 'undefined' && IndexedDBStorage.isSupported()) {
 
     window.addEventListener('dmtoolbox:packs-applied', () => {
       try {
+        // Re-filter all data structures when packs are applied/removed
+        pruneSpells(filter);
+        pruneLevelUpData(filter);
+        // Refresh DOM elements with updated filter state
         refreshSrdNodes(filter);
       } catch (err) {
         console.warn('SRD gating refresh failed:', err);

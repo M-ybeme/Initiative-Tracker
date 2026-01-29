@@ -35,7 +35,7 @@ This document provides a high-level view of **The DM's Toolbox** architecture, s
 
 ### SRD Gating & Private Packs
 
-- Only SRD 5.1 data ships in `/data/srd/`. Runtime lookups pass through `window.SRDContentFilter`, which reads from `js/generated/srd-allowlist.js` to ensure UI layers render SRD-safe content by default.
+- Only SRD 5.2 (2024 PHB) data ships in `/data/srd/`. Runtime lookups pass through `window.SRDContentFilter`, which reads from `js/generated/srd-allowlist.js` to ensure UI layers render SRD-safe content by default.
 - Historical non-SRD data lives in `/data/packs/` or user-supplied packs. When a private pack is loaded, it registers additional IDs with the filter so pages can opt into the extra races/spells/classes locally without altering the public bundle.
 - Diagnostics in `site.js` expose which packs are active, making it easy to verify compliance in any running build.
                                      │
@@ -89,7 +89,7 @@ This document provides a high-level view of **The DM's Toolbox** architecture, s
 
 │                                                                             │
 
-- Only SRD 5.1 data ships in `/data/srd/`. Runtime lookups pass through `window.SRDContentFilter`, which reads from `js/generated/srd-allowlist.js` to ensure UI layers render SRD-safe content by default.
+- Only SRD 5.2 (2024 PHB) data ships in `/data/srd/`. Runtime lookups pass through `window.SRDContentFilter`, which reads from `js/generated/srd-allowlist.js` to ensure UI layers render SRD-safe content by default.
 - Historical non-SRD data lives in `/data/packs/` or user-supplied packs. When a private pack is loaded, it registers additional IDs with the filter so pages can opt into the extra races/spells/classes locally without altering the public bundle.
 - Diagnostics in `site.js` expose which packs are active, making it easy to verify compliance in any running build.
 └─────────────────────────────────────────────────────────────────────────────┘
@@ -118,7 +118,7 @@ This document provides a high-level view of **The DM's Toolbox** architecture, s
 
 **Steps:**
 1. User opens Character Creation Wizard
-2. Wizard guides through race → class → abilities → background → equipment
+2. Wizard guides through species → class → abilities → background → background ASIs → equipment
 3. Character saved to IndexedDB with `schemaVersion: 2`
 4. Character sheet displays full editable view
 5. Can export to PDF/Word or send to Initiative Tracker

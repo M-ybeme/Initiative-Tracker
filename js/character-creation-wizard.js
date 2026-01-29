@@ -50,7 +50,7 @@ const CharacterCreationWizard = (function() {
           <p class="lead">This wizard will guide you through creating a 5th Edition D&D character step by step.</p>
           <p>We'll help you with:</p>
           <ul class="text-start">
-            <li>Choosing your race and class</li>
+            <li>Choosing your species and class</li>
             <li>Rolling ability scores</li>
             <li>Calculating your character's stats</li>
             <li>Selecting skills and proficiencies</li>
@@ -99,21 +99,21 @@ const CharacterCreationWizard = (function() {
       }
     },
     {
-      title: "Step 2: Choose Your Race",
+      title: "Step 2: Choose Your Species",
       content: `
-        <h5>Pick your character's race</h5>
-        <p>Your race determines your heritage and provides ability score bonuses and special traits.</p>
+        <h5>Pick your character's species</h5>
+        <p>Your species determines your heritage and provides ability score bonuses and special traits.</p>
         <div class="mb-3">
           <label for="wizardRace" class="form-label">
-            Race *
-            <span class="ms-2 align-middle text-warning d-none" data-srd-notice-for="wizard-races" data-srd-tooltip="Additional races (Aasimar, Genasi, Warforged, etc.) require a private content pack.">
+            Species *
+            <span class="ms-2 align-middle text-warning d-none" data-srd-notice-for="wizard-races" data-srd-tooltip="Additional species (Aasimar, Genasi, Warforged, etc.) require a private content pack.">
               <i class="bi bi-lock-fill" aria-hidden="true"></i>
-              <span class="visually-hidden">Additional races locked in SRD build</span>
+              <span class="visually-hidden">Additional species locked in SRD build</span>
             </span>
           </label>
           <select class="form-select" id="wizardRace">
-            <option value="">Choose a race...</option>
-            <optgroup label="Common Races (PHB)">
+            <option value="">Choose a species...</option>
+            <optgroup label="Common Species (PHB)">
               <option value="Human">Human - Versatile, +1 to all abilities</option>
               <option value="Elf">Elf - Graceful, +2 Dex, darkvision, keen senses</option>
               <option value="Dwarf" data-srd-block="race:Dwarf" data-srd-block-group="wizard-races">Dwarf - Sturdy, +2 Con, darkvision, resilient</option>
@@ -124,7 +124,7 @@ const CharacterCreationWizard = (function() {
               <option value="Half-Orc" data-srd-block="race:Half-Orc" data-srd-block-group="wizard-races">Half-Orc - Strong, +2 Str +1 Con, relentless, savage</option>
               <option value="Tiefling">Tiefling - Infernal, +2 Cha +1 Int, darkvision, fire resistance</option>
             </optgroup>
-            <optgroup label="Exotic Races (Volo's Guide)">
+            <optgroup label="Exotic Species (Volo's Guide)">
               <option value="Aarakocra" data-srd-block="race:Aarakocra" data-srd-block-group="wizard-races">Aarakocra - Bird-like, +2 Dex +1 Wis, flight</option>
               <option value="Aasimar" data-srd-block="race:Aasimar" data-srd-block-group="wizard-races">Aasimar - Celestial, +2 Cha +1 Wis, healing hands, light bearer</option>
               <option value="Bugbear" data-srd-block="race:Bugbear" data-srd-block-group="wizard-races">Bugbear - Sneaky brute, +2 Str +1 Dex, long-limbed, surprise attack</option>
@@ -212,7 +212,7 @@ const CharacterCreationWizard = (function() {
       validate: () => {
         const race = document.getElementById('wizardRace')?.value;
         if (!race) {
-          alert('Please choose a race.');
+          alert('Please choose a species.');
           return false;
         }
         const subrace = document.getElementById('wizardSubrace')?.value || '';
@@ -239,53 +239,23 @@ const CharacterCreationWizard = (function() {
         const subraceSelect = document.getElementById('wizardSubrace');
         const raceDesc = document.getElementById('raceDescription');
 
-        // Define subraces for applicable races
-        const subraces = {
-          'Elf': [
-            { value: 'High Elf', label: 'High Elf - Extra cantrip, weapon training, extra language' },
-            { value: 'Wood Elf', label: 'Wood Elf - Increased speed, mask of the wild, weapon training' }
-          ],
-          'Dwarf': [
-            { value: 'Hill Dwarf', label: 'Hill Dwarf - Extra HP, dwarven toughness' },
-            { value: 'Mountain Dwarf', label: 'Mountain Dwarf - +2 Str, light/medium armor proficiency' },
-            { value: 'Duergar', label: 'Duergar - Superior darkvision, enlarge/invisibility spells, sunlight sensitivity' }
-          ],
-          'Halfling': [
-            { value: 'Lightfoot', label: 'Lightfoot - +1 Cha, naturally stealthy' },
-            { value: 'Stout', label: 'Stout - +1 Con, poison resistance' }
-          ],
-          'Gnome': [
-            { value: 'Forest Gnome', label: 'Forest Gnome - +1 Dex, natural illusionist, speak with small beasts' },
-            { value: 'Rock Gnome', label: 'Rock Gnome - +1 Con, artificer\'s lore, tinker' },
-            { value: 'Deep Gnome (Svirfneblin)', label: 'Deep Gnome - +1 Dex, superior darkvision, stone camouflage' }
-          ],
-          'Dragonborn': [
-            { value: 'Black', label: 'Black Dragon Ancestry - Acid breath (line)' },
-            { value: 'Blue', label: 'Blue Dragon Ancestry - Lightning breath (line)' },
-            { value: 'Brass', label: 'Brass Dragon Ancestry - Fire breath (line)' },
-            { value: 'Bronze', label: 'Bronze Dragon Ancestry - Lightning breath (line)' },
-            { value: 'Copper', label: 'Copper Dragon Ancestry - Acid breath (line)' },
-            { value: 'Gold', label: 'Gold Dragon Ancestry - Fire breath (cone)' },
-            { value: 'Green', label: 'Green Dragon Ancestry - Poison breath (cone)' },
-            { value: 'Red', label: 'Red Dragon Ancestry - Fire breath (cone)' },
-            { value: 'Silver', label: 'Silver Dragon Ancestry - Cold breath (cone)' },
-            { value: 'White', label: 'White Dragon Ancestry - Cold breath (cone)' }
-          ],
-          'Tiefling': [
-            { value: 'Asmodeus', label: 'Asmodeus Bloodline - Fire spells' }
-          ],
-          'Aasimar': [
-            { value: 'Protector', label: 'Protector - Flight, radiant damage' },
-            { value: 'Scourge', label: 'Scourge - Radiant damage aura' },
-            { value: 'Fallen', label: 'Fallen - Frighten enemies, necrotic damage' }
-          ],
-          'Shifter': [
-            { value: 'Beasthide', label: 'Beasthide - +1 Con, tough and resilient' },
-            { value: 'Longtooth', label: 'Longtooth - +1 Str, fierce bite attack' },
-            { value: 'Swiftstride', label: 'Swiftstride - +1 Dex, swift and agile' },
-            { value: 'Wildhunt', label: 'Wildhunt - +1 Wis, heightened senses' }
-          ]
-        };
+        // Get subraces from LevelUpData (SRD filtered)
+        function getSubracesForRace(raceName) {
+          if (!window.LevelUpData || !window.LevelUpData.SUBRACE_DATA) {
+            return [];
+          }
+          const subraceData = window.LevelUpData.SUBRACE_DATA;
+          const raceSubraces = [];
+          for (const data of Object.values(subraceData)) {
+            if (data.race === raceName) {
+              raceSubraces.push({
+                value: data.name,
+                label: `${data.name} - ${data.description.substring(0, 60)}${data.description.length > 60 ? '...' : ''}`
+              });
+            }
+          }
+          return raceSubraces.sort((a, b) => a.value.localeCompare(b.value));
+        }
 
         const descriptions = {
           'Human': 'Humans are the most adaptable and ambitious people. They get +1 to all ability scores, making them viable for any class.',
@@ -350,10 +320,11 @@ const CharacterCreationWizard = (function() {
               raceDesc.style.display = 'none';
             }
 
-            // Handle subraces
-            if (selectedRace && subraces[selectedRace]) {
+            // Handle subraces from filtered LevelUpData
+            const raceSubraces = getSubracesForRace(selectedRace);
+            if (selectedRace && raceSubraces.length > 0) {
               subraceSelect.innerHTML = '<option value="">Choose a subrace...</option>';
-              subraces[selectedRace].forEach(subrace => {
+              raceSubraces.forEach(subrace => {
                 const option = document.createElement('option');
                 option.value = subrace.value;
                 option.textContent = subrace.label;
@@ -650,9 +621,21 @@ const CharacterCreationWizard = (function() {
 
           intro.textContent = `Choose your ${subclassData.name}. This choice is permanent and defines your character's path.`;
 
-          // Render subclass options
-          const options = Object.keys(subclassData.options);
+          // Render subclass options - filter by SRD allowlist
+          const allOptions = Object.keys(subclassData.options);
+          const filter = window.SRDContentFilter;
+          const options = filter
+            ? allOptions.filter(optionName => filter.isAllowed('subclass', `${className}:${optionName}`))
+            : allOptions;
+          const hasHiddenOptions = options.length < allOptions.length;
+
           container.innerHTML = `
+            ${hasHiddenOptions ? `
+              <div class="alert alert-info py-2 mb-3">
+                <i class="bi bi-info-circle me-2"></i>
+                <small>Additional ${subclassData.name.toLowerCase()} options are available via content packs.</small>
+              </div>
+            ` : ''}
             <div class="list-group">
               ${options.map(optionName => {
                 const option = subclassData.options[optionName];
@@ -1137,22 +1120,28 @@ const CharacterCreationWizard = (function() {
         <h5>Choose your background</h5>
         <p>Your background provides additional skill proficiencies, tool proficiencies, and roleplay hooks.</p>
         <div class="mb-3">
-          <label for="wizardBackground" class="form-label">Background *</label>
+          <label for="wizardBackground" class="form-label">
+            Background *
+            <span class="ms-2 align-middle text-warning d-none" data-srd-notice-for="wizard-backgrounds" data-srd-tooltip="Additional backgrounds require a private content pack.">
+              <i class="bi bi-lock-fill" aria-hidden="true"></i>
+              <span class="visually-hidden">Additional backgrounds locked in SRD build</span>
+            </span>
+          </label>
           <select class="form-select" id="wizardBackground">
             <option value="">Choose a background...</option>
             <option value="Acolyte">Acolyte - Religious servant (+Insight, +Religion)</option>
-            <option value="Charlatan">Charlatan - Con artist (+Deception, +Sleight of Hand)</option>
+            <option value="Charlatan" data-srd-block="background:Charlatan" data-srd-block-group="wizard-backgrounds">Charlatan - Con artist (+Deception, +Sleight of Hand)</option>
             <option value="Criminal">Criminal - Lawbreaker (+Deception, +Stealth)</option>
-            <option value="Entertainer">Entertainer - Performer (+Acrobatics, +Performance)</option>
-            <option value="Folk Hero">Folk Hero - Common champion (+Animal Handling, +Survival)</option>
-            <option value="Guild Artisan">Guild Artisan - Craftsperson (+Insight, +Persuasion)</option>
-            <option value="Hermit">Hermit - Secluded sage (+Medicine, +Religion)</option>
-            <option value="Noble">Noble - High born (+History, +Persuasion)</option>
-            <option value="Outlander">Outlander - Wilderness survivor (+Athletics, +Survival)</option>
+            <option value="Entertainer" data-srd-block="background:Entertainer" data-srd-block-group="wizard-backgrounds">Entertainer - Performer (+Acrobatics, +Performance)</option>
+            <option value="Folk Hero" data-srd-block="background:Folk Hero" data-srd-block-group="wizard-backgrounds">Folk Hero - Common champion (+Animal Handling, +Survival)</option>
+            <option value="Guild Artisan" data-srd-block="background:Guild Artisan" data-srd-block-group="wizard-backgrounds">Guild Artisan - Craftsperson (+Insight, +Persuasion)</option>
+            <option value="Hermit" data-srd-block="background:Hermit" data-srd-block-group="wizard-backgrounds">Hermit - Secluded sage (+Medicine, +Religion)</option>
+            <option value="Noble" data-srd-block="background:Noble" data-srd-block-group="wizard-backgrounds">Noble - High born (+History, +Persuasion)</option>
+            <option value="Outlander" data-srd-block="background:Outlander" data-srd-block-group="wizard-backgrounds">Outlander - Wilderness survivor (+Athletics, +Survival)</option>
             <option value="Sage">Sage - Scholar and researcher (+Arcana, +History)</option>
-            <option value="Sailor">Sailor - Sea voyager (+Athletics, +Perception)</option>
+            <option value="Sailor" data-srd-block="background:Sailor" data-srd-block-group="wizard-backgrounds">Sailor - Sea voyager (+Athletics, +Perception)</option>
             <option value="Soldier">Soldier - Military veteran (+Athletics, +Intimidation)</option>
-            <option value="Urchin">Urchin - Street kid (+Sleight of Hand, +Stealth)</option>
+            <option value="Urchin" data-srd-block="background:Urchin" data-srd-block-group="wizard-backgrounds">Urchin - Street kid (+Sleight of Hand, +Stealth)</option>
           </select>
         </div>
         <div id="backgroundDescription" class="alert alert-info" style="display:none;"></div>
@@ -1209,10 +1198,82 @@ const CharacterCreationWizard = (function() {
       }
     },
     // ============================================================
-    // STEP 8: STARTING EQUIPMENT
+    // STEP 8: BACKGROUND ABILITY SCORE INCREASES (2024 PHB)
     // ============================================================
     {
-      title: "Step 8: Choose Starting Equipment",
+      title: "Step 8: Background Ability Scores",
+      content: `
+        <h5>Assign Background Ability Score Increases</h5>
+        <p>In the 2024 Player's Handbook, your background grants you ability score increases: <strong>+2 to one ability and +1 to another</strong>.</p>
+        <p>Your background also grants you the <strong><span id="originFeatName"></span></strong> feat automatically.</p>
+
+        <div class="mb-3">
+          <label for="backgroundASI2" class="form-label">Choose ability for +2 bonus *</label>
+          <select class="form-select" id="backgroundASI2">
+            <option value="">Choose an ability...</option>
+            <option value="str">Strength</option>
+            <option value="dex">Dexterity</option>
+            <option value="con">Constitution</option>
+            <option value="int">Intelligence</option>
+            <option value="wis">Wisdom</option>
+            <option value="cha">Charisma</option>
+          </select>
+        </div>
+
+        <div class="mb-3">
+          <label for="backgroundASI1" class="form-label">Choose ability for +1 bonus *</label>
+          <select class="form-select" id="backgroundASI1">
+            <option value="">Choose an ability...</option>
+            <option value="str">Strength</option>
+            <option value="dex">Dexterity</option>
+            <option value="con">Constitution</option>
+            <option value="int">Intelligence</option>
+            <option value="wis">Wisdom</option>
+            <option value="cha">Charisma</option>
+          </select>
+        </div>
+
+        <div class="alert alert-info">
+          <strong>Note:</strong> These bonuses are in addition to your species (racial) bonuses and can increase an ability score above 20 during character creation.
+        </div>
+      `,
+      buttons: ['Back', 'Next'],
+      validate: () => {
+        const asi2 = document.getElementById('backgroundASI2')?.value;
+        const asi1 = document.getElementById('backgroundASI1')?.value;
+
+        if (!asi2) {
+          alert('Please choose which ability gets the +2 bonus.');
+          return false;
+        }
+        if (!asi1) {
+          alert('Please choose which ability gets the +1 bonus.');
+          return false;
+        }
+        if (asi2 === asi1) {
+          alert('You must choose different abilities for the +2 and +1 bonuses.');
+          return false;
+        }
+
+        wizardData.backgroundASI = { bonus2: asi2, bonus1: asi1 };
+        return true;
+      },
+      onShow: () => {
+        // Display the origin feat name
+        const originFeatEl = document.getElementById('originFeatName');
+        if (originFeatEl && wizardData.background && window.LevelUpData) {
+          const bgData = window.LevelUpData.BACKGROUND_DATA[wizardData.background];
+          if (bgData && bgData.originFeat) {
+            originFeatEl.textContent = bgData.originFeat;
+          }
+        }
+      }
+    },
+    // ============================================================
+    // STEP 9: STARTING EQUIPMENT
+    // ============================================================
+    {
+      title: "Step 9: Choose Starting Equipment",
       content: `
         <h5>Choose your starting equipment</h5>
         <p>Select your equipment from the options below, or take starting gold to buy your own gear.</p>
@@ -1311,7 +1372,7 @@ const CharacterCreationWizard = (function() {
       }
     },
     {
-      title: "Step 9: Skills & Proficiencies",
+      title: "Step 10: Skills & Proficiencies",
       content: `
         <h5>Choose your skill proficiencies</h5>
         <p id="skillSelectionInstructions">Select the skills your class grants you.</p>
@@ -1400,7 +1461,7 @@ const CharacterCreationWizard = (function() {
       }
     },
     {
-      title: "Step 10: Hit Points & Combat Stats",
+      title: "Step 11: Hit Points & Combat Stats",
       content: `
         <h5>Calculate your starting stats</h5>
         <p>We'll automatically calculate your HP, AC, and other combat statistics.</p>
@@ -1848,7 +1909,7 @@ const CharacterCreationWizard = (function() {
       }
     },
     {
-      title: "Step 11: Learn Starting Spells",
+      title: "Step 12: Learn Starting Spells",
       content: `
         <h5>Select your starting spells</h5>
         <div id="spellLearningContainer">
@@ -2106,7 +2167,7 @@ const CharacterCreationWizard = (function() {
       }
     },
     {
-      title: "Step 12: Review & Finish",
+      title: "Step 13: Review & Finish",
       content: `
         <h5>Review your character</h5>
         <p>Here's a summary of your character. Click "Create Character" to finish!</p>
@@ -2138,7 +2199,7 @@ const CharacterCreationWizard = (function() {
           summary.innerHTML = `
             <h6><strong>${wizardData.name}</strong></h6>
             <p class="mb-2">
-              <strong>Race:</strong> ${wizardData.race}${subraceTxt}<br>
+              <strong>Species:</strong> ${wizardData.race}${subraceTxt}<br>
               <strong>Class:</strong> ${wizardData.class}, Level ${wizardData.level}<br>
               <strong>Background:</strong> ${backgroundTxt}<br>
               <strong>Alignment:</strong> ${wizardData.alignment || 'Not chosen'}
@@ -2698,16 +2759,16 @@ const CharacterCreationWizard = (function() {
   }
 
   /**
-   * Convert racial spell data to full spell objects
-   * @param {Array} racialSpellEntries - Array of { spell, type, note?, level } objects from getRacialSpells
-   * @returns {Array} - Array of spell objects with racial metadata
+   * Convert species spell data to full spell objects
+   * @param {Array} speciesSpellEntries - Array of { spell, type, note?, level } objects from getSpeciesSpells
+   * @returns {Array} - Array of spell objects with species metadata
    */
-  function gatherRacialSpellData(racialSpellEntries) {
-    if (!window.SPELLS_DATA || !Array.isArray(racialSpellEntries)) return [];
+  function gatherSpeciesSpellData(speciesSpellEntries) {
+    if (!window.SPELLS_DATA || !Array.isArray(speciesSpellEntries)) return [];
 
     const spellObjects = [];
 
-    for (const entry of racialSpellEntries) {
+    for (const entry of speciesSpellEntries) {
       let spellName = entry.spell;
 
       // Handle High Elf cantrip choice - use the selected cantrip instead of placeholder
@@ -2792,16 +2853,16 @@ const CharacterCreationWizard = (function() {
   }
 
   /**
-   * Gather racial features for the character
-   * @param {string} race - Character's race
-   * @param {string} subrace - Character's subrace (optional)
+   * Gather species features for the character
+   * @param {string} race - Character's species
+   * @param {string} subrace - Character's subspecies (optional)
    * @param {number} level - Character's level
-   * @returns {string} - Formatted racial features text
+   * @returns {string} - Formatted species features text
    */
-  function gatherRacialFeatures(race, subrace, level) {
+  function gatherSpeciesFeatures(race, subrace, level) {
     // Use LevelUpData's comprehensive formatter if available
-    if (window.LevelUpData && typeof window.LevelUpData.formatRacialFeaturesAsText === 'function') {
-      return window.LevelUpData.formatRacialFeaturesAsText(race, subrace, level);
+    if (window.LevelUpData && typeof window.LevelUpData.formatSpeciesFeaturesAsText === 'function') {
+      return window.LevelUpData.formatSpeciesFeaturesAsText(race, subrace, level);
     }
 
     // Fallback to basic formatting if LevelUpData not available
@@ -3363,8 +3424,14 @@ const CharacterCreationWizard = (function() {
   function finishWizard() {
     console.log('🧙 Wizard finishing with data:', wizardData);
 
-    // Add racial ability score bonuses
-    applyRacialBonuses();
+    // Add species ability score bonuses
+    applySpeciesBonuses();
+
+    // Add background ability score bonuses (2024 PHB)
+    applyBackgroundASIs();
+
+    // Grant origin feat from background (2024 PHB)
+    grantOriginFeat();
 
     // Get background skills
     const backgroundSkills = getBackgroundSkills(wizardData.background);
@@ -3376,9 +3443,9 @@ const CharacterCreationWizard = (function() {
     // Calculate saving throws
     wizardData.savingThrows = getClassSavingThrows(wizardData.class);
 
-    // Gather racial features
-    wizardData.racialFeatures = gatherRacialFeatures(wizardData.race, wizardData.subrace, wizardData.level);
-    console.log(`🧬 Gathered racial features for ${wizardData.race}${wizardData.subrace ? ` (${wizardData.subrace})` : ''}`);
+    // Gather species features
+    wizardData.racialFeatures = gatherSpeciesFeatures(wizardData.race, wizardData.subrace, wizardData.level);
+    console.log(`🧬 Gathered species features for ${wizardData.race}${wizardData.subrace ? ` (${wizardData.subrace})` : ''}`);
 
     // Gather background feature
     wizardData.backgroundFeature = gatherBackgroundFeature(wizardData.background);
@@ -3484,8 +3551,8 @@ const CharacterCreationWizard = (function() {
       }
     }
 
-    // Gather racial spells (if applicable)
-    if (window.LevelUpData && typeof window.LevelUpData.getRacialSpells === 'function') {
+    // Gather species spells (if applicable)
+    if (window.LevelUpData && typeof window.LevelUpData.getSpeciesSpells === 'function') {
       // Parse race and subrace from the stored format
       let race = wizardData.race;
       let subrace = wizardData.subrace;
@@ -3499,10 +3566,10 @@ const CharacterCreationWizard = (function() {
         }
       }
 
-      const racialSpellData = window.LevelUpData.getRacialSpells(race, subrace, wizardData.level);
-      if (racialSpellData && racialSpellData.length > 0) {
-        wizardData.racialSpells = gatherRacialSpellData(racialSpellData);
-        console.log(`🧬 Added ${wizardData.racialSpells.length} racial spells for ${race}${subrace ? ` (${subrace})` : ''}`);
+      const speciesSpellData = window.LevelUpData.getSpeciesSpells(race, subrace, wizardData.level);
+      if (speciesSpellData && speciesSpellData.length > 0) {
+        wizardData.racialSpells = gatherSpeciesSpellData(speciesSpellData);
+        console.log(`🧬 Added ${wizardData.racialSpells.length} species spells for ${race}${subrace ? ` (${subrace})` : ''}`);
       }
     }
 
@@ -3531,7 +3598,7 @@ const CharacterCreationWizard = (function() {
         }
 
         // Show success message
-        alert(`Character created successfully!\n\n${wizardData.name}, the Level ${wizardData.level} ${wizardData.race} ${wizardData.class}\n\nYour character sheet has been populated with:\n✓ Ability scores (with racial bonuses)\n✓ HP: ${wizardData.maxHP}, AC: ${wizardData.ac}\n✓ Skills, saving throws, and proficiency bonus\n✓ Speed and basic stats\n\nYou can now add equipment, spells, and customize further!`);
+        alert(`Character created successfully!\n\n${wizardData.name}, the Level ${wizardData.level} ${wizardData.race} ${wizardData.class}\n\nYour character sheet has been populated with:\n✓ Ability scores (with species bonuses)\n✓ HP: ${wizardData.maxHP}, AC: ${wizardData.ac}\n✓ Skills, saving throws, and proficiency bonus\n✓ Speed and basic stats\n\nYou can now add equipment, spells, and customize further!`);
       }, 200); // Wait 200ms to ensure fillFormFromWizardData completes
     } else {
       console.error('fillFormFromWizardData function not found. Make sure character.js is loaded.');
@@ -3539,9 +3606,9 @@ const CharacterCreationWizard = (function() {
     }
   }
 
-  function applyRacialBonuses() {
-    // Apply racial ability score increases
-    const racialBonuses = {
+  function applySpeciesBonuses() {
+    // Apply species ability score increases
+    const speciesBonuses = {
       'Human': { str: 1, dex: 1, con: 1, int: 1, wis: 1, cha: 1 },
       'Elf': { dex: 2 },
       'Dwarf': { con: 2 },
@@ -3585,8 +3652,8 @@ const CharacterCreationWizard = (function() {
       'Yuan-ti Pureblood': { cha: 2, int: 1 }
     };
 
-    // Apply subrace bonuses
-    const subraceBonuses = {
+    // Apply subspecies bonuses
+    const subspeciesBonuses = {
       'High Elf': { int: 1 },
       'Wood Elf': { wis: 1 },
       'Dark Elf (Drow)': { cha: 1 },
@@ -3607,8 +3674,8 @@ const CharacterCreationWizard = (function() {
       'Wildhunt': { wis: 1 }
     };
 
-    const baseBonuses = racialBonuses[wizardData.race] || {};
-    const subraceBonus = subraceBonuses[wizardData.subrace] || {};
+    const baseBonuses = speciesBonuses[wizardData.race] || {};
+    const subraceBonus = subspeciesBonuses[wizardData.subrace] || {};
 
     // Store original scores
     wizardData.baseStr = wizardData.str;
@@ -3618,7 +3685,7 @@ const CharacterCreationWizard = (function() {
     wizardData.baseWis = wizardData.wis;
     wizardData.baseCha = wizardData.cha;
 
-    // Apply racial bonuses
+    // Apply species bonuses
     wizardData.str += (baseBonuses.str || 0) + (subraceBonus.str || 0);
     wizardData.dex += (baseBonuses.dex || 0) + (subraceBonus.dex || 0);
     wizardData.con += (baseBonuses.con || 0) + (subraceBonus.con || 0);
@@ -3677,6 +3744,61 @@ const CharacterCreationWizard = (function() {
     }
 
     wizardData.currentHP = wizardData.maxHP;
+  }
+
+  /**
+   * Apply background ability score increases (2024 PHB)
+   * Backgrounds grant +2 to one ability and +1 to another (player choice)
+   */
+  function applyBackgroundASIs() {
+    if (!wizardData.backgroundASI) {
+      console.warn('No background ASI data found - skipping background ability score bonuses');
+      return;
+    }
+
+    const { bonus2, bonus1 } = wizardData.backgroundASI;
+
+    // Apply +2 bonus
+    if (bonus2) {
+      wizardData[bonus2] = (wizardData[bonus2] || 10) + 2;
+      console.log(`📚 Applied +2 background bonus to ${bonus2}`);
+    }
+
+    // Apply +1 bonus
+    if (bonus1) {
+      wizardData[bonus1] = (wizardData[bonus1] || 10) + 1;
+      console.log(`📚 Applied +1 background bonus to ${bonus1}`);
+    }
+  }
+
+  /**
+   * Grant origin feat from background (2024 PHB)
+   * Each background automatically grants a specific feat
+   */
+  function grantOriginFeat() {
+    if (!wizardData.background || !window.LevelUpData) {
+      console.warn('Cannot grant origin feat - missing background or LevelUpData');
+      return;
+    }
+
+    const bgData = window.LevelUpData.BACKGROUND_DATA[wizardData.background];
+    if (!bgData || !bgData.originFeat) {
+      console.warn(`No origin feat defined for background: ${wizardData.background}`);
+      return;
+    }
+
+    const originFeat = bgData.originFeat;
+
+    // Initialize feats array if it doesn't exist
+    if (!wizardData.feats) {
+      wizardData.feats = [];
+    }
+
+    // Add the origin feat if not already present
+    if (!wizardData.feats.includes(originFeat)) {
+      wizardData.feats.push(originFeat);
+      console.log(`🎖️ Granted origin feat from background: ${originFeat}`);
+    }
   }
 
   function getBackgroundSkills(background) {
