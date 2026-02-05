@@ -4,187 +4,320 @@
     "name": "My Homebrew Content Pack",
     "version": "1.0.0",
     "authors": ["Your Name"],
-    "source": "Original homebrew or personal book reference",
+    "source": "Original homebrew content",
     "license": "Private use only",
-    "createdAt": "2026-01-26T00:00:00.000Z",
-    "updatedAt": "2026-01-26T00:00:00.000Z",
+    "createdAt": "2026-01-29T00:00:00.000Z",
+    "updatedAt": "2026-01-29T00:00:00.000Z",
     "toolVersion": "2.0.8",
     "homepage": "https://example.com/optional"
   },
   "dependencies": [],
   "allowlist": {
-    "class": ["Chronomancer"],
-    "subclass": ["Wizard:Arcane Geometer", "Fighter:Vanguard"],
+    "race": ["Crystalborn"],
+    "subrace": ["Crystalborn:Quartz Heart", "Crystalborn:Obsidian Shard"],
+    "class": ["Resonant"],
+    "subclass": ["Resonant:Harmonic Weaver", "Fighter:Shardguard"],
     "spell": [
-      "Arcane Surge",
-      "Temporal Anchor"
+      "Prismatic Pulse",
+      "Crystalline Shield",
+      "Resonance Strike",
+      "Shatter Point"
     ],
-    "feat": ["Tactical Genius"],
-    "background": ["Merchant Prince"],
-    "fighting-style": ["Sentinel Stance"],
-    "pact-boon": ["Pact of the Grimoire"],
-    "eldritch-invocation": ["Eldritch Barrier"],
-    "metamagic": ["Redirected Spell"],
-    "subrace": ["Elf:Starlight Elf"]
+    "feat": ["Lattice Mind"],
+    "background": ["Geomantic Apprentice"],
+    "fighting-style": ["Refracted Defense"],
+    "pact-boon": ["Pact of the Shard"],
+    "eldritch-invocation": ["Crystalline Gaze"],
+    "metamagic": ["Fractured Spell"]
   },
   "records": [
     {
       "type": "class",
-      "id": "Chronomancer",
+      "id": "Resonant",
       "operation": "add",
       "payload": {
-        "hitDice": "d6",
-        "primaryAbility": "int",
-        "spellcastingProgression": "full",
-        "equipment": [
-          "A quarterstaff or dagger",
-          "A component pouch or arcane focus",
-          "A scholar's pack"
-        ],
+        "name": "Resonant",
+        "description": "Resonants tap into the vibrational frequencies that underlie all matter, manipulating sound and force to devastating effect.",
+        "hitDice": "d8",
+        "primaryAbility": ["cha"],
+        "savingThrows": ["Constitution", "Charisma"],
+        "armorProficiencies": ["Light armor"],
+        "weaponProficiencies": ["Simple weapons"],
+        "skillChoices": ["Acrobatics", "Arcana", "Insight", "Performance", "Perception", "Persuasion"],
+        "numSkillChoices": 2,
+        "spellcastingAbility": "Charisma",
         "featuresByLevel": {
-          "1": ["Time Sense", "Spellcasting"],
-          "2": ["Temporal Ward"],
-          "3": ["Chronomancy Specialization"],
-          "4": ["Ability Score Improvement"]
+          "1": ["Harmonic Attunement", "Spellcasting"],
+          "2": ["Frequency Shift"],
+          "3": ["Resonant Path"],
+          "4": ["Ability Score Improvement"],
+          "5": ["Amplified Resonance"],
+          "6": ["Resonant Path Feature"]
+        },
+        "equipmentChoices": {
+          "choices": [
+            {
+              "id": "weapon",
+              "label": "Weapon",
+              "options": [
+                { "id": "quarterstaff", "label": "Quarterstaff", "items": [{ "name": "Quarterstaff", "quantity": 1, "weight": 4, "notes": "1d6 bludgeoning, versatile (1d8)" }] },
+                { "id": "simple", "label": "Any simple weapon", "items": "any_simple" }
+              ]
+            },
+            {
+              "id": "pack",
+              "label": "Equipment Pack",
+              "options": [
+                { "id": "explorer", "label": "Explorer's Pack", "items": [{ "name": "Explorer's Pack", "quantity": 1, "weight": 59, "notes": "Backpack, bedroll, mess kit, tinderbox, torches (10), rations (10 days), waterskin, hempen rope (50 ft)" }] },
+                { "id": "entertainer", "label": "Entertainer's Pack", "items": [{ "name": "Entertainer's Pack", "quantity": 1, "weight": 38, "notes": "Backpack, bedroll, 2 costumes, 5 candles, 5 days of rations, waterskin, disguise kit" }] }
+              ]
+            },
+            {
+              "id": "focus",
+              "label": "Arcane Focus",
+              "options": [
+                { "id": "tuningfork", "label": "Crystal Tuning Fork", "items": [{ "name": "Crystal Tuning Fork", "quantity": 1, "weight": 0, "notes": "Arcane focus for Resonant spells" }] },
+                { "id": "chimes", "label": "Harmonic Chimes", "items": [{ "name": "Harmonic Chimes", "quantity": 1, "weight": 1, "notes": "Arcane focus for Resonant spells" }] }
+              ]
+            }
+          ],
+          "fixed": [
+            { "name": "Leather Armor", "quantity": 1, "weight": 10, "notes": "AC 11 + Dex modifier", "equipped": true },
+            { "name": "Dagger", "quantity": 2, "weight": 1, "notes": "1d4 piercing, finesse, light, thrown (20/60)" }
+          ],
+          "goldAlternative": {
+            "dice": "4d4",
+            "multiplier": 10,
+            "average": 100
+          }
+        },
+        "defaultEquipment": {
+          "weapons": [
+            { "name": "Quarterstaff", "quantity": 1, "weight": 4, "notes": "1d6 bludgeoning, versatile (1d8)" },
+            { "name": "Dagger", "quantity": 2, "weight": 1, "notes": "1d4 piercing, finesse, light, thrown (20/60)" }
+          ],
+          "armor": [
+            { "name": "Leather Armor", "quantity": 1, "weight": 10, "notes": "AC 11 + Dex modifier", "equipped": true }
+          ],
+          "gear": [
+            { "name": "Crystal Tuning Fork", "quantity": 1, "weight": 0, "notes": "Arcane focus for Resonant spells" },
+            { "name": "Explorer's Pack", "quantity": 1, "weight": 59, "notes": "Backpack, bedroll, mess kit, tinderbox, torches (10), rations (10 days), waterskin, hempen rope (50 ft)" }
+          ]
         }
       }
     },
     {
       "type": "subclass",
-      "id": "Wizard:Arcane Geometer",
+      "id": "Resonant:Harmonic Weaver",
       "operation": "add",
       "payload": {
-        "name": "Arcane Geometer",
-        "description": "Wizards who study the mathematical patterns underlying magic.",
-        "features": {
-          "2": ["Geometric Insights", "Pattern Recognition"],
-          "6": ["Calculated Precision"],
-          "10": ["Fractal Defense"],
-          "14": ["Perfect Formula"]
+        "name": "Harmonic Weaver",
+        "parentClass": "Resonant",
+        "description": "Harmonic Weavers blend multiple frequencies together, creating complex patterns of sound and force that can heal allies or confound enemies.",
+        "featuresByLevel": {
+          "3": ["Chord of Restoration", "Sympathetic Vibrations"],
+          "6": ["Dissonant Counter"],
+          "10": ["Harmonic Shield"],
+          "14": ["Perfect Resonance"]
         }
       }
     },
     {
-      "type": "spell",
-      "id": "Arcane Surge",
+      "type": "subclass",
+      "id": "Fighter:Shardguard",
       "operation": "add",
       "payload": {
-        "title": "Arcane Surge",
-        "level": 2,
-        "school": "Evocation",
-        "casting": "1 action",
-        "range": "Self (30-foot cone)",
-        "components": "V, S",
-        "duration": "Instantaneous",
-        "description": "A wave of raw arcane energy bursts from your hands. Each creature in the area must make a Dexterity saving throw or take 3d8 force damage.",
-        "classes": ["Wizard", "Sorcerer"]
+        "name": "Shardguard",
+        "parentClass": "Fighter",
+        "description": "Shardguards learn to conjure crystalline weapons and armor from pure will, adapting their equipment to any situation.",
+        "featuresByLevel": {
+          "3": ["Crystal Armament", "Shard Sense"],
+          "7": ["Reflective Guard"],
+          "10": ["Crystalline Form"],
+          "15": ["Shard Storm"],
+          "18": ["Living Crystal"]
+        }
+      }
+    },
+    {
+      "type": "race",
+      "id": "Crystalborn",
+      "operation": "add",
+      "payload": {
+        "name": "Crystalborn",
+        "summary": "Beings of living crystal with innate magical resonance",
+        "description": "Crystalborn are humanoids whose bodies are composed of living crystalline material. They originate from the Elemental Plane of Earth, where raw magical energies merged with mineral formations to create sentient beings. Crystalborn have an innate connection to magical vibrations and can channel energy through their crystalline forms.",
+        "abilityScoreIncrease": "+2 Constitution, +1 Intelligence",
+        "speed": "30 feet",
+        "size": "Medium",
+        "traits": [
+          "Crystalline Body: Your body is made of living crystal. You have resistance to poison damage and advantage on saving throws against being poisoned.",
+          "Living Gem: You don't need to eat, drink, or breathe. You also don't need to sleep and can't be put to sleep by magic. To gain the benefits of a long rest, you must spend at least 6 hours in an inactive, motionless state.",
+          "Resonant Form: You know the Mending cantrip. When you cast it on yourself, you can also restore 1 hit point. Constitution is your spellcasting ability for this spell.",
+          "Natural Armor: When you aren't wearing armor, your AC equals 12 + your Dexterity modifier."
+        ],
+        "languages": ["Common", "Primordial"]
       }
     },
     {
       "type": "spell",
-      "id": "Temporal Anchor",
+      "id": "Prismatic Pulse",
       "operation": "add",
       "payload": {
-        "title": "Temporal Anchor",
+        "title": "Prismatic Pulse",
+        "level": 1,
+        "school": "Evocation",
+        "casting": "1 action",
+        "range": "60 feet",
+        "components": "V, S",
+        "duration": "Instantaneous",
+        "description": "You project a beam of multicolored light at a creature within range. Make a ranged spell attack. On a hit, the target takes 2d8 radiant damage and must succeed on a Constitution saving throw or be blinded until the end of your next turn. At Higher Levels: The damage increases by 1d8 for each slot level above 1st.",
+        "classes": ["Resonant", "Sorcerer", "Wizard"]
+      }
+    },
+    {
+      "type": "spell",
+      "id": "Crystalline Shield",
+      "operation": "add",
+      "payload": {
+        "title": "Crystalline Shield",
+        "level": 2,
+        "school": "Abjuration",
+        "casting": "1 reaction, which you take when you are hit by an attack",
+        "range": "Self",
+        "components": "V, S",
+        "duration": "1 round",
+        "description": "A shimmering barrier of crystal energy springs into existence, granting you +5 to AC against the triggering attack and any subsequent attacks until the start of your next turn.",
+        "classes": ["Resonant", "Wizard"]
+      }
+    },
+    {
+      "type": "spell",
+      "id": "Resonance Strike",
+      "operation": "add",
+      "payload": {
+        "title": "Resonance Strike",
         "level": 3,
+        "school": "Evocation",
+        "casting": "1 action",
+        "range": "Self (30-foot line)",
+        "components": "V, S",
+        "duration": "Instantaneous",
+        "description": "You release a concentrated wave of vibrational energy in a 30-foot line that is 5 feet wide. Each creature in the line must make a Constitution saving throw. On a failure, a creature takes 4d10 thunder damage and is deafened for 1 minute. On a success, a creature takes half damage and isn't deafened. At Higher Levels: The damage increases by 1d10 for each slot level above 3rd.",
+        "classes": ["Resonant", "Bard", "Sorcerer"]
+      }
+    },
+    {
+      "type": "spell",
+      "id": "Shatter Point",
+      "operation": "add",
+      "payload": {
+        "title": "Shatter Point",
+        "level": 4,
         "school": "Transmutation",
         "casting": "1 action",
-        "range": "Self",
-        "components": "V, S, M (a small hourglass)",
-        "duration": "1 minute",
-        "description": "You mark your current position in time. Until the spell ends, you can use your reaction to return to that moment, regaining hit points equal to any damage taken since casting.",
-        "classes": ["Wizard", "Chronomancer"]
+        "range": "Touch",
+        "components": "V, S",
+        "duration": "Concentration, up to 1 minute",
+        "description": "You touch an object or creature and identify structural weaknesses. If targeting a creature, for the duration, your attacks against it score a critical hit on a roll of 18-20, and the creature has vulnerability to one damage type of your choice. If targeting an object, it has vulnerability to all damage for the duration.",
+        "classes": ["Resonant", "Wizard"]
       }
     },
     {
       "type": "feat",
-      "id": "Tactical Genius",
+      "id": "Lattice Mind",
       "operation": "add",
       "payload": {
-        "name": "Tactical Genius",
-        "description": "You have a keen mind for battlefield strategy. You gain +1 to Intelligence, and allies within 30 feet gain advantage on their first attack roll each combat.",
-        "prerequisites": "Intelligence 13 or higher"
+        "name": "Lattice Mind",
+        "summary": "Your thoughts are organized in crystalline patterns, granting mental resilience.",
+        "description": "You gain +1 to Intelligence or Wisdom, advantage on saving throws against being charmed or frightened, and you can perfectly recall anything you have seen or heard within the past month.",
+        "prerequisites": "None"
       }
     },
     {
       "type": "background",
-      "id": "Merchant Prince",
+      "id": "Geomantic Apprentice",
       "operation": "add",
       "payload": {
-        "name": "Merchant Prince",
-        "description": "You were born into a wealthy trading family and learned the art of negotiation from an early age.",
-        "skillProficiencies": ["Insight", "Persuasion"],
-        "toolProficiencies": ["One type of gaming set"],
-        "languages": ["One of your choice"],
+        "name": "Geomantic Apprentice",
+        "description": "You studied under a master who taught you to read the magical energies flowing through stone and crystal. You learned to identify mineral compositions and sense ley lines.",
+        "proficiencies": {
+          "skills": ["Arcana", "Nature"],
+          "tools": ["Jeweler's tools"],
+          "languages": ["Primordial"]
+        },
         "equipment": [
-          "A set of fine clothes",
-          "A signet ring",
-          "A letter of credit worth 25 gp",
-          "A belt pouch containing 15 gp"
+          "A set of jeweler's tools",
+          "A small crystal worth 10 gp",
+          "A journal of geological notes",
+          "Common clothes",
+          "A belt pouch containing 10 gp"
         ],
         "feature": {
-          "name": "Trade Connections",
-          "description": "You have contacts in major trading cities who can provide lodging and information about local markets."
+          "name": "Earth Reader",
+          "description": "You can spend 10 minutes examining natural stone or crystal formations to determine if any magical effects are present, the general direction of any nearby ley lines or magical nodes, and whether the area has been affected by earthquakes or magical upheaval in the past year."
         }
       }
     },
     {
-      "type": "fighting-style",
-      "id": "Sentinel Stance",
+      "type": "subrace",
+      "id": "Crystalborn:Quartz Heart",
       "operation": "add",
       "payload": {
-        "name": "Sentinel Stance",
-        "description": "When you are wielding a melee weapon in one hand and no other weapons, you gain +1 to AC and can use your reaction to make an opportunity attack when a creature within 5 feet of you attacks a target other than you.",
+        "name": "Quartz Heart",
+        "race": "Crystalborn",
+        "description": "Quartz Hearts channel pure, clear energy. Their crystalline forms are nearly transparent, and they excel at amplifying magical effects. They gain resistance to radiant damage and can cast the Light cantrip at will."
+      }
+    },
+    {
+      "type": "subrace",
+      "id": "Crystalborn:Obsidian Shard",
+      "operation": "add",
+      "payload": {
+        "name": "Obsidian Shard",
+        "race": "Crystalborn",
+        "description": "Obsidian Shards are formed from volcanic glass, dark and sharp-edged. They are natural warriors, gaining resistance to fire damage and proficiency with one martial weapon of their choice."
+      }
+    },
+    {
+      "type": "fighting-style",
+      "id": "Refracted Defense",
+      "operation": "add",
+      "payload": {
+        "name": "Refracted Defense",
+        "description": "When you are hit by a ranged attack, you can use your reaction to reduce the damage by 1d6 + your proficiency bonus as your crystalline form refracts the incoming projectile.",
         "classes": ["Fighter", "Paladin"]
       }
     },
     {
       "type": "pact-boon",
-      "id": "Pact of the Grimoire",
+      "id": "Pact of the Shard",
       "operation": "add",
       "payload": {
-        "name": "Pact of the Grimoire",
-        "description": "Your patron grants you a magical grimoire containing forbidden knowledge. You learn two additional cantrips from any spell list, and once per long rest you can cast a spell you don't know as a ritual if it appears in your grimoire."
+        "name": "Pact of the Shard",
+        "description": "Your patron gifts you a crystalline focus that hovers near your shoulder. As a bonus action, you can command the shard to fire a beam at a creature within 30 feet, dealing 1d8 force damage on a hit. The shard uses your spell attack modifier."
       }
     },
     {
       "type": "eldritch-invocation",
-      "id": "Eldritch Barrier",
+      "id": "Crystalline Gaze",
       "operation": "add",
       "payload": {
-        "name": "Eldritch Barrier",
-        "description": "When you cast eldritch blast, you can forgo one beam to create a barrier of force. Until the start of your next turn, you have half cover against ranged attacks.",
-        "prerequisites": {
-          "level": 5,
-          "other": "Eldritch Blast cantrip"
-        }
+        "name": "Crystalline Gaze",
+        "description": "You can see through solid crystal and glass as if it were transparent, up to 30 feet. Additionally, you have advantage on saving throws against being blinded.",
+        "prerequisites": null
       }
     },
     {
       "type": "metamagic",
-      "id": "Redirected Spell",
+      "id": "Fractured Spell",
       "operation": "add",
       "payload": {
-        "name": "Redirected Spell",
-        "description": "When a spell you cast that targets only one creature misses or the target succeeds on its saving throw, you can spend 2 sorcery points to redirect the spell to a different target within range.",
-        "cost": 2
-      }
-    },
-    {
-      "type": "subrace",
-      "id": "Elf:Starlight Elf",
-      "operation": "add",
-      "payload": {
-        "name": "Starlight Elf",
-        "race": "Elf",
-        "description": "Elves who dwell in observatories atop mountain peaks, studying celestial phenomena. They gain Starlight Vision and a connection to the night sky."
+        "name": "Fractured Spell",
+        "description": "When you cast a spell that deals damage to a single target, you can spend 2 sorcery points to split the damage between the original target and one other creature within 15 feet of it. Both targets take half the original damage.",
+        "cost": "2 sorcery points"
       }
     }
   ],
-  "notes": [
-    "This is a template with example homebrew content.",
-    "Replace the examples with your own creations or content you own.",
-    "Remember: do not paste copyrighted text verbatim - summarize in your own words.",
-    "Add page references here for your personal use."
-  ]
+  "notes": "This template demonstrates all supported content types with original homebrew examples. The Crystalborn race and Resonant class shown here are purely illustrative. Replace these examples with your own creations. Always summarize content in your own words - never paste copyrighted text verbatim. Note: Races can only be referenced via allowlist entries since the character creation system uses a different data structure for base races."
 }

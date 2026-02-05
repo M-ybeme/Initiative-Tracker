@@ -1,0 +1,1398 @@
+<!DOCTYPE html>
+<html lang="en" data-bs-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>The DM's Toolbox: NPC Generator</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" crossorigin="anonymous" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.8.3/font/bootstrap-icons.css" />
+  <!-- Custom CSS -->
+  <link href="/css/site.css" rel="stylesheet" />
+  <!-- Dev Icons -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/devicons/devicon@v2.15.1/devicon.min.css" />
+  <!-- Favicon -->
+  <link rel="icon" type="image/png" href="/images/dndFavicon (2).png" />
+  <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" crossorigin="anonymous"></script>
+  <script src="/js/site.js"></script>
+  <style>
+    .bgimage{
+        background: url('images/BGMap.png') no-repeat center center fixed;
+        background-size: cover;}
+    .bg-orange { background-color: #fd7e14 !important; color: #212529 !important; }
+    .drag-handle { cursor: move; }
+    .active-turn {
+      border-left: 5px solid #1d9e6d !important;
+      color: #f8f9fa !important;
+      font-weight: bold;
+    }
+    #saveHistorySelect { min-width: 200px; }
+  </style>
+</head>
+<body class="bgimage">
+   <nav class="navbar navbar-expand-lg navbar-dark fixed-top text-light" id="mainNav">
+    <div class="container-fluid">
+      <a class="navbar-brand" href="index.html">
+        <img src="/images/dndFavicon (2).png" height="40" width="40" alt="App Logo" class="d-inline-block" />
+        The DM Toolbox
+      </a>
+      <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarSupportedContent"
+        aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+        <span class="navbar-toggler-icon"></span>
+      </button>
+      <div class="collapse navbar-collapse" id="navbarSupportedContent">
+        <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+          <li class="nav-item dropdown">
+            <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+              Combat
+            </a>
+            <ul class="dropdown-menu">
+              <li><a class="dropdown-item" href="initiative.html">Initiative Tracker</a></li>
+              <li><a class="dropdown-item" href="battlemap.html">Battle Map</a></li>
+              <li><a class="dropdown-item" href="encounterbuilder.html">Encounter Builder</a></li>
+            </ul>
+          </li>
+          <li class="nav-item dropdown">
+            <a class="nav-link dropdown-toggle active" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+              Generators
+            </a>
+            <ul class="dropdown-menu">
+              <li><a class="dropdown-item" href="name.html">Name Generator</a></li>
+              <li><a class="dropdown-item" href="loot.html">Loot Generator</a></li>
+              <li><a class="dropdown-item" href="shop.html">Shop Generator</a></li>
+              <li><a class="dropdown-item active" aria-current="page" href="npc.html">NPC Generator</a></li>
+              <li><a class="dropdown-item" href="tav.html">Tavern/Inn Generator</a></li>
+            </ul>
+          </li>
+          <li class="nav-item dropdown">
+            <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+              Campaign
+            </a>
+            <ul class="dropdown-menu">
+              <li><a class="dropdown-item" href="characters.html">Characters</a></li>
+              <li><a class="dropdown-item" href="journal.html">Journal</a></li>
+            </ul>
+          </li>
+        </ul>
+      </div>
+    </div>
+   </nav>
+  <main class="content pt-3">
+    <div class="container-fluid text-center backdrop">
+      <div class="alert alert-warning text-start" role="status">
+        <div class="fw-semibold"><i class="bi bi-shield-lock me-1"></i>SRD Scope</div>
+        <small>All names, ancestry tags, and stat suggestions in this generator stick to SRD-legal options or original text. Non-SRD ancestries and notable NPCs stay hidden unless a private content pack re-enables them locally, keeping the public distribution compliant.</small>
+      </div>
+        <!-- ===== NPC Generator (drop-in) ===== -->
+<div class="row g-3">
+  <!-- Settings -->
+  <div class="col-12 col-lg-4">
+    <div class="card bg-dark border-secondary h-100">
+      <div class="card-header border-secondary">
+        <h5 class="mb-0">NPC Settings</h5>
+      </div>
+      <div class="card-body" style="max-height: 600px; overflow-y: auto;">
+        <!-- Preset Templates -->
+        <div class="mb-3">
+          <label for="npc-preset" class="form-label fw-semibold">
+            <i class="bi bi-bookmark-star me-1"></i>Quick Presets
+          </label>
+          <select id="npc-preset" class="form-select">
+            <option value="">Custom Settings</option>
+            <optgroup label="Town NPCs">
+              <option value="guards">Town Guards (5)</option>
+              <option value="merchants">Merchants & Shopkeepers (6)</option>
+              <option value="tavern">Tavern Staff (4)</option>
+              <option value="nobles">Nobles & Officials (3)</option>
+            </optgroup>
+            <optgroup label="Adventure NPCs">
+              <option value="bandits">Bandit Gang (8)</option>
+              <option value="cultists">Cultist Group (6)</option>
+              <option value="guild">Thieves' Guild Members (5)</option>
+              <option value="villagers">Village Folk (10)</option>
+            </optgroup>
+            <optgroup label="Special">
+              <option value="party">Adventuring Party (4)</option>
+              <option value="crowd">Random Crowd (20)</option>
+            </optgroup>
+          </select>
+        </div>
+
+        <hr class="border-secondary">
+
+        <div class="mb-2">
+          <label for="npc-settlement" class="form-label">Settlement profile</label>
+          <select id="npc-settlement" class="form-select">
+            <option value="village">Village</option>
+            <option value="town" selected>Town</option>
+            <option value="capital">Capital</option>
+          </select>
+        </div>
+
+        <div class="row g-2">
+          <div class="col-6">
+            <label for="npc-count" class="form-label">NPCs</label>
+            <input id="npc-count" class="form-control" type="number" inputmode="numeric" min="1" max="500" value="12">
+          </div>
+          <div class="col-6">
+            <label for="npc-seed" class="form-label">Seed (optional)</label>
+            <input id="npc-seed" class="form-control" type="text" placeholder="e.g. session-14">
+          </div>
+        </div>
+
+        <div class="form-check mt-2">
+          <input class="form-check-input" type="checkbox" id="npc-roleInDesc" checked>
+          <label class="form-check-label" for="npc-roleInDesc">Mention role in description</label>
+        </div>
+
+        <div class="form-check">
+          <input class="form-check-input" type="checkbox" id="npc-autoName">
+          <label class="form-check-label" for="npc-autoName">Auto-generate names</label>
+        </div>
+
+        <div class="d-grid gap-2 mt-3">
+          <button class="btn btn-success" id="npc-generate"><i class="bi bi-people-fill me-1"></i>Generate NPCs</button>
+
+          <div class="btn-group" role="group">
+            <button class="btn btn-outline-light" id="npc-copy"><i class="bi bi-clipboard me-1"></i>Copy All</button>
+            <button class="btn btn-outline-info dropdown-toggle dropdown-toggle-split" data-bs-toggle="dropdown">
+              <span class="visually-hidden">Export options</span>
+            </button>
+            <ul class="dropdown-menu dropdown-menu-dark">
+              <li><a class="dropdown-item" href="#" id="npc-download-txt"><i class="bi bi-file-text me-2"></i>Download as .txt</a></li>
+              <li><a class="dropdown-item" href="#" id="npc-download-json"><i class="bi bi-file-code me-2"></i>Download as .json</a></li>
+            </ul>
+          </div>
+
+          <button class="btn btn-outline-danger" id="npc-clear"><i class="bi bi-trash me-1"></i>Clear All</button>
+        </div>
+
+        <div class="alert alert-info mt-3 text-start small">
+          <div class="fw-semibold mb-1"><i class="bi bi-lightbulb me-1"></i>Tips</div>
+          <ul class="mb-0 ps-3 small">
+            <li>Use presets for quick NPC groups</li>
+            <li>Click "Generate Name" on any NPC</li>
+            <li>Click "Generate Stats" for combat-ready NPCs</li>
+            <li>Export to JSON for external tools</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Results -->
+  <div class="col-12 col-lg-8">
+    <div class="card bg-dark border-secondary h-100">
+      <div class="card-header border-secondary">
+        <h5 class="mb-0">NPCs</h5>
+      </div>
+      <div class="card-body">
+        <div id="npc-meta" class="d-flex flex-wrap gap-2 small text-secondary mb-2"></div>
+        <div id="npc-out" class="row row-cols-1 row-cols-sm-2 row-cols-lg-2 g-2" aria-live="polite"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<style>
+  .npc-pill{border:1px solid rgba(255,255,255,.15);border-radius:50rem;padding:.15rem .5rem}
+  .npc-tile{border:1px solid rgba(255,255,255,.15);border-radius:.6rem;padding:.6rem;background:rgba(0,0,0,.2)}
+  .npc-field{font-size:.9rem}
+  .npc-field b{color:#aeb4be}
+</style>
+
+<script>
+(()=>{
+// ---------- Seeded RNG ----------
+function hashString(str){let h=1779033703^str.length;for(let i=0;i<str.length;i++){h=Math.imul(h^str.charCodeAt(i),3432918353);h=h<<13|h>>>19;}return (h>>>0)>>>0}
+function mulberry32(a){return function(){let t=a+=0x6D2B79F5;t=Math.imul(t^t>>>15,t|1);t^=t+Math.imul(t^t>>>7,t|61);return ((t^t>>>14)>>>0)/4294967296}}
+function prand(seedStr){const s = seedStr? hashString(seedStr) : Math.floor(Math.random()*2**32); return mulberry32(s) }
+const $ = (id)=>document.getElementById(id);
+function pick(rng, arr){ return arr[Math.floor(rng()*arr.length)] }
+function pickN(rng, arr, n){
+  const pool=[...arr]; const out=[];
+  for(let i=0;i<n && pool.length;i++){
+    const idx=Math.floor(rng()*pool.length); out.push(pool.splice(idx,1)[0]);
+  }
+  return out;
+}
+function clamp(v,min,max){return Math.max(min,Math.min(max,v))}
+
+// ---------- Pools (neutral, table-safe, no plot hooks) ----------
+const AGE = [
+  "young adult","middle-aged","older","elderly",
+  "early adult","late adult","seasoned","prime of life","weathered","spry elder",
+  "silver-haired","long-in-the-tooth","fresh-faced","timeworn","stooped","youthful-looking"
+];
+
+const BUILD = [
+  "slight","lean","average","sturdy","broad-shouldered","lithe","stocky",
+  "willowy","wiry","lanky","compact","athletic","barrel-chested","paunchy",
+  "burly","round-shouldered","sinewy","thickset","petite","imposing","gaunt"
+];
+
+const HEIGHT = [
+  "very short","short","below average height","average height","above average height","tall","very tall",
+  "unusually tall","compact","towering","diminutive","statuesque"
+];
+
+const HAIR_STYLE = [
+  "short-cropped","curly","straight","braided","shaved","shoulder-length","coiled",
+  "topknot","undercut","loose waves","ringlets","high bun","messy bun","side-parted",
+  "center-parted","cropped fringe","twists","single long braid","double braids","braid crown","tousled"
+];
+
+const HAIR_COLOR = [
+  "dark","fair","ginger","gray-streaked","white","sandy","jet-black","chestnut",
+  "auburn","ash-blond","straw blond","honey-brown","copper","platinum","raven",
+  "salt-and-pepper","silver","ashen","indigo-dyed","henna-red","mousy brown"
+];
+
+const EYES = [
+  "grey","brown","green","blue","hazel",
+  "amber","gold-flecked","steel-blue","ice-blue","grey-green","hazel-brown","near-black",
+  "violet","sea-green","stormy grey","pale blue"
+];
+
+const FEATURES = [
+  "ink-stained fingers","sun-browned skin","freckles","callused hands","neat beard","piercing gaze",
+  "soft smile","scar on knuckle","weathered cheeks","tidy braids",
+  "missing front tooth","crooked nose","scar over eyebrow","laugh lines","pierced ear",
+  "tattoo ring on finger","rough nails","smudged spectacles","steady hands","nicked knuckles",
+  "rosy cheeks","chapped lips","perpetual squint"
+];
+
+const ATTIRE = [
+  "work-stained apron","patched cloak","neat tunic","travel-worn coat","simple uniform","layered shawl",
+  "tool belt and vest","well-kept robes","weathered jacket","rolled-up sleeves",
+  "embroidered cuffs","sturdy boots","broad-brim hat","wool cap","scarf tucked at neck",
+  "fingerless gloves","belt with pouches","neatly tied cravat","weathered hood","apron with many loops",
+  "reinforced coat","patched knees","polished buckle"
+];
+
+const DEMEANOR = [
+  "brisk","courteous","distracted","cheerful","wary","even-tempered","no-nonsense","patient",
+  "eager","world-weary","soft-spoken","forthright",
+  "brusque","amiable","fidgety","methodical","stoic","sardonic","warm","proud",
+  "anxious","unflappable","obliging","perky","gruff","deadpan"
+];
+
+const VOICE_TEMPO = [
+  "measured","quick","slow","unhurried","brisk",
+  "staccato","halting","stop-start","rambling","clipped","rapid-fire","languid","jerky","steady","sing-song"
+];
+
+const VOICE_TIMBRE = [
+  "warm","raspy","nasal","gravelly","breathy","clear","booming","soft",
+  "reedy","velvety","hoarse","smoky","thin","round","bright","dark","metallic","woody","whispery","husky","buzzy"
+];
+
+const VOICE_PITCH = [
+  "low","mid","high",
+  "very low","baritone","tenor","alto","contralto","soprano","falsetto","flat mid","rising high","deeply chesty","whistle-high"
+];
+
+const VOICE_ACCENT = [
+  "local lilt","coastal drawl","northern clip","merchant cant","scholarly cadence","street patter","formal diction","sing-song inflection",
+  "mountain burr","riverlands brogue","border cant","dockside slang","market hawker patter","islander cadence","desert drawl",
+  "high-court formality","temple intonation","academy enunciation","northern frontier burr","rural twang"
+];
+
+const VOICE_DELIVERY = [
+  "chooses words carefully","talks in short sentences","trails off at the end","emphasizes key words",
+  "asks confirming questions","murmurs while thinking","drops final consonants slightly","rolls r’s a touch",
+  "speaks in metaphors","overexplains steps","answers with questions","clips small words",
+  "enunciates every syllable","draws out vowels","drops to a whisper for emphasis","counts softly while speaking",
+  "laughs at their own remarks","pauses for effect","repeats key phrases","adds honorifics reflexively","uses trade jargon"
+];
+
+const MANNERISMS = [
+  "rubs thumb and forefinger","tilts head before answering","squints when listening","drums fingers on surfaces",
+  "keeps hands clasped","straightens nearby objects","tugs at sleeves","taps foot softly","pauses to think mid-sentence",
+  "glances over a shoulder now and then","nods repeatedly","counts on fingers","clears throat quietly","hums under breath",
+  "chews the inside of their cheek",
+  "rolls shoulders to loosen up","adjusts spectacles","checks pocket contents","touches a lucky charm","balances on heels",
+  "cracks knuckles quietly","stares into middle distance","keeps posture ramrod-straight","fidgets with a ring",
+  "taps a quill or pen","sniffs thoughtfully","smooths hair back","sways gently while standing","tilts chin upward","purses lips"
+];
+
+const QUIRKS = [
+  "collects buttons","keeps a neat ledger of tiny favors","names their tools","insists on exact change",
+  "carries a smooth lucky pebble","takes dawn walks daily","brews a personal tea blend","never swears",
+  "wears mismatched socks","polishes gear at the same hour","saves interesting labels","folds notes into tiny squares",
+  "presses dried flowers in a book",
+  "saves short lengths of twine","keeps a pocket almanac","whistles the same tune when working",
+  "carves tiny animals from scraps","makes coin rubbings","collects unusual pebbles",
+  "folds tiny paper boats","brews odd herbal syrups","labels everything with neat tags",
+  "logs the weather each day","lines items up by height","repairs broken buckles for fun"
+];
+
+const SECRETS = [
+  "owes money to a local merchant guild","once witnessed a crime but never reported it","has a hidden stash of silver coins",
+  "secretly practices minor magic","keeps a journal of overheard conversations","is related to minor nobility","fled from another town years ago",
+  "knows the location of a smuggler's cache","has a false identity","once worked for a thieves' guild",
+  "is being blackmailed over a past indiscretion","sends anonymous donations to the local temple","saved a noble's life once",
+  "has a hidden family in another city","knows a secret passage under the town","once served in a war under a false name",
+  "is investigating a local conspiracy","has prophetic dreams they don't share","owes their life to a criminal",
+  "knows who really started the tavern fire","is teaching themselves to read forbidden texts","has a secret lover from a rival family",
+  "witnessed their mentor's mysterious death","keeps a record of corrupt officials","found a treasure map they haven't shared",
+  "is being followed by someone from their past","knows the mayor's dark secret","once stole from the town treasury",
+  "has correspondence with a foreign spy","saved evidence of a merchant's fraud","knows where bodies are buried",
+  "is part of a secret religious sect","has a bounty on their head in another kingdom","discovered their family lineage is fabricated",
+  "knows the real reason the old mill burned","once poisoned someone and got away with it","has a hidden magical item they can't use",
+  "is slowly embezzling from their employer","knows a cure for a rare disease","witnessed a shapeshifter replacing someone",
+  "has maps of secret smuggling routes","is quietly documenting nobles' movements","knows the town was built on cursed ground",
+  "has evidence that could topple a powerful family","once worked as an informant for authorities","knows where a missing person is hiding"
+];
+
+const WANTS = [
+  "to make a fair sale","a quiet day of steady work","better tools","news from the road","to impress a supervisor",
+  "to trade for supplies","to hire short-term help","to clear a small debt","to finish on time",
+  "to maintain a good reputation","to teach an apprentice","repeat customers","to avoid shortages",
+  "a day off soon","a fair hearing","more storage space","to learn a new skill","a steady supplier",
+  "to keep family comfortable","to expand the shop","a reliable apprentice","to work without interruption",
+  "to finish a personal project","clear instructions","a good recommendation","stable prices"
+];
+
+const AVOIDS = [
+  "attention from officials","long haggling","rowdy crowds","credit purchases","wasting materials","lateness",
+  "broken promises","public arguments","being overheard","theft","refund disputes","wet weather","idle gossip about them",
+  "mud tracked indoors","smoldering coals near stock","spilled ink on ledgers","damp storage","spoiled goods",
+  "rust","inaccurate scales","counterfeit coins","price undercutting","idle loitering at the door",
+  "taking sides in disputes","overlong stories while working","open flames near spirits"
+];
+
+// ---------- Stat Block System ----------
+// Tier system: 1=Commoner, 2=Trained, 3=Veteran, 4=Elite, 5=Legendary
+const STAT_TIERS = {
+  1: { name: "Commoner", cr: "0-1/8", hp: [4, 8], ac: [10, 12], prof: 0, abilities: "basic" },
+  2: { name: "Trained", cr: "1/4-1", hp: [11, 22], ac: [12, 14], prof: 2, abilities: "trained" },
+  3: { name: "Veteran", cr: "2-4", hp: [27, 49], ac: [14, 16], prof: 2, abilities: "veteran" },
+  4: { name: "Elite", cr: "5-8", hp: [68, 136], ac: [16, 18], prof: 3, abilities: "elite" },
+  5: { name: "Legendary", cr: "9-15", hp: [153, 250], ac: [17, 20], prof: 4, abilities: "legendary" }
+};
+
+// Specialties define combat style and stat priorities
+const STAT_SPECIALTIES = {
+  "Commoner": {
+    desc: "Untrained individual, attacks with improvised weapons",
+    stats: { str: 10, dex: 10, con: 10, int: 10, wis: 10, cha: 10 },
+    attacks: ["Improvised weapon (club, stick, etc.)"],
+    traits: ["Untrained"]
+  },
+  "Laborer": {
+    desc: "Strong from physical work, hardy but slow",
+    stats: { str: 14, dex: 9, con: 13, int: 9, wis: 11, cha: 9 },
+    attacks: ["Improvised tool (shovel, hammer, etc.)"],
+    traits: ["Hardy", "Strong back"]
+  },
+  "Farmer": {
+    desc: "Rural worker, uses farming tools as weapons",
+    stats: { str: 12, dex: 10, con: 12, int: 9, wis: 12, cha: 9 },
+    attacks: ["Pitchfork or scythe"],
+    traits: ["Weathered", "Early riser"]
+  },
+  "Merchant": {
+    desc: "Quick-witted trader, convincing but not a fighter",
+    stats: { str: 9, dex: 11, con: 10, int: 12, wis: 11, cha: 14 },
+    attacks: ["Dagger or light crossbow"],
+    traits: ["Silver tongue", "Merchant's eye"]
+  },
+  "Guard": {
+    desc: "Trained town guard with basic combat skills",
+    stats: { str: 13, dex: 12, con: 12, int: 10, wis: 11, cha: 10 },
+    attacks: ["Spear", "Club"],
+    traits: ["Alert", "Watchful"]
+  },
+  "Soldier": {
+    desc: "Trained military fighter with weapons proficiency",
+    stats: { str: 14, dex: 12, con: 13, int: 10, wis: 11, cha: 10 },
+    attacks: ["Longsword", "Crossbow"],
+    traits: ["Martial training", "Disciplined"]
+  },
+  "Scout": {
+    desc: "Agile ranger, skilled in ranged combat",
+    stats: { str: 11, dex: 15, con: 12, int: 11, wis: 13, cha: 9 },
+    attacks: ["Shortbow", "Shortsword"],
+    traits: ["Keen eye", "Stealthy"]
+  },
+  "Veteran": {
+    desc: "Experienced fighter, skilled in multiple weapons",
+    stats: { str: 15, dex: 13, con: 14, int: 10, wis: 12, cha: 11 },
+    attacks: ["Longsword", "Shield bash", "Heavy crossbow"],
+    traits: ["Battle hardened", "Tactical awareness"]
+  },
+  "Knight": {
+    desc: "Heavily armored warrior with noble training",
+    stats: { str: 16, dex: 11, con: 14, int: 11, wis: 11, cha: 13 },
+    attacks: ["Greatsword or lance", "Shield bash"],
+    traits: ["Heavy armor master", "Noble bearing"]
+  },
+  "Thug": {
+    desc: "Street tough, brutal and direct in combat",
+    stats: { str: 15, dex: 11, con: 14, int: 9, wis: 10, cha: 9 },
+    attacks: ["Mace", "Heavy fists"],
+    traits: ["Pack tactics", "Intimidating"]
+  },
+  "Bandit": {
+    desc: "Opportunistic criminal, hits and runs",
+    stats: { str: 11, dex: 14, con: 12, int: 10, wis: 10, cha: 10 },
+    attacks: ["Scimitar", "Light crossbow"],
+    traits: ["Cunning action", "Ambusher"]
+  },
+  "Monk": {
+    desc: "Unarmed martial artist, agile and precise",
+    stats: { str: 11, dex: 16, con: 13, int: 11, wis: 15, cha: 10 },
+    attacks: ["Unarmed strike (multiple)", "Quarterstaff"],
+    traits: ["Unarmored defense", "Ki strikes", "Deflect missiles"]
+  },
+  "Mage": {
+    desc: "Spellcaster with limited combat magic",
+    stats: { str: 8, dex: 12, con: 11, int: 16, wis: 12, cha: 11 },
+    attacks: ["Fire bolt cantrip", "Quarterstaff"],
+    traits: ["Spellcasting (wizard)", "Arcane recovery"]
+  },
+  "Priest": {
+    desc: "Divine caster with healing and support",
+    stats: { str: 10, dex: 10, con: 12, int: 11, wis: 16, cha: 13 },
+    attacks: ["Sacred flame cantrip", "Mace"],
+    traits: ["Spellcasting (cleric)", "Divine intervention"]
+  },
+  "Assassin": {
+    desc: "Deadly striker, excels at surprise attacks",
+    stats: { str: 11, dex: 17, con: 13, int: 13, wis: 12, cha: 10 },
+    attacks: ["Shortsword (poison)", "Hand crossbow"],
+    traits: ["Sneak attack", "Assassinate", "Evasion"]
+  },
+  "Champion": {
+    desc: "Master warrior with legendary combat prowess",
+    stats: { str: 18, dex: 14, con: 16, int: 11, wis: 12, cha: 14 },
+    attacks: ["Multiple attacks", "Any martial weapon"],
+    traits: ["Multiattack (3)", "Action surge", "Indomitable"]
+  },
+  "Archmage": {
+    desc: "Powerful wizard with devastating spells",
+    stats: { str: 8, dex: 14, con: 14, int: 20, wis: 15, cha: 12 },
+    attacks: ["High-level spells", "Staff"],
+    traits: ["Spellcasting (9th level)", "Spell resistance", "Magic resistance"]
+  }
+};
+
+function generateStatBlock(tier, specialty, rng) {
+  const tierData = STAT_TIERS[tier];
+  const specData = STAT_SPECIALTIES[specialty];
+
+  // Calculate HP (random within tier range)
+  const hp = tierData.hp[0] + Math.floor(rng() * (tierData.hp[1] - tierData.hp[0] + 1));
+
+  // Calculate AC (random within tier range)
+  const ac = tierData.ac[0] + Math.floor(rng() * (tierData.ac[1] - tierData.ac[0] + 1));
+
+  // Scale stats based on tier
+  const statMod = (tier - 1) * 2; // +0 for tier 1, +2 for tier 2, etc.
+  const stats = {};
+  for (const [stat, base] of Object.entries(specData.stats)) {
+    stats[stat] = Math.min(20, base + statMod);
+  }
+
+  // Calculate ability modifiers
+  const mods = {};
+  for (const [stat, score] of Object.entries(stats)) {
+    mods[stat] = Math.floor((score - 10) / 2);
+  }
+
+  // Calculate speed (based on armor/build)
+  let speed = 30;
+  if (specialty === "Scout" || specialty === "Monk") speed = 40;
+  if (specialty === "Knight") speed = 25;
+
+  return {
+    tier: tierData.name,
+    cr: tierData.cr,
+    specialty,
+    hp,
+    ac,
+    speed,
+    stats,
+    mods,
+    profBonus: tierData.prof,
+    attacks: specData.attacks,
+    traits: specData.traits,
+    desc: specData.desc
+  };
+}
+
+function formatStatBlock(block) {
+  const modStr = (m) => (m >= 0 ? `+${m}` : `${m}`);
+
+  return `**${block.specialty}** (${block.tier}, CR ${block.cr})
+━━━━━━━━━━━━━━━━━━━━━━━━━━
+**HP:** ${block.hp}  **AC:** ${block.ac}  **Speed:** ${block.speed} ft.
+**Prof. Bonus:** +${block.profBonus}
+
+**Ability Scores:**
+STR ${block.stats.str} (${modStr(block.mods.str)})  DEX ${block.stats.dex} (${modStr(block.mods.dex)})  CON ${block.stats.con} (${modStr(block.mods.con)})
+INT ${block.stats.int} (${modStr(block.mods.int)})  WIS ${block.stats.wis} (${modStr(block.mods.wis)})  CHA ${block.stats.cha} (${modStr(block.mods.cha)})
+
+**Attacks:** ${block.attacks.join(", ")}
+**Traits:** ${block.traits.join(", ")}
+
+*${block.desc}*`;
+}
+
+// Roles by settlement (used only inside the description if enabled)
+const ROLES = {
+  village: [
+    "farmer","herder","miller","fisher","herbalist","carpenter","tanner","hunter","stable hand",
+    "village guard","innkeeper","baker","weaver","potter","beekeeper",
+    "shepherd","swineherd","goatherd","thatcher","thresher","wool-spinner","cooper","carter",
+    "reed-cutter","charcoal-burner","net maker","woodcutter","stonecutter","basket-weaver","midwife","broom-maker","fieldhand","drover"
+  ],
+  town: [
+    "blacksmith","apothecary clerk","dockhand","shopkeeper","scribe","courier","guard corporal","ferryman",
+    "brewer","tailor","cobbler","mason","cartwright","bookbinder","glassworker",
+    "chandler (candlemaker)","cooper","dyer","ropemaker","tinker","wagoner","porter","engraver",
+    "furrier","plasterer","glazier","sawyer","barber","cook","inn server","printer","teamster","warehouse tallyman"
+  ],
+  capital: [
+    "guild clerk","factor","archivist","court messenger","city watch sergeant","street vendor","stage performer",
+    "temple attendant","arcane student","moneychanger teller","court scribe","porter","restaurateur",
+    "notary","customs inspector","tax office aide","armorer journeyman","stablemaster","coachman","perfumer",
+    "magistrate’s aide","courier dispatcher","stagehand","house steward","guild examiner","astronomer’s assistant",
+    "map-room attendant","cathedral cantor","royal gardener","ledger auditor","apartment concierge"
+  ]
+};
+
+// ---------- NPC assembly ----------
+function makeDescription(rng, settlement, mentionRole){
+  const role = pick(rng, ROLES[settlement]);
+  const age = pick(rng, AGE);
+  const height = pick(rng, HEIGHT);
+  const build = pick(rng, BUILD);
+  const hair = `${pick(rng, HAIR_STYLE)} ${pick(rng, HAIR_COLOR)} hair`;
+  const eyes = `${pick(rng, EYES)} eyes`;
+  const feat = pick(rng, FEATURES);
+  const attire = pick(rng, ATTIRE);
+  const demeanor = pick(rng, DEMEANOR);
+  const roleBit = mentionRole ? ` ${role}` : "";
+  return `A ${age}, ${height}, ${build}${roleBit} with ${hair}, ${eyes}, and ${feat}. Wears a ${attire}; ${demeanor} manner.`;
+}
+function makeVoice(rng){
+  const tempo = pick(rng, VOICE_TEMPO), timbre = pick(rng, VOICE_TIMBRE), pitch = pick(rng, VOICE_PITCH);
+  const accent = pick(rng, VOICE_ACCENT), delivery = pick(rng, VOICE_DELIVERY);
+  return `${tempo}, ${timbre}, ${pitch} pitch; ${accent}; ${delivery}.`;
+}
+function makeMannerisms(rng){
+  return pickN(rng, MANNERISMS, 2).join("; ") + ".";
+}
+function makeQuirk(rng){ return pick(rng, QUIRKS) + "."; }
+function makeWants(rng){ return pickN(rng, WANTS, 2).join("; ") + "."; }
+function makeAvoids(rng){ return pickN(rng, AVOIDS, 2).join("; ") + "."; }
+function makeSecret(rng){ return pick(rng, SECRETS) + "."; }
+
+function generate(){
+  const settlement = $("npc-settlement").value;
+  const count = clamp(+$("npc-count").value || 12, 1, 500);
+  const seed = $("npc-seed").value.trim();
+  const roleInDesc = $("npc-roleInDesc").checked;
+  const autoName = $("npc-autoName").checked;
+
+  const rng = prand(seed);
+  const out = $("npc-out"); out.innerHTML = "";
+  const meta = $("npc-meta"); meta.innerHTML = "";
+
+  [["Settlement", settlement],["Count", count],["Seed", seed||"(random)"]]
+    .forEach(([k,v])=>{ const s=document.createElement("span"); s.className="npc-pill"; s.textContent=`${k}: ${v}`; meta.appendChild(s); });
+
+  const rows = [];
+  for(let i=0;i<count;i++){
+    const desc = makeDescription(rng, settlement, roleInDesc);
+    const voice = makeVoice(rng);
+    const mans = makeMannerisms(rng);
+    const quirk = makeQuirk(rng);
+    const wants = makeWants(rng);
+    const avoids = makeAvoids(rng);
+    const secret = makeSecret(rng);
+
+    // Auto-generate name if enabled
+    let generatedName = "[No name yet]";
+    let nameClass = "text-info";
+    if(autoName){
+      const race = detectRaceFromDescription(desc);
+      const { names } = generateNamesForNPC(`race: ${race}`, 1);
+      generatedName = names[0] || "[No name yet]";
+      nameClass = "text-success";
+    }
+
+    // render card
+    const col = document.createElement("div"); col.className = "col";
+    const div = document.createElement("div"); div.className = "npc-tile";
+    div.innerHTML = `
+      <div class="npc-field mb-2">
+        <b>Name:</b> <span class="npc-name-display ${nameClass}">${generatedName}</span>
+        <button class="btn btn-outline-success btn-sm ms-2 npc-name-gen-btn" title="Generate Name">
+          <i class="bi bi-person-badge me-1"></i>Generate Name
+        </button>
+      </div>
+      <div class="npc-field"><b>Description:</b> ${desc}</div>
+      <div class="npc-field"><b>Voice:</b> ${voice}</div>
+      <div class="npc-field"><b>Mannerisms:</b> ${mans}</div>
+      <div class="npc-field"><b>Quirk:</b> ${quirk}</div>
+      <div class="npc-field"><b>Wants:</b> ${wants}</div>
+      <div class="npc-field"><b>Wants to Avoid:</b> ${avoids}</div>
+      <div class="npc-field"><b>Secret:</b> ${secret}</div>
+      <div class="mt-2 d-grid gap-2 d-sm-flex flex-wrap">
+        <button class="btn btn-outline-warning btn-sm npc-stat-gen-btn" title="Generate Combat Stats">
+          <i class="bi bi-shield-fill-check me-1"></i>Generate Stats
+        </button>
+        <button class="btn btn-outline-info btn-sm npc-copy-btn" title="Copy this NPC">
+          <i class="bi bi-clipboard me-1"></i>Copy
+        </button>
+        <button class="btn btn-outline-success btn-sm npc-initiative-btn" title="Send to Initiative Tracker" style="display:none;">
+          <i class="bi bi-arrow-right-circle me-1"></i>Initiative
+        </button>
+        <button class="btn btn-outline-secondary btn-sm npc-download-btn" title="Download Stats as Text" style="display:none;">
+          <i class="bi bi-file-text me-1"></i>Download
+        </button>
+      </div>
+      <div class="npc-stats-display mt-2" style="display:none;"></div>
+    `;
+    col.appendChild(div); out.appendChild(col);
+
+    rows.push({
+      name: generatedName,
+      desc: `Description: ${desc}`,
+      voice: `Voice: ${voice}`,
+      mans: `Mannerisms: ${mans}`,
+      quirk: `Quirk: ${quirk}`,
+      wants: `Wants: ${wants}`,
+      avoids: `Wants to Avoid: ${avoids}`,
+      secret: `Secret: ${secret}`
+    });
+  }
+  return rows;
+}
+
+// Copy / Download helpers
+function extractNPCData(){
+  return [...document.querySelectorAll("#npc-out .npc-tile")].map(tile=>{
+    const nameEl = tile.querySelector(".npc-name-display");
+    const name = nameEl ? nameEl.textContent : "[No name yet]";
+
+    // Extract all fields
+    const fields = tile.querySelectorAll(".npc-field");
+    const data = { name };
+
+    fields.forEach(field => {
+      const text = field.textContent.trim();
+      const colonIdx = text.indexOf(':');
+      if(colonIdx > -1){
+        const key = text.substring(0, colonIdx).trim().toLowerCase();
+        const value = text.substring(colonIdx + 1).trim();
+        data[key] = value;
+      }
+    });
+
+    // Get stat block if it exists
+    if(tile.dataset.statBlock){
+      data.statBlock = tile.dataset.statBlock;
+    }
+
+    return data;
+  });
+}
+
+function copyNPCs(){
+  const rows = [...document.querySelectorAll("#npc-out .npc-tile")].map(tile=>{
+    const nameEl = tile.querySelector(".npc-name-display");
+    const name = nameEl ? nameEl.textContent : "[No name yet]";
+    const rest = tile.innerText.replace(/Name:.*?Generate Name/s, "").replace(/Generate Stats.*$/s, "").replace(/\n{2,}/g,"\n").trim();
+    const statBlock = tile.dataset.statBlock || "";
+
+    let fullText = `Name: ${name}\n${rest}`;
+    if(statBlock) fullText += `\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━\nCOMBAT STATS:\n${statBlock}`;
+
+    return fullText;
+  });
+  if(!rows.length) return;
+  navigator.clipboard.writeText(rows.join("\n\n═══════════════════════════════════════\n\n"));
+}
+
+function downloadNPCsTxt(){
+  const text = [...document.querySelectorAll("#npc-out .npc-tile")].map(tile=>{
+    const nameEl = tile.querySelector(".npc-name-display");
+    const name = nameEl ? nameEl.textContent : "[No name yet]";
+    const rest = tile.innerText.replace(/Name:.*?Generate Name/s, "").replace(/Generate Stats.*$/s, "").replace(/\n{2,}/g,"\n").trim();
+    const statBlock = tile.dataset.statBlock || "";
+
+    let fullText = `Name: ${name}\n${rest}`;
+    if(statBlock) fullText += `\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━\nCOMBAT STATS:\n${statBlock}`;
+
+    return fullText;
+  }).join("\n\n═══════════════════════════════════════\n\n");
+
+  if(!text.trim()) return;
+
+  const header = `NPC Collection\nGenerated: ${new Date().toLocaleString()}\nTotal NPCs: ${document.querySelectorAll("#npc-out .npc-tile").length}\n\n═══════════════════════════════════════\n\n`;
+  const fullText = header + text;
+
+  const blob = new Blob([fullText], {type:"text/plain;charset=utf-8"});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href=url;
+  a.download=`npcs_${new Date().toISOString().slice(0,10)}.txt`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+function downloadNPCsJson(){
+  const npcs = extractNPCData();
+  if(!npcs.length) return;
+
+  const exportData = {
+    metadata: {
+      generatedAt: new Date().toISOString(),
+      totalNPCs: npcs.length,
+      generator: "The DM's Toolbox - NPC Generator"
+    },
+    npcs: npcs
+  };
+
+  const blob = new Blob([JSON.stringify(exportData, null, 2)], {type:"application/json"});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href=url;
+  a.download=`npcs_${new Date().toISOString().slice(0,10)}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+// ---------- Name Generator Integration ----------
+function detectRaceFromDescription(desc){
+  const text = desc.toLowerCase();
+  const raceMap = {
+    dwarf: /\bdwarf/i,
+    elf: /\b(elf|elven)/i,
+    drow: /\bdrow/i,
+    orc: /\borc/i,
+    halfling: /\bhalfling/i,
+    gnome: /\bgnome/i,
+    dragonborn: /\bdragonborn/i,
+    tiefling: /\btiefling/i,
+    goblin: /\bgoblin/i,
+    lizardfolk: /\b(lizardfolk|lizard folk)/i,
+    genasi: /\bgenasi/i,
+    fey: /\b(fey|fairy|faerie)/i
+  };
+
+  for(const [race, pattern] of Object.entries(raceMap)){
+    if(pattern.test(text)) return race.charAt(0).toUpperCase() + race.slice(1);
+  }
+  return "Human (Latin)"; // default
+}
+
+function generateNamesForNPC(desc, count = 10){
+  // Simple name generator using same RNG approach
+  const race = detectRaceFromDescription(desc);
+  const seed = "npc-name-" + Date.now() + "-" + Math.random();
+  const rng = prand(seed);
+
+  const nameStyles = {
+    "Dwarf": {start:["br","dr","gr","th","bal"], mid:["a","o","u","or"], end:["ar","in","dur","grim"]},
+    "Elf": {start:["ae","li","fa","th","ar"], mid:["ri","la","si"], end:["el","iel","wyn","ara"]},
+    "Drow": {start:["zae","dra","vyr","zil"], mid:["ri","z","yl"], end:["th","rin","zra"]},
+    "Orc": {start:["gr","br","kr","gar","zug"], mid:["a","o","u","ok"], end:["th","g","zug","nak"]},
+    "Half-Orc": {start:["gr","thr","kar","dur","gor"], mid:["a","o","u","ar","ok"], end:["ak","og","ush","gak","rim"]},
+    "Halfling": {start:["al","ben","cor","pip","sam"], mid:["o","er","il","in"], end:["o","y","ie","in","wick"]},
+    "Gnome": {start:["bod","fiz","ned","tim","gar"], mid:["a","el","on","um"], end:["bin","wick","um","ock"]},
+    "Dragonborn": {start:["arj","drax","rax","vor","kry"], mid:["a","or","ul","an"], end:["thor","ion","var","drim"]},
+    "Tiefling": {start:["az","mal","vor","zar","dam"], mid:["a","ir","ul","oth"], end:["zor","iel","ith","mon"]},
+    "Goblin": {start:["sk","gr","zik","krik","nix"], mid:["a","i","zz","ik"], end:["it","ug","gob","git"]},
+    "Hobgoblin": {start:["kor","mag","drak","ghor","zar"], mid:["a","o","u","ag"], end:["gan","thul","ruk","dak"]},
+    "Kobold": {start:["kik","mik","tik","drix","zix"], mid:["i","a","ix","ak"], end:["ix","ak","ik","zik"]},
+    "Lizardfolk": {start:["sli","kra","ska","ss","tro"], mid:["s","az","or","ra"], end:["th","ss","zith","sith"]},
+    "Aarakocra": {start:["kee","aak","quil","aar","kaa"], mid:["ka","ra","ki","ak"], end:["kra","aar","kek","rill"]},
+    "Tabaxi": {start:["cloud","rain","mist","storm","wind"], mid:["on","in"], end:["mountains","water","forest","leaves","sky"]},
+    "Firbolg": {start:["adh","bru","car","dun","eir"], mid:["al","ir","an","or"], end:["an","ach","ion","os"]},
+    "Kenku": {start:["kik","kak","krek","chik","kaw"], mid:["i","a","e","ee"], end:["kaw","eek","awk","ik"]},
+    "Triton": {start:["cor","del","mar","nal","por"], mid:["a","i","an","or"], end:["is","os","ian","us"]},
+    "Goliath": {start:["kav","kul","mav","thu","vok"], mid:["a","o","u","ak"], end:["aak","oth","nak","kar"]},
+    "Genasi": {start:["aer","ign","zel","lum","cal"], mid:["ra","el","or","um"], end:["os","ara","ion","eth"]},
+    "Fey": {start:["ly","tia","vio","aur","syl"], mid:["li","ri","ya","ve"], end:["wyn","ria","yse","elle"]},
+    "Bugbear": {start:["gru","hru","kru","skar","thag"], mid:["u","oo","ag","ur"], end:["ub","ash","ug","urz"]},
+    "Yuan-ti": {start:["sss","sess","iss","zss","rass"], mid:["i","e","ss","eth"], end:["ith","eth","iss","ra"]},
+    "Changeling": {start:["bin","jin","sin","ven","wyn"], mid:["a","e","i","ar"], end:["ak","et","ix","yn"]},
+    "Warforged": {start:["bul","cog","iron","steel","war"], mid:["wark","guard","mark"], end:["ed","er","on","ium"]},
+    "Human (Latin)": {start:["mar","luc","val","jul","max"], mid:["a","i","an","us"], end:["a","us","ian","ella"]},
+    "Human (Norse)": {start:["al","bir","ein","har","thor","ulf"], mid:["a","e","ar","ir","or"], end:["ar","en","ir","ulf","son","rid"]},
+    "Human (Arabic)": {start:["al","has","kal","ras","sal"], mid:["a","i","im","ad"], end:["id","im","an","een"]},
+    "Human (Asian)": {start:["li","mei","yan","jin","ming"], mid:["an","ing","ao","ei"], end:["li","ying","feng","long"]}
+  };
+
+  const style = nameStyles[race] || nameStyles["Human (Latin)"];
+  const names = [];
+
+  for(let i = 0; i < count; i++){
+    const parts = [
+      pick(rng, style.start),
+      pick(rng, style.mid),
+      pick(rng, style.end)
+    ];
+    let name = parts.join("");
+    name = name.charAt(0).toUpperCase() + name.slice(1);
+    names.push(name);
+  }
+
+  return { names, race };
+}
+
+function showNamePickerModal(npcTile, desc){
+  let currentNPCTile = npcTile; // Store reference for regeneration
+  const detectedRace = detectRaceFromDescription(desc);
+
+  // Create modal if it doesn't exist
+  let modal = document.getElementById("namePickerModal");
+  if(!modal){
+    modal = document.createElement("div");
+    modal.id = "namePickerModal";
+    modal.className = "modal fade";
+    modal.tabIndex = -1;
+    modal.innerHTML = `
+      <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content bg-dark text-light">
+          <div class="modal-header border-secondary">
+            <h5 class="modal-title">Pick a Name</h5>
+            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+          </div>
+          <div class="modal-body">
+            <div class="mb-3">
+              <label for="raceSelect" class="form-label fw-semibold">
+                <i class="bi bi-people me-1"></i>Race/Culture:
+              </label>
+              <div class="input-group">
+                <select id="raceSelect" class="form-select">
+                  <optgroup label="Common Races">
+                    <option value="Human (Latin)">Human (Latin)</option>
+                    <option value="Human (Norse)">Human (Norse)</option>
+                    <option value="Human (Arabic)">Human (Arabic)</option>
+                    <option value="Human (Asian)">Human (Asian)</option>
+                    <option value="Dwarf">Dwarf</option>
+                    <option value="Elf">Elf</option>
+                    <option value="Halfling">Halfling</option>
+                    <option value="Gnome">Gnome</option>
+                  </optgroup>
+                  <optgroup label="Uncommon Races">
+                    <option value="Dragonborn">Dragonborn</option>
+                    <option value="Half-Orc">Half-Orc</option>
+                    <option value="Tiefling">Tiefling</option>
+                    <option value="Drow">Drow</option>
+                    <option value="Goliath">Goliath</option>
+                    <option value="Firbolg">Firbolg</option>
+                    <option value="Genasi">Genasi</option>
+                    <option value="Triton">Triton</option>
+                    <option value="Aarakocra">Aarakocra</option>
+                    <option value="Tabaxi">Tabaxi</option>
+                    <option value="Kenku">Kenku</option>
+                  </optgroup>
+                  <optgroup label="Monstrous Races">
+                    <option value="Orc">Orc</option>
+                    <option value="Goblin">Goblin</option>
+                    <option value="Hobgoblin">Hobgoblin</option>
+                    <option value="Kobold">Kobold</option>
+                    <option value="Lizardfolk">Lizardfolk</option>
+                    <option value="Bugbear">Bugbear</option>
+                    <option value="Yuan-ti">Yuan-ti</option>
+                  </optgroup>
+                  <optgroup label="Special Races">
+                    <option value="Fey">Fey</option>
+                    <option value="Changeling">Changeling</option>
+                    <option value="Warforged">Warforged</option>
+                  </optgroup>
+                </select>
+                <button class="btn btn-outline-info" id="regenerateNames" title="Generate new names">
+                  <i class="bi bi-arrow-clockwise"></i> Regenerate
+                </button>
+              </div>
+              <small class="text-secondary">Auto-detected: <strong id="detectedRaceLabel"></strong></small>
+            </div>
+            <hr class="border-secondary">
+            <div class="row row-cols-2 row-cols-md-3 g-2" id="nameGrid"></div>
+          </div>
+          <div class="modal-footer border-secondary">
+            <button type="button" class="btn btn-outline-light" id="nameOpenInGen">
+              <i class="bi bi-box-arrow-up-right me-1"></i>Open Name Generator
+            </button>
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+          </div>
+        </div>
+      </div>`;
+    document.body.appendChild(modal);
+  }
+
+  // Function to generate and populate names
+  function populateNames(race){
+    const { names } = generateNamesForNPC(`race: ${race}`, 12);
+    const grid = document.getElementById("nameGrid");
+    grid.innerHTML = "";
+
+    names.forEach(name => {
+      const col = document.createElement("div");
+      col.className = "col";
+      const btn = document.createElement("button");
+      btn.className = "btn btn-outline-info w-100 name-option-btn";
+      btn.textContent = name;
+      btn.onclick = ()=>{
+        const nameDisplay = currentNPCTile.querySelector(".npc-name-display");
+        nameDisplay.textContent = name;
+        nameDisplay.classList.remove("text-info");
+        nameDisplay.classList.add("text-success");
+        bootstrap.Modal.getInstance(modal).hide();
+      };
+      col.appendChild(btn);
+      grid.appendChild(col);
+    });
+  }
+
+  // Set detected race and populate initial names
+  document.getElementById("detectedRaceLabel").textContent = detectedRace;
+  document.getElementById("raceSelect").value = detectedRace;
+  populateNames(detectedRace);
+
+  // Setup regenerate button
+  document.getElementById("regenerateNames").onclick = ()=>{
+    const selectedRace = document.getElementById("raceSelect").value;
+    populateNames(selectedRace);
+  };
+
+  // Setup "Open Name Generator" button
+  document.getElementById("nameOpenInGen").onclick = ()=>{
+    const selectedRace = document.getElementById("raceSelect").value;
+    localStorage.setItem("npc-name-request", JSON.stringify({
+      race: selectedRace,
+      timestamp: Date.now()
+    }));
+    window.open("name.html?from=npc&race=" + encodeURIComponent(selectedRace), "_blank");
+  };
+
+  // Show modal
+  const bsModal = new bootstrap.Modal(modal);
+  bsModal.show();
+}
+
+// ---------- Stat Block Modal ----------
+function showStatBlockModal(npcTile) {
+  let currentNPCTile = npcTile;
+
+  // Create modal if it doesn't exist
+  let modal = document.getElementById("statBlockModal");
+  if(!modal){
+    modal = document.createElement("div");
+    modal.id = "statBlockModal";
+    modal.className = "modal fade";
+    modal.tabIndex = -1;
+    modal.innerHTML = `
+      <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content bg-dark text-light">
+          <div class="modal-header border-secondary">
+            <h5 class="modal-title"><i class="bi bi-shield-fill-check me-2"></i>Generate Combat Stats</h5>
+            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+          </div>
+          <div class="modal-body">
+            <div class="mb-3">
+              <label for="statTierSelect" class="form-label fw-semibold">
+                <i class="bi bi-bar-chart-steps me-1"></i>Difficulty Tier:
+              </label>
+              <select id="statTierSelect" class="form-select">
+                <option value="1">Tier 1: Commoner (CR 0-1/8) - Weak, untrained</option>
+                <option value="2" selected>Tier 2: Trained (CR 1/4-1) - Basic combat training</option>
+                <option value="3">Tier 3: Veteran (CR 2-4) - Experienced fighter</option>
+                <option value="4">Tier 4: Elite (CR 5-8) - Skilled warrior</option>
+                <option value="5">Tier 5: Legendary (CR 9-15) - Master combatant</option>
+              </select>
+            </div>
+
+            <div class="mb-3">
+              <label for="statSpecialtySelect" class="form-label fw-semibold">
+                <i class="bi bi-person-gear me-1"></i>Combat Specialty:
+              </label>
+              <select id="statSpecialtySelect" class="form-select">
+                <optgroup label="Common Folk">
+                  <option value="Commoner">Commoner - Untrained, improvised weapons</option>
+                  <option value="Laborer">Laborer - Strong, uses tools as weapons</option>
+                  <option value="Farmer">Farmer - Hardy, uses farming implements</option>
+                  <option value="Merchant">Merchant - Quick-witted, light weapons</option>
+                </optgroup>
+                <optgroup label="Trained Fighters">
+                  <option value="Guard">Guard - Town watch, basic combat</option>
+                  <option value="Soldier">Soldier - Military training, disciplined</option>
+                  <option value="Scout">Scout - Agile ranger, ranged combat</option>
+                  <option value="Thug">Thug - Street tough, brutal</option>
+                  <option value="Bandit">Bandit - Hit and run tactics</option>
+                </optgroup>
+                <optgroup label="Skilled Combatants">
+                  <option value="Veteran">Veteran - Experienced, versatile</option>
+                  <option value="Knight">Knight - Heavy armor, noble training</option>
+                  <option value="Monk">Monk - Unarmed martial artist</option>
+                </optgroup>
+                <optgroup label="Spellcasters">
+                  <option value="Mage">Mage - Arcane spellcaster</option>
+                  <option value="Priest">Priest - Divine spellcaster</option>
+                </optgroup>
+                <optgroup label="Elite/Legendary">
+                  <option value="Assassin">Assassin - Deadly striker</option>
+                  <option value="Champion">Champion - Master warrior</option>
+                  <option value="Archmage">Archmage - Powerful wizard</option>
+                </optgroup>
+              </select>
+              <small class="text-secondary mt-1 d-block" id="specialtyDesc">Select a specialty to see details</small>
+            </div>
+
+            <div class="alert alert-info">
+              <i class="bi bi-info-circle me-1"></i>
+              <strong>Tip:</strong> Choose tier based on challenge, specialty based on their background.
+            </div>
+          </div>
+          <div class="modal-footer border-secondary">
+            <button type="button" class="btn btn-success" id="generateStatBlockBtn">
+              <i class="bi bi-dice-5 me-1"></i>Generate
+            </button>
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+          </div>
+        </div>
+      </div>`;
+    document.body.appendChild(modal);
+  }
+
+  // Update specialty description on change
+  const specialtySelect = document.getElementById("statSpecialtySelect");
+  const specialtyDesc = document.getElementById("specialtyDesc");
+  specialtySelect.addEventListener("change", ()=>{
+    const spec = STAT_SPECIALTIES[specialtySelect.value];
+    if(spec) specialtyDesc.textContent = spec.desc;
+  });
+
+  // Initialize description
+  const initialSpec = STAT_SPECIALTIES[specialtySelect.value];
+  if(initialSpec) specialtyDesc.textContent = initialSpec.desc;
+
+  // Generate button handler
+  document.getElementById("generateStatBlockBtn").onclick = ()=>{
+    const tier = parseInt(document.getElementById("statTierSelect").value);
+    const specialty = document.getElementById("statSpecialtySelect").value;
+
+    // Generate stat block with seeded RNG for consistency
+    const seed = "stat-" + Date.now() + "-" + Math.random();
+    const rng = prand(seed);
+    const statBlock = generateStatBlock(tier, specialty, rng);
+    const formatted = formatStatBlock(statBlock);
+
+    // Display in NPC tile
+    const statsDisplay = currentNPCTile.querySelector(".npc-stats-display");
+    statsDisplay.style.display = "block";
+    statsDisplay.innerHTML = `
+      <div class="card bg-dark border-warning">
+        <div class="card-body p-2">
+          <pre class="mb-0" style="font-size: 0.85rem; white-space: pre-wrap;">${formatted}</pre>
+        </div>
+      </div>`;
+
+    // Show copy button
+    const copyBtn = currentNPCTile.querySelector(".npc-copy-btn");
+    copyBtn.style.display = "inline-block";
+
+    // Store stat block data for copying and initiative export
+    currentNPCTile.dataset.statBlock = formatted;
+    currentNPCTile.dataset.statBlockData = JSON.stringify(statBlock);
+
+    // Show the "Send to Initiative" button on the card
+    const initiativeBtn = currentNPCTile.querySelector(".npc-initiative-btn");
+    if (initiativeBtn) initiativeBtn.style.display = "inline-block";
+
+    // Show the "Download Stats" button on the card
+    const downloadBtn = currentNPCTile.querySelector(".npc-download-btn");
+    if (downloadBtn) downloadBtn.style.display = "inline-block";
+
+    bootstrap.Modal.getInstance(modal).hide();
+  };
+
+  // Show modal
+  const bsModal = new bootstrap.Modal(modal);
+  bsModal.show();
+}
+
+// ---------- Presets ----------
+const PRESETS = {
+  guards: {
+    count: 5,
+    settlement: "town",
+    seed: "guards",
+    roleInDesc: true,
+    autoName: false
+  },
+  merchants: {
+    count: 6,
+    settlement: "town",
+    seed: "merchants",
+    roleInDesc: true,
+    autoName: false
+  },
+  tavern: {
+    count: 4,
+    settlement: "town",
+    seed: "tavern",
+    roleInDesc: true,
+    autoName: false
+  },
+  nobles: {
+    count: 3,
+    settlement: "capital",
+    seed: "nobles",
+    roleInDesc: true,
+    autoName: false
+  },
+  bandits: {
+    count: 8,
+    settlement: "village",
+    seed: "bandits",
+    roleInDesc: true,
+    autoName: false
+  },
+  cultists: {
+    count: 6,
+    settlement: "town",
+    seed: "cultists",
+    roleInDesc: true,
+    autoName: false
+  },
+  guild: {
+    count: 5,
+    settlement: "town",
+    seed: "thieves",
+    roleInDesc: true,
+    autoName: false
+  },
+  villagers: {
+    count: 10,
+    settlement: "village",
+    seed: "villagers",
+    roleInDesc: true,
+    autoName: false
+  },
+  party: {
+    count: 4,
+    settlement: "town",
+    seed: "party",
+    roleInDesc: false,
+    autoName: true
+  },
+  crowd: {
+    count: 20,
+    settlement: "town",
+    seed: "crowd",
+    roleInDesc: false,
+    autoName: false
+  }
+};
+
+function applyPreset(presetKey){
+  const preset = PRESETS[presetKey];
+  if(!preset) return;
+
+  $("npc-count").value = preset.count;
+  $("npc-settlement").value = preset.settlement;
+  $("npc-seed").value = preset.seed;
+  $("npc-roleInDesc").checked = preset.roleInDesc;
+  $("npc-autoName").checked = preset.autoName;
+}
+
+// ---------- Initiative Tracker Integration ----------
+function sendNPCToInitiative(npcTile) {
+  const nameEl = npcTile.querySelector(".npc-name-display");
+  const name = nameEl ? nameEl.textContent : "[Unnamed NPC]";
+
+  const statBlockDataStr = npcTile.dataset.statBlockData;
+  if (!statBlockDataStr) {
+    alert('Generate stats first before sending to Initiative Tracker.');
+    return;
+  }
+
+  const statBlock = JSON.parse(statBlockDataStr);
+  const dexMod = statBlock.mods.dex || 0;
+
+  const initiativeData = {
+    name: name,
+    maxHp: statBlock.hp,
+    ac: statBlock.ac,
+    initiative: dexMod,
+    useActualInitiative: false,
+    type: 'npc',
+    source: 'NPC Generator'
+  };
+
+  // Show confirmation with stats summary
+  const modStr = dexMod >= 0 ? `+${dexMod}` : `${dexMod}`;
+  const confirmed = confirm(
+    `Add "${name}" to Initiative Tracker?\n\n` +
+    `HP: ${statBlock.hp}\n` +
+    `AC: ${statBlock.ac}\n` +
+    `Initiative Bonus: ${modStr}\n\n` +
+    `Click OK to open the Initiative Tracker.`
+  );
+
+  if (confirmed) {
+    localStorage.setItem('dmtools.pendingInitiativeImport', JSON.stringify(initiativeData));
+
+    // Open in new tab
+    const newWindow = window.open('initiative.html#autoimport', '_blank');
+
+    // Handle popup blocker
+    if (!newWindow || newWindow.closed || typeof newWindow.closed === 'undefined') {
+      const navigateHere = confirm(
+        'Popup blocked!\n\n' +
+        'Click OK to navigate to the Initiative Tracker in this tab,\n' +
+        'or Cancel to stay here (data is saved for when you visit manually).'
+      );
+
+      if (navigateHere) {
+        window.location.href = 'initiative.html#autoimport';
+      }
+    }
+  }
+}
+
+function downloadNPCStatsTxt(npcTile) {
+  const nameEl = npcTile.querySelector(".npc-name-display");
+  const name = nameEl ? nameEl.textContent : "NPC";
+  const statBlock = npcTile.dataset.statBlock;
+
+  if (!statBlock) {
+    alert('Generate stats first before downloading.');
+    return;
+  }
+
+  // Extract NPC description text
+  const desc = npcTile.innerText.split("Generate Stats")[0].replace(/Name:.*?Generate Name/s, "").replace(/\n{2,}/g,"\n").trim();
+
+  const fullText = `Name: ${name}\n${desc}\n\n${'━'.repeat(26)}\nCOMBAT STATS:\n${statBlock}`;
+
+  const blob = new Blob([fullText], { type: 'text/plain;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `${name.replace(/[^a-zA-Z0-9 ]/g, '').replace(/\s+/g, '_')}_stats.txt`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+// Wire up
+document.addEventListener("DOMContentLoaded", ()=>{
+  $("npc-generate").addEventListener("click", generate);
+  $("npc-copy").addEventListener("click", copyNPCs);
+  $("npc-download-txt").addEventListener("click", (e)=>{ e.preventDefault(); downloadNPCsTxt(); });
+  $("npc-download-json").addEventListener("click", (e)=>{ e.preventDefault(); downloadNPCsJson(); });
+  $("npc-clear").addEventListener("click", ()=>{ $("npc-out").innerHTML=""; $("npc-meta").innerHTML=""; });
+
+  // Preset handler
+  $("npc-preset").addEventListener("change", (e)=>{
+    if(e.target.value){
+      applyPreset(e.target.value);
+    }
+  });
+
+  // Event delegation for buttons
+  document.addEventListener("click", (e)=>{
+    // Name generation
+    if(e.target.closest(".npc-name-gen-btn")){
+      const btn = e.target.closest(".npc-name-gen-btn");
+      const tile = btn.closest(".npc-tile");
+      const descField = tile.querySelector(".npc-field:has(b)");
+      const desc = descField ? descField.textContent : "";
+      showNamePickerModal(tile, desc);
+    }
+
+    // Stat block generation
+    if(e.target.closest(".npc-stat-gen-btn")){
+      const btn = e.target.closest(".npc-stat-gen-btn");
+      const tile = btn.closest(".npc-tile");
+      showStatBlockModal(tile);
+    }
+
+    // Copy individual NPC
+    if(e.target.closest(".npc-copy-btn")){
+      const btn = e.target.closest(".npc-copy-btn");
+      const tile = btn.closest(".npc-tile");
+      const nameEl = tile.querySelector(".npc-name-display");
+      const name = nameEl ? nameEl.textContent : "[No name yet]";
+      const desc = tile.innerText.split("Generate Stats")[0].replace(/Name:.*?Generate Name/s, "").replace(/\n{2,}/g,"\n").trim();
+      const statBlock = tile.dataset.statBlock || "";
+
+      let fullText = `Name: ${name}\n${desc}`;
+      if(statBlock) fullText += `\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━\nCOMBAT STATS:\n${statBlock}`;
+
+      navigator.clipboard.writeText(fullText).then(()=>{
+        btn.innerHTML = '<i class="bi bi-check me-1"></i>Copied!';
+        setTimeout(()=>{ btn.innerHTML = '<i class="bi bi-clipboard me-1"></i>Copy'; }, 2000);
+      });
+    }
+
+    // Send to Initiative Tracker
+    if(e.target.closest(".npc-initiative-btn")){
+      const btn = e.target.closest(".npc-initiative-btn");
+      const tile = btn.closest(".npc-tile");
+      sendNPCToInitiative(tile);
+    }
+
+    // Download individual NPC stats
+    if(e.target.closest(".npc-download-btn")){
+      const btn = e.target.closest(".npc-download-btn");
+      const tile = btn.closest(".npc-tile");
+      downloadNPCStatsTxt(tile);
+    }
+  });
+
+  // initial batch
+  generate();
+});
+})();
+</script>
+<!-- ===== /NPC Generator ===== -->
+
+    </div>
+  </main>
+  <!-- Footer -->
+  <footer class="container-fluid mt-5 site-footer" role="contentinfo">
+    <div class="footer-main py-3">
+      <div class="container">
+        <div class="row align-items-center text-center text-md-start">
+          <!-- Left: Copyright -->
+          <div class="col-12 col-md-4 mb-2 mb-md-0 text-md-start text-center">
+            <small class="text-muted">&copy; 2025 Maybeme | The DM’s Toolbox</small>
+          </div>
+
+          <!-- Center: Logo -->
+          <div class="col-12 col-md-4 text-center mb-2 mb-md-0">
+            <img src="/images/White logo - no background.png" height="40" alt="Logo" class="footer-logo">
+          </div>
+
+          <!-- Right: Social Links -->
+          <div class="col-12 col-md-4 d-flex justify-content-center justify-content-md-end align-items-center gap-2">
+            <a href="https://www.linkedin.com/in/marlo-mayberry-930ab9b7/" class="socialicons" target="_blank" rel="noopener" aria-label="LinkedIn">
+              <i class="bi bi-linkedin"></i>
+            </a>
+            <a href="https://github.com/M-ybeme" class="socialicons" target="_blank" rel="noopener" aria-label="GitHub">
+              <i class="bi bi-github"></i>
+            </a>
+            <a href="https://ko-fi.com/maybemestoolbox" class="socialicons d-flex align-items-center" target="_blank" rel="noopener" title="Support The DM’s Toolbox on Ko-fi">
+              <i class="bi bi-cup-hot"></i>
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </footer>
+  <script data-goatcounter="https://maybeme1990.goatcounter.com/count"
+        async src="//gc.zgo.at/count.js"></script>
+</body>
+</html>

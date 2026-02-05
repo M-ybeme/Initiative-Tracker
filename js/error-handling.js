@@ -579,7 +579,7 @@ async function showDiagnosticsPanel() {
   const licenseAttributionHtml = formatDiagnosticsAttribution(licenseInfo.attributionText, licenseInfo.licenseUrl);
   const licenseDisclaimerHtml = diagnosticsEscapeHtml(licenseInfo.productIdentityDisclaimer);
   const srdPdfLinkHtml = licenseInfo.srdUrl
-    ? `<div style="font-size: 11px; line-height: 1.5; margin-top: 6px;">SRD 5.1 Reference PDF: <a href="${diagnosticsEscapeHtml(licenseInfo.srdUrl)}" target="_blank" rel="noopener noreferrer" style="color:#6fe7d2;">Download from Wizards</a></div>`
+    ? `<div style="font-size: 11px; line-height: 1.5; margin-top: 6px;">SRD 5.2 Reference PDF: <a href="${diagnosticsEscapeHtml(licenseInfo.srdUrl)}" target="_blank" rel="noopener noreferrer" style="color:#6fe7d2;">Download from Wizards</a></div>`
     : '';
 
   const packSectionHtml = (() => {

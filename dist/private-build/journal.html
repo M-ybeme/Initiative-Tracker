@@ -1,0 +1,1710 @@
+<!DOCTYPE html>
+<html lang="en" data-bs-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>The DM's Toolbox: Journal</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" crossorigin="anonymous" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" />
+  <!-- Custom CSS -->
+  <link href="/css/site.css" rel="stylesheet" />
+  <!-- Dev Icons -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/devicons/devicon@v2.15.1/devicon.min.css" />
+  <!-- Favicon -->
+  <link rel="icon" type="image/png" href="/images/dndFavicon (2).png" />
+  <!-- Quill Rich Text Editor -->
+  <link href="https://cdn.quilljs.com/1.3.7/quill.snow.css" rel="stylesheet">
+  <script src="https://cdn.quilljs.com/1.3.7/quill.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" crossorigin="anonymous"></script>
+  <script src="/js/site.js"></script>
+  <!-- Export Libraries -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://unpkg.com/docx@8.5.0/build/index.js"></script>
+  <!-- Journal Export Script -->
+  <script src="/js/journal-export.js"></script>
+  <style>
+    .bgimage{
+        background: url('images/BGMap.png') no-repeat center center fixed;
+        background-size: cover;}
+    .bg-orange { background-color: #fd7e14 !important; color: #212529 !important; }
+    .drag-handle { cursor: move; }
+    .active-turn {
+      border-left: 5px solid #1d9e6d !important;
+      color: #f8f9fa !important;
+      font-weight: bold;
+    }
+    #saveHistorySelect { min-width: 200px; }
+
+    /* Journal Styles */
+    #journalEditor {
+      height: calc(100vh - 300px);
+      min-height: 400px;
+      background-color: white;
+      color: #212529;
+    }
+
+    /* Toolbar visual separation */
+    .ql-toolbar {
+      border-bottom: 2px solid #dee2e6 !important;
+      background-color: #f8f9fa;
+    }
+
+    .file-list {
+      max-height: calc(100vh - 300px);
+      overflow-y: auto;
+      min-height: 400px;
+    }
+
+    .file-item {
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .file-item:hover {
+      background-color: rgba(255, 255, 255, 0.15);
+      transform: translateX(2px);
+    }
+
+    .file-item.active {
+      background-color: rgba(29, 158, 109, 0.2);
+      border-left: 4px solid #1d9e6d;
+      font-weight: 500;
+    }
+
+    .file-name-edit {
+      background-color: transparent;
+      border: 1px solid #495057;
+      color: #f8f9fa;
+      padding: 2px 6px;
+      border-radius: 4px;
+      width: 100%;
+    }
+
+    .file-name-edit:focus {
+      outline: none;
+      border-color: #1d9e6d;
+    }
+
+    /* Highlight for search matches */
+    .search-highlight {
+      background-color: #ffc107;
+      color: #212529;
+      padding: 2px 4px;
+      border-radius: 3px;
+      font-weight: bold;
+    }
+
+    /* Image resizing in editor */
+    #journalEditor img {
+      max-width: 100%;
+      height: auto;
+      cursor: pointer;
+      margin: 10px;
+    }
+
+    #journalEditor img.selected {
+      outline: 2px solid #1d9e6d;
+      box-shadow: 0 0 10px rgba(29, 158, 109, 0.3);
+    }
+
+    /* Image float options for text wrapping */
+    #journalEditor img.float-left {
+      float: left !important;
+      margin-right: 15px;
+      margin-left: 0;
+      margin-top: 5px;
+      margin-bottom: 5px;
+    }
+
+    #journalEditor img.float-right {
+      float: right !important;
+      margin-left: 15px;
+      margin-right: 0;
+      margin-top: 5px;
+      margin-bottom: 5px;
+    }
+
+    #journalEditor img.float-center {
+      float: none !important;
+      display: block;
+      margin-left: auto !important;
+      margin-right: auto !important;
+      margin-top: 10px;
+      margin-bottom: 10px;
+    }
+
+    /* Ensure paragraphs don't wrap around centered images */
+    #journalEditor img.float-center + p,
+    #journalEditor img.float-center ~ p {
+      clear: both;
+    }
+
+    /* Image alignment controls */
+    .image-controls {
+      position: fixed;
+      background: #212529;
+      border: 2px solid #1d9e6d;
+      border-radius: 8px;
+      padding: 8px;
+      z-index: 10001;
+      display: flex;
+      gap: 5px;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+    }
+
+    .image-controls button {
+      background: #343a40;
+      border: 1px solid #495057;
+      color: #f8f9fa;
+      padding: 6px 10px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 12px;
+      transition: all 0.2s;
+    }
+
+    .image-controls button:hover {
+      background: #495057;
+      border-color: #1d9e6d;
+    }
+
+    .image-controls button.active {
+      background: #1d9e6d;
+      border-color: #1d9e6d;
+    }
+
+    .resize-handle {
+      position: fixed;
+      width: 12px;
+      height: 12px;
+      background: #1d9e6d;
+      border: 2px solid white;
+      border-radius: 50%;
+      z-index: 10000;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+    }
+
+    .resize-handle.nw { cursor: nw-resize; }
+    .resize-handle.ne { cursor: ne-resize; }
+    .resize-handle.sw { cursor: sw-resize; }
+    .resize-handle.se { cursor: se-resize; }
+    .resize-handle.n { cursor: n-resize; }
+    .resize-handle.s { cursor: s-resize; }
+    .resize-handle.e { cursor: e-resize; }
+    .resize-handle.w { cursor: w-resize; }
+
+    /* Clickable elements get pointer cursor */
+    .file-item,
+    #newFileBtn,
+    #importBtn,
+    #saveBtn,
+    #deleteBtn,
+    .ql-toolbar button,
+    #journalEditor a {
+      cursor: pointer;
+    }
+
+    /* Better link styling */
+    #journalEditor a {
+      color: #0d6efd;
+      text-decoration: underline;
+    }
+
+    #journalEditor a:hover {
+      color: #0a58ca;
+    }
+  </style>
+</head>
+<body class="bgimage">
+   <nav class="navbar navbar-expand-lg navbar-dark fixed-top text-light" id="mainNav">
+    <div class="container-fluid">
+      <a class="navbar-brand" href="index.html">
+        <img src="/images/dndFavicon (2).png" height="40" width="40" alt="App Logo" class="d-inline-block" />
+        The DM Toolbox
+      </a>
+      <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarSupportedContent"
+        aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+        <span class="navbar-toggler-icon"></span>
+      </button>
+      <div class="collapse navbar-collapse" id="navbarSupportedContent">
+        <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+          <li class="nav-item dropdown">
+            <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+              Combat
+            </a>
+            <ul class="dropdown-menu">
+              <li><a class="dropdown-item" href="initiative.html">Initiative Tracker</a></li>
+              <li><a class="dropdown-item" href="battlemap.html">Battle Map</a></li>
+              <li><a class="dropdown-item" href="encounterbuilder.html">Encounter Builder</a></li>
+            </ul>
+          </li>
+          <li class="nav-item dropdown">
+            <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+              Generators
+            </a>
+            <ul class="dropdown-menu">
+              <li><a class="dropdown-item" href="name.html">Name Generator</a></li>
+              <li><a class="dropdown-item" href="loot.html">Loot Generator</a></li>
+              <li><a class="dropdown-item" href="shop.html">Shop Generator</a></li>
+              <li><a class="dropdown-item" href="npc.html">NPC Generator</a></li>
+              <li><a class="dropdown-item" href="tav.html">Tavern/Inn Generator</a></li>
+            </ul>
+          </li>
+          <li class="nav-item dropdown">
+            <a class="nav-link dropdown-toggle active" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+              Campaign
+            </a>
+            <ul class="dropdown-menu">
+              <li><a class="dropdown-item" href="characters.html">Characters</a></li>
+              <li><a class="dropdown-item active" aria-current="page" href="journal.html">Journal</a></li>
+            </ul>
+        </ul>
+      </div>
+    </div>
+   </nav>
+  <main class="content pt-3">
+    <div class="container-fluid backdrop">
+      <div class="alert alert-warning text-start" role="status">
+        <div class="fw-semibold"><i class="bi bi-shield-lock me-1"></i>SRD Scope</div>
+        <small>The journal ships empty and any default prompts reference only SRD-legal concepts. Import/export your own notes for other books locally—please don’t commit non-SRD text to this repo.</small>
+      </div>
+      <div class="row">
+        <!-- Left Sidebar - File List -->
+        <div class="col-md-3">
+          <div class="card bg-dark text-light">
+            <div class="card-header d-flex justify-content-between align-items-center">
+              <h5 class="mb-0">Journal Entries</h5>
+              <div>
+                <button class="btn btn-info btn-sm me-1" id="bulkExportBtn" data-bs-toggle="modal" data-bs-target="#bulkExportModal" title="Bulk Export">
+                  <i class="bi bi-box-arrow-down"></i>
+                </button>
+                <button class="btn btn-warning btn-sm me-1" id="importBtn" title="Import Entry">
+                  <i class="bi bi-upload"></i>
+                </button>
+                <button class="btn btn-success btn-sm" id="newFileBtn" title="New Entry">
+                  <i class="bi bi-plus-lg"></i>
+                </button>
+              </div>
+              <!-- Hidden file input for import -->
+              <input type="file" id="importFileInput" accept=".txt,.md,.markdown,.docx,.pdf" style="display: none;" />
+            </div>
+            <div class="card-body p-0">
+              <!-- Search Bar -->
+              <div class="p-2 border-bottom border-secondary">
+                <div class="input-group input-group-sm">
+                  <span class="input-group-text bg-secondary text-light border-secondary">
+                    <i class="bi bi-search"></i>
+                  </span>
+                  <input type="text" class="form-control bg-dark text-light border-secondary"
+                         id="searchInput" placeholder="Search entries..." />
+                  <button class="btn btn-outline-secondary" type="button" id="clearSearchBtn" title="Clear search">
+                    <i class="bi bi-x-lg"></i>
+                  </button>
+                </div>
+              </div>
+              <!-- Sort Options -->
+              <div class="p-2 border-bottom border-secondary">
+                <div class="input-group input-group-sm">
+                  <span class="input-group-text bg-secondary text-light border-secondary">
+                    <i class="bi bi-sort-down"></i>
+                  </span>
+                  <select class="form-select form-select-sm bg-dark text-light border-secondary" id="sortSelect">
+                    <option value="modified-desc">Last Modified (Newest)</option>
+                    <option value="modified-asc">Last Modified (Oldest)</option>
+                    <option value="created-desc">Created (Newest)</option>
+                    <option value="created-asc">Created (Oldest)</option>
+                    <option value="name-asc">Name (A-Z)</option>
+                    <option value="name-desc">Name (Z-A)</option>
+                  </select>
+                </div>
+              </div>
+              <div class="file-list" id="fileList">
+                <!-- Files will be loaded here -->
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Right Side - Editor -->
+        <div class="col-md-9">
+          <div class="card bg-dark text-light">
+            <div class="card-header">
+              <div class="row align-items-center">
+                <div class="col-md-6">
+                  <div class="input-group">
+                    <span class="input-group-text bg-secondary text-light border-secondary">
+                      <i class="bi bi-journal-text"></i>
+                    </span>
+                    <input type="text" class="form-control bg-dark text-light border-secondary"
+                           id="fileName" placeholder="Entry name..." />
+                  </div>
+                </div>
+                <div class="col-md-6 text-end mt-2 mt-md-0">
+                  <button class="btn btn-primary" id="saveBtn" title="Save (Ctrl+S)">
+                    <i class="bi bi-floppy"></i> Save
+                  </button>
+                  <button class="btn btn-success" id="exportBtn" data-bs-toggle="modal" data-bs-target="#exportModal" title="Export Entry">
+                    <i class="bi bi-download"></i> Export
+                  </button>
+                  <button class="btn btn-danger" id="deleteBtn" disabled>
+                    <i class="bi bi-trash"></i> Delete
+                  </button>
+                </div>
+              </div>
+            </div>
+            <div class="card-body">
+              <!-- Quill Editor -->
+              <div id="journalEditor"></div>
+              <!-- Word/Character Count -->
+              <div class="mt-2 text-end">
+                <small class="text-muted" id="wordCount">Words: 0 | Characters: 0</small>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- Export Modal -->
+  <div class="modal fade" id="exportModal" tabindex="-1" aria-labelledby="exportModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content bg-dark text-light">
+        <div class="modal-header border-secondary">
+          <h5 class="modal-title" id="exportModalLabel">
+            <i class="bi bi-download"></i> Export Journal Entry
+          </h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <p class="mb-3">Choose a format to export your journal entry:</p>
+          <div class="d-grid gap-2">
+            <button class="btn btn-outline-light btn-lg text-start" onclick="handleExportClick('txt')">
+              <i class="bi bi-file-earmark-text"></i> Plain Text (.txt)
+              <small class="d-block text-muted">Simple text format without formatting</small>
+            </button>
+            <button class="btn btn-outline-light btn-lg text-start" onclick="handleExportClick('markdown')">
+              <i class="bi bi-markdown"></i> Markdown (.md)
+              <small class="d-block text-muted">Markdown format for documentation</small>
+            </button>
+            <button class="btn btn-outline-light btn-lg text-start" onclick="handleExportClick('word')">
+              <i class="bi bi-file-earmark-word"></i> Word Document (.docx)
+              <small class="d-block text-muted">Microsoft Word format</small>
+            </button>
+            <button class="btn btn-outline-light btn-lg text-start" onclick="handleExportClick('pdf')">
+              <i class="bi bi-file-earmark-pdf"></i> PDF Document (.pdf)
+              <small class="d-block text-muted">Portable Document Format</small>
+            </button>
+            <button class="btn btn-outline-light btn-lg text-start" onclick="handleExportClick('clipboard')">
+              <i class="bi bi-clipboard"></i> Copy to Clipboard
+              <small class="d-block text-muted">Copy content as plain text</small>
+            </button>
+          </div>
+        </div>
+        <div class="modal-footer border-secondary">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Bulk Export Modal -->
+  <div class="modal fade" id="bulkExportModal" tabindex="-1" aria-labelledby="bulkExportModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+      <div class="modal-content bg-dark text-light">
+        <div class="modal-header border-secondary">
+          <h5 class="modal-title" id="bulkExportModalLabel">
+            <i class="bi bi-box-arrow-down"></i> Bulk Export Journal Entries
+          </h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <!-- Search Bar -->
+          <div class="mb-3">
+            <div class="input-group">
+              <span class="input-group-text bg-secondary text-light border-secondary">
+                <i class="bi bi-search"></i>
+              </span>
+              <input type="text" class="form-control bg-dark text-light border-secondary"
+                     id="bulkSearchInput" placeholder="Search entries..." />
+              <button class="btn btn-outline-secondary" type="button" id="clearBulkSearchBtn" title="Clear search">
+                <i class="bi bi-x-lg"></i>
+              </button>
+            </div>
+          </div>
+
+          <!-- Selection Controls -->
+          <div class="mb-3 d-flex justify-content-between align-items-center">
+            <div>
+              <button class="btn btn-sm btn-outline-light" id="selectAllBtn">
+                <i class="bi bi-check-square"></i> Select All
+              </button>
+              <button class="btn btn-sm btn-outline-light" id="selectNoneBtn">
+                <i class="bi bi-square"></i> Deselect All
+              </button>
+            </div>
+            <span class="text-muted" id="selectionCount">0 selected</span>
+          </div>
+
+          <!-- Entry List with Checkboxes -->
+          <div class="border border-secondary rounded" style="max-height: 400px; overflow-y: auto;">
+            <div id="bulkEntryList" class="p-2">
+              <!-- Entries will be loaded here -->
+            </div>
+          </div>
+
+          <!-- Format Selection -->
+          <div class="mt-3">
+            <label class="form-label">Export Format:</label>
+            <div class="btn-group w-100" role="group">
+              <input type="radio" class="btn-check" name="bulkExportFormat" id="bulkFormatTxt" value="txt" autocomplete="off" checked>
+              <label class="btn btn-outline-light" for="bulkFormatTxt">
+                <i class="bi bi-file-earmark-text"></i> TXT
+              </label>
+
+              <input type="radio" class="btn-check" name="bulkExportFormat" id="bulkFormatMd" value="markdown" autocomplete="off">
+              <label class="btn btn-outline-light" for="bulkFormatMd">
+                <i class="bi bi-markdown"></i> Markdown
+              </label>
+
+              <input type="radio" class="btn-check" name="bulkExportFormat" id="bulkFormatDocx" value="word" autocomplete="off">
+              <label class="btn btn-outline-light" for="bulkFormatDocx">
+                <i class="bi bi-file-earmark-word"></i> Word
+              </label>
+
+              <input type="radio" class="btn-check" name="bulkExportFormat" id="bulkFormatPdf" value="pdf" autocomplete="off">
+              <label class="btn btn-outline-light" for="bulkFormatPdf">
+                <i class="bi bi-file-earmark-pdf"></i> PDF
+              </label>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer border-secondary">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button type="button" class="btn btn-success" id="executeBulkExportBtn">
+            <i class="bi bi-download"></i> Export Selected
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <footer class="container-fluid mt-5 site-footer" role="contentinfo">
+    <div class="footer-main py-3">
+      <div class="container">
+        <div class="row align-items-center text-center text-md-start">
+          <!-- Left: Copyright -->
+          <div class="col-12 col-md-4 mb-2 mb-md-0 text-md-start text-center">
+            <small class="text-muted">&copy; 2025 Maybeme | The DM’s Toolbox</small>
+          </div>
+
+          <!-- Center: Logo -->
+          <div class="col-12 col-md-4 text-center mb-2 mb-md-0">
+            <img src="/images/White logo - no background.png" height="40" alt="Logo" class="footer-logo">
+          </div>
+
+          <!-- Right: Social Links -->
+          <div class="col-12 col-md-4 d-flex justify-content-center justify-content-md-end align-items-center gap-2">
+            <a href="https://www.linkedin.com/in/marlo-mayberry-930ab9b7/" class="socialicons" target="_blank" rel="noopener" aria-label="LinkedIn">
+              <i class="bi bi-linkedin"></i>
+            </a>
+            <a href="https://github.com/M-ybeme" class="socialicons" target="_blank" rel="noopener" aria-label="GitHub">
+              <i class="bi bi-github"></i>
+            </a>
+            <a href="https://ko-fi.com/maybemestoolbox" class="socialicons d-flex align-items-center" target="_blank" rel="noopener" title="Support The DM’s Toolbox on Ko-fi">
+              <i class="bi bi-cup-hot"></i>
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </footer>
+
+  <script>
+    // IndexedDB Setup
+    const DB_NAME = 'JournalDB';
+    const DB_VERSION = 1;
+    const STORE_NAME = 'entries';
+    let db;
+    let quill;
+    let currentFileId = null;
+    let hasUnsavedChanges = false;
+    let lastSavedContent = '';
+
+    // Initialize IndexedDB
+    function initDB() {
+      return new Promise((resolve, reject) => {
+        const request = indexedDB.open(DB_NAME, DB_VERSION);
+
+        request.onerror = () => reject(request.error);
+        request.onsuccess = () => {
+          db = request.result;
+          resolve(db);
+        };
+
+        request.onupgradeneeded = (event) => {
+          const db = event.target.result;
+          if (!db.objectStoreNames.contains(STORE_NAME)) {
+            const objectStore = db.createObjectStore(STORE_NAME, { keyPath: 'id', autoIncrement: true });
+            objectStore.createIndex('timestamp', 'timestamp', { unique: false });
+            objectStore.createIndex('name', 'name', { unique: false });
+            objectStore.createIndex('lastModified', 'lastModified', { unique: false });
+          }
+        };
+      });
+    }
+
+    // Get all entries from IndexedDB
+    function getAllEntries() {
+      return new Promise((resolve, reject) => {
+        const transaction = db.transaction([STORE_NAME], 'readonly');
+        const objectStore = transaction.objectStore(STORE_NAME);
+        const request = objectStore.getAll();
+
+        request.onsuccess = () => resolve(request.result);
+        request.onerror = () => reject(request.error);
+      });
+    }
+
+    // Save entry to IndexedDB
+    function saveEntry(entry) {
+      return new Promise((resolve, reject) => {
+        const transaction = db.transaction([STORE_NAME], 'readwrite');
+        const objectStore = transaction.objectStore(STORE_NAME);
+        const request = entry.id ? objectStore.put(entry) : objectStore.add(entry);
+
+        request.onsuccess = () => resolve(request.result);
+        request.onerror = () => reject(request.error);
+      });
+    }
+
+    // Delete entry from IndexedDB
+    function deleteEntry(id) {
+      return new Promise((resolve, reject) => {
+        const transaction = db.transaction([STORE_NAME], 'readwrite');
+        const objectStore = transaction.objectStore(STORE_NAME);
+        const request = objectStore.delete(id);
+
+        request.onsuccess = () => resolve();
+        request.onerror = () => reject(request.error);
+      });
+    }
+
+    // Get entry by ID
+    function getEntry(id) {
+      return new Promise((resolve, reject) => {
+        const transaction = db.transaction([STORE_NAME], 'readonly');
+        const objectStore = transaction.objectStore(STORE_NAME);
+        const request = objectStore.get(id);
+
+        request.onsuccess = () => resolve(request.result);
+        request.onerror = () => reject(request.error);
+      });
+    }
+
+    // Format date for display
+    function formatDate(timestamp) {
+      const date = new Date(timestamp);
+      return date.toLocaleString('en-US', {
+        month: 'short',
+        day: 'numeric',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+    }
+
+    // Highlight search term in text
+    function highlightText(text, searchTerm) {
+      if (!searchTerm || !searchTerm.trim()) {
+        return text;
+      }
+
+      const escapedTerm = searchTerm.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      const regex = new RegExp(`(${escapedTerm})`, 'gi');
+      return text.replace(regex, '<span class="search-highlight">$1</span>');
+    }
+
+    // Generate default name from timestamp
+    function getDefaultName() {
+      const now = new Date();
+      return now.toLocaleString('en-US', {
+        month: '2-digit',
+        day: '2-digit',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: true
+      }).replace(',', '');
+    }
+
+    // Load file list
+    async function loadFileList(searchTerm = '') {
+      const entries = await getAllEntries();
+      const fileList = document.getElementById('fileList');
+      fileList.innerHTML = '';
+
+      // Get sort option
+      const sortSelect = document.getElementById('sortSelect');
+      const sortOption = sortSelect ? sortSelect.value : 'modified-desc';
+
+      // Sort entries based on selected option
+      entries.sort((a, b) => {
+        switch (sortOption) {
+          case 'modified-desc':
+            return (b.lastModified || b.timestamp) - (a.lastModified || a.timestamp);
+          case 'modified-asc':
+            return (a.lastModified || a.timestamp) - (b.lastModified || b.timestamp);
+          case 'created-desc':
+            return b.timestamp - a.timestamp;
+          case 'created-asc':
+            return a.timestamp - b.timestamp;
+          case 'name-asc':
+            return a.name.localeCompare(b.name);
+          case 'name-desc':
+            return b.name.localeCompare(a.name);
+          default:
+            return (b.lastModified || b.timestamp) - (a.lastModified || a.timestamp);
+        }
+      });
+
+      // Filter entries based on search term
+      let filteredEntries = entries;
+      if (searchTerm && searchTerm.trim() !== '') {
+        const lowerSearchTerm = searchTerm.toLowerCase();
+        filteredEntries = entries.filter(entry => {
+          // Search in entry name
+          const nameMatch = entry.name && entry.name.toLowerCase().includes(lowerSearchTerm);
+
+          // Search in entry content (strip HTML tags for better searching)
+          let contentMatch = false;
+          if (entry.content) {
+            try {
+              const tempDiv = document.createElement('div');
+              tempDiv.innerHTML = entry.content;
+              const textContent = tempDiv.textContent || tempDiv.innerText || '';
+              contentMatch = textContent.toLowerCase().includes(lowerSearchTerm);
+            } catch (e) {
+              console.error('Error parsing content for search:', e);
+            }
+          }
+
+          return nameMatch || contentMatch;
+        });
+      }
+
+      filteredEntries.forEach(entry => {
+        const fileItem = document.createElement('div');
+        fileItem.className = 'file-item p-3 border-bottom border-secondary';
+        if (entry.id === currentFileId) {
+          fileItem.classList.add('active');
+        }
+
+        // Highlight search term in entry name
+        const highlightedName = highlightText(entry.name, searchTerm);
+
+        // Get content preview
+        let contentPreview = '';
+        if (entry.content) {
+          try {
+            const tempDiv = document.createElement('div');
+            tempDiv.innerHTML = entry.content;
+            const textContent = tempDiv.textContent || tempDiv.innerText || '';
+
+            if (searchTerm && searchTerm.trim() !== '') {
+              // Show context around search match if found
+              const lowerSearchTerm = searchTerm.toLowerCase();
+              const lowerContent = textContent.toLowerCase();
+              const matchIndex = lowerContent.indexOf(lowerSearchTerm);
+
+              if (matchIndex !== -1) {
+                // Extract context around the match (50 characters before and after)
+                const start = Math.max(0, matchIndex - 50);
+                const end = Math.min(textContent.length, matchIndex + searchTerm.length + 50);
+                let excerpt = textContent.substring(start, end).trim();
+
+                // Add ellipsis if we cut off text
+                if (start > 0) excerpt = '...' + excerpt;
+                if (end < textContent.length) excerpt = excerpt + '...';
+
+                // Highlight the search term in the excerpt
+                contentPreview = `<small class="text-muted d-block mt-1">${highlightText(excerpt, searchTerm)}</small>`;
+              } else {
+                // Show first 100 characters even if no match (in case name matched)
+                let excerpt = textContent.substring(0, 100).trim();
+                if (textContent.length > 100) excerpt += '...';
+                contentPreview = `<small class="text-muted d-block mt-1">${excerpt}</small>`;
+              }
+            } else {
+              // Always show first 100 characters when not searching
+              let excerpt = textContent.substring(0, 100).trim();
+              if (textContent.length > 100) excerpt += '...';
+              if (excerpt) {
+                contentPreview = `<small class="text-muted d-block mt-1">${excerpt}</small>`;
+              }
+            }
+          } catch (e) {
+            console.error('Error parsing content for preview:', e);
+          }
+        }
+
+        // Format timestamps
+        const createdDate = formatDate(entry.timestamp);
+        const modifiedDate = entry.lastModified ? formatDate(entry.lastModified) : createdDate;
+        const timestampDisplay = entry.lastModified && entry.lastModified !== entry.timestamp
+          ? `Created: ${createdDate}<br>Last edited: ${modifiedDate}`
+          : `Created: ${createdDate}`;
+
+        fileItem.innerHTML = `
+          <div class="d-flex justify-content-between align-items-start">
+            <div class="flex-grow-1">
+              <div class="fw-bold">${highlightedName}</div>
+              <small class="text-muted">${timestampDisplay}</small>
+              ${contentPreview}
+            </div>
+          </div>
+        `;
+
+        fileItem.addEventListener('click', () => loadEntry(entry.id));
+        fileList.appendChild(fileItem);
+      });
+
+      // If no entries exist or no matches found, show a message
+      if (entries.length === 0) {
+        fileList.innerHTML = `
+          <div class="text-center text-muted p-4">
+            <i class="bi bi-journal-x" style="font-size: 3rem; opacity: 0.3;"></i>
+            <p class="mt-2 mb-1">No journal entries yet</p>
+            <small>Click the <i class="bi bi-plus-lg"></i> button above to create your first entry</small>
+          </div>
+        `;
+      } else if (filteredEntries.length === 0) {
+        fileList.innerHTML = `
+          <div class="text-center text-muted p-4">
+            <i class="bi bi-search" style="font-size: 3rem; opacity: 0.3;"></i>
+            <p class="mt-2 mb-1">No entries found</p>
+            <small>Try a different search term</small>
+          </div>
+        `;
+      }
+    }
+
+    // Check for unsaved changes before switching entries
+    function checkUnsavedChanges() {
+      if (hasUnsavedChanges) {
+        return confirm('You have unsaved changes. Do you want to discard them and continue?');
+      }
+      return true;
+    }
+
+    // Load entry into editor
+    async function loadEntry(id) {
+      // Check for unsaved changes first
+      if (!checkUnsavedChanges()) {
+        return;
+      }
+
+      const entry = await getEntry(id);
+      if (entry) {
+        currentFileId = entry.id;
+        document.getElementById('fileName').value = entry.name;
+        quill.root.innerHTML = entry.content;
+        lastSavedContent = entry.content;
+        hasUnsavedChanges = false;
+        updateSaveButtonState();
+        document.getElementById('deleteBtn').disabled = false;
+        loadFileList(); // Refresh to update active state
+      }
+    }
+
+    // Save current entry
+    async function saveCurrentEntry() {
+      const name = document.getElementById('fileName').value.trim() || getDefaultName();
+      const content = quill.root.innerHTML;
+
+      const entry = {
+        name: name,
+        content: content,
+        lastModified: Date.now()
+      };
+
+      if (currentFileId) {
+        entry.id = currentFileId;
+        // Keep original timestamp if it exists
+        const existingEntry = await getEntry(currentFileId);
+        entry.timestamp = existingEntry.timestamp || Date.now();
+      } else {
+        // New entry - set both timestamps
+        entry.timestamp = Date.now();
+      }
+
+      try {
+        const id = await saveEntry(entry);
+        currentFileId = id;
+        document.getElementById('fileName').value = name;
+        document.getElementById('deleteBtn').disabled = false;
+        lastSavedContent = content;
+        hasUnsavedChanges = false;
+        updateSaveButtonState();
+        await loadFileList();
+
+        // Show success message
+        showToast('Entry saved successfully!', 'success');
+      } catch (error) {
+        console.error('Error saving entry:', error);
+        showToast('Error saving entry', 'danger');
+      }
+    }
+
+    // Create new entry
+    function createNewEntry() {
+      // Check for unsaved changes first
+      if (!checkUnsavedChanges()) {
+        return;
+      }
+
+      currentFileId = null;
+      document.getElementById('fileName').value = '';
+      quill.setText('');
+      lastSavedContent = '';
+      hasUnsavedChanges = false;
+      updateSaveButtonState();
+      document.getElementById('deleteBtn').disabled = true;
+      loadFileList(); // Refresh to clear active state
+    }
+
+    // Update save button state based on unsaved changes
+    function updateSaveButtonState() {
+      const saveBtn = document.getElementById('saveBtn');
+      if (hasUnsavedChanges) {
+        saveBtn.classList.add('btn-warning');
+        saveBtn.classList.remove('btn-primary');
+        saveBtn.innerHTML = '<i class="bi bi-floppy"></i> Save *';
+      } else {
+        saveBtn.classList.remove('btn-warning');
+        saveBtn.classList.add('btn-primary');
+        saveBtn.innerHTML = '<i class="bi bi-floppy"></i> Save';
+      }
+    }
+
+    // Update word and character count
+    function updateWordCount() {
+      const text = quill.getText().trim();
+      const words = text ? text.split(/\s+/).length : 0;
+      const chars = text.length;
+
+      const wordCountElement = document.getElementById('wordCount');
+      if (wordCountElement) {
+        wordCountElement.textContent = `Words: ${words} | Characters: ${chars}`;
+      }
+    }
+
+    // Delete current entry
+    async function deleteCurrentEntry() {
+      if (!currentFileId) return;
+
+      if (confirm('Are you sure you want to delete this entry?')) {
+        try {
+          await deleteEntry(currentFileId);
+          createNewEntry();
+          await loadFileList();
+          showToast('Entry deleted', 'info');
+        } catch (error) {
+          console.error('Error deleting entry:', error);
+          showToast('Error deleting entry', 'danger');
+        }
+      }
+    }
+
+    // Show toast notification
+    function showToast(message, type = 'info') {
+      // Create a simple toast notification
+      const toast = document.createElement('div');
+      toast.className = `alert alert-${type} position-fixed top-0 start-50 translate-middle-x mt-5`;
+      toast.style.zIndex = '9999';
+      toast.textContent = message;
+      document.body.appendChild(toast);
+
+      setTimeout(() => {
+        toast.remove();
+      }, 3000);
+    }
+
+    // Custom image handler with resize support
+    function imageHandler() {
+      const input = document.createElement('input');
+      input.setAttribute('type', 'file');
+      input.setAttribute('accept', 'image/*');
+      input.click();
+
+      input.onchange = async () => {
+        const file = input.files[0];
+        if (file) {
+          const reader = new FileReader();
+          reader.onload = (e) => {
+            const range = quill.getSelection(true);
+
+            // Insert the image
+            quill.insertEmbed(range.index, 'image', e.target.result);
+            quill.setSelection(range.index + 1);
+
+            // Wait a bit for the image to render, then auto-select it
+            setTimeout(() => {
+              const images = quill.root.querySelectorAll('img');
+              const newImage = images[images.length - 1]; // Get the last (newest) image
+              if (newImage) {
+                // Simulate a click on the image to show resize handles
+                const clickEvent = new MouseEvent('click', {
+                  view: window,
+                  bubbles: true,
+                  cancelable: true
+                });
+                newImage.dispatchEvent(clickEvent);
+              }
+            }, 100);
+          };
+          reader.readAsDataURL(file);
+        }
+      };
+    }
+
+    // Custom link handler
+    function linkHandler(value) {
+      if (value) {
+        const range = quill.getSelection();
+        if (range) {
+          const text = quill.getText(range.index, range.length);
+
+          // Prompt for link URL
+          const url = prompt('Enter the URL:');
+          if (url) {
+            // If there's selected text, use it as the link text
+            if (range.length > 0) {
+              quill.deleteText(range.index, range.length);
+              quill.insertText(range.index, text, 'link', url);
+            } else {
+              // Otherwise, prompt for link text
+              const linkText = prompt('Enter the link text:', url);
+              if (linkText) {
+                quill.insertText(range.index, linkText, 'link', url);
+              }
+            }
+          }
+        }
+      } else {
+        quill.format('link', false);
+      }
+    }
+
+    // Add drag-to-resize functionality for images
+    function enableImageResize() {
+      const editor = quill.root;
+      let selectedImage = null;
+      let resizeHandle = null;
+      let startX, startY, startWidth, startHeight;
+
+      // Click on image to select it
+      editor.addEventListener('click', (e) => {
+        if (e.target.tagName === 'IMG') {
+          // Remove previous selection
+          if (selectedImage) {
+            selectedImage.classList.remove('selected');
+            removeResizeHandles();
+          }
+
+          // Select new image
+          selectedImage = e.target;
+          selectedImage.classList.add('selected');
+          addResizeHandles(selectedImage);
+        } else if (!e.target.classList.contains('resize-handle')) {
+          // Clicked elsewhere, deselect
+          if (selectedImage) {
+            selectedImage.classList.remove('selected');
+            removeResizeHandles();
+            selectedImage = null;
+          }
+        }
+      });
+
+      // Add resize handles around selected image
+      function addResizeHandles(img) {
+        const handles = ['nw', 'n', 'ne', 'e', 'se', 's', 'sw', 'w'];
+        handles.forEach(position => {
+          const handle = document.createElement('div');
+          handle.className = `resize-handle ${position}`;
+          handle.dataset.position = position;
+          handle.addEventListener('mousedown', startResize);
+
+          // Append to body for fixed positioning
+          document.body.appendChild(handle);
+          positionHandle(handle, img, position);
+        });
+
+        // Add image alignment controls
+        addImageControls(img);
+      }
+
+      // Add control toolbar for image alignment
+      function addImageControls(img) {
+        const controls = document.createElement('div');
+        controls.className = 'image-controls';
+        controls.id = 'imageControls';
+
+        // Determine current alignment
+        let currentAlign = 'center';
+        if (img.classList.contains('float-left')) currentAlign = 'left';
+        else if (img.classList.contains('float-right')) currentAlign = 'right';
+
+        controls.innerHTML = `
+          <button class="align-btn ${currentAlign === 'left' ? 'active' : ''}" data-align="left" title="Align left with text wrap">
+            <i class="bi bi-text-left"></i> Left
+          </button>
+          <button class="align-btn ${currentAlign === 'right' ? 'active' : ''}" data-align="right" title="Align right with text wrap">
+            <i class="bi bi-text-right"></i> Right
+          </button>
+        `;
+
+        document.body.appendChild(controls);
+
+        // Position controls above the image
+        const rect = img.getBoundingClientRect();
+        controls.style.top = (rect.top - 50) + 'px';
+        controls.style.left = (rect.left + rect.width / 2 - controls.offsetWidth / 2) + 'px';
+
+        // Add click handlers for alignment buttons
+        controls.querySelectorAll('.align-btn').forEach(btn => {
+          btn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const align = btn.dataset.align;
+            setImageAlignment(img, align);
+
+            // Update active state
+            controls.querySelectorAll('.align-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+          });
+        });
+      }
+
+      // Set image alignment
+      function setImageAlignment(img, align) {
+        // Remove all alignment classes
+        img.classList.remove('float-left', 'float-right');
+
+        // Add new alignment class
+        if (align === 'left') {
+          img.classList.add('float-left');
+        } else if (align === 'right') {
+          img.classList.add('float-right');
+        }
+
+        // Update handle positions after alignment change
+        removeResizeHandles();
+        addResizeHandles(img);
+      }
+
+      // Position handle based on image position (using fixed positioning)
+      function positionHandle(handle, img, position) {
+        const rect = img.getBoundingClientRect();
+        const handleSize = 12;
+        const offset = handleSize / 2;
+
+        const positions = {
+          nw: { top: rect.top - offset, left: rect.left - offset },
+          n: { top: rect.top - offset, left: rect.left + rect.width / 2 - offset },
+          ne: { top: rect.top - offset, left: rect.right - offset },
+          e: { top: rect.top + rect.height / 2 - offset, left: rect.right - offset },
+          se: { top: rect.bottom - offset, left: rect.right - offset },
+          s: { top: rect.bottom - offset, left: rect.left + rect.width / 2 - offset },
+          sw: { top: rect.bottom - offset, left: rect.left - offset },
+          w: { top: rect.top + rect.height / 2 - offset, left: rect.left - offset }
+        };
+
+        handle.style.top = positions[position].top + 'px';
+        handle.style.left = positions[position].left + 'px';
+      }
+
+      // Remove all resize handles
+      function removeResizeHandles() {
+        document.querySelectorAll('.resize-handle').forEach(handle => handle.remove());
+        const controls = document.getElementById('imageControls');
+        if (controls) controls.remove();
+      }
+
+      // Start resizing
+      function startResize(e) {
+        e.preventDefault();
+        e.stopPropagation();
+
+        resizeHandle = e.target.dataset.position;
+        startX = e.clientX;
+        startY = e.clientY;
+        startWidth = selectedImage.offsetWidth;
+        startHeight = selectedImage.offsetHeight;
+
+        document.addEventListener('mousemove', doResize);
+        document.addEventListener('mouseup', stopResize);
+      }
+
+      // Perform resize
+      function doResize(e) {
+        if (!selectedImage || !resizeHandle) return;
+
+        const deltaX = e.clientX - startX;
+        const deltaY = e.clientY - startY;
+
+        let newWidth = startWidth;
+        let newHeight = startHeight;
+
+        // Calculate new dimensions based on handle position
+        switch (resizeHandle) {
+          case 'se':
+          case 'e':
+            newWidth = startWidth + deltaX;
+            break;
+          case 'sw':
+          case 'w':
+            newWidth = startWidth - deltaX;
+            break;
+          case 'ne':
+            newWidth = startWidth + deltaX;
+            break;
+          case 'nw':
+            newWidth = startWidth - deltaX;
+            break;
+          case 's':
+            // Maintain aspect ratio
+            newHeight = startHeight + deltaY;
+            newWidth = (newHeight / startHeight) * startWidth;
+            break;
+          case 'n':
+            // Maintain aspect ratio
+            newHeight = startHeight - deltaY;
+            newWidth = (newHeight / startHeight) * startWidth;
+            break;
+        }
+
+        // Maintain aspect ratio for corner handles
+        if (['nw', 'ne', 'sw', 'se'].includes(resizeHandle)) {
+          const aspectRatio = startHeight / startWidth;
+          newHeight = newWidth * aspectRatio;
+        }
+
+        // Apply minimum size
+        if (newWidth > 50) {
+          selectedImage.style.width = newWidth + 'px';
+          selectedImage.style.height = 'auto';
+
+          // Update handle positions
+          removeResizeHandles();
+          addResizeHandles(selectedImage);
+        }
+      }
+
+      // Stop resizing
+      function stopResize() {
+        document.removeEventListener('mousemove', doResize);
+        document.removeEventListener('mouseup', stopResize);
+        resizeHandle = null;
+      }
+
+      // Clean up handles when clicking outside editor
+      document.addEventListener('click', (e) => {
+        if (!editor.contains(e.target) && !e.target.classList.contains('resize-handle') && selectedImage) {
+          selectedImage.classList.remove('selected');
+          removeResizeHandles();
+          selectedImage = null;
+        }
+      });
+
+      // Update handle positions on scroll
+      editor.addEventListener('scroll', () => {
+        if (selectedImage) {
+          updateHandlePositions();
+        }
+      });
+
+      // Update handle positions on window scroll or resize
+      window.addEventListener('scroll', () => {
+        if (selectedImage) {
+          updateHandlePositions();
+        }
+      });
+
+      window.addEventListener('resize', () => {
+        if (selectedImage) {
+          updateHandlePositions();
+        }
+      });
+
+      // Update all handle positions
+      function updateHandlePositions() {
+        const handles = document.querySelectorAll('.resize-handle');
+        handles.forEach((handle, index) => {
+          const positions = ['nw', 'n', 'ne', 'e', 'se', 's', 'sw', 'w'];
+          positionHandle(handle, selectedImage, positions[index]);
+        });
+
+        // Update controls position
+        const controls = document.getElementById('imageControls');
+        if (controls && selectedImage) {
+          const rect = selectedImage.getBoundingClientRect();
+          controls.style.top = (rect.top - 50) + 'px';
+          controls.style.left = (rect.left + rect.width / 2 - controls.offsetWidth / 2) + 'px';
+        }
+      }
+    }
+
+    // Add tooltips to toolbar buttons
+    function addToolbarTooltips() {
+      const tooltips = {
+        '.ql-header[value="1"]': 'Heading 1',
+        '.ql-header[value="2"]': 'Heading 2',
+        '.ql-header[value="3"]': 'Heading 3',
+        '.ql-header[value=""]': 'Normal text',
+        '.ql-bold': 'Bold',
+        '.ql-italic': 'Italic',
+        '.ql-underline': 'Underline',
+        '.ql-strike': 'Strikethrough',
+        '.ql-list[value="ordered"]': 'Numbered list',
+        '.ql-list[value="bullet"]': 'Bulleted list',
+        '.ql-color': 'Text color',
+        '.ql-background': 'Background color',
+        '.ql-align': 'Text alignment',
+        '.ql-link': 'Insert link',
+        '.ql-image': 'Insert image',
+        '.ql-clean': 'Clear formatting'
+      };
+
+      Object.entries(tooltips).forEach(([selector, title]) => {
+        const elements = document.querySelectorAll(selector);
+        elements.forEach(el => {
+          el.setAttribute('title', title);
+        });
+      });
+    }
+
+    // Initialize on page load
+    document.addEventListener('DOMContentLoaded', async () => {
+      // Initialize Quill editor
+      quill = new Quill('#journalEditor', {
+        theme: 'snow',
+        modules: {
+          toolbar: {
+            container: [
+              [{ 'header': [1, 2, 3, false] }],
+              ['bold', 'italic', 'underline', 'strike'],
+              [{ 'list': 'ordered'}, { 'list': 'bullet' }],
+              [{ 'color': [] }, { 'background': [] }],
+              [{ 'align': [] }],
+              ['link', 'image'],
+              ['clean']
+            ],
+            handlers: {
+              'image': imageHandler,
+              'link': linkHandler
+            }
+          }
+        },
+        placeholder: 'Write your journal entry here...'
+      });
+
+      // Enable image resize functionality
+      enableImageResize();
+
+      // Add tooltips to toolbar buttons
+      addToolbarTooltips();
+
+      // Track changes to editor content
+      quill.on('text-change', function(delta, oldDelta, source) {
+        if (source === 'user') {
+          const currentContent = quill.root.innerHTML;
+          hasUnsavedChanges = (currentContent !== lastSavedContent);
+          updateSaveButtonState();
+        }
+        // Update word count on any change
+        updateWordCount();
+      });
+
+      // Initial word count
+      updateWordCount();
+
+      // Initialize database
+      try {
+        await initDB();
+        await loadFileList();
+      } catch (error) {
+        console.error('Error initializing database:', error);
+        showToast('Error initializing database', 'danger');
+      }
+
+      // Event listeners
+      document.getElementById('newFileBtn').addEventListener('click', createNewEntry);
+      document.getElementById('saveBtn').addEventListener('click', saveCurrentEntry);
+      document.getElementById('deleteBtn').addEventListener('click', deleteCurrentEntry);
+
+      // Import functionality
+      document.getElementById('importBtn').addEventListener('click', () => {
+        document.getElementById('importFileInput').click();
+      });
+
+      document.getElementById('importFileInput').addEventListener('change', handleFileImport);
+
+      // Search functionality
+      const searchInput = document.getElementById('searchInput');
+      const clearSearchBtn = document.getElementById('clearSearchBtn');
+
+      searchInput.addEventListener('input', (e) => {
+        loadFileList(e.target.value);
+      });
+
+      clearSearchBtn.addEventListener('click', () => {
+        searchInput.value = '';
+        loadFileList();
+      });
+
+      // Sort functionality
+      const sortSelect = document.getElementById('sortSelect');
+      sortSelect.addEventListener('change', () => {
+        loadFileList(searchInput.value);
+      });
+
+      // Auto-save on Ctrl+S
+      document.addEventListener('keydown', (e) => {
+        if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+          e.preventDefault();
+          saveCurrentEntry();
+        }
+      });
+    });
+
+    // Import handler function
+    async function handleFileImport(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+
+      const fileName = file.name;
+      const fileExtension = fileName.split('.').pop().toLowerCase();
+
+      try {
+        let content = '';
+        let entryName = fileName.replace(/\.[^/.]+$/, ''); // Remove extension
+
+        if (fileExtension === 'txt') {
+          // Handle plain text
+          content = await readTextFile(file);
+          content = `<p>${content.replace(/\n/g, '<br>')}</p>`;
+        } else if (fileExtension === 'md' || fileExtension === 'markdown') {
+          // Handle Markdown - convert to HTML
+          content = await readTextFile(file);
+          content = convertMarkdownToHtml(content);
+        } else if (fileExtension === 'docx') {
+          // Handle Word documents
+          showToast('Word document import is not yet supported. Please export as TXT or Markdown first.', 'warning');
+          event.target.value = ''; // Reset input
+          return;
+        } else if (fileExtension === 'pdf') {
+          // Handle PDF
+          showToast('PDF import is not yet supported. Please export as TXT or Markdown first.', 'warning');
+          event.target.value = ''; // Reset input
+          return;
+        } else {
+          showToast('Unsupported file type. Please use .txt, .md, or .markdown files.', 'danger');
+          event.target.value = ''; // Reset input
+          return;
+        }
+
+        // Create a new entry with the imported content
+        const newEntry = {
+          name: entryName,
+          content: content,
+          lastModified: new Date().toISOString()
+        };
+
+        // Save to IndexedDB
+        await saveEntry(newEntry);
+
+        // Load the new entry
+        await loadFileList();
+
+        // Find and load the newly imported entry
+        const entries = await getAllEntries();
+        const importedEntry = entries.find(e => e.name === entryName);
+        if (importedEntry) {
+          loadEntry(importedEntry.id);
+        }
+
+        showToast(`Successfully imported "${entryName}"`, 'success');
+      } catch (error) {
+        console.error('Import error:', error);
+        showToast('Failed to import file: ' + error.message, 'danger');
+      }
+
+      // Reset the file input
+      event.target.value = '';
+    }
+
+    // Helper function to read text files
+    function readTextFile(file) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = (e) => resolve(e.target.result);
+        reader.onerror = (e) => reject(new Error('Failed to read file'));
+        reader.readAsText(file);
+      });
+    }
+
+    // Simple Markdown to HTML converter
+    function convertMarkdownToHtml(markdown) {
+      let html = markdown;
+
+      // Headers
+      html = html.replace(/^### (.*$)/gim, '<h3>$1</h3>');
+      html = html.replace(/^## (.*$)/gim, '<h2>$1</h2>');
+      html = html.replace(/^# (.*$)/gim, '<h1>$1</h1>');
+
+      // Bold
+      html = html.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+      html = html.replace(/__(.*?)__/g, '<strong>$1</strong>');
+
+      // Italic
+      html = html.replace(/\*(.*?)\*/g, '<em>$1</em>');
+      html = html.replace(/_(.*?)_/g, '<em>$1</em>');
+
+      // Links
+      html = html.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2">$1</a>');
+
+      // Line breaks and paragraphs
+      html = html.replace(/\n\n/g, '</p><p>');
+      html = html.replace(/\n/g, '<br>');
+      html = '<p>' + html + '</p>';
+
+      // Unordered lists
+      html = html.replace(/<p>([*-] .*?)<\/p>/g, (match, listItems) => {
+        const items = listItems.split('<br>').map(item => {
+          return item.replace(/^[*-] /, '<li>') + '</li>';
+        }).join('');
+        return '<ul>' + items + '</ul>';
+      });
+
+      // Ordered lists
+      html = html.replace(/<p>(\d+\. .*?)<\/p>/g, (match, listItems) => {
+        const items = listItems.split('<br>').map(item => {
+          return item.replace(/^\d+\. /, '<li>') + '</li>';
+        }).join('');
+        return '<ol>' + items + '</ol>';
+      });
+
+      // Code blocks
+      html = html.replace(/```(.*?)```/gs, '<pre><code>$1</code></pre>');
+
+      // Inline code
+      html = html.replace(/`([^`]+)`/g, '<code>$1</code>');
+
+      return html;
+    }
+
+    // Export handler function
+    function handleExportClick(format) {
+      const entryName = document.getElementById('fileName').value.trim() || 'journal_entry';
+      const htmlContent = quill.root.innerHTML;
+
+      if (!htmlContent || htmlContent === '<p><br></p>') {
+        alert('Please create some content before exporting.');
+        return;
+      }
+
+      // Handle clipboard copy
+      if (format === 'clipboard') {
+        const tempDiv = document.createElement('div');
+        tempDiv.innerHTML = htmlContent;
+        const textContent = tempDiv.textContent || tempDiv.innerText || '';
+
+        navigator.clipboard.writeText(textContent).then(() => {
+          showToast('Content copied to clipboard!', 'success');
+          // Close modal
+          const modal = bootstrap.Modal.getInstance(document.getElementById('exportModal'));
+          if (modal) modal.hide();
+        }).catch(err => {
+          console.error('Failed to copy:', err);
+          showToast('Failed to copy to clipboard', 'danger');
+        });
+        return;
+      }
+
+      // Handle file exports
+      JournalExport.handleExport(format, entryName, htmlContent);
+
+      // Close modal after initiating export
+      const modal = bootstrap.Modal.getInstance(document.getElementById('exportModal'));
+      if (modal) modal.hide();
+    }
+
+    // Bulk Export Functionality
+    let bulkEntries = [];
+    let selectedEntryIds = new Set();
+
+    // Load entries in bulk export modal
+    async function loadBulkEntryList(searchTerm = '') {
+      bulkEntries = await getAllEntries();
+      const bulkEntryList = document.getElementById('bulkEntryList');
+      bulkEntryList.innerHTML = '';
+
+      // Sort by timestamp, newest first
+      bulkEntries.sort((a, b) => b.timestamp - a.timestamp);
+
+      // Filter entries based on search term
+      let filteredEntries = bulkEntries;
+      if (searchTerm && searchTerm.trim() !== '') {
+        const lowerSearchTerm = searchTerm.toLowerCase();
+        filteredEntries = bulkEntries.filter(entry => {
+          const nameMatch = entry.name && entry.name.toLowerCase().includes(lowerSearchTerm);
+          let contentMatch = false;
+          if (entry.content) {
+            try {
+              const tempDiv = document.createElement('div');
+              tempDiv.innerHTML = entry.content;
+              const textContent = tempDiv.textContent || tempDiv.innerText || '';
+              contentMatch = textContent.toLowerCase().includes(lowerSearchTerm);
+            } catch (e) {
+              console.error('Error parsing content for search:', e);
+            }
+          }
+          return nameMatch || contentMatch;
+        });
+      }
+
+      if (filteredEntries.length === 0) {
+        bulkEntryList.innerHTML = '<div class="text-center text-muted p-3">No entries found</div>';
+        updateSelectionCount();
+        return;
+      }
+
+      filteredEntries.forEach(entry => {
+        const entryDiv = document.createElement('div');
+        entryDiv.className = 'form-check py-2 ps-3 pe-2 border-bottom border-secondary d-flex align-items-start';
+
+        const isChecked = selectedEntryIds.has(entry.id);
+
+        entryDiv.innerHTML = `
+          <input class="form-check-input me-2 mt-1 flex-shrink-0" type="checkbox" value="${entry.id}" id="bulkEntry${entry.id}" ${isChecked ? 'checked' : ''}>
+          <label class="form-check-label flex-grow-1" for="bulkEntry${entry.id}" style="cursor: pointer;">
+            <div class="fw-bold">${entry.name}</div>
+            <small class="text-muted">${formatDate(entry.timestamp)}</small>
+          </label>
+        `;
+
+        const checkbox = entryDiv.querySelector('input[type="checkbox"]');
+        checkbox.addEventListener('change', (e) => {
+          if (e.target.checked) {
+            selectedEntryIds.add(entry.id);
+          } else {
+            selectedEntryIds.delete(entry.id);
+          }
+          updateSelectionCount();
+        });
+
+        bulkEntryList.appendChild(entryDiv);
+      });
+
+      updateSelectionCount();
+    }
+
+    // Update selection count display
+    function updateSelectionCount() {
+      const count = selectedEntryIds.size;
+      document.getElementById('selectionCount').textContent = `${count} selected`;
+    }
+
+    // Select all entries
+    function selectAllEntries() {
+      const checkboxes = document.querySelectorAll('#bulkEntryList input[type="checkbox"]');
+      checkboxes.forEach(checkbox => {
+        checkbox.checked = true;
+        selectedEntryIds.add(parseInt(checkbox.value));
+      });
+      updateSelectionCount();
+    }
+
+    // Deselect all entries
+    function deselectAllEntries() {
+      const checkboxes = document.querySelectorAll('#bulkEntryList input[type="checkbox"]');
+      checkboxes.forEach(checkbox => {
+        checkbox.checked = false;
+        selectedEntryIds.delete(parseInt(checkbox.value));
+      });
+      updateSelectionCount();
+    }
+
+    // Execute bulk export
+    async function executeBulkExport() {
+      if (selectedEntryIds.size === 0) {
+        alert('Please select at least one entry to export.');
+        return;
+      }
+
+      // Get selected format
+      const formatRadio = document.querySelector('input[name="bulkExportFormat"]:checked');
+      const format = formatRadio ? formatRadio.value : 'txt';
+
+      // Get selected entries
+      const selectedEntries = bulkEntries.filter(entry => selectedEntryIds.has(entry.id));
+
+      // Close modal
+      const modal = bootstrap.Modal.getInstance(document.getElementById('bulkExportModal'));
+      if (modal) modal.hide();
+
+      // Ask user if they want separate files or combined
+      const useCombined = selectedEntries.length > 1 && confirm(
+        `Export ${selectedEntries.length} entries as:\n\nOK = Single combined file\nCancel = Separate files`
+      );
+
+      // Show loading message
+      showToast(`Exporting ${selectedEntries.length} ${selectedEntries.length === 1 ? 'entry' : 'entries'}...`, 'info');
+
+      // Perform export
+      if (useCombined) {
+        await JournalExport.handleBulkExportCombined(format, selectedEntries, 'journal_export');
+      } else {
+        await JournalExport.handleBulkExport(format, selectedEntries);
+      }
+    }
+
+    // Event listeners for bulk export modal
+    document.addEventListener('DOMContentLoaded', () => {
+      // Load entries when modal is opened
+      const bulkExportModal = document.getElementById('bulkExportModal');
+      bulkExportModal.addEventListener('show.bs.modal', () => {
+        loadBulkEntryList();
+      });
+
+      // Reset when modal is closed
+      bulkExportModal.addEventListener('hidden.bs.modal', () => {
+        document.getElementById('bulkSearchInput').value = '';
+        selectedEntryIds.clear();
+      });
+
+      // Bulk search functionality
+      const bulkSearchInput = document.getElementById('bulkSearchInput');
+      bulkSearchInput.addEventListener('input', (e) => {
+        loadBulkEntryList(e.target.value);
+      });
+
+      document.getElementById('clearBulkSearchBtn').addEventListener('click', () => {
+        bulkSearchInput.value = '';
+        loadBulkEntryList();
+      });
+
+      // Select all/none buttons
+      document.getElementById('selectAllBtn').addEventListener('click', selectAllEntries);
+      document.getElementById('selectNoneBtn').addEventListener('click', deselectAllEntries);
+
+      // Execute bulk export button
+      document.getElementById('executeBulkExportBtn').addEventListener('click', executeBulkExport);
+    });
+  </script>
+  <script data-goatcounter="https://maybeme1990.goatcounter.com/count"
+        async src="//gc.zgo.at/count.js"></script>
+</body>
+</html>

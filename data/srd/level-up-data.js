@@ -2662,6 +2662,13 @@ window.LevelUpData = (function() {
   };
 
   // ============================================================
+  // RACE DATA (for homebrew/custom races from content packs)
+  // Built-in races are hardcoded in character-creation-wizard.js
+  // This structure stores races added via content packs
+  // ============================================================
+  const RACE_DATA = {};
+
+  // ============================================================
   // SUBRACE DATA
   // ============================================================
   const SUBRACE_DATA = {
@@ -3681,6 +3688,7 @@ window.LevelUpData = (function() {
     PACT_BOON_DATA,
     ELDRITCH_INVOCATION_DATA,
     METAMAGIC_DATA,
+    RACE_DATA,
     SUBRACE_DATA,
     DEFAULT_CLASS_WEAPONS,
     CLASS_RESOURCES,

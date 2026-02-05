@@ -20,7 +20,13 @@ const ALLOWED_RECORD_TYPES = new Set([
   'class-starting-gold',
   'beast',
   'artificer-infusion',
-  'note'
+  'note',
+  'race',
+  'subrace',
+  'fighting-style',
+  'pact-boon',
+  'eldritch-invocation',
+  'metamagic'
 ]);
 const ALLOWED_OPERATIONS = new Set(['add', 'replace', 'remove']);
 const GENERATOR_TABLES = new Set(['loot', 'shop', 'tavern', 'npc', 'name']);
@@ -351,6 +357,25 @@ function validateRecordPayload(type, payload, errors, warnings, index) {
         errors.push(`records[${index}].payload.table '${payload.table}' is not supported`);
       }
       requireArrayField(payload, 'entries', errors, index, { min: 1 });
+      break;
+    case 'race':
+      requireStringField(payload, 'name', errors, index, 'records');
+      break;
+    case 'subrace':
+      requireStringField(payload, 'name', errors, index, 'records');
+      requireStringField(payload, 'race', errors, index, 'records');
+      break;
+    case 'fighting-style':
+      requireStringField(payload, 'name', errors, index, 'records');
+      break;
+    case 'pact-boon':
+      requireStringField(payload, 'name', errors, index, 'records');
+      break;
+    case 'eldritch-invocation':
+      requireStringField(payload, 'name', errors, index, 'records');
+      break;
+    case 'metamagic':
+      requireStringField(payload, 'name', errors, index, 'records');
       break;
     default:
       break;

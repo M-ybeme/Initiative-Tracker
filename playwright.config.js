@@ -8,8 +8,7 @@ export default defineConfig({
   workers: process.env.CI ? 1 : undefined,
   reporter: 'html',
   use: {
-    // Base URL for all tests - use file:// protocol for static HTML files
-    baseURL: `file:///${process.cwd().replace(/\\/g, '/')}/`,
+    baseURL: 'http://localhost:3000',
     trace: 'on-first-retry',
     screenshot: 'only-on-failure',
   },
@@ -21,5 +20,11 @@ export default defineConfig({
     },
   ],
 
-  // No web server needed - we're testing static HTML files
+  // Web server to serve static files - needed for absolute paths like /js/...
+  webServer: {
+    command: 'npx serve -l 3000',
+    url: 'http://localhost:3000',
+    reuseExistingServer: !process.env.CI,
+    timeout: 120000,
+  },
 });

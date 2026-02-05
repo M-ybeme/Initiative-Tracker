@@ -8,14 +8,99 @@ The format is based on Keep a Changelog, and this project adheres to Semantic Ve
 The DM's Toolbox has evolved through focused feature releases:
 
 
-- **2.0.x**: Starting equipment selection, subclass bonus cantrips, enhanced feat selection UI, and bug fixes and introducing test and engeneering polish to the app
+- **2.0.x**: Starting equipment selection, subclass bonus cantrips, enhanced feat selection UI, interactive class feature selection, ability check rolls, full custom monster creator, and engineering polish
 - **1.11.x**: Journal system with rich text editor, import/export (Word/PDF/TXT/Markdown), and Battle Map → Initiative Tracker integration
 - **1.10.x**: Full character manager with multiclass support, spell learning, subclass selection, and character sheet export
 - **1.9.x**: Battle map measurement tools, persistent fog shapes, and generator integration across NPC/Tavern/Shop systems
 - **1.8.x**: Spell database expansion to 432+ spells, inventory management, loot generator overhaul, and character token generation
 
-**Current version: 2.0.8 (January 2026)**
+**Current version: 2.0.8.1 (February 2026)**
 
+---
+
+## [2.0.8.1] - 2026-02-02
+**SRD Filtering, Content Pack Hotfix, and Content Pack Record Types Expansion**
+
+### Fixed
+- **Content pack allowlists not unlocking content** – Fixed critical bug where content packs couldn't unlock non-SRD subraces, races, and other content. The SRD filter now properly merges pack allowlists before filtering data.
+- **Data restoration on pack toggle** – Added backup/restore mechanism so toggling packs on/off correctly restores or removes content. Previously, pruned data was permanently deleted and couldn't be restored when packs were enabled.
+- **SRD filter reset** – Added `resetToBaseAllowlist()` and `mergePackAllowlist()` methods to properly handle pack enable/disable cycles.
+- **Homebrew feature options** – Content pack fighting styles, pact boons, eldritch invocations, and metamagic options now properly appear in the level-up selection UI alongside SRD options.
+
+### Changed
+- **SRD Regression Pack completeness** – Updated `srd-regression-pack.json` allowlist to include ALL non-SRD content from the blocklist, ensuring the pack fully restores pre-SRD content. Now includes:
+  - 96 non-SRD spells (Booming Blade, Green-Flame Blade, Absorb Elements, etc.)
+  - 12 non-SRD backgrounds (Charlatan, Criminal, Entertainer, Folk Hero, etc.)
+  - 70 non-SRD feats (Alert, Great Weapon Master, Lucky, Sentinel, etc.)
+  - 89 non-SRD subclasses (Battle Master, Hexblade, Wild Magic, Circle of the Moon, etc.)
+  - 7 non-SRD fighting styles (Blessed Warrior, Blind Fighting, Unarmed Fighting, etc.)
+  - Artificer class with all infusions, equipment, and resources
+  - Pact of the Talisman, additional Eldritch Invocations, and Metamagic options
+  - All non-SRD racial features, racial spells, and subclass spells
+- **Regression pack generator** – Updated `generate-srd-regression-pack.mjs` to include all 21 non-SRD subraces (Drow, Eladrin, Sea Elf, Duergar, Ghostwise, Tiefling bloodlines, Shifter variants, etc.) in the QA allowlist overrides.
+- **Content pack runtime** – Extended `content-pack-runtime.js` to capture baseline data for and sync changes to `SUBRACE_DATA`, `FIGHTING_STYLE_DATA`, `PACT_BOON_DATA`, `ELDRITCH_INVOCATION_DATA`, and `METAMAGIC_DATA`.
+- **Allowlist auto-population** – New record types are automatically added to the allowlist when packs are applied.
+- **Template documentation** – Updated `content-pack-template.json` with examples of all new record types using original homebrew content (Crystalborn subraces, Refracted Defense fighting style, Pact of the Shard, Crystalline Gaze invocation, Fractured Spell metamagic).
+- **Renamed "Checks and Saves" to "Saving Throws"** – Clarified section naming to distinguish saving throws (which use save proficiency) from ability checks (which use just the ability modifier).
+- **Level-up features step** – Now separates auto-granted features from selectable features, showing selection UI only for features that require player choice.
+- **SRD 5.1 → SRD 5.2 license updates** – Updated all SRD references across the codebase from 5.1 to 5.2, including license documentation, export utilities, error handling, and PDF links. The official SRD PDF link now points to the 2024 Creative Commons release.
+
+### Added
+- **Subrace records** – Content packs can now add new subraces with full data definitions using the `subrace` record type. Subraces use the `Race:Subrace Name` ID format and include name, race, and description fields.
+- **Fighting style records** – Content packs can now add custom fighting styles using the `fighting-style` record type. Includes name, description, and optional classes field.
+- **Pact boon records** – Content packs can now add custom warlock pact boons using the `pact-boon` record type.
+- **Eldritch invocation records** – Content packs can now add custom eldritch invocations using the `eldritch-invocation` record type. Supports optional prerequisites field.
+- **Metamagic records** – Content packs can now add custom sorcerer metamagic options using the `metamagic` record type. Includes cost field.
+- **Interactive class feature selection in level-up wizard** – Features that require player choices (Fighting Style, Pact Boon, Eldritch Invocations, Metamagic) now display interactive selection UI during level-up instead of just listing feature names. Players select from available options with full descriptions, prerequisites are shown for Eldritch Invocations, and homebrew options from content packs appear with a "Homebrew" badge.
+- **Ability check rolls** – Added roll buttons (advantage/normal/disadvantage) to the Ability Scores & Modifiers section. Players can now roll raw ability checks (d20 + modifier) directly, separate from skill checks and saving throws.
+- **Combat view ability checks** – The Ability Scores section in Combat View is now clickable. Click any ability (STR, DEX, CON, INT, WIS, CHA) to roll an ability check. Results show in a toast notification and are stored in roll history, matching the existing save roll functionality.
+- **Full custom monster creator** – Completely rewrote the custom monster import in Encounter Builder with Simple/Full mode toggle. Simple mode provides quick entry for basic monsters. Full mode includes all D&D 5e stat block fields organized into accordion sections:
+  - Basic Info: name, size, type, subtype, alignment, CR override, proficiency bonus
+  - Combat Stats: AC (with type), HP (with hit dice), multi-mode speed (walk/fly/swim/climb/burrow/hover)
+  - Ability Scores: all six abilities with auto-calculated modifiers
+  - Defenses: saving throw proficiencies, damage vulnerabilities/resistances/immunities, condition immunities
+  - Skills & Senses: skill proficiencies, passive perception, senses, languages
+  - Special Abilities: name/description pairs
+  - Spellcasting: innate or standard, spell save DC, attack bonus, at-will/per-day spells, spell slots by level
+  - Actions: name, to-hit, save DC, damage, description
+  - Bonus Actions, Reactions: name/description pairs
+  - Legendary Actions: with count per round
+  - Mythic Actions: with mythic trait description
+  - Lair Actions & Regional Effects: for legendary monsters
+  - Notes: free-form notes field
+- **Enhanced monster text export** – Text file export now includes all new monster fields: subtype, alignment, AC type, hit dice, proficiency bonus, languages, damage/condition modifiers, spellcasting details, bonus actions, mythic actions, lair actions, regional effects, and legendary action count.
+- **Custom monster example help** – Added collapsible help section in Full mode with a complete homebrew monster example ("Crystalwing Marauder") demonstrating all available fields.
+- **Homebrew class support in character creation** – Character creation wizard now displays homebrew classes from content packs in a dedicated "Homebrew Classes" optgroup. Classes added via content pack records appear with their description, hit die, and primary ability.
+- **Race records in content pack template** – Added Crystalborn race record to the content pack template example. Previously only subraces were defined without the parent race.
+- **Feature selection storage** – Selected class features are now stored on the character object (`character.fightingStyles`, `character.pactBoon`, `character.eldritchInvocations`, `character.metamagic`) and full descriptions are written to the character's features field.
+- **`rollAbilityCheck()` function** – New dice rolling function in character.js for raw ability modifier rolls with advantage/disadvantage support.
+
+### Fixed
+- **Critical: Content pack allowlists not merging** – Fixed `TypeError: packManager.getRuntimeContext is not a function` that was preventing content pack allowlists from being merged into the SRD filter. The function was incorrectly named `getRuntimeContext()` instead of `getMergedContext()`. This bug caused the srd-regression-pack and other packs to fail silently, leaving all non-SRD content blocked.
+- **Content Pack Manager modal positioning** – Fixed modal appearing too high and being covered by the navbar. Added proper margin-top to match other modals.
+- **Feat tooltip in level-up wizard** – Fixed tooltips not displaying for feats in the ASI/Feat selection step. The tooltip content wasn't being properly escaped (missing `&` and `'` escaping). Now uses the proper `escapeHtml()` function matching spell tooltips.
+- **Homebrew class equipment sync** – Fixed bug where homebrew class equipment choices from content packs weren't syncing to `LevelUpData.CLASS_EQUIPMENT_CHOICES` and `LevelUpData.DEFAULT_CLASS_EQUIPMENT`. The content pack runtime now initializes these structures directly on LevelUpData instead of using local fallback objects.
+- **Monster text export field name mismatches** – Fixed 7 field name mismatches between the custom monster form (snake_case) and the text stat block export (camelCase). Affected fields: `proficiency_bonus`, `damage_vulnerabilities`, `damage_resistances`, `damage_immunities`, `condition_immunities`, `legendary_action_count`, and `mythic_trait`. Text export now checks for both naming conventions to support data from the form and from JSON imports.
+- **Monster spellcasting text export** – Fixed spellcasting section in text export looking for `spellSaveDC`/`spellAttackBonus` instead of `dc`/`attack` (the names used by the form's `buildSpellcasting()`). Also added fallback to output the form's free-text `spells` field when structured per-level spell data isn't available.
+- **Lair actions/regional effects crash** – Fixed text export crashing when lair actions or regional effects are plain text strings (as stored by the custom form). The export expected arrays of `{name, desc}` objects but now handles both text strings and arrays.
+- **Monster description in text export** – Added the `description` field to the text stat block export. Previously this field was collected by the form but never included in exports.
+
+### Added
+- **Roster JSON import/export** – New "Roster (Full Monster Data)" export mode preserves all custom monster fields (actions, abilities, defenses, spellcasting, etc.) for later re-import. "Import Roster" button loads a roster JSON file and adds all monsters to the current encounter. The JSON textarea also now accepts arrays and `{ roster: [...] }` objects for bulk adding.
+
+### Changed
+- **Send to Initiative Tracker now includes full stat block** – The "Send to Initiative Tracker" button now populates each monster's notes field with a complete combat reference including ability scores, defenses (resistances, immunities, vulnerabilities), actions, bonus actions, reactions, legendary actions, spellcasting, saves, skills, and senses. Previously only CR, type, and size were included.
+
+### Testing
+- **Playwright web server configuration** – Added `serve` web server to `playwright.config.js` for e2e tests. Required because scripts with absolute paths (`/js/...`) don't load with file:// protocol. Tests now run against `http://localhost:3000`.
+- **Navigation URL pattern fixes** – Updated navigation tests to handle `serve` stripping `.html` extensions from URLs. Patterns like `/initiative\.html/` now use `/initiative(\.html)?$/` to match both formats.
+- **Initiative tracker help button test** – Fixed flaky test by adding Bootstrap offcanvas backdrop handling. The help offcanvas was sometimes already open on page load, blocking subsequent clicks.
+- **SRD filtering test updates** – Updated e2e tests for SRD 5.2 compliance: subclasses are now allowed (Champion, Life Domain, Thief), and only Acolyte background is in SRD 5.2 (not 4 backgrounds as in 5.1).
+- **Unit test SRD version** – Fixed export-utils test expecting "System Reference Document 5.1" to expect "System Reference Document 5.2".
+- **Duplicate function lint fix** – Removed duplicate `calculateAbilityModifier` function in level-up-system.js that was causing lint errors.
+- All 77 e2e tests pass (3 character wizard tests skipped pending button ID updates).
+
+---
 
 ## [2.0.8] - 2026-01-28
 **SRD 5.2 Compliance Overhaul / 2024 PHB Updates / Diagnostics Enhancements**

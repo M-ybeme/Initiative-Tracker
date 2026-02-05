@@ -695,22 +695,25 @@
       color: #9ca3af;
     }
 
-    /* Clickable Saves and Stats */
+    /* Clickable Saves, Stats, and Ability Checks */
     .combat-save-box.clickable-roll,
-    .combat-stat-box.clickable-roll {
+    .combat-stat-box.clickable-roll,
+    .combat-ability-box.clickable-roll {
       cursor: pointer;
       transition: all 0.2s ease;
     }
 
     .combat-save-box.clickable-roll:hover,
-    .combat-stat-box.clickable-roll:hover {
+    .combat-stat-box.clickable-roll:hover,
+    .combat-ability-box.clickable-roll:hover {
       background: rgba(139, 92, 246, 0.2);
       transform: scale(1.05);
       border-color: rgba(139, 92, 246, 0.5);
     }
 
     .combat-save-box.clickable-roll:active,
-    .combat-stat-box.clickable-roll:active {
+    .combat-stat-box.clickable-roll:active,
+    .combat-ability-box.clickable-roll:active {
       transform: scale(0.98);
     }
 
@@ -1348,10 +1351,11 @@
               </div>
             </div>
 
-            <!-- Ability Scores + Modifiers -->
+            <!-- Ability Scores + Modifiers (with Ability Check rolls) -->
             <div class="card bg-dark border-secondary mb-3">
-              <div class="card-header border-secondary collapsible-header" data-bs-toggle="collapse" data-bs-target="#collapseAbilities" aria-expanded="true" aria-controls="collapseAbilities" style="cursor: pointer;">
+              <div class="card-header border-secondary d-flex justify-content-between align-items-center collapsible-header" data-bs-toggle="collapse" data-bs-target="#collapseAbilities" aria-expanded="true" aria-controls="collapseAbilities" style="cursor: pointer;">
                 <strong><i class="bi bi-chevron-down me-1 collapse-icon"></i>Ability Scores & Modifiers</strong>
+                <small class="text-muted">Shift+Click = Advantage, Ctrl+Click = Disadvantage</small>
               </div>
               <div class="collapse show" id="collapseAbilities">
               <div class="card-body">
@@ -1365,9 +1369,20 @@
                            placeholder="Score" />
                     <input type="number"
                            id="modStr"
-                           class="form-control form-control-sm text-center"
+                           class="form-control form-control-sm text-center mb-1"
                            placeholder="Auto"
                            readonly />
+                    <div class="btn-group btn-group-sm w-100" role="group">
+                      <button type="button" class="btn btn-success p-0 px-1 ability-check-btn" data-ability="Str" data-roll-type="advantage" title="Roll STR check with Advantage">
+                        <i class="bi bi-dice-5"></i>
+                      </button>
+                      <button type="button" class="btn btn-primary p-0 px-1 ability-check-btn" data-ability="Str" data-roll-type="normal" title="Roll STR check">
+                        <i class="bi bi-dice-5"></i>
+                      </button>
+                      <button type="button" class="btn btn-danger p-0 px-1 ability-check-btn" data-ability="Str" data-roll-type="disadvantage" title="Roll STR check with Disadvantage">
+                        <i class="bi bi-dice-5"></i>
+                      </button>
+                    </div>
                   </div>
                   <!-- DEX -->
                   <div class="col-6 col-md-2">
@@ -1378,9 +1393,20 @@
                            placeholder="Score" />
                     <input type="number"
                            id="modDex"
-                           class="form-control form-control-sm text-center"
+                           class="form-control form-control-sm text-center mb-1"
                            placeholder="Auto"
                            readonly />
+                    <div class="btn-group btn-group-sm w-100" role="group">
+                      <button type="button" class="btn btn-success p-0 px-1 ability-check-btn" data-ability="Dex" data-roll-type="advantage" title="Roll DEX check with Advantage">
+                        <i class="bi bi-dice-5"></i>
+                      </button>
+                      <button type="button" class="btn btn-primary p-0 px-1 ability-check-btn" data-ability="Dex" data-roll-type="normal" title="Roll DEX check">
+                        <i class="bi bi-dice-5"></i>
+                      </button>
+                      <button type="button" class="btn btn-danger p-0 px-1 ability-check-btn" data-ability="Dex" data-roll-type="disadvantage" title="Roll DEX check with Disadvantage">
+                        <i class="bi bi-dice-5"></i>
+                      </button>
+                    </div>
                   </div>
                   <!-- CON -->
                   <div class="col-6 col-md-2">
@@ -1391,9 +1417,20 @@
                            placeholder="Score" />
                     <input type="number"
                            id="modCon"
-                           class="form-control form-control-sm text-center"
+                           class="form-control form-control-sm text-center mb-1"
                            placeholder="Auto"
                            readonly />
+                    <div class="btn-group btn-group-sm w-100" role="group">
+                      <button type="button" class="btn btn-success p-0 px-1 ability-check-btn" data-ability="Con" data-roll-type="advantage" title="Roll CON check with Advantage">
+                        <i class="bi bi-dice-5"></i>
+                      </button>
+                      <button type="button" class="btn btn-primary p-0 px-1 ability-check-btn" data-ability="Con" data-roll-type="normal" title="Roll CON check">
+                        <i class="bi bi-dice-5"></i>
+                      </button>
+                      <button type="button" class="btn btn-danger p-0 px-1 ability-check-btn" data-ability="Con" data-roll-type="disadvantage" title="Roll CON check with Disadvantage">
+                        <i class="bi bi-dice-5"></i>
+                      </button>
+                    </div>
                   </div>
                   <!-- INT -->
                   <div class="col-6 col-md-2">
@@ -1404,9 +1441,20 @@
                            placeholder="Score" />
                     <input type="number"
                            id="modInt"
-                           class="form-control form-control-sm text-center"
+                           class="form-control form-control-sm text-center mb-1"
                            placeholder="Auto"
                            readonly />
+                    <div class="btn-group btn-group-sm w-100" role="group">
+                      <button type="button" class="btn btn-success p-0 px-1 ability-check-btn" data-ability="Int" data-roll-type="advantage" title="Roll INT check with Advantage">
+                        <i class="bi bi-dice-5"></i>
+                      </button>
+                      <button type="button" class="btn btn-primary p-0 px-1 ability-check-btn" data-ability="Int" data-roll-type="normal" title="Roll INT check">
+                        <i class="bi bi-dice-5"></i>
+                      </button>
+                      <button type="button" class="btn btn-danger p-0 px-1 ability-check-btn" data-ability="Int" data-roll-type="disadvantage" title="Roll INT check with Disadvantage">
+                        <i class="bi bi-dice-5"></i>
+                      </button>
+                    </div>
                   </div>
                   <!-- WIS -->
                   <div class="col-6 col-md-2">
@@ -1417,9 +1465,20 @@
                            placeholder="Score" />
                     <input type="number"
                            id="modWis"
-                           class="form-control form-control-sm text-center"
+                           class="form-control form-control-sm text-center mb-1"
                            placeholder="Auto"
                            readonly />
+                    <div class="btn-group btn-group-sm w-100" role="group">
+                      <button type="button" class="btn btn-success p-0 px-1 ability-check-btn" data-ability="Wis" data-roll-type="advantage" title="Roll WIS check with Advantage">
+                        <i class="bi bi-dice-5"></i>
+                      </button>
+                      <button type="button" class="btn btn-primary p-0 px-1 ability-check-btn" data-ability="Wis" data-roll-type="normal" title="Roll WIS check">
+                        <i class="bi bi-dice-5"></i>
+                      </button>
+                      <button type="button" class="btn btn-danger p-0 px-1 ability-check-btn" data-ability="Wis" data-roll-type="disadvantage" title="Roll WIS check with Disadvantage">
+                        <i class="bi bi-dice-5"></i>
+                      </button>
+                    </div>
                   </div>
                   <!-- CHA -->
                   <div class="col-6 col-md-2">
@@ -1430,19 +1489,30 @@
                            placeholder="Score" />
                     <input type="number"
                            id="modCha"
-                           class="form-control form-control-sm text-center"
+                           class="form-control form-control-sm text-center mb-1"
                            placeholder="Auto"
                            readonly />
+                    <div class="btn-group btn-group-sm w-100" role="group">
+                      <button type="button" class="btn btn-success p-0 px-1 ability-check-btn" data-ability="Cha" data-roll-type="advantage" title="Roll CHA check with Advantage">
+                        <i class="bi bi-dice-5"></i>
+                      </button>
+                      <button type="button" class="btn btn-primary p-0 px-1 ability-check-btn" data-ability="Cha" data-roll-type="normal" title="Roll CHA check">
+                        <i class="bi bi-dice-5"></i>
+                      </button>
+                      <button type="button" class="btn btn-danger p-0 px-1 ability-check-btn" data-ability="Cha" data-roll-type="disadvantage" title="Roll CHA check with Disadvantage">
+                        <i class="bi bi-dice-5"></i>
+                      </button>
+                    </div>
                   </div>
                 </div>
               </div>
               </div>
             </div>
 
-            <!-- Checks and Saves -->
+            <!-- Saving Throws -->
             <div class="card bg-dark border-secondary mb-3">
               <div class="card-header border-secondary d-flex justify-content-between align-items-center collapsible-header" data-bs-toggle="collapse" data-bs-target="#collapseSaves" aria-expanded="true" aria-controls="collapseSaves" style="cursor: pointer;">
-                <strong><i class="bi bi-chevron-down me-1 collapse-icon"></i>Checks and Saves</strong>
+                <strong><i class="bi bi-chevron-down me-1 collapse-icon"></i>Saving Throws</strong>
                 <small class="text-muted">Shift+Click = Advantage, Ctrl+Click = Disadvantage</small>
               </div>
               <div class="collapse show" id="collapseSaves">
@@ -2945,36 +3015,36 @@
               </div>
             </div>
 
-            <!-- Abilities Area: STR, DEX, CON, INT, WIS, CHA scores + mods -->
+            <!-- Abilities Area: STR, DEX, CON, INT, WIS, CHA scores + mods (clickable for ability checks) -->
             <div class="combat-area-abilities combat-panel">
-              <div class="combat-section-title"><i class="bi bi-bar-chart"></i> Ability Scores</div>
-              <div class="combat-ability-grid">
-                <div class="combat-ability-box">
+              <div class="combat-section-title"><i class="bi bi-bar-chart"></i> Ability Checks</div>
+              <div class="combat-ability-grid" id="combatAbilityGrid">
+                <div class="combat-ability-box clickable-roll" data-ability="Str" title="Click to roll STR check">
                   <div class="combat-ability-label">STR</div>
                   <div class="combat-ability-mod" id="combatModStr">+0</div>
                   <div class="combat-ability-score" id="combatScoreStr">10</div>
                 </div>
-                <div class="combat-ability-box">
+                <div class="combat-ability-box clickable-roll" data-ability="Dex" title="Click to roll DEX check">
                   <div class="combat-ability-label">DEX</div>
                   <div class="combat-ability-mod" id="combatModDex">+0</div>
                   <div class="combat-ability-score" id="combatScoreDex">10</div>
                 </div>
-                <div class="combat-ability-box">
+                <div class="combat-ability-box clickable-roll" data-ability="Con" title="Click to roll CON check">
                   <div class="combat-ability-label">CON</div>
                   <div class="combat-ability-mod" id="combatModCon">+0</div>
                   <div class="combat-ability-score" id="combatScoreCon">10</div>
                 </div>
-                <div class="combat-ability-box">
+                <div class="combat-ability-box clickable-roll" data-ability="Int" title="Click to roll INT check">
                   <div class="combat-ability-label">INT</div>
                   <div class="combat-ability-mod" id="combatModInt">+0</div>
                   <div class="combat-ability-score" id="combatScoreInt">10</div>
                 </div>
-                <div class="combat-ability-box">
+                <div class="combat-ability-box clickable-roll" data-ability="Wis" title="Click to roll WIS check">
                   <div class="combat-ability-label">WIS</div>
                   <div class="combat-ability-mod" id="combatModWis">+0</div>
                   <div class="combat-ability-score" id="combatScoreWis">10</div>
                 </div>
-                <div class="combat-ability-box">
+                <div class="combat-ability-box clickable-roll" data-ability="Cha" title="Click to roll CHA check">
                   <div class="combat-ability-label">CHA</div>
                   <div class="combat-ability-mod" id="combatModCha">+0</div>
                   <div class="combat-ability-score" id="combatScoreCha">10</div>
@@ -2984,7 +3054,7 @@
 
             <!-- Saves Area: Saving throw bonuses -->
             <div class="combat-area-saves combat-panel">
-              <div class="combat-section-title"><i class="bi bi-shield-check"></i> Saves & Checks</div>
+              <div class="combat-section-title"><i class="bi bi-shield-check"></i> Saving Throws</div>
               <div class="combat-saves-grid" id="combatSavesGrid">
                 <div class="combat-save-box clickable-roll" id="combatSaveStrBox" data-ability="Str" title="Click to roll STR save">
                   <div class="combat-save-label">STR</div>
@@ -3094,7 +3164,7 @@
 
           <!-- Center: Logo -->
           <div class="col-12 col-md-4 text-center mb-2 mb-md-0">
-            <img src="/images/White logo - no background.png" height="40" alt="Logo" class="footer-logo">
+            <img src="/images/White logo MM- no background.png" height="40" alt="Logo" class="footer-logo">
           </div>
 
           <!-- Right: Social Links + Settings -->
@@ -5030,6 +5100,76 @@
         }
       }
 
+      // Roll ability check from combat view (uses modifier only, not save proficiency)
+      function rollCombatAbilityCheck(ability) {
+        try {
+          const modValue = document.getElementById(`mod${ability}`)?.value || '0';
+          const modifier = parseInt(modValue, 10) || 0;
+
+          const roll = rollDie(20);
+          const total = roll + modifier;
+          const isCrit = roll === 20;
+          const isFumble = roll === 1;
+
+          const modStr = modifier >= 0 ? `+${modifier}` : String(modifier);
+          const abilityName = {
+            'Str': 'Strength', 'Dex': 'Dexterity', 'Con': 'Constitution',
+            'Int': 'Intelligence', 'Wis': 'Wisdom', 'Cha': 'Charisma'
+          }[ability] || ability;
+
+          // Try to add to roll history (optional)
+          try {
+            if (typeof window.addToRollHistory === 'function') {
+              window.addToRollHistory({
+                notation: '1d20',
+                description: `${abilityName} Check`,
+                rolls: [roll],
+                modifier: modifier,
+                total: total,
+                timestamp: new Date().toISOString(),
+                isCritical: isCrit,
+                isFumble: isFumble
+              });
+            }
+          } catch (e) { /* ignore history errors */ }
+
+          // Try to show toast, fallback to alert
+          let toastShown = false;
+          try {
+            if (typeof window.showRollToast === 'function') {
+              let extra = null;
+              if (isCrit) extra = 'Natural 20!';
+              if (isFumble) extra = 'Natural 1!';
+              window.showRollToast(`${abilityName} Check`, total, extra);
+              toastShown = true;
+            }
+          } catch (e) { /* ignore toast errors */ }
+
+          if (!toastShown) {
+            let result = `${abilityName} Check: ${total}\n(d20: ${roll} ${modStr})`;
+            if (isCrit) result += '\nNatural 20!';
+            if (isFumble) result += '\nNatural 1!';
+            alert(result);
+          }
+
+          // Update the ability box to show the result briefly
+          const abilityBox = document.querySelector(`.combat-ability-box[data-ability="${ability}"]`);
+          if (abilityBox) {
+            const modEl = abilityBox.querySelector('.combat-ability-mod');
+            const originalText = modEl?.textContent;
+            if (modEl) {
+              modEl.innerHTML = `<span class="${isCrit ? 'text-success' : isFumble ? 'text-danger' : ''}">${total}</span>`;
+              setTimeout(() => {
+                modEl.textContent = originalText;
+              }, 2000);
+            }
+          }
+        } catch (err) {
+          console.error('Error rolling ability check:', err);
+          alert('Error rolling ability check. Check console for details.');
+        }
+      }
+
       // Roll initiative from combat view
       function rollCombatInitiative() {
         try {
@@ -5152,6 +5292,26 @@
         });
       } else {
         console.warn('combatSavesGrid not found');
+      }
+
+      // Event delegation for ability check boxes (using grid container)
+      const combatAbilityGrid = document.getElementById('combatAbilityGrid');
+      if (combatAbilityGrid) {
+        combatAbilityGrid.addEventListener('click', function(e) {
+          try {
+            const abilityBox = e.target.closest('.combat-ability-box');
+            if (abilityBox) {
+              const ability = abilityBox.dataset.ability;
+              if (ability) {
+                rollCombatAbilityCheck(ability);
+              }
+            }
+          } catch (err) {
+            console.error('Error in ability check box click:', err);
+          }
+        });
+      } else {
+        console.warn('combatAbilityGrid not found');
       }
 
       // ========================================

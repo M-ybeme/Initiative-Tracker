@@ -372,6 +372,11 @@ main.content {
   margin-top: 4rem;
 }
 
+/* Content Pack Manager modal */
+.content-pack-modal .modal-dialog {
+  margin-top: 5rem;
+}
+
 @media (max-width: 576px) {
   #characterCreationModal .modal-dialog,
   #characterWizardModal .modal-dialog,

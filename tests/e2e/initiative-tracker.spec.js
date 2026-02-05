@@ -150,6 +150,13 @@ test.describe('Initiative Tracker', () => {
 
   test.describe('View Options', () => {
     test('quick help button opens offcanvas', async ({ page }) => {
+      // Close any open offcanvas first by clicking the backdrop if visible
+      const backdrop = page.locator('.offcanvas-backdrop');
+      if (await backdrop.isVisible()) {
+        await backdrop.click();
+        await page.waitForTimeout(500);
+      }
+
       await page.locator('#helpBtn').click();
       await expect(page.locator('#helpCanvas')).toBeVisible();
     });

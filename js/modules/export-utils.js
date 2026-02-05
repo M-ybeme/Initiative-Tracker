@@ -7,10 +7,10 @@
 import { getAbilityModifier, getProficiencyBonus } from './character-calculations.js';
 
 const EXPORT_LICENSE_PHRASE = 'Creative Commons Attribution 4.0 International License';
-const SRD_PDF_URL = 'https://media.wizards.com/2016/downloads/DND/SRD-OGL_V5.1.pdf';
+const SRD_PDF_URL = 'https://www.dndbeyond.com/attachments/39j2li89/SRD5.2-CreativeCommons.pdf';
 const EXPORT_LICENSE_DEFAULTS = {
-  attributionText: 'This work includes material from the System Reference Document 5.1 by Wizards of the Coast LLC and is licensed for our use under the Creative Commons Attribution 4.0 International License.',
-  productIdentityDisclaimer: 'The DM\'s Toolbox references rules and mechanics from the Dungeons & Dragons 5e System Reference Document 5.1. Wizards of the Coast, Dungeons & Dragons, Forgotten Realms, Ravenloft, Eberron, the dragon ampersand, beholders, githyanki, githzerai, mind flayers, yuan-ti, and all other Wizards of the Coast product identity are trademarks of Wizards of the Coast LLC in the U.S.A. and other countries. The DM\'s Toolbox is not affiliated with, endorsed, sponsored, or specifically approved by Wizards of the Coast LLC.',
+  attributionText: 'This work includes material from the System Reference Document 5.2 by Wizards of the Coast LLC and is licensed for our use under the Creative Commons Attribution 4.0 International License.',
+  productIdentityDisclaimer: 'The DM\'s Toolbox references rules and mechanics from the Dungeons & Dragons 5e System Reference Document 5.2. Wizards of the Coast, Dungeons & Dragons, Forgotten Realms, Ravenloft, Eberron, the dragon ampersand, beholders, githyanki, githzerai, mind flayers, yuan-ti, and all other Wizards of the Coast product identity are trademarks of Wizards of the Coast LLC in the U.S.A. and other countries. The DM\'s Toolbox is not affiliated with, endorsed, sponsored, or specifically approved by Wizards of the Coast LLC.',
   licenseUrl: 'https://creativecommons.org/licenses/by/4.0/',
   srdUrl: SRD_PDF_URL
 };
@@ -38,7 +38,7 @@ function buildPlainTextLicenseBlock() {
     lines.push(`License: ${info.licenseUrl}`);
   }
   if (info.srdUrl) {
-    lines.push(`SRD 5.1 PDF: ${info.srdUrl}`);
+    lines.push(`SRD 5.2 PDF: ${info.srdUrl}`);
   }
   lines.push(info.productIdentityDisclaimer);
   return lines.join('\n');
@@ -48,7 +48,7 @@ function buildMarkdownLicenseBlock() {
   const info = getExportLicenseInfo();
   const lines = ['---', '## License & Attribution', formatMarkdownAttribution(info)];
   if (info.srdUrl) {
-    lines.push('', `[SRD 5.1 Reference PDF](${info.srdUrl})`);
+    lines.push('', `[SRD 5.2 Reference PDF](${info.srdUrl})`);
   }
   lines.push('', info.productIdentityDisclaimer);
   return lines.join('\n');

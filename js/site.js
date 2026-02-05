@@ -1,14 +1,14 @@
 const DM_TOOLBOX_BUILD = {
   name: "The DM's Toolbox",
-  version: "2.0.8",
+  version: "2.0.8.1",
   recentChanges: [
+    "Content packs can now add subraces, fighting styles, pact boons, invocations, and metamagic",
+    "Content packs now properly unlock non-SRD subraces, races, and other content",
+    "Fixed data restoration when toggling content packs on/off",
+    "SRD 5.2 compliance overhaul – allowlist updated to match 2024 PHB rules",
     "Fog shape rotation – drag the orange handle to rotate rectangle/square fog shapes",
     "Footer settings button for mobile access to diagnostics panel",
-    "Export/Import All Data buttons for complete backup and restoration",
-    "SRD 5.2 compliance overhaul – allowlist updated to match 2024 PHB rules",
-    "Fog of war shapes can now be rotated by dragging the orange handle",
-    "Fixed bug where some content pack features were not properly gated by SRD allowlist",
-    "Mass Export/Import options added to Debug Panel and Button added to Footer for easier access on mobile"
+    "Export/Import All Data buttons for complete backup and restoration"
   ],
   buildTime: new Date().toISOString(),
   author: "Maybeme"
@@ -110,6 +110,75 @@ if (typeof IndexedDBStorage !== 'undefined' && IndexedDBStorage.isSupported()) {
 }
 
 (function initSrdGatingRuntime() {
+  // Backup storage for original data - allows restoration when packs change
+  let dataBackups = null;
+
+  function createDataBackups() {
+    if (dataBackups) return; // Already created
+
+    dataBackups = {
+      SPELLS_DATA: window.SPELLS_DATA ? JSON.parse(JSON.stringify(window.SPELLS_DATA)) : null,
+      LevelUpData: {}
+    };
+
+    const data = window.LevelUpData;
+    if (data) {
+      // Deep copy all data structures that get pruned
+      if (data.FEATS) dataBackups.LevelUpData.FEATS = JSON.parse(JSON.stringify(data.FEATS));
+      if (data.CLASS_DATA) dataBackups.LevelUpData.CLASS_DATA = JSON.parse(JSON.stringify(data.CLASS_DATA));
+      if (data.SUBCLASS_DATA) dataBackups.LevelUpData.SUBCLASS_DATA = JSON.parse(JSON.stringify(data.SUBCLASS_DATA));
+      if (data.CLASS_RESOURCES) dataBackups.LevelUpData.CLASS_RESOURCES = JSON.parse(JSON.stringify(data.CLASS_RESOURCES));
+      if (data.DEFAULT_CLASS_WEAPONS) dataBackups.LevelUpData.DEFAULT_CLASS_WEAPONS = JSON.parse(JSON.stringify(data.DEFAULT_CLASS_WEAPONS));
+      if (data.CLASS_STARTING_GOLD) dataBackups.LevelUpData.CLASS_STARTING_GOLD = JSON.parse(JSON.stringify(data.CLASS_STARTING_GOLD));
+      if (data.CLASS_EQUIPMENT_CHOICES) dataBackups.LevelUpData.CLASS_EQUIPMENT_CHOICES = JSON.parse(JSON.stringify(data.CLASS_EQUIPMENT_CHOICES));
+      if (data.DEFAULT_CLASS_EQUIPMENT) dataBackups.LevelUpData.DEFAULT_CLASS_EQUIPMENT = JSON.parse(JSON.stringify(data.DEFAULT_CLASS_EQUIPMENT));
+      if (data.BACKGROUND_DATA) dataBackups.LevelUpData.BACKGROUND_DATA = JSON.parse(JSON.stringify(data.BACKGROUND_DATA));
+      if (data.FIGHTING_STYLE_DATA) dataBackups.LevelUpData.FIGHTING_STYLE_DATA = JSON.parse(JSON.stringify(data.FIGHTING_STYLE_DATA));
+      if (data.PACT_BOON_DATA) dataBackups.LevelUpData.PACT_BOON_DATA = JSON.parse(JSON.stringify(data.PACT_BOON_DATA));
+      if (data.ELDRITCH_INVOCATION_DATA) dataBackups.LevelUpData.ELDRITCH_INVOCATION_DATA = JSON.parse(JSON.stringify(data.ELDRITCH_INVOCATION_DATA));
+      if (data.METAMAGIC_DATA) dataBackups.LevelUpData.METAMAGIC_DATA = JSON.parse(JSON.stringify(data.METAMAGIC_DATA));
+      if (data.RACE_DATA) dataBackups.LevelUpData.RACE_DATA = JSON.parse(JSON.stringify(data.RACE_DATA));
+      if (data.SUBRACE_DATA) dataBackups.LevelUpData.SUBRACE_DATA = JSON.parse(JSON.stringify(data.SUBRACE_DATA));
+      if (data.BEAST_FORMS) dataBackups.LevelUpData.BEAST_FORMS = JSON.parse(JSON.stringify(data.BEAST_FORMS));
+      if (data.ARTIFICER_INFUSIONS) dataBackups.LevelUpData.ARTIFICER_INFUSIONS = JSON.parse(JSON.stringify(data.ARTIFICER_INFUSIONS));
+    }
+  }
+
+  function restoreFromBackups() {
+    if (!dataBackups) return;
+
+    // Restore spells
+    if (dataBackups.SPELLS_DATA && window.SPELLS_DATA) {
+      window.SPELLS_DATA.length = 0;
+      window.SPELLS_DATA.push(...JSON.parse(JSON.stringify(dataBackups.SPELLS_DATA)));
+    }
+
+    // Restore LevelUpData structures
+    const data = window.LevelUpData;
+    const backup = dataBackups.LevelUpData;
+    if (data && backup) {
+      const keysToRestore = [
+        'FEATS', 'CLASS_DATA', 'SUBCLASS_DATA', 'CLASS_RESOURCES', 'DEFAULT_CLASS_WEAPONS',
+        'CLASS_STARTING_GOLD', 'CLASS_EQUIPMENT_CHOICES', 'DEFAULT_CLASS_EQUIPMENT',
+        'BACKGROUND_DATA', 'FIGHTING_STYLE_DATA', 'PACT_BOON_DATA', 'ELDRITCH_INVOCATION_DATA',
+        'METAMAGIC_DATA', 'RACE_DATA', 'SUBRACE_DATA', 'BEAST_FORMS', 'ARTIFICER_INFUSIONS'
+      ];
+
+      keysToRestore.forEach((key) => {
+        if (backup[key]) {
+          // Clear existing and restore from backup
+          if (Array.isArray(data[key])) {
+            data[key].length = 0;
+            data[key].push(...JSON.parse(JSON.stringify(backup[key])));
+          } else if (typeof data[key] === 'object') {
+            Object.keys(data[key]).forEach((k) => delete data[key][k]);
+            Object.assign(data[key], JSON.parse(JSON.stringify(backup[key])));
+          }
+        }
+      });
+    }
+  }
+
   function filterArrayInPlace(filter, type, arr, selector) {
     if (!Array.isArray(arr)) return;
     const filtered = filter.filterArray(type, arr, selector);
@@ -375,11 +444,31 @@ if (typeof IndexedDBStorage !== 'undefined' && IndexedDBStorage.isSupported()) {
 
     window.addEventListener('dmtoolbox:packs-applied', () => {
       try {
+        // Reset filter to base SRD allowlist, then merge pack allowlists
+        if (filter.resetToBaseAllowlist) {
+          filter.resetToBaseAllowlist();
+        }
+
+        // Merge content pack allowlists into the filter
+        const packManager = window.ContentPackManager;
+        if (packManager && filter.mergePackAllowlist) {
+          const context = packManager.getMergedContext();
+          if (context && context.allowlist) {
+            filter.mergePackAllowlist(context.allowlist);
+          }
+        }
+
+        // Restore original data before re-filtering
+        restoreFromBackups();
+
         // Re-filter all data structures when packs are applied/removed
         pruneSpells(filter);
         pruneLevelUpData(filter);
         // Refresh DOM elements with updated filter state
         refreshSrdNodes(filter);
+
+        // Signal that SRD filtering is complete - content pack runtime can now re-apply records
+        window.dispatchEvent(new CustomEvent('dmtoolbox:srd-filtered'));
       } catch (err) {
         console.warn('SRD gating refresh failed:', err);
       }
@@ -391,6 +480,9 @@ if (typeof IndexedDBStorage !== 'undefined' && IndexedDBStorage.isSupported()) {
     if (!filter) return;
 
     try {
+      // Create backups before first prune so we can restore when packs change
+      createDataBackups();
+
       pruneSpells(filter);
       pruneLevelUpData(filter);
       initSrdDomGating(filter);

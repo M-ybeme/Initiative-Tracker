@@ -513,7 +513,7 @@ class CharacterSheetExporter {
       children.push(new Paragraph({ text: attributionParagraph }));
       children.push(new Paragraph({ text: licenseInfo.productIdentityDisclaimer }));
       if (licenseInfo.srdUrl) {
-        children.push(new Paragraph({ text: `SRD 5.1 Reference PDF: ${licenseInfo.srdUrl}` }));
+        children.push(new Paragraph({ text: `SRD 5.2 Reference PDF: ${licenseInfo.srdUrl}` }));
       }
 
       const doc = new Document({
@@ -1326,7 +1326,7 @@ class CharacterSheetExporter {
     const disclaimer = this.escapeHtml(info.productIdentityDisclaimer);
     const srdUrl = info.srdUrl ? this.escapeHtml(info.srdUrl) : '';
     const srdLink = srdUrl
-      ? `<p style="margin: 0;">SRD 5.1 Reference PDF: <a href="${srdUrl}" target="_blank" rel="noopener noreferrer">Download from Wizards</a></p>`
+      ? `<p style="margin: 0;">SRD 5.2 Reference PDF: <a href="${srdUrl}" target="_blank" rel="noopener noreferrer">Download from Wizards</a></p>`
       : '';
     return `
         <section style="margin-top: 30px; padding-top: 12px; border-top: 1px solid #e2e8f0; font-size: 12px; color: #4a5568; line-height: 1.5;">

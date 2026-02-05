@@ -99,7 +99,7 @@ describe('generateCharacterText', () => {
   it('appends licensing notice to text export', () => {
     const text = generateCharacterText(testCharacter);
     expect(text).toContain('LICENSE & ATTRIBUTION');
-    expect(text).toContain('System Reference Document 5.1');
+    expect(text).toContain('System Reference Document 5.2');
   });
 });
 

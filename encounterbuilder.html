@@ -205,11 +205,14 @@
                 <select id="eb-export-mode" class="form-select">
                   <option value="session" selected>Full Session JSON</option>
                   <option value="append">Append (addCharacters)</option>
+                  <option value="roster">Roster (Full Monster Data)</option>
                 </select>
               </div>
               <div class="col-12 col-lg-5 text-lg-end">
                 <button id="eb-export" class="btn btn-outline-warning me-2"><i class="bi bi-download me-1"></i>Export</button>
-                <button id="eb-clear" class="btn btn-outline-light"><i class="bi bi-trash me-1"></i>Clear</button>
+                <button id="eb-import-roster" class="btn btn-outline-info me-2"><i class="bi bi-upload me-1"></i>Import Roster</button>
+                <input type="file" id="eb-import-roster-file" accept=".json" class="d-none">
+                <button id="eb-clear" class="btn btn-outline-light me-2"><i class="bi bi-trash me-1"></i>Clear</button>
                 <button id="eb-send-to-tracker" class="btn btn-warning"><i class="bi bi-box-arrow-in-right me-1"></i>Send to Tracker</button>
               </div>
             </div>
@@ -248,94 +251,572 @@
             </div>
           </div>
 
-          <!-- Middle: Custom Monster -->
+          <!-- Middle: Custom Monster Creator (Full Stat Block) -->
           <div class="col-12 col-lg-4">
             <div class="card bg-dark border-secondary h-100">
               <div class="card-header fw-semibold d-flex justify-content-between align-items-center">
                 <span><i class="bi bi-plus-circle me-1"></i>Custom Monster</span>
-                <button id="cm-toggle-advanced" class="btn btn-sm btn-outline-info">Simple / Advanced</button>
+                <div class="btn-group btn-group-sm">
+                  <button id="cm-mode-simple" class="btn btn-outline-info active" title="Simple mode">Simple</button>
+                  <button id="cm-mode-full" class="btn btn-outline-info" title="Full stat block mode">Full</button>
+                </div>
               </div>
-              <div class="card-body" style="max-height: 500px; overflow-y: auto;">
-                <!-- Basic Info -->
-                <div class="row g-2">
-                  <div class="col-12"><input id="cm-name" class="form-control" placeholder="Monster Name *"></div>
-                  <div class="col-6">
-                    <select id="cm-size" class="form-select">
-                      <option value="">Size</option>
-                      <option value="Tiny">Tiny</option>
-                      <option value="Small">Small</option>
-                      <option value="Medium" selected>Medium</option>
-                      <option value="Large">Large</option>
-                      <option value="Huge">Huge</option>
-                      <option value="Gargantuan">Gargantuan</option>
-                    </select>
-                  </div>
-                  <div class="col-6"><input id="cm-type" class="form-control" placeholder="Type (e.g., Undead) *"></div>
-                  <div class="col-4"><input id="cm-ac" class="form-control" type="number" placeholder="AC *"></div>
-                  <div class="col-4"><input id="cm-hp" class="form-control" type="number" placeholder="HP *"></div>
-                  <div class="col-4"><input id="cm-speed" class="form-control" placeholder="Speed (30 ft.)"></div>
-                </div>
+              <div class="card-body" style="max-height: 600px; overflow-y: auto;">
 
-                <!-- Advanced Fields (Collapsible) -->
-                <div id="cm-advanced-fields" style="display:none;">
+                <!-- ========== SIMPLE MODE (default) ========== -->
+                <div id="cm-simple-mode">
+                  <div class="row g-2">
+                    <div class="col-12"><input id="cm-name" class="form-control" placeholder="Monster Name *"></div>
+                    <div class="col-6">
+                      <select id="cm-size" class="form-select">
+                        <option value="Tiny">Tiny</option>
+                        <option value="Small">Small</option>
+                        <option value="Medium" selected>Medium</option>
+                        <option value="Large">Large</option>
+                        <option value="Huge">Huge</option>
+                        <option value="Gargantuan">Gargantuan</option>
+                      </select>
+                    </div>
+                    <div class="col-6"><input id="cm-type" class="form-control" placeholder="Type (e.g., Undead) *"></div>
+                    <div class="col-4"><input id="cm-ac" class="form-control" type="number" placeholder="AC *"></div>
+                    <div class="col-4"><input id="cm-hp" class="form-control" type="number" placeholder="HP *"></div>
+                    <div class="col-4"><input id="cm-speed" class="form-control" placeholder="Speed"></div>
+                  </div>
                   <hr class="my-2">
-                  <div class="small text-secondary mb-2">Ability Scores (optional, for reference)</div>
-                  <div class="row g-1">
-                    <div class="col-4"><input id="cm-str" class="form-control form-control-sm" type="number" placeholder="STR"></div>
-                    <div class="col-4"><input id="cm-dex" class="form-control form-control-sm" type="number" placeholder="DEX"></div>
-                    <div class="col-4"><input id="cm-con" class="form-control form-control-sm" type="number" placeholder="CON"></div>
-                    <div class="col-4"><input id="cm-int" class="form-control form-control-sm" type="number" placeholder="INT"></div>
-                    <div class="col-4"><input id="cm-wis" class="form-control form-control-sm" type="number" placeholder="WIS"></div>
-                    <div class="col-4"><input id="cm-cha" class="form-control form-control-sm" type="number" placeholder="CHA"></div>
+                  <div class="mb-2">
+                    <label class="form-label mb-1 small fw-semibold">Actions (one per line)</label>
+                    <textarea id="cm-actions" rows="3" class="form-control form-control-sm" placeholder="Longsword; toHit:+5; damage:1d8+3&#10;Fire Breath; saveDC:15; damage:6d6"></textarea>
+                    <div class="form-text small">Format: <code>Name; toHit:+X; damage:XdX+X</code> or <code>Name; saveDC:X; damage:XdX</code></div>
                   </div>
-                  <div class="row g-1 mt-1">
-                    <div class="col-12"><input id="cm-saves" class="form-control form-control-sm" placeholder="Saving Throws (e.g., Dex +5, Wis +3)"></div>
-                    <div class="col-12"><input id="cm-skills" class="form-control form-control-sm" placeholder="Skills (e.g., Stealth +7, Perception +4)"></div>
-                    <div class="col-12"><input id="cm-senses" class="form-control form-control-sm" placeholder="Senses (e.g., darkvision 60 ft., passive Perception 14)"></div>
+                  <div class="small text-info mb-2">
+                    <i class="bi bi-info-circle"></i> CR auto-calculated. Use <strong>Full</strong> mode for complete stat blocks.
                   </div>
                 </div>
 
+                <!-- ========== FULL MODE (comprehensive stat block) ========== -->
+                <div id="cm-full-mode" style="display:none;">
+
+                  <!-- Collapsible Example Monster Help -->
+                  <div class="mb-3">
+                    <button class="btn btn-sm btn-outline-secondary w-100 d-flex align-items-center justify-content-between" type="button" data-bs-toggle="collapse" data-bs-target="#cmExampleHelp" aria-expanded="false">
+                      <span><i class="bi bi-lightbulb me-2"></i>Example: Full Homebrew Monster</span>
+                      <i class="bi bi-chevron-down"></i>
+                    </button>
+                    <div class="collapse mt-2" id="cmExampleHelp">
+                      <div class="card card-body bg-secondary bg-opacity-25 border-info small" style="max-height: 300px; overflow-y: auto;">
+                        <h6 class="text-info mb-2"><i class="bi bi-bookmark-star me-1"></i>Crystalwing Marauder</h6>
+                        <p class="text-light mb-2">Here's an example homebrew monster using all available fields:</p>
+
+                        <div class="mb-2">
+                          <strong class="text-warning">Basic Info:</strong><br>
+                          <span class="text-light">Name:</span> Crystalwing Marauder<br>
+                          <span class="text-light">Size:</span> Large | <span class="text-light">Type:</span> Monstrosity | <span class="text-light">Subtype:</span> crystalline<br>
+                          <span class="text-light">Alignment:</span> Chaotic Evil | <span class="text-light">CR:</span> 8 | <span class="text-light">Prof Bonus:</span> +3
+                        </div>
+
+                        <div class="mb-2">
+                          <strong class="text-warning">Combat Stats:</strong><br>
+                          <span class="text-light">AC:</span> 17 (natural armor) | <span class="text-light">HP:</span> 136 (13d10+65)<br>
+                          <span class="text-light">Speed:</span> 40 ft. walk, 60 ft. fly, 20 ft. climb
+                        </div>
+
+                        <div class="mb-2">
+                          <strong class="text-warning">Ability Scores:</strong><br>
+                          STR 20 (+5) | DEX 14 (+2) | CON 20 (+5) | INT 8 (-1) | WIS 12 (+1) | CHA 16 (+3)
+                        </div>
+
+                        <div class="mb-2">
+                          <strong class="text-warning">Defenses:</strong><br>
+                          <span class="text-light">Saves:</span> STR, CON, CHA<br>
+                          <span class="text-light">Damage Resistances:</span> cold, lightning<br>
+                          <span class="text-light">Damage Immunities:</span> radiant, poison<br>
+                          <span class="text-light">Condition Immunities:</span> poisoned, frightened
+                        </div>
+
+                        <div class="mb-2">
+                          <strong class="text-warning">Skills & Senses:</strong><br>
+                          <span class="text-light">Skills:</span> Perception, Intimidation<br>
+                          <span class="text-light">Senses:</span> darkvision 120 ft., tremorsense 30 ft.<br>
+                          <span class="text-light">Languages:</span> Primordial, understands Common but can't speak
+                        </div>
+
+                        <div class="mb-2">
+                          <strong class="text-warning">Special Abilities:</strong><br>
+                          <em>Crystalline Body:</em> The marauder sheds bright light in a 10-foot radius and dim light for an additional 10 feet. When it takes damage, creatures within 5 feet must make a DC 15 DEX save or take 7 (2d6) piercing damage from crystal shards.<br>
+                          <em>Magic Resistance:</em> The marauder has advantage on saving throws against spells and other magical effects.
+                        </div>
+
+                        <div class="mb-2">
+                          <strong class="text-warning">Spellcasting (Innate):</strong><br>
+                          <span class="text-light">Ability:</span> Charisma | <span class="text-light">Spell DC:</span> 14 | <span class="text-light">Attack:</span> +6<br>
+                          <span class="text-light">At will:</span> dancing lights, light<br>
+                          <span class="text-light">3/day:</span> chromatic orb, color spray<br>
+                          <span class="text-light">1/day:</span> prismatic spray
+                        </div>
+
+                        <div class="mb-2">
+                          <strong class="text-warning">Actions:</strong><br>
+                          <em>Multiattack:</em> The marauder makes two claw attacks and one bite attack.<br>
+                          <em>Bite:</em> +8 to hit, 2d10+5 piercing plus 2d6 radiant<br>
+                          <em>Claw:</em> +8 to hit, 2d6+5 slashing<br>
+                          <em>Crystal Breath (Recharge 5-6):</em> DC 16 DEX save, 8d6 radiant in 30-ft cone
+                        </div>
+
+                        <div class="mb-2">
+                          <strong class="text-warning">Bonus Actions:</strong><br>
+                          <em>Refract:</em> The marauder bends light around itself, becoming invisible until the start of its next turn or until it attacks.
+                        </div>
+
+                        <div class="mb-2">
+                          <strong class="text-warning">Reactions:</strong><br>
+                          <em>Shatter Shield:</em> When hit by an attack, the marauder can use its reaction to reduce damage by 1d10+5 and force the attacker to make a DC 15 DEX save or be blinded until the end of their next turn.
+                        </div>
+
+                        <div class="mb-2">
+                          <strong class="text-warning">Legendary Actions (3/round):</strong><br>
+                          <em>Detect:</em> (1 action) The marauder makes a Perception check.<br>
+                          <em>Wing Attack:</em> (2 actions) Each creature within 10 feet must succeed on a DC 16 DEX save or take 2d6+5 bludgeoning and be knocked prone. The marauder can then fly up to half its speed.<br>
+                          <em>Blinding Flash:</em> (2 actions) The marauder emits a blinding pulse. Each creature within 30 feet must succeed on a DC 14 CON save or be blinded for 1 minute.
+                        </div>
+
+                        <div class="mb-2">
+                          <strong class="text-warning">Lair Actions (Initiative 20):</strong><br>
+                          • Crystal spikes erupt from the ground. Each creature of the marauder's choice in contact with the ground must succeed on a DC 15 DEX save or take 3d6 piercing damage.<br>
+                          • Light refracts through the lair's crystals. One creature the marauder can see must succeed on a DC 15 WIS save or be charmed until initiative count 20 of the next round.<br>
+                          • The marauder causes a 20-foot-radius area to fill with dazzling prismatic light. Creatures in the area have disadvantage on attack rolls until initiative count 20 of the next round.
+                        </div>
+
+                        <div class="mb-2">
+                          <strong class="text-warning">Regional Effects (1 mile radius):</strong><br>
+                          • Crystal formations sprout from the ground within 1 mile. Moving through these areas costs 2 feet of movement for every 1 foot traveled.<br>
+                          • Light within the region is intensified. Bright light extends 50% further from all sources, and darkness spells require a DC 15 check to cast successfully.<br>
+                          • Creatures that finish a long rest within the region dream of glittering, labyrinthine caves and must succeed on a DC 12 WIS save or gain no benefit from the rest.
+                        </div>
+
+                        <div class="mt-2 pt-2 border-top border-secondary">
+                          <span class="text-info"><i class="bi bi-info-circle me-1"></i>Tip:</span>
+                          <span class="text-light">Not all fields are required! Use only what your monster needs. Simple enemies might just need AC, HP, and a few actions.</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="accordion accordion-flush" id="cmAccordion">
+
+                    <!-- 1. Basic Info -->
+                    <div class="accordion-item bg-dark border-secondary">
+                      <h2 class="accordion-header">
+                        <button class="accordion-button bg-dark text-light small py-2" type="button" data-bs-toggle="collapse" data-bs-target="#cmBasic">
+                          <i class="bi bi-card-heading me-2"></i>Basic Info
+                        </button>
+                      </h2>
+                      <div id="cmBasic" class="accordion-collapse collapse show" data-bs-parent="#cmAccordion">
+                        <div class="accordion-body py-2">
+                          <div class="row g-2">
+                            <div class="col-12"><input id="cm-name-full" class="form-control form-control-sm" placeholder="Monster Name *"></div>
+                            <div class="col-6">
+                              <select id="cm-size-full" class="form-select form-select-sm">
+                                <option value="Tiny">Tiny</option>
+                                <option value="Small">Small</option>
+                                <option value="Medium" selected>Medium</option>
+                                <option value="Large">Large</option>
+                                <option value="Huge">Huge</option>
+                                <option value="Gargantuan">Gargantuan</option>
+                              </select>
+                            </div>
+                            <div class="col-6"><input id="cm-type-full" class="form-control form-control-sm" placeholder="Type (e.g., Fiend)"></div>
+                            <div class="col-6"><input id="cm-subtype" class="form-control form-control-sm" placeholder="Subtype (e.g., devil)"></div>
+                            <div class="col-6">
+                              <select id="cm-alignment" class="form-select form-select-sm">
+                                <option value="">Alignment</option>
+                                <option value="lawful good">Lawful Good</option>
+                                <option value="neutral good">Neutral Good</option>
+                                <option value="chaotic good">Chaotic Good</option>
+                                <option value="lawful neutral">Lawful Neutral</option>
+                                <option value="neutral">Neutral</option>
+                                <option value="chaotic neutral">Chaotic Neutral</option>
+                                <option value="lawful evil">Lawful Evil</option>
+                                <option value="neutral evil">Neutral Evil</option>
+                                <option value="chaotic evil">Chaotic Evil</option>
+                                <option value="unaligned">Unaligned</option>
+                                <option value="any alignment">Any Alignment</option>
+                              </select>
+                            </div>
+                            <div class="col-6">
+                              <select id="cm-cr-override" class="form-select form-select-sm">
+                                <option value="">CR (auto-calc)</option>
+                                <option value="0">CR 0</option>
+                                <option value="0.125">CR 1/8</option>
+                                <option value="0.25">CR 1/4</option>
+                                <option value="0.5">CR 1/2</option>
+                                <option value="1">CR 1</option>
+                                <option value="2">CR 2</option>
+                                <option value="3">CR 3</option>
+                                <option value="4">CR 4</option>
+                                <option value="5">CR 5</option>
+                                <option value="6">CR 6</option>
+                                <option value="7">CR 7</option>
+                                <option value="8">CR 8</option>
+                                <option value="9">CR 9</option>
+                                <option value="10">CR 10</option>
+                                <option value="11">CR 11</option>
+                                <option value="12">CR 12</option>
+                                <option value="13">CR 13</option>
+                                <option value="14">CR 14</option>
+                                <option value="15">CR 15</option>
+                                <option value="16">CR 16</option>
+                                <option value="17">CR 17</option>
+                                <option value="18">CR 18</option>
+                                <option value="19">CR 19</option>
+                                <option value="20">CR 20</option>
+                                <option value="21">CR 21</option>
+                                <option value="22">CR 22</option>
+                                <option value="23">CR 23</option>
+                                <option value="24">CR 24</option>
+                                <option value="25">CR 25</option>
+                                <option value="26">CR 26</option>
+                                <option value="27">CR 27</option>
+                                <option value="28">CR 28</option>
+                                <option value="29">CR 29</option>
+                                <option value="30">CR 30</option>
+                              </select>
+                            </div>
+                            <div class="col-6"><input id="cm-prof-bonus" class="form-control form-control-sm" type="number" placeholder="Prof Bonus (+2)"></div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <!-- 2. Combat Stats -->
+                    <div class="accordion-item bg-dark border-secondary">
+                      <h2 class="accordion-header">
+                        <button class="accordion-button collapsed bg-dark text-light small py-2" type="button" data-bs-toggle="collapse" data-bs-target="#cmCombat">
+                          <i class="bi bi-shield-fill me-2"></i>Combat Stats
+                        </button>
+                      </h2>
+                      <div id="cmCombat" class="accordion-collapse collapse" data-bs-parent="#cmAccordion">
+                        <div class="accordion-body py-2">
+                          <div class="row g-2">
+                            <div class="col-6"><input id="cm-ac-full" class="form-control form-control-sm" type="number" placeholder="AC *"></div>
+                            <div class="col-6"><input id="cm-ac-type" class="form-control form-control-sm" placeholder="AC Type (natural armor)"></div>
+                            <div class="col-6"><input id="cm-hp-full" class="form-control form-control-sm" type="number" placeholder="HP *"></div>
+                            <div class="col-6"><input id="cm-hit-dice" class="form-control form-control-sm" placeholder="Hit Dice (8d10+24)"></div>
+                          </div>
+                          <div class="small text-secondary mt-2 mb-1">Speed</div>
+                          <div class="row g-1">
+                            <div class="col-4"><input id="cm-speed-walk" class="form-control form-control-sm" placeholder="Walk (30)"></div>
+                            <div class="col-4"><input id="cm-speed-fly" class="form-control form-control-sm" placeholder="Fly"></div>
+                            <div class="col-4"><input id="cm-speed-swim" class="form-control form-control-sm" placeholder="Swim"></div>
+                            <div class="col-4"><input id="cm-speed-climb" class="form-control form-control-sm" placeholder="Climb"></div>
+                            <div class="col-4"><input id="cm-speed-burrow" class="form-control form-control-sm" placeholder="Burrow"></div>
+                            <div class="col-4">
+                              <div class="form-check form-check-inline mt-1">
+                                <input class="form-check-input" type="checkbox" id="cm-speed-hover">
+                                <label class="form-check-label small" for="cm-speed-hover">Hover</label>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <!-- 3. Ability Scores -->
+                    <div class="accordion-item bg-dark border-secondary">
+                      <h2 class="accordion-header">
+                        <button class="accordion-button collapsed bg-dark text-light small py-2" type="button" data-bs-toggle="collapse" data-bs-target="#cmAbilities">
+                          <i class="bi bi-bar-chart-fill me-2"></i>Ability Scores
+                        </button>
+                      </h2>
+                      <div id="cmAbilities" class="accordion-collapse collapse" data-bs-parent="#cmAccordion">
+                        <div class="accordion-body py-2">
+                          <div class="row g-1 text-center">
+                            <div class="col-2">
+                              <div class="small text-secondary">STR</div>
+                              <input id="cm-str" class="form-control form-control-sm text-center" type="number" placeholder="10">
+                              <div class="small text-muted" id="cm-str-mod">(+0)</div>
+                            </div>
+                            <div class="col-2">
+                              <div class="small text-secondary">DEX</div>
+                              <input id="cm-dex" class="form-control form-control-sm text-center" type="number" placeholder="10">
+                              <div class="small text-muted" id="cm-dex-mod">(+0)</div>
+                            </div>
+                            <div class="col-2">
+                              <div class="small text-secondary">CON</div>
+                              <input id="cm-con" class="form-control form-control-sm text-center" type="number" placeholder="10">
+                              <div class="small text-muted" id="cm-con-mod">(+0)</div>
+                            </div>
+                            <div class="col-2">
+                              <div class="small text-secondary">INT</div>
+                              <input id="cm-int" class="form-control form-control-sm text-center" type="number" placeholder="10">
+                              <div class="small text-muted" id="cm-int-mod">(+0)</div>
+                            </div>
+                            <div class="col-2">
+                              <div class="small text-secondary">WIS</div>
+                              <input id="cm-wis" class="form-control form-control-sm text-center" type="number" placeholder="10">
+                              <div class="small text-muted" id="cm-wis-mod">(+0)</div>
+                            </div>
+                            <div class="col-2">
+                              <div class="small text-secondary">CHA</div>
+                              <input id="cm-cha" class="form-control form-control-sm text-center" type="number" placeholder="10">
+                              <div class="small text-muted" id="cm-cha-mod">(+0)</div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <!-- 4. Proficiencies -->
+                    <div class="accordion-item bg-dark border-secondary">
+                      <h2 class="accordion-header">
+                        <button class="accordion-button collapsed bg-dark text-light small py-2" type="button" data-bs-toggle="collapse" data-bs-target="#cmProficiencies">
+                          <i class="bi bi-award-fill me-2"></i>Saves & Skills
+                        </button>
+                      </h2>
+                      <div id="cmProficiencies" class="accordion-collapse collapse" data-bs-parent="#cmAccordion">
+                        <div class="accordion-body py-2">
+                          <div class="small text-secondary mb-1">Saving Throws</div>
+                          <input id="cm-saves" class="form-control form-control-sm mb-2" placeholder="Dex +5, Con +8, Wis +6">
+                          <div class="small text-secondary mb-1">Skills</div>
+                          <input id="cm-skills" class="form-control form-control-sm" placeholder="Perception +6, Stealth +5">
+                        </div>
+                      </div>
+                    </div>
+
+                    <!-- 5. Defenses -->
+                    <div class="accordion-item bg-dark border-secondary">
+                      <h2 class="accordion-header">
+                        <button class="accordion-button collapsed bg-dark text-light small py-2" type="button" data-bs-toggle="collapse" data-bs-target="#cmDefenses">
+                          <i class="bi bi-shield-check me-2"></i>Defenses
+                        </button>
+                      </h2>
+                      <div id="cmDefenses" class="accordion-collapse collapse" data-bs-parent="#cmAccordion">
+                        <div class="accordion-body py-2">
+                          <div class="row g-2">
+                            <div class="col-12">
+                              <label class="small text-secondary">Damage Vulnerabilities</label>
+                              <input id="cm-vulnerabilities" class="form-control form-control-sm" placeholder="radiant">
+                            </div>
+                            <div class="col-12">
+                              <label class="small text-secondary">Damage Resistances</label>
+                              <input id="cm-resistances" class="form-control form-control-sm" placeholder="cold, lightning; bludgeoning from nonmagical attacks">
+                            </div>
+                            <div class="col-12">
+                              <label class="small text-secondary">Damage Immunities</label>
+                              <input id="cm-damage-immunities" class="form-control form-control-sm" placeholder="fire, poison">
+                            </div>
+                            <div class="col-12">
+                              <label class="small text-secondary">Condition Immunities</label>
+                              <input id="cm-condition-immunities" class="form-control form-control-sm" placeholder="charmed, frightened, poisoned">
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <!-- 6. Senses & Languages -->
+                    <div class="accordion-item bg-dark border-secondary">
+                      <h2 class="accordion-header">
+                        <button class="accordion-button collapsed bg-dark text-light small py-2" type="button" data-bs-toggle="collapse" data-bs-target="#cmSenses">
+                          <i class="bi bi-eye-fill me-2"></i>Senses & Languages
+                        </button>
+                      </h2>
+                      <div id="cmSenses" class="accordion-collapse collapse" data-bs-parent="#cmAccordion">
+                        <div class="accordion-body py-2">
+                          <div class="row g-2">
+                            <div class="col-12"><input id="cm-senses" class="form-control form-control-sm" placeholder="darkvision 120 ft., blindsight 30 ft., passive Perception 16"></div>
+                            <div class="col-12"><input id="cm-languages" class="form-control form-control-sm" placeholder="Common, Infernal, telepathy 120 ft."></div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <!-- 7. Spellcasting -->
+                    <div class="accordion-item bg-dark border-secondary">
+                      <h2 class="accordion-header">
+                        <button class="accordion-button collapsed bg-dark text-light small py-2" type="button" data-bs-toggle="collapse" data-bs-target="#cmSpellcasting">
+                          <i class="bi bi-stars me-2"></i>Spellcasting
+                        </button>
+                      </h2>
+                      <div id="cmSpellcasting" class="accordion-collapse collapse" data-bs-parent="#cmAccordion">
+                        <div class="accordion-body py-2">
+                          <div class="row g-2">
+                            <div class="col-6">
+                              <select id="cm-spell-ability" class="form-select form-select-sm">
+                                <option value="">Spellcasting Ability</option>
+                                <option value="int">Intelligence</option>
+                                <option value="wis">Wisdom</option>
+                                <option value="cha">Charisma</option>
+                              </select>
+                            </div>
+                            <div class="col-3"><input id="cm-spell-dc" class="form-control form-control-sm" type="number" placeholder="DC"></div>
+                            <div class="col-3"><input id="cm-spell-atk" class="form-control form-control-sm" placeholder="+Atk"></div>
+                            <div class="col-12">
+                              <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="cm-innate-spellcasting">
+                                <label class="form-check-label small" for="cm-innate-spellcasting">Innate Spellcasting (no slots/components)</label>
+                              </div>
+                            </div>
+                            <div class="col-12">
+                              <label class="small text-secondary">Cantrips (at will)</label>
+                              <input id="cm-cantrips" class="form-control form-control-sm" placeholder="fire bolt, mage hand, minor illusion">
+                            </div>
+                            <div class="col-12">
+                              <label class="small text-secondary">Spells (one level per line: "1st (4 slots): spell, spell")</label>
+                              <textarea id="cm-spells" rows="4" class="form-control form-control-sm" placeholder="1st (4 slots): burning hands, shield&#10;2nd (3 slots): hold person, misty step&#10;3rd (2 slots): counterspell, fireball"></textarea>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <!-- 8. Special Abilities / Traits -->
+                    <div class="accordion-item bg-dark border-secondary">
+                      <h2 class="accordion-header">
+                        <button class="accordion-button collapsed bg-dark text-light small py-2" type="button" data-bs-toggle="collapse" data-bs-target="#cmTraits">
+                          <i class="bi bi-gem me-2"></i>Traits / Special Abilities
+                        </button>
+                      </h2>
+                      <div id="cmTraits" class="accordion-collapse collapse" data-bs-parent="#cmAccordion">
+                        <div class="accordion-body py-2">
+                          <textarea id="cm-special" rows="4" class="form-control form-control-sm" placeholder="Magic Resistance: Advantage on saving throws against spells.&#10;&#10;Pack Tactics: Advantage on attack rolls if an ally is within 5 ft."></textarea>
+                          <div class="form-text small">Format: <code>Name: Description</code> (one per paragraph, blank line between)</div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <!-- 9. Actions -->
+                    <div class="accordion-item bg-dark border-secondary">
+                      <h2 class="accordion-header">
+                        <button class="accordion-button collapsed bg-dark text-light small py-2" type="button" data-bs-toggle="collapse" data-bs-target="#cmActions">
+                          <i class="bi bi-lightning-charge-fill me-2"></i>Actions
+                        </button>
+                      </h2>
+                      <div id="cmActions" class="accordion-collapse collapse" data-bs-parent="#cmAccordion">
+                        <div class="accordion-body py-2">
+                          <textarea id="cm-actions-full" rows="5" class="form-control form-control-sm" placeholder="Multiattack: The dragon makes three attacks: one bite and two claws.&#10;&#10;Bite; toHit:+11; damage:2d10+6; type:piercing&#10;&#10;Fire Breath (Recharge 5-6); saveDC:18; damage:12d6; type:fire; area:60 ft. cone"></textarea>
+                          <div class="form-text small">
+                            Attack format: <code>Name; toHit:+X; damage:XdX+X; type:slashing</code><br>
+                            Save format: <code>Name; saveDC:X; damage:XdX; type:fire</code><br>
+                            Optional: <code>range:X ft.</code>, <code>reach:X ft.</code>, <code>area:X</code>, <code>attacks:X</code>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <!-- 10. Bonus Actions -->
+                    <div class="accordion-item bg-dark border-secondary">
+                      <h2 class="accordion-header">
+                        <button class="accordion-button collapsed bg-dark text-light small py-2" type="button" data-bs-toggle="collapse" data-bs-target="#cmBonusActions">
+                          <i class="bi bi-plus-circle-fill me-2"></i>Bonus Actions
+                        </button>
+                      </h2>
+                      <div id="cmBonusActions" class="accordion-collapse collapse" data-bs-parent="#cmAccordion">
+                        <div class="accordion-body py-2">
+                          <textarea id="cm-bonus-actions" rows="2" class="form-control form-control-sm" placeholder="Nimble Escape: The goblin can Disengage or Hide as a bonus action."></textarea>
+                        </div>
+                      </div>
+                    </div>
+
+                    <!-- 11. Reactions -->
+                    <div class="accordion-item bg-dark border-secondary">
+                      <h2 class="accordion-header">
+                        <button class="accordion-button collapsed bg-dark text-light small py-2" type="button" data-bs-toggle="collapse" data-bs-target="#cmReactions">
+                          <i class="bi bi-arrow-repeat me-2"></i>Reactions
+                        </button>
+                      </h2>
+                      <div id="cmReactions" class="accordion-collapse collapse" data-bs-parent="#cmAccordion">
+                        <div class="accordion-body py-2">
+                          <textarea id="cm-reactions" rows="2" class="form-control form-control-sm" placeholder="Parry: The gladiator adds 3 to its AC against one melee attack."></textarea>
+                        </div>
+                      </div>
+                    </div>
+
+                    <!-- 12. Legendary Actions -->
+                    <div class="accordion-item bg-dark border-secondary">
+                      <h2 class="accordion-header">
+                        <button class="accordion-button collapsed bg-dark text-light small py-2" type="button" data-bs-toggle="collapse" data-bs-target="#cmLegendary">
+                          <i class="bi bi-trophy-fill me-2"></i>Legendary Actions
+                        </button>
+                      </h2>
+                      <div id="cmLegendary" class="accordion-collapse collapse" data-bs-parent="#cmAccordion">
+                        <div class="accordion-body py-2">
+                          <div class="row g-2">
+                            <div class="col-12">
+                              <input id="cm-legendary-count" class="form-control form-control-sm" type="number" placeholder="Legendary Actions per Round (3)" value="3">
+                            </div>
+                            <div class="col-12">
+                              <textarea id="cm-legendary" rows="3" class="form-control form-control-sm" placeholder="Detect: The dragon makes a Wisdom (Perception) check.&#10;&#10;Tail Attack (Costs 2 Actions): The dragon makes a tail attack.&#10;&#10;Wing Attack (Costs 2 Actions): Each creature within 10 ft. must succeed on a DC 19 DEX save or take 2d6+6 bludgeoning damage."></textarea>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <!-- 13. Mythic Actions -->
+                    <div class="accordion-item bg-dark border-secondary">
+                      <h2 class="accordion-header">
+                        <button class="accordion-button collapsed bg-dark text-light small py-2" type="button" data-bs-toggle="collapse" data-bs-target="#cmMythic">
+                          <i class="bi bi-star-fill me-2"></i>Mythic Actions
+                        </button>
+                      </h2>
+                      <div id="cmMythic" class="accordion-collapse collapse" data-bs-parent="#cmAccordion">
+                        <div class="accordion-body py-2">
+                          <textarea id="cm-mythic-trait" rows="2" class="form-control form-control-sm mb-2" placeholder="Mythic Trait Name: When reduced to 0 HP, the creature regains 200 HP and its mythic trait activates."></textarea>
+                          <label class="small text-secondary">Mythic Actions (available when mythic trait is active)</label>
+                          <textarea id="cm-mythic-actions" rows="2" class="form-control form-control-sm" placeholder="Mythic Slam (Costs 2 Actions): The creature makes a devastating slam attack."></textarea>
+                        </div>
+                      </div>
+                    </div>
+
+                    <!-- 14. Lair Actions -->
+                    <div class="accordion-item bg-dark border-secondary">
+                      <h2 class="accordion-header">
+                        <button class="accordion-button collapsed bg-dark text-light small py-2" type="button" data-bs-toggle="collapse" data-bs-target="#cmLair">
+                          <i class="bi bi-house-fill me-2"></i>Lair Actions
+                        </button>
+                      </h2>
+                      <div id="cmLair" class="accordion-collapse collapse" data-bs-parent="#cmAccordion">
+                        <div class="accordion-body py-2">
+                          <textarea id="cm-lair-actions" rows="3" class="form-control form-control-sm" placeholder="On initiative count 20 (losing ties), the dragon takes a lair action:&#10;• Magma erupts from a point the dragon can see within 120 feet.&#10;• Volcanic gases form a cloud in a 20-foot radius sphere."></textarea>
+                        </div>
+                      </div>
+                    </div>
+
+                    <!-- 15. Regional Effects -->
+                    <div class="accordion-item bg-dark border-secondary">
+                      <h2 class="accordion-header">
+                        <button class="accordion-button collapsed bg-dark text-light small py-2" type="button" data-bs-toggle="collapse" data-bs-target="#cmRegional">
+                          <i class="bi bi-globe-americas me-2"></i>Regional Effects
+                        </button>
+                      </h2>
+                      <div id="cmRegional" class="accordion-collapse collapse" data-bs-parent="#cmAccordion">
+                        <div class="accordion-body py-2">
+                          <textarea id="cm-regional-effects" rows="3" class="form-control form-control-sm" placeholder="The region containing the dragon's lair is warped by its presence:&#10;• Small earthquakes are common within 6 miles.&#10;• Water sources within 1 mile are supernaturally warm."></textarea>
+                        </div>
+                      </div>
+                    </div>
+
+                    <!-- 16. Description & Notes -->
+                    <div class="accordion-item bg-dark border-secondary">
+                      <h2 class="accordion-header">
+                        <button class="accordion-button collapsed bg-dark text-light small py-2" type="button" data-bs-toggle="collapse" data-bs-target="#cmNotes">
+                          <i class="bi bi-journal-text me-2"></i>Description & Notes
+                        </button>
+                      </h2>
+                      <div id="cmNotes" class="accordion-collapse collapse" data-bs-parent="#cmAccordion">
+                        <div class="accordion-body py-2">
+                          <textarea id="cm-description" rows="2" class="form-control form-control-sm mb-2" placeholder="Physical description, lore, personality..."></textarea>
+                          <textarea id="cm-notes" rows="2" class="form-control form-control-sm" placeholder="DM notes, tactics, encounter ideas..."></textarea>
+                        </div>
+                      </div>
+                    </div>
+
+                  </div><!-- /accordion -->
+                </div><!-- /full-mode -->
+
                 <hr class="my-2">
 
-                <!-- Special Abilities -->
-                <div class="mb-2">
-                  <label class="form-label mb-1 small fw-semibold">Special Abilities (one per line)</label>
-                  <textarea id="cm-special" rows="2" class="form-control form-control-sm" placeholder="Name: Description&#10;Pack Tactics: Advantage on attack rolls if ally is within 5 ft. of target."></textarea>
-                </div>
-
-                <!-- Actions -->
-                <div class="mb-2">
-                  <label class="form-label mb-1 small fw-semibold">Actions (one per line)</label>
-                  <textarea id="cm-actions" rows="3" class="form-control form-control-sm" placeholder="Longsword; toHit:+5; damage:1d8+3; attacks:1&#10;Fire Breath; saveDC:15; damage:6d6; targets:3"></textarea>
-                  <div class="form-text small">Format: <code>Name; toHit:+X; damage:XdX+X</code> or <code>Name; saveDC:X; damage:XdX</code><br>
-                  Optional: <code>attacks:X</code>, <code>targets:X</code>, <code>avg:X</code></div>
-                </div>
-
-                <!-- Reactions -->
-                <div class="mb-2">
-                  <label class="form-label mb-1 small fw-semibold">Reactions (one per line, optional)</label>
-                  <textarea id="cm-reactions" rows="2" class="form-control form-control-sm" placeholder="Name: Description&#10;Parry: +2 AC against one melee attack."></textarea>
-                </div>
-
-                <!-- Legendary Actions -->
-                <div class="mb-2">
-                  <label class="form-label mb-1 small fw-semibold">Legendary Actions (one per line, optional)</label>
-                  <textarea id="cm-legendary" rows="2" class="form-control form-control-sm" placeholder="Name: Description&#10;Tail Attack: Makes one tail attack."></textarea>
-                </div>
-
-                <!-- Notes -->
-                <div class="mb-2">
-                  <label class="form-label mb-1 small fw-semibold">Notes (optional)</label>
-                  <textarea id="cm-notes" rows="1" class="form-control form-control-sm" placeholder="Additional DM notes..."></textarea>
-                </div>
-
-                <hr class="my-2">
-
-                <!-- CR Auto-calc info -->
-                <div class="small text-info mb-2">
-                  <i class="bi bi-info-circle"></i> CR will be auto-calculated when you add the monster based on HP, AC, and actions.
-                </div>
-
+                <!-- Add/Clear Buttons -->
                 <div class="d-flex justify-content-between gap-2">
                   <button id="cm-add" class="btn btn-sm btn-success flex-grow-1"><i class="bi bi-cart-plus me-1"></i>Add to Encounter</button>
                   <button id="cm-clear" class="btn btn-sm btn-outline-secondary">Clear</button>
@@ -343,16 +824,17 @@
 
                 <hr class="my-2">
 
+                <!-- JSON Import (collapsed) -->
                 <div class="accordion accordion-flush" id="jsonAccordion">
                   <div class="accordion-item bg-dark border-secondary">
                     <h2 class="accordion-header">
-                      <button class="accordion-button collapsed bg-dark text-light small" type="button" data-bs-toggle="collapse" data-bs-target="#jsonCollapse">
-                        Or paste Monster JSON
+                      <button class="accordion-button collapsed bg-dark text-light small py-2" type="button" data-bs-toggle="collapse" data-bs-target="#jsonCollapse">
+                        <i class="bi bi-code-slash me-2"></i>Import from JSON
                       </button>
                     </h2>
                     <div id="jsonCollapse" class="accordion-collapse collapse" data-bs-parent="#jsonAccordion">
-                      <div class="accordion-body">
-                        <textarea id="cm-json" rows="4" class="form-control small" placeholder='{"name":"Shadow","type":"Undead","ac":12,"hp":16,"actions":[{"name":"Strength Drain","toHit":4,"damage":"2d6"}]}'></textarea>
+                      <div class="accordion-body py-2">
+                        <textarea id="cm-json" rows="4" class="form-control form-control-sm" placeholder='Single monster or array: {"name":"Shadow","type":"Undead","ac":12,"hp":16} or [{"name":"Wolf","ac":13,"hp":11}, ...]'></textarea>
                         <button id="cm-json-add" class="btn btn-sm btn-outline-info mt-2">Add JSON</button>
                       </div>
                     </div>
@@ -394,7 +876,7 @@
 
           <!-- Center: Logo -->
           <div class="col-12 col-md-4 text-center mb-2 mb-md-0">
-            <img src="/images/White logo - no background.png" height="40" alt="Logo" class="footer-logo">
+            <img src="/images/White logo MM- no background.png" height="40" alt="Logo" class="footer-logo">
           </div>
 
           <!-- Right: Social Links + Settings -->
@@ -1161,42 +1643,177 @@
       });
     }
 
+    // Check which mode is active (Simple or Full)
+    function isFullMode() {
+      return $('#cm-full-mode').style.display !== 'none';
+    }
+
+    // Build speed string from individual fields
+    function buildSpeedString() {
+      const parts = [];
+      const walk = $('#cm-speed-walk')?.value?.trim();
+      const fly = $('#cm-speed-fly')?.value?.trim();
+      const swim = $('#cm-speed-swim')?.value?.trim();
+      const climb = $('#cm-speed-climb')?.value?.trim();
+      const burrow = $('#cm-speed-burrow')?.value?.trim();
+      const hover = $('#cm-speed-hover')?.checked;
+
+      if (walk) parts.push(`${walk} ft.`);
+      if (fly) parts.push(`fly ${fly} ft.${hover ? ' (hover)' : ''}`);
+      if (swim) parts.push(`swim ${swim} ft.`);
+      if (climb) parts.push(`climb ${climb} ft.`);
+      if (burrow) parts.push(`burrow ${burrow} ft.`);
+
+      return parts.join(', ') || '30 ft.';
+    }
+
+    // Build spellcasting object from form fields
+    function buildSpellcasting() {
+      const ability = $('#cm-spell-ability')?.value;
+      const dc = $('#cm-spell-dc')?.value?.trim();
+      const atk = $('#cm-spell-atk')?.value?.trim();
+      const innate = $('#cm-innate-spellcasting')?.checked;
+      const cantrips = $('#cm-cantrips')?.value?.trim();
+      const spells = $('#cm-spells')?.value?.trim();
+
+      if (!ability && !dc && !cantrips && !spells) return null;
+
+      return {
+        ability: ability || undefined,
+        dc: dc ? Number(dc) : undefined,
+        attack: atk ? Number(atk) : undefined,
+        innate: innate || undefined,
+        cantrips: cantrips || undefined,
+        spells: spells || undefined
+      };
+    }
+
     function readCustomForm(){
-      const name = $('#cm-name').value.trim();
-      const type = $('#cm-type').value.trim() || '—';
-      const size = $('#cm-size').value.trim() || 'Medium';
-      const ac = Number($('#cm-ac').value||'0');
-      const hp = Number($('#cm-hp').value||'1');
-      const speed = $('#cm-speed').value.trim() || '';
-      const actions = parseActionsQuick($('#cm-actions').value||'');
-      const special_abilities = parseSpecialAbilities($('#cm-special').value||'');
-      const reactions = parseSpecialAbilities($('#cm-reactions').value||'');
-      const legendary_actions = parseSpecialAbilities($('#cm-legendary').value||'');
-      const notes = $('#cm-notes').value.trim();
+      // Determine which mode we're in
+      const fullMode = isFullMode();
 
-      // Advanced fields (optional)
-      const str = $('#cm-str').value ? Number($('#cm-str').value) : undefined;
-      const dex = $('#cm-dex').value ? Number($('#cm-dex').value) : undefined;
-      const con = $('#cm-con').value ? Number($('#cm-con').value) : undefined;
-      const int = $('#cm-int').value ? Number($('#cm-int').value) : undefined;
-      const wis = $('#cm-wis').value ? Number($('#cm-wis').value) : undefined;
-      const cha = $('#cm-cha').value ? Number($('#cm-cha').value) : undefined;
-      const saves = $('#cm-saves').value.trim();
-      const skills = $('#cm-skills').value.trim();
-      const senses = $('#cm-senses').value.trim();
+      // Basic fields - read from appropriate source based on mode
+      const name = fullMode
+        ? ($('#cm-name-full')?.value?.trim() || '')
+        : ($('#cm-name')?.value?.trim() || '');
+      const type = fullMode
+        ? ($('#cm-type-full')?.value?.trim() || '—')
+        : ($('#cm-type')?.value?.trim() || '—');
+      const size = fullMode
+        ? ($('#cm-size-full')?.value || 'Medium')
+        : ($('#cm-size')?.value || 'Medium');
+      const ac = fullMode
+        ? Number($('#cm-ac-full')?.value || '0')
+        : Number($('#cm-ac')?.value || '0');
+      const hp = fullMode
+        ? Number($('#cm-hp-full')?.value || '1')
+        : Number($('#cm-hp')?.value || '1');
+      const speed = fullMode
+        ? buildSpeedString()
+        : ($('#cm-speed')?.value?.trim() || '30 ft.');
 
+      // Actions - read from appropriate textarea
+      const actionsText = fullMode
+        ? ($('#cm-actions-full')?.value || '')
+        : ($('#cm-actions')?.value || '');
+      const actions = parseActionsQuick(actionsText);
+
+      // Other action types
+      const special_abilities = parseSpecialAbilities($('#cm-special')?.value || '');
+      const bonus_actions = parseSpecialAbilities($('#cm-bonus-actions')?.value || '');
+      const reactions = parseSpecialAbilities($('#cm-reactions')?.value || '');
+      const legendary_actions = parseSpecialAbilities($('#cm-legendary')?.value || '');
+      const notes = $('#cm-notes')?.value?.trim() || '';
+
+      // Build the base monster object
       const mon = {
         name, type, size, ac, hp, speed, actions,
         special_abilities, reactions, legendary_actions, notes
       };
 
-      // Only include advanced fields if provided
+      // Add bonus actions if present
+      if (bonus_actions.length > 0) mon.bonus_actions = bonus_actions;
+
+      // Full mode exclusive fields
+      if (fullMode) {
+        // Subtype and alignment
+        const subtype = $('#cm-subtype')?.value?.trim();
+        const alignment = $('#cm-alignment')?.value;
+        if (subtype) mon.subtype = subtype;
+        if (alignment) mon.alignment = alignment;
+
+        // CR override
+        const crOverride = $('#cm-cr-override')?.value;
+        if (crOverride) mon.cr_override = Number(crOverride);
+
+        // Proficiency bonus
+        const profBonus = $('#cm-prof-bonus')?.value?.trim();
+        if (profBonus) mon.proficiency_bonus = Number(profBonus);
+
+        // AC type and hit dice
+        const acType = $('#cm-ac-type')?.value?.trim();
+        const hitDice = $('#cm-hit-dice')?.value?.trim();
+        if (acType) mon.ac_type = acType;
+        if (hitDice) mon.hit_dice = hitDice;
+
+        // Defenses
+        const vulnerabilities = $('#cm-vulnerabilities')?.value?.trim();
+        const resistances = $('#cm-resistances')?.value?.trim();
+        const damageImmunities = $('#cm-damage-immunities')?.value?.trim();
+        const conditionImmunities = $('#cm-condition-immunities')?.value?.trim();
+        if (vulnerabilities) mon.damage_vulnerabilities = vulnerabilities;
+        if (resistances) mon.damage_resistances = resistances;
+        if (damageImmunities) mon.damage_immunities = damageImmunities;
+        if (conditionImmunities) mon.condition_immunities = conditionImmunities;
+
+        // Languages
+        const languages = $('#cm-languages')?.value?.trim();
+        if (languages) mon.languages = languages;
+
+        // Spellcasting
+        const spellcasting = buildSpellcasting();
+        if (spellcasting) mon.spellcasting = spellcasting;
+
+        // Legendary action count
+        const legendaryCount = $('#cm-legendary-count')?.value?.trim();
+        if (legendaryCount) mon.legendary_action_count = Number(legendaryCount);
+
+        // Mythic trait and actions
+        const mythicTrait = $('#cm-mythic-trait')?.value?.trim();
+        const mythicActions = parseSpecialAbilities($('#cm-mythic-actions')?.value || '');
+        if (mythicTrait) mon.mythic_trait = mythicTrait;
+        if (mythicActions.length > 0) mon.mythic_actions = mythicActions;
+
+        // Lair actions and regional effects
+        const lairActions = $('#cm-lair-actions')?.value?.trim();
+        const regionalEffects = $('#cm-regional-effects')?.value?.trim();
+        if (lairActions) mon.lair_actions = lairActions;
+        if (regionalEffects) mon.regional_effects = regionalEffects;
+
+        // Description
+        const description = $('#cm-description')?.value?.trim();
+        if (description) mon.description = description;
+      }
+
+      // Ability scores (shared between modes, but only in full mode accordion)
+      const str = $('#cm-str')?.value ? Number($('#cm-str').value) : undefined;
+      const dex = $('#cm-dex')?.value ? Number($('#cm-dex').value) : undefined;
+      const con = $('#cm-con')?.value ? Number($('#cm-con').value) : undefined;
+      const int = $('#cm-int')?.value ? Number($('#cm-int').value) : undefined;
+      const wis = $('#cm-wis')?.value ? Number($('#cm-wis').value) : undefined;
+      const cha = $('#cm-cha')?.value ? Number($('#cm-cha').value) : undefined;
+
       if (str !== undefined) mon.str = str;
       if (dex !== undefined) mon.dex = dex;
       if (con !== undefined) mon.con = con;
       if (int !== undefined) mon.int = int;
       if (wis !== undefined) mon.wis = wis;
       if (cha !== undefined) mon.cha = cha;
+
+      // Saves, skills, senses (always available)
+      const saves = $('#cm-saves')?.value?.trim();
+      const skills = $('#cm-skills')?.value?.trim();
+      const senses = $('#cm-senses')?.value?.trim();
       if (saves) mon.saves = saves;
       if (skills) mon.skills = skills;
       if (senses) mon.senses = senses;
@@ -1205,26 +1822,187 @@
     }
 
     function clearCustomForm(){
-      const fields = [
-        '#cm-name','#cm-type','#cm-ac','#cm-hp','#cm-speed',
-        '#cm-actions','#cm-special','#cm-reactions','#cm-legendary','#cm-notes',
-        '#cm-str','#cm-dex','#cm-con','#cm-int','#cm-wis','#cm-cha',
-        '#cm-saves','#cm-skills','#cm-senses','#cm-json'
+      // Simple mode fields
+      const simpleFields = [
+        '#cm-name', '#cm-type', '#cm-ac', '#cm-hp', '#cm-speed', '#cm-actions'
       ];
-      fields.forEach(sel => {
+
+      // Full mode fields
+      const fullFields = [
+        '#cm-name-full', '#cm-type-full', '#cm-subtype', '#cm-ac-full', '#cm-hp-full',
+        '#cm-ac-type', '#cm-hit-dice', '#cm-prof-bonus',
+        '#cm-speed-walk', '#cm-speed-fly', '#cm-speed-swim', '#cm-speed-climb', '#cm-speed-burrow',
+        '#cm-str', '#cm-dex', '#cm-con', '#cm-int', '#cm-wis', '#cm-cha',
+        '#cm-saves', '#cm-skills', '#cm-senses', '#cm-languages',
+        '#cm-vulnerabilities', '#cm-resistances', '#cm-damage-immunities', '#cm-condition-immunities',
+        '#cm-spell-dc', '#cm-spell-atk', '#cm-cantrips', '#cm-spells',
+        '#cm-special', '#cm-actions-full', '#cm-bonus-actions', '#cm-reactions', '#cm-legendary',
+        '#cm-legendary-count', '#cm-mythic-trait', '#cm-mythic-actions',
+        '#cm-lair-actions', '#cm-regional-effects', '#cm-description', '#cm-notes', '#cm-json'
+      ];
+
+      [...simpleFields, ...fullFields].forEach(sel => {
         const elem = $(sel);
         if (elem) elem.value = '';
       });
-      // Reset size to Medium
-      const sizeElem = $('#cm-size');
-      if (sizeElem) sizeElem.value = 'Medium';
+
+      // Reset selects
+      const selectResets = {
+        '#cm-size': 'Medium',
+        '#cm-size-full': 'Medium',
+        '#cm-alignment': '',
+        '#cm-cr-override': '',
+        '#cm-spell-ability': ''
+      };
+      Object.entries(selectResets).forEach(([sel, val]) => {
+        const elem = $(sel);
+        if (elem) elem.value = val;
+      });
+
+      // Reset checkboxes
+      ['#cm-speed-hover', '#cm-innate-spellcasting'].forEach(sel => {
+        const elem = $(sel);
+        if (elem) elem.checked = false;
+      });
+
+      // Reset legendary count to default
+      const legCount = $('#cm-legendary-count');
+      if (legCount) legCount.value = '3';
+
+      // Reset ability modifier displays
+      ['str', 'dex', 'con', 'int', 'wis', 'cha'].forEach(stat => {
+        const modEl = $(`#cm-${stat}-mod`);
+        if (modEl) modEl.textContent = '(+0)';
+      });
+    }
+
+    // Calculate ability modifier from score
+    function calcAbilityMod(score) {
+      return Math.floor((score - 10) / 2);
+    }
+
+    // Format modifier string
+    function formatMod(mod) {
+      return mod >= 0 ? `(+${mod})` : `(${mod})`;
+    }
+
+    // Update ability modifier display when score changes
+    function setupAbilityModUpdates() {
+      ['str', 'dex', 'con', 'int', 'wis', 'cha'].forEach(stat => {
+        const input = $(`#cm-${stat}`);
+        const modDisplay = $(`#cm-${stat}-mod`);
+        if (input && modDisplay) {
+          input.addEventListener('input', () => {
+            const score = Number(input.value) || 10;
+            const mod = calcAbilityMod(score);
+            modDisplay.textContent = formatMod(mod);
+          });
+        }
+      });
     }
 
     // -------------------- Export --------------------
+    function buildTrackerNotes(m) {
+      const parts = [];
+      parts.push(`CR ${m.calc?.cr ?? (m.cr ?? '—')} • ${m.type || '—'}${m.size ? `, ${m.size}` : ''}`);
+
+      // Speed
+      if (m.speed) parts.push(`Speed: ${m.speed}`);
+
+      // Ability scores
+      const abilities = ['str','dex','con','int','wis','cha'].filter(a => m[a]);
+      if (abilities.length > 0) {
+        parts.push(abilities.map(a => `${a.toUpperCase()} ${m[a]}`).join(' | '));
+      }
+
+      // Saves, skills, senses
+      if (m.saves) parts.push(`Saves: ${m.saves}`);
+      if (m.skills) parts.push(`Skills: ${m.skills}`);
+      if (m.senses) parts.push(`Senses: ${m.senses}`);
+      if (m.languages) parts.push(`Languages: ${m.languages}`);
+
+      // Defenses
+      const dmgVuln = m.damage_vulnerabilities || m.damageVulnerabilities;
+      const dmgRes = m.damage_resistances || m.damageResistances;
+      const dmgImm = m.damage_immunities || m.damageImmunities;
+      const condImm = m.condition_immunities || m.conditionImmunities;
+      if (dmgVuln) parts.push(`Vuln: ${dmgVuln}`);
+      if (dmgRes) parts.push(`Resist: ${dmgRes}`);
+      if (dmgImm) parts.push(`Immune: ${dmgImm}`);
+      if (condImm) parts.push(`Cond Immune: ${condImm}`);
+
+      // Special abilities
+      if (m.special_abilities?.length > 0) {
+        parts.push('--- Special ---');
+        m.special_abilities.forEach(sa => {
+          parts.push(`${sa.name}${sa.desc ? ': ' + sa.desc : ''}`);
+        });
+      }
+
+      // Spellcasting
+      if (m.spellcasting) {
+        const sc = m.spellcasting;
+        let scLine = sc.innate ? 'Innate Spellcasting' : 'Spellcasting';
+        const spellDC = sc.dc || sc.spellSaveDC;
+        const spellAtk = sc.attack || sc.spellAttackBonus;
+        if (spellDC) scLine += `, DC ${spellDC}`;
+        if (spellAtk) scLine += `, +${spellAtk} to hit`;
+        parts.push(scLine);
+        if (sc.cantrips) parts.push(`Cantrips: ${sc.cantrips}`);
+        if (sc.spells && !sc.level1) parts.push(`Spells: ${sc.spells}`);
+      }
+
+      // Actions
+      if (m.actions?.length > 0) {
+        parts.push('--- Actions ---');
+        m.actions.forEach(a => {
+          let line = a.name;
+          const info = [];
+          if (a.toHit !== undefined) info.push(`+${a.toHit}`);
+          if (a.saveDC !== undefined) info.push(`DC ${a.saveDC}`);
+          if (a.damage) info.push(a.damage);
+          if (info.length) line += ` (${info.join(', ')})`;
+          if (a.desc) line += `: ${a.desc}`;
+          parts.push(line);
+        });
+      }
+
+      // Bonus actions
+      if (m.bonus_actions?.length > 0) {
+        parts.push('--- Bonus Actions ---');
+        m.bonus_actions.forEach(ba => {
+          parts.push(`${ba.name}${ba.desc ? ': ' + ba.desc : ''}`);
+        });
+      }
+
+      // Reactions
+      if (m.reactions?.length > 0) {
+        parts.push('--- Reactions ---');
+        m.reactions.forEach(r => {
+          parts.push(`${r.name}${r.desc ? ': ' + r.desc : ''}`);
+        });
+      }
+
+      // Legendary actions
+      if (m.legendary_actions?.length > 0) {
+        const legCount = m.legendary_action_count || m.legendaryCount;
+        parts.push(`--- Legendary Actions${legCount ? ` (${legCount}/round)` : ''} ---`);
+        m.legendary_actions.forEach(la => {
+          parts.push(`${la.name}${la.desc ? ': ' + la.desc : ''}`);
+        });
+      }
+
+      // Notes
+      if (m.notes) parts.push(`Notes: ${m.notes}`);
+
+      return parts.join('\n');
+    }
+
     function monstersToTrackerCharacters(){
       const out = [];
       roster.forEach(m=>{
         const qty = m.qty||1;
+        const notes = buildTrackerNotes(m);
         for(let i=0;i<qty;i++){
           out.push({
             name: qty>1 ? `${m.name} #${i+1}` : m.name,
@@ -1234,7 +2012,7 @@
             maxHP: m.hp ?? 1,
             tempHP: 0,
             ac: m.ac ?? null,
-            notes: `CR ${m.calc?.cr ?? (m.cr ?? '—')} • ${m.type||'—'}${m.size?`, ${m.size}`:''}`,
+            notes: notes,
             concentration: false,
             deathSaves: { s:0, f:0, stable:false },
             status: []
@@ -1267,11 +2045,22 @@
         text += `\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n`;
 
         // Basic Info
-        text += `${m.size || 'Medium'} ${m.type || 'creature'}, CR ${m.calc?.cr ?? (m.cr ?? '—')}\n\n`;
+        let typeStr = `${m.size || 'Medium'} ${m.type || 'creature'}`;
+        if (m.subtype) typeStr += ` (${m.subtype})`;
+        if (m.alignment) typeStr += `, ${m.alignment}`;
+        text += `${typeStr}\n`;
+        const profBonus = m.proficiency_bonus || m.profBonus;
+        text += `CR ${m.calc?.cr ?? (m.cr ?? '—')}${profBonus ? ` (Proficiency Bonus +${profBonus})` : ''}\n\n`;
 
         // Core Stats
-        text += `Armor Class: ${m.ac ?? '—'}\n`;
-        text += `Hit Points: ${m.hp ?? '—'}\n`;
+        let acStr = `Armor Class: ${m.ac ?? '—'}`;
+        const acType = m.ac_type || m.acType;
+        if (acType) acStr += ` (${acType})`;
+        text += `${acStr}\n`;
+        let hpStr = `Hit Points: ${m.hp ?? '—'}`;
+        const hitDice = m.hit_dice || m.hitDice;
+        if (hitDice) hpStr += ` (${hitDice})`;
+        text += `${hpStr}\n`;
         if (m.speed) text += `Speed: ${m.speed}\n`;
         text += `\n`;
 
@@ -1287,11 +2076,23 @@
           text += `\n`;
         }
 
-        // Saves, skills, senses
+        // Saves, skills, senses, languages
         if (m.saves) text += `Saving Throws: ${m.saves}\n`;
         if (m.skills) text += `Skills: ${m.skills}\n`;
         if (m.senses) text += `Senses: ${m.senses}\n`;
-        if (m.saves || m.skills || m.senses) text += `\n`;
+        if (m.languages) text += `Languages: ${m.languages}\n`;
+        if (m.saves || m.skills || m.senses || m.languages) text += `\n`;
+
+        // Damage/condition modifiers (handle both snake_case from form and camelCase from API)
+        const dmgVuln = m.damage_vulnerabilities || m.damageVulnerabilities;
+        const dmgRes = m.damage_resistances || m.damageResistances;
+        const dmgImm = m.damage_immunities || m.damageImmunities;
+        const condImm = m.condition_immunities || m.conditionImmunities;
+        if (dmgVuln) text += `Damage Vulnerabilities: ${dmgVuln}\n`;
+        if (dmgRes) text += `Damage Resistances: ${dmgRes}\n`;
+        if (dmgImm) text += `Damage Immunities: ${dmgImm}\n`;
+        if (condImm) text += `Condition Immunities: ${condImm}\n`;
+        if (dmgVuln || dmgRes || dmgImm || condImm) text += `\n`;
 
         // Calculated CR breakdown
         if (m.calc) {
@@ -1306,6 +2107,37 @@
             if (sa.desc) text += `  ${sa.desc}\n`;
             text += `\n`;
           });
+        }
+
+        // Spellcasting
+        if (m.spellcasting) {
+          text += `─── SPELLCASTING ───\n\n`;
+          const sc = m.spellcasting;
+          text += `${sc.innate ? 'Innate Spellcasting' : 'Spellcasting'}`;
+          if (sc.ability) text += ` (${sc.ability})`;
+          text += `\n`;
+          const spellDC = sc.dc || sc.spellSaveDC;
+          const spellAtk = sc.attack || sc.spellAttackBonus;
+          if (spellDC) text += `Spell Save DC: ${spellDC}\n`;
+          if (spellAtk) text += `Spell Attack Bonus: +${spellAtk}\n`;
+          if (sc.atWill) text += `At will: ${sc.atWill}\n`;
+          if (sc.perDay3) text += `3/day each: ${sc.perDay3}\n`;
+          if (sc.perDay2) text += `2/day each: ${sc.perDay2}\n`;
+          if (sc.perDay1) text += `1/day each: ${sc.perDay1}\n`;
+          if (sc.cantrips) text += `Cantrips: ${sc.cantrips}\n`;
+          // Structured spell levels (from API imports)
+          if (sc.level1) text += `1st level (${sc.level1Slots || '—'} slots): ${sc.level1}\n`;
+          if (sc.level2) text += `2nd level (${sc.level2Slots || '—'} slots): ${sc.level2}\n`;
+          if (sc.level3) text += `3rd level (${sc.level3Slots || '—'} slots): ${sc.level3}\n`;
+          if (sc.level4) text += `4th level (${sc.level4Slots || '—'} slots): ${sc.level4}\n`;
+          if (sc.level5) text += `5th level (${sc.level5Slots || '—'} slots): ${sc.level5}\n`;
+          if (sc.level6) text += `6th level (${sc.level6Slots || '—'} slots): ${sc.level6}\n`;
+          if (sc.level7) text += `7th level (${sc.level7Slots || '—'} slots): ${sc.level7}\n`;
+          if (sc.level8) text += `8th level (${sc.level8Slots || '—'} slots): ${sc.level8}\n`;
+          if (sc.level9) text += `9th level (${sc.level9Slots || '—'} slots): ${sc.level9}\n`;
+          // Free-text spells (from custom form)
+          if (sc.spells && !sc.level1) text += `Spells: ${sc.spells}\n`;
+          text += `\n`;
         }
 
         // Actions
@@ -1330,6 +2162,16 @@
           });
         }
 
+        // Bonus Actions
+        if (m.bonus_actions && m.bonus_actions.length > 0) {
+          text += `─── BONUS ACTIONS ───\n\n`;
+          m.bonus_actions.forEach(ba => {
+            text += `• ${ba.name}\n`;
+            if (ba.desc) text += `  ${ba.desc}\n`;
+            text += `\n`;
+          });
+        }
+
         // Reactions
         if (m.reactions && m.reactions.length > 0) {
           text += `─── REACTIONS ───\n\n`;
@@ -1343,11 +2185,58 @@
         // Legendary Actions
         if (m.legendary_actions && m.legendary_actions.length > 0) {
           text += `─── LEGENDARY ACTIONS ───\n\n`;
+          const legCount = m.legendary_action_count || m.legendaryCount;
+          if (legCount) text += `(${legCount} legendary actions per round)\n\n`;
           m.legendary_actions.forEach(la => {
             text += `• ${la.name}\n`;
             if (la.desc) text += `  ${la.desc}\n`;
             text += `\n`;
           });
+        }
+
+        // Mythic Actions
+        if (m.mythic_actions && m.mythic_actions.length > 0) {
+          text += `─── MYTHIC ACTIONS ───\n\n`;
+          const mythicDesc = m.mythic_trait || m.mythicDescription;
+          if (mythicDesc) text += `${mythicDesc}\n\n`;
+          m.mythic_actions.forEach(ma => {
+            text += `• ${ma.name}\n`;
+            if (ma.desc) text += `  ${ma.desc}\n`;
+            text += `\n`;
+          });
+        }
+
+        // Lair Actions (handle both text string from form and array from API)
+        if (m.lair_actions) {
+          text += `─── LAIR ACTIONS ───\n\n`;
+          if (typeof m.lair_actions === 'string') {
+            text += `${m.lair_actions}\n\n`;
+          } else if (Array.isArray(m.lair_actions) && m.lair_actions.length > 0) {
+            m.lair_actions.forEach(la => {
+              text += `• ${la.name || la.desc}\n`;
+              if (la.name && la.desc) text += `  ${la.desc}\n`;
+              text += `\n`;
+            });
+          }
+        }
+
+        // Regional Effects (handle both text string from form and array from API)
+        if (m.regional_effects) {
+          text += `─── REGIONAL EFFECTS ───\n\n`;
+          if (typeof m.regional_effects === 'string') {
+            text += `${m.regional_effects}\n\n`;
+          } else if (Array.isArray(m.regional_effects) && m.regional_effects.length > 0) {
+            m.regional_effects.forEach(re => {
+              text += `• ${re.name || re.desc}\n`;
+              if (re.name && re.desc) text += `  ${re.desc}\n`;
+              text += `\n`;
+            });
+          }
+        }
+
+        // Description
+        if (m.description) {
+          text += `─── DESCRIPTION ───\n${m.description}\n\n`;
         }
 
         // Notes
@@ -1412,15 +2301,22 @@
     $('#eb-cr-filter').onchange = renderResults;
     $('#eb-type-filter').onchange = renderResults;
 
-    // Advanced fields toggle
-    $('#cm-toggle-advanced').onclick = ()=>{
-      const advFields = $('#cm-advanced-fields');
-      if(advFields.style.display === 'none'){
-        advFields.style.display = 'block';
-      } else {
-        advFields.style.display = 'none';
-      }
+    // Simple/Full mode toggle for custom monster creator
+    $('#cm-mode-simple').onclick = () => {
+      $('#cm-simple-mode').style.display = 'block';
+      $('#cm-full-mode').style.display = 'none';
+      $('#cm-mode-simple').classList.add('active');
+      $('#cm-mode-full').classList.remove('active');
     };
+    $('#cm-mode-full').onclick = () => {
+      $('#cm-simple-mode').style.display = 'none';
+      $('#cm-full-mode').style.display = 'block';
+      $('#cm-mode-simple').classList.remove('active');
+      $('#cm-mode-full').classList.add('active');
+    };
+
+    // Initialize ability modifier auto-updates for full mode
+    setupAbilityModUpdates();
 
     $('#eb-party-levels').oninput = ()=>{ renderPartySummary(); renderSummary(); };
     $('#eb-resist-mode').onchange = e=>{ resistMode = e.target.value; // recalc all
@@ -1433,24 +2329,105 @@
       addToRoster(mon);
       clearCustomForm();
     };
+    // Extract an array of monster-like objects from any JSON format the page produces
+    function extractMonsters(parsed) {
+      if (Array.isArray(parsed)) return parsed;
+      if (parsed.roster) return parsed.roster;               // Roster (Full Monster Data) export
+      if (parsed.characters) return parsed.characters;       // Full Session JSON export
+      if (parsed.addCharacters) return parsed.addCharacters; // Append export
+      if (parsed.name) return [parsed];                      // Single monster object
+      return null;
+    }
+
+    // Normalize a tracker-format character back into a roster monster
+    function normalizeImportedMonster(obj) {
+      const mon = {...obj};
+      // Session/tracker exports use currentHP/maxHP instead of hp
+      if (mon.hp == null && (mon.currentHP != null || mon.maxHP != null)) {
+        mon.hp = Number(mon.maxHP ?? mon.currentHP ?? 1);
+      }
+      // Clean up tracker-only fields
+      delete mon.initiative;
+      delete mon.currentHP;
+      delete mon.maxHP;
+      delete mon.tempHP;
+      delete mon.concentration;
+      delete mon.deathSaves;
+      delete mon.status;
+      // Tracker sets type to "Enemy"/"PC"/etc — don't overwrite real creature type
+      if (['Enemy','PC','NPC','Companion'].includes(mon.type)) {
+        delete mon.type;
+      }
+      return mon;
+    }
+
     $('#cm-json-add').onclick = ()=>{
       try{
-        const mon = JSON.parse($('#cm-json').value||'{}');
-        if(!mon.name || !mon.ac || !mon.hp) { alert('JSON must include at least name, ac, hp.'); return; }
-        addToRoster(mon);
+        const parsed = JSON.parse($('#cm-json').value||'{}');
+        const monsters = extractMonsters(parsed);
+        if (!monsters || !monsters.length) { alert('No monsters found in JSON.'); return; }
+        let added = 0;
+        for (const raw of monsters) {
+          const mon = normalizeImportedMonster(raw);
+          if(!mon.name || !mon.ac || !mon.hp) continue;
+          addToRoster({...mon, qty: mon.qty || 1});
+          added++;
+        }
+        if (added === 0) { alert('No valid monsters found. Each needs at least name, ac, hp.'); return; }
+        $('#cm-json').value = '';
       }catch{ alert('Invalid JSON.'); }
     };
     $('#cm-clear').onclick = clearCustomForm;
 
+    // Import Roster from file
+    $('#eb-import-roster').onclick = ()=> $('#eb-import-roster-file').click();
+    $('#eb-import-roster-file').onchange = (e)=>{
+      const file = e.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = (evt)=>{
+        try {
+          const parsed = JSON.parse(evt.target.result);
+          const monsters = extractMonsters(parsed);
+          if (!monsters || !monsters.length) {
+            alert('No monsters found in file. Accepts roster exports, session exports, or an array of monster objects.');
+            return;
+          }
+          let added = 0, skipped = 0;
+          for (const raw of monsters) {
+            const mon = normalizeImportedMonster(raw);
+            if (!mon.name || !mon.ac || !mon.hp) { skipped++; continue; }
+            addToRoster({...mon, qty: mon.qty || 1});
+            added++;
+          }
+          let msg = `Imported ${added} monster${added !== 1 ? 's' : ''} to roster.`;
+          if (skipped) msg += ` (${skipped} skipped - missing name/ac/hp)`;
+          alert(msg);
+        } catch { alert('Invalid JSON file.'); }
+      };
+      reader.readAsText(file);
+      e.target.value = ''; // reset so same file can be re-imported
+    };
+
     $('#eb-clear').onclick = ()=>{ roster.splice(0,roster.length); renderRoster(); };
     $('#eb-export').onclick = ()=>{
       const mode = $('#eb-export-mode').value;
-      const chars = monstersToTrackerCharacters();
-      if(!chars.length){ alert('No monsters in roster.'); return; }
-      if(mode==='append'){
-        downloadJSON({ addCharacters: chars }, `initiative_add_${new Date().toISOString()}.json`);
+      if(!roster.length){ alert('No monsters in roster.'); return; }
+      if(mode==='roster'){
+        // Export full monster data (preserves all fields for re-import)
+        const rosterData = roster.map(m => {
+          const exported = {...m};
+          delete exported.calc; // CR calc is regenerated on import
+          return exported;
+        });
+        downloadJSON({ roster: rosterData }, `encounter_roster_${new Date().toISOString()}.json`);
       }else{
-        downloadJSON({ characters: chars, currentTurn:0, combatRound:1, diceHistory:[] }, `initiative_session_${new Date().toISOString()}.json`);
+        const chars = monstersToTrackerCharacters();
+        if(mode==='append'){
+          downloadJSON({ addCharacters: chars }, `initiative_add_${new Date().toISOString()}.json`);
+        }else{
+          downloadJSON({ characters: chars, currentTurn:0, combatRound:1, diceHistory:[] }, `initiative_session_${new Date().toISOString()}.json`);
+        }
       }
     };
 
@@ -1463,7 +2440,7 @@
       maxHP:     Number(c.hp ?? c.maxHP     ?? 1),
       tempHP: 0,
       ac: (c.ac ?? null),
-      notes: c.notes ?? (c.calc?.cr != null ? `CR ${c.calc.cr}` : ""),
+      notes: buildTrackerNotes(c),
       concentration: false,
       deathSaves: { s:0, f:0, stable:false },
       status: []

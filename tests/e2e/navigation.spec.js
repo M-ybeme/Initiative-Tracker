@@ -149,8 +149,8 @@ test.describe('Navigation', () => {
       // Click on the Initiative Tracker launch button in feature cards
       await page.locator('.feature-card a[href="initiative.html"]').first().click();
 
-      // Wait for navigation
-      await page.waitForURL(/initiative\.html/);
+      // Wait for navigation - serve strips .html extension, so match with or without it
+      await expect(page).toHaveURL(/initiative(\.html)?$/, { timeout: 10000 });
       await expect(page).toHaveTitle(/Initiative Tracker/);
     });
 
@@ -160,8 +160,8 @@ test.describe('Navigation', () => {
       // Click on Character Manager launch button in feature cards
       await page.locator('.feature-card a[href="characters.html"]').click();
 
-      // Wait for navigation
-      await page.waitForURL(/characters\.html/);
+      // Wait for navigation - serve strips .html extension, so match with or without it
+      await expect(page).toHaveURL(/characters(\.html)?$/, { timeout: 10000 });
       await expect(page).toHaveTitle(/Characters/);
     });
 
@@ -171,8 +171,8 @@ test.describe('Navigation', () => {
       // Click navbar brand
       await page.locator('.navbar-brand').click();
 
-      // Wait for navigation
-      await page.waitForURL(/index\.html/);
+      // Wait for navigation - serve may serve index as root /, so match either format
+      await expect(page).toHaveURL(/\/(index(\.html)?)?$/, { timeout: 10000 });
       await expect(page).toHaveTitle(/The DM's Toolbox/);
       await expect(page.locator('.hero-section')).toBeVisible();
     });

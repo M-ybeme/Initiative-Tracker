@@ -91,6 +91,112 @@ const LevelUpSystem = (function() {
   }
 
   // ============================================================
+  // SELECTABLE FEATURE DETECTION
+  // ============================================================
+
+  /**
+   * Mapping of feature keywords to their data sources and storage keys
+   * Used to detect when a feature requires user selection during level-up
+   */
+  const SELECTABLE_FEATURES = {
+    'Fighting Style': {
+      type: 'fightingStyle',
+      dataGetter: (className) => {
+        const allStyles = LevelUpData.getAllFightingStyles ? LevelUpData.getAllFightingStyles() : [];
+        // Filter by class
+        return allStyles.filter(name => {
+          const data = LevelUpData.getFightingStyleData ? LevelUpData.getFightingStyleData(name) : null;
+          return data && (!data.classes || data.classes.includes(className));
+        });
+      },
+      dataFetcher: (name) => LevelUpData.getFightingStyleData ? LevelUpData.getFightingStyleData(name) : null,
+      storageKey: 'fightingStyles',
+      singular: true,
+      getExisting: (char) => char.fightingStyles || []
+    },
+    'Pact Boon': {
+      type: 'pactBoon',
+      dataGetter: () => LevelUpData.getAllPactBoons ? LevelUpData.getAllPactBoons() : [],
+      dataFetcher: (name) => LevelUpData.getPactBoonData ? LevelUpData.getPactBoonData(name) : null,
+      storageKey: 'pactBoon',
+      singular: true,
+      getExisting: (char) => char.pactBoon ? [char.pactBoon] : []
+    },
+    'Eldritch Invocation': {
+      type: 'eldritchInvocation',
+      dataGetter: (className, character) => {
+        // Use getAvailableInvocationsForLevel if it exists, otherwise get all
+        if (LevelUpData.getAvailableInvocationsForLevel) {
+          const level = parseInt(character?.level, 10) || 1;
+          const pactBoon = character?.pactBoon || null;
+          const hasEldritchBlast = (character?.spellList || []).some(s =>
+            (s.name || s.title || '').toLowerCase() === 'eldritch blast'
+          );
+          return LevelUpData.getAvailableInvocationsForLevel(level + 1, pactBoon, hasEldritchBlast);
+        }
+        return LevelUpData.getAllEldritchInvocations ? LevelUpData.getAllEldritchInvocations() : [];
+      },
+      dataFetcher: (name) => LevelUpData.getEldritchInvocationData ? LevelUpData.getEldritchInvocationData(name) : null,
+      storageKey: 'eldritchInvocations',
+      singular: false,
+      getExisting: (char) => char.eldritchInvocations || []
+    },
+    'Metamagic': {
+      type: 'metamagic',
+      dataGetter: () => LevelUpData.getAllMetamagic ? LevelUpData.getAllMetamagic() : [],
+      dataFetcher: (name) => LevelUpData.getMetamagicData ? LevelUpData.getMetamagicData(name) : null,
+      storageKey: 'metamagic',
+      singular: false,
+      getExisting: (char) => char.metamagic || []
+    }
+  };
+
+  /**
+   * Parse a feature name to determine if it requires selection
+   * @param {string} featureName - The feature name from CLASS_DATA
+   * @returns {Object|null} - Selection info or null if not selectable
+   */
+  function parseSelectableFeature(featureName) {
+    if (!featureName) return null;
+
+    // Check for exact matches first
+    for (const [keyword, config] of Object.entries(SELECTABLE_FEATURES)) {
+      if (featureName === keyword) {
+        return { ...config, count: 1, originalName: featureName };
+      }
+    }
+
+    // Check for patterns like "Eldritch Invocations (2)" or "Metamagic (2 options)"
+    const countMatch = featureName.match(/^(.+?)\s*\((\d+)(?:\s*options?)?\)$/i);
+    if (countMatch) {
+      const baseName = countMatch[1].trim();
+      const count = parseInt(countMatch[2], 10);
+
+      for (const [keyword, config] of Object.entries(SELECTABLE_FEATURES)) {
+        // Match "Eldritch Invocations" to "Eldritch Invocation"
+        if (baseName === keyword || baseName === keyword + 's' ||
+            baseName.replace(/s$/, '') === keyword) {
+          return { ...config, count, originalName: featureName };
+        }
+      }
+    }
+
+    // Check for "Additional Fighting Style"
+    if (featureName.includes('Additional Fighting Style')) {
+      return { ...SELECTABLE_FEATURES['Fighting Style'], count: 1, originalName: featureName };
+    }
+
+    return null;
+  }
+
+  /**
+   * Calculate ability modifier from a score
+   */
+  function calculateAbilityModifier(score) {
+    return Math.floor((score - 10) / 2);
+  }
+
+  // ============================================================
   // STATE
   // ============================================================
   let currentCharacter = null;
@@ -810,14 +916,20 @@ const LevelUpSystem = (function() {
       });
     }
 
+    // Dispose existing tooltips before re-rendering to prevent memory leaks
+    listEl.querySelectorAll('[data-bs-toggle="tooltip"]').forEach(el => {
+      const tooltip = bootstrap.Tooltip.getInstance(el);
+      if (tooltip) tooltip.dispose();
+    });
+
     listEl.innerHTML = filteredFeats.map(featName => {
       const featData = LevelUpData.getFeatData(featName);
       const isSelected = selectedFeat === featName;
       const description = featData?.description || '';
       const shortDesc = description.length > 100 ? description.substring(0, 100) + '...' : description;
 
-      // Escape HTML for tooltip
-      const tooltipContent = description.replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+      // Escape HTML for tooltip (use proper escapeHtml function like spell tooltips)
+      const tooltipContent = escapeHtml(description);
 
       // Build prerequisites display
       let prereqHtml = '';
@@ -966,20 +1078,57 @@ const LevelUpSystem = (function() {
 
   /**
    * Step: New Features
+   * Now includes interactive selection for features that require choices
    */
   function renderFeaturesStep(character, className, changes, stepNum) {
     const features = changes.features || [];
     const hasFeatures = features.length > 0;
 
-    let featuresHtml = '';
-    if (hasFeatures) {
-      featuresHtml = '<ul class="list-unstyled">';
-      features.forEach(f => {
-        featuresHtml += `<li class="mb-2"><i class="bi bi-star-fill text-warning me-2"></i>${f}</li>`;
+    // Separate static features from selectable ones
+    const staticFeatures = [];
+    const selectableFeatures = [];
+
+    features.forEach(f => {
+      const selectable = parseSelectableFeature(f);
+      if (selectable) {
+        selectableFeatures.push({ name: f, ...selectable });
+      } else {
+        staticFeatures.push(f);
+      }
+    });
+
+    // Track if any selections are required
+    const hasSelections = selectableFeatures.length > 0;
+
+    // Build static features HTML
+    let staticFeaturesHtml = '';
+    if (staticFeatures.length > 0) {
+      staticFeaturesHtml = '<div class="mb-3"><h6 class="text-info mb-2">Auto-Granted Features:</h6><ul class="list-unstyled">';
+      staticFeatures.forEach(f => {
+        staticFeaturesHtml += `<li class="mb-2"><i class="bi bi-check-circle-fill text-success me-2"></i>${f}</li>`;
       });
-      featuresHtml += '</ul>';
-    } else {
-      featuresHtml = '<p class="text-muted">No new features at this level.</p>';
+      staticFeaturesHtml += '</ul></div>';
+    }
+
+    // Build selectable features HTML
+    let selectableFeaturesHtml = '';
+    if (selectableFeatures.length > 0) {
+      selectableFeatures.forEach(selectable => {
+        selectableFeaturesHtml += renderFeatureSelectionUI(selectable, character, className);
+      });
+    }
+
+    // Determine badge state
+    let badgeClass = 'bg-secondary';
+    let badgeText = 'None';
+    if (hasFeatures) {
+      if (hasSelections) {
+        badgeClass = 'bg-warning text-dark';
+        badgeText = 'Choices Required';
+      } else {
+        badgeClass = 'bg-success';
+        badgeText = features.length + ' Feature' + (features.length > 1 ? 's' : '');
+      }
     }
 
     return `
@@ -987,19 +1136,133 @@ const LevelUpSystem = (function() {
         <h2 class="accordion-header">
           <button class="accordion-button collapsed bg-dark text-light" type="button" data-bs-toggle="collapse" data-bs-target="#step${stepNum}">
             <strong>Step ${stepNum}: New Class Features</strong>
-            <span class="ms-auto me-3 badge ${hasFeatures ? 'bg-warning' : 'bg-secondary'}">
-              ${hasFeatures ? features.length + ' Feature' + (features.length > 1 ? 's' : '') : 'None'}
+            <span class="ms-auto me-3 badge ${badgeClass}" id="featuresBadge">
+              ${badgeText}
             </span>
           </button>
         </h2>
         <div id="step${stepNum}" class="accordion-collapse collapse" data-bs-parent="#levelUpAccordion">
           <div class="accordion-body">
-            <p class="text-muted mb-3">
-              Review your new ${className} features. Make sure to update your character notes with details.
-            </p>
-            ${featuresHtml}
-            ${hasFeatures ? '<p class="text-muted small mt-3"><em>Remember to update your Features & Traits tab with the details of these new abilities.</em></p>' : ''}
+            ${hasFeatures ? `
+              <p class="text-muted mb-3">
+                ${hasSelections ? 'Make your selections below for features that require choices.' : `Review your new ${className} features.`}
+              </p>
+              ${staticFeaturesHtml}
+              ${selectableFeaturesHtml}
+            ` : '<p class="text-muted">No new features at this level.</p>'}
           </div>
+        </div>
+      </div>
+    `;
+  }
+
+  /**
+   * Render selection UI for a selectable feature
+   * @param {Object} selectable - The selectable feature config from parseSelectableFeature
+   * @param {Object} character - The character object
+   * @param {string} className - The class name
+   * @returns {string} - HTML for the selection UI
+   */
+  function renderFeatureSelectionUI(selectable, character, className) {
+    const { type, dataGetter, dataFetcher, storageKey, singular, count, originalName, getExisting } = selectable;
+
+    // Get available options
+    let options = [];
+    try {
+      options = dataGetter(className, character) || [];
+    } catch (e) {
+      console.warn(`Could not get options for ${type}:`, e);
+    }
+
+    // Get already selected options to exclude
+    const existing = getExisting(character);
+
+    // Filter by SRD if filter is active
+    const filter = window.SRDContentFilter;
+    const filteredOptions = options.filter(optionName => {
+      // Exclude already selected
+      if (existing.includes(optionName)) return false;
+
+      // Check SRD filter
+      if (filter) {
+        const data = dataFetcher(optionName);
+        if (data && data.srd === false && !filter.isAllowed(type, optionName)) {
+          return false;
+        }
+      }
+      return true;
+    });
+
+    // Build option items
+    const optionItems = filteredOptions.map(optionName => {
+      const data = dataFetcher(optionName);
+      if (!data) return '';
+
+      const isHomebrew = data.srd === false;
+      const prereqText = data.prerequisites ? `<small class="text-warning d-block">Prerequisite: ${data.prerequisites}</small>` : '';
+      const costText = data.cost ? `<small class="text-info d-block">Cost: ${data.cost}</small>` : '';
+      const homebrewBadge = isHomebrew ? '<span class="badge bg-purple ms-2">Homebrew</span>' : '';
+      const inputType = singular ? 'radio' : 'checkbox';
+      const inputName = `feature-${type}`;
+      const inputId = `feature-${type}-${optionName.replace(/[^a-zA-Z0-9]/g, '')}`;
+
+      return `
+        <label class="list-group-item list-group-item-action bg-dark border-secondary cursor-pointer">
+          <div class="d-flex align-items-start gap-2">
+            <input type="${inputType}" name="${inputName}" value="${escapeHtml(optionName)}"
+                   class="form-check-input mt-1 feature-selection-input"
+                   data-feature-type="${type}"
+                   data-storage-key="${storageKey}"
+                   data-singular="${singular}"
+                   data-max-count="${count}"
+                   id="${inputId}" />
+            <div class="flex-grow-1">
+              <h6 class="mb-1 fw-bold text-primary">${data.name}${homebrewBadge}</h6>
+              ${prereqText}
+              ${costText}
+              <p class="mb-0 small text-light">${data.description}</p>
+            </div>
+          </div>
+        </label>
+      `;
+    }).join('');
+
+    // Show message if no options available
+    const noOptionsMessage = filteredOptions.length === 0
+      ? '<div class="alert alert-info py-2"><i class="bi bi-info-circle me-2"></i>No additional options available (already selected or filtered by content settings).</div>'
+      : '';
+
+    // Already selected display
+    let existingHtml = '';
+    if (existing.length > 0) {
+      existingHtml = `
+        <div class="mb-2">
+          <small class="text-muted">Already selected:</small>
+          <div class="d-flex flex-wrap gap-1 mt-1">
+            ${existing.map(name => `<span class="badge bg-secondary">${name}</span>`).join('')}
+          </div>
+        </div>
+      `;
+    }
+
+    const selectionLabel = singular
+      ? 'Choose one option:'
+      : `Choose ${count} option${count > 1 ? 's' : ''}:`;
+
+    return `
+      <div class="feature-selection-section mb-4" data-feature-type="${type}">
+        <h6 class="text-warning mb-2">
+          <i class="bi bi-hand-index me-1"></i>${originalName}
+        </h6>
+        ${existingHtml}
+        <p class="text-muted small mb-2">${selectionLabel}</p>
+        ${noOptionsMessage}
+        <div class="list-group feature-options-list" data-feature-type="${type}" data-max-count="${count}">
+          ${optionItems}
+        </div>
+        <div class="mt-2">
+          <small class="text-muted">Selected:</small>
+          <span class="badge bg-secondary feature-selection-badge" data-feature-type="${type}">None</span>
         </div>
       </div>
     `;
@@ -1528,6 +1791,9 @@ const LevelUpSystem = (function() {
       renderAvailableSpells();
     }
 
+    // Feature Selection Event Handlers (Fighting Style, Metamagic, etc.)
+    setupFeatureSelectionHandlers(modal, character, changes);
+
     // Confirm Level Up
     const confirmBtn = modal.querySelector('#confirmLevelUpBtn');
     confirmBtn.addEventListener('click', () => {
@@ -1537,6 +1803,127 @@ const LevelUpSystem = (function() {
         bootstrap.Modal.getInstance(modal).hide();
       }
     });
+  }
+
+  /**
+   * Set up event handlers for feature selection UI (Fighting Style, Metamagic, etc.)
+   * @param {Element} modal - The modal element
+   * @param {Object} character - The character object
+   * @param {Object} changes - The level-up changes object
+   */
+  function setupFeatureSelectionHandlers(modal, character, changes) {
+    // Initialize feature selections state
+    changes.featureSelections = changes.featureSelections || {};
+
+    // Find all feature selection inputs
+    const featureInputs = modal.querySelectorAll('.feature-selection-input');
+    if (featureInputs.length === 0) return;
+
+    featureInputs.forEach(input => {
+      input.addEventListener('change', (e) => {
+        const featureType = input.dataset.featureType;
+        const storageKey = input.dataset.storageKey;
+        const singular = input.dataset.singular === 'true';
+        const maxCount = parseInt(input.dataset.maxCount, 10) || 1;
+        const optionsList = input.closest('.feature-options-list');
+        const badge = modal.querySelector(`.feature-selection-badge[data-feature-type="${featureType}"]`);
+        const featuresBadge = modal.querySelector('#featuresBadge');
+
+        // Initialize storage for this feature type
+        if (!changes.featureSelections[storageKey]) {
+          changes.featureSelections[storageKey] = [];
+        }
+
+        if (singular) {
+          // Radio button - single selection
+          if (input.checked) {
+            changes.featureSelections[storageKey] = [input.value];
+          }
+        } else {
+          // Checkbox - multiple selection
+          if (input.checked) {
+            // Check if we've reached max
+            if (changes.featureSelections[storageKey].length >= maxCount) {
+              input.checked = false;
+              alert(`You can only select ${maxCount} option${maxCount > 1 ? 's' : ''} for this feature.`);
+              return;
+            }
+            changes.featureSelections[storageKey].push(input.value);
+          } else {
+            // Remove from selection
+            changes.featureSelections[storageKey] = changes.featureSelections[storageKey].filter(v => v !== input.value);
+          }
+        }
+
+        // Update badge for this feature
+        if (badge) {
+          const selected = changes.featureSelections[storageKey];
+          if (selected.length === 0) {
+            badge.textContent = 'None';
+            badge.className = 'badge bg-secondary feature-selection-badge';
+          } else if (singular || selected.length === maxCount) {
+            badge.textContent = selected.join(', ');
+            badge.className = 'badge bg-success feature-selection-badge';
+          } else {
+            badge.textContent = `${selected.length}/${maxCount}: ${selected.join(', ')}`;
+            badge.className = 'badge bg-warning text-dark feature-selection-badge';
+          }
+          badge.dataset.featureType = featureType;
+        }
+
+        // Update main features badge
+        updateFeaturesBadgeState(modal, changes);
+
+        // Update summary
+        updateSummary(modal, changes);
+      });
+    });
+  }
+
+  /**
+   * Update the main features badge based on all feature selection states
+   */
+  function updateFeaturesBadgeState(modal, changes) {
+    const featuresBadge = modal.querySelector('#featuresBadge');
+    if (!featuresBadge) return;
+
+    // Check all feature selection sections
+    const sections = modal.querySelectorAll('.feature-selection-section');
+    let allComplete = true;
+    let anyStarted = false;
+
+    sections.forEach(section => {
+      const featureType = section.dataset.featureType;
+      const optionsList = section.querySelector('.feature-options-list');
+      if (!optionsList) return;
+
+      const maxCount = parseInt(optionsList.dataset.maxCount, 10) || 1;
+      const storageKey = section.querySelector('.feature-selection-input')?.dataset.storageKey;
+      if (!storageKey) return;
+
+      const selected = changes.featureSelections?.[storageKey] || [];
+      if (selected.length > 0) anyStarted = true;
+      if (selected.length < maxCount) allComplete = false;
+    });
+
+    // If no selection sections, consider complete
+    if (sections.length === 0) {
+      const features = changes.features || [];
+      featuresBadge.textContent = features.length > 0 ? `${features.length} Feature${features.length > 1 ? 's' : ''}` : 'None';
+      featuresBadge.className = 'ms-auto me-3 badge bg-success';
+      return;
+    }
+
+    if (allComplete) {
+      featuresBadge.textContent = 'All Selected';
+      featuresBadge.className = 'ms-auto me-3 badge bg-success';
+    } else if (anyStarted) {
+      featuresBadge.textContent = 'In Progress';
+      featuresBadge.className = 'ms-auto me-3 badge bg-warning text-dark';
+    } else {
+      featuresBadge.textContent = 'Choices Required';
+      featuresBadge.className = 'ms-auto me-3 badge bg-warning text-dark';
+    }
   }
 
   /**
@@ -1583,7 +1970,34 @@ const LevelUpSystem = (function() {
       spellsSet = changes.spellState.selectedSpells.length === changes.spellRules.newSpells;
     }
 
-    const allComplete = subclassSet && racialFeatureSet && hpSet && asiSet && spellsSet;
+    // Check feature selections (Fighting Style, Metamagic, etc.)
+    let featuresSet = true;
+    const featureSections = modal.querySelectorAll('.feature-selection-section');
+    const featureStatus = [];
+    featureSections.forEach(section => {
+      const featureType = section.dataset.featureType;
+      const optionsList = section.querySelector('.feature-options-list');
+      if (!optionsList) return;
+
+      const maxCount = parseInt(optionsList.dataset.maxCount, 10) || 1;
+      const storageKey = section.querySelector('.feature-selection-input')?.dataset.storageKey;
+      if (!storageKey) return;
+
+      const selected = changes.featureSelections?.[storageKey] || [];
+      const isComplete = selected.length >= maxCount;
+      if (!isComplete) featuresSet = false;
+
+      // Get the original feature name from the section header
+      const featureHeader = section.querySelector('h6')?.textContent?.trim() || featureType;
+      featureStatus.push({
+        name: featureHeader,
+        isComplete,
+        selected: selected.length,
+        required: maxCount
+      });
+    });
+
+    const allComplete = subclassSet && racialFeatureSet && hpSet && asiSet && spellsSet && featuresSet;
 
     let html = '';
 
@@ -1626,6 +2040,16 @@ const LevelUpSystem = (function() {
       }
     }
 
+    // Feature selections status
+    featureStatus.forEach(status => {
+      if (status.isComplete) {
+        html += `<li class="text-success"><i class="bi bi-check-circle-fill me-1"></i>${status.name} selected</li>`;
+      } else {
+        const remaining = status.required - status.selected;
+        html += `<li class="text-muted">Select ${remaining} more ${status.name.toLowerCase()} option${remaining > 1 ? 's' : ''}</li>`;
+      }
+    });
+
     if (allComplete) {
       html += `<li class="text-success"><i class="bi bi-check-circle-fill me-1"></i>Ready to level up!</li>`;
       confirmBtn.disabled = false;
@@ -1654,7 +2078,8 @@ const LevelUpSystem = (function() {
       spellsLearned: [],
       spellSwapped: null,
       multiclassPath: 'continue',
-      multiclassNewClass: null
+      multiclassNewClass: null,
+      featureSelections: changes.featureSelections || {}
     };
 
     // Check multiclass path
@@ -1778,6 +2203,25 @@ const LevelUpSystem = (function() {
           oldSpell: changes.spellState.swapOldSpell,
           newSpell: changes.spellState.swapNewSpell
         };
+      }
+    }
+
+    // Validate feature selections (Fighting Style, Metamagic, etc.)
+    const featureSections = modal.querySelectorAll('.feature-selection-section');
+    for (const section of featureSections) {
+      const featureType = section.dataset.featureType;
+      const optionsList = section.querySelector('.feature-options-list');
+      if (!optionsList) continue;
+
+      const maxCount = parseInt(optionsList.dataset.maxCount, 10) || 1;
+      const storageKey = section.querySelector('.feature-selection-input')?.dataset.storageKey;
+      if (!storageKey) continue;
+
+      const selected = data.featureSelections[storageKey] || [];
+      if (selected.length < maxCount) {
+        const featureHeader = section.querySelector('h6')?.textContent?.trim() || featureType;
+        alert(`Please complete your ${featureHeader} selection (${selected.length}/${maxCount} selected).`);
+        return null;
       }
     }
 
@@ -2248,8 +2692,66 @@ const LevelUpSystem = (function() {
       console.warn('Could not update Wild Shape reference:', e);
     }
 
-    // Add features to notes (optional)
-    if (levelUpData.features.length > 0 || racialFeaturesGained.length > 0) {
+    // Process feature selections (Fighting Style, Metamagic, Eldritch Invocations, Pact Boon)
+    const featureSelections = levelUpData.featureSelections || {};
+    let selectedFeaturesText = '';
+
+    // Fighting Style
+    if (featureSelections.fightingStyles && featureSelections.fightingStyles.length > 0) {
+      character.fightingStyles = character.fightingStyles || [];
+      featureSelections.fightingStyles.forEach(styleName => {
+        if (!character.fightingStyles.includes(styleName)) {
+          character.fightingStyles.push(styleName);
+        }
+        const styleData = LevelUpData.getFightingStyleData ? LevelUpData.getFightingStyleData(styleName) : null;
+        if (styleData) {
+          selectedFeaturesText += `\n\n**Fighting Style: ${styleData.name}**\n${styleData.description}`;
+        }
+      });
+    }
+
+    // Pact Boon
+    if (featureSelections.pactBoon && featureSelections.pactBoon.length > 0) {
+      character.pactBoon = featureSelections.pactBoon[0];
+      const boonData = LevelUpData.getPactBoonData ? LevelUpData.getPactBoonData(character.pactBoon) : null;
+      if (boonData) {
+        selectedFeaturesText += `\n\n**Pact Boon: ${boonData.name}**\n${boonData.description}`;
+      }
+    }
+
+    // Eldritch Invocations
+    if (featureSelections.eldritchInvocations && featureSelections.eldritchInvocations.length > 0) {
+      character.eldritchInvocations = character.eldritchInvocations || [];
+      featureSelections.eldritchInvocations.forEach(invocationName => {
+        if (!character.eldritchInvocations.includes(invocationName)) {
+          character.eldritchInvocations.push(invocationName);
+        }
+        const invocationData = LevelUpData.getEldritchInvocationData ? LevelUpData.getEldritchInvocationData(invocationName) : null;
+        if (invocationData) {
+          const prereqText = invocationData.prerequisites ? ` (Prerequisite: ${invocationData.prerequisites})` : '';
+          selectedFeaturesText += `\n\n**Eldritch Invocation: ${invocationData.name}**${prereqText}\n${invocationData.description}`;
+        }
+      });
+    }
+
+    // Metamagic
+    if (featureSelections.metamagic && featureSelections.metamagic.length > 0) {
+      character.metamagic = character.metamagic || [];
+      featureSelections.metamagic.forEach(metamagicName => {
+        if (!character.metamagic.includes(metamagicName)) {
+          character.metamagic.push(metamagicName);
+        }
+        const metamagicData = LevelUpData.getMetamagicData ? LevelUpData.getMetamagicData(metamagicName) : null;
+        if (metamagicData) {
+          const costText = metamagicData.cost ? ` (${metamagicData.cost})` : '';
+          selectedFeaturesText += `\n\n**Metamagic: ${metamagicData.name}**${costText}\n${metamagicData.description}`;
+        }
+      });
+    }
+
+    // Add features to notes
+    const hasFeatures = levelUpData.features.length > 0 || racialFeaturesGained.length > 0 || selectedFeaturesText;
+    if (hasFeatures) {
       let featuresText = '';
 
       // Add racial features first
@@ -2260,9 +2762,20 @@ const LevelUpSystem = (function() {
         });
       }
 
-      // Add class features
-      if (levelUpData.features.length > 0) {
-        featuresText += `\n\n=== Level ${levelUpData.newLevel} Class Features ===\n${levelUpData.features.join('\n')}`;
+      // Add class features header
+      if (levelUpData.features.length > 0 || selectedFeaturesText) {
+        featuresText += `\n\n=== Level ${levelUpData.newLevel} Class Features ===`;
+
+        // Add static (auto-granted) features as bullet points
+        const staticFeatures = levelUpData.features.filter(f => !parseSelectableFeature(f));
+        if (staticFeatures.length > 0) {
+          featuresText += '\n' + staticFeatures.join('\n');
+        }
+
+        // Add selected features with full descriptions
+        if (selectedFeaturesText) {
+          featuresText += selectedFeaturesText;
+        }
       }
 
       character.features = (character.features || '') + featuresText;
@@ -2314,6 +2827,22 @@ const LevelUpSystem = (function() {
       wildShapeMessage = `<li>Wild Shape forms updated for level ${levelUpData.newLevel}</li>`;
     }
 
+    // Build feature selections message
+    let featureSelectionsMessage = '';
+    const featureSelections = levelUpData.featureSelections || {};
+    if (featureSelections.fightingStyles && featureSelections.fightingStyles.length > 0) {
+      featureSelectionsMessage += `<li>Fighting Style: ${featureSelections.fightingStyles.join(', ')}</li>`;
+    }
+    if (featureSelections.pactBoon && featureSelections.pactBoon.length > 0) {
+      featureSelectionsMessage += `<li>Pact Boon: ${featureSelections.pactBoon[0]}</li>`;
+    }
+    if (featureSelections.eldritchInvocations && featureSelections.eldritchInvocations.length > 0) {
+      featureSelectionsMessage += `<li>Eldritch Invocations: ${featureSelections.eldritchInvocations.join(', ')}</li>`;
+    }
+    if (featureSelections.metamagic && featureSelections.metamagic.length > 0) {
+      featureSelectionsMessage += `<li>Metamagic: ${featureSelections.metamagic.join(', ')}</li>`;
+    }
+
     // Build warning message for resources that couldn't be auto-updated
     let warningMessage = '';
     if (resStatus && resStatus.needsManualUpdate) {
@@ -2337,6 +2866,7 @@ const LevelUpSystem = (function() {
           ${levelUpData.asi ? '<li>Ability scores increased</li>' : ''}
           ${levelUpData.feat ? `<li>Gained feat: ${levelUpData.feat}</li>` : ''}
           ${levelUpData.features.length > 0 ? `<li>${levelUpData.features.length} new class feature(s) gained</li>` : ''}
+          ${featureSelectionsMessage}
           ${racialFeatureMessage}
           ${racialSpellsMessage}
           ${wildShapeMessage}
@@ -2362,14 +2892,6 @@ const LevelUpSystem = (function() {
       }, 10000);
     }
   }
-
-  /**
-   * Calculate ability modifier from score
-   */
-  function calculateAbilityModifier(score) {
-    return Math.floor((score - 10) / 2);
-  }
-
   // ============================================================
   // PUBLIC API
   // ============================================================

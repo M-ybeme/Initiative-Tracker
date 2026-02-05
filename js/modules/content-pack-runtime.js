@@ -7,6 +7,12 @@
  *     BACKGROUND_DATA?: Record<string, unknown>;
  *     CLASS_EQUIPMENT_CHOICES?: Record<string, unknown>;
  *     DEFAULT_CLASS_EQUIPMENT?: Record<string, unknown>;
+ *     RACE_DATA?: Record<string, unknown>;
+ *     SUBRACE_DATA?: Record<string, unknown>;
+ *     FIGHTING_STYLE_DATA?: Record<string, unknown>;
+ *     PACT_BOON_DATA?: Record<string, unknown>;
+ *     ELDRITCH_INVOCATION_DATA?: Record<string, unknown>;
+ *     METAMAGIC_DATA?: Record<string, unknown>;
  *   };
  *   SRD_CONTENT_ALLOWLIST?: Record<string, string[]>;
  *   SPELLS_DATA?: Array<Record<string, unknown>>;
@@ -126,7 +132,13 @@ function captureBaseline() {
     feats: safeClone(levelData.FEATS || {}),
     backgrounds: safeClone(levelData.BACKGROUND_DATA || {}),
     classEquipmentChoices: safeClone(levelData.CLASS_EQUIPMENT_CHOICES || {}),
-    defaultClassEquipment: safeClone(levelData.DEFAULT_CLASS_EQUIPMENT || {})
+    defaultClassEquipment: safeClone(levelData.DEFAULT_CLASS_EQUIPMENT || {}),
+    raceData: safeClone(levelData.RACE_DATA || {}),
+    subraceData: safeClone(levelData.SUBRACE_DATA || {}),
+    fightingStyleData: safeClone(levelData.FIGHTING_STYLE_DATA || {}),
+    pactBoonData: safeClone(levelData.PACT_BOON_DATA || {}),
+    eldritchInvocationData: safeClone(levelData.ELDRITCH_INVOCATION_DATA || {}),
+    metamagicData: safeClone(levelData.METAMAGIC_DATA || {})
   };
 }
 
@@ -191,7 +203,10 @@ function addRecordIdsToAllowlist(buckets, recordsByType = {}) {
     });
   };
   addFromRecords('class', (record) => addClassDerivativeAllowlists(buckets, record?.id));
-  ['subclass', 'feat', 'background', 'spell'].forEach((type) => addFromRecords(type));
+  [
+    'subclass', 'feat', 'background', 'spell', 'race',
+    'subrace', 'fighting-style', 'pact-boon', 'eldritch-invocation', 'metamagic'
+  ].forEach((type) => addFromRecords(type));
 }
 
 function mergeAllowlists(base = {}, additions = {}, recordsByType = {}) {
@@ -466,6 +481,144 @@ function applyBackgroundRecords(records = [], backgrounds = {}) {
   });
 }
 
+function applyRaceRecords(records = [], raceData = {}) {
+  records.forEach((record) => {
+    const id = record?.id?.trim();
+    if (!id) {
+      return;
+    }
+    if (record.operation === 'remove') {
+      delete raceData[id];
+      return;
+    }
+    if (!record.payload || typeof record.payload !== 'object') {
+      return;
+    }
+    const payload = safeClone(record.payload);
+    if (!payload.name) {
+      payload.name = id;
+    }
+    raceData[id] = payload;
+  });
+}
+
+function applySubraceRecords(records = [], subraceData = {}) {
+  records.forEach((record) => {
+    const id = record?.id;
+    if (!id) {
+      return;
+    }
+    // Subrace IDs use format "Race:Subrace Name"
+    const [raceName, ...rest] = id.split(':');
+    const subraceName = rest.join(':').trim();
+    const trimmedRace = raceName?.trim();
+    if (!trimmedRace || !subraceName) {
+      return;
+    }
+    const key = `${trimmedRace}:${subraceName}`;
+    if (record.operation === 'remove') {
+      delete subraceData[key];
+      return;
+    }
+    if (!record.payload || typeof record.payload !== 'object') {
+      return;
+    }
+    const payload = safeClone(record.payload);
+    // Ensure required fields
+    if (!payload.name) {
+      payload.name = subraceName;
+    }
+    if (!payload.race) {
+      payload.race = trimmedRace;
+    }
+    subraceData[key] = payload;
+  });
+}
+
+function applyFightingStyleRecords(records = [], fightingStyleData = {}) {
+  records.forEach((record) => {
+    const id = record?.id?.trim();
+    if (!id) {
+      return;
+    }
+    if (record.operation === 'remove') {
+      delete fightingStyleData[id];
+      return;
+    }
+    if (!record.payload || typeof record.payload !== 'object') {
+      return;
+    }
+    const payload = safeClone(record.payload);
+    if (!payload.name) {
+      payload.name = id;
+    }
+    fightingStyleData[id] = payload;
+  });
+}
+
+function applyPactBoonRecords(records = [], pactBoonData = {}) {
+  records.forEach((record) => {
+    const id = record?.id?.trim();
+    if (!id) {
+      return;
+    }
+    if (record.operation === 'remove') {
+      delete pactBoonData[id];
+      return;
+    }
+    if (!record.payload || typeof record.payload !== 'object') {
+      return;
+    }
+    const payload = safeClone(record.payload);
+    if (!payload.name) {
+      payload.name = id;
+    }
+    pactBoonData[id] = payload;
+  });
+}
+
+function applyEldritchInvocationRecords(records = [], eldritchInvocationData = {}) {
+  records.forEach((record) => {
+    const id = record?.id?.trim();
+    if (!id) {
+      return;
+    }
+    if (record.operation === 'remove') {
+      delete eldritchInvocationData[id];
+      return;
+    }
+    if (!record.payload || typeof record.payload !== 'object') {
+      return;
+    }
+    const payload = safeClone(record.payload);
+    if (!payload.name) {
+      payload.name = id;
+    }
+    eldritchInvocationData[id] = payload;
+  });
+}
+
+function applyMetamagicRecords(records = [], metamagicData = {}) {
+  records.forEach((record) => {
+    const id = record?.id?.trim();
+    if (!id) {
+      return;
+    }
+    if (record.operation === 'remove') {
+      delete metamagicData[id];
+      return;
+    }
+    if (!record.payload || typeof record.payload !== 'object') {
+      return;
+    }
+    const payload = safeClone(record.payload);
+    if (!payload.name) {
+      payload.name = id;
+    }
+    metamagicData[id] = payload;
+  });
+}
+
 function buildRuntimeData(baseSnapshot) {
   const source = baseSnapshot || {};
   return {
@@ -475,7 +628,13 @@ function buildRuntimeData(baseSnapshot) {
     feats: safeClone(source.feats || {}),
     backgrounds: safeClone(source.backgrounds || {}),
     classEquipmentChoices: safeClone(source.classEquipmentChoices || {}),
-    defaultClassEquipment: safeClone(source.defaultClassEquipment || {})
+    defaultClassEquipment: safeClone(source.defaultClassEquipment || {}),
+    raceData: safeClone(source.raceData || {}),
+    subraceData: safeClone(source.subraceData || {}),
+    fightingStyleData: safeClone(source.fightingStyleData || {}),
+    pactBoonData: safeClone(source.pactBoonData || {}),
+    eldritchInvocationData: safeClone(source.eldritchInvocationData || {}),
+    metamagicData: safeClone(source.metamagicData || {})
   };
 }
 
@@ -527,12 +686,36 @@ function applyRuntimeData(nextData) {
   if (!levelData.DEFAULT_CLASS_EQUIPMENT) {
     levelData.DEFAULT_CLASS_EQUIPMENT = {};
   }
+  if (!levelData.RACE_DATA) {
+    levelData.RACE_DATA = {};
+  }
+  if (!levelData.SUBRACE_DATA) {
+    levelData.SUBRACE_DATA = {};
+  }
+  if (!levelData.FIGHTING_STYLE_DATA) {
+    levelData.FIGHTING_STYLE_DATA = {};
+  }
+  if (!levelData.PACT_BOON_DATA) {
+    levelData.PACT_BOON_DATA = {};
+  }
+  if (!levelData.ELDRITCH_INVOCATION_DATA) {
+    levelData.ELDRITCH_INVOCATION_DATA = {};
+  }
+  if (!levelData.METAMAGIC_DATA) {
+    levelData.METAMAGIC_DATA = {};
+  }
   syncObject(levelData.CLASS_DATA, nextData.classData);
   syncObject(levelData.SUBCLASS_DATA, nextData.subclassData);
   syncObject(levelData.FEATS, nextData.feats);
   syncObject(levelData.BACKGROUND_DATA, nextData.backgrounds);
   syncObject(levelData.CLASS_EQUIPMENT_CHOICES, nextData.classEquipmentChoices);
   syncObject(levelData.DEFAULT_CLASS_EQUIPMENT, nextData.defaultClassEquipment);
+  syncObject(levelData.RACE_DATA, nextData.raceData);
+  syncObject(levelData.SUBRACE_DATA, nextData.subraceData);
+  syncObject(levelData.FIGHTING_STYLE_DATA, nextData.fightingStyleData);
+  syncObject(levelData.PACT_BOON_DATA, nextData.pactBoonData);
+  syncObject(levelData.ELDRITCH_INVOCATION_DATA, nextData.eldritchInvocationData);
+  syncObject(levelData.METAMAGIC_DATA, nextData.metamagicData);
 }
 
 function applyRecords(baseSnapshot, recordsByType = {}) {
@@ -542,7 +725,77 @@ function applyRecords(baseSnapshot, recordsByType = {}) {
   applySubclassRecords(recordsByType.subclass, runtime.subclassData);
   applyFeatRecords(recordsByType.feat, runtime.feats);
   applyBackgroundRecords(recordsByType.background, runtime.backgrounds);
+  applyRaceRecords(recordsByType.race, runtime.raceData);
+  applySubraceRecords(recordsByType.subrace, runtime.subraceData);
+  applyFightingStyleRecords(recordsByType['fighting-style'], runtime.fightingStyleData);
+  applyPactBoonRecords(recordsByType['pact-boon'], runtime.pactBoonData);
+  applyEldritchInvocationRecords(recordsByType['eldritch-invocation'], runtime.eldritchInvocationData);
+  applyMetamagicRecords(recordsByType.metamagic, runtime.metamagicData);
   applyRuntimeData(runtime);
+}
+
+/**
+ * Apply records directly to the current window data without rebuilding from baseline.
+ * Used after SRD filtering to add homebrew content to already-filtered data.
+ */
+function applyRecordsToCurrentData(recordsByType = {}) {
+  if (!runtimeWindow) {
+    return;
+  }
+  const levelData = runtimeWindow.LevelUpData || {};
+
+  // Apply spell records directly to current SPELLS_DATA
+  if (Array.isArray(runtimeWindow.SPELLS_DATA)) {
+    applySpellRecords(recordsByType.spell, runtimeWindow.SPELLS_DATA);
+  }
+
+  // Apply class records directly to current LevelUpData structures
+  if (levelData.CLASS_DATA) {
+    // Ensure equipment structures exist and are synced
+    if (!levelData.CLASS_EQUIPMENT_CHOICES) {
+      levelData.CLASS_EQUIPMENT_CHOICES = {};
+    }
+    if (!levelData.DEFAULT_CLASS_EQUIPMENT) {
+      levelData.DEFAULT_CLASS_EQUIPMENT = {};
+    }
+    applyClassRecords(recordsByType.class, levelData.CLASS_DATA, levelData.CLASS_EQUIPMENT_CHOICES, levelData.DEFAULT_CLASS_EQUIPMENT);
+  }
+
+  if (levelData.SUBCLASS_DATA) {
+    applySubclassRecords(recordsByType.subclass, levelData.SUBCLASS_DATA);
+  }
+
+  if (levelData.FEATS) {
+    applyFeatRecords(recordsByType.feat, levelData.FEATS);
+  }
+
+  if (levelData.BACKGROUND_DATA) {
+    applyBackgroundRecords(recordsByType.background, levelData.BACKGROUND_DATA);
+  }
+
+  if (levelData.RACE_DATA) {
+    applyRaceRecords(recordsByType.race, levelData.RACE_DATA);
+  }
+
+  if (levelData.SUBRACE_DATA) {
+    applySubraceRecords(recordsByType.subrace, levelData.SUBRACE_DATA);
+  }
+
+  if (levelData.FIGHTING_STYLE_DATA) {
+    applyFightingStyleRecords(recordsByType['fighting-style'], levelData.FIGHTING_STYLE_DATA);
+  }
+
+  if (levelData.PACT_BOON_DATA) {
+    applyPactBoonRecords(recordsByType['pact-boon'], levelData.PACT_BOON_DATA);
+  }
+
+  if (levelData.ELDRITCH_INVOCATION_DATA) {
+    applyEldritchInvocationRecords(recordsByType['eldritch-invocation'], levelData.ELDRITCH_INVOCATION_DATA);
+  }
+
+  if (levelData.METAMAGIC_DATA) {
+    applyMetamagicRecords(recordsByType.metamagic, levelData.METAMAGIC_DATA);
+  }
 }
 
 function dispatchPacksEvent(detail) {
@@ -561,12 +814,30 @@ export function initContentPackRuntime(manager) {
     return;
   }
 
+  // Store the current context so we can re-apply records after SRD filtering
+  let currentContext = {};
+  let currentMergedAllowlist = {};
+
   const handleUpdate = (context = {}) => {
-    const mergedAllowlist = mergeAllowlists(base.allowlist, context.allowlist, context.recordsByType);
-    applyAllowlist(mergedAllowlist);
+    currentContext = context;
+    currentMergedAllowlist = mergeAllowlists(base.allowlist, context.allowlist, context.recordsByType);
+    applyAllowlist(currentMergedAllowlist);
     applyRecords(base, context.recordsByType || {});
-    dispatchPacksEvent({ allowlist: mergedAllowlist, context });
+    dispatchPacksEvent({ allowlist: currentMergedAllowlist, context });
   };
+
+  // Listen for SRD filtering completion and re-apply records
+  // This is needed because site.js restores from backups on packs-applied,
+  // which wipes out the homebrew content we just added
+  runtimeWindow.addEventListener('dmtoolbox:srd-filtered', () => {
+    if (!currentContext.recordsByType || Object.keys(currentContext.recordsByType).length === 0) {
+      return;
+    }
+    // Re-apply records directly to the current (already filtered) window data
+    applyRecordsToCurrentData(currentContext.recordsByType);
+    // Signal that pack content is now fully applied - triggers cache invalidation
+    runtimeWindow.dispatchEvent(new CustomEvent('dmtoolbox:packs-ready'));
+  });
 
   manager.subscribe((payload) => {
     handleUpdate(payload?.context || {});

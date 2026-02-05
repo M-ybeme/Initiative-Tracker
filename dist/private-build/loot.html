@@ -1,0 +1,2402 @@
+<!DOCTYPE html>
+<html lang="en" data-bs-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>The DM's Toolbox: Loot Generator</title>
+
+  <!-- Bootstrap CSS + Icons -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" crossorigin="anonymous" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.8.3/font/bootstrap-icons.css" />
+
+  <!-- Custom CSS -->
+  <link href="/css/site.css" rel="stylesheet" />
+  <!-- Dev Icons -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/devicons/devicon@v2.15.1/devicon.min.css" />
+  <!-- Favicon -->
+  <link rel="icon" type="image/png" href="/images/dndFavicon (2).png" />
+
+  <!-- Sortable (optional) + Bootstrap JS -->
+  <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" crossorigin="anonymous"></script>
+  <script src="/js/site.js"></script>
+
+  <style>
+    .bgimage{ background: url('images/BGMap.png') no-repeat center center fixed; background-size: cover; }
+    .bg-orange { background-color: #fd7e14 !important; color: #212529 !important; }
+    .drag-handle { cursor: move; }
+    .active-turn { border-left: 5px solid #1d9e6d !important; color: #f8f9fa !important; font-weight: bold; }
+    #saveHistorySelect { min-width: 200px; }
+
+    /* Loot UI */
+    .loot-tile{border:1px solid rgba(255,255,255,.15);border-radius:.6rem;padding:.6rem;background:rgba(0,0,0,.2)}
+    .loot-title{font-weight:600}
+    .loot-sub{font-size:.9rem;color:#9aa0a6}
+    .loot-meta{font-size:.8rem;color:#8b93a1}
+    .pill{border:1px solid rgba(255,255,255,.15);border-radius:50rem;padding:.15rem .5rem}
+    .range-label{display:flex;justify-content:space-between;font-size:.85rem;color:#9aa0a6;margin-top:.25rem}
+    .form-hint{font-size:.85rem;color:#9aa0a6}
+
+    /* Simple/Advanced mode toggle */
+    .advanced-setting { display: none; }
+    .advanced-mode .advanced-setting { display: block; }
+    .advanced-setting.row { display: none; }
+    .advanced-mode .advanced-setting.row { display: flex; }
+  </style>
+</head>
+<body class="bgimage">
+  <!-- Nav -->
+  <nav class="navbar navbar-expand-lg navbar-dark fixed-top text-light" id="mainNav">
+    <div class="container-fluid">
+      <a class="navbar-brand" href="index.html">
+        <img src="/images/dndFavicon (2).png" height="40" width="40" alt="App Logo" class="d-inline-block" />
+        The DM Toolbox
+      </a>
+      <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarSupportedContent"
+        aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+        <span class="navbar-toggler-icon"></span>
+      </button>
+      <div class="collapse navbar-collapse" id="navbarSupportedContent">
+        <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+          <li class="nav-item dropdown">
+            <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+              Combat
+            </a>
+            <ul class="dropdown-menu">
+              <li><a class="dropdown-item" href="initiative.html">Initiative Tracker</a></li>
+              <li><a class="dropdown-item" href="battlemap.html">Battle Map</a></li>
+              <li><a class="dropdown-item" href="encounterbuilder.html">Encounter Builder</a></li>
+            </ul>
+          </li>
+          <li class="nav-item dropdown">
+            <a class="nav-link dropdown-toggle active" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+              Generators
+            </a>
+            <ul class="dropdown-menu">
+              <li><a class="dropdown-item" href="name.html">Name Generator</a></li>
+              <li><a class="dropdown-item active" aria-current="page" href="loot.html">Loot Generator</a></li>
+              <li><a class="dropdown-item" href="shop.html">Shop Generator</a></li>
+              <li><a class="dropdown-item" href="npc.html">NPC Generator</a></li>
+              <li><a class="dropdown-item" href="tav.html">Tavern/Inn Generator</a></li>
+            </ul>
+          </li>
+          <li class="nav-item dropdown">
+            <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+              Campaign
+            </a>
+            <ul class="dropdown-menu">
+              <li><a class="dropdown-item" href="characters.html">Characters</a></li>
+              <li><a class="dropdown-item" href="journal.html">Journal</a></li>
+            </ul>
+          </li>
+        </ul>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Main -->
+  <main class="content pt-3">
+    <h1 class="d-flex justify-content-center mt-2">Loot Generator</h1>
+    <div class="container-fluid text-center backdrop">
+      <div class="alert alert-warning text-start" role="status">
+        <div class="fw-semibold"><i class="bi bi-shield-lock me-1"></i>SRD Scope</div>
+        <small>The treasure tables stick to SRD 5.1 currency, magic items, and spell scrolls (plus original flavor snippets). Homebrew hoards or items from other books should be injected through a private content pack so the public download remains SRD-only.</small>
+      </div>
+      <div class="row g-3">
+        <!-- Settings -->
+        <div class="col-12 col-lg-4">
+          <div class="card bg-dark border-secondary h-100">
+            <div class="card-header border-secondary d-flex justify-content-between align-items-center">
+              <h5 class="mb-0">Loot Settings</h5>
+              <div class="form-check form-switch mb-0">
+                <input class="form-check-input" type="checkbox" id="advancedModeToggle" role="switch">
+                <label class="form-check-label small" for="advancedModeToggle">Advanced</label>
+              </div>
+            </div>
+            <div class="card-body" id="lootSettingsBody">
+
+              <!-- Presets -->
+              <div class="mb-2">
+                <label for="lg-preset" class="form-label">Tier / CR Preset</label>
+                <select id="lg-preset" class="form-select">
+                  <option value="custom">Custom (no preset)</option>
+                  <option value="t1">Tier I (Lv 1–4 / CR 1–4)</option>
+                  <option value="t2">Tier II (Lv 5–10 / CR 5–10)</option>
+                  <option value="t3">Tier III (Lv 11–16 / CR 11–16)</option>
+                  <option value="t4">Tier IV (Lv 17–20 / CR 17+)</option>
+                </select>
+                <div class="form-hint mt-1">Presets adjust budget/caps/usefulness. You can still tweak below.</div>
+              </div>
+
+              <!-- Quick Bundle Presets -->
+              <div class="mb-3">
+                <label class="form-label fw-semibold">
+                  <i class="bi bi-lightning-charge me-1"></i>Quick Bundles
+                </label>
+                <div class="d-grid gap-2">
+                  <div class="row g-2">
+                    <div class="col-6">
+                      <button class="btn btn-sm btn-outline-light w-100 quick-bundle-btn" data-bundle="pocket">
+                        <i class="bi bi-coin me-1"></i>Pocket Loot
+                        <small class="d-block text-secondary" style="font-size: 0.7rem;">~50 gp</small>
+                      </button>
+                    </div>
+                    <div class="col-6">
+                      <button class="btn btn-sm btn-outline-secondary w-100 quick-bundle-btn" data-bundle="coinpouch">
+                        <i class="bi bi-cash-stack me-1"></i>Coin Pouch
+                        <small class="d-block text-secondary" style="font-size: 0.7rem;">200-500 gp</small>
+                      </button>
+                    </div>
+                  </div>
+                  <div class="row g-2">
+                    <div class="col-6">
+                      <button class="btn btn-sm btn-outline-success w-100 quick-bundle-btn" data-bundle="gems">
+                        <i class="bi bi-gem me-1"></i>5 Gems
+                        <small class="d-block text-secondary" style="font-size: 0.7rem;">~500 gp</small>
+                      </button>
+                    </div>
+                    <div class="col-6">
+                      <button class="btn btn-sm btn-outline-info w-100 quick-bundle-btn" data-bundle="potions">
+                        <i class="bi bi-droplet-fill me-1"></i>Potion Bundle
+                        <small class="d-block text-secondary" style="font-size: 0.7rem;">3 potions</small>
+                      </button>
+                    </div>
+                  </div>
+                  <div class="row g-2">
+                    <div class="col-6">
+                      <button class="btn btn-sm btn-outline-info w-100 quick-bundle-btn" data-bundle="scrolls">
+                        <i class="bi bi-file-text me-1"></i>Scroll Bundle
+                        <small class="d-block text-secondary" style="font-size: 0.7rem;">3 scrolls</small>
+                      </button>
+                    </div>
+                    <div class="col-6">
+                      <button class="btn btn-sm btn-outline-warning w-100 quick-bundle-btn" data-bundle="boss">
+                        <i class="bi bi-trophy me-1"></i>Boss Hoard
+                        <small class="d-block text-secondary" style="font-size: 0.7rem;">~2000 gp</small>
+                      </button>
+                    </div>
+                  </div>
+                  <div class="row g-2">
+                    <div class="col-6">
+                      <button class="btn btn-sm btn-outline-light w-100 quick-bundle-btn" data-bundle="magicitems">
+                        <i class="bi bi-stars me-1"></i>Magic Items
+                        <small class="d-block text-secondary" style="font-size: 0.7rem;">8 items</small>
+                      </button>
+                    </div>
+                    <div class="col-6">
+                      <button class="btn btn-sm btn-outline-danger w-100 quick-bundle-btn" data-bundle="curseditems">
+                        <i class="bi bi-exclamation-triangle me-1"></i>Cursed Items
+                        <small class="d-block text-secondary" style="font-size: 0.7rem;">6 items</small>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+                <div class="form-hint mt-1">One-click common loot scenarios. Bypasses settings below.</div>
+              </div>
+
+              <!-- Monster Type -->
+              <div class="mb-2 advanced-setting">
+                <label for="lg-monster" class="form-label">Monster Type (Optional)</label>
+                <select id="lg-monster" class="form-select">
+                  <option value="none">None (use hoard template below)</option>
+                  <option value="dragon">Dragon</option>
+                  <option value="lich">Lich</option>
+                  <option value="vampire">Vampire</option>
+                  <option value="beholder">Beholder</option>
+                  <option value="giant">Giant</option>
+                  <option value="demon">Demon/Devil</option>
+                  <option value="fey">Fey Noble</option>
+                  <option value="aberration">Aberration</option>
+                  <option value="undead">Undead Horde</option>
+                </select>
+                <div class="form-hint mt-1">Overrides hoard template with monster-specific loot.</div>
+              </div>
+
+              <!-- Hoard Template -->
+              <div class="mb-2 advanced-setting">
+                <label for="lg-template" class="form-label">Hoard Template</label>
+                <select id="lg-template" class="form-select">
+                  <option value="none">None (generic mix)</option>
+                  <option value="bandit">Bandit cache</option>
+                  <option value="cult">Cult sanctum</option>
+                  <option value="noble">Noble vault</option>
+                  <option value="goblin">Goblin den</option>
+                  <option value="ship">Ship cargo</option>
+                  <option value="wizard">Wizard's study</option>
+                </select>
+                <div class="form-hint mt-1">Biases categories, bundles, and flavor.</div>
+              </div>
+
+              <!-- Loot Type -->
+              <div class="mb-2 advanced-setting">
+                <label class="form-label d-block">Loot Type</label>
+                <div class="btn-group w-100" role="group" aria-label="Loot Type">
+                  <input type="radio" class="btn-check" name="lg-loot-type" id="lg-loot-hoard" value="hoard" checked>
+                  <label class="btn btn-outline-light" for="lg-loot-hoard">Hoard</label>
+                  <input type="radio" class="btn-check" name="lg-loot-type" id="lg-loot-individual" value="individual">
+                  <label class="btn btn-outline-light" for="lg-loot-individual">Individual</label>
+                </div>
+                <div class="form-hint mt-1">Hoard: large treasure piles. Individual: pocket loot from single creatures.</div>
+              </div>
+
+              <!-- Mode -->
+              <div class="mb-2 advanced-setting">
+                <label class="form-label d-block">Generation Mode</label>
+                <div class="btn-group w-100" role="group" aria-label="Mode">
+                  <input type="radio" class="btn-check" name="lg-mode" id="lg-mode-count" value="count" checked>
+                  <label class="btn btn-outline-light" for="lg-mode-count">Count</label>
+                  <input type="radio" class="btn-check" name="lg-mode" id="lg-mode-budget" value="budget">
+                  <label class="btn btn-outline-light" for="lg-mode-budget">Budget</label>
+                </div>
+              </div>
+
+              <!-- Common controls -->
+              <div class="row g-2 advanced-setting">
+                <div class="col-6">
+                  <label for="lg-count" class="form-label">Count</label>
+                  <input id="lg-count" class="form-control" type="number" inputmode="numeric" min="1" max="5000" value="50">
+                  <div class="form-hint">Ignored in Budget mode (used as soft cap).</div>
+                </div>
+                <div class="col-6">
+                  <label for="lg-seed" class="form-label">Seed (optional)</label>
+                  <input id="lg-seed" class="form-control" type="text" placeholder="e.g. session-12">
+                </div>
+              </div>
+
+              <div class="row g-2 mt-1 advanced-setting">
+                <div class="col-6">
+                  <label for="lg-min" class="form-label">Min value (sp)</label>
+                  <input id="lg-min" class="form-control" type="number" inputmode="numeric" min="0" max="500" value="1">
+                </div>
+                <div class="col-6">
+                  <label for="lg-max" class="form-label">Max value (gp)</label>
+                  <input id="lg-max" class="form-control" type="number" inputmode="numeric" min="1" max="500" value="25">
+                </div>
+              </div>
+
+              <!-- Budget -->
+              <div class="mt-2 advanced-setting">
+                <label for="lg-budget" class="form-label">Target Budget (gp)</label>
+                <input id="lg-budget" class="form-control" type="number" inputmode="numeric" min="1" max="100000" value="150">
+                <div class="form-hint">Used when Mode = Budget (aims ±10%).</div>
+              </div>
+
+              <!-- Usefulness slider -->
+              <div class="mt-2 advanced-setting">
+                <label for="lg-use" class="form-label">Usefulness Bias</label>
+                <input id="lg-use" class="form-range" type="range" min="0" max="100" value="50">
+                <div class="range-label"><span>Flavor-heavy</span><span>Balanced</span><span>Valuable/usable</span></div>
+              </div>
+
+              <!-- Minor magic toggle -->
+              <div class="form-check mt-2 advanced-setting">
+                <input class="form-check-input" type="checkbox" id="lg-magic">
+                <label class="form-check-label" for="lg-magic">Allow minor magic (consumables & situational gear)</label>
+              </div>
+
+              <!-- Cursed items toggle -->
+              <div class="form-check mt-2 advanced-setting">
+                <input class="form-check-input" type="checkbox" id="lg-cursed">
+                <label class="form-check-label" for="lg-cursed">Include cursed items (risk & reward)</label>
+              </div>
+
+              <!-- Curse severity slider (only visible when cursed items enabled) -->
+              <div class="mt-2 advanced-setting" id="lg-curse-severity-wrap" style="display:none;">
+                <label for="lg-curse-severity" class="form-label">Curse Severity</label>
+                <input id="lg-curse-severity" class="form-range" type="range" min="1" max="5" value="3">
+                <div class="range-label"><span>Flavor only</span><span>Balanced</span><span>Dangerous</span></div>
+                <div class="form-hint mt-1">Lower values: mostly harmless. Higher values: serious mechanical penalties.</div>
+              </div>
+
+              <!-- Categories -->
+              <div class="mt-2 advanced-setting">
+                <label class="form-label">Categories</label>
+                <div class="row row-cols-2 g-1" id="lg-cats"></div>
+                <div class="form-hint mt-1">"Minor Magic" and "Cursed Items" are auto-included only when their toggles are on.</div>
+              </div>
+
+              <div class="form-check mt-2 advanced-setting">
+                <input class="form-check-input" type="checkbox" id="lg-weight" checked>
+                <label class="form-check-label" for="lg-weight">Show weight estimate</label>
+              </div>
+              <div class="form-check advanced-setting">
+                <input class="form-check-input" type="checkbox" id="lg-tags" checked>
+                <label class="form-check-label" for="lg-tags">Show tags</label>
+              </div>
+
+              <!-- Custom Loot Table -->
+              <div class="mt-2 advanced-setting">
+                <label class="form-label d-flex justify-content-between align-items-center">
+                  Custom Loot Tables
+                  <button class="btn btn-sm btn-outline-light" id="lg-import-custom"><i class="bi bi-upload me-1"></i>Import JSON</button>
+                </label>
+                <select id="lg-custom-table" class="form-select">
+                  <option value="">None (use standard tables)</option>
+                </select>
+                <div class="form-hint mt-1">Import custom loot tables in JSON format.</div>
+              </div>
+
+              <!-- Save/Load Presets -->
+              <div class="mt-2 advanced-setting">
+                <label class="form-label">Save/Load Preset</label>
+                <div class="input-group">
+                  <input type="text" id="lg-preset-name" class="form-control" placeholder="Preset name...">
+                  <button class="btn btn-outline-success" id="lg-save-preset"><i class="bi bi-save me-1"></i>Save</button>
+                  <button class="btn btn-outline-info" id="lg-load-preset"><i class="bi bi-folder-open me-1"></i>Load</button>
+                </div>
+                <select id="lg-saved-presets" class="form-select mt-1">
+                  <option value="">-- Select a saved preset --</option>
+                </select>
+              </div>
+
+              <div class="d-grid d-sm-flex gap-2 mt-3">
+                <button class="btn btn-success" id="lg-generate"><i class="bi bi-stars me-1"></i>Generate</button>
+                <button class="btn btn-outline-light" id="lg-copy"><i class="bi bi-clipboard me-1"></i>Copy</button>
+                <button class="btn btn-warning" id="lg-download"><i class="bi bi-download me-1"></i>Download .txt</button>
+                <button class="btn btn-danger" id="lg-clear"><i class="bi bi-trash me-1"></i>Clear</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Results -->
+        <div class="col-12 col-lg-8">
+          <div class="card bg-dark border-secondary h-100">
+            <div class="card-header border-secondary">
+              <h5 class="mb-0">Results</h5>
+            </div>
+            <div class="card-body">
+              <div id="lg-meta" class="d-flex flex-wrap gap-2 small text-secondary mb-2"></div>
+              <div id="lg-out" class="row row-cols-1 row-cols-sm-2 row-cols-md-3 row-cols-lg-4 g-2" aria-live="polite"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- Footer -->
+  <footer class="container-fluid mt-5 site-footer" role="contentinfo">
+    <div class="footer-main py-3">
+      <div class="container">
+        <div class="row align-items-center text-center text-md-start">
+          <!-- Left: Copyright -->
+          <div class="col-12 col-md-4 mb-2 mb-md-0 text-md-start text-center">
+            <small class="text-muted">&copy; 2025 Maybeme | The DM’s Toolbox</small>
+          </div>
+
+          <!-- Center: Logo -->
+          <div class="col-12 col-md-4 text-center mb-2 mb-md-0">
+            <img src="/images/White logo - no background.png" height="40" alt="Logo" class="footer-logo">
+          </div>
+
+          <!-- Right: Social Links -->
+          <div class="col-12 col-md-4 d-flex justify-content-center justify-content-md-end align-items-center gap-2">
+            <a href="https://www.linkedin.com/in/marlo-mayberry-930ab9b7/" class="socialicons" target="_blank" rel="noopener" aria-label="LinkedIn">
+              <i class="bi bi-linkedin"></i>
+            </a>
+            <a href="https://github.com/M-ybeme" class="socialicons" target="_blank" rel="noopener" aria-label="GitHub">
+              <i class="bi bi-github"></i>
+            </a>
+            <a href="https://ko-fi.com/maybemestoolbox" class="socialicons d-flex align-items-center" target="_blank" rel="noopener" title="Support The DM’s Toolbox on Ko-fi">
+              <i class="bi bi-cup-hot"></i>
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </footer>
+
+  <!-- Generator Script -->
+  <script>
+  (()=>{
+// ---------- Seeded RNG ----------
+function hashString(str){let h=1779033703^str.length;for(let i=0;i<str.length;i++){h=Math.imul(h^str.charCodeAt(i),3432918353);h=h<<13|h>>>19;}return (h>>>0)>>>0}
+function mulberry32(a){return function(){let t=a+=0x6D2B79F5;t=Math.imul(t^t>>>15,t|1);t^=t+Math.imul(t^t>>>7,t|61);return ((t^t>>>14)>>>0)/4294967296}}
+function prand(seedStr){const s=seedStr?hashString(seedStr):Math.floor(Math.random()*2**32);return mulberry32(s)}
+const $=id=>document.getElementById(id);
+
+// ---------- Flavor Pools ----------
+const COLORS=["umber","sable","ash","ivory","verdant","ochre","crimson","indigo","cobalt","pearl","smoke","rust","teal","brass"];
+const ADJS=["plain","neatly made","well-used","serviceable","careworn","sturdy","dainty","homespun","faded","scuffed","polished","patched","clean","oiled","balanced"];
+const COND=["mint","good","used","worn","weathered","patched","chipped","tarnished","dented","frayed","scuffed","stained"];
+const PATTERNS=["herringbone","chevron","crosshatch","spiral","flecked","ringed","braided","stitched","knotted","grooved"];
+const MARKS=["simple maker’s mark","initials (illegible)","tiny circle stamp","plain triangle stamp","short tally mark","simple hash","basic starburst","three dots"];
+const MATERIALS={ cloth:["linen","wool","cotton","canvas","burlap","felt","silk"], leather:["leather","boiled leather","suede","rawhide"], wood:["oak","ashwood","birch","maple","yew","pine","walnut"], metal:["iron","bronze","copper","pewter","brass","tin","steel","silver"], stone:["riverstone","slate","granite","marble chip","soapstone","basalt"], clay:["terracotta","earthenware","stoneware"], glass:["clear glass","green glass","smoked glass"], paper:["rag paper","vellum","parchment"] };
+const SIZES=["miniature","small","hand-sized","broad","long","wide","narrow","compact","thin","thick"];
+const SCENTS=["oiled","soap-scented","smoky","spice-dusted","fresh","musty","earthy","herbal","neutral"];
+const ANIMALS=["stag","fox","herring","sparrow","boar","ram","hare","owl","wolf","bee"];
+const SIMPLE_ICONS=["leaf","sun","moon","key","wheel","hammer","anvil","cup","sheaf","river"];
+
+// ---------- Quick bundle supporting datasets ----------
+const COIN_ITEMS=buildCoinEntries();
+const FOOD_ITEMS=buildFoodEntries();
+const TOOL_ITEMS=buildToolEntries();
+const MUNDANE_ITEMS=buildMundaneEntries();
+const POTION_ITEMS=buildPotionEntries();
+const SCROLL_ITEMS=buildScrollEntries();
+const GEM_ITEMS=buildGemEntries();
+const ADV_GEAR_ITEMS=buildAdventuringGearEntries();
+const TOOLKIT_ITEMS=buildToolkitEntries();
+const BAG_ITEMS=buildBagEntries();
+const CLOTHING_ITEMS=buildClothingEntries();
+
+function buildCoinEntries(){
+  const forms=[
+    {root:'coin purse',mat:'leather',weight:0.2,sp:[20,180]},
+    {root:'drawstring pouch',mat:'cloth',weight:0.15,sp:[10,140]},
+    {root:'belt wallet',mat:'leather',weight:0.18,sp:[30,200]},
+    {root:'hidden ankle purse',mat:'cloth',weight:0.12,sp:[15,160]},
+    {root:'lockable strong-purse',mat:'leather',weight:0.3,sp:[60,260]},
+    {root:'token tube',mat:'metal',weight:0.22,sp:[40,250]},
+    {root:'ledger wallet',mat:'leather',weight:0.28,sp:[55,280]},
+    {root:'sailor scrip',mat:'cloth',weight:0.2,sp:[18,180]}
+  ];
+  const textures=['stitched','embroidered','reinforced','paneled','beaded','oiled','patched','polished','quilted','riveted'];
+  const closures=['with brass clasp','with copper buttons','with bone toggles','with braided cord','with hidden buckle','sealed with wax disc','with rune laces','with tiny padlock','with silver chain'];
+  const flourishes=['lined in velvet','lined in felt','lined in suede','lined in canvas','bearing tally marks','with secret pocket','with coin dividers','scented with lavender','smelling of smoke','reinforced mouth'];
+  const variants=[];
+  let capReached=false;
+  for(const form of forms){
+    if(capReached) break;
+    for(let i=0;i<textures.length;i++){
+      if(capReached) break;
+      for(let j=0;j<closures.length;j++){
+        const flourish=flourishes[(i+j)%flourishes.length];
+        const min=form.sp[0]+i*5+j*3;
+        const max=form.sp[1]+i*5+j*3+20;
+        variants.push({
+          n:`${textures[i]} ${form.root} ${closures[j]} (${flourish})`,
+          mat:form.mat,
+          w:form.weight,
+          sp:[min,max],
+          valuable:j>=5||i>=5
+        });
+        if(variants.length>=90){ capReached=true; break; }
+      }
+    }
+  }
+  if(variants.length<120){
+    const humble=[
+      {root:'threadbare purse',mat:'cloth',weight:0.1,sp:[5,40]},
+      {root:'patched pouch',mat:'cloth',weight:0.12,sp:[8,55]},
+      {root:'simple belt satchel',mat:'leather',weight:0.15,sp:[10,70]},
+      {root:'plain cord roll',mat:'cloth',weight:0.08,sp:[6,45]},
+      {root:'worn travel purse',mat:'leather',weight:0.14,sp:[12,80]},
+      {root:'market coin wrap',mat:'cloth',weight:0.09,sp:[9,60]},
+      {root:'sailcloth pouch',mat:'cloth',weight:0.11,sp:[7,65]},
+      {root:'linen bankroll',mat:'cloth',weight:0.1,sp:[8,70]},
+      {root:'simple lockbox',mat:'metal',weight:0.4,sp:[20,120]},
+      {root:'twine-bound purse',mat:'cloth',weight:0.09,sp:[5,55]}
+    ];
+    const trims=['frayed drawstring','patched base','plain stitching','waxed mouth','reinforced lip','spare loop','button clasp','ribbon tie','tucked flap','braided cinch'];
+    for(const base of humble){
+      for(let k=0;k<trims.length;k++){
+        variants.push({
+          n:`${base.root} (${trims[k]})`,
+          mat:base.mat,
+          w:base.weight,
+          sp:[base.sp[0],base.sp[1]+k*2],
+          valuable:false
+        });
+        if(variants.length>=120)break;
+      }
+      if(variants.length>=120)break;
+    }
+  }
+  return variants;
+}
+
+function buildFoodEntries(){
+  const bases=[
+    {item:'dried fruit packet',mat:'cloth',w:0.2,sp:[8,120]},
+    {item:'hardtack stack',mat:'paper',w:0.3,sp:[6,80]},
+    {item:'smoked nuts pouch',mat:'cloth',w:0.2,sp:[10,140]},
+    {item:'cheese wedge',mat:'paper',w:0.3,sp:[10,160]},
+    {item:'pickled vegetable jar',mat:'glass',w:0.5,sp:[12,170]},
+    {item:'salted fish filet',mat:'cloth',w:0.4,sp:[14,180]},
+    {item:'jerky strip bundle',mat:'cloth',w:0.3,sp:[16,190]},
+    {item:'travel stew concentrate',mat:'metal',w:0.35,sp:[18,210]},
+    {item:'honey cake tin',mat:'metal',w:0.4,sp:[15,200]},
+    {item:'herbal tea sachet set',mat:'paper',w:0.2,sp:[12,160]}
+  ];
+  const flavors=['spiced','peppered','smoked','candied','herbed','maple-glazed','citrus-dusted','garlic-roasted','berry-infused','savory'];
+  const wrappings=['wrapped in waxed cloth','sealed in oilskin','bundled with twine','packed in tin','tucked into parchment','bound with reed cord'];
+  const entries=[];
+  for(const base of bases){
+    for(let i=0;i<flavors.length;i++){
+      const wrap=wrappings[i%wrappings.length];
+      const min=base.sp[0]+i*2;
+      const max=base.sp[1]+i*4;
+      entries.push({
+        n:`${flavors[i]} ${base.item} (${wrap})`,
+        mat:base.mat,
+        w:base.w,
+        sp:[min,max]
+      });
+    }
+  }
+  const rustic=[
+    {item:'simple trail bread',mat:'cloth',w:0.2,sp:[4,30]},
+    {item:'barley biscuit pack',mat:'cloth',w:0.25,sp:[5,35]},
+    {item:'root vegetable chips',mat:'paper',w:0.2,sp:[6,40]},
+    {item:'dried berry satchel',mat:'cloth',w:0.2,sp:[7,45]},
+    {item:'bean mash pouch',mat:'cloth',w:0.3,sp:[6,38]},
+    {item:'lentil wafers',mat:'paper',w:0.2,sp:[5,32]},
+    {item:'honeyed oat bar',mat:'paper',w:0.15,sp:[8,42]},
+    {item:'mineral water flask',mat:'glass',w:0.4,sp:[10,50]},
+    {item:'lemon pepper jerky',mat:'cloth',w:0.25,sp:[12,60]},
+    {item:'camp stew jar',mat:'glass',w:0.5,sp:[15,70]}
+  ];
+  const prep=['lightly salted','pepper dusted','garlic brushed','with rosemary','with thyme','with sesame','with fig glaze'];
+  for(const base of rustic){
+    for(const tag of prep){
+      entries.push({
+        n:`${tag} ${base.item}`,
+        mat:base.mat,
+        w:base.w,
+        sp:[base.sp[0],base.sp[1]],
+        valuable:false
+      });
+      if(entries.length>=150)break;
+    }
+    if(entries.length>=150)break;
+  }
+  return entries;
+}
+
+function buildToolEntries(){
+  const bases=[
+    {item:'folding knife',mat:'metal',w:0.2,sp:[60,300]},
+    {item:'small hammer',mat:'metal',w:0.8,sp:[40,260]},
+    {item:'awl',mat:'metal',w:0.1,sp:[10,120]},
+    {item:'whetstone',mat:'stone',w:0.7,sp:[12,90]},
+    {item:'needle kit',mat:'metal',w:0.05,sp:[20,160]},
+    {item:'hand drill',mat:'metal',w:0.6,sp:[45,220]},
+    {item:'carver chisel',mat:'metal',w:0.4,sp:[30,210]},
+    {item:'rasp file',mat:'metal',w:0.5,sp:[30,200]},
+    {item:'pliers set',mat:'metal',w:0.4,sp:[35,210]},
+    {item:'measuring cord',mat:'cloth',w:0.1,sp:[15,120]}
+  ];
+  const finishes=['balanced','well-oiled','field-repaired','polished','well-used','reinforced','rubber-gripped','twin-handled','sturdy','lightweight'];
+  const engravings=['etched grid','guiding arrow','sunburst','gear motif','wave pattern','ivy scroll','starline','maker mark'];
+  const entries=[];
+  for(const base of bases){
+    for(let i=0;i<finishes.length;i++){
+      const engraving=engravings[i%engravings.length];
+      const min=base.sp[0]+i*3;
+      const max=base.sp[1]+i*3+20;
+      entries.push({
+        n:`${finishes[i]} ${base.item} (${engraving})`,
+        mat:base.mat,
+        w:base.w,
+        sp:[min,max]
+      });
+    }
+  }
+  const handy=[
+    {item:'basic awl',mat:'metal',w:0.08,sp:[5,25]},
+    {item:'tin snips',mat:'metal',w:0.3,sp:[8,35]},
+    {item:'leather punch',mat:'metal',w:0.2,sp:[7,28]},
+    {item:'mini saw',mat:'metal',w:0.35,sp:[10,40]},
+    {item:'chalk line kit',mat:'cloth',w:0.25,sp:[6,24]},
+    {item:'simple calipers',mat:'metal',w:0.3,sp:[12,38]},
+    {item:'wax sticks',mat:'cloth',w:0.15,sp:[4,18]},
+    {item:'hand ceramic scraper',mat:'metal',w:0.25,sp:[9,32]},
+    {item:'needle bundle',mat:'metal',w:0.05,sp:[3,16]},
+    {item:'braiding comb',mat:'wood',w:0.05,sp:[4,20]}
+  ];
+  for(const base of handy){
+    entries.push({
+      n:`${base.item} (well-used)`,
+      mat:base.mat,
+      w:base.w,
+      sp:[base.sp[0],base.sp[1]],
+      valuable:false
+    });
+    entries.push({
+      n:`${base.item} (refurbished)`,
+      mat:base.mat,
+      w:base.w,
+      sp:[base.sp[0]+3,base.sp[1]+6],
+      valuable:false
+    });
+    if(entries.length>=140)break;
+  }
+  return entries;
+}
+
+function buildMundaneEntries(){
+  const bases=[
+    {item:'50 ft hempen rope',mat:'cloth',w:10,sp:[10,30]},
+    {item:'silk rope',mat:'cloth',w:5,sp:[50,120]},
+    {item:'torch bundle',mat:'wood',w:5,sp:[5,15]},
+    {item:'bedroll',mat:'cloth',w:7,sp:[10,30]},
+    {item:'travel rations',mat:'cloth',w:10,sp:[35,70]},
+    {item:'candle pack',mat:'cloth',w:0.5,sp:[1,5]},
+    {item:'tinderbox',mat:'metal',w:1,sp:[5,15]},
+    {item:'grappling hook',mat:'metal',w:4,sp:[20,60]},
+    {item:'crowbar',mat:'metal',w:5,sp:[20,60]},
+    {item:'10 ft pole',mat:'wood',w:7,sp:[5,15]},
+    {item:'chalk bundle',mat:'stone',w:0.2,sp:[1,5]},
+    {item:'iron spikes',mat:'metal',w:5,sp:[10,30]},
+    {item:'hooded lantern',mat:'metal',w:2,sp:[50,150]},
+    {item:'oil flask',mat:'glass',w:1,sp:[1,10]},
+    {item:'shovel',mat:'metal',w:5,sp:[20,60]},
+    {item:'two-person tent',mat:'cloth',w:20,sp:[20,60]},
+    {item:'backpack',mat:'cloth',w:5,sp:[20,60]},
+    {item:'caltrops bag',mat:'metal',w:2,sp:[10,30]},
+    {item:'10 ft chain',mat:'metal',w:10,sp:[50,150]},
+    {item:'fishing tackle',mat:'cloth',w:4,sp:[10,30]},
+    {item:'signal whistle',mat:'metal',w:0.1,sp:[5,15]},
+    {item:'piton set',mat:'metal',w:4,sp:[20,60]},
+    {item:'waterskin',mat:'leather',w:2,sp:[12,40]},
+    {item:'mess kit',mat:'metal',w:1,sp:[10,40]},
+    {item:'hand saw',mat:'metal',w:3,sp:[25,70]}
+  ];
+  const descriptors=['standard','reinforced','waxed','oiled','well-worn','newly issued','patched','canvas-bound','iron-banded','field-tested'];
+  const entries=[];
+  for(const base of bases){
+    for(let i=0;i<descriptors.length;i++){
+      const min=base.sp[0]+i;
+      const max=base.sp[1]+i*2;
+      entries.push({
+        n:`${descriptors[i]} ${base.item}`,
+        mat:base.mat,
+        w:base.w,
+        sp:[min,max]
+      });
+    }
+  }
+  if(entries.length<150){
+    const filler=[
+      {item:'wooden spoon set',mat:'wood',w:0.3,sp:[2,12]},
+      {item:'camp mug pair',mat:'metal',w:0.4,sp:[3,15]},
+      {item:'patch kit',mat:'cloth',w:0.2,sp:[4,18]},
+      {item:'tin of buttons',mat:'metal',w:0.3,sp:[5,22]},
+      {item:'simple cordage roll',mat:'cloth',w:0.4,sp:[6,26]},
+      {item:'chalkboard slate',mat:'stone',w:0.6,sp:[8,30]},
+      {item:'hand broom',mat:'wood',w:0.5,sp:[4,20]},
+      {item:'mess tin lid',mat:'metal',w:0.3,sp:[3,16]},
+      {item:'camp skillet',mat:'metal',w:1.5,sp:[9,32]},
+      {item:'simple tarp squares',mat:'cloth',w:0.8,sp:[7,28]}
+    ];
+    const states=['basic','patched','camp-used','market-ready','waxed'];
+    for(const base of filler){
+      for(const state of states){
+        entries.push({
+          n:`${state} ${base.item}`,
+          mat:base.mat,
+          w:base.w,
+          sp:[base.sp[0],base.sp[1]],
+          valuable:false
+        });
+        if(entries.length>=150)break;
+      }
+      if(entries.length>=150)break;
+    }
+  }
+  return entries;
+}
+
+function buildPotionEntries(){
+  const baseList=[
+    {name:'potion of healing',range:[500,700],effect:'restores 2d4+2 HP'},
+    {name:'potion of greater healing',range:[1500,2200],effect:'restores 4d4+4 HP'},
+    {name:'potion of superior healing',range:[4500,5200],effect:'restores 8d4+8 HP'},
+    {name:'potion of supreme healing',range:[9000,11000],effect:'restores 10d4+20 HP'},
+    {name:'potion of climbing',range:[750,1100],effect:'gain climb speed for 1 hour'},
+    {name:'potion of water breathing',range:[1000,1500],effect:'breathe underwater for 1 hour'},
+    {name:'potion of heroism',range:[3000,3800],effect:'gain bless + 10 temp HP'},
+    {name:'potion of mind reading',range:[3500,4200],effect:'detect thoughts for 1 hour'},
+    {name:'potion of invisibility',range:[4000,5200],effect:'become invisible for 1 minute'},
+    {name:'potion of speed',range:[4200,5200],effect:'haste effect for 1 minute'},
+    {name:'potion of flying',range:[4800,5600],effect:'fly speed 60 ft for 1 hour'},
+    {name:'potion of gaseous form',range:[3600,4400],effect:'become mist for 1 hour'},
+    {name:'potion of growth',range:[3100,3900],effect:'enlarge spell for 1 hour'},
+    {name:'potion of diminution',range:[3100,3900],effect:'reduce spell for 1 hour'},
+    {name:'potion of vitality',range:[4600,5400],effect:'remove exhaustion and poison'},
+    {name:'potion of longevity',range:[9000,12000],effect:'reduces physical age'},
+    {name:'potion of invulnerability',range:[5000,6200],effect:'resist all damage for 1 minute'},
+    {name:'potion of resistance (acid)',range:[1500,2200],effect:'resist acid for 1 hour'},
+    {name:'potion of resistance (cold)',range:[1500,2200],effect:'resist cold for 1 hour'},
+    {name:'potion of resistance (fire)',range:[1500,2200],effect:'resist fire for 1 hour'},
+    {name:'potion of resistance (lightning)',range:[1500,2200],effect:'resist lightning for 1 hour'},
+    {name:'potion of resistance (poison)',range:[1500,2200],effect:'resist poison for 1 hour'},
+    {name:'potion of fire breath',range:[1800,2400],effect:'exhale flames 3 times'},
+    {name:'potion of frost giant strength',range:[3200,4200],effect:'STR becomes 23 for 1 hour'},
+    {name:'potion of hill giant strength',range:[2100,2800],effect:'STR becomes 21 for 1 hour'},
+    {name:'potion of stone giant strength',range:[3600,4500],effect:'STR becomes 23 for 1 hour'},
+    {name:'potion of fire giant strength',range:[4200,5200],effect:'STR becomes 25 for 1 hour'},
+    {name:'potion of cloud giant strength',range:[5200,6200],effect:'STR becomes 27 for 1 hour'},
+    {name:'potion of storm giant strength',range:[7200,8200],effect:'STR becomes 29 for 1 hour'},
+    {name:'potion of animal friendship',range:[900,1400],effect:'cast animal friendship'},
+    {name:'potion of clairvoyance',range:[3600,4200],effect:'sense location for 1 hour'},
+    {name:'potion of darkvision',range:[2100,2800],effect:'see in dark for 8 hours'},
+    {name:'potion of spider climb',range:[1800,2400],effect:'spider climb for 1 hour'},
+    {name:'potion of etherealness',range:[7200,9000],effect:'enter the Ethereal Plane'},
+    {name:'philter of love',range:[1700,2300],effect:'charms first creature seen'},
+    {name:'oil of slipperiness',range:[1800,2400],effect:'freedom of movement'},
+    {name:'elixir of health',range:[3000,3800],effect:'cures disease and blindness'},
+    {name:'elixir of swiftness',range:[2600,3200],effect:'+10 ft speed for 1 hour'},
+    {name:'elixir of acumen',range:[2600,3200],effect:'+2 bonus to spell attack for 1 hour'},
+    {name:'draught of keen sight',range:[2000,2800],effect:'advantage on Perception checks'},
+    {name:'elixir of silent step',range:[2000,2600],effect:'advantage on Stealth for 1 hour'},
+    {name:'elixir of sea stride',range:[2200,2800],effect:'walk on water for 10 minutes'},
+    {name:'elixir of ember shield',range:[2400,3200],effect:'resist fire and shed light'},
+    {name:'potion of stormstride',range:[3600,4400],effect:'bonus action teleport 15 ft'},
+    {name:'draught of earthen vigor',range:[2800,3400],effect:'+2 AC while standing for 1 hour'},
+    {name:'elixir of mental clarity',range:[2500,3200],effect:'advantage on INT checks for 1 hour'},
+    {name:'potion of tongues',range:[2400,3200],effect:'understand any language for 1 hour'},
+    {name:'elixir of lucid dreaming',range:[2600,3200],effect:'gain inspiration after short rest'},
+    {name:'draught of mirror skin',range:[3500,4200],effect:'first critical hit becomes normal'},
+    {name:'elixir of starfall',range:[3800,4600],effect:'cast feather fall once'},
+    {name:'elixir of verdant breath',range:[2600,3300],effect:'ignore plant difficult terrain'},
+    {name:'elixir of crystal focus',range:[2800,3600],effect:'advantage on concentration saves'}
+  ];
+  const tonics=[
+    {name:'tonic of restful sleep',range:[900,1400],effect:'long rest grants +1 hit die'},
+    {name:'draught of steady hands',range:[1100,1600],effect:'advantage on Sleight of Hand'},
+    {name:'sailor storm cordial',range:[1000,1500],effect:'advantage on CON saves vs weather'},
+    {name:'glowcap infusion',range:[950,1400],effect:'shed soft light for 8 hours'},
+    {name:'hunter focus tonic',range:[1200,1700],effect:'advantage on Survival checks'},
+    {name:'iron stomach cordial',range:[1000,1500],effect:'resist ingested poison for 8 hours'},
+    {name:'stonefoot draught',range:[1100,1600],effect:'cannot be knocked prone for 1 minute'},
+    {name:'tumbler tonic',range:[1150,1700],effect:'reduce falling damage by 1d6'},
+    {name:'lanternheart cordial',range:[1200,1800],effect:'immune to fright for 10 minutes'},
+    {name:'emberline booster',range:[1300,1900],effect:'+5 ft speed for 1 hour'}
+  ];
+  const suspensions=[
+    {name:'silverweed suspension',range:[1600,2200],effect:'detect poison/disease for 10 minutes'},
+    {name:'bluevine renewal draught',range:[1500,2100],effect:'remove 1 level of exhaustion'},
+    {name:'marshlight philter',range:[1400,2000],effect:'advantage on Stealth in dim light'},
+    {name:'skyward tonic',range:[1800,2400],effect:'feather fall once'},
+    {name:'echo veil elixir',range:[1900,2400],effect:'advantage on deception for 1 hour'},
+    {name:'stonebark tonic',range:[1700,2300],effect:'+1 AC for 10 minutes'},
+    {name:'whisperwind elixir',range:[1800,2400],effect:'double jump distance for 1 hour'},
+    {name:'glaciermint draught',range:[1700,2300],effect:'resist cold for 1 hour'},
+    {name:'iron bloom cordial',range:[1900,2500],effect:'add +2 to next saving throw'},
+    {name:'sunwake suspension',range:[1500,2100],effect:'advantage vs sleep effects'}
+  ];
+  const remedies=[
+    {name:'soother salve vial',range:[600,900],effect:'heal 1d4 HP'},
+    {name:'herbal vigor draught',range:[700,1000],effect:'gain 5 temp HP'},
+    {name:'calming petals infusion',range:[800,1100],effect:'remove frightened condition'},
+    {name:'sparkseed cordial',range:[900,1200],effect:'advantage on initiative once'},
+    {name:'bardsong tincture',range:[950,1300],effect:'advantage on Performance checks'},
+    {name:'sentry wake tonic',range:[850,1200],effect:'stay alert, immune to magical sleep'},
+    {name:'scout eye elixir',range:[900,1250],effect:'darkvision 30 ft for 1 hour'},
+    {name:'gleamwater draught',range:[800,1150],effect:'cleanse grime, grant pleasant scent'},
+    {name:'mender smoke vial',range:[700,1050],effect:'stabilize a bleeding creature'},
+    {name:'pilgrim ember brew',range:[750,1100],effect:'resist cold weather for 8 hours'}
+  ];
+  const expanded=baseList.concat(tonics,suspensions,remedies);
+  return expanded.map(entry=>({
+    n:entry.name,
+    mat:'glass',
+    w:0.4,
+    sp:entry.range,
+    effect:entry.effect
+  }));
+}
+
+function buildScrollEntries(){
+  const spells=[
+    {name:'Alarm',level:1,school:'Abjuration'},
+    {name:'Bless',level:1,school:'Enchantment'},
+    {name:'Bane',level:1,school:'Enchantment'},
+    {name:'Burning Hands',level:1,school:'Evocation'},
+    {name:'Chromatic Orb',level:1,school:'Evocation'},
+    {name:'Cure Wounds',level:1,school:'Evocation'},
+    {name:'Detect Magic',level:1,school:'Divination'},
+    {name:'Disguise Self',level:1,school:'Illusion'},
+    {name:'Faerie Fire',level:1,school:'Evocation'},
+    {name:'Guiding Bolt',level:1,school:'Evocation'},
+    {name:'Magic Missile',level:1,school:'Evocation'},
+    {name:'Shield',level:1,school:'Abjuration'},
+    {name:'Thunderwave',level:1,school:'Evocation'},
+    {name:'Witch Bolt',level:1,school:'Evocation'},
+    {name:'Silent Image',level:1,school:'Illusion'},
+    {name:'Command',level:1,school:'Enchantment'},
+    {name:'Aid',level:2,school:'Abjuration'},
+    {name:'Alter Self',level:2,school:'Transmutation'},
+    {name:'Blur',level:2,school:'Illusion'},
+    {name:'Darkvision',level:2,school:'Transmutation'},
+    {name:'Flaming Sphere',level:2,school:'Evocation'},
+    {name:'Hold Person',level:2,school:'Enchantment'},
+    {name:'Invisibility',level:2,school:'Illusion'},
+    {name:'Knock',level:2,school:'Transmutation'},
+    {name:'Mirror Image',level:2,school:'Illusion'},
+    {name:'Misty Step',level:2,school:'Conjuration'},
+    {name:'Scorching Ray',level:2,school:'Evocation'},
+    {name:'Shatter',level:2,school:'Evocation'},
+    {name:'Spiritual Weapon',level:2,school:'Evocation'},
+    {name:'Suggestion',level:2,school:'Enchantment'},
+    {name:'Web',level:2,school:'Conjuration'},
+    {name:'Animate Dead',level:3,school:'Necromancy'},
+    {name:'Beacon of Hope',level:3,school:'Abjuration'},
+    {name:'Counterspell',level:3,school:'Abjuration'},
+    {name:'Dispel Magic',level:3,school:'Abjuration'},
+    {name:'Fireball',level:3,school:'Evocation'},
+    {name:'Fly',level:3,school:'Transmutation'},
+    {name:'Haste',level:3,school:'Transmutation'},
+    {name:'Hypnotic Pattern',level:3,school:'Illusion'},
+    {name:'Lightning Bolt',level:3,school:'Evocation'},
+    {name:'Major Image',level:3,school:'Illusion'},
+    {name:'Revivify',level:3,school:'Necromancy'},
+    {name:'Spirit Guardians',level:3,school:'Conjuration'},
+    {name:'Tiny Hut',level:3,school:'Evocation'},
+    {name:'Water Breathing',level:3,school:'Transmutation'},
+    {name:'Banishment',level:4,school:'Abjuration'},
+    {name:'Dimension Door',level:4,school:'Conjuration'},
+    {name:'Greater Invisibility',level:4,school:'Illusion'},
+    {name:'Guardian of Faith',level:4,school:'Conjuration'},
+    {name:'Ice Storm',level:4,school:'Evocation'},
+    {name:'Polymorph',level:4,school:'Transmutation'},
+    {name:'Stoneskin',level:4,school:'Abjuration'},
+    {name:'Vitriolic Sphere',level:4,school:'Evocation'},
+    {name:'Cone of Cold',level:5,school:'Evocation'},
+    {name:'Cloudkill',level:5,school:'Conjuration'},
+    {name:'Wall of Force',level:5,school:'Evocation'},
+    {name:'Telekinesis',level:5,school:'Transmutation'},
+    {name:'Commune',level:5,school:'Divination'},
+    {name:'Legend Lore',level:5,school:'Divination'},
+    {name:'Passwall',level:5,school:'Transmutation'},
+    {name:"Rary's Telepathic Bond",level:5,school:'Divination'},
+    {name:'Blade Barrier',level:6,school:'Evocation'},
+    {name:'Chain Lightning',level:6,school:'Evocation'},
+    {name:'Circle of Death',level:6,school:'Necromancy'},
+    {name:'Disintegrate',level:6,school:'Transmutation'},
+    {name:'Eyebite',level:6,school:'Necromancy'},
+    {name:'Globe of Invulnerability',level:6,school:'Abjuration'},
+    {name:'Heal',level:6,school:'Evocation'},
+    {name:"Heroes' Feast",level:6,school:'Conjuration'},
+    {name:'Mass Suggestion',level:6,school:'Enchantment'},
+    {name:'Sunbeam',level:6,school:'Evocation'},
+    {name:'Wall of Ice',level:6,school:'Evocation'},
+    {name:'Wall of Thorns',level:6,school:'Conjuration'},
+    {name:'Word of Recall',level:6,school:'Conjuration'},
+    {name:'Etherealness',level:7,school:'Transmutation'},
+    {name:'Finger of Death',level:7,school:'Necromancy'},
+    {name:'Forcecage',level:7,school:'Evocation'},
+    {name:'Mirage Arcane',level:7,school:'Illusion'},
+    {name:'Plane Shift',level:7,school:'Conjuration'},
+    {name:'Prismatic Spray',level:7,school:'Evocation'},
+    {name:'Project Image',level:7,school:'Illusion'},
+    {name:'Regenerate',level:7,school:'Transmutation'},
+    {name:'Resurrection',level:7,school:'Necromancy'},
+    {name:'Reverse Gravity',level:7,school:'Transmutation'},
+    {name:'Symbol',level:7,school:'Abjuration'},
+    {name:'Teleport',level:7,school:'Conjuration'},
+    {name:'Antimagic Field',level:8,school:'Abjuration'},
+    {name:'Clone',level:8,school:'Necromancy'},
+    {name:'Earthquake',level:8,school:'Evocation'},
+    {name:'Feeblemind',level:8,school:'Enchantment'},
+    {name:'Mind Blank',level:8,school:'Abjuration'},
+    {name:'Power Word Stun',level:8,school:'Enchantment'},
+    {name:'Sunburst',level:8,school:'Evocation'},
+    {name:'Tsunami',level:8,school:'Conjuration'}
+  ];
+  return spells.map(spell=>({
+    n:spell.name,
+    mat:'paper',
+    w:0.12+spell.level*0.01,
+    sp:[600+spell.level*400,1100+spell.level*600],
+    school:spell.school,
+    level:spell.level
+  }));
+}
+
+function buildGemEntries(){
+  const materials=[
+    {name:'ruby',range:[1500,3200]},
+    {name:'sapphire',range:[1400,3000]},
+    {name:'emerald',range:[1400,3000]},
+    {name:'diamond',range:[2200,4800]},
+    {name:'opal',range:[900,2200]},
+    {name:'amethyst',range:[800,2000]},
+    {name:'topaz',range:[900,2100]},
+    {name:'garnet',range:[700,1800]},
+    {name:'onyx',range:[800,1900]},
+    {name:'pearl',range:[900,2300]},
+    {name:'jade',range:[1000,2400]},
+    {name:'lapis',range:[800,2000]},
+    {name:'amber',range:[700,1800]},
+    {name:'moonstone',range:[900,2100]}
+  ];
+  const forms=[
+    {name:'cameo',delta:[100,300]},
+    {name:'signet ring',delta:[200,400]},
+    {name:'bracelet',delta:[250,500]},
+    {name:'necklace',delta:[300,600]},
+    {name:'tiara',delta:[400,800]},
+    {name:'brooch',delta:[220,460]},
+    {name:'chalice',delta:[350,700]},
+    {name:'goblet',delta:[300,640]},
+    {name:'statuette',delta:[380,760]},
+    {name:'idol',delta:[420,840]},
+    {name:'music box',delta:[360,720]},
+    {name:'mosaic tile',delta:[250,520]},
+    {name:'mask',delta:[400,820]},
+    {name:'pendant',delta:[260,520]}
+  ];
+  const motifs=['dragon','phoenix','lion','ivy','wave','starburst','labyrinth','spiral','feather','sunburst','thornvine','constellation'];
+  const entries=[];
+  let idx=0;
+  for(const mat of materials){
+    for(const form of forms){
+      const motif=motifs[idx%motifs.length];
+      const min=mat.range[0]+form.delta[0];
+      const max=mat.range[1]+form.delta[1];
+      entries.push({
+        n:`${toTitle(mat.name)} ${form.name} engraved with ${motif}`,
+        mat:mat.name==='diamond'?'stone':'metal',
+        w:form.name.includes('statuette')?1.2:0.4,
+        sp:[min,max],
+        valuable:true
+      });
+      idx++;
+    }
+  }
+  if(entries.length<150){
+    const chips=[
+      {name:'polished riverstone charm',range:[120,260]},
+      {name:'glass bead string',range:[100,220]},
+      {name:'agate worry stone',range:[140,280]},
+      {name:'carved bone pendant',range:[130,260]},
+      {name:'shell cameo',range:[110,230]},
+      {name:'quartz shard talisman',range:[150,300]},
+      {name:'obsidian bead bracelet',range:[160,320]},
+      {name:'hematite ring',range:[130,260]},
+      {name:'lapis cabochon pin',range:[170,330]},
+      {name:'amber droplet earring',range:[140,290]}
+    ];
+    const trims=['wrapped in copper wire','set on leather thong','bound with twine','mounted on brass pin'];
+    for(const chip of chips){
+      for(const trim of trims){
+        entries.push({
+          n:`${chip.name} (${trim})`,
+          mat:'stone',
+          w:0.15,
+          sp:[chip.range[0],chip.range[1]],
+          valuable:false
+        });
+        if(entries.length>=150)break;
+      }
+      if(entries.length>=150)break;
+    }
+  }
+  return entries;
+}
+
+function buildAdventuringGearEntries(){
+  const bases=[
+    {n:'healer kit satchel',mat:'cloth',w:3,sp:[500,1400],valuable:true},
+    {n:'reinforced climbing harness',mat:'leather',w:4,sp:[550,1500],valuable:true},
+    {n:'collapsible ten-foot pole',mat:'metal',w:3,sp:[400,900],valuable:true},
+    {n:'grappling launcher',mat:'metal',w:5,sp:[650,1600],valuable:true},
+    {n:'hidden-sheath dagger',mat:'metal',w:0.7,sp:[600,1600],valuable:true},
+    {n:'scout signal mirror',mat:'metal',w:0.3,sp:[350,900],valuable:false},
+    {n:'field alchemy burner',mat:'metal',w:2,sp:[520,1400],valuable:true},
+    {n:'quick-deploy barricade stakes',mat:'wood',w:6,sp:[480,1200],valuable:true},
+    {n:'enchanted chalk reel',mat:'stone',w:0.3,sp:[420,1100],valuable:true},
+    {n:'waterskin with filter core',mat:'leather',w:2.2,sp:[460,1200],valuable:true},
+    {n:'signal flare tube',mat:'metal',w:1,sp:[380,900],valuable:false},
+    {n:'portable ram with grips',mat:'metal',w:10,sp:[520,1400],valuable:true},
+    {n:'hunter snare kit',mat:'cloth',w:4,sp:[480,1100],valuable:true},
+    {n:'silent boot spikes',mat:'metal',w:1,sp:[500,1200],valuable:true},
+    {n:'weatherproof map case',mat:'metal',w:1,sp:[450,1000],valuable:true},
+    {n:'messenger signal wand',mat:'wood',w:0.5,sp:[400,900],valuable:true},
+    {n:'collapsible shield frame',mat:'metal',w:6,sp:[650,1500],valuable:true},
+    {n:'arcanist component caddy',mat:'wood',w:1.5,sp:[520,1400],valuable:true},
+    {n:'beast caltrop net',mat:'cloth',w:5,sp:[500,1300],valuable:true},
+    {n:'smuggler false-bottom crate',mat:'wood',w:8,sp:[600,1500],valuable:true}
+  ];
+  const descriptors=['dwarven-crafted','elven-made','battle-ready','clockwork-enhanced','storm-forged'];
+  const entries=[];
+  for(const base of bases){
+    for(const desc of descriptors){
+      const delta=descriptors.indexOf(desc)*40;
+      entries.push({
+        n:`${desc} ${base.n}`,
+        mat:base.mat,
+        w:base.w,
+        sp:[base.sp[0]+delta,base.sp[1]+delta],
+        valuable:base.valuable
+      });
+    }
+  }
+  if(entries.length<140){
+    const lightGear=[
+      {n:'camp repair kit',mat:'cloth',w:2,sp:[180,420]},
+      {n:'rope ladder bundle',mat:'cloth',w:4,sp:[160,400]},
+      {n:'signal flag roll',mat:'cloth',w:1,sp:[140,360]},
+      {n:'emergency splint set',mat:'wood',w:2,sp:[150,380]},
+      {n:'travel shrine kit',mat:'wood',w:2.5,sp:[200,420]},
+      {n:'folding cook rack',mat:'metal',w:3,sp:[170,380]},
+      {n:'camouflage netting',mat:'cloth',w:3,sp:[190,420]},
+      {n:'weather hood extender',mat:'cloth',w:1,sp:[130,320]},
+      {n:'belt hook assortment',mat:'metal',w:0.8,sp:[120,300]},
+      {n:'simple climbing spikes',mat:'metal',w:1.5,sp:[160,360]}
+    ];
+    const tags=['backup','field','patched','spare','travel'];
+    for(const base of lightGear){
+      for(const tag of tags){
+        entries.push({
+          n:`${tag} ${base.n}`,
+          mat:base.mat,
+          w:base.w,
+          sp:[base.sp[0],base.sp[1]],
+          valuable:false
+        });
+        if(entries.length>=140)break;
+      }
+      if(entries.length>=140)break;
+    }
+  }
+  return entries;
+}
+
+function buildToolkitEntries(){
+  const bases=[
+    {n:"alchemist's supplies",mat:'wood',w:5,sp:[800,2000],valuable:true},
+    {n:"brewer's supplies",mat:'wood',w:8,sp:[600,1500],valuable:true},
+    {n:"calligrapher's supplies",mat:'wood',w:4,sp:[700,1600],valuable:true},
+    {n:"carpenter's tools",mat:'wood',w:6,sp:[700,1700],valuable:true},
+    {n:"cartographer's tools",mat:'wood',w:4,sp:[650,1600],valuable:true},
+    {n:"cobbler's tools",mat:'leather',w:5,sp:[600,1500],valuable:true},
+    {n:"cook's utensils",mat:'metal',w:6,sp:[500,1400],valuable:false},
+    {n:"glassblower's tools",mat:'wood',w:5,sp:[750,1700],valuable:true},
+    {n:"jeweler's tools",mat:'metal',w:3,sp:[900,2100],valuable:true},
+    {n:"leatherworker's tools",mat:'leather',w:5,sp:[650,1500],valuable:true},
+    {n:"mason's tools",mat:'metal',w:8,sp:[700,1700],valuable:true},
+    {n:"navigator's tools",mat:'wood',w:4,sp:[800,2000],valuable:true},
+    {n:"painter's supplies",mat:'wood',w:5,sp:[650,1500],valuable:true},
+    {n:"potter's tools",mat:'clay',w:6,sp:[600,1400],valuable:false},
+    {n:"smith's tools",mat:'metal',w:8,sp:[800,1900],valuable:true},
+    {n:"tinker's tools",mat:'metal',w:10,sp:[900,2100],valuable:true},
+    {n:"weaver's tools",mat:'wood',w:4,sp:[600,1400],valuable:false},
+    {n:"woodcarver's tools",mat:'wood',w:4,sp:[620,1500],valuable:true},
+    {n:'poisoner kit',mat:'metal',w:3,sp:[900,2000],valuable:true},
+    {n:'herbalism kit',mat:'wood',w:3,sp:[650,1400],valuable:true},
+    {n:'disguise kit',mat:'cloth',w:4,sp:[620,1500],valuable:true},
+    {n:'forgery kit',mat:'wood',w:3,sp:[750,1600],valuable:true},
+    {n:'gaming set (dragonchess)',mat:'wood',w:2,sp:[550,1200],valuable:false},
+    {n:'gaming set (three-dragon ante)',mat:'wood',w:1.5,sp:[500,1100],valuable:false}
+  ];
+  const descriptors=['masterwork','well-loved','guild-issue','arcane-trimmed','traveler'];
+  const entries=[];
+  for(const base of bases){
+    for(const desc of descriptors){
+      const delta=descriptors.indexOf(desc)*30;
+      entries.push({
+        n:`${desc} ${base.n}`,
+        mat:base.mat,
+        w:base.w,
+        sp:[base.sp[0]+delta,base.sp[1]+delta],
+        valuable:base.valuable
+      });
+    }
+  }
+  if(entries.length<160){
+    const pocketKits=[
+      {n:'mini stitch kit',mat:'cloth',w:1,sp:[220,420]},
+      {n:'field sketch roll',mat:'paper',w:0.8,sp:[200,380]},
+      {n:'basic tinkering tin',mat:'metal',w:1.2,sp:[240,420]},
+      {n:'camp spice kit',mat:'wood',w:1.5,sp:[180,360]},
+      {n:'travel ink pack',mat:'wood',w:1,sp:[210,380]},
+      {n:'stringed instrument care set',mat:'wood',w:1.2,sp:[230,410]},
+      {n:'simple appraisal loupe',mat:'metal',w:0.3,sp:[260,420]},
+      {n:'basic rune etcher',mat:'metal',w:0.9,sp:[240,430]},
+      {n:'gardener starter bundle',mat:'wood',w:2,sp:[190,360]},
+      {n:'portable dye kit',mat:'cloth',w:1.4,sp:[200,370]}
+    ];
+    const states=['pocket','travel','practice','guild-marked'];
+    for(const kit of pocketKits){
+      for(const state of states){
+        entries.push({
+          n:`${state} ${kit.n}`,
+          mat:kit.mat,
+          w:kit.w,
+          sp:[kit.sp[0],kit.sp[1]],
+          valuable:false
+        });
+        if(entries.length>=160)break;
+      }
+      if(entries.length>=160)break;
+    }
+  }
+  return entries;
+}
+
+function buildBagEntries(){
+  const bases=[
+    {n:'satchel',mat:'cloth',w:0.4,sp:[20,200]},
+    {n:'messenger bag',mat:'cloth',w:0.5,sp:[25,220]},
+    {n:'scroll tube',mat:'metal',w:0.4,sp:[40,260]},
+    {n:'strongbox',mat:'metal',w:2,sp:[80,320]},
+    {n:'stash box',mat:'wood',w:1.2,sp:[50,260]},
+    {n:'specimen jar',mat:'glass',w:0.4,sp:[40,260]},
+    {n:'map case',mat:'leather',w:0.6,sp:[30,220]},
+    {n:'lockable coffer',mat:'metal',w:2.5,sp:[90,360]},
+    {n:'bandolier',mat:'leather',w:0.5,sp:[35,200]},
+    {n:'ammo case',mat:'wood',w:0.8,sp:[45,240]},
+    {n:'sample crate',mat:'wood',w:3,sp:[70,260]},
+    {n:'potion carrier',mat:'leather',w:0.6,sp:[60,260]}
+  ];
+  const descriptors=['waxed','tar-coated','embroidered','runed','steel-rimmed','double-stitched','featherweight','ironclad','canvas-lined','brocade'];
+  const entries=[];
+  for(const base of bases){
+    for(let i=0;i<descriptors.length;i++){
+      const color=COLORS[i%COLORS.length];
+      const min=base.sp[0]+i*2;
+      const max=base.sp[1]+i*3+20;
+      entries.push({
+        n:`${descriptors[i]} ${color} ${base.n}`,
+        mat:base.mat,
+        w:base.w,
+        sp:[min,max]
+      });
+    }
+  }
+  if(entries.length<150){
+    const humbleCarry=[
+      {n:'rolled canvas wrap',mat:'cloth',w:0.3,sp:[12,80]},
+      {n:'waxed paper parcel',mat:'paper',w:0.2,sp:[10,70]},
+      {n:'cord-tied bundle',mat:'cloth',w:0.25,sp:[8,60]},
+      {n:'braided reed basket',mat:'wood',w:0.5,sp:[15,90]},
+      {n:'threadbare tote',mat:'cloth',w:0.35,sp:[9,65]},
+      {n:'simple sling satchel',mat:'cloth',w:0.4,sp:[14,85]},
+      {n:'patched courier roll',mat:'cloth',w:0.45,sp:[16,95]},
+      {n:'hardshell pot case',mat:'metal',w:0.6,sp:[18,110]},
+      {n:'plain belt pouch',mat:'leather',w:0.2,sp:[11,70]},
+      {n:'stackable crate half',mat:'wood',w:0.8,sp:[20,120]}
+    ];
+    const flags=['frayed edge','fresh lining','button clasp','rope cinch','reinforced base'];
+    for(const carry of humbleCarry){
+      for(const flag of flags){
+        entries.push({
+          n:`${carry.n} (${flag})`,
+          mat:carry.mat,
+          w:carry.w,
+          sp:[carry.sp[0],carry.sp[1]],
+          valuable:false
+        });
+        if(entries.length>=150)break;
+      }
+      if(entries.length>=150)break;
+    }
+  }
+  return entries;
+}
+
+function buildClothingEntries(){
+  const bases=[
+    {n:'cloak',mat:'cloth',w:1,sp:[50,260]},
+    {n:'scarf',mat:'cloth',w:0.2,sp:[8,160]},
+    {n:'gloves',mat:'leather',w:0.3,sp:[15,180]},
+    {n:'hat',mat:'cloth',w:0.2,sp:[12,160]},
+    {n:'belt',mat:'leather',w:0.3,sp:[10,180]},
+    {n:'boots',mat:'leather',w:2,sp:[60,260]},
+    {n:'tunic',mat:'cloth',w:1.2,sp:[40,220]},
+    {n:'tabard',mat:'cloth',w:1.5,sp:[45,230]},
+    {n:'sash',mat:'cloth',w:0.2,sp:[12,150]},
+    {n:'vest',mat:'cloth',w:0.8,sp:[30,200]}
+  ];
+  const styles=['winter-weight','travel-stained','embroidered','festival','merchant-grade','scout-cut','courtly','battle-ready','trimmed','layered'];
+  const accents=['with brass pins','with silver piping','with leather edging','with quilted lining','with hidden pocket','with tassel fringe','with fur collar','with rune stitching'];
+  const entries=[];
+  for(const base of bases){
+    for(let i=0;i<styles.length;i++){
+      const accent=accents[i%accents.length];
+      const min=base.sp[0]+i*3;
+      const max=base.sp[1]+i*4;
+      entries.push({
+        n:`${styles[i]} ${base.n} ${accent}`,
+        mat:base.mat,
+        w:base.w,
+        sp:[min,max]
+      });
+    }
+  }
+  if(entries.length<150){
+    const basics=[
+      {n:'linen wraps',mat:'cloth',w:0.3,sp:[6,40]},
+      {n:'wool cap',mat:'cloth',w:0.2,sp:[8,50]},
+      {n:'fingerless gloves',mat:'cloth',w:0.15,sp:[7,45]},
+      {n:'simple sandals',mat:'leather',w:0.6,sp:[10,55]},
+      {n:'patchwork sash',mat:'cloth',w:0.1,sp:[5,35]},
+      {n:'canvas apron',mat:'cloth',w:0.7,sp:[12,60]},
+      {n:'simple shawl',mat:'cloth',w:0.4,sp:[9,48]},
+      {n:'cotton kerchief',mat:'cloth',w:0.05,sp:[4,30]},
+      {n:'travel leggings',mat:'cloth',w:0.8,sp:[15,70]},
+      {n:'plain doublet',mat:'cloth',w:1,sp:[18,80]}
+    ];
+    const looks=['patched','fresh-dyed','sun-faded','hearth-warm','oiled'];
+    for(const base of basics){
+      for(const look of looks){
+        entries.push({
+          n:`${look} ${base.n}`,
+          mat:base.mat,
+          w:base.w,
+          sp:[base.sp[0],base.sp[1]],
+          valuable:false
+        });
+        if(entries.length>=150)break;
+      }
+      if(entries.length>=150)break;
+    }
+  }
+  return entries;
+}
+
+// ---------- Utils ----------
+function pick(rng,arr){return arr[Math.floor(rng()*arr.length)]}
+function clamp(v,min,max){return Math.max(min,Math.min(max,v))}
+function tags(...xs){return xs}
+function toTitle(s){return s.charAt(0).toUpperCase()+s.slice(1)}
+function spToGp(sp){return +(sp/10).toFixed(2)}
+function gpToSp(gp){return Math.round(gp*10)}
+
+// Mixed coin bundle
+function coinBundle(rng,minSp,maxSp){
+  let total=Math.max(minSp,Math.floor(minSp+rng()*(maxSp-minSp+1)));
+  let gp=0,sp=0,cp=0;
+  if(total>=100){gp=Math.floor((total/10)*(0.15+rng()*0.35)); total-=gp*10;}
+  sp=Math.floor(total*(0.5+rng()*0.4)); total-=sp;
+  cp=total*10;
+  const tokens=rng()<0.12?Math.max(1,Math.floor(rng()*6)):0;
+  return {gp,sp,cp,tokens};
+}
+function formatCoinBundle(b){
+  const parts=[]; if(b.gp) parts.push(`${b.gp} gold`); if(b.sp) parts.push(`${b.sp} silver`); if(b.cp) parts.push(`${b.cp} copper`); if(b.tokens) parts.push(`${b.tokens} brass trade tokens`);
+  return parts.join(", ");
+}
+
+// ---------- Catalog (including Minor Magic, gated by toggle later) ----------
+const CATS={
+  "Coins & Purses":{
+    base:COIN_ITEMS,
+    make:(rng,b)=>{
+      const c=coinBundle(rng,b.sp[0],b.sp[1]);
+      const note=rng()<0.4?`, ${pick(rng,ADJS)}`:"";
+      const spVal=c.gp*10 + c.sp + Math.floor(c.cp/10) + (c.tokens*5);
+      return [`Pouch of ${formatCoinBundle(c)}${note}`, tags("currency","common"), spVal>=50]
+    }
+  },
+  "Trade Goods":{
+    base:[
+      {n:"bolt of fine cloth",mat:"cloth",w:2.0,sp:[300,1200],valuable:true},
+      {n:"small keg of dyed thread",mat:"cloth",w:6.0,sp:[200,800],valuable:true},
+      {n:"crate of dried spices",mat:"paper",w:8.0,sp:[400,1500],valuable:true},
+      {n:"bundle of cured furs",mat:"leather",w:5.0,sp:[250,900],valuable:true},
+      {n:"ingot of refined copper",mat:"metal",w:10.0,sp:[300,900],valuable:true},
+      {n:"ingot of worked silver",mat:"metal",w:5.0,sp:[1200,2600],valuable:true},
+      {n:"barrel of aged wine",mat:"wood",w:40.0,sp:[500,1800],valuable:true},
+      {n:"crate of exotic tea leaves",mat:"paper",w:4.0,sp:[350,1400],valuable:true},
+      {n:"bundle of rare herbs",mat:"cloth",w:2.0,sp:[300,1100],valuable:true},
+      {n:"sack of quality coffee beans",mat:"cloth",w:8.0,sp:[250,900],valuable:true},
+      {n:"case of fine tobacco",mat:"wood",w:3.0,sp:[400,1300],valuable:true},
+      {n:"bolt of spider silk",mat:"cloth",w:1.0,sp:[800,2400],valuable:true},
+      {n:"jar of rare pigments",mat:"glass",w:2.0,sp:[600,1800],valuable:true},
+      {n:"bundle of exotic incense",mat:"paper",w:1.0,sp:[300,1000],valuable:true}
+    ],
+    make:(rng,b)=>{
+      const m=pick(rng,MATERIALS[b.mat]); const detail=rng()<0.4?` (${pick(rng,PATTERNS)} marks)`:``;
+      return [`${toTitle(m)} ${b.n}${detail}`, tags("trade","valuable"), true]
+    }
+  },
+  "Gems & Art":{
+    base:GEM_ITEMS,
+    make:(rng,b)=>{
+      const m=pick(rng,MATERIALS[b.mat]); const col=rng()<0.4?`, ${pick(rng,COLORS)}`:""; const icon=rng()<0.35?` bearing a ${pick(rng,SIMPLE_ICONS)}`:"";
+      return [`${toTitle(m)} ${b.n}${col}${icon}`, tags("art","gem","valuable"), true]
+    }
+  },
+  "Adventuring Gear of Note":{
+    base:ADV_GEAR_ITEMS,
+    make:(rng,b)=>{
+      const m=pick(rng,MATERIALS[b.mat]); const q=rng()<0.5?pick(rng,["good","excellent","serviceable"]):null; const note=q?` (${q})`:"";
+      return [`${toTitle(m)} ${b.n}${note}`, tags("gear","useful"), !!b.valuable]
+    }
+  },
+  "Toolkits & Supplies":{
+    base:TOOLKIT_ITEMS,
+    make:(rng,b)=>{
+      const m=pick(rng,MATERIALS[b.mat]); const mark=rng()<0.35?`, ${pick(rng,MARKS)}`:"";
+      return [`${toTitle(m)} ${b.n}${mark}`, tags("tools","specialty","valuable"), true]
+    }
+  },
+  "Clothing & Wearables":{
+    base:CLOTHING_ITEMS,
+    make:(rng,b)=>{
+      const m=pick(rng,MATERIALS[b.mat]); const pat=rng()<0.35?`, ${pick(rng,PATTERNS)} pattern`:""; const col=rng()<0.45?`, ${pick(rng,COLORS)}`:"";
+      return [`${pick(rng,ADJS)} ${m} ${b.n}${pat}${col}`, tags("apparel","civilian"), false]
+    }
+  },
+  "Tools & Utensils":{
+    base:TOOL_ITEMS,
+    make:(rng,b)=>{
+      const m=pick(rng,MATERIALS[b.mat]); const cond=pick(rng,COND); const scent=rng()<0.2?`, ${pick(rng,SCENTS)}`:"";
+      return [`${cond} ${m} ${b.n}${scent}`, tags("tool","common"), false]
+    }
+  },
+  "Household & Table":{
+    base:[
+      {n:"clay cup",mat:"clay",w:0.4,sp:[3,60]},
+      {n:"wooden bowl",mat:"wood",w:0.4,sp:[3,60]},
+      {n:"glass vial (empty)",mat:"glass",w:0.1,sp:[40,300]},
+      {n:"tin plate",mat:"metal",w:0.5,sp:[10,160]}
+    ],
+    make:(rng,b)=>{
+      const m=pick(rng,MATERIALS[b.mat]); const pat=rng()<0.35?` with ${pick(rng,PATTERNS)} motif`:""; const mark=rng()<0.3?`, ${pick(rng,MARKS)}`:"";
+      return [`${m} ${b.n}${pat}${mark}`, tags("household","mundane"), false]
+    }
+  },
+  "Writing & Games":{
+    base:[
+      {n:"rag-paper booklet (blank)",mat:"paper",w:0.2,sp:[40,240]},
+      {n:"graphite stick",mat:"stone",w:0.05,sp:[6,80]},
+      {n:"dice pair (bone)",mat:"stone",w:0.1,sp:[40,280]},
+      {n:"simple playing cards",mat:"paper",w:0.1,sp:[50,250]}
+    ],
+    make:(rng,b)=>{
+      const m=pick(rng,MATERIALS[b.mat]); const add=rng()<0.45?`, edged in ${pick(rng,COLORS)}`:"";
+      return [`${m} ${b.n}${add}`, tags("leisure","stationery"), false]
+    }
+  },
+  "Food & Provisions":{
+    base:FOOD_ITEMS,
+    make:(rng,b)=>{
+      const scent=rng()<0.6?`, ${pick(rng,SCENTS)}`:"";
+      return [`${pick(rng,ADJS)} ${b.n}${scent}`, tags("provisions","edible"), false]
+    }
+  },
+  "Curios & Charms":{
+    base:[
+      {n:"carved token",mat:"wood",w:0.05,sp:[20,240]},
+      {n:"braided cord bracelet",mat:"cloth",w:0.02,sp:[10,140]},
+      {n:"pressed flower in paper",mat:"paper",w:0.01,sp:[10,120]},
+      {n:"simple pendant",mat:"metal",w:0.04,sp:[30,300]}
+    ],
+    make:(rng,b)=>{
+      const m=pick(rng,MATERIALS[b.mat]); const icon=rng()<0.6?` bearing a ${pick(rng,SIMPLE_ICONS)}`:""; const animal=rng()<0.25?` and a tiny ${pick(rng,ANIMALS)}`:"";
+      return [`${pick(rng,ADJS)} ${m} ${b.n}${icon}${animal}`, tags("curio","keepsake"), false]
+    }
+  },
+  "Potions & Elixirs":{
+    base:POTION_ITEMS,
+    make:(rng,b)=>{
+      const m=pick(rng,MATERIALS[b.mat]);
+      const hue=pick(rng,["ruby","sapphire","emerald","amber","opalescent","violet","smoky","golden"]);
+      const swirl=rng()<0.4?` with ${pick(rng,PATTERNS)} swirls`:"";
+      const scent=rng()<0.3?` smelling of ${pick(rng,SCENTS)}`:"";
+      const effect=b.effect?` (${b.effect})`:"";
+      return [`${toTitle(m)} vial of ${b.n} (${hue})${swirl}${scent}${effect}`, tags("potion","consumable","magical"), true]
+    }
+  },
+  "Arcane Scrolls":{
+    base:SCROLL_ITEMS,
+    make:(rng,b)=>{
+      const material=pick(rng,MATERIALS[b.mat]);
+      const ribbon=pick(rng,["crimson","midnight","cerulean","gold-threaded","indigo","emerald"]);
+      const glyph=rng()<0.4?` sealed with a ${pick(rng,SIMPLE_ICONS)} sigil`:"";
+      const script=rng()<0.5?` inked in ${pick(rng,COLORS)} script`:"";
+      const tier=`${b.school} spell (level ${b.level})`;
+      return [`Scroll of ${b.n}, ${material} tied with ${ribbon} cord${glyph}${script} (${tier})`, tags("scroll","spell","magical","consumable"), true]
+    }
+  },
+  "Bags & Containers":{
+    base:BAG_ITEMS,
+    make:(rng,b)=>{
+      const m=pick(rng,MATERIALS[b.mat]); const size=rng()<0.35?` (${pick(rng,SIZES)})`:""; const col=rng()<0.3?`, ${pick(rng,COLORS)}`:"";
+      return [`${m} ${b.n}${size}${col}`, tags("container","storage"), false]
+    }
+  },
+
+  "Mundane Adventuring Items":{
+    base:MUNDANE_ITEMS,
+    make:(rng,b)=>{
+      const m=pick(rng,MATERIALS[b.mat]); const cond=rng()<0.5?pick(rng,COND):"standard";
+      return [`${cond} ${m} ${b.n}`, tags("mundane","gear","common"), false]
+    }
+  },
+
+  // --- Cursed Items (gated by toggle) ---
+  "Cursed Items":{
+    base:[
+      // Severity 1: Minor trade-offs (appealing benefit, subtle drawback)
+      {n:"lucky coin (+1 to initiative, but you sneeze loudly at the start of combat)",mat:"metal",w:0.05,sp:[150,350],severity:1},
+      {n:"charming brooch (+1 to Charisma checks, but you compulsively compliment strangers)",mat:"metal",w:0.1,sp:[180,380],severity:1},
+      {n:"keen quill (advantage on Investigation to decipher text, but it occasionally writes your secrets)",mat:"wood",w:0.02,sp:[160,340],severity:1},
+      {n:"flask of warmth (keeps drinks perfect temperature, but you become mildly chatty when drinking)",mat:"metal",w:0.5,sp:[140,320],severity:1},
+      {n:"weatherproof cloak (advantage vs rain/wind discomfort, but always smells faintly of wet dog)",mat:"cloth",w:1.5,sp:[200,400],severity:1},
+      {n:"gloves of grip (+1 to climbing checks, but your hands feel uncomfortably warm)",mat:"leather",w:0.2,sp:[170,360],severity:1},
+      {n:"mirror of confidence (+1 to Performance checks, but shows you slightly more attractive than reality)",mat:"glass",w:0.5,sp:[190,390],severity:1},
+      {n:"dice of fortune (reroll 1s once per day, but must make DC 10 wisdom save to stop gambling when desired)",mat:"stone",w:0.1,sp:[220,420],severity:1},
+      {n:"bag of organization (find items 50% faster, but they occasionally rearrange themselves noisily)",mat:"cloth",w:0.5,sp:[210,410],severity:1},
+      {n:"hat of shade (advantage vs sun glare, but your hair is always messy when removed)",mat:"cloth",w:0.3,sp:[150,350],severity:1},
+
+      // Severity 2: Noticeable trade-offs (good benefit, annoying drawback)
+      {n:"boots of sure footing (+1 AC vs being knocked prone, but squeak when sneaking - disadvantage on Stealth)",mat:"leather",w:2.0,sp:[300,600],severity:2},
+      {n:"ring of arcane memory (recall one forgotten spell slot 1/day, but finger itches intensely for 1 hour after)",mat:"metal",w:0.05,sp:[350,650],severity:2},
+      {n:"cloak of many pockets (+10 lbs carry capacity, but attracts small insects that crawl out occasionally)",mat:"cloth",w:1.5,sp:[320,620],severity:2},
+      {n:"honest pendant (+2 to Insight checks, but you sneeze when you lie)",mat:"metal",w:0.1,sp:[280,580],severity:2},
+      {n:"bracelet of dexterity (+1 to Sleight of Hand, but causes harmless static shocks to allies)",mat:"metal",w:0.1,sp:[340,640],severity:2},
+      {n:"belt of strength (carry +15 lbs, but loosens during strenuous activity - DC 10 DEX save or drop items)",mat:"leather",w:0.5,sp:[310,610],severity:2},
+      {n:"spoon of sustenance (food is 25% more filling, but tastes completely bland)",mat:"metal",w:0.2,sp:[260,560],severity:2},
+      {n:"lantern of clarity (bright light radius +5 ft, but goes out in the face of danger)",mat:"metal",w:2.0,sp:[380,680],severity:2},
+      {n:"scarf of comfort (advantage vs cold weather, but occasionally tightens causing brief discomfort)",mat:"cloth",w:0.3,sp:[290,590],severity:2},
+      {n:"coin pouch of plenty (holds 50 extra coins, but 1d4 copper falls out per hour, pc might notice or not)",mat:"leather",w:0.3,sp:[270,570],severity:2},
+
+      // Severity 3: Meaningful trade-offs (strong benefit, notable drawback)
+      {n:"keen dagger (+1 to hit and damage, but on killing blow deal 1d4 damage to self and victim's name scrawls on your skin)",mat:"metal",w:1.0,sp:[500,900],severity:3},
+      {n:"amulet of preservation (food lasts twice as long, but fresh food tastes 'off' to you, causing mild nausea on 1d4 you throw up)",mat:"metal",w:0.2,sp:[450,850],severity:3},
+      {n:"rope of escape (advantage on escape artist checks, but 10%(1d10) chance to untie itself during use)",mat:"cloth",w:5.0,sp:[520,920],severity:3},
+      {n:"endless waterskin (refills with clean water at dawn, but water is always lukewarm and slightly metallic)",mat:"leather",w:2.0,sp:[480,880],severity:3},
+      {n:"torch of revealing (bright light reveals invisible creatures within 10 ft, but casts disturbing shadow-faces 5% chance(1d20) to gain fear)",mat:"wood",w:1.0,sp:[540,940],severity:3},
+      {n:"pack of holding (capacity +20 lbs, but feels 10 lbs heavier than contents)",mat:"cloth",w:6.0,sp:[600,1000],severity:3},
+      {n:"resonant shield (+1 AC, but hums audibly in combat - disadvantage on Stealth during fights)",mat:"metal",w:6.0,sp:[650,1050],severity:3},
+      {n:"helm of awareness (+2 to Perception, but causes mild headaches after 1 hour - disadvantage on CON saves)",mat:"metal",w:3.0,sp:[580,980],severity:3},
+      {n:"beast pendant (advantage on Animal Handling, but wild animals detect you from 2x distance)",mat:"metal",w:0.1,sp:[530,930],severity:3},
+      {n:"gloves of precision (+1 to ranged attacks, but everything you touch becomes slightly sticky)",mat:"leather",w:0.3,sp:[560,960],severity:3},
+
+      // Severity 4: Strong benefit with risky drawback
+      {n:"boots of haste (+10 ft movement, but on full speed movement roll 1d4: on 1 you slip and fall prone)",mat:"leather",w:3.0,sp:[800,1300],severity:4},
+      {n:"ring of vigor (ignore first level of exhaustion, but disadvantage on first ability check each day)",mat:"metal",w:0.05,sp:[750,1250],severity:4},
+      {n:"shadow cloak (+2 to Stealth in dim light, but you're more visible in shadows to darkvision)",mat:"cloth",w:2.0,sp:[850,1350],severity:4},
+      {n:"gauntlets of power (+2 to Athletics, but roll 1d20 daily: on 1 you fumble and drop held items)",mat:"metal",w:2.0,sp:[900,1400],severity:4},
+      {n:"adaptive armor (+1 AC and resist 3 cold OR fire damage, but constantly uncomfortable opposite temperature)",mat:"metal",w:20.0,sp:[1000,1500],severity:4},
+      {n:"earring of keen hearing (+3 to Perception for sounds, but disadvantage on saves vs thunder damage)",mat:"metal",w:0.05,sp:[780,1280],severity:4},
+      {n:"lucky brooch (reroll one failed save per day, but attract minor misfortune - DM adds 1 random complication)",mat:"metal",w:0.1,sp:[820,1320],severity:4},
+      {n:"bag of retrieval (retrieve specific item as bonus action, but 5% chance it swaps with random item)",mat:"cloth",w:1.0,sp:[770,1270],severity:4},
+      {n:"quenching canteen (water restores +2 HP once per day, but you require 50% more water to avoid dehydration)",mat:"metal",w:1.5,sp:[740,1240],severity:4},
+      {n:"bracers of the grave (+2 to hit vs undead, but undead sense you from 2x distance)",mat:"leather",w:1.0,sp:[810,1310],severity:4},
+
+      // Severity 5: Powerful benefit with serious consequence
+      {n:"bloodthirsty blade (+2 to hit and damage, but if not used to damage a creature daily take 2d4 psychic damage at dawn)",mat:"metal",w:3.0,sp:[1400,2000],severity:5},
+      {n:"armor of false security (+2 AC, but critical hits against you occur on 19-20)",mat:"metal",w:25.0,sp:[1600,2200],severity:5},
+      {n:"ring of triumph (turn two failed saves into success per day, but natural 20s reroll - if lower use lower result)",mat:"metal",w:0.05,sp:[1300,1900],severity:5},
+      {n:"cloak of shadows (+3 to Stealth checks, but disadvantage on all Stealth in bright light)",mat:"cloth",w:2.5,sp:[1450,2050],severity:5},
+      {n:"boots of the endless road (+15 ft movement, but must walk 5+ miles daily or gain 1 exhaustion at dawn)",mat:"leather",w:3.0,sp:[1550,2150],severity:5},
+      {n:"helm of iron mind (+2 to WIS saves, but 1/week suffer nightmares - no long rest benefits that night)",mat:"metal",w:4.0,sp:[1700,2300],severity:5},
+      {n:"amulet of destiny (advantage on death saves, but divination magic and scrying vs you has advantage)",mat:"metal",w:0.3,sp:[1500,2100],severity:5},
+      {n:"gloves of the duelist (+1 to attack rolls, but on natural 1 you fumble and fling your weapon 1d20 feet)",mat:"leather",w:0.4,sp:[1400,2000],severity:5},
+      {n:"belt of the titan (carry capacity +100 lbs, but base capacity reduced by 50 lbs - net +50)",mat:"leather",w:1.0,sp:[1350,1950],severity:5},
+      {n:"pendant of primal fury (+2 damage vs beasts and monstrosities, but they detect and prioritize you from 3x distance)",mat:"metal",w:0.2,sp:[1600,2200],severity:5}
+    ],
+    make:(rng,b)=>{
+      const m=pick(rng,MATERIALS[b.mat]);
+      const allure=pick(rng,["beautifully crafted","masterwork quality","elegantly designed","finely made","exquisitely detailed"]);
+      const severityTag = `curse-${b.severity}`;
+      return [`${toTitle(m)} ${b.n}, ${allure}`, tags("cursed",severityTag,"magical"), true]
+    }
+  },
+
+  // --- Minor Magic (gated by toggle) ---
+  "Minor Magic":{
+    base:[
+      // Consumables - Healing & Recovery
+      {n:"tonic of vigor (one use)",mat:"glass",w:0.3,sp:[400,900],kind:"consumable"},
+      {n:"salve of mending (heals minor wounds)",mat:"glass",w:0.2,sp:[350,850],kind:"consumable"},
+      {n:"restorative tea (removes fatigue)",mat:"paper",w:0.1,sp:[300,750],kind:"consumable"},
+      {n:"vial of clarity (advantage on next save vs mind effects)",mat:"glass",w:0.2,sp:[450,950],kind:"consumable"},
+
+      // Consumables - Combat & Defense
+      {n:"smoke charm (one stealth test advantage)",mat:"cloth",w:0.1,sp:[350,800],kind:"consumable"},
+      {n:"oil of edge (sharpen once, +1 damage one attack)",mat:"glass",w:0.2,sp:[450,1000],kind:"consumable"},
+      {n:"warding ribbon (one save bolster)",mat:"cloth",w:0.05,sp:[350,900],kind:"consumable"},
+      {n:"shield charm (one automatic hit becomes miss)",mat:"metal",w:0.1,sp:[550,1100],kind:"consumable"},
+      {n:"thunderstone (thrown, loud bang, disorient)",mat:"stone",w:0.5,sp:[400,900],kind:"consumable"},
+      {n:"flash powder (thrown, bright light, blind)",mat:"paper",w:0.1,sp:[400,900],kind:"consumable"},
+      {n:"tanglefoot bag (thrown, restrain briefly)",mat:"cloth",w:1.0,sp:[450,950],kind:"consumable"},
+
+      // Consumables - Movement & Utility
+      {n:"feather token (negate a short fall once)",mat:"paper",w:0.05,sp:[500,1100],kind:"consumable"},
+      {n:"boots of springing (one enhanced jump)",mat:"leather",w:0.5,sp:[500,1100],kind:"consumable"},
+      {n:"potion of water breathing (10 minutes)",mat:"glass",w:0.3,sp:[600,1200],kind:"consumable"},
+      {n:"dust of tracelessness (erase tracks for 1 hour)",mat:"paper",w:0.1,sp:[450,1000],kind:"consumable"},
+      {n:"feather fall token (slow fall for 1 minute)",mat:"paper",w:0.05,sp:[550,1150],kind:"consumable"},
+
+      // Consumables - Social & Luck
+      {n:"lucky coin (one d20 reroll, once)",mat:"metal",w:0.05,sp:[600,1200],kind:"consumable"},
+      {n:"charm of persuasion (advantage on one charisma check)",mat:"metal",w:0.05,sp:[400,900],kind:"consumable"},
+      {n:"vial of courage (advantage vs one fear effect)",mat:"glass",w:0.2,sp:[350,850],kind:"consumable"},
+      {n:"token of truth (know if next statement is lie)",mat:"metal",w:0.05,sp:[500,1000],kind:"consumable"},
+
+      // Situational Gear - Exploration
+      {n:"guide's pin (advantage on one navigation check)",mat:"metal",w:0.05,sp:[500,1200],kind:"gear"},
+      {n:"wayfinder's compass (points to nearest settlement)",mat:"metal",w:0.3,sp:[700,1400],kind:"gear"},
+      {n:"lens of detection (advantage on one search check)",mat:"glass",w:0.1,sp:[550,1150],kind:"gear"},
+      {n:"ear trumpet of listening (advantage on one perception check)",mat:"metal",w:0.4,sp:[500,1100],kind:"gear"},
+      {n:"dowsing rod (detect water within 100 ft)",mat:"wood",w:0.5,sp:[450,1000],kind:"gear"},
+
+      // Situational Gear - Knowledge & Magic
+      {n:"scribe's quill (advantage on one recall/decipher check)",mat:"wood",w:0.02,sp:[500,1200],kind:"gear"},
+      {n:"scholar's monocle (read one language you don't know)",mat:"glass",w:0.1,sp:[650,1300],kind:"gear"},
+      {n:"candle of revealing (detect invisible within 10 ft)",mat:"cloth",w:0.2,sp:[700,1400],kind:"gear"},
+      {n:"chalk of warding (draw protective circle, 1 hour)",mat:"stone",w:0.1,sp:[550,1150],kind:"gear"},
+      {n:"crystal of light (bright light 30 ft, 1 hour)",mat:"stone",w:0.3,sp:[400,900],kind:"gear"},
+
+      // Situational Gear - Tools & Craft
+      {n:"hammer of mending (repair one broken mundane item)",mat:"metal",w:1.0,sp:[600,1250],kind:"gear"},
+      {n:"rope of climbing (advantage on climbing with this rope)",mat:"cloth",w:5.0,sp:[800,1600],kind:"gear"},
+      {n:"thieves' gloves (advantage on one lockpicking attempt)",mat:"leather",w:0.2,sp:[650,1300],kind:"gear"},
+      {n:"bag of endless knots (never runs out of rope, 50ft max)",mat:"cloth",w:0.5,sp:[750,1500],kind:"gear"},
+
+      // Situational Gear - Nature & Animals
+      {n:"beast whistle (calm one animal)",mat:"wood",w:0.1,sp:[450,950],kind:"gear"},
+      {n:"druid's seed (grow edible fruit instantly, once)",mat:"wood",w:0.05,sp:[400,900],kind:"gear"},
+      {n:"weatherglass (predict weather 24 hours ahead)",mat:"glass",w:0.4,sp:[550,1150],kind:"gear"},
+
+      // Ongoing Minor Items (very limited power)
+      {n:"everburning torch (sheds light, never consumed)",mat:"wood",w:1.0,sp:[1200,2400],kind:"ongoing"},
+      {n:"self-heating mug (keeps beverages warm)",mat:"metal",w:0.5,sp:[500,1100],kind:"ongoing"},
+      {n:"cleaning cloth (removes dirt/stains with a wipe)",mat:"cloth",w:0.1,sp:[400,900],kind:"ongoing"},
+      {n:"compass of true north (always points north)",mat:"metal",w:0.2,sp:[600,1200],kind:"ongoing"},
+      {n:"tankard of purity (detects poison in drink)",mat:"metal",w:0.6,sp:[750,1500],kind:"ongoing"},
+      {n:"prestidigitation ring (create minor sensory effects)",mat:"metal",w:0.05,sp:[800,1600],kind:"ongoing"},
+      {n:"warming cloak clasp (wearer comfortable in cold)",mat:"metal",w:0.1,sp:[700,1400],kind:"ongoing"},
+      {n:"cooling hat pin (wearer comfortable in heat)",mat:"metal",w:0.05,sp:[700,1400],kind:"ongoing"}
+    ],
+    make:(rng,b)=>{
+      const m=pick(rng,MATERIALS[b.mat]);
+      const glimmer=rng()<0.6?` faintly glimmering`:"";
+      const note=b.kind==="consumable"?"consumable":(b.kind==="ongoing"?"ongoing":"situational");
+      return [`${toTitle(m)} ${b.n}${glimmer}`, tags("minor-magic",note), true]
+    }
+  }
+};
+
+// ---------- Hoard Template biases ----------
+const TEMPLATE = {
+  none:{ catMult:{}, bundleBias:{}, flavor:[] },
+  bandit:{
+    catMult:{ "Coins & Purses":1.2,"Trade Goods":1.1,"Toolkits & Supplies":1.0,"Adventuring Gear of Note":1.0,"Curios & Charms":0.9,"Gems & Art":0.8 },
+    bundleBias:{ smuggler:0.35, hunter:0.15, merchant:0.2 },
+    flavor:["smoke-stained","hastily wrapped","mud-spattered","with crude tally marks"]
+  },
+  cult:{
+    catMult:{ "Writing & Games":1.15,"Toolkits & Supplies":1.1,"Gems & Art":1.1,"Household & Table":0.9,"Trade Goods":0.9 },
+    bundleBias:{ smuggler:0.15, hunter:0.05, merchant:0.1 },
+    flavor:["daubed with chalk sigils","faint incense scent","bound in dark ribbon","scribed margins"]
+  },
+  noble:{
+    catMult:{ "Gems & Art":1.4,"Trade Goods":1.2,"Coins & Purses":1.1,"Clothing & Wearables":1.1,"Curios & Charms":0.8 },
+    bundleBias:{ merchant:0.35, smuggler:0.1, hunter:0.05 },
+    flavor:["wax seal stamped","finely chased","embroidered crest","wrapped in silk"]
+  },
+  goblin:{
+    catMult:{ "Food & Provisions":1.2,"Bags & Containers":1.1,"Tools & Utensils":1.1,"Coins & Purses":0.9,"Gems & Art":0.7 },
+    bundleBias:{ hunter:0.4, smuggler:0.1, merchant:0.05 },
+    flavor:["sticky resin smell","crudely knotted","patchwork repairs","scratched with tally cuts"]
+  },
+  ship:{
+    catMult:{ "Trade Goods":1.3,"Toolkits & Supplies":1.2,"Bags & Containers":1.1,"Coins & Purses":1.0 },
+    bundleBias:{ merchant:0.45, smuggler:0.3, hunter:0.05 },
+    flavor:["tarred twine","salt-stained","stenciled crate marks","sealed with pitch"]
+  },
+  wizard:{
+    catMult:{ "Writing & Games":1.25,"Toolkits & Supplies":1.2,"Adventuring Gear of Note":1.1,"Gems & Art":1.05 },
+    bundleBias:{ smuggler:0.15, merchant:0.2, hunter:0.05 },
+    flavor:["ink-splattered","annotated margin","arcane diagram stamps","scent of ozone"]
+  }
+};
+
+// ---------- Monster-specific loot templates ----------
+const MONSTER_TEMPLATES = {
+  dragon:{
+    catMult:{ "Gems & Art":2.0,"Coins & Purses":1.8,"Trade Goods":1.3,"Adventuring Gear of Note":1.2,"Minor Magic":1.5 },
+    bundleBias:{ merchant:0.3, smuggler:0.05, hunter:0.05 },
+    flavor:["scorched edges","melted slightly","gleaming","ancient","partially fused"]
+  },
+  lich:{
+    catMult:{ "Writing & Games":1.8,"Toolkits & Supplies":1.5,"Gems & Art":1.4,"Minor Magic":1.6,"Curios & Charms":1.3 },
+    bundleBias:{ smuggler:0.2, merchant:0.15, hunter:0.05 },
+    flavor:["necromantic runes","bone-white","desiccated","ancient parchment","death-touched"]
+  },
+  vampire:{
+    catMult:{ "Gems & Art":1.6,"Clothing & Wearables":1.5,"Coins & Purses":1.4,"Trade Goods":1.3,"Minor Magic":1.2 },
+    bundleBias:{ merchant:0.35, smuggler:0.15, hunter:0.05 },
+    flavor:["blood-stained","velvet-lined","aristocratic","night-black","crimson accents"]
+  },
+  beholder:{
+    catMult:{ "Gems & Art":1.7,"Curios & Charms":1.5,"Minor Magic":1.8,"Writing & Games":1.2,"Toolkits & Supplies":1.3 },
+    bundleBias:{ smuggler:0.25, merchant:0.2, hunter:0.1 },
+    flavor:["alien geometry","faintly humming","prismatic","eye-shaped motif","arcane resonance"]
+  },
+  giant:{
+    catMult:{ "Food & Provisions":1.5,"Bags & Containers":1.3,"Trade Goods":1.4,"Coins & Purses":1.2,"Mundane Adventuring Items":1.3 },
+    bundleBias:{ hunter:0.4, merchant:0.25, smuggler:0.1 },
+    flavor:["oversized","crudely fashioned","massive scale","boulder-sized","primitive"]
+  },
+  demon:{
+    catMult:{ "Gems & Art":1.5,"Minor Magic":1.7,"Curios & Charms":1.4,"Coins & Purses":1.3 },
+    bundleBias:{ smuggler:0.3, merchant:0.15, hunter:0.1 },
+    flavor:["sulfurous","infernal script","smoldering","cursed-looking","abyssal"]
+  },
+  fey:{
+    catMult:{ "Curios & Charms":1.8,"Gems & Art":1.5,"Clothing & Wearables":1.4,"Minor Magic":1.6,"Food & Provisions":1.3 },
+    bundleBias:{ merchant:0.2, smuggler:0.15, hunter:0.2 },
+    flavor:["rainbow-hued","gossamer","moonlit","star-kissed","enchanted shimmer"]
+  },
+  aberration:{
+    catMult:{ "Curios & Charms":1.6,"Writing & Games":1.4,"Minor Magic":1.5,"Gems & Art":1.2 },
+    bundleBias:{ smuggler:0.3, merchant:0.1, hunter:0.15 },
+    flavor:["otherworldly","non-euclidean","pulsating","mind-bending","eldritch"]
+  },
+  undead:{
+    catMult:{ "Coins & Purses":1.3,"Gems & Art":1.2,"Clothing & Wearables":1.2,"Mundane Adventuring Items":1.1 },
+    bundleBias:{ merchant:0.2, hunter:0.15, smuggler:0.15 },
+    flavor:["grave-touched","musty","decayed","tomb-sealed","centuries-old"]
+  }
+};
+
+// ---------- Value & Weight ----------
+function estimateValue(rng,b){const baseSp=b.sp[0]+Math.floor(rng()*(b.sp[1]-b.sp[0]+1));return Math.max(1,baseSp)}
+function estimateWeight(rng,b){const jitter=(rng()-0.5)*0.1*b.w;return Math.max(0.01, +(b.w + jitter).toFixed(2))}
+
+// Masterwork upgrade
+function tryUpgrade(rng,item){
+  if(rng()<0.08){
+    item.title=item.title.replace(/^(?:plain|used|well-used|sturdy|serviceable)\s/i,"");
+    item.title=item.title.replace(/^(.*)$/i,"masterwork $1");
+    item.value=Math.floor(item.value*(1.5+rng()*0.8));
+  }
+}
+
+// Themed bundles (return an item already bundled)
+function themedBundle(rng, templateKey){
+  const mkContainer=(titleBase)=>({cat:"Bags & Containers",title:titleBase,value:0,weight:0.4,tags:["bundle","container"],isValuable:true});
+  const coin=(sp)=>({cat:"Coins & Purses",title:`Pouch of ${spToGp(sp)} gp (${sp} sp)`,value:sp,weight:0.05,tags:["currency"],isValuable:true});
+
+  const choice = (()=> {
+    const bias = TEMPLATE[templateKey]?.bundleBias || {};
+    const r = rng();
+    const pS = bias.smuggler||0, pH = (pS + (bias.hunter||0)), pM = (pH + (bias.merchant||0));
+    if(r < pS) return "smuggler";
+    if(r < pH) return "hunter";
+    if(r < pM) return "merchant";
+    return pick(rng,["smuggler","hunter","merchant"]);
+  })();
+
+  if(choice==="smuggler"){
+    const base = mkContainer("Smuggler’s tin");
+    const picks = [
+      {cat:"Toolkits & Supplies",title:"Lockpicks (quality set)",value:estimateValue(rng,{sp:[900,2400]}),weight:0.2,tags:["tools","specialty"],isValuable:true},
+      {cat:"Toolkits & Supplies",title:"Forged papers (traveler’s marks)",value:estimateValue(rng,{sp:[700,1500]}),weight:0.1,tags:["tools","paper"],isValuable:true},
+      coin(70)
+    ];
+    base.title += ` containing ${picks.map(p=>p.title).join("; ")}`;
+    base.value = picks.reduce((t,p)=>t+p.value,0);
+    base.weight = +(base.weight + picks.reduce((t,p)=>t+p.weight,0)).toFixed(2);
+    return base;
+  }
+  if(choice==="hunter"){
+    const base = mkContainer("Hunter’s roll");
+    const picks = [
+      {cat:"Adventuring Gear of Note",title:"Snares (3)",value:estimateValue(rng,{sp:[120,300]}),weight:0.6,tags:["gear"],isValuable:false},
+      {cat:"Adventuring Gear of Note",title:"Pitons (10)",value:estimateValue(rng,{sp:[300,900]}),weight:5.0,tags:["gear"],isValuable:true},
+      {cat:"Adventuring Gear of Note",title:"Rope, hempen 50′",value:estimateValue(rng,{sp:[100,300]}),weight:10.0,tags:["gear"],isValuable:false}
+    ];
+    base.title += ` containing ${picks.map(p=>p.title).join("; ")}`;
+    base.value = picks.reduce((t,p)=>t+p.value,0);
+    base.weight = +(base.weight + picks.reduce((t,p)=>t+p.weight,0)).toFixed(2);
+    return base;
+  }
+  // merchant
+  const base = mkContainer("Merchant parcel");
+  const picks = [
+    {cat:"Trade Goods",title:"Spices (sealed pouch)",value:estimateValue(rng,{sp:[400,1200]}),weight:1.0,tags:["trade"],isValuable:true},
+    {cat:"Trade Goods",title:"Fine cloth (rolled)",value:estimateValue(rng,{sp:[300,1000]}),weight:2.0,tags:["trade"],isValuable:true},
+    {cat:"Writing & Games",title:"Tally slate with chalk",value:estimateValue(rng,{sp:[80,220]}),weight:0.6,tags:["stationery"],isValuable:false}
+  ];
+  base.title += ` containing ${picks.map(p=>p.title).join("; ")}`;
+  base.value = picks.reduce((t,p)=>t+p.value,0);
+  base.weight = +(base.weight + picks.reduce((t,p)=>t+p.weight,0)).toFixed(2);
+  return base;
+}
+
+// Maybe bundle contents inside containers; inject themed bundles sometimes
+function maybeBundle(rng,item,templateKey){
+  // Occasionally replace a normal container with a themed bundle
+  if(item.cat==="Bags & Containers" && rng()<0.18){
+    return themedBundle(rng, templateKey||"none");
+  }
+  if(item.cat!=="Bags & Containers"||rng()>=0.18) return item;
+
+  const howMany=1+Math.floor(rng()*3);
+  // Fill categories are template-aware
+  let catsForFill=["Coins & Purses","Writing & Games","Tools & Utensils","Adventuring Gear of Note","Gems & Art"];
+  if(templateKey==="wizard") catsForFill=["Writing & Games","Toolkits & Supplies","Adventuring Gear of Note","Coins & Purses"];
+  if(templateKey==="ship") catsForFill=["Trade Goods","Bags & Containers","Coins & Purses","Toolkits & Supplies"];
+  if(templateKey==="goblin") catsForFill=["Food & Provisions","Tools & Utensils","Coins & Purses","Bags & Containers"];
+
+  const picks=[];
+  for(let i=0;i<howMany;i++){
+    const c=pick(rng,catsForFill);
+    const inner=makeOne(rng,c,true,templateKey);
+    picks.push(inner);
+  }
+  const innerText=picks.map(p=>p.title).join("; ");
+  item.title+=` containing ${innerText}`;
+  item.value+=picks.reduce((t,p)=>t+p.value,0);
+  item.weight=+(item.weight+picks.reduce((t,p)=>t+p.weight,0)).toFixed(2);
+  item.tags=Array.from(new Set([...item.tags,"bundle","container"]));
+  item.isValuable=item.isValuable||picks.some(p=>p.isValuable);
+  return item;
+}
+
+// Compose one
+function makeOne(rng,catKey,noBundle=false,templateKey="none",magicOn=false,cursedOn=false,curseSeverity=3){
+  const cat=CATS[catKey];
+
+  // For cursed items, filter by severity
+  let basePool = cat.base;
+  if(catKey === "Cursed Items" && cursedOn){
+    basePool = cat.base.filter(b => b.severity <= curseSeverity);
+    if(basePool.length === 0) basePool = cat.base; // fallback if no items match
+  }
+
+  const base=pick(rng,basePool);
+  let [desc,taglist,forceVal]=cat.make(rng,base);
+
+  // Template flavor injections (light touch)
+  const fl=TEMPLATE[templateKey]?.flavor||[];
+  if(fl.length && rng()<0.35) desc += `, ${pick(rng,fl)}`;
+
+  let sp=estimateValue(rng,base), wt=estimateWeight(rng,base);
+  let title=toTitle(desc);
+  const item={k:`${catKey}:${title}`,cat:catKey,title,value:sp,weight:wt,tags:taglist,isValuable:!!forceVal};
+
+  // Minor magic items and cursed items stay low-impact; skip masterwork for special items
+  if(catKey!=="Minor Magic" && catKey!=="Cursed Items") tryUpgrade(rng,item);
+
+  return noBundle?item:maybeBundle(rng,item,templateKey);
+}
+
+// Weighted category pick from usefulness slider + template multipliers; include Minor Magic and Cursed Items if allowed
+function categoryWeights(selectedCats,usefulness01,templateKey,magicOn,cursedOn){
+  const base = {
+    "Trade Goods": 0.8, "Gems & Art": 0.9, "Adventuring Gear of Note": 0.85, "Toolkits & Supplies": 0.8,
+    "Coins & Purses": 0.6,
+    "Clothing & Wearables": 0.4, "Tools & Utensils": 0.5, "Household & Table": 0.35,
+    "Writing & Games": 0.45, "Food & Provisions": 0.35, "Curios & Charms": 0.3, "Bags & Containers": 0.5,
+    "Potions & Elixirs": 0.7, "Arcane Scrolls": 0.7,
+    "Mundane Adventuring Items": 0.6,
+    "Minor Magic": magicOn ? 0.35 : 0.0,
+    "Cursed Items": cursedOn ? 0.25 : 0.0
+  };
+  const flavorBoost = 1 - usefulness01;
+  const usefulBoost = usefulness01;
+  const mult = TEMPLATE[templateKey]?.catMult || {};
+
+  const weights = {};
+  for(const c of selectedCats){
+    let w = base[c] ?? 0.5;
+    if(["Curios & Charms","Household & Table","Food & Provisions","Clothing & Wearables","Writing & Games"].includes(c)) {
+      w = w*(0.6 + 0.8*flavorBoost);
+    } else {
+      w = w*(0.6 + 0.8*usefulBoost);
+    }
+    if(mult[c]) w *= mult[c];
+    weights[c]=Math.max(0.0001,w);
+  }
+  // If magic on, add Minor Magic implicitly (not in checkboxes)
+  if(magicOn){
+    let w = base["Minor Magic"];
+    if(templateKey==="wizard") w *= 1.35;
+    weights["Minor Magic"] = (weights["Minor Magic"]||0) + w;
+  }
+
+  // If cursed on, add Cursed Items implicitly (not in checkboxes)
+  if(cursedOn){
+    let w = base["Cursed Items"];
+    if(templateKey==="lich") w *= 1.5;
+    if(templateKey==="demon") w *= 1.4;
+    if(templateKey==="undead") w *= 1.3;
+    weights["Cursed Items"] = (weights["Cursed Items"]||0) + w;
+  }
+
+  // normalize
+  const sum = Object.values(weights).reduce((a,b)=>a+b,0) || 1;
+  for(const k in weights) weights[k]/=sum;
+  return weights;
+}
+function weightedPick(rng, cats, weights){
+  const r=rng(); let acc=0;
+  for(const c of cats){ acc+=weights[c]??0; if(r<=acc) return c; }
+  return cats[cats.length-1];
+}
+
+// ---------- UI bootstrap: categories ----------
+(function buildCategoryCheckboxes(){
+  const wrap=$("lg-cats"); wrap.innerHTML="";
+  const order = Object.keys(CATS).filter(k=>k!=="Minor Magic"); // magic is gated
+  for(const k of order){
+    const id="cat-"+k.replace(/[^a-z0-9]/gi,'');
+    const checked = !["Curios & Charms","Household & Table"].includes(k);
+    const div=document.createElement("div");div.className="col";
+    div.innerHTML=`<div class="form-check">
+      <input class="form-check-input" type="checkbox" id="${id}" data-cat="${k}" ${checked?"checked":""}>
+      <label class="form-check-label" for="${id}">${k}</label>
+    </div>`;
+    wrap.appendChild(div);
+  }
+})();
+
+// ---------- Generation core (Count mode) ----------
+function generateCount(rng, selectedCats, opts){
+  const {count,minSp,maxSp,usefulness01,templateKey,magicOn,cursedOn,curseSeverity} = opts;
+  const weights=categoryWeights(selectedCats,usefulness01,templateKey,magicOn,cursedOn);
+  const seen=new Set(), list=[];
+  let guard=0, maxGuard=count*100;
+
+  // include Minor Magic and Cursed Items implicitly in selection list when enabled
+  let pickableCats = [...selectedCats];
+  if(magicOn) pickableCats.push("Minor Magic");
+  if(cursedOn) pickableCats.push("Cursed Items");
+
+  while(list.length<count && guard++<maxGuard){
+    const cat=weightedPick(rng,pickableCats,weights);
+    const item=makeOne(rng,cat,false,templateKey,magicOn,cursedOn,curseSeverity);
+    if(item.value<minSp || item.value>maxSp) continue;
+    if(seen.has(item.k)) continue;
+    seen.add(item.k);
+    list.push(item);
+  }
+  return list;
+}
+
+// ---------- Generation to budget (Budget mode) ----------
+function generateToBudget(rng, selectedCats, opts){
+  const {targetSp, softCount, minSp, maxSp, usefulness01, templateKey, magicOn, cursedOn, curseSeverity} = opts;
+  const weights=categoryWeights(selectedCats,usefulness01,templateKey,magicOn,cursedOn);
+  let pickableCats = [...selectedCats];
+  if(magicOn) pickableCats.push("Minor Magic");
+  if(cursedOn) pickableCats.push("Cursed Items");
+  const list=[]; let total=0; let guard=0;
+
+  // Greedy fill
+  while(total<targetSp*0.9 && guard++<6000){
+    const cat=weightedPick(rng,pickableCats,weights);
+    const it=makeOne(rng,cat,false,templateKey,magicOn,cursedOn,curseSeverity);
+    if(it.value>maxSp || it.value<minSp) continue;
+    if(softCount && list.length>=softCount && total+it.value>targetSp*1.1) break;
+    if(total+it.value>targetSp*1.15 && rng()<0.7) continue;
+    list.push(it); total+=it.value;
+  }
+
+  // Improvement pass to aim ±10%
+  let tries=250;
+  while(tries-- && (total<targetSp*0.9 || total>targetSp*1.1) && list.length){
+    const i=Math.floor(rng()*list.length);
+    const old=list[i];
+    const cat=weightedPick(rng,pickableCats,weights);
+    const cand=makeOne(rng,cat,false,templateKey,magicOn,cursedOn,curseSeverity);
+    if(cand.value>maxSp || cand.value<minSp) continue;
+    const newTotal=total-old.value+cand.value;
+    if(Math.abs(newTotal-targetSp) < Math.abs(total-targetSp)){
+      list[i]=cand; total=newTotal;
+    }
+  }
+  return list;
+}
+
+// ---------- Render & meta ----------
+function renderList(list, wantWeight, wantTags){
+  const out=$("lg-out"); out.innerHTML="";
+  let totalSp=0, totalWt=0, valCount=0, cursedCount=0;
+  for(const it of list){
+    totalSp+=it.value; totalWt+=it.weight; if(it.isValuable) valCount++;
+    const isCursed = it.cat === "Cursed Items";
+    if(isCursed) cursedCount++;
+    const col=document.createElement("div"); col.className="col";
+    const div=document.createElement("div"); div.className="loot-tile";
+
+    // Add special styling for cursed items
+    if(isCursed){
+      div.style.borderColor = "#dc3545";
+      div.style.backgroundColor = "rgba(220, 53, 69, 0.1)";
+    }
+
+    const gp=spToGp(it.value);
+    const cursedMarker = isCursed ? ' • <span class="text-danger"><i class="bi bi-exclamation-triangle-fill"></i> CURSED</span>' : '';
+    div.innerHTML=`
+      <div class="loot-title">${it.title}</div>
+      <div class="loot-sub">${it.cat}${it.isValuable?' • <span class="text-warning">valuable</span>':''}${cursedMarker}</div>
+      <div class="loot-meta">${(gp%1?gp.toFixed(2):gp)} gp (${it.value} sp)${wantWeight?` • ${it.weight} lb`:``}${wantTags?` • ${it.tags.join(", ")}`:``}</div>
+    `;
+    col.appendChild(div); out.appendChild(col);
+  }
+  const meta=$("lg-meta"); meta.innerHTML="";
+  const pills = [
+    ["Items", list.length],
+    ["Total value", `${spToGp(totalSp)} gp (${totalSp} sp)`],
+    ["Total weight", `${totalWt.toFixed(2)} lb`],
+    ["Valuable", `${valCount} (${Math.round((valCount/(list.length||1))*100)}%)`]
+  ];
+  if(cursedCount > 0){
+    pills.push(["Cursed", `${cursedCount} (${Math.round((cursedCount/(list.length||1))*100)}%)`]);
+  }
+  for(const [k,v] of pills){ const s=document.createElement("span"); s.className="pill"; s.textContent=`${k}: ${v}`; meta.appendChild(s); }
+}
+
+// ---------- Clipboard / download ----------
+function copyOut(){
+  const rows=[...document.querySelectorAll("#lg-out .loot-tile")].map(tile=>{
+    const t=tile.querySelector(".loot-title").textContent;
+    const m=tile.querySelector(".loot-meta").textContent;
+    return `${t} — ${m}`;
+  });
+  if(!rows.length) return;
+  navigator.clipboard.writeText(rows.join("\n"));
+}
+function downloadOut(){
+  const rows=[...document.querySelectorAll("#lg-out .loot-tile")].map(tile=>{
+    const t=tile.querySelector(".loot-title").textContent;
+    const s=tile.querySelector(".loot-sub").textContent;
+    const m=tile.querySelector(".loot-meta").textContent;
+    return `${t}\n${s}\n${m}\n`;
+  });
+  if(!rows.length) return;
+  const blob=new Blob([rows.join("\n")],{type:"text/plain"});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement("a"); a.href=url; a.download="loot.txt"; a.click(); URL.revokeObjectURL(url);
+}
+
+// ---------- Presets ----------
+const PRESETS = {
+  custom: ()=>{},
+  t1: ()=>{
+    $("lg-mode-count").checked=true;
+    $("lg-min").value=1; $("lg-max").value=30;
+    $("lg-budget").value=120; $("lg-use").value=45; $("lg-count").value=30;
+  },
+  t2: ()=>{
+    $("lg-mode-budget").checked=true;
+    $("lg-min").value=5; $("lg-max").value=120;
+    $("lg-budget").value=450; $("lg-use").value=60; $("lg-count").value=40;
+  },
+  t3: ()=>{
+    $("lg-mode-budget").checked=true;
+    $("lg-min").value=10; $("lg-max").value=300;
+    $("lg-budget").value=1200; $("lg-use").value=70; $("lg-count").value=50;
+  },
+  t4: ()=>{
+    $("lg-mode-budget").checked=true;
+    $("lg-min").value=20; $("lg-max").value=600;
+    $("lg-budget").value=3000; $("lg-use").value=75; $("lg-count").value=60;
+  }
+};
+
+// ---------- Wire up ----------
+function currentSelectedCats(){
+  return [...document.querySelectorAll("#lg-cats input:checked")].map(x=>x.dataset.cat);
+}
+
+// Custom loot tables storage
+let customLootTables = {};
+
+// Quick Bundle configurations
+const QUICK_BUNDLES = {
+  pocket: {
+    name: "Pocket Loot",
+    mode: "count",
+    lootType: "individual",
+    count: 5,
+    min: 1,
+    max: 15,
+    budget: 50,
+    usefulness: 50,
+    template: "none",
+    monster: "none",
+    magic: false,
+    categories: ["Coins & Purses", "Food & Provisions", "Tools & Utensils", "Mundane Adventuring Items"]
+  },
+  coinpouch: {
+    name: "Coin Pouch",
+    mode: "budget",
+    lootType: "individual",
+    count: 3,
+    min: 50,
+    max: 200,
+    budget: 350,
+    usefulness: 10,
+    template: "none",
+    monster: "none",
+    magic: false,
+    categories: ["Coins & Purses"]
+  },
+  gems: {
+    name: "5 Gems",
+    mode: "count",
+    lootType: "hoard",
+    count: 5,
+    min: 50,
+    max: 200,
+    budget: 500,
+    usefulness: 80,
+    template: "none",
+    monster: "none",
+    magic: false,
+    categories: ["Gems & Art"]
+  },
+  potions: {
+    name: "Potion Bundle (3)",
+    mode: "count",
+    lootType: "hoard",
+    count: 3,
+    min: 30,
+    max: 400,
+    budget: 300,
+    usefulness: 100,
+    template: "none",
+    monster: "none",
+    magic: true,
+    categories: ["Potions & Elixirs"]
+  },
+  scrolls: {
+    name: "Scroll Bundle (3)",
+    mode: "count",
+    lootType: "hoard",
+    count: 3,
+    min: 40,
+    max: 600,
+    budget: 450,
+    usefulness: 100,
+    template: "none",
+    monster: "none",
+    magic: true,
+    categories: ["Arcane Scrolls"]
+  },
+  boss: {
+    name: "Boss Hoard",
+    mode: "budget",
+    lootType: "hoard",
+    count: 50,
+    min: 10,
+    max: 300,
+    budget: 2000,
+    usefulness: 75,
+    template: "none",
+    monster: "none",
+    magic: true,
+    categories: ["Coins & Purses", "Gems & Art", "Trade Goods", "Adventuring Gear of Note"]
+  },
+  magicitems: {
+    name: "Magic Items",
+    mode: "count",
+    lootType: "hoard",
+    count: 8,
+    min: 30,
+    max: 200,
+    budget: 800,
+    usefulness: 90,
+    template: "none",
+    monster: "none",
+    magic: true,
+    cursed: false,
+    curseSeverity: 3,
+    categories: ["Adventuring Gear of Note", "Toolkits & Supplies", "Gems & Art", "Trade Goods", "Bags & Containers"]
+  },
+  curseditems: {
+    name: "Cursed Items",
+    mode: "count",
+    lootType: "hoard",
+    count: 6,
+    min: 40,
+    max: 250,
+    budget: 900,
+    usefulness: 80,
+    template: "none",
+    monster: "none",
+    magic: false,
+    cursed: true,
+    curseSeverity: 3,
+    categories: ["Adventuring Gear of Note", "Toolkits & Supplies", "Clothing & Wearables", "Gems & Art", "Bags & Containers"]
+  }
+};
+
+function applyQuickBundle(bundleKey) {
+  const bundle = QUICK_BUNDLES[bundleKey];
+  if (!bundle) return;
+
+  // Set all form values
+  if (bundle.mode === "budget") {
+    $("lg-mode-budget").checked = true;
+  } else {
+    $("lg-mode-count").checked = true;
+  }
+
+  if (bundle.lootType === "individual") {
+    $("lg-loot-individual").checked = true;
+  } else {
+    $("lg-loot-hoard").checked = true;
+  }
+
+  $("lg-count").value = bundle.count;
+  $("lg-min").value = bundle.min;
+  $("lg-max").value = bundle.max;
+  $("lg-budget").value = bundle.budget;
+  $("lg-use").value = bundle.usefulness;
+  $("lg-template").value = bundle.template;
+  $("lg-monster").value = bundle.monster;
+  $("lg-magic").checked = bundle.magic;
+  $("lg-cursed").checked = bundle.cursed || false;
+  $("lg-curse-severity").value = bundle.curseSeverity || 3;
+
+  // Show/hide curse severity based on cursed toggle
+  $("lg-curse-severity-wrap").style.display = bundle.cursed ? "block" : "none";
+
+  // Set categories - uncheck all first, then check only bundle categories
+  document.querySelectorAll("#lg-cats input[type='checkbox']").forEach(cb => {
+    cb.checked = bundle.categories.includes(cb.dataset.cat);
+  });
+
+  // Auto-generate
+  doGenerate();
+}
+
+function doGenerate(){
+  const seed=$("lg-seed").value.trim(); const rng=prand(seed);
+  const mode=document.querySelector('input[name="lg-mode"]:checked').value;
+  const lootType=document.querySelector('input[name="lg-loot-type"]:checked').value;
+  const count=clamp(+$("lg-count").value||50,1,5000);
+  const minSp=Math.max(0,+$("lg-min").value||0);
+  const maxGp=Math.max(1,+$("lg-max").value||25); const maxSp=maxGp*10;
+  const targetGp=Math.max(1,+$("lg-budget").value||150); const targetSp=gpToSp(targetGp);
+  const usefulness01 = Math.max(0,Math.min(1,(+$("lg-use").value||50)/100));
+  const monsterType = $("lg-monster").value || "none";
+  let templateKey = $("lg-template").value || "none";
+  const customTableKey = $("lg-custom-table").value || "";
+  const magicOn = $("lg-magic").checked;
+  const cursedOn = $("lg-cursed").checked;
+  const curseSeverity = cursedOn ? (+$("lg-curse-severity").value || 3) : 3;
+
+  // Monster type overrides template
+  if(monsterType !== "none"){
+    templateKey = monsterType;
+    // Merge MONSTER_TEMPLATES with TEMPLATE for compatibility
+    if(MONSTER_TEMPLATES[monsterType] && !TEMPLATE[monsterType]){
+      TEMPLATE[monsterType] = MONSTER_TEMPLATES[monsterType];
+    }
+  }
+
+  // Apply individual loot type adjustments
+  let adjustedCount = count;
+  let adjustedBudget = targetSp;
+  if(lootType === "individual"){
+    adjustedCount = Math.max(1, Math.floor(count / 10));
+    adjustedBudget = Math.floor(targetSp / 10);
+  }
+
+  let selectedCats=currentSelectedCats();
+
+  // Use custom loot table if selected
+  if(customTableKey && customLootTables[customTableKey]){
+    const customTable = customLootTables[customTableKey];
+    if(customTable.categories){
+      selectedCats = customTable.categories;
+    }
+    if(customTable.template){
+      TEMPLATE[customTableKey] = customTable.template;
+      templateKey = customTableKey;
+    }
+  }
+
+  if(!selectedCats.length){ alert("Select at least one category."); return; }
+
+  const wantWeight=$("lg-weight").checked, wantTags=$("lg-tags").checked;
+
+  let list=[];
+  if(mode==="budget"){
+    list=generateToBudget(rng,selectedCats,{
+      targetSp: adjustedBudget, softCount: adjustedCount, minSp, maxSp, usefulness01, templateKey, magicOn, cursedOn, curseSeverity
+    });
+  }else{
+    list=generateCount(rng,selectedCats,{
+      count: adjustedCount, minSp, maxSp, usefulness01, templateKey, magicOn, cursedOn, curseSeverity
+    });
+  }
+  renderList(list,wantWeight,wantTags);
+}
+
+// Save/Load Preset functionality
+function savePreset(){
+  const name = $("lg-preset-name").value.trim();
+  if(!name){ alert("Enter a preset name."); return; }
+
+  const preset = {
+    mode: document.querySelector('input[name="lg-mode"]:checked').value,
+    lootType: document.querySelector('input[name="lg-loot-type"]:checked').value,
+    count: $("lg-count").value,
+    seed: $("lg-seed").value,
+    min: $("lg-min").value,
+    max: $("lg-max").value,
+    budget: $("lg-budget").value,
+    usefulness: $("lg-use").value,
+    monster: $("lg-monster").value,
+    template: $("lg-template").value,
+    magic: $("lg-magic").checked,
+    cursed: $("lg-cursed").checked,
+    curseSeverity: $("lg-curse-severity").value,
+    weight: $("lg-weight").checked,
+    tags: $("lg-tags").checked,
+    categories: currentSelectedCats()
+  };
+
+  const presets = JSON.parse(localStorage.getItem("lootPresets") || "{}");
+  presets[name] = preset;
+  localStorage.setItem("lootPresets", JSON.stringify(presets));
+  loadPresetList();
+  alert(`Preset "${name}" saved!`);
+}
+
+function loadPreset(){
+  const name = $("lg-saved-presets").value;
+  if(!name){ alert("Select a preset to load."); return; }
+
+  const presets = JSON.parse(localStorage.getItem("lootPresets") || "{}");
+  const preset = presets[name];
+  if(!preset){ alert("Preset not found."); return; }
+
+  // Apply preset values
+  if(preset.mode === "count") $("lg-mode-count").checked = true;
+  else $("lg-mode-budget").checked = true;
+
+  if(preset.lootType === "hoard") $("lg-loot-hoard").checked = true;
+  else $("lg-loot-individual").checked = true;
+
+  $("lg-count").value = preset.count || 50;
+  $("lg-seed").value = preset.seed || "";
+  $("lg-min").value = preset.min || 1;
+  $("lg-max").value = preset.max || 25;
+  $("lg-budget").value = preset.budget || 150;
+  $("lg-use").value = preset.usefulness || 50;
+  $("lg-monster").value = preset.monster || "none";
+  $("lg-template").value = preset.template || "none";
+  $("lg-magic").checked = preset.magic || false;
+  $("lg-cursed").checked = preset.cursed || false;
+  $("lg-curse-severity").value = preset.curseSeverity || 3;
+  $("lg-weight").checked = preset.weight !== false;
+  $("lg-tags").checked = preset.tags !== false;
+
+  // Show/hide curse severity based on cursed toggle
+  $("lg-curse-severity-wrap").style.display = preset.cursed ? "block" : "none";
+
+  // Restore categories
+  document.querySelectorAll("#lg-cats input").forEach(cb => {
+    cb.checked = preset.categories?.includes(cb.dataset.cat) || false;
+  });
+
+  alert(`Preset "${name}" loaded!`);
+}
+
+function loadPresetList(){
+  const presets = JSON.parse(localStorage.getItem("lootPresets") || "{}");
+  const select = $("lg-saved-presets");
+  select.innerHTML = '<option value="">-- Select a saved preset --</option>';
+  for(const name in presets){
+    const opt = document.createElement("option");
+    opt.value = name;
+    opt.textContent = name;
+    select.appendChild(opt);
+  }
+}
+
+// Import custom loot table
+function importCustomTable(){
+  const input = document.createElement("input");
+  input.type = "file";
+  input.accept = ".json";
+  input.onchange = (e) => {
+    const file = e.target.files[0];
+    if(!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (evt) => {
+      try{
+        const data = JSON.parse(evt.target.result);
+        if(!data.name){ alert("Custom loot table must have a 'name' field."); return; }
+
+        customLootTables[data.name] = data;
+
+        const select = $("lg-custom-table");
+        const opt = document.createElement("option");
+        opt.value = data.name;
+        opt.textContent = data.name;
+        select.appendChild(opt);
+        select.value = data.name;
+
+        alert(`Custom loot table "${data.name}" imported!`);
+      }catch(err){
+        alert("Invalid JSON file: " + err.message);
+      }
+    };
+    reader.readAsText(file);
+  };
+  input.click();
+}
+
+document.addEventListener("DOMContentLoaded",()=>{
+  // Simple/Advanced mode toggle
+  const advancedKey = 'dmtools.advancedMode.loot';
+  const advancedToggle = $('advancedModeToggle');
+  const settingsBody = $('lootSettingsBody');
+
+  const isAdvanced = localStorage.getItem(advancedKey) === 'true';
+  advancedToggle.checked = isAdvanced;
+  if (isAdvanced) settingsBody.classList.add('advanced-mode');
+
+  advancedToggle.addEventListener('change', () => {
+    if (advancedToggle.checked) {
+      settingsBody.classList.add('advanced-mode');
+      localStorage.setItem(advancedKey, 'true');
+    } else {
+      settingsBody.classList.remove('advanced-mode');
+      localStorage.setItem(advancedKey, 'false');
+    }
+  });
+
+  $("lg-generate").addEventListener("click",doGenerate);
+  $("lg-copy").addEventListener("click",copyOut);
+  $("lg-download").addEventListener("click",downloadOut);
+  $("lg-clear").addEventListener("click",()=>{ $("lg-out").innerHTML=""; $("lg-meta").innerHTML=""; });
+
+  $("lg-preset").addEventListener("change",(e)=>{
+    const v=e.target.value; (PRESETS[v]||PRESETS.custom)();
+  });
+
+  // Cursed items toggle - show/hide severity slider
+  $("lg-cursed").addEventListener("change",(e)=>{
+    const wrap = $("lg-curse-severity-wrap");
+    wrap.style.display = e.target.checked ? "block" : "none";
+  });
+
+  // Quick Bundle event listeners
+  document.querySelectorAll(".quick-bundle-btn").forEach(btn => {
+    btn.addEventListener("click", (e) => {
+      e.preventDefault();
+      const bundleKey = btn.dataset.bundle;
+      applyQuickBundle(bundleKey);
+    });
+  });
+
+  // New event handlers
+  $("lg-save-preset").addEventListener("click",savePreset);
+  $("lg-load-preset").addEventListener("click",loadPreset);
+  $("lg-import-custom").addEventListener("click",importCustomTable);
+
+  // Load saved presets on startup
+  loadPresetList();
+
+  // First run
+  doGenerate();
+});
+})();
+  </script>
+  <script data-goatcounter="https://maybeme1990.goatcounter.com/count"
+        async src="//gc.zgo.at/count.js"></script>
+</body>
+</html>

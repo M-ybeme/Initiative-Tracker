@@ -1,0 +1,200 @@
+
+.bgimage {
+  background:url('/images/BGMap.png') no-repeat center center fixed;
+  background-size:cover;
+}
+.bg-orange{ background-color:#fd7e14 !important; color:#212529 !important; }
+.drag-handle{ cursor:move; }
+#saveHistorySelect{ min-width:200px; }
+/* Give help button a subtle glow on dark theme */
+#helpBtn { box-shadow: 0 0 0.25rem rgba(13,202,240,.65); }
+#helpBtn:hover { box-shadow: 0 0 0.6rem rgba(13,202,240,.85); }
+/* Compact status icon row */
+.status-icon-row{ display:flex; flex-wrap:wrap; gap:.3rem; align-items:center; }
+.status-chip{ font-size:1.05rem; line-height:1; user-select:none; }
+.status-chip[data-remaining]::after{ content: attr(data-remaining); font-size:.7rem; margin-left:.15rem; opacity:.8; }
+.conc-btn{ border:1px dashed rgba(255,255,255,.35); }
+.conc-on{ border-color:#ffc107; color:#ffc107; }
+.hp-controls .btn{ padding:.1rem .35rem; line-height:1; }
+/* Sticky table header */
+table thead th{ position:sticky; top:0; background:#161a1d; z-index:2; }
+/* Keep Notes & Effects tidy */
+.notes-actions{ display:flex; gap:.35rem; align-items:center; }
+.notes-actions .btn{ padding:.15rem .45rem; }
+@media (max-width:576px){
+  .btn,.form-control{ padding:.6rem .8rem; font-size:1rem; }
+  .table td,.table th{ padding:.6rem .5rem; }
+}
+.controls-grid {
+  display: grid;
+  gap: 0.5rem 0.75rem;
+  align-items: center;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  justify-content: center;
+  max-width: 900px;
+  margin-inline: auto;
+}
+/* --- Added: compact UI for temp HP & death saves --- */
+.temphp-wrap { display:flex; align-items:center; gap:.25rem; }
+.temphp-badge { font-size:.75rem; padding:.15rem .35rem; border:1px dashed rgba(255,255,255,.35); border-radius:.35rem; }
+.temp-btns .btn { padding:.1rem .3rem; line-height:1; }
+.death-saves { display:flex; align-items:center; gap:.35rem; }
+.ds-pill { font-size:.75rem; padding:.15rem .4rem; border-radius:.5rem; }
+.ds-pill.success { background:rgba(25,135,84,.15); border:1px solid rgba(25,135,84,.45); }
+.ds-pill.fail { background:rgba(220,53,69,.15); border:1px solid rgba(220,53,69,.45); }
+.ds-btns .btn { padding:.1rem .35rem; line-height:1; }
+.ds-stable { font-size:.75rem; color:#20c997; }
+/* Faster enter "pop" */
+#rollToast.showing, #rollToast.show { animation: rollPop .24s cubic-bezier(.2,.8,.2,1); }
+@keyframes rollPop {
+  0%   { transform: translate(-50%,-50%) scale(.88); opacity:.15; }
+  100% { transform: translate(-50%,-50%) scale(1);   opacity:1; }
+}
+/* Faster fade-out (Bootstrap uses .fade) */
+.toast.fade { transition-duration: .14s; }
+/* Respect reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  #rollToast.showing, #rollToast.show { animation: none; }
+  .toast.fade { transition-duration: 0s; }
+}
+/* Dark theme subtle border accents by type */
+tr[data-type="PC"]        { border-left: 4px solid rgba(13,202,240,.6); } /* info/cyan */
+tr[data-type="Companion"] { border-left: 4px solid rgba(25,135,84,.6); }  /* success/green */
+tr[data-type="NPC"]       { border-left: 4px solid rgba(255,193,7,.6); }  /* warning/yellow */
+tr[data-type="Enemy"]     { border-left: 4px solid rgba(220,53,69,.7); }  /* danger/red */
+#rulesCategories .list-group-item.active { background:#0dcaf0; color:#111; border-color:#0dcaf0; }
+#rulesContainer .accordion-button { background:#1a1f24; color:#f8f9fa; }
+#rulesContainer .accordion-item   { border-color:#2b3238; }
+#rulesContainer .badge            { font-weight:500; }
+/* --- Player View layout: hide DM chrome, clean table --- */
+/* Hide DM-only controls but leave the Player View toggle */
+body.player-view #manualSaveBtn,
+
+body.player-view #copyOrderBtn,
+body.player-view #saveHistorySelect,
+body.player-view #export-btn,
+body.player-view #import-btn,
+body.player-view [data-bs-target="#savedCharsModal"],
+body.player-view [data-bs-target="#rulesModal"],
+body.player-view #helpBtn {
+  display: none !important;
+}
+/* Hide dice roller block completely */
+body.player-view .my-4.text-light {
+  display: none !important;
+}
+/* Hide the Actions column (header + cells) in Player View */
+body.player-view table thead .col-actions,
+body.player-view table tbody .col-actions {
+  display: none !important;
+}
+/* Hide AC (header + cell) in Player View */
+body.player-view table thead .col-ac,
+body.player-view table tbody .col-ac {
+  display: none !important;
+}
+/* Player view: hide HP numbers but keep the colored bar */
+body.player-view .col-health .health-input,
+body.player-view .card .health-input {
+  color: transparent !important;
+  text-shadow: none !important;
+  caret-color: transparent;   /* no blinking caret on the TV */
+}
+/* Player View: hide AC portion of mobile summary, keep type/init */
+body.player-view .meta-ac {
+  display: none !important;
+}
+/* --- Active turn: icon + row styling (contained in row) --- */
+
+/* Keep the caret cell a consistent width for all rows */
+.col-turn {
+  width: 2.5rem;
+}
+
+/* Base caret: dim on non-active rows so the active one stands out */
+.table td.col-turn i.bi-caret-right-fill {
+  font-size: 1.3rem;
+  vertical-align: middle;
+  opacity: 0.25;
+}
+
+/* Active row: stronger background, but only inside the cells */
+tr.active-turn td {
+  position: relative;
+  font-weight: 700 !important;
+  color: #f4fff9 !important;
+  background: linear-gradient(
+    90deg,
+    rgba(29, 255, 148, 0.18),
+    rgba(29, 255, 148, 0.03)
+  );
+  box-shadow: inset 0 0 0 1px rgba(29, 255, 148, 0.22);
+}
+
+/* Slight extra emphasis on the Character cell only */
+tr.active-turn td:nth-child(3) {
+  background: linear-gradient(
+    90deg,
+    rgba(29, 158, 109, 0.22),
+    rgba(29, 158, 109, 0)
+  );
+}
+
+/* Active-row caret: bright, pulsing arrow, but no extra band */
+tr.active-turn td.col-turn i.bi-caret-right-fill {
+  display: inline-block;
+  opacity: 1;
+  color: #1dff94 !important;
+  filter: drop-shadow(0 0 4px rgba(29, 255, 148, 0.85));
+  transform: scale(1.15);
+  animation: pulseTurnArrow 1.6s ease-in-out infinite;
+}
+
+@keyframes pulseTurnArrow {
+  0%   { transform: scale(1);    opacity: 0.9; }
+  50%  { transform: scale(1.18); opacity: 1;   }
+  100% { transform: scale(1);    opacity: 0.9; }
+}
+
+/* Mobile card active-turn outline */
+@media (max-width: 768px) {
+  .initiative-card.active-turn {
+    border: 2px solid rgba(29, 255, 148, 0.65) !important;
+    box-shadow: 0 0 6px rgba(29, 255, 148, 0.4);
+  }
+}
+
+/* Make inline inputs look like plain text on the TV */
+body.player-view .name-input,
+body.player-view .init-input {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+body.player-view .name-input {
+  padding-left: 0;
+}
+/* Player View banner toggle */
+body.player-view #playerViewBanner {
+  display: block !important;
+}
+/* Player view: hide HP numbers but keep the colored bar */
+body.player-view td:nth-child(7) .health-input,
+body.player-view .card .health-input {
+  color: transparent !important;
+  text-shadow: none !important;
+  caret-color: transparent;   /* no blinking caret on the TV */
+}
+.conc-chip {
+  color: #ffc107;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 193, 7, 0.8);
+  padding: 0.1rem 0.4rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.conc-chip i {
+  font-size: 0.9rem;
+  line-height: 1;
+}

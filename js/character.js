@@ -313,6 +313,26 @@
         return result;
       }
 
+      function rollAbilityCheck(ability, rollType = 'normal') {
+        const abilityNames = { Str: 'Strength', Dex: 'Dexterity', Con: 'Constitution', Int: 'Intelligence', Wis: 'Wisdom', Cha: 'Charisma' };
+        const abilityName = abilityNames[ability] || ability;
+
+        // Get the modifier from the modStr, modDex, etc. input
+        const modEl = $(`mod${ability}`);
+        const modifier = modEl ? (Number(modEl.value) || 0) : 0;
+
+        let result;
+        if (rollType === 'advantage') {
+          result = rollWithAdvantage(modifier, `${abilityName} Check`);
+        } else if (rollType === 'disadvantage') {
+          result = rollWithDisadvantage(modifier, `${abilityName} Check`);
+        } else {
+          result = rollDice(`1d20${modifier >= 0 ? '+' : ''}${modifier}`, `${abilityName} Check`);
+        }
+
+        return result;
+      }
+
       function rollAttack(attackIndex, rollType = 'normal') {
         if (attackIndex < 0 || attackIndex >= currentAttackList.length) return;
         const attack = currentAttackList[attackIndex];
@@ -879,6 +899,11 @@
 
       // Allow cache invalidation when content packs are applied
       window.addEventListener('dmtoolbox:packs-applied', () => {
+        _cachedSpells = null;
+      });
+
+      // Also invalidate after pack content is fully applied (after SRD filtering)
+      window.addEventListener('dmtoolbox:packs-ready', () => {
         _cachedSpells = null;
       });
 
@@ -4970,6 +4995,18 @@
               rollType = e.shiftKey ? 'advantage' : (e.ctrlKey ? 'disadvantage' : 'normal');
             }
             rollSavingThrow(ability, rollType);
+          }
+
+          // Ability check buttons (raw ability modifier rolls)
+          const abilityCheckBtn = e.target.closest('.ability-check-btn');
+          if (abilityCheckBtn) {
+            const ability = abilityCheckBtn.getAttribute('data-ability');
+            // Use data-roll-type attribute if present, otherwise fall back to keyboard modifiers
+            let rollType = abilityCheckBtn.getAttribute('data-roll-type');
+            if (!rollType) {
+              rollType = e.shiftKey ? 'advantage' : (e.ctrlKey ? 'disadvantage' : 'normal');
+            }
+            rollAbilityCheck(ability, rollType);
           }
 
           // Attack roll buttons (to hit)

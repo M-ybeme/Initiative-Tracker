@@ -168,6 +168,7 @@ const CharacterCreationWizard = (function() {
               <option value="Locathah" data-srd-block="race:Locathah" data-srd-block-group="wizard-races">Locathah - Fish-like, +2 Dex +1 Wis, natural armor, limited amphibiousness</option>
               <option value="Grung" data-srd-block="race:Grung" data-srd-block-group="wizard-races">Grung - Poison frog, +2 Dex +1 Con, poison skin, standing leap, water dependency</option>
             </optgroup>
+            <optgroup id="homebrewRacesOptgroup" label="Homebrew Races" class="d-none"></optgroup>
           </select>
           <div class="alert alert-warning small mt-2 d-none" data-srd-notice-for="wizard-races">
             Looking for races from Volo's, Eberron, or other supplements? Load a private content pack to enable them in this SRD-safe build.
@@ -300,6 +301,46 @@ const CharacterCreationWizard = (function() {
           'Warforged': 'Constructed beings built for war. Don\'t need to sleep, eat, or breathe. Have integrated protection and constructed resilience.',
           'Yuan-ti Pureblood': 'Serpentine humanoids with snake-like features. Immune to poison, resistant to magic, and can speak with serpents.'
         };
+
+        // Populate homebrew races from content packs
+        function populateHomebrewRaces() {
+          const optgroup = document.getElementById('homebrewRacesOptgroup');
+          if (!optgroup) return;
+
+          // Clear existing homebrew options
+          optgroup.innerHTML = '';
+
+          const raceData = window.LevelUpData?.RACE_DATA || {};
+          const races = Object.entries(raceData);
+
+          if (races.length === 0) {
+            optgroup.classList.add('d-none');
+            return;
+          }
+
+          optgroup.classList.remove('d-none');
+
+          races.sort((a, b) => a[0].localeCompare(b[0])).forEach(([raceName, data]) => {
+            const option = document.createElement('option');
+            option.value = raceName;
+            const shortDesc = data.summary || data.description || '';
+            const truncated = shortDesc.length > 50 ? shortDesc.substring(0, 50) + '...' : shortDesc;
+            option.textContent = truncated ? `${raceName} - ${truncated}` : raceName;
+            optgroup.appendChild(option);
+
+            // Also add to descriptions for display when selected
+            if (data.description && !descriptions[raceName]) {
+              descriptions[raceName] = data.description;
+            }
+          });
+        }
+
+        // Populate on show
+        populateHomebrewRaces();
+
+        // Refresh when content packs change
+        const refreshHandler = () => populateHomebrewRaces();
+        window.addEventListener('dmtoolbox:packs-ready', refreshHandler);
 
         if (raceSelect && raceDesc && subraceSection && subraceSelect) {
           // Remove any existing listener to prevent memory leaks and duplicate handlers
@@ -455,6 +496,7 @@ const CharacterCreationWizard = (function() {
               <option value="Artificer" data-srd-block="class:Artificer" data-srd-block-group="wizard-classes">Artificer - Magical inventor with infusions (Int)</option>
               <option value="Paladin" data-srd-block="class:Paladin" data-srd-block-group="wizard-classes">Paladin - Holy warrior with divine magic (Str/Cha)</option>
             </optgroup>
+            <optgroup id="homebrewClassesOptgroup" label="Homebrew Classes" class="d-none"></optgroup>
           </select>
           <div class="alert alert-warning small mt-2 d-none" data-srd-notice-for="wizard-classes">
             Need Paladins, Monks, or Artificers? Load a private content pack to re-enable non-SRD classes in this builder.
@@ -479,6 +521,56 @@ const CharacterCreationWizard = (function() {
         const classDesc = document.getElementById('classDescription');
         const hitDieInfo = document.getElementById('classHitDie');
         const primaryAbilityInfo = document.getElementById('primaryAbility');
+
+        // Populate homebrew classes from content packs
+        function populateHomebrewClasses() {
+          const optgroup = document.getElementById('homebrewClassesOptgroup');
+          if (!optgroup) return;
+
+          // Clear existing homebrew options
+          optgroup.innerHTML = '';
+
+          const classData = window.LevelUpData?.CLASS_DATA || {};
+          // Filter to only include classes added by content packs (not built-in ones)
+          const builtInClasses = ['Artificer', 'Barbarian', 'Bard', 'Cleric', 'Druid', 'Fighter', 'Monk', 'Paladin', 'Ranger', 'Rogue', 'Sorcerer', 'Warlock', 'Wizard'];
+          const homebrewClasses = Object.entries(classData).filter(([name]) => !builtInClasses.includes(name));
+
+          if (homebrewClasses.length === 0) {
+            optgroup.classList.add('d-none');
+            return;
+          }
+
+          optgroup.classList.remove('d-none');
+
+          homebrewClasses.sort((a, b) => a[0].localeCompare(b[0])).forEach(([className, data]) => {
+            const option = document.createElement('option');
+            option.value = className;
+            const hitDie = data.hitDice || data.hitDie || 'd8';
+            // Handle primaryAbility as string or array
+            let abilityStr = '';
+            if (data.primaryAbility) {
+              const abilities = Array.isArray(data.primaryAbility) ? data.primaryAbility : [data.primaryAbility];
+              abilityStr = `(${abilities.map(a => a.charAt(0).toUpperCase() + a.slice(1)).join('/')})`;
+            }
+            const shortDesc = data.description || '';
+            const truncated = shortDesc.length > 40 ? shortDesc.substring(0, 40) + '...' : shortDesc;
+            option.textContent = `${className} - ${truncated || 'Homebrew class'} ${abilityStr}`;
+            option.setAttribute('data-homebrew', 'true');
+            optgroup.appendChild(option);
+          });
+        }
+
+        populateHomebrewClasses();
+
+        // Refresh when content packs change - listen to multiple events for robustness
+        if (!classSelect._homebrewRefreshHandler) {
+          classSelect._homebrewRefreshHandler = () => {
+            // Small delay to ensure data is fully updated
+            setTimeout(populateHomebrewClasses, 10);
+          };
+          window.addEventListener('dmtoolbox:packs-ready', classSelect._homebrewRefreshHandler);
+          window.addEventListener('dmtoolbox:packs-applied', classSelect._homebrewRefreshHandler);
+        }
 
         if (classSelect && classDesc && hitDieInfo && primaryAbilityInfo) {
           // Remove any existing listener to prevent memory leaks and duplicate handlers
@@ -527,14 +619,35 @@ const CharacterCreationWizard = (function() {
               'Wizard': 'Intelligence (for spells and knowledge)'
             };
 
-            if (e.target.value && descriptions[e.target.value]) {
-              classDesc.textContent = descriptions[e.target.value];
+            const selectedClass = e.target.value;
+            if (selectedClass && descriptions[selectedClass]) {
+              // Built-in class
+              classDesc.textContent = descriptions[selectedClass];
               classDesc.style.display = 'block';
 
-              hitDieInfo.innerHTML = `<strong>Hit Die:</strong> ${hitDice[e.target.value]} per level. This determines your Hit Points.`;
+              hitDieInfo.innerHTML = `<strong>Hit Die:</strong> ${hitDice[selectedClass]} per level. This determines your Hit Points.`;
               hitDieInfo.style.display = 'block';
 
-              primaryAbilityInfo.innerHTML = `<strong>Primary Ability:</strong> ${primaryAbilities[e.target.value]}`;
+              primaryAbilityInfo.innerHTML = `<strong>Primary Ability:</strong> ${primaryAbilities[selectedClass]}`;
+              primaryAbilityInfo.style.display = 'block';
+            } else if (selectedClass && window.LevelUpData?.CLASS_DATA?.[selectedClass]) {
+              // Homebrew class from content pack
+              const data = window.LevelUpData.CLASS_DATA[selectedClass];
+              classDesc.innerHTML = `<span class="badge bg-info me-2">Homebrew</span>${data.description || 'A custom class from your content pack.'}`;
+              classDesc.style.display = 'block';
+
+              const hd = data.hitDice || data.hitDie || 'd8';
+              hitDieInfo.innerHTML = `<strong>Hit Die:</strong> ${hd} per level. This determines your Hit Points.`;
+              hitDieInfo.style.display = 'block';
+
+              // Handle primaryAbility as string or array
+              let abilityDisplay = 'varies';
+              if (data.primaryAbility) {
+                const abilities = Array.isArray(data.primaryAbility) ? data.primaryAbility : [data.primaryAbility];
+                abilityDisplay = abilities.map(a => a.charAt(0).toUpperCase() + a.slice(1)).join('/');
+              }
+              const spellAbility = data.spellcastingAbility ? ` (spellcasting: ${data.spellcastingAbility})` : '';
+              primaryAbilityInfo.innerHTML = `<strong>Primary Ability:</strong> ${abilityDisplay}${spellAbility}`;
               primaryAbilityInfo.style.display = 'block';
             } else {
               classDesc.style.display = 'none';
@@ -1389,7 +1502,13 @@ const CharacterCreationWizard = (function() {
         const selectedSkills = Array.from(document.querySelectorAll('input[name="classSkill"]:checked'))
           .map(cb => cb.value);
 
-        const requiredCount = wizardData.classSkillCount || 2;
+        const requiredCount = wizardData.classSkillCount;
+        // Allow proceeding if no skills are defined (requiredCount is 0 or undefined)
+        if (requiredCount === 0 || requiredCount === undefined) {
+          wizardData.classSkills = [];
+          return true;
+        }
+
         if (selectedSkills.length !== requiredCount) {
           alert(`Please select exactly ${requiredCount} skill(s) for your class.`);
           return false;
@@ -1417,7 +1536,22 @@ const CharacterCreationWizard = (function() {
         };
 
         const charClass = wizardData.class;
-        const classData = classSkills[charClass] || { count: 2, skills: [] };
+        let classData = classSkills[charClass];
+
+        // Check for homebrew class in LevelUpData.CLASS_DATA if not in hardcoded list
+        if (!classData && window.LevelUpData?.CLASS_DATA?.[charClass]) {
+          const homebrewData = window.LevelUpData.CLASS_DATA[charClass];
+          classData = {
+            count: homebrewData.numSkillChoices || 2,
+            skills: homebrewData.skillChoices || []
+          };
+        }
+
+        // Fallback if still nothing found
+        if (!classData) {
+          classData = { count: 2, skills: [] };
+        }
+
         wizardData.classSkillCount = classData.count;
 
         const instructionEl = document.getElementById('skillSelectionInstructions');
@@ -1429,6 +1563,22 @@ const CharacterCreationWizard = (function() {
 
         if (containerEl) {
           containerEl.innerHTML = '';
+
+          // Handle empty skills list
+          if (!classData.skills || classData.skills.length === 0) {
+            containerEl.innerHTML = `
+              <div class="alert alert-warning">
+                <i class="bi bi-exclamation-triangle me-2"></i>
+                No skill choices defined for this class.
+                ${window.LevelUpData?.CLASS_DATA?.[charClass] ?
+                  'The content pack may need to include <code>skillChoices</code> in the class definition.' :
+                  'This class may not be fully configured.'}
+              </div>
+            `;
+            wizardData.classSkillCount = 0; // Allow skipping if no skills defined
+            return;
+          }
+
           classData.skills.forEach(skill => {
             const div = document.createElement('div');
             div.className = 'form-check';
@@ -2908,7 +3058,16 @@ const CharacterCreationWizard = (function() {
     }
 
     const choicesData = window.LevelUpData.getClassEquipmentChoices(className);
-    const goldData = window.LevelUpData.getClassStartingGold(className);
+    // Try CLASS_STARTING_GOLD first, then fall back to goldAlternative in equipment choices
+    let goldData = window.LevelUpData.getClassStartingGold(className);
+
+    // For homebrew classes, check goldAlternative in equipment choices
+    if (!goldData || (goldData.dice === '3d4' && goldData.average === 75)) {
+      // Default fallback was used, check if there's a goldAlternative in choices
+      if (choicesData?.goldAlternative) {
+        goldData = choicesData.goldAlternative;
+      }
+    }
 
     wizardData.equipmentChoiceData = choicesData;
     wizardData.startingGoldAmount = null; // Reset gold selection

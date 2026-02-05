@@ -1,0 +1,3077 @@
+<!DOCTYPE html>
+<html lang="en" data-bs-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>The DM's Toolbox: Battle Map</title>
+
+  <!-- Vendor CSS -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" crossorigin="anonymous" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.8.3/font/bootstrap-icons.css" />
+
+  <!-- Site CSS -->
+  <link href="/css/site.css" rel="stylesheet" />
+
+  <!-- Favicon -->
+  <link rel="icon" type="image/png" href="/images/dndFavicon (2).png" />
+
+  <!-- Vendor JS -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" crossorigin="anonymous"></script>
+  <script src="/js/site.js"></script>
+  <script src="/js/generated/srd-allowlist.js"></script>
+  <script src="/js/modules/srd-content-filter.js"></script>
+  <script src="/js/indexed-db-storage.js"></script>
+
+  <style>
+    :root {
+      --bg:#0b0f14; --panel:#0f1620; --ink:#e6f1ff; --muted:#8fa3bf;
+      --accent:#8bd3ff; --line:#1b2430; --nav:56px;
+    }
+    html, body { height: 100%; background: var(--bg); }
+    body { margin: 0; color: var(--ink); padding-top: var(--nav); }
+    .navbar { height: var(--nav); background:#0f1620; border-bottom:1px solid var(--line) }
+
+    /* Layout */
+    .map-wrap{
+      min-height: calc(100dvh - var(--nav));
+      display: flex;
+      gap: 12px;
+      padding: 12px;
+      background: var(--bg);
+      overflow-x: hidden; /* kill horizontal page scroll */
+    }
+
+    /* Offcanvas controls: drawer on mobile, static column on lg+ */
+    #controlsDrawer.offcanvas-lg { width: 340px; max-width: 40vw; }
+    @media (min-width: 992px){
+      #controlsDrawer.offcanvas-lg{
+        position: static;
+        transform: none !important;
+        visibility: visible !important;
+        background: transparent;
+        border: none;
+      }
+      #controlsDrawer .offcanvas-header { display: none !important; }
+      #controlsDrawer .offcanvas-body { padding: 0 !important; }
+    }
+
+    /* Make controls wider on mobile */
+    @media (max-width: 991.98px) {
+      #controlsDrawer.offcanvas-lg {
+        width: 90vw;       /* take up most of the viewport width */
+        max-width: 480px;  /* optional cap for tablets */
+      }
+    }
+
+    .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 12px; overflow: auto; }
+    .panel h2 { margin: 0 0 8px; font-size: 16px; letter-spacing: .3px; }
+    .group h3 { margin: 0 0 8px; font-size: 13px; color: var(--muted); font-weight: 600; }
+    label { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 8px; margin: 6px 0; font-size: 13px; color: var(--ink); }
+    input[type="number"], input[type="text"], input[type="color"], select {
+      background: #0a111a; border: 1px solid var(--line); color: var(--ink);
+      padding: 6px 8px; border-radius: 8px; font-size: 13px;
+    }
+    input[type="file"] { font-size: 12px; }
+    button { background: #0a111a; color: var(--ink); border: 1px solid var(--line); padding: 8px 10px; border-radius: 10px; cursor: pointer; font-size: 13px; }
+    button:hover { border-color: #283345; }
+    .row-inline { display:flex; gap:8px; align-items:center; flex-wrap: wrap; }
+    .muted { color: var(--muted); font-size: 12px; }
+
+    .canvas-panel { flex: 1 1 auto; min-width: 0; display:flex; flex-direction: column; min-height: 0; }
+    .bar { padding: 8px 10px; display:flex; align-items:center; gap:8px; border: 1px solid var(--line); border-radius: 12px; background: #0c131d; margin-bottom: 12px; overflow-x: auto; -webkit-overflow-scrolling: touch; flex-wrap: wrap; }
+    .bar span { font-size:12px; color: var(--muted); }
+    .bar .active { outline: 2px solid var(--accent); }
+
+    .canvas-wrap { position: relative; flex: 1 1 auto; min-height: 0; }
+    .canvas-wrap canvas {
+      position: absolute;
+      inset: 0;
+      display: block;
+      width: 100%;
+      height: 100%;
+      border-radius: 12px;
+      touch-action: none;
+      pointer-events: none;
+    }
+    #mapLayer { background: #0a0f16; border: 1px solid var(--line); }
+    #fogLayer, #tokenLayer { background: transparent; }
+    #uiLayer { background: transparent; pointer-events: auto; cursor: grab; }
+    #uiLayer.dragging { cursor: grabbing; }
+    .token-list { display:flex; flex-wrap: wrap; gap:6px; }
+    .pill { border:1px solid var(--line); padding:4px 8px; border-radius:999px; font-size:12px; background:#0a111a; }
+
+    .context-menu { position:fixed; background:#0f1620; border:1px solid var(--line); border-radius:8px; padding:4px; z-index:1000; display:none; min-width:150px; max-height:80vh; overflow-y:auto; box-shadow: 0 4px 12px rgba(0,0,0,0.5); }
+    .context-menu button { width:100%; text-align:left; padding:5px 8px; border-radius:6px; font-size:13px; }
+
+    .measure-label { position:absolute; background:#0f1620; border:1px solid var(--line); border-radius:6px; padding:2px 6px; font-size:12px; color:var(--ink); transform:translate(-50%, -150%); pointer-events:none; }
+
+    /* Unsaved changes indicator animation */
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.6; }
+    }
+
+    /* Mobile touch targets */
+    @media (max-width: 991.98px){
+      input, select, button { min-height: 44px; }
+      label { grid-template-columns: 1fr; gap: 4px; }
+      .row-inline { gap: 6px; }
+    }
+  </style>
+</head>
+<body>
+  <nav class="navbar navbar-expand-lg navbar-dark fixed-top" id="mainNav">
+    <div class="container-fluid">
+      <a class="navbar-brand" href="index.html">
+        <img src="/images/dndFavicon (2).png" height="32" width="32" alt="App Logo" class="d-inline-block me-1" />
+        The DM's Toolbox
+      </a>
+
+      <!-- Mobile Controls button -->
+      <button class="btn btn-outline-light d-lg-none ms-auto"
+              type="button"
+              data-bs-toggle="offcanvas"
+              data-bs-target="#controlsDrawer"
+              aria-controls="controlsDrawer">
+        <i class="bi bi-sliders"></i> Controls
+      </button>
+
+      <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarSupportedContent"
+              aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+        <span class="navbar-toggler-icon"></span>
+      </button>
+
+      <div class="collapse navbar-collapse" id="navbarSupportedContent">
+        <ul class="navbar-nav ms-auto ms-lg-3 mb-2 mb-lg-0">
+          <li class="nav-item dropdown">
+            <a class="nav-link dropdown-toggle active" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+              Combat
+            </a>
+            <ul class="dropdown-menu">
+              <li><a class="dropdown-item" href="initiative.html">Initiative Tracker</a></li>
+              <li><a class="dropdown-item active" aria-current="page" href="battlemap.html">Battle Map</a></li>
+              <li><a class="dropdown-item" href="encounterbuilder.html">Encounter Builder</a></li>
+            </ul>
+          </li>
+          <li class="nav-item dropdown">
+            <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+              Generators
+            </a>
+            <ul class="dropdown-menu">
+              <li><a class="dropdown-item" href="name.html">Name Generator</a></li>
+              <li><a class="dropdown-item" href="loot.html">Loot Generator</a></li>
+              <li><a class="dropdown-item" href="shop.html">Shop Generator</a></li>
+              <li><a class="dropdown-item" href="npc.html">NPC Generator</a></li>
+              <li><a class="dropdown-item" href="tav.html">Tavern/Inn Generator</a></li>
+            </ul>
+          </li>
+          <li class="nav-item dropdown">
+            <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+              Campaign
+            </a>
+            <ul class="dropdown-menu">
+              <li><a class="dropdown-item" href="characters.html">Characters</a></li>
+              <li><a class="dropdown-item" href="journal.html">Journal</a></li>
+            </ul>
+          </li>
+        </ul>
+      </div>
+    </div>
+  </nav>
+
+  <div class="alert alert-warning text-start mx-3" role="status">
+    <div class="fw-semibold"><i class="bi bi-shield-lock me-1"></i>SRD Scope</div>
+    <small>Token presets and cross-tool imports only load SRD-safe stat data by default. Private packs can re-enable other bestiaries locally, but nothing non-SRD is baked into this page.</small>
+  </div>
+
+  <div class="map-wrap">
+    <!-- Controls: offcanvas on <lg, static column on ≥lg -->
+    <aside id="controlsDrawer"
+           class="offcanvas offcanvas-lg offcanvas-start panel"
+           tabindex="-1"
+           aria-labelledby="controlsLabel"
+           data-bs-scroll="true"
+           data-bs-backdrop="false">
+      <div class="offcanvas-header d-lg-none">
+        <h5 id="controlsLabel" class="m-0">Battle Map Controls</h5>
+        <button type="button" class="btn-close btn-close-white"
+        data-bs-dismiss="offcanvas" aria-label="Close"></button>
+      </div>
+
+      <div class="offcanvas-body p-2 p-lg-0">
+
+        <!-- DESKTOP/LARGE: Accordion groups -->
+        <div class="accordion" id="bmAccordion">
+
+          <!-- Map & Grid -->
+          <div class="accordion-item">
+            <h2 class="accordion-header" id="accMapHdr">
+              <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#accMap" aria-expanded="true">
+                1) Map & Grid
+              </button>
+            </h2>
+            <div id="accMap" class="accordion-collapse collapse show" data-bs-parent="#bmAccordion">
+              <div class="accordion-body">
+                <div class="group">
+                  <h3>Map</h3>
+                  <label>Upload Map <input id="mapFile" type="file" accept="image/*" /></label>
+                  <label>Base Scale (px per cell) <input id="gridSize" type="number" min="4" max="256" value="140" /></label>
+                  <label>Units per cell <input id="unitsPerCell" type="number" min="1" value="5" /></label>
+                  <label>Grid Color <input id="gridColor" type="color" value="#6aa5ff" /></label>
+                  <label>Grid Opacity <input id="gridAlpha" type="number" min="0" max="1" step="0.05" value="0.35" /></label>
+                  <label>Show Grid <input id="showGrid" type="checkbox" checked /></label>
+                  <div class="row-inline">
+                    <button id="centerMap">Center</button>
+                    <button id="fitMap">Fit</button>
+                    <button id="clearMap">Clear</button>
+                  </div>
+                </div>
+                <hr class="text-secondary"/>
+                <div class="group">
+                  <h3>Map Transform</h3>
+                  <label>Map Scale (%) <input id="mapScale" type="number" min="10" max="400" step="1" value="100" /></label>
+                  <label>Map Offset X (px) <input id="mapOffsetX" type="number" step="1" value="0" /></label>
+                  <label>Map Offset Y (px) <input id="mapOffsetY" type="number" step="1" value="0" /></label>
+                  <div class="row-inline">
+                    <button id="resetMapTransform">Reset Map Transform</button>
+                  </div>
+                </div>
+                <hr class="text-secondary"/>
+                <div class="group">
+                  <h3>Grid Alignment</h3>
+                  <label>Grid Origin X (px) <input id="gridOffsetX" type="number" step="1" value="0" /></label>
+                  <label>Grid Origin Y (px) <input id="gridOffsetY" type="number" step="1" value="0" /></label>
+                  <div class="row-inline">
+                    <button id="pickGridOrigin">Pick Origin on Map</button>
+                    <button id="snapOriginToMap">Align to Clicked Intersection</button>
+                  </div>
+                  <label>Calibrate: cells between clicks <input id="calibCells" type="number" min="1" step="1" value="10" /></label>
+                  <div class="row-inline">
+                    <button id="startCalibrate">Start Calibration</button>
+                    <span class="muted" id="calibStatus"></span>
+                  </div>
+                  <div class="muted">Use calibration when the image has a printed grid or unknown DPI: click two intersections N cells apart.</div>
+                  <div class="muted">Wheel to zoom. Middle-drag or hold <kbd>Space</kbd> + drag to pan.</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Tokens & Presets -->
+          <div class="accordion-item">
+            <h2 class="accordion-header" id="accTokensHdr">
+              <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#accTokens">
+                2) Tokens & Presets
+              </button>
+            </h2>
+            <div id="accTokens" class="accordion-collapse collapse" data-bs-parent="#bmAccordion">
+              <div class="accordion-body">
+                <div class="group">
+                  <h3>Tokens</h3>
+                  <label>Upload Token Image <input id="tokenFile" type="file" accept="image/*" /></label>
+                  <label>Name <input id="tokenName" type="text" placeholder="Goblin A" /></label>
+                  <div class="row-inline">
+                    <button id="addToken">Add Token</button>
+                    <button id="deleteSelected">Delete Selected</button>
+                  </div>
+                  <label>Snap to Grid <input id="snap" type="checkbox" checked /></label>
+                  <label>Token Size (cells) <input id="tokenCells" type="number" min="0.5" step="0.5" value="1" /></label>
+                </div>
+
+                <hr class="text-secondary"/>
+                <div class="group">
+                  <h3>Presets</h3>
+                  <label>Choose Preset
+                    <select id="tokenPreset" style="min-width:220px">
+                      <option value="">— select a token —</option>
+                    </select>
+                  </label>
+                  <div class="row-inline">
+                    <button id="addPreset">Add Selected Preset</button>
+                  </div>
+                  <div class="token-list" id="tokenList"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Session -->
+          <div class="accordion-item">
+            <h2 class="accordion-header" id="accSessionHdr">
+              <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#accSession">
+                3) Session
+              </button>
+            </h2>
+            <div id="accSession" class="accordion-collapse collapse" data-bs-parent="#bmAccordion">
+              <div class="accordion-body">
+                <div class="group">
+                  <div class="row-inline" style="align-items: center; gap: 8px;">
+                    <button id="saveSession">Save Session</button>
+                    <span id="unsavedIndicator" class="badge bg-warning text-dark" style="display: none; animation: pulse 2s infinite;">
+                      <i class="bi bi-exclamation-triangle-fill me-1"></i>Unsaved Changes
+                    </span>
+                    <button id="exportJson">Export JSON</button>
+                  </div>
+                  <div class="row-inline">
+                    <input id="importJsonFile" type="file" accept="application/json" />
+                  </div>
+                  <div class="row-inline">
+                    <button id="resetAll" title="Clear map and tokens">Reset</button>
+                  </div>
+                  <div class="muted">Click "Save Session" to save your progress. Session auto-loads on page refresh.</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Shortcuts -->
+          <div class="accordion-item">
+            <h2 class="accordion-header" id="accShortHdr">
+              <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#accShort">
+                Shortcuts
+              </button>
+            </h2>
+            <div id="accShort" class="accordion-collapse collapse" data-bs-parent="#bmAccordion">
+              <div class="accordion-body">
+                <div class="muted">
+                  Space+Drag: Pan • Wheel: Zoom • <strong>Brush Mode: Paint Fog</strong> (or Shift+Drag on desktop)
+                  • Measure: toggle button (or Alt on desktop) • R: Rotate • +/-: Resize • [ ]: Send/Bring • Esc: Clear selection • Del: Delete
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Help -->
+          <div class="accordion-item">
+            <h2 class="accordion-header" id="accHelpHdr">
+              <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#accHelp">
+                Help
+              </button>
+            </h2>
+            <div id="accHelp" class="accordion-collapse collapse" data-bs-parent="#bmAccordion">
+              <div class="accordion-body">
+                <div class="group">
+                  <h3>Getting Started</h3>
+                  <div class="muted" style="line-height: 1.5;">
+                    1. Upload a battle map image<br>
+                    2. Adjust grid size to match your map<br>
+                    3. Use calibration if your map has a printed grid<br>
+                    4. Add tokens from presets or upload custom images<br>
+                    5. Enable fog of war and start revealing areas
+                  </div>
+                </div>
+
+                <hr class="text-secondary"/>
+                <div class="group">
+                  <h3>Navigation</h3>
+                  <div class="muted" style="line-height: 1.5;">
+                    <strong>Pan:</strong> Space+Drag or Middle Mouse Button<br>
+                    <strong>Zoom:</strong> Mouse Wheel<br>
+                    <strong>Pinch Zoom:</strong> Two fingers on touchscreen<br>
+                    <strong>Center/Fit:</strong> Use buttons in Map & Grid section
+                  </div>
+                </div>
+
+                <hr class="text-secondary"/>
+                <div class="group">
+                  <h3>Tokens</h3>
+                  <div class="muted" style="line-height: 1.5;">
+                    <strong>Add:</strong> Choose preset or upload image, then click "Add Token"<br>
+                    <strong>Move:</strong> Click and drag<br>
+                    <strong>Rotate:</strong> Select token, press R<br>
+                    <strong>Resize:</strong> Select token, press +/- keys<br>
+                    <strong>Delete:</strong> Select token, press Delete/Backspace<br>
+                    <strong>Right-click:</strong> Context menu (rename, duplicate, etc.)<br>
+                    <strong>Snap to Grid:</strong> Enable checkbox for auto-alignment
+                  </div>
+                </div>
+
+                <hr class="text-secondary"/>
+                <div class="group">
+                  <h3>Fog of War</h3>
+                  <div class="muted" style="line-height: 1.5;">
+                    <strong>Enable:</strong> Click "Fog: Off" to turn on<br>
+                    <strong>Reveal Mode:</strong> Erase fog to show areas<br>
+                    <strong>Cover Mode:</strong> Paint fog to hide areas<br>
+                    <strong>Brush:</strong> Shift+Drag (desktop) or "Brush Mode" button (mobile)<br>
+                    <strong>Brush Size:</strong> Adjust with Brush input field<br>
+                    <strong>Clear All:</strong> Removes all fog and shapes
+                  </div>
+                </div>
+
+                <hr class="text-secondary"/>
+                <div class="group">
+                  <h3>Fog Shapes</h3>
+                  <div class="muted" style="line-height: 1.5;">
+                    <strong>Types:</strong> Rectangle, Square, Circle<br>
+                    <strong>Modes:</strong><br>
+                    • <strong>Cover</strong> - Hides the map (default: black fog)<br>
+                    • <strong>Reveal</strong> - Cuts through cover fog to show map underneath<br>
+                    <strong>Color:</strong> Pick any color (default: black for fog effect)<br>
+                    <strong>Size:</strong> Set in grid cells (1-20) before adding<br>
+                    <strong>Add:</strong> Configure settings, click "Add Shape"<br>
+                    <strong>Move:</strong> Click and drag shape interior<br>
+                    <strong>Resize (Keyboard):</strong> Select shape, press +/- keys<br>
+                    <strong>Resize (Mouse):</strong><br>
+                    • Rectangles/Squares - Drag corner or edge handles<br>
+                    • Circles - Drag the blue handle on the right edge<br>
+                    <strong>Delete:</strong> Select shape, press Delete or click "Delete Shape"<br>
+                    <strong>Layering:</strong> Reveal shapes cut through all cover shapes<br>
+                    <strong>Saving:</strong> Use Ctrl+S or "Save Session" button<br>
+                    <em>Perfect for fog of war! Cover the map, then use reveal circles for spell areas or line-of-sight!</em>
+                  </div>
+                </div>
+
+                <hr class="text-secondary"/>
+                <div class="group">
+                  <h3>Measurement</h3>
+                  <div class="muted" style="line-height: 1.5;">
+                    <strong>Quick Measure:</strong><br>
+                    • Desktop: Hold Alt, click and drag<br>
+                    • Mobile: Toggle "Measure" button<br>
+                    Shows distance in feet and grid cells<br>
+                    <br>
+                    <strong>Tip:</strong> Use reveal circle fog shapes for persistent spell areas and ranges!
+                  </div>
+                </div>
+
+                <hr class="text-secondary"/>
+                <div class="group">
+                  <h3>Grid Calibration</h3>
+                  <div class="muted" style="line-height: 1.5;">
+                    <strong>When to use:</strong> Your map has a printed grid<br>
+                    <strong>How:</strong> Enter number of cells, click "Start Calibration"<br>
+                    Click two grid intersections that distance apart<br>
+                    <strong>Grid Origin:</strong> Set (0,0) point for alignment<br>
+                    <strong>Snap to Map:</strong> Align grid to clicked intersection
+                  </div>
+                </div>
+
+                <hr class="text-secondary"/>
+                <div class="group">
+                  <h3>Saving & Loading</h3>
+                  <div class="muted" style="line-height: 1.5;">
+                    <strong>Manual Save:</strong> Click "Save Session" or press Ctrl+S<br>
+                    <strong>When to Save:</strong> After placing tokens, shapes, or adjusting fog<br>
+                    <strong>Export JSON:</strong> Download your session as file<br>
+                    <strong>Import JSON:</strong> Load a saved session file<br>
+                    <strong>Reset:</strong> Clear everything and start fresh<br>
+                    <em>Note: Manual saves prevent slowdown during grid adjustments!</em>
+                  </div>
+                </div>
+
+                <hr class="text-secondary"/>
+                <div class="group">
+                  <h3>Tips & Tricks</h3>
+                  <div class="muted" style="line-height: 1.5;">
+                    • <strong>Fog of War:</strong> Cover entire map with black fog, then add reveal circles for line-of-sight<br>
+                    • <strong>Spell Areas:</strong> Use reveal circles for Fireball, Darkness, or other area effects<br>
+                    • <strong>Colored Zones:</strong> Use colored cover shapes to mark traps, difficult terrain, or auras<br>
+                    • <strong>Layering:</strong> Reveal shapes always cut through cover - perfect for windows in walls!<br>
+                    • <strong>Circle Resize:</strong> Drag the blue handle to adjust spell/vision radius dynamically<br>
+                    • Combine brush and shapes for precise fog control<br>
+                    • Export your session before major changes<br>
+                    • Grid size affects token and shape sizing<br>
+                    • On mobile: Use toggle buttons for brush/measure modes
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+        <!-- /accordion -->
+      </div>
+    </aside>
+
+    <!-- Canvas column -->
+    <section class="canvas-panel">
+      <div class="bar">
+        <button id="toggleFog">Fog: Off</button>
+        <button id="fogReveal" disabled>Reveal</button>
+        <button id="fogCover" disabled>Cover</button>
+        <label class="ms-2">Brush
+          <input id="fogBrush" type="number" min="5" max="400" step="5" value="80" style="width:90px" disabled>
+        </label>
+        <button id="fogClear" disabled>Clear Fog</button>
+
+        <!-- NEW: Fog shape controls -->
+        <label class="ms-2">Shape
+          <select id="fogShapeType" style="width:110px" disabled>
+            <option value="rect">Rectangle</option>
+            <option value="square">Square</option>
+            <option value="circle">Circle</option>
+          </select>
+        </label>
+        <label class="ms-2">Color
+          <input id="fogShapeColor" type="color" value="#000000" disabled />
+        </label>
+        <label class="ms-2">Size (cells)
+          <input id="fogShapeSize" type="number" min="1" max="20" step="0.5" value="3" style="width:90px" disabled>
+        </label>
+        <button id="addFogShape" disabled>Add Shape</button>
+        <button id="deleteFogShape" disabled>Delete Shape</button>
+
+        <!-- NEW: Mobile-friendly mode toggles -->
+        <button id="fogBrushMode" aria-pressed="false" title="Toggle brush mode for touch/mobile">Brush Mode</button>
+        <button id="measureToggle" aria-pressed="false" title="Toggle measure mode (mobile-friendly)">Measure</button>
+        <label class="ms-2">Shape
+          <select id="measureShape" style="width:90px">
+            <option value="line">Line</option>
+            <option value="cone">Cone</option>
+            <option value="circle">Circle</option>
+          </select>
+        </label>
+        <button id="persistentMeasureToggle" aria-pressed="false" title="Toggle persistent measure mode">Persistent</button>
+        <label class="ms-2" title="Measurement color">
+          <input type="color" id="measureColor" value="#8bd3ff" style="width:30px; height:24px; vertical-align:middle;">
+        </label>
+      </div>
+
+      <div class="canvas-wrap">
+        <canvas id="mapLayer" width="1920" height="1080"></canvas>
+        <canvas id="fogLayer" width="1920" height="1080"></canvas>
+        <canvas id="tokenLayer" width="1920" height="1080"></canvas>
+        <canvas id="uiLayer" width="1920" height="1080"></canvas>
+        <div id="measureLabel" class="measure-label" style="display:none;">0 ft</div>
+        <div id="ctxMenu" class="context-menu">
+          <button data-cmd="rename">✏️ Rename</button>
+          <button data-cmd="toggleLabel">🏷️ Label</button>
+          <button data-cmd="setHp">❤️ HP</button>
+          <button data-cmd="addStatus">🔶 Status</button>
+          <button data-cmd="setAura">⭕ Aura</button>
+          <button data-cmd="setVision">👁️ Vision</button>
+          <hr style="margin:2px 0;border:none;border-top:1px solid var(--line)">
+          <button data-cmd="addToInitiative">⚔️ Add to Initiative</button>
+          <button data-cmd="duplicate">📋 Duplicate</button>
+          <button data-cmd="delete">🗑️ Delete</button>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <footer class="container-fluid site-footer" role="contentinfo"
+          style="background:#0f1620;border-top:1px solid var(--line);position:fixed;left:0;right:0;bottom:0;display:none"></footer>
+
+<script>
+(function(){
+  // --- Built-in manifest; /images/tokenManifest.json (if present) overrides.
+  const DEFAULT_MANIFEST = {
+    players: [
+      { name: 'Artificer',    src: '/images/playerTokens/PlayerArtificerToken.png' },
+      { name: 'Barbarian',    src: '/images/playerTokens/PlayerBarbarianToken.png' },
+      { name: 'Bard',         src: '/images/playerTokens/PlayerBardToken.png' },
+      { name: 'Blood Hunter', src: '/images/playerTokens/PlayerBloodHunterToken.png' },
+      { name: 'Cleric',       src: '/images/playerTokens/PlayerClericToken.png' },
+      { name: 'Druid',        src: '/images/playerTokens/PlayerDruidToken.png' },
+      { name: 'Fighter',      src: '/images/playerTokens/PlayerFighterToken.png' },
+      { name: 'Monk',         src: '/images/playerTokens/PlayerMonkToken.png' },
+      { name: 'Paladin',      src: '/images/playerTokens/PlayerPaladinToken.png' },
+      { name: 'Ranger',       src: '/images/playerTokens/PlayerRangerToken.png' },
+      { name: 'Rogue',        src: '/images/playerTokens/PlayerRogueToken.png' },
+      { name: 'Sorcerer',     src: '/images/playerTokens/PlayerSorcererToken.png' },
+      { name: 'Warlock',      src: '/images/playerTokens/PlayerWarlockToken.png' },
+      { name: 'Wizard',       src: '/images/playerTokens/PlayerWizardToken.png' }
+    ],
+    enemies: [
+      { name: 'Aberration',   src: '/images/enemyTokens/EnemyAberationToken.png' },
+      { name: 'Beast',        src: '/images/enemyTokens/EnemyBeastToken.png' },
+      { name: 'Celestial',    src: '/images/enemyTokens/EnemyCelestialToken.png' },
+      { name: 'Construct',    src: '/images/enemyTokens/EnemyConstructToken.png' },
+      { name: 'Dragon',       src: '/images/enemyTokens/EnemyDragonToken.png' },
+      { name: 'Elemental',    src: '/images/enemyTokens/EnemyElementalToken.png' },
+      { name: 'Fey',          src: '/images/enemyTokens/EnemyFeyToken.png' },
+      { name: 'Fiend',        src: '/images/enemyTokens/EnemyFiendToken.png' },
+      { name: 'Giant',        src: '/images/enemyTokens/EnemyGiantToken.png' },
+      { name: 'Humanoid',     src: '/images/enemyTokens/EnemyHumanoidToken.png' },
+      { name: 'Monstrosity',  src: '/images/enemyTokens/EnemyMonstrosityToken.png' },
+      { name: 'Ooze',         src: '/images/enemyTokens/EnemyOozeToken.png' },
+      { name: 'Plant',        src: '/images/enemyTokens/EnemyPlantToken.png' },
+      { name: 'Undead',       src: '/images/enemyTokens/EnemyUndeadToken.png' }
+    ]
+  };
+
+  async function loadTokenManifest(){
+    return Promise.resolve(DEFAULT_MANIFEST);
+  }
+
+  function buildPresetDropdown(manifest){
+    tokenPresetEl.innerHTML = '<option value="">— select a token —</option>';
+    const addGroup = (label, list) => {
+      const og = document.createElement('optgroup');
+      og.label = label;
+      (list || []).forEach(it => {
+        const opt = document.createElement('option');
+        opt.value = it.src;
+        opt.dataset.name = it.name;
+        opt.textContent = it.name;
+        og.appendChild(opt);
+      });
+      tokenPresetEl.appendChild(og);
+    };
+    addGroup('Players', manifest.players);
+    addGroup('Enemies', manifest.enemies);
+  }
+
+  const imageCache = new Map();
+  function getCachedImage(src){
+    if(imageCache.has(src)) return Promise.resolve(imageCache.get(src));
+    return loadImage(src).then(img=>{ imageCache.set(src,img); return img; });
+  }
+
+  /** @typedef {{ id:string, name:string, imgSrc:string, img:HTMLImageElement|null, x:number, y:number, w:number, h:number, rot:number, selected?:boolean, hp?:number, maxHp?:number, showLabel?:boolean, statusConditions?:string[], aura?:{radius:number, color:string}, visionCone?:{angle:number, range:number, color:string} }} Token */
+
+  // Layer canvases
+  const mapLayer = document.getElementById('mapLayer');
+  const fogLayer = document.getElementById('fogLayer');
+  const tokenLayer = document.getElementById('tokenLayer');
+  const uiLayer = document.getElementById('uiLayer');
+
+  const mapCtx = mapLayer.getContext('2d', { alpha: false });
+  const fogCtx = fogLayer.getContext('2d', { alpha: true });
+  const tokenCtx = tokenLayer.getContext('2d', { alpha: true });
+  const uiCtx = uiLayer.getContext('2d', { alpha: true });
+
+  const DPR = Math.max(1, window.devicePixelRatio || 1);
+
+  // Dirty flags for selective rendering
+  let renderRequested = false;
+  const dirty = {
+    map: true,
+    fog: true,
+    tokens: true,
+    grid: true,
+    ui: true
+  };
+
+  function requestRender() {
+    if (renderRequested) return;
+    renderRequested = true;
+    requestAnimationFrame(renderFrame);
+  }
+
+  function resizeLayerCanvas(cnv) {
+    const rect = cnv.getBoundingClientRect();
+    const targetW = Math.max(200, Math.round(rect.width * DPR));
+    const targetH = Math.max(200, Math.round(rect.height * DPR));
+    if (cnv.width === targetW && cnv.height === targetH) return;
+    cnv.width = targetW;
+    cnv.height = targetH;
+  }
+
+  let resizeRaf = false;
+  function resizeAllLayers() {
+    if (resizeRaf) return;
+    resizeRaf = true;
+    requestAnimationFrame(() => {
+      resizeRaf = false;
+      resizeLayerCanvas(mapLayer);
+      resizeLayerCanvas(fogLayer);
+      resizeLayerCanvas(tokenLayer);
+      resizeLayerCanvas(uiLayer);
+      dirty.map = dirty.fog = dirty.tokens = dirty.grid = dirty.ui = true;
+      requestRender();
+    });
+  }
+
+  new ResizeObserver(resizeAllLayers).observe(document.querySelector('.canvas-wrap'));
+  resizeAllLayers();
+
+  const statusEl = document.getElementById('status');
+  const tokenListEl = document.getElementById('tokenList');
+  const tokenPresetEl = document.getElementById('tokenPreset');
+  const ctxMenu = document.getElementById('ctxMenu');
+  const measureLabel = document.getElementById('measureLabel');
+
+  // --- State
+  const state = {
+    map: { imgSrc: '', img: null, w: 0, h: 0 },
+    mapTransform: { scale: 1, x: 0, y: 0 }, // image->world transform
+    grid: { size: 50, unitsPerCell: 5, color: '#6aa5ff', alpha: 0.35, show: true, offsetX: 0, offsetY: 0 },
+    view: { x: 0, y: 0, scale: 1 },         // world->screen
+    tokens: /** @type{Token[]} */([]),
+    ui: {
+      dragMode: 'none', dragId: null, dragOffset:{x:0,y:0},
+      spaceDown:false, tool: 'none',
+      calib:{p1:null,p2:null},
+      measuring:false, measureStart:null,
+      brushMode:false,        // NEW: mobile fog brush
+      measureToggle:false,     // NEW: mobile measure
+      persistentMeasureMode:false, // NEW: persistent measure mode
+      fogShapeDragId: null    // NEW: dragging fog shape
+    }
+  };
+
+  // --- Fog of War layer (image-space bitmap, aligns with map image)
+  const fog = document.createElement('canvas');
+  const fctx = fog.getContext('2d', { alpha:true });
+  const fogState = { enabled:false, brush:80, mode:'reveal', painting:false, shapeType:'rect', shapeColor:'#000000', shapeSize:3 };
+
+  /** @typedef {{ id:string, type:'rect'|'circle', x:number, y:number, w?:number, h?:number, r?:number, mode:'reveal'|'cover', color:string, selected?:boolean }} FogShape */
+  const fogShapes = /** @type{FogShape[]} */([]);
+
+  /** @typedef {{ id:string, type:'line'|'cone'|'circle', x1:number, y1:number, x2:number, y2:number, color:string, selected?:boolean }} PersistentMeasurement */
+  const persistentMeasurements = /** @type{PersistentMeasurement[]} */([]);
+
+  // --- Dirty flag tracking for unsaved changes
+  let isDirty = false;
+  const unsavedIndicator = document.getElementById('unsavedIndicator');
+
+  function setDirty() {
+    if (!isDirty) {
+      isDirty = true;
+      if (unsavedIndicator) {
+        unsavedIndicator.style.display = 'inline-block';
+      }
+    }
+  }
+
+  function clearDirty() {
+    isDirty = false;
+    if (unsavedIndicator) {
+      unsavedIndicator.style.display = 'none';
+    }
+  }
+
+  // Warn user before leaving with unsaved changes
+  window.addEventListener('beforeunload', (e) => {
+    if (isDirty) {
+      e.preventDefault();
+      e.returnValue = ''; // Chrome requires returnValue to be set
+    }
+  });
+
+  function setFogUI(enabled) {
+    document.getElementById('toggleFog').textContent = enabled ? 'Fog: On' : 'Fog: Off';
+    ['fogReveal','fogCover','fogBrush','fogClear','fogShapeType','fogShapeColor','fogShapeSize','addFogShape','deleteFogShape'].forEach(id=>{
+      document.getElementById(id).disabled = !enabled;
+    });
+    document.getElementById('fogReveal').classList.toggle('active', enabled && fogState.mode==='reveal');
+    document.getElementById('fogCover').classList.toggle('active', enabled && fogState.mode==='cover');
+  }
+
+  function ensureFogSize() {
+    const W = state.map?.w || 0;
+    const H = state.map?.h || 0;
+    if (!W || !H) { fog.width = 1; fog.height = 1; return; }
+    if (fog.width !== W || fog.height !== H) {
+      // preserve existing if possible
+      const old = document.createElement('canvas');
+      old.width = fog.width; old.height = fog.height;
+      old.getContext('2d').drawImage(fog,0,0);
+      fog.width = W; fog.height = H;
+      fctx.clearRect(0,0,fog.width,fog.height);
+      fctx.drawImage(old,0,0);
+    }
+  }
+
+  // image<->world<->screen conversions
+  function imageToWorld(ix, iy){
+    const s = state.mapTransform.scale;
+    return { x: ix * s + state.mapTransform.x, y: iy * s + state.mapTransform.y };
+  }
+  function worldToImage(wx, wy){
+    const s = state.mapTransform.scale || 1;
+    return { x: (wx - state.mapTransform.x) / s, y: (wy - state.mapTransform.y) / s };
+  }
+  function worldToScreen(x,y){ return { x: (x*state.view.scale + state.view.x), y: (y*state.view.scale + state.view.y) }; }
+  function screenToWorld(x,y){ return { x: (x - state.view.x)/state.view.scale, y: (y - state.view.y)/state.view.scale }; }
+
+  const STORAGE_KEY = 'dmtoolbox.battlemap.mvp.v3';
+  const USE_INDEXED_DB = IndexedDBStorage && IndexedDBStorage.isSupported();
+
+  async function save(){
+    // Always capture the fog canvas if it exists, regardless of enabled flag
+    const fogData = (fog.width > 1 && fog.height > 1) ? tryCanvasToDataURL(fog) : null;
+
+    const payload = {
+      map: { imgSrc: state.map.imgSrc, w: state.map.w, h: state.map.h },
+      mapTransform: state.mapTransform,
+      grid: state.grid,
+      view: state.view,
+      tokens: state.tokens.map(t => ({
+        id: t.id,
+        name: t.name,
+        imgSrc: t.imgSrc,
+        x: t.x,
+        y: t.y,
+        w: t.w,
+        h: t.h,
+        rot: t.rot,
+        selected: !!t.selected,
+        hp: t.hp,
+        maxHp: t.maxHp,
+        showLabel: t.showLabel,
+        statusConditions: t.statusConditions,
+        aura: t.aura,
+        visionCone: t.visionCone
+      })),
+      fog: fogData,
+      fogState: {
+        enabled: fogState.enabled,
+        mode: fogState.mode,
+        brush: fogState.brush,
+        shapeType: fogState.shapeType,
+        shapeColor: fogState.shapeColor,
+        shapeSize: fogState.shapeSize
+      },
+      fogShapes: fogShapes.map(s => ({
+        id: s.id,
+        type: s.type,
+        x: s.x,
+        y: s.y,
+        w: s.w,
+        h: s.h,
+        r: s.r,
+        mode: s.mode,
+        color: s.color,
+        selected: !!s.selected
+      })),
+      persistentMeasurements: persistentMeasurements.map(m => ({
+        id: m.id,
+        type: m.type,
+        x1: m.x1,
+        y1: m.y1,
+        x2: m.x2,
+        y2: m.y2,
+        color: m.color,
+        selected: !!m.selected
+      }))
+    };
+
+    if (USE_INDEXED_DB) {
+      try {
+        await IndexedDBStorage.saveBattleMap(payload);
+        // Also save to localStorage as backup (if size allows)
+        try {
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
+        } catch (e) {
+          console.log('ℹ localStorage backup skipped (quota exceeded, but IndexedDB save succeeded)');
+        }
+        clearDirty(); // Clear unsaved changes indicator
+        return;
+      } catch (error) {
+        console.error('❌ IndexedDB save failed, trying localStorage fallback:', error);
+      }
+    }
+
+    // Fallback to localStorage
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
+      clearDirty(); // Clear unsaved changes indicator
+    } catch {}
+  }
+  async function load(){
+    let data = null;
+
+    if (USE_INDEXED_DB) {
+      try {
+        data = await IndexedDBStorage.loadBattleMap();
+        if (data) {
+          console.log('✓ Loaded battle map from IndexedDB');
+        } else {
+          // Try migration from localStorage
+          console.log('🔄 Checking for localStorage data to migrate...');
+          const raw = localStorage.getItem(STORAGE_KEY);
+          if (raw) {
+            data = JSON.parse(raw);
+            console.log('🔄 Migrating battle map from localStorage to IndexedDB...');
+            await IndexedDBStorage.saveBattleMap(data);
+            console.log('✓ Migration successful! Battle map is now in IndexedDB');
+            localStorage.setItem(STORAGE_KEY + '_migrated', 'true');
+          }
+        }
+      } catch (error) {
+        console.error('❌ IndexedDB load failed, trying localStorage fallback:', error);
+        // Fall through to localStorage fallback below
+      }
+    }
+
+    // Fallback to localStorage if IndexedDB didn't work
+    if (!data) {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (!raw) return;
+      try {
+        data = JSON.parse(raw);
+      } catch (e) {
+        console.warn('❌ localStorage load failed', e);
+        return;
+      }
+    }
+
+    if (!data) return;
+
+    try {
+      Object.assign(state.grid, data.grid || {});
+      Object.assign(state.view, data.view || {});
+      Object.assign(state.mapTransform, data.mapTransform || {});
+
+      state.tokens = (data.tokens || []).map(t => ({
+        ...t,
+        img: null,
+        selected: !!t.selected,
+        rot: typeof t.rot === 'number' ? t.rot : 0
+      }));
+
+      // Restore fog settings if present (backward-compatible)
+      if (data.fogState) {
+        fogState.enabled = !!data.fogState.enabled;
+        fogState.mode = data.fogState.mode || fogState.mode;
+        fogState.brush = typeof data.fogState.brush === 'number'
+          ? data.fogState.brush
+          : fogState.brush;
+        fogState.shapeType = data.fogState.shapeType || fogState.shapeType;
+        fogState.shapeColor = data.fogState.shapeColor || fogState.shapeColor;
+        fogState.shapeSize = typeof data.fogState.shapeSize === 'number'
+          ? data.fogState.shapeSize
+          : fogState.shapeSize;
+        setFogUI(fogState.enabled);
+        document.getElementById('fogBrush').value = fogState.brush;
+        document.getElementById('fogShapeType').value = fogState.shapeType;
+        document.getElementById('fogShapeColor').value = fogState.shapeColor;
+        document.getElementById('fogShapeSize').value = fogState.shapeSize;
+      }
+
+      // Restore fog shapes if present
+      if (data.fogShapes) {
+        fogShapes.length = 0;
+        fogShapes.push(...data.fogShapes.map(s => ({
+          id: s.id,
+          type: s.type,
+          x: s.x,
+          y: s.y,
+          w: s.w,
+          h: s.h,
+          r: s.r,
+          mode: s.mode,
+          color: s.color || '#000000',
+          selected: !!s.selected
+        })));
+      }
+
+      // Restore persistent measurements if present
+      if (data.persistentMeasurements) {
+        persistentMeasurements.length = 0;
+        persistentMeasurements.push(...data.persistentMeasurements.map(m => ({
+          id: m.id,
+          type: m.type,
+          x1: m.x1,
+          y1: m.y1,
+          x2: m.x2,
+          y2: m.y2,
+          color: m.color || '#8bd3ff',
+          selected: !!m.selected
+        })));
+      }
+
+      if (data.map?.imgSrc) {
+        loadImage(data.map.imgSrc).then(img => {
+          state.map = {
+            imgSrc: data.map.imgSrc,
+            img,
+            w: img.naturalWidth,
+            h: img.naturalHeight
+          };
+          ensureFogSize();
+          if (data.fog) {
+            drawDataUrlToCanvas(data.fog, fog).then(() => {
+              dirty.map = dirty.fog = dirty.tokens = dirty.grid = true;
+              requestRender();
+            });
+          } else {
+            // No saved fog bitmap, render shapes if present
+            renderFogShapes();
+            dirty.map = dirty.fog = dirty.tokens = dirty.grid = true;
+            requestRender();
+          }
+          // IMPORTANT: do NOT call fitMap(); keep saved view/pan/zoom
+        });
+      } else {
+        // No map, but render fog shapes if present
+        renderFogShapes();
+      }
+
+      state.tokens.forEach(t => {
+        loadImage(t.imgSrc).then(img => {
+          t.img = img;
+          dirty.tokens = true;
+          requestRender();
+        });
+      });
+    } catch (e) {
+      console.warn('❌ Load failed', e);
+    }
+  }
+
+  function loadImage(src){ return new Promise((res, rej)=>{ const img = new Image(); img.onload=()=>res(img); img.onerror=rej; img.src=src; }); }
+  function tryCanvasToDataURL(cnv){
+    try { return cnv.toDataURL('image/webp', 0.85); } catch { try { return cnv.toDataURL('image/png'); } catch { return null; } }
+  }
+  function drawDataUrlToCanvas(url, cnv){
+    return new Promise((resolve)=>{ const img=new Image(); img.onload=()=>{ const ct=cnv.getContext('2d'); ct.clearRect(0,0,cnv.width,cnv.height); ct.drawImage(img,0,0); resolve(); }; img.src=url; });
+  }
+
+  // Event-driven rendering system - main entry point
+  function renderFrame() {
+    renderRequested = false;
+
+    if (dirty.map || dirty.grid) renderMapLayer();
+    if (dirty.fog) renderFogLayer();
+    if (dirty.tokens) renderTokenLayer();
+    if (dirty.ui || state.ui.measuring) renderUiLayer();
+
+    dirty.map = dirty.fog = dirty.tokens = dirty.grid = dirty.ui = false;
+  }
+
+  // Render map image and grid on the map layer
+  function renderMapLayer() {
+    const { width:W, height:H } = mapLayer;
+    mapCtx.setTransform(1,0,0,1,0,0);
+    mapCtx.fillStyle = '#091018';
+    mapCtx.fillRect(0,0,W,H);
+
+    mapCtx.setTransform(state.view.scale, 0, 0, state.view.scale, state.view.x, state.view.y);
+
+    // Map image (image->world)
+    if(state.map.img){
+      mapCtx.save();
+      mapCtx.translate(state.mapTransform.x, state.mapTransform.y);
+      mapCtx.scale(state.mapTransform.scale, state.mapTransform.scale);
+      mapCtx.drawImage(state.map.img, 0, 0);
+      mapCtx.restore();
+    }
+
+    // Grid (world-space)
+    if(state.grid.show){ drawGrid(mapCtx); }
+
+    mapCtx.setTransform(1,0,0,1,0,0);
+  }
+
+  // Render fog bitmap and fog shapes on the fog layer
+  function renderFogLayer() {
+    const { width:W, height:H } = fogLayer;
+    fogCtx.setTransform(1,0,0,1,0,0);
+    fogCtx.clearRect(0,0,W,H);
+
+    fogCtx.setTransform(state.view.scale, 0, 0, state.view.scale, state.view.x, state.view.y);
+
+    if(fogState.enabled && state.map.img && fog.width > 1 && fog.height > 1){
+      fogCtx.save();
+      fogCtx.translate(state.mapTransform.x, state.mapTransform.y);
+      fogCtx.scale(state.mapTransform.scale, state.mapTransform.scale);
+      fogCtx.drawImage(fog, 0, 0);
+      fogCtx.restore();
+
+      // Fog shapes (drawn after fog bitmap)
+      drawFogShapes(fogCtx);
+      drawFogShapeOutlines(fogCtx);
+    }
+
+    fogCtx.setTransform(1,0,0,1,0,0);
+  }
+
+  // Render tokens, auras, vision cones, HP bars, labels on the token layer
+  function renderTokenLayer() {
+    const { width:W, height:H } = tokenLayer;
+    tokenCtx.setTransform(1,0,0,1,0,0);
+    tokenCtx.clearRect(0,0,W,H);
+
+    tokenCtx.setTransform(state.view.scale, 0, 0, state.view.scale, state.view.x, state.view.y);
+
+    // Tokens - auras and vision cones first (behind tokens)
+    for(const t of state.tokens){
+      if(!t.img) continue;
+      const cx = t.x + t.w/2;
+      const cy = t.y + t.h/2;
+
+      // Aura
+      if(t.aura && t.aura.radius > 0){
+        tokenCtx.save();
+        tokenCtx.globalAlpha = 0.2;
+        tokenCtx.fillStyle = t.aura.color || '#8bd3ff';
+        tokenCtx.beginPath();
+        tokenCtx.arc(cx, cy, (t.aura.radius + 0.5) * state.grid.size, 0, Math.PI * 2);
+        tokenCtx.fill();
+        tokenCtx.globalAlpha = 0.6;
+        tokenCtx.strokeStyle = t.aura.color || '#8bd3ff';
+        tokenCtx.lineWidth = 2/state.view.scale;
+        tokenCtx.stroke();
+        tokenCtx.restore();
+      }
+
+      // Vision cone
+      if(t.visionCone && t.visionCone.range > 0){
+        tokenCtx.save();
+        tokenCtx.globalAlpha = 0.15;
+        tokenCtx.fillStyle = t.visionCone.color || '#ffff88';
+        tokenCtx.beginPath();
+        const angleRad = (t.visionCone.angle || 90) * Math.PI / 180;
+        const range = t.visionCone.range * state.grid.size;
+        const startAngle = (t.rot || 0) - angleRad / 2;
+        const endAngle = (t.rot || 0) + angleRad / 2;
+        tokenCtx.moveTo(cx, cy);
+        tokenCtx.arc(cx, cy, range, startAngle, endAngle);
+        tokenCtx.closePath();
+        tokenCtx.fill();
+        tokenCtx.globalAlpha = 0.4;
+        tokenCtx.strokeStyle = t.visionCone.color || '#ffff88';
+        tokenCtx.lineWidth = 2/state.view.scale;
+        tokenCtx.stroke();
+        tokenCtx.restore();
+      }
+    }
+
+    // Tokens - main images
+    for(const t of state.tokens){
+      if(t.img){
+        tokenCtx.save();
+        const cx = t.x + t.w/2;
+        const cy = t.y + t.h/2;
+        tokenCtx.translate(cx, cy);
+        if (t.rot) tokenCtx.rotate(t.rot);
+        tokenCtx.drawImage(t.img, -t.w/2, -t.h/2, t.w, t.h);
+        if(t.selected){
+          tokenCtx.lineWidth = 2/state.view.scale;
+          tokenCtx.strokeStyle = 'rgba(255,255,255,0.9)';
+          tokenCtx.strokeRect(-t.w/2, -t.h/2, t.w, t.h);
+        }
+        tokenCtx.restore();
+      }
+    }
+
+    // Tokens - overlays (HP, status, labels) - rendered unrotated on top
+    for(const t of state.tokens){
+      if(!t.img) continue;
+      const cx = t.x + t.w/2;
+      const cy = t.y + t.h/2;
+
+      tokenCtx.save();
+      tokenCtx.translate(cx, cy);
+
+      // HP Bar
+      if(t.maxHp && t.maxHp > 0){
+        const barY = t.h/2 + 4/state.view.scale;
+        const hpPct = Math.max(0, Math.min(1, (t.hp || 0) / t.maxHp));
+
+        tokenCtx.fillStyle = 'rgba(0,0,0,0.7)';
+        tokenCtx.fillRect(-t.w/2, barY, t.w, 6/state.view.scale);
+
+        tokenCtx.fillStyle = hpPct > 0.5 ? '#4ade80' : hpPct > 0.25 ? '#fbbf24' : '#ef4444';
+        tokenCtx.fillRect(-t.w/2, barY, t.w * hpPct, 6/state.view.scale);
+
+        tokenCtx.strokeStyle = 'rgba(255,255,255,0.5)';
+        tokenCtx.lineWidth = 1/state.view.scale;
+        tokenCtx.strokeRect(-t.w/2, barY, t.w, 6/state.view.scale);
+      }
+
+      // Status & Label - batch text rendering
+      const hasStatus = t.statusConditions && t.statusConditions.length > 0;
+      const hasLabel = t.showLabel && t.name;
+
+      if(hasStatus || hasLabel){
+        tokenCtx.textAlign = 'center';
+        tokenCtx.textBaseline = 'middle';
+        let yOffset = -t.h/2 - 8/state.view.scale;
+
+        // Label
+        if(hasLabel){
+          tokenCtx.font = `bold ${11/state.view.scale}px sans-serif`;
+          const pad = 3/state.view.scale;
+          tokenCtx.fillStyle = 'rgba(0,0,0,0.8)';
+          const lw = tokenCtx.measureText(t.name).width;
+          tokenCtx.fillRect(-lw/2-pad, yOffset-8/state.view.scale, lw+pad*2, 16/state.view.scale);
+          tokenCtx.fillStyle = '#8bd3ff';
+          tokenCtx.fillText(t.name, 0, yOffset);
+          yOffset -= 16/state.view.scale;
+        }
+
+        // Status
+        if(hasStatus){
+          const statusTxt = t.statusConditions.join(', ');
+          tokenCtx.font = `${9/state.view.scale}px sans-serif`;
+          const pad = 3/state.view.scale;
+          tokenCtx.fillStyle = 'rgba(0,0,0,0.8)';
+          const sw = tokenCtx.measureText(statusTxt).width;
+          tokenCtx.fillRect(-sw/2-pad, yOffset-6/state.view.scale, sw+pad*2, 12/state.view.scale);
+          tokenCtx.fillStyle = '#fbbf24';
+          tokenCtx.fillText(statusTxt, 0, yOffset);
+        }
+      }
+
+      tokenCtx.restore();
+    }
+
+    tokenCtx.setTransform(1,0,0,1,0,0);
+  }
+
+  // Render persistent measurements (shapes only, no text unless selected)
+  function renderPersistentMeasurements(ctx) {
+    for (const m of persistentMeasurements) {
+      const dx = m.x2 - m.x1;
+      const dy = m.y2 - m.y1;
+      const distPx = Math.hypot(dx, dy);
+
+      ctx.save();
+      ctx.lineWidth = 2 / state.view.scale;
+      ctx.strokeStyle = m.color;
+      ctx.fillStyle = m.color.replace(')', ', 0.2)').replace('rgb', 'rgba').replace('#', 'rgba(');
+
+      // Simple color to rgba conversion for hex colors
+      if (m.color.startsWith('#')) {
+        const r = parseInt(m.color.slice(1, 3), 16);
+        const g = parseInt(m.color.slice(3, 5), 16);
+        const b = parseInt(m.color.slice(5, 7), 16);
+        ctx.fillStyle = `rgba(${r}, ${g}, ${b}, 0.2)`;
+      }
+
+      if (m.type === 'line') {
+        ctx.beginPath();
+        ctx.moveTo(m.x1, m.y1);
+        ctx.lineTo(m.x2, m.y2);
+        ctx.stroke();
+      } else if (m.type === 'cone') {
+        const angle = Math.atan2(dy, dx);
+        const coneAngle = Math.PI / 2;
+
+        ctx.beginPath();
+        ctx.moveTo(m.x1, m.y1);
+        ctx.arc(m.x1, m.y1, distPx, angle - coneAngle / 2, angle + coneAngle / 2);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+      } else if (m.type === 'circle') {
+        // Add 0.5 cells to account for token size (same as aura)
+        const adjustedRadius = distPx + (0.5 * state.grid.size);
+        ctx.beginPath();
+        ctx.arc(m.x1, m.y1, adjustedRadius, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+
+        // Draw radius line
+        ctx.beginPath();
+        ctx.moveTo(m.x1, m.y1);
+        ctx.lineTo(m.x2, m.y2);
+        ctx.stroke();
+      }
+
+      // If selected, draw text and handles
+      if (m.selected) {
+        const cells = distPx / state.grid.size;
+        const units = cells * state.grid.unitsPerCell;
+
+        ctx.font = `bold ${12/state.view.scale}px sans-serif`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+
+        let labelText = '';
+        if (m.type === 'cone') {
+          labelText = `${Math.round(units)} ft cone`;
+        } else if (m.type === 'circle') {
+          // Display includes the +0.5 adjustment
+          const adjustedCells = cells + 0.5;
+          const adjustedUnits = adjustedCells * state.grid.unitsPerCell;
+          labelText = `${Math.round(adjustedUnits)} ft radius`;
+        } else {
+          labelText = `${Math.round(units)} ft`;
+        }
+
+        const midX = (m.x1 + m.x2) / 2;
+        const midY = (m.y1 + m.y2) / 2;
+
+        const pad = 4/state.view.scale;
+        const tw = ctx.measureText(labelText).width;
+        ctx.fillStyle = 'rgba(15,22,32,0.9)';
+        ctx.fillRect(midX - tw/2 - pad, midY - 8/state.view.scale, tw + pad*2, 16/state.view.scale);
+        ctx.fillStyle = m.color;
+        ctx.fillText(labelText, midX, midY);
+
+        // Draw handles
+        const handleSize = 8 / state.view.scale;
+        ctx.fillStyle = m.color;
+        ctx.fillRect(m.x1 - handleSize/2, m.y1 - handleSize/2, handleSize, handleSize);
+        ctx.fillRect(m.x2 - handleSize/2, m.y2 - handleSize/2, handleSize, handleSize);
+      }
+
+      ctx.restore();
+    }
+  }
+
+  // Render measurement overlay on the UI layer
+  function renderUiLayer() {
+    const { width:W, height:H } = uiLayer;
+    uiCtx.setTransform(1,0,0,1,0,0);
+    uiCtx.clearRect(0,0,W,H);
+
+    uiCtx.setTransform(state.view.scale, 0, 0, state.view.scale, state.view.x, state.view.y);
+
+    // Render persistent measurements first (below active measurement)
+    renderPersistentMeasurements(uiCtx);
+
+    // Measuring overlay
+    if (state.ui.measuring && state.ui.measureStart) {
+      const mp = state.ui.measureStart;
+      const rect = uiLayer.getBoundingClientRect();
+      const mx = (mouseScreen.x - rect.left) * DPR;
+      const my = (mouseScreen.y - rect.top) * DPR;
+      const mWorld = screenToWorld(mx, my);
+      const dx = mWorld.x - mp.x;
+      const dy = mWorld.y - mp.y;
+      const distPx = Math.hypot(dx, dy);
+      const cells = distPx / state.grid.size;
+      const units = cells * state.grid.unitsPerCell;
+
+      const measureShape = document.getElementById('measureShape').value;
+
+      uiCtx.save();
+      uiCtx.lineWidth = 2 / state.view.scale;
+      uiCtx.strokeStyle = '#8bd3ff';
+      uiCtx.fillStyle = 'rgba(139, 211, 255, 0.2)';
+
+      if (measureShape === 'line') {
+        uiCtx.beginPath();
+        uiCtx.moveTo(mp.x, mp.y);
+        uiCtx.lineTo(mWorld.x, mWorld.y);
+        uiCtx.stroke();
+      } else if (measureShape === 'cone') {
+        const angle = Math.atan2(dy, dx);
+        const coneAngle = Math.PI / 2;
+
+        uiCtx.beginPath();
+        uiCtx.moveTo(mp.x, mp.y);
+        uiCtx.arc(mp.x, mp.y, distPx, angle - coneAngle / 2, angle + coneAngle / 2);
+        uiCtx.closePath();
+        uiCtx.fill();
+        uiCtx.stroke();
+      } else if (measureShape === 'circle') {
+        // Add 0.5 cells to account for token size (same as aura)
+        const adjustedRadius = distPx + (0.5 * state.grid.size);
+        uiCtx.beginPath();
+        uiCtx.arc(mp.x, mp.y, adjustedRadius, 0, Math.PI * 2);
+        uiCtx.fill();
+        uiCtx.stroke();
+
+        uiCtx.beginPath();
+        uiCtx.moveTo(mp.x, mp.y);
+        uiCtx.lineTo(mWorld.x, mWorld.y);
+        uiCtx.stroke();
+      }
+
+      uiCtx.restore();
+
+      // label
+      const mid = worldToScreen((mp.x + mWorld.x)/2, (mp.y + mWorld.y)/2);
+      measureLabel.style.left = mid.x + 'px';
+      measureLabel.style.top = mid.y + 'px';
+
+      if (measureShape === 'cone') {
+        measureLabel.textContent = `${Math.round(units)} ft cone (${cells.toFixed(2)} cells)`;
+      } else if (measureShape === 'circle') {
+        // Display includes the +0.5 adjustment
+        const adjustedCells = cells + 0.5;
+        const adjustedUnits = adjustedCells * state.grid.unitsPerCell;
+        measureLabel.textContent = `${Math.round(adjustedUnits)} ft radius (${adjustedCells.toFixed(2)} cells)`;
+      } else {
+        measureLabel.textContent = `${Math.round(units)} ft (${cells.toFixed(2)} cells)`;
+      }
+      measureLabel.style.display = 'block';
+    } else {
+      measureLabel.style.display = 'none';
+    }
+
+    uiCtx.setTransform(1,0,0,1,0,0);
+  }
+
+  function drawGrid(ctx){
+    const { size, color, alpha, offsetX, offsetY } = state.grid;
+    const { width:W, height:H } = mapLayer;
+
+    ctx.save();
+    ctx.globalAlpha = alpha;
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 1 / state.view.scale;
+
+    const topLeft = screenToWorld(0,0);
+    const botRight = screenToWorld(W,H);
+
+    const xStart = Math.floor((topLeft.x - offsetX) / size) * size + offsetX;
+    const xEnd = Math.ceil((botRight.x - offsetX) / size) * size + offsetX;
+    const yStart = Math.floor((topLeft.y - offsetY) / size) * size + offsetY;
+    const yEnd = Math.ceil((botRight.y - offsetY) / size) * size + offsetY;
+
+    ctx.beginPath();
+    for(let x=xStart; x<=xEnd; x+=size){ ctx.moveTo(x, yStart); ctx.lineTo(x, yEnd); }
+    for(let y=yStart; y<=yEnd; y+=size){ ctx.moveTo(xStart, y); ctx.lineTo(xEnd, y); }
+    ctx.stroke();
+
+    // Major lines every 5 cells
+    ctx.lineWidth = 2 / state.view.scale;
+    ctx.beginPath();
+    const major = size * 5;
+    const xMStart = Math.floor((topLeft.x - offsetX) / major) * major + offsetX;
+    const xMEnd = Math.ceil((botRight.x - offsetX) / major) * major + offsetX;
+    const yMStart = Math.floor((topLeft.y - offsetY) / major) * major + offsetY;
+    const yMEnd = Math.ceil((botRight.y - offsetY) / major) * major + offsetY;
+    for(let x=xMStart; x<=xMEnd; x+=major){ ctx.moveTo(x, yStart); ctx.lineTo(x, yEnd); }
+    for(let y=yMStart; y<=yEnd; y+=major){ ctx.moveTo(xStart, y); ctx.lineTo(xEnd, y); }
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  function centerMap(){
+    if(!state.map.img) return;
+    const { width:W, height:H } = mapLayer;
+    state.view.x = (W - state.map.w*state.view.scale)/2;
+    state.view.y = (H - state.map.h*state.view.scale)/2;
+    dirty.map = dirty.grid = dirty.fog = dirty.tokens = true;
+    requestRender();
+  }
+  function fitMap(){
+    if(!state.map.img) return;
+    const { width:W, height:H } = mapLayer;
+    const sx = W / Math.max(1,state.map.w);
+    const sy = H / Math.max(1,state.map.h);
+    state.view.scale = Math.min(sx, sy) * 0.95;
+    centerMap();
+  }
+
+  function hitToken(wx, wy){
+    // consider rotation by inverse transform
+    for(let i=state.tokens.length-1; i>=0; i--){
+      const t = state.tokens[i];
+      const cx = t.x + t.w/2;
+      const cy = t.y + t.h/2;
+      const dx = wx - cx, dy = wy - cy;
+      const c = Math.cos(-(t.rot||0)), s = Math.sin(-(t.rot||0));
+      const rx = dx*c - dy*s, ry = dx*s + dy*c;
+      if(Math.abs(rx) <= t.w/2 && Math.abs(ry) <= t.h/2){ return t; }
+    }
+    return null;
+  }
+
+  function hitFogShape(wx, wy){
+    // Convert world coords to image coords
+    const ip = worldToImage(wx, wy);
+
+    // Check shapes in reverse order (top to bottom)
+    for(let i = fogShapes.length - 1; i >= 0; i--){
+      const shape = fogShapes[i];
+
+      if(shape.type === 'rect'){
+        if(ip.x >= shape.x && ip.x <= shape.x + shape.w &&
+           ip.y >= shape.y && ip.y <= shape.y + shape.h){
+          return shape;
+        }
+      } else if(shape.type === 'circle'){
+        const cx = shape.x + shape.r;
+        const cy = shape.y + shape.r;
+        const dist = Math.hypot(ip.x - cx, ip.y - cy);
+        if(dist <= shape.r){
+          return shape;
+        }
+      }
+    }
+    return null;
+  }
+
+  /**
+   * Check if world coordinates hit a resize handle of a fog shape
+   * Returns: {shape, handle} where handle is: 'nw', 'ne', 'sw', 'se', 'n', 's', 'e', 'w', or null
+   */
+  function hitFogShapeHandle(wx, wy){
+    const ip = worldToImage(wx, wy);
+    const handleSize = 10 / state.view.scale / state.mapTransform.scale; // Handle size in image space
+
+    // Check shapes in reverse order (check both rectangles and circles)
+    for(let i = fogShapes.length - 1; i >= 0; i--){
+      const shape = fogShapes[i];
+
+      if(shape.type === 'rect'){
+        const x1 = shape.x;
+        const y1 = shape.y;
+        const x2 = shape.x + shape.w;
+        const y2 = shape.y + shape.h;
+        const centerX = (x1 + x2) / 2;
+        const centerY = (y1 + y2) / 2;
+
+        // Check corner handles first
+        if(Math.hypot(ip.x - x1, ip.y - y1) <= handleSize) return {shape, handle: 'nw'};
+        if(Math.hypot(ip.x - x2, ip.y - y1) <= handleSize) return {shape, handle: 'ne'};
+        if(Math.hypot(ip.x - x1, ip.y - y2) <= handleSize) return {shape, handle: 'sw'};
+        if(Math.hypot(ip.x - x2, ip.y - y2) <= handleSize) return {shape, handle: 'se'};
+
+        // Check edge handles
+        if(Math.abs(ip.x - centerX) <= handleSize && Math.abs(ip.y - y1) <= handleSize) return {shape, handle: 'n'};
+        if(Math.abs(ip.x - centerX) <= handleSize && Math.abs(ip.y - y2) <= handleSize) return {shape, handle: 's'};
+        if(Math.abs(ip.y - centerY) <= handleSize && Math.abs(ip.x - x1) <= handleSize) return {shape, handle: 'w'};
+        if(Math.abs(ip.y - centerY) <= handleSize && Math.abs(ip.x - x2) <= handleSize) return {shape, handle: 'e'};
+      } else if(shape.type === 'circle'){
+        // Check handle on the right edge of the circle
+        const centerX = shape.x + shape.r;
+        const centerY = shape.y + shape.r;
+        const handleX = centerX + shape.r; // Right edge
+        const handleY = centerY;
+
+        if(Math.hypot(ip.x - handleX, ip.y - handleY) <= handleSize) return {shape, handle: 'edge'};
+      }
+    }
+    return null;
+  }
+
+  /**
+   * Check if world coordinates hit a persistent measurement
+   */
+  function hitPersistentMeasurement(wx, wy){
+    const threshold = 10 / state.view.scale; // Click threshold in world space
+
+    for(let i = persistentMeasurements.length - 1; i >= 0; i--){
+      const m = persistentMeasurements[i];
+      const dx = m.x2 - m.x1;
+      const dy = m.y2 - m.y1;
+      const distPx = Math.hypot(dx, dy);
+
+      if(m.type === 'line'){
+        // Point-to-line distance
+        const lineLengthSq = dx*dx + dy*dy;
+        if(lineLengthSq === 0) continue;
+        const t = Math.max(0, Math.min(1, ((wx - m.x1) * dx + (wy - m.y1) * dy) / lineLengthSq));
+        const projX = m.x1 + t * dx;
+        const projY = m.y1 + t * dy;
+        const dist = Math.hypot(wx - projX, wy - projY);
+        if(dist <= threshold) return m;
+      } else if(m.type === 'cone'){
+        // Check if point is inside the cone shape
+        const angle = Math.atan2(dy, dx);
+        const coneAngle = Math.PI / 2;
+        const pointAngle = Math.atan2(wy - m.y1, wx - m.x1);
+        const angleDiff = Math.abs(((pointAngle - angle + Math.PI) % (2 * Math.PI)) - Math.PI);
+        const pointDist = Math.hypot(wx - m.x1, wy - m.y1);
+        if(pointDist <= distPx && angleDiff <= coneAngle / 2) return m;
+      } else if(m.type === 'circle'){
+        // Check if point is near the circle edge or radius line (with +0.5 cell adjustment)
+        const adjustedRadius = distPx + (0.5 * state.grid.size);
+        const circleDist = Math.hypot(wx - m.x1, wy - m.y1);
+        const edgeDist = Math.abs(circleDist - adjustedRadius);
+        if(edgeDist <= threshold) return m;
+
+        // Also check radius line
+        const lineLengthSq = dx*dx + dy*dy;
+        if(lineLengthSq > 0){
+          const t = Math.max(0, Math.min(1, ((wx - m.x1) * dx + (wy - m.y1) * dy) / lineLengthSq));
+          const projX = m.x1 + t * dx;
+          const projY = m.y1 + t * dy;
+          const dist = Math.hypot(wx - projX, wy - projY);
+          if(dist <= threshold) return m;
+        }
+      }
+    }
+    return null;
+  }
+
+  /**
+   * Check if world coordinates hit a handle of a persistent measurement
+   */
+  function hitPersistentMeasurementHandle(wx, wy){
+    const handleSize = 10 / state.view.scale;
+
+    for(let i = persistentMeasurements.length - 1; i >= 0; i--){
+      const m = persistentMeasurements[i];
+      if(!m.selected) continue; // Only check selected measurements
+
+      if(Math.hypot(wx - m.x1, wy - m.y1) <= handleSize) return {measurement: m, handle: 'start'};
+      if(Math.hypot(wx - m.x2, wy - m.y2) <= handleSize) return {measurement: m, handle: 'end'};
+    }
+    return null;
+  }
+
+  let isPointerDown = false, pointerId = null, last = { x:0, y:0 };
+  let mouseScreen = { x:0, y:0 };
+
+    // Pinch zoom state
+  const activePointers = new Map();
+  let pinchStartDistance = null;
+  let pinchStartScale = null;
+  let pinchCenter = null; // world-space point to zoom around
+
+  // Decide whether to paint fog (desktop: Shift, mobile: Brush Mode)
+  function wantsFogPaint(ev){
+    return fogState.enabled
+      && (fogState.mode === 'reveal' || fogState.mode === 'cover')
+      && (ev.shiftKey || state.ui.brushMode);
+  }
+
+  uiLayer.addEventListener('pointerdown', (e)=>{
+    uiLayer.setPointerCapture(e.pointerId);
+
+    // Track all active pointers for pinch
+    activePointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+
+    // If we now have 2 fingers down, start pinch mode
+    if (activePointers.size === 2) {
+      const [p1, p2] = [...activePointers.values()];
+      pinchStartDistance = Math.hypot(p2.x - p1.x, p2.y - p1.y);
+      pinchStartScale = state.view.scale;
+
+      // Compute world-space center of the pinch
+      const rect = uiLayer.getBoundingClientRect();
+      const centerClientX = (p1.x + p2.x) / 2;
+      const centerClientY = (p1.y + p2.y) / 2;
+      const sx = (centerClientX - rect.left) * DPR;
+      const sy = (centerClientY - rect.top) * DPR;
+      pinchCenter = screenToWorld(sx, sy);
+
+      // Cancel any token drag / pan in progress
+      state.ui.dragMode = 'none';
+      state.ui.dragId = null;
+      fogState.painting = false;
+
+      // Do NOT start normal single-pointer behavior when pinch begins
+      isPointerDown = false;
+      pointerId = null;
+      return;
+    }
+
+    // Normal single-pointer setup
+    pointerId = e.pointerId;
+    isPointerDown = true;
+    last = { x:e.clientX, y:e.clientY };
+
+    const rect = uiLayer.getBoundingClientRect();
+    const sx = (e.clientX - rect.left) * DPR;
+    const sy = (e.clientY - rect.top) * DPR;
+    const wpt = screenToWorld(sx, sy);
+
+    // Mobile/Toggle measuring
+    if (state.ui.measureToggle || state.ui.measuring) {
+      state.ui.measuring = true;
+      state.ui.measureStart = wpt;
+      return;
+    }
+
+    // Fog paint starts if Shift OR BrushMode
+    if (wantsFogPaint(e)) {
+      fogState.painting = true;
+      const ip = worldToImage(wpt.x, wpt.y);
+      fogDot(ip.x, ip.y);
+      return;
+    }
+
+    // Tools (calibrate/origin)
+    if(state.ui.tool === 'calibrate'){
+      if(!state.ui.calib.p1){ state.ui.calib.p1 = {x:wpt.x, y:wpt.y}; calibStatusEl.textContent = 'Click second intersection'; }
+      else {
+        state.ui.calib.p2 = {x:wpt.x, y:wpt.y};
+        const dx = state.ui.calib.p2.x - state.ui.calib.p1.x; const dy = state.ui.calib.p2.y - state.ui.calib.p1.y;
+        const dist = Math.hypot(dx, dy);
+        const cells = Math.max(1, parseFloat(calibCellsEl.value)||10);
+        const newSize = dist / cells;
+        state.grid.size = clamp(newSize, 4, 256);
+        state.grid.offsetX = state.grid.offsetX + (state.ui.calib.p1.x - Math.round((state.ui.calib.p1.x - state.grid.offsetX)/state.grid.size)*state.grid.size);
+        state.grid.offsetY = state.grid.offsetY + (state.ui.calib.p1.y - Math.round((state.ui.calib.p1.y - state.grid.offsetY)/state.grid.size)*state.grid.size);
+        gridOffsetXEl.value = Math.round(state.grid.offsetX);
+        gridOffsetYEl.value = Math.round(state.grid.offsetY);
+        state.ui.tool = 'none'; calibStatusEl.textContent = `Calibrated: ${state.grid.size.toFixed(2)} px/cell`;
+        setDirty();
+      }
+      return;
+    }
+    if(state.ui.tool === 'pickOrigin'){
+      state.grid.offsetX = wpt.x; state.grid.offsetY = wpt.y;
+      gridOffsetXEl.value = Math.round(state.grid.offsetX);
+      gridOffsetYEl.value = Math.round(state.grid.offsetY);
+      state.ui.tool = 'none'; calibStatusEl.textContent = 'Origin set';
+      setDirty();
+      return;
+    }
+    if(state.ui.tool === 'snapOrigin'){
+      const size = state.grid.size;
+      state.grid.offsetX = wpt.x - Math.round(wpt.x/size)*size;
+      state.grid.offsetY = wpt.y - Math.round(wpt.y/size)*size;
+      gridOffsetXEl.value = Math.round(state.grid.offsetX);
+      gridOffsetYEl.value = Math.round(state.grid.offsetY);
+      state.ui.tool = 'none'; calibStatusEl.textContent = 'Aligned to clicked intersection';
+      setDirty();
+      return;
+    }
+
+    // Check for persistent measurement handle hit first, then fog shape handles
+    const panMode = state.ui.spaceDown || e.button === 1;
+    const measurementHandleHit = !panMode ? hitPersistentMeasurementHandle(wpt.x, wpt.y) : null;
+    const measurement = !measurementHandleHit && !panMode ? hitPersistentMeasurement(wpt.x, wpt.y) : null;
+    const handleHit = !measurementHandleHit && fogState.enabled && !panMode ? hitFogShapeHandle(wpt.x, wpt.y) : null;
+    const fogShape = !measurementHandleHit && !handleHit && fogState.enabled && !panMode ? hitFogShape(wpt.x, wpt.y) : null;
+    const token = hitToken(wpt.x, wpt.y);
+
+    if(!panMode && measurementHandleHit){
+      // Persistent measurement handle resize
+      const {measurement, handle} = measurementHandleHit;
+      persistentMeasurements.forEach(m=> m.selected = false);
+      fogShapes.forEach(s=> s.selected = false);
+      state.tokens.forEach(t=> t.selected = false);
+      measurement.selected = true;
+      state.ui.dragMode = 'measurementResize';
+      state.ui.dragId = measurement.id;
+      state.ui.resizeHandle = handle;
+      hideMenu();
+      updateTokenList();
+      dirty.ui = true;
+      requestRender();
+    } else if(!panMode && measurement){
+      // Persistent measurement selection
+      persistentMeasurements.forEach(m=> m.selected = false);
+      fogShapes.forEach(s=> s.selected = false);
+      state.tokens.forEach(t=> t.selected = false);
+      measurement.selected = true;
+      state.ui.dragMode = 'measurement';
+      state.ui.dragId = measurement.id;
+      state.ui.dragOffset = { x: wpt.x - measurement.x1, y: wpt.y - measurement.y1 };
+      hideMenu();
+      updateTokenList();
+      dirty.ui = true;
+      requestRender();
+    } else if(!panMode && handleHit){
+      // Resize handle interaction
+      const {shape, handle} = handleHit;
+      persistentMeasurements.forEach(m=> m.selected = false);
+      fogShapes.forEach(s=> s.selected = false);
+      state.tokens.forEach(t=> t.selected = false);
+      shape.selected = true;
+      state.ui.dragMode = 'fogShapeResize';
+      state.ui.fogShapeDragId = shape.id;
+      state.ui.resizeHandle = handle;
+      state.ui.resizeStart = worldToImage(wpt.x, wpt.y);
+      state.ui.originalShape = {x: shape.x, y: shape.y, w: shape.w, h: shape.h, r: shape.r};
+      hideMenu();
+      updateTokenList();
+    } else if(!panMode && fogShape){
+      // Fog shape interaction takes priority when fog is enabled
+      persistentMeasurements.forEach(m=> m.selected = false);
+      fogShapes.forEach(s=> s.selected = false);
+      state.tokens.forEach(t=> t.selected = false);
+      fogShape.selected = true;
+      state.ui.dragMode = 'fogShape';
+      state.ui.fogShapeDragId = fogShape.id;
+      const ip = worldToImage(wpt.x, wpt.y);
+      state.ui.dragOffset = { x: ip.x - fogShape.x, y: ip.y - fogShape.y };
+      hideMenu();
+      updateTokenList();
+    } else if(!panMode && token){
+      persistentMeasurements.forEach(m=> m.selected = false);
+      state.tokens.forEach(t=> t.selected = false);
+      fogShapes.forEach(s=> s.selected = false);
+      token.selected = true;
+      state.ui.dragMode = 'token';
+      state.ui.dragId = token.id;
+      state.ui.dragOffset = { x: wpt.x - token.x, y: wpt.y - token.y };
+      hideMenu();
+      updateTokenList();
+    } else {
+      persistentMeasurements.forEach(m=> m.selected = false);
+      state.tokens.forEach(t=> t.selected = false);
+      fogShapes.forEach(s=> s.selected = false);
+      state.ui.dragMode = 'pan';
+      hideMenu();
+      updateTokenList();
+    }
+  });
+
+    uiLayer.addEventListener('pointermove', (e)=>{
+    mouseScreen = { x:e.clientX, y:e.clientY };
+
+    // Update position of this pointer if it's part of a pinch
+    if (activePointers.has(e.pointerId)) {
+      activePointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    }
+
+    // If we have 2 pointers and pinch is active, handle pinch zoom
+    if (activePointers.size === 2 && pinchStartDistance) {
+      e.preventDefault(); // stop browser gestures
+
+      const [p1, p2] = [...activePointers.values()];
+      const dist = Math.hypot(p2.x - p1.x, p2.y - p1.y) || 1;
+      const factor = dist / pinchStartDistance;
+      const newScale = clamp(pinchStartScale * factor, 0.1, 8);
+
+      // Keep pinchCenter under the same screen position
+      const before = worldToScreen(pinchCenter.x, pinchCenter.y);
+      state.view.scale = newScale;
+      const after = worldToScreen(pinchCenter.x, pinchCenter.y);
+      state.view.x += (before.x - after.x);
+      state.view.y += (before.y - after.y);
+
+      // Mark all layers dirty on zoom
+      dirty.map = dirty.fog = dirty.tokens = dirty.grid = dirty.ui = true;
+      requestRender();
+
+      return; // don't run the normal drag/pan logic
+    }
+
+    // Normal single-pointer logic
+    if(!isPointerDown || e.pointerId !== pointerId) return;
+
+    const rect = uiLayer.getBoundingClientRect();
+    const sx = (e.clientX - rect.left) * DPR;
+    const sy = (e.clientY - rect.top) * DPR;
+    const wpt = screenToWorld(sx, sy);
+
+    // Continue fog paint only if painting
+    if (fogState.painting) {
+      const ip = worldToImage(wpt.x, wpt.y);
+      fogDot(ip.x, ip.y);
+      return;
+    }
+
+    if(state.ui.measuring) return; // render handles the line
+
+    if(state.ui.dragMode === 'measurementResize' && state.ui.dragId){
+      const measurement = persistentMeasurements.find(m=> m.id === state.ui.dragId);
+      if(measurement){
+        const handle = state.ui.resizeHandle;
+        if(handle === 'start'){
+          measurement.x1 = wpt.x;
+          measurement.y1 = wpt.y;
+        } else if(handle === 'end'){
+          measurement.x2 = wpt.x;
+          measurement.y2 = wpt.y;
+        }
+        dirty.ui = true;
+        requestRender();
+      }
+      return;
+    }
+
+    if(state.ui.dragMode === 'measurement' && state.ui.dragId){
+      const measurement = persistentMeasurements.find(m=> m.id === state.ui.dragId);
+      if(measurement){
+        const dx = measurement.x2 - measurement.x1;
+        const dy = measurement.y2 - measurement.y1;
+        measurement.x1 = wpt.x - state.ui.dragOffset.x;
+        measurement.y1 = wpt.y - state.ui.dragOffset.y;
+        measurement.x2 = measurement.x1 + dx;
+        measurement.y2 = measurement.y1 + dy;
+        dirty.ui = true;
+        requestRender();
+      }
+      return;
+    }
+
+    if(state.ui.dragMode === 'fogShapeResize' && state.ui.fogShapeDragId){
+      const shape = fogShapes.find(s=> s.id === state.ui.fogShapeDragId);
+      const ip = worldToImage(wpt.x, wpt.y);
+      const handle = state.ui.resizeHandle;
+      const orig = state.ui.originalShape;
+
+      if(shape && shape.type === 'rect'){
+        const delta = {x: ip.x - state.ui.resizeStart.x, y: ip.y - state.ui.resizeStart.y};
+
+        // Apply resize based on which handle is being dragged
+        if(handle.includes('n')){ // North handles
+          shape.y = orig.y + delta.y;
+          shape.h = orig.h - delta.y;
+        }
+        if(handle.includes('s')){ // South handles
+          shape.h = orig.h + delta.y;
+        }
+        if(handle.includes('w')){ // West handles
+          shape.x = orig.x + delta.x;
+          shape.w = orig.w - delta.x;
+        }
+        if(handle.includes('e')){ // East handles
+          shape.w = orig.w + delta.x;
+        }
+
+        // Ensure minimum size
+        const minSize = 10;
+        if(shape.w < minSize){
+          if(handle.includes('w')) shape.x = orig.x + orig.w - minSize;
+          shape.w = minSize;
+        }
+        if(shape.h < minSize){
+          if(handle.includes('n')) shape.y = orig.y + orig.h - minSize;
+          shape.h = minSize;
+        }
+
+        renderFogShapes(); // Re-render fog canvas
+      } else if(shape && shape.type === 'circle' && handle === 'edge'){
+        // Resize circle by changing radius based on distance from center
+        const centerX = orig.x + orig.r;
+        const centerY = orig.y + orig.r;
+        const newRadius = Math.hypot(ip.x - centerX, ip.y - centerY);
+
+        // Ensure minimum radius
+        const minRadius = 10;
+        shape.r = Math.max(minRadius, newRadius);
+
+        // Update position to keep center fixed
+        shape.x = centerX - shape.r;
+        shape.y = centerY - shape.r;
+
+        renderFogShapes(); // Re-render fog canvas
+      }
+    }
+    if(state.ui.dragMode === 'fogShape' && state.ui.fogShapeDragId){
+      const shape = fogShapes.find(s=> s.id === state.ui.fogShapeDragId);
+      if(shape){
+        const ip = worldToImage(wpt.x, wpt.y);
+        shape.x = ip.x - state.ui.dragOffset.x;
+        shape.y = ip.y - state.ui.dragOffset.y;
+        renderFogShapes(); // Re-render fog canvas
+      }
+    }
+    if(state.ui.dragMode === 'token' && state.ui.dragId){
+      const t = state.tokens.find(t=> t.id === state.ui.dragId);
+      if(t){ t.x = wpt.x - state.ui.dragOffset.x; t.y = wpt.y - state.ui.dragOffset.y; }
+    }
+    if(state.ui.dragMode === 'pan'){
+      const dx = (e.clientX - last.x) * DPR;
+      const dy = (e.clientY - last.y) * DPR;
+      state.view.x += dx;
+      state.view.y += dy;
+      last = { x:e.clientX, y:e.clientY };
+
+      // Mark all layers dirty on pan
+      dirty.map = dirty.fog = dirty.tokens = dirty.grid = dirty.ui = true;
+      requestRender();
+    }
+  });
+
+
+    window.addEventListener('pointerup', (e)=>{
+    // Remove from activePointers (for pinch tracking)
+    activePointers.delete(e.pointerId);
+    if (activePointers.size < 2) {
+      pinchStartDistance = null;
+      pinchStartScale = null;
+      pinchCenter = null;
+    }
+
+    if(e.pointerId === pointerId){
+      isPointerDown = false;
+      pointerId = null;
+      try { uiLayer.releasePointerCapture(e.pointerId); } catch {}
+    }
+
+    if (fogState.painting) {
+      fogState.painting = false;
+      setDirty(); // Fog was painted
+      return;
+    }
+
+    if(state.ui.measuring){
+      // If persistent measure mode is on, create a persistent measurement
+      if(state.ui.persistentMeasureMode && state.ui.measureStart){
+        const rect = uiLayer.getBoundingClientRect();
+        const mx = (e.clientX - rect.left) * DPR;
+        const my = (e.clientY - rect.top) * DPR;
+        const mWorld = screenToWorld(mx, my);
+        const measureShape = document.getElementById('measureShape').value;
+        const measureColor = document.getElementById('measureColor').value;
+
+        persistentMeasurements.push({
+          id: `pm-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+          type: measureShape,
+          x1: state.ui.measureStart.x,
+          y1: state.ui.measureStart.y,
+          x2: mWorld.x,
+          y2: mWorld.y,
+          color: measureColor,
+          selected: false
+        });
+        setDirty();
+        dirty.ui = true;
+        requestRender();
+      }
+
+      // If toggle is on, keep measuring until toggled off; otherwise end now.
+      if(!state.ui.measureToggle){
+        state.ui.measuring = false;
+        state.ui.measureStart = null;
+      }
+      return;
+    }
+
+    if(state.ui.dragMode === 'token' && state.ui.dragId){
+      const t = state.tokens.find(t=> t.id === state.ui.dragId);
+      if(t && document.getElementById('snap').checked){
+        const s = state.grid.size;
+        t.x = Math.round(t.x / s) * s;
+        t.y = Math.round(t.y / s) * s;
+      }
+      setDirty(); // Token was moved
+    }
+    if(state.ui.dragMode === 'measurement' || state.ui.dragMode === 'measurementResize'){
+      // Persistent measurement dragging/resizing completed, save changes
+      setDirty(); // Measurement was moved/resized
+    }
+    if(state.ui.dragMode === 'fogShape' || state.ui.dragMode === 'fogShapeResize'){
+      // Fog shape dragging/resizing completed, save changes
+      renderFogShapes();
+      setDirty(); // Fog shape was moved/resized
+    }
+    state.ui.dragMode = 'none';
+    state.ui.dragId = null;
+    state.ui.fogShapeDragId = null;
+    state.ui.resizeHandle = null;
+    state.ui.resizeStart = null;
+    state.ui.originalShape = null;
+  });
+
+    window.addEventListener('pointercancel', (e)=>{
+    activePointers.delete(e.pointerId);
+    if (activePointers.size < 2) {
+      pinchStartDistance = null;
+      pinchStartScale = null;
+      pinchCenter = null;
+    }
+
+    if(e.pointerId === pointerId){
+      isPointerDown = false;
+      pointerId = null;
+      try { uiLayer.releasePointerCapture(e.pointerId); } catch {}
+    }
+
+    if (fogState.painting) {
+      fogState.painting = false;
+    }
+
+    state.ui.dragMode = 'none';
+    state.ui.dragId = null;
+  });
+
+
+  uiLayer.addEventListener('wheel', (e)=>{
+    e.preventDefault();
+    const rect = uiLayer.getBoundingClientRect();
+    const sx = (e.clientX - rect.left) * DPR; const sy = (e.clientY - rect.top) * DPR;
+
+    const before = screenToWorld(sx, sy);
+    const factor = Math.exp(-e.deltaY * 0.0015);
+    const newScale = clamp(state.view.scale * factor, 0.1, 8);
+    state.view.scale = newScale;
+    const after = screenToWorld(sx, sy);
+
+    state.view.x += (after.x - before.x) * state.view.scale;
+    state.view.y += (after.y - before.y) * state.view.scale;
+
+    // Mark all layers dirty on zoom
+    dirty.map = dirty.fog = dirty.tokens = dirty.grid = dirty.ui = true;
+    requestRender();
+  }, { passive:false });
+
+  // Context menu (right-click)
+  uiLayer.addEventListener('contextmenu', (e)=>{
+    e.preventDefault();
+
+    // Exit measure mode on right-click
+    if (state.ui.measuring) {
+      state.ui.measuring = false;
+      state.ui.measureStart = null;
+      // If measure toggle is on, turn it off
+      if (state.ui.measureToggle) {
+        state.ui.measureToggle = false;
+        const measureToggleBtn = document.getElementById('measureToggle');
+        measureToggleBtn.classList.remove('active');
+        measureToggleBtn.setAttribute('aria-pressed', 'false');
+      }
+      return;
+    }
+
+    const rect = uiLayer.getBoundingClientRect();
+    const sx = (e.clientX - rect.left) * DPR; const sy = (e.clientY - rect.top) * DPR;
+    const wpt = screenToWorld(sx, sy);
+
+    const token = hitToken(wpt.x, wpt.y);
+    if (!token) { hideMenu(); return; }
+    state.tokens.forEach(t=> t.selected = false);
+    token.selected = true; updateTokenList();
+    showMenu(e.clientX, e.clientY);
+  });
+  document.addEventListener('click', (e)=>{ if (!ctxMenu.contains(e.target)) hideMenu(); });
+  function showMenu(x,y){
+    ctxMenu.style.display='block';
+
+    // Get menu dimensions
+    const menuRect = ctxMenu.getBoundingClientRect();
+    const viewportWidth = window.innerWidth;
+    const viewportHeight = window.innerHeight;
+
+    let left = x;
+    let top = y;
+
+    // Adjust if menu goes off right edge
+    if (left + menuRect.width > viewportWidth) {
+      left = viewportWidth - menuRect.width - 10;
+    }
+
+    // Adjust if menu goes off bottom - open upward
+    if (top + menuRect.height > viewportHeight) {
+      top = y - menuRect.height;
+      if (top < 0) {
+        top = Math.max(10, viewportHeight - menuRect.height - 10);
+      }
+    }
+
+    left = Math.max(10, left);
+    top = Math.max(10, top);
+
+    ctxMenu.style.left = left+'px';
+    ctxMenu.style.top = top+'px';
+  }
+  function hideMenu(){ ctxMenu.style.display='none'; }
+
+  // Add token to initiative tracker
+  function addTokenToInitiativeTracker(token) {
+    // List of generic creature names that should prompt for a more specific name
+    const genericNames = [
+      'goblin', 'orc', 'kobold', 'skeleton', 'zombie', 'bandit', 'guard', 'cultist',
+      'dragon', 'beast', 'wolf', 'bear', 'spider', 'rat', 'snake', 'bat',
+      'paladin', 'wizard', 'fighter', 'rogue', 'cleric', 'barbarian', 'ranger', 'druid',
+      'warrior', 'mage', 'archer', 'soldier', 'mercenary', 'assassin',
+      'demon', 'devil', 'elemental', 'golem', 'giant', 'troll', 'ogre',
+      'token', 'creature', 'enemy', 'npc', 'monster', 'minion'
+    ];
+
+    // Get current token data
+    let name = (token.name || '').trim();
+    let currentHP = token.hp || null;
+    let maxHP = token.maxHp || null;
+    let ac = null;
+    let initiative = null;
+
+    // Check if name is generic
+    const isGeneric = !name || genericNames.some(generic =>
+      name.toLowerCase() === generic ||
+      name.toLowerCase().startsWith(generic + ' ') ||
+      name.toLowerCase().endsWith(' ' + generic)
+    );
+
+    // Prompt for specific name if generic
+    if (isGeneric) {
+      const newName = prompt('This token has a generic name. Please enter a more specific name:', name || 'Creature');
+      if (newName === null) return; // User cancelled
+      name = newName.trim();
+      if (!name) {
+        alert('A name is required to add to the initiative tracker.');
+        return;
+      }
+    }
+
+    // Prompt for missing HP info
+    if (maxHP === null || maxHP === 0) {
+      const maxHpInput = prompt('Enter Max HP:', '');
+      if (maxHpInput === null) return; // User cancelled
+      maxHP = parseInt(maxHpInput) || 0;
+    }
+
+    if (currentHP === null || currentHP === 0) {
+      const currentHpInput = prompt('Enter Current HP:', maxHP || '');
+      if (currentHpInput === null) return; // User cancelled
+      currentHP = parseInt(currentHpInput) || maxHP || 0;
+    }
+
+    // Prompt for AC
+    const acInput = prompt('Enter AC (Armor Class):', '10');
+    if (acInput === null) return; // User cancelled
+    ac = parseInt(acInput) || 10;
+
+    // Prompt for initiative (default to 0)
+    const initiativeInput = prompt('Enter Initiative roll (0 to roll later):', '0');
+    if (initiativeInput === null) return; // User cancelled
+    initiative = parseInt(initiativeInput) || 0;
+
+    // Prepare data for initiative tracker
+    const initiativeData = {
+      name: name,
+      maxHp: maxHP,
+      currentHp: currentHP,
+      ac: ac,
+      initiative: initiative,
+      useActualInitiative: true  // Flag to tell tracker to use the value directly, not as a bonus
+    };
+
+    // Show confirmation
+    const confirmed = confirm(
+      `Add "${name}" to Initiative Tracker?\n\n` +
+      `HP: ${currentHP}/${maxHP}\n` +
+      `AC: ${ac}\n` +
+      `Initiative: ${initiative}\n\n` +
+      `Click OK to open the Initiative Tracker.`
+    );
+
+    if (confirmed) {
+      // Store in localStorage for the initiative tracker to pick up
+      localStorage.setItem('dmtools.pendingInitiativeImport', JSON.stringify(initiativeData));
+      console.log('Saved to localStorage:', initiativeData);
+
+      // Try to open in new tab first
+      const newWindow = window.open('initiative.html#autoimport', '_blank');
+
+      // Check if popup was blocked
+      if (!newWindow || newWindow.closed || typeof newWindow.closed === 'undefined') {
+        // Popup blocked - offer alternative
+        const navigateHere = confirm(
+          'Popup blocked!\n\n' +
+          'Click OK to navigate to the Initiative Tracker in this tab,\n' +
+          'or click Cancel and manually click the "Initiative Tracker" link in the navbar.\n\n' +
+          'The character will be auto-added either way.'
+        );
+
+        if (navigateHere) {
+          window.location.href = 'initiative.html#autoimport';
+        }
+      }
+    } else {
+      console.log('User cancelled initiative tracker import');
+    }
+  }
+
+  ctxMenu.addEventListener('click', (e)=>{
+    const cmd = e.target.dataset.cmd;
+    const t = state.tokens.find(x=>x.selected);
+    if(!t) return;
+    if (cmd==='rename'){
+      const name = prompt('Token name:', t.name || '');
+      if (name!==null) {
+        t.name = name.trim();
+        setDirty();
+      }
+    } else if (cmd==='toggleLabel'){
+      t.showLabel = !t.showLabel;
+      setDirty();
+    } else if (cmd==='setHp'){
+      const choice = prompt('HP: [S]et max/current, [D]amage, [H]eal, [C]lear', 'S').toUpperCase();
+      if (choice === 'S') {
+        const hp = prompt('Current HP:', t.hp || '');
+        const maxHp = prompt('Max HP:', t.maxHp || '');
+        if (hp !== null) t.hp = parseInt(hp) || 0;
+        if (maxHp !== null) t.maxHp = parseInt(maxHp) || 0;
+        setDirty();
+      } else if (choice === 'D') {
+        const dmg = prompt('Damage amount:', '');
+        if (dmg !== null) {
+          t.hp = Math.max(0, (t.hp || 0) - (parseInt(dmg) || 0));
+          setDirty();
+        }
+      } else if (choice === 'H') {
+        const heal = prompt('Heal amount:', '');
+        if (heal !== null) {
+          t.hp = Math.min((t.maxHp || 0), (t.hp || 0) + (parseInt(heal) || 0));
+          setDirty();
+        }
+      } else if (choice === 'C') {
+        t.hp = 0; t.maxHp = 0;
+        setDirty();
+      }
+    } else if (cmd==='addStatus'){
+      const choice = prompt('Status: [A]dd, [C]lear', 'A').toUpperCase();
+      if (choice === 'A') {
+        const status = prompt('Status condition (e.g., Poisoned, Stunned):', '');
+        if (status !== null && status.trim()) {
+          if (!t.statusConditions) t.statusConditions = [];
+          t.statusConditions.push(status.trim());
+          setDirty();
+        }
+      } else if (choice === 'C') {
+        t.statusConditions = [];
+        setDirty();
+      }
+    } else if (cmd==='setAura'){
+      const radius = prompt('Aura radius (in cells, 0 to remove):', t.aura?.radius || '');
+      if (radius !== null) {
+        const r = parseFloat(radius) || 0;
+        if (r <= 0) {
+          delete t.aura;
+        } else {
+          const color = prompt('Aura color (hex, e.g., #ff0000):', t.aura?.color || '#8bd3ff');
+          t.aura = { radius: r, color: color || '#8bd3ff' };
+        }
+        setDirty();
+      }
+    } else if (cmd==='setVision'){
+      const range = prompt('Vision range (in cells, 0 to remove):', t.visionCone?.range || '');
+      if (range !== null) {
+        const r = parseFloat(range) || 0;
+        if (r <= 0) {
+          delete t.visionCone;
+        } else {
+          const angle = prompt('Vision angle (degrees, e.g., 90):', t.visionCone?.angle || '90');
+          const color = prompt('Vision color (hex):', t.visionCone?.color || '#ffff88');
+          t.visionCone = {
+            range: r,
+            angle: parseFloat(angle) || 90,
+            color: color || '#ffff88'
+          };
+        }
+        setDirty();
+      }
+    } else if (cmd==='duplicate'){
+      const copy = { ...t, id:'t_'+Math.random().toString(36).slice(2,9), x:t.x+10, y:t.y+10, selected:true };
+      if(t.statusConditions) copy.statusConditions = [...t.statusConditions];
+      if(t.aura) copy.aura = {...t.aura};
+      if(t.visionCone) copy.visionCone = {...t.visionCone};
+      state.tokens.forEach(x=>x.selected=false);
+      state.tokens.push(copy);
+      setDirty();
+    } else if (cmd==='bring'){
+      const i = state.tokens.indexOf(t); if(i>=0){ state.tokens.splice(i,1); state.tokens.push(t); }
+      setDirty();
+    } else if (cmd==='send'){
+      const i = state.tokens.indexOf(t); if(i>=0){ state.tokens.splice(i,1); state.tokens.unshift(t); }
+      setDirty();
+    } else if (cmd==='addToInitiative'){
+      addTokenToInitiativeTracker(t);
+    } else if (cmd==='delete'){
+      state.tokens = state.tokens.filter(x=>!x.selected);
+      setDirty();
+    }
+    hideMenu(); updateTokenList();
+  });
+
+  window.addEventListener('keydown', (e)=>{
+    if(e.code === 'Space') { state.ui.spaceDown = true; uiLayer.classList.add('dragging'); }
+    if(e.key === 'Delete' || e.key === 'Backspace') {
+      deleteSelected();
+      deleteSelectedFogShapes();
+      deleteSelectedPersistentMeasurements();
+    }
+    if(e.key === 'Escape'){
+      state.tokens.forEach(t=> t.selected = false);
+      fogShapes.forEach(s=> s.selected = false);
+      persistentMeasurements.forEach(m=> m.selected = false);
+      dirty.ui = true;
+      requestRender();
+      updateTokenList();
+      hideMenu();
+    }
+    if(e.altKey){ state.ui.measuring = true; }
+
+    // Handle fog shape resizing
+    const fs = fogShapes.find(x=>x.selected);
+    if(fs){
+      if(e.key === '+' || e.key === '='){
+        if(fs.type === 'rect'){
+          fs.w *= 1.1;
+          fs.h *= 1.1;
+        } else if(fs.type === 'circle'){
+          fs.r *= 1.1;
+        }
+        renderFogShapes();
+        setDirty();
+        return;
+      }
+      if(e.key === '-' || e.key === '_'){
+        if(fs.type === 'rect'){
+          fs.w *= 0.9;
+          fs.h *= 0.9;
+        } else if(fs.type === 'circle'){
+          fs.r *= 0.9;
+        }
+        renderFogShapes();
+        setDirty();
+        return;
+      }
+    }
+
+    // Handle token operations
+    const t = state.tokens.find(x=>x.selected);
+    if(!t) return;
+    if(e.key === 'r' || e.key === 'R'){ t.rot = (t.rot||0) + (Math.PI/12); setDirty(); }
+    if(e.key === '+'){ t.w*=1.1; t.h*=1.1; setDirty(); }
+    if(e.key === '-'){ t.w*=0.9; t.h*=0.9; setDirty(); }
+    if(e.key === '['){ const i=state.tokens.indexOf(t); if(i>0){ state.tokens.splice(i,1); state.tokens.splice(i-1,0,t); setDirty(); } }
+    if(e.key === ']'){ const i=state.tokens.indexOf(t); if(i>=0 && i<state.tokens.length-1){ state.tokens.splice(i,1); state.tokens.splice(i+1,0,t); setDirty(); } }
+  });
+  window.addEventListener('keyup', (e)=>{
+    if(e.code === 'Space'){ state.ui.spaceDown = false; uiLayer.classList.remove('dragging'); }
+    if(!e.altKey && state.ui.measuring && !state.ui.measureToggle){
+      state.ui.measuring = false; state.ui.measureStart = null;
+    }
+    // If Shift released mid-stroke and Brush Mode is OFF, stop fog painting
+    if(!e.shiftKey && fogState.painting && !state.ui.brushMode){
+      fogState.painting = false;
+    }
+  });
+
+  document.getElementById('mapFile').addEventListener('change', async (e)=>{
+    const file = e.target.files?.[0]; if(!file) return;
+    const dataUrl = await fileToDataUrl(file);
+    const img = await loadImage(dataUrl);
+    state.map = { imgSrc:dataUrl, img, w: img.naturalWidth, h: img.naturalHeight };
+    ensureFogSize();
+    // reset map transform when new image loads
+    state.mapTransform = { scale:1, x:0, y:0 };
+    mapScaleInput.value = 100; mapOffsetXInput.value = 0; mapOffsetYInput.value = 0;
+    fctx.clearRect(0,0,fog.width,fog.height);
+    fitMap(); save();
+  });
+  document.getElementById('gridSize').addEventListener('input', (e)=>{ state.grid.size = clamp(parseFloat(e.target.value)||50, 4, 256); dirty.grid = dirty.map = true; requestRender(); setDirty(); });
+  document.getElementById('unitsPerCell').addEventListener('input', (e)=>{ state.grid.unitsPerCell = Math.max(1, parseFloat(e.target.value)||5); setDirty(); });
+  document.getElementById('gridColor').addEventListener('input', (e)=>{ state.grid.color = e.target.value; dirty.grid = dirty.map = true; requestRender(); setDirty(); });
+  document.getElementById('gridAlpha').addEventListener('input', (e)=>{ state.grid.alpha = clamp(parseFloat(e.target.value)||0.35, 0, 1); dirty.grid = dirty.map = true; requestRender(); setDirty(); });
+  document.getElementById('showGrid').addEventListener('change', (e)=>{ state.grid.show = e.target.checked; dirty.grid = dirty.map = true; requestRender(); setDirty(); });
+
+  // Map transform inputs (unique names to avoid redeclare)
+  const mapScaleInput  = document.getElementById('mapScale');
+  const mapOffsetXInput = document.getElementById('mapOffsetX');
+  const mapOffsetYInput = document.getElementById('mapOffsetY');
+  mapScaleInput.addEventListener('input', (e)=>{ state.mapTransform.scale = clamp((parseFloat(e.target.value)||100)/100, 0.1, 4); setDirty(); });
+  mapOffsetXInput.addEventListener('input', (e)=>{ state.mapTransform.x = parseFloat(e.target.value)||0; setDirty(); });
+  mapOffsetYInput.addEventListener('input', (e)=>{ state.mapTransform.y = parseFloat(e.target.value)||0; setDirty(); });
+  document.getElementById('resetMapTransform').addEventListener('click', ()=>{
+    state.mapTransform = { scale:1, x:0, y:0 }; mapScaleInput.value = 100; mapOffsetXInput.value = 0; mapOffsetYInput.value = 0;
+    setDirty();
+  });
+
+  // Grid alignment inputs (unique names)
+  const gridOffsetXEl = document.getElementById('gridOffsetX');
+  const gridOffsetYEl = document.getElementById('gridOffsetY');
+  gridOffsetXEl.addEventListener('input', (e)=>{ state.grid.offsetX = parseFloat(e.target.value)||0; setDirty(); });
+  gridOffsetYEl.addEventListener('input', (e)=>{ state.grid.offsetY = parseFloat(e.target.value)||0; setDirty(); });
+
+  const calibCellsEl = document.getElementById('calibCells');
+  const calibStatusEl = document.getElementById('calibStatus');
+  document.getElementById('startCalibrate').addEventListener('click', ()=>{
+    state.ui.tool = 'calibrate'; state.ui.calib = { p1:null, p2:null }; calibStatusEl.textContent = 'Click first grid intersection';
+  });
+  document.getElementById('pickGridOrigin').addEventListener('click', ()=>{
+    state.ui.tool = 'pickOrigin'; calibStatusEl.textContent = 'Click the grid intersection to become (0,0)';
+  });
+  document.getElementById('snapOriginToMap').addEventListener('click', ()=>{
+    state.ui.tool = 'snapOrigin'; calibStatusEl.textContent = 'Click a grid intersection on the map';
+  });
+
+  document.getElementById('centerMap').addEventListener('click', centerMap);
+  document.getElementById('fitMap').addEventListener('click', fitMap);
+  document.getElementById('clearMap').addEventListener('click', ()=>{
+    state.map = { imgSrc:'', img:null, w:0, h:0 };
+    ensureFogSize();
+    save();
+  });
+
+  // Token actions
+  document.getElementById('addToken').addEventListener('click', addTokenFromInputs);
+  document.getElementById('deleteSelected').addEventListener('click', deleteSelected);
+
+  // Fog controls
+  document.getElementById('toggleFog').addEventListener('click', ()=>{
+    fogState.enabled = !fogState.enabled;
+    setFogUI(fogState.enabled);
+    if (fogState.enabled) ensureFogSize();
+    save();
+  });
+  document.getElementById('fogReveal').addEventListener('click', ()=>{ fogState.mode='reveal'; setFogUI(true); });
+  document.getElementById('fogCover').addEventListener('click', ()=>{ fogState.mode='cover'; setFogUI(true); });
+  document.getElementById('fogBrush').addEventListener('input', (e)=>{ fogState.brush = Math.max(5, Math.min(400, parseFloat(e.target.value)||80)); });
+  document.getElementById('fogClear').addEventListener('click', ()=>{
+    fctx.clearRect(0,0,fog.width,fog.height);
+    fogShapes.length = 0;
+    save();
+  });
+
+  // Fog shape controls
+  document.getElementById('fogShapeType').addEventListener('change', (e)=>{ fogState.shapeType = e.target.value; });
+  document.getElementById('fogShapeColor').addEventListener('input', (e)=>{ fogState.shapeColor = e.target.value; });
+  document.getElementById('fogShapeSize').addEventListener('input', (e)=>{ fogState.shapeSize = parseFloat(e.target.value) || 3; });
+  document.getElementById('addFogShape').addEventListener('click', addFogShape);
+  document.getElementById('deleteFogShape').addEventListener('click', ()=>{
+    deleteSelectedFogShapes();
+  });
+
+  // NEW: Brush Mode / Measure toggles (mobile-friendly)
+  const fogBrushModeBtn = document.getElementById('fogBrushMode');
+  fogBrushModeBtn.addEventListener('click', (e)=>{
+    state.ui.brushMode = !state.ui.brushMode;
+    e.currentTarget.classList.toggle('active', state.ui.brushMode);
+    e.currentTarget.setAttribute('aria-pressed', String(state.ui.brushMode));
+  });
+  const measureToggleBtn = document.getElementById('measureToggle');
+  measureToggleBtn.addEventListener('click', (e)=>{
+    state.ui.measureToggle = !state.ui.measureToggle;
+    e.currentTarget.classList.toggle('active', state.ui.measureToggle);
+    e.currentTarget.setAttribute('aria-pressed', String(state.ui.measureToggle));
+    state.ui.measuring = state.ui.measureToggle;
+    if(!state.ui.measureToggle){ state.ui.measureStart = null; }
+  });
+  const persistentMeasureToggleBtn = document.getElementById('persistentMeasureToggle');
+  persistentMeasureToggleBtn.addEventListener('click', (e)=>{
+    state.ui.persistentMeasureMode = !state.ui.persistentMeasureMode;
+    e.currentTarget.classList.toggle('active', state.ui.persistentMeasureMode);
+    e.currentTarget.setAttribute('aria-pressed', String(state.ui.persistentMeasureMode));
+  });
+
+  // Presets
+  document.getElementById('addPreset').addEventListener('click', addTokenFromPreset);
+  loadTokenManifest().then(buildPresetDropdown);
+
+  // Export / Import
+  document.getElementById('exportJson').addEventListener('click', ()=>{
+    const payload = localStorage.getItem(STORAGE_KEY) || JSON.stringify({});
+    const blob = new Blob([payload], {type:'application/json'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a'); a.href = url; a.download = `battlemap_${new Date().toISOString()}.json`;
+    document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
+  });
+  document.getElementById('importJsonFile').addEventListener('change', async (e)=>{
+    const file = e.target.files?.[0]; if(!file) return;
+    try {
+      const text = await file.text();
+      const data = JSON.parse(text);
+      // restore core state
+      Object.assign(state.grid, data.grid||{});
+      Object.assign(state.view, data.view||{});
+      Object.assign(state.mapTransform, data.mapTransform||{});
+      state.tokens = (data.tokens || []).map(t => ({
+        ...t,
+        img: null,
+        selected: !!t.selected,
+        rot: typeof t.rot === 'number' ? t.rot : 0
+      }));
+
+      // Restore fog settings if present
+      if (data.fogState) {
+        fogState.enabled = !!data.fogState.enabled;
+        fogState.mode = data.fogState.mode || fogState.mode;
+        fogState.brush = typeof data.fogState.brush === 'number'
+          ? data.fogState.brush
+          : fogState.brush;
+        fogState.shapeType = data.fogState.shapeType || fogState.shapeType;
+        fogState.shapeColor = data.fogState.shapeColor || fogState.shapeColor;
+        fogState.shapeSize = typeof data.fogState.shapeSize === 'number'
+          ? data.fogState.shapeSize
+          : fogState.shapeSize;
+        setFogUI(fogState.enabled);
+        document.getElementById('fogBrush').value = fogState.brush;
+        document.getElementById('fogShapeType').value = fogState.shapeType;
+        document.getElementById('fogShapeColor').value = fogState.shapeColor;
+        document.getElementById('fogShapeSize').value = fogState.shapeSize;
+      }
+
+      // Restore fog shapes if present
+      if (data.fogShapes) {
+        fogShapes.length = 0;
+        fogShapes.push(...data.fogShapes.map(s => ({
+          id: s.id,
+          type: s.type,
+          x: s.x,
+          y: s.y,
+          w: s.w,
+          h: s.h,
+          r: s.r,
+          mode: s.mode,
+          color: s.color || '#000000',
+          selected: !!s.selected
+        })));
+      }
+
+      // Restore persistent measurements if present
+      if (data.persistentMeasurements) {
+        persistentMeasurements.length = 0;
+        persistentMeasurements.push(...data.persistentMeasurements.map(m => ({
+          id: m.id,
+          type: m.type,
+          x1: m.x1,
+          y1: m.y1,
+          x2: m.x2,
+          y2: m.y2,
+          color: m.color || '#8bd3ff',
+          selected: !!m.selected
+        })));
+      }
+
+      if (data.map?.imgSrc) {
+        const img = await loadImage(data.map.imgSrc);
+        state.map = { imgSrc: data.map.imgSrc, img, w: img.naturalWidth, h: img.naturalHeight };
+        ensureFogSize();
+      } else {
+        state.map = { imgSrc:'', img:null, w:0, h:0 };
+        ensureFogSize();
+      }
+
+      // fog bitmap
+      fctx.clearRect(0,0,fog.width,fog.height);
+      if (data.fog) {
+        await drawDataUrlToCanvas(data.fog, fog);
+      } else {
+        // No saved fog bitmap, render shapes if present
+        renderFogShapes();
+      }
+
+      // load token images
+      await Promise.all(state.tokens.map(async t => {
+        t.img = await loadImage(t.imgSrc);
+      }));
+
+      save();
+    } catch(err) {
+      console.warn(err);
+      alert('Import failed: invalid or incompatible file.');
+    }
+  });
+
+  // Save Session button
+  document.getElementById('saveSession').addEventListener('click', ()=>{
+    save();
+  });
+
+  // Keyboard shortcut: Ctrl+S to save
+  window.addEventListener('keydown', (e)=>{
+    if((e.ctrlKey || e.metaKey) && e.key === 's'){
+      e.preventDefault();
+      save();
+      }
+  });
+
+  // Reset-all
+  document.getElementById('resetAll').addEventListener('click', ()=>{
+    localStorage.removeItem(STORAGE_KEY);
+
+    Object.assign(state, {
+      map: { imgSrc:'', img:null, w:0, h:0 },
+      mapTransform: { scale:1, x:0, y:0 },
+      grid: { size:50, unitsPerCell:5, color:'#6aa5ff', alpha:0.35, show:true, offsetX:0, offsetY:0 },
+      view: { x:0, y:0, scale:1 },
+      tokens: [],
+      ui: {
+        dragMode: 'none', dragId: null, dragOffset:{x:0,y:0},
+        spaceDown:false, tool:'none',
+        calib:{p1:null,p2:null},
+        measuring:false, measureStart:null,
+        brushMode:false, measureToggle:false, persistentMeasureMode:false,
+        fogShapeDragId: null
+      }
+    });
+
+    // Reset fog state + bitmap + shapes
+    fogState.enabled = false;
+    fogState.mode = 'reveal';
+    fogState.brush = 80;
+    fogState.shapeType = 'rect';
+    fogState.shapeColor = '#000000';
+    fogState.shapeSize = 3;
+    fogShapes.length = 0;
+    persistentMeasurements.length = 0;
+    setFogUI(false);
+    fctx.clearRect(0,0,fog.width,fog.height);
+
+    updateTokenList();
+  });
+
+  function fogDot(ix, iy) {
+    const r = fogState.brush * 0.5; // base brush in image px
+    if (!fog.width || !fog.height) return;
+    if (fogState.mode === 'reveal') {
+      fctx.globalCompositeOperation = 'destination-out'; // erase (reveal)
+      fctx.beginPath(); fctx.arc(ix, iy, r, 0, Math.PI*2); fctx.fill();
+    } else {
+      fctx.globalCompositeOperation = 'source-over'; // paint black (cover)
+      fctx.fillStyle = 'rgba(0,0,0,1)';
+      fctx.beginPath(); fctx.arc(ix, iy, r, 0, Math.PI*2); fctx.fill();
+    }
+  }
+
+  function renderFogShapes() {
+    if (!fog.width || !fog.height) return;
+    // Clear and redraw all fog shapes
+    fctx.clearRect(0, 0, fog.width, fog.height);
+
+    for (const shape of fogShapes) {
+      if (shape.mode === 'reveal') {
+        fctx.globalCompositeOperation = 'destination-out'; // erase (reveal)
+      } else {
+        fctx.globalCompositeOperation = 'source-over'; // paint with color (cover)
+        fctx.fillStyle = shape.color || '#000000';
+      }
+
+      if (shape.type === 'rect') {
+        fctx.fillRect(shape.x, shape.y, shape.w, shape.h);
+      } else if (shape.type === 'circle') {
+        fctx.beginPath();
+        fctx.arc(shape.x + shape.r, shape.y + shape.r, shape.r, 0, Math.PI * 2);
+        fctx.fill();
+      }
+    }
+
+    // Reset composite operation
+    fctx.globalCompositeOperation = 'source-over';
+  }
+
+  function drawFogShapes(ctx) {
+    // Draw filled fog shapes in world space (on top of everything)
+    // Render in two passes: cover first, then reveal (which cuts through cover)
+
+    // Pass 1: Draw all COVER shapes
+    for (const shape of fogShapes) {
+      if (shape.mode !== 'cover') continue;
+
+      const worldPos = imageToWorld(shape.x, shape.y);
+      ctx.save();
+      ctx.fillStyle = shape.color || '#000000';
+
+      if (shape.type === 'rect') {
+        const worldW = shape.w * state.mapTransform.scale;
+        const worldH = shape.h * state.mapTransform.scale;
+        ctx.fillRect(worldPos.x, worldPos.y, worldW, worldH);
+      } else if (shape.type === 'circle') {
+        const worldR = shape.r * state.mapTransform.scale;
+        const centerWorld = imageToWorld(shape.x + shape.r, shape.y + shape.r);
+        ctx.beginPath();
+        ctx.arc(centerWorld.x, centerWorld.y, worldR, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.restore();
+    }
+
+    // Pass 2: Draw all REVEAL shapes (cut through cover using destination-out)
+    for (const shape of fogShapes) {
+      if (shape.mode !== 'reveal') continue;
+
+      const worldPos = imageToWorld(shape.x, shape.y);
+      ctx.save();
+
+      // Use destination-out to "erase" the fog underneath
+      ctx.globalCompositeOperation = 'destination-out';
+      ctx.fillStyle = '#000000'; // Color doesn't matter, using alpha to erase
+
+      if (shape.type === 'rect') {
+        const worldW = shape.w * state.mapTransform.scale;
+        const worldH = shape.h * state.mapTransform.scale;
+        ctx.fillRect(worldPos.x, worldPos.y, worldW, worldH);
+      } else if (shape.type === 'circle') {
+        const worldR = shape.r * state.mapTransform.scale;
+        const centerWorld = imageToWorld(shape.x + shape.r, shape.y + shape.r);
+        ctx.beginPath();
+        ctx.arc(centerWorld.x, centerWorld.y, worldR, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.restore();
+    }
+  }
+
+  function drawFogShapeOutlines(ctx) {
+    // Draw outlines for fog shapes in world space (for selection feedback)
+    for (const shape of fogShapes) {
+      const worldPos = imageToWorld(shape.x, shape.y);
+
+      ctx.save();
+      ctx.strokeStyle = shape.selected ? '#8bd3ff' : 'rgba(138, 211, 255, 0.4)';
+      ctx.lineWidth = 2 / state.view.scale;
+      ctx.setLineDash([5 / state.view.scale, 5 / state.view.scale]);
+
+      if (shape.type === 'rect') {
+        const worldW = shape.w * state.mapTransform.scale;
+        const worldH = shape.h * state.mapTransform.scale;
+        ctx.strokeRect(worldPos.x, worldPos.y, worldW, worldH);
+
+        // Draw resize handles if selected
+        if (shape.selected) {
+          ctx.setLineDash([]);
+          ctx.fillStyle = '#8bd3ff';
+          const handleSize = 8 / state.view.scale;
+
+          // Corner handles
+          ctx.fillRect(worldPos.x - handleSize/2, worldPos.y - handleSize/2, handleSize, handleSize); // NW
+          ctx.fillRect(worldPos.x + worldW - handleSize/2, worldPos.y - handleSize/2, handleSize, handleSize); // NE
+          ctx.fillRect(worldPos.x - handleSize/2, worldPos.y + worldH - handleSize/2, handleSize, handleSize); // SW
+          ctx.fillRect(worldPos.x + worldW - handleSize/2, worldPos.y + worldH - handleSize/2, handleSize, handleSize); // SE
+
+          // Edge handles
+          ctx.fillRect(worldPos.x + worldW/2 - handleSize/2, worldPos.y - handleSize/2, handleSize, handleSize); // N
+          ctx.fillRect(worldPos.x + worldW/2 - handleSize/2, worldPos.y + worldH - handleSize/2, handleSize, handleSize); // S
+          ctx.fillRect(worldPos.x - handleSize/2, worldPos.y + worldH/2 - handleSize/2, handleSize, handleSize); // W
+          ctx.fillRect(worldPos.x + worldW - handleSize/2, worldPos.y + worldH/2 - handleSize/2, handleSize, handleSize); // E
+        }
+      } else if (shape.type === 'circle') {
+        const worldR = shape.r * state.mapTransform.scale;
+        const centerWorld = imageToWorld(shape.x + shape.r, shape.y + shape.r);
+        ctx.beginPath();
+        ctx.arc(centerWorld.x, centerWorld.y, worldR, 0, Math.PI * 2);
+        ctx.stroke();
+
+        // Draw resize handle on the edge (to the right) if selected
+        if (shape.selected) {
+          ctx.setLineDash([]);
+          ctx.fillStyle = '#8bd3ff';
+          const handleSize = 8 / state.view.scale;
+
+          // Handle on the right edge of the circle
+          const handleX = centerWorld.x + worldR;
+          const handleY = centerWorld.y;
+          ctx.fillRect(handleX - handleSize/2, handleY - handleSize/2, handleSize, handleSize);
+        }
+      }
+
+      ctx.restore();
+    }
+  }
+
+  function addTokenFromInputs(){
+    const fileInput = document.getElementById('tokenFile');
+    const nameInput = document.getElementById('tokenName');
+    const cells = parseFloat(document.getElementById('tokenCells').value) || 1;
+    const file = fileInput.files?.[0];
+    if(!file){ alert('Choose a token image first, or use the Presets section.'); return; }
+    fileToDataUrl(file).then(src=> loadImage(src).then(img=>{
+      placeToken(nameInput.value || file.name, src, img, cells);
+    }));
+  }
+  function addTokenFromPreset(){
+    const opt = tokenPresetEl.options[tokenPresetEl.selectedIndex];
+    const src = opt?.value || '';
+    const name = opt?.dataset?.name || opt?.textContent || '';
+    if(!src){ alert('Select a preset token first.'); return; }
+    const cells = parseFloat(document.getElementById('tokenCells').value) || 1;
+    getCachedImage(src).then(img=> placeToken(name, src, img, cells));
+  }
+  function placeToken(name, src, img, cells){
+    const size = state.grid.size * cells;
+    const center = screenToWorld(mapLayer.width/2, mapLayer.height/2);
+    const token = {
+      id: 't_'+Math.random().toString(36).slice(2,9),
+      name: name || 'Token',
+      imgSrc: src,
+      img,
+      x: center.x - size/2,
+      y: center.y - size/2,
+      w: size,
+      h: size,
+      rot: 0,
+      selected: true
+    };
+    state.tokens.forEach(t=> t.selected=false);
+    state.tokens.push(token);
+    updateTokenList(); save();
+  }
+
+  function deleteSelected(){
+    const before = state.tokens.length;
+    state.tokens = state.tokens.filter(t=> !t.selected);
+    if(state.tokens.length !== before){ updateTokenList(); setDirty(); }
+  }
+
+  function deleteSelectedFogShapes(){
+    const before = fogShapes.length;
+    const newShapes = fogShapes.filter(s=> !s.selected);
+    if(newShapes.length !== before){
+      fogShapes.length = 0;
+      fogShapes.push(...newShapes);
+      renderFogShapes();
+      setDirty();
+    }
+  }
+
+  function deleteSelectedPersistentMeasurements(){
+    const before = persistentMeasurements.length;
+    const newMeasurements = persistentMeasurements.filter(m=> !m.selected);
+    if(newMeasurements.length !== before){
+      persistentMeasurements.length = 0;
+      persistentMeasurements.push(...newMeasurements);
+      dirty.ui = true;
+      requestRender();
+      setDirty();
+    }
+  }
+
+  function addFogShape(){
+    if(!state.map.img){ alert('Please load a map first.'); return; }
+    ensureFogSize();
+
+    const shapeType = document.getElementById('fogShapeType').value;
+    const shapeColor = document.getElementById('fogShapeColor').value;
+    const shapeSizeCells = parseFloat(document.getElementById('fogShapeSize').value) || 3;
+    const gridSize = state.grid.size;
+
+    // Size based on user input in grid cells, converted to image-space
+    const defaultSize = gridSize * shapeSizeCells / state.mapTransform.scale;
+
+    // Place at center of viewport in image-space
+    const center = screenToWorld(mapLayer.width/2, mapLayer.height/2);
+    const imgCenter = worldToImage(center.x, center.y);
+
+    let shape;
+    if(shapeType === 'square'){
+      shape = {
+        id: 'fs_' + Math.random().toString(36).slice(2,9),
+        type: 'rect',
+        x: imgCenter.x - defaultSize/2,
+        y: imgCenter.y - defaultSize/2,
+        w: defaultSize,
+        h: defaultSize,
+        mode: fogState.mode,
+        color: shapeColor,
+        selected: true
+      };
+    } else if(shapeType === 'rect'){
+      shape = {
+        id: 'fs_' + Math.random().toString(36).slice(2,9),
+        type: 'rect',
+        x: imgCenter.x - defaultSize,
+        y: imgCenter.y - defaultSize/2,
+        w: defaultSize * 2,
+        h: defaultSize,
+        mode: fogState.mode,
+        color: shapeColor,
+        selected: true
+      };
+    } else if(shapeType === 'circle'){
+      shape = {
+        id: 'fs_' + Math.random().toString(36).slice(2,9),
+        type: 'circle',
+        x: imgCenter.x - defaultSize/2,
+        y: imgCenter.y - defaultSize/2,
+        r: defaultSize/2,
+        mode: fogState.mode,
+        color: shapeColor,
+        selected: true
+      };
+    }
+
+    if(shape){
+      fogShapes.forEach(s=> s.selected = false);
+      state.tokens.forEach(t=> t.selected = false);
+      fogShapes.push(shape);
+      renderFogShapes();
+      save();
+    }
+  }
+
+  function updateTokenList(){
+    tokenListEl.innerHTML = '';
+    for(const t of state.tokens){
+      const el = document.createElement('button');
+      el.className = 'pill';
+      el.textContent = t.name || t.id;
+      if(t.selected) el.style.outline = '2px solid var(--accent)';
+      el.addEventListener('click', ()=>{ state.tokens.forEach(x=>x.selected=false); t.selected=true; updateTokenList(); });
+      tokenListEl.appendChild(el);
+    }
+  }
+
+  function fileToDataUrl(file){ return new Promise((res,rej)=>{ const r = new FileReader(); r.onload=()=>res(r.result); r.onerror=rej; r.readAsDataURL(file); }); }
+  function clamp(v,min,max){ return Math.max(min, Math.min(max, v)); }
+
+  // ---- Long-press context menu for touch ----
+  let lpTimer = null;
+  uiLayer.addEventListener('pointerdown', (e) => {
+    if (e.pointerType === 'touch') {
+      const startX = e.clientX, startY = e.clientY;
+      lpTimer = setTimeout(() => {
+        const rect = uiLayer.getBoundingClientRect();
+        const sx = (startX - rect.left) * DPR, sy = (startY - rect.top) * DPR;
+        const wpt = screenToWorld(sx, sy);
+        const token = hitToken(wpt.x, wpt.y);
+        if (token) {
+          state.tokens.forEach(t=> t.selected=false);
+          token.selected = true; updateTokenList();
+          showMenu(startX, startY);
+        }
+      }, 500);
+    }
+  }, { passive: true });
+
+  ['pointermove','pointerup','pointercancel'].forEach(ev =>
+    uiLayer.addEventListener(ev, () => { if (lpTimer) { clearTimeout(lpTimer); lpTimer = null; } }, { passive: true })
+  );
+
+  // Prevent browser gestures from stealing interaction on uiLayer while dragging
+  uiLayer.addEventListener('touchmove', (e) => {
+    if (state.ui.dragMode !== 'none' || fogState.painting) e.preventDefault();
+  }, { passive: false });
+
+  // Boot
+  // Hook brush/measure buttons initial state to UI
+  document.getElementById('fogBrushMode').classList.toggle('active', state.ui.brushMode);
+  document.getElementById('fogBrushMode').setAttribute('aria-pressed', String(state.ui.brushMode));
+  document.getElementById('measureToggle').classList.toggle('active', state.ui.measureToggle);
+  document.getElementById('measureToggle').setAttribute('aria-pressed', String(state.ui.measureToggle));
+  document.getElementById('persistentMeasureToggle').classList.toggle('active', state.ui.persistentMeasureMode);
+  document.getElementById('persistentMeasureToggle').setAttribute('aria-pressed', String(state.ui.persistentMeasureMode));
+
+  load().then(() => {
+    // Check for pending character import from characters page (after load completes)
+    if (window.location.hash === '#autoinput') {
+      try {
+        const pendingData = localStorage.getItem('dmtools.pendingBattleMapImport');
+        if (pendingData) {
+          const data = JSON.parse(pendingData);
+          localStorage.removeItem('dmtools.pendingBattleMapImport');
+          window.location.hash = ''; // Clear the hash
+
+          // Import tokens
+          if (data.tokens && Array.isArray(data.tokens)) {
+            let imported = 0;
+            data.tokens.forEach(token => {
+              if (token.tokenImage && token.name) {
+                // Load the token image and add it to the map
+                loadImage(token.tokenImage).then(img => {
+                  const cells = 1; // Default size
+                  const size = state.grid.size * cells;
+                  const center = screenToWorld(mapLayer.width/2, mapLayer.height/2);
+
+                  // Create token without affecting existing selections
+                  const newToken = {
+                    id: 't_'+Math.random().toString(36).slice(2,9),
+                    name: token.name,
+                    imgSrc: token.tokenImage,
+                    img,
+                    x: center.x - size/2,
+                    y: center.y - size/2,
+                    w: size,
+                    h: size,
+                    rot: 0,
+                    selected: false // Don't select the new token
+                  };
+
+                  // Don't deselect existing tokens - just add the new one
+                  state.tokens.push(newToken);
+                  updateTokenList();
+                  save();
+
+                  imported++;
+                  if (imported === data.tokens.length) {
+                  }
+                }).catch(err => {
+                  console.error('Failed to load token image:', err);
+                });
+              }
+            });
+          }
+        }
+      } catch (e) {
+        console.error('Failed to import pending battle map data:', e);
+      }
+    }
+  });
+  updateTokenList();
+
+  // Initialize with first render
+  dirty.map = dirty.fog = dirty.tokens = dirty.grid = dirty.ui = true;
+  requestRender();
+
+  // Keep continuous UI updates for smooth measurement and dragging
+  function continuousUiUpdate() {
+    if (state.ui.measuring || state.ui.dragMode !== 'none') {
+      dirty.ui = true;
+
+      // Pan affects all layers since they all use state.view transform
+      if (state.ui.dragMode === 'pan') {
+        dirty.map = dirty.fog = dirty.tokens = dirty.grid = true;
+      }
+      // Token drag only affects token layer
+      else if (state.ui.dragMode === 'token') {
+        dirty.tokens = true;
+      }
+      // Fog shape operations affect fog layer
+      else if (state.ui.dragMode === 'fogShape' || state.ui.dragMode === 'fogShapeResize') {
+        dirty.fog = true;
+      }
+
+      requestRender();
+    }
+    requestAnimationFrame(continuousUiUpdate);
+  }
+  continuousUiUpdate();
+})();
+</script>
+<script data-goatcounter="https://maybeme1990.goatcounter.com/count"
+        async src="//gc.zgo.at/count.js"></script>
+</body>
+</html>

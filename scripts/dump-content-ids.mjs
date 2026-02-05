@@ -140,6 +140,24 @@ const SOURCES = [
 ];
 
 async function main() {
+  const outPath = path.join(ROOT_DIR, 'internal-roadmaps', 'manifests', 'srd-audit.json');
+
+  // Load existing manifest to preserve curated status values
+  let existingLookup = new Map();
+  try {
+    const existingRaw = await readFile(outPath, 'utf8');
+    const existingManifest = JSON.parse(existingRaw);
+    if (Array.isArray(existingManifest.entities)) {
+      for (const entry of existingManifest.entities) {
+        const key = `${entry.type}:${entry.id}`;
+        existingLookup.set(key, entry);
+      }
+    }
+    console.log(`Loaded ${existingLookup.size} existing entries from manifest`);
+  } catch (err) {
+    console.log('No existing manifest found, creating new one');
+  }
+
   const entities = [];
 
   for (const source of SOURCES) {
@@ -162,22 +180,25 @@ async function main() {
       const metadata = Object.assign({}, entry.metadata);
       metadata.displayText = entry.displayText;
 
+      // Preserve curated fields from existing manifest entry
+      const key = `${entry.type}:${entry.id}`;
+      const existing = existingLookup.get(key);
+
       return {
         id: entry.id,
         type: entry.type,
         label: entry.label,
         groupHint: entry.groupHint,
         sourceFile: entry.sourceFile,
-        srdCitation: null,
-        nonSrdReason: null,
-        status: 'unreviewed',
-        notes: '',
+        srdCitation: existing?.srdCitation ?? null,
+        nonSrdReason: existing?.nonSrdReason ?? null,
+        status: existing?.status ?? 'unreviewed',
+        notes: existing?.notes ?? '',
         metadata
       };
     })
   };
 
-  const outPath = path.join(ROOT_DIR, 'internal-roadmaps', 'manifests', 'srd-audit.json');
   await mkdir(path.dirname(outPath), { recursive: true });
   await writeFile(outPath, JSON.stringify(manifest, null, 2));
 
@@ -251,7 +272,10 @@ function extractSpellsFromDataset(fileContents, filePath) {
     id: spell.title?.trim() || 'UNKNOWN_SPELL',
     label: spell.title?.trim() || 'Unknown Spell',
     displayText: spell.title?.trim() || 'Unknown Spell',
-    groupHint: typeof spell.level === 'number' ? `Spell Level ${spell.level}` : 'Spell'
+    groupHint: typeof spell.level === 'number' ? `Spell Level ${spell.level}` : 'Spell',
+    metadata: {
+      srd: spell.srd === true
+    }
   }));
 }
 

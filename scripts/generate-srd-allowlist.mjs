@@ -19,7 +19,8 @@ const TYPES_WITH_SRD_FLAGS = new Set([
   'pact-boon',
   'eldritch-invocation',
   'metamagic',
-  'subrace'
+  'subrace',
+  'spell'
 ]);
 
 async function main() {

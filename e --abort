@@ -1,0 +1,79 @@
+[33me9194df[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m, [m[1;31morigin/main[m[33m, [m[1;31morigin/HEAD[m[33m)[m SRD 5.2 compliance overhaul and PHB2024 updates and feature enhancements
+[33m4257455[m loot, npc, shop, and initiative fixes and feature updates with general visual bug fixes
+[33m936716c[m update to 2.0.6 with srd scrubbing and license updates.
+[33m5faf699[m hotfix to make quick bundels in loot access correct loot tables and fix character creation hp calculation at level 5.
+[33m41bf344[m updated scripting to include goat counter
+[33ma715163[m aligning readme with current testing/egeneering realities. not a full version update.
+[33m99ac1de[m release: prepare 2.0.4 diagnostics + migrations
+[33mccb37cc[m updates to make character creation more friednly to knew users.
+[33mf6b6eaf[m Just no
+[33ma5bd244[m major updates to combat view in character sheets and simple advances toggle added to the setting of name, shop, and loot gens
+[33m1e9fe8e[m test implimentation complete
+[33m150d899[m refactor readme to be less verbose and other non code changes
+[33m26abae2[m splash page added
+[33m9e0bd51[m Add starting equipment step, bonus cantrip system, searchable feat UI, High Elf/Nature Domain cantrip selection, and level-1 subclass fixes
+[33m7d60596[m hot fix to fix dropdown on character sheet not updating like it should have
+[33m81a3e99[m updates to character creation and level up wizard
+[33m7bc789a[m Updates to character creation and further fixes to process of character creation beyond level 1.
+[33mc7fcc02[m update to character sheet so all subclasses are present and prepared spells/feats are now fully  supported in character creation and level up systems
+[33m5d393d8[m updated pdf creation for character creation to strech across multiple pages and correct inventory info now carries over to all exports
+[33m5e59da5[m fixes to chcaracter level up and creator above level 1
+[33m23150c1[m updated journal functionlaity and ui to add polish to existing systems
+[33m6c4e4dc[m battle map add to initiative and add import txt and md to journal
+[33m28f10da[m Journal: Added comprehensive export system (Word, PDF, TXT, Markdown) with single and bulk export options
+[33m14c4e44[m added journal search functionality
+[33me6ee333[m solved persistent measure flicker issue
+[33m2938d3f[m updated nav bar and battle map refactor to undo flicker which reapeared after testing
+[33m4917947[m Journal update and loot update with cursed objects
+[33m9b8e415[m update loot with cursed items and fixed bug on potion and scroll quick bundle options
+[33ma4f6ba8[m update readme
+[33m42f52ab[m Tavern Generator: Expand cultural tavern menus with 4-5x more food and drink options per type for greater variety
+[33m257fad7[m Character Manager: Add character sheet export supporting PDF, PNG, and Word formats with complete D&D 5e data including attacks, spells, death saves, currency, resources, and all character stats
+[33m5f0595e[m Battlemap: Layered canvas architecture with persistent measurements (drag, resize, rename) and live preview
+[33m0fd8951[m Total rewrite of the battlemap draw function. maybe temporary. We shall see.
+[33m3b11a1e[m Tavern Generator: Expand cultural tavern types with full immersion system (patrons, events, rumors, ambiance, staff)
+[33m202fd4a[m Add Combat/DM View toggle to Character Manager
+[33mf4b1d52[m Character Manager: Add racial features, scaling tables, and comprehensive help modal
+[33md0f9479[m "Tavern generator: time-of-day / tavern-type controls",       "Context-weighting (boostedPool), expanded pools, and metrics tooling"
+[33mdfc2c37[m fixed regex logic to make spaces not break action roll damage
+[33m220f4d7[m Implement full PHB subclass selection, spell learning, and multiclass spellcasting logic, plus character creation and spell slot fixes in the Character Manager.
+[33m60d75f3[m Character Manager: Level-Up System and character creation fix
+[33m2e1964b[m Battle Map: Canvas Flicker Revert
+[33m4629496[m implimented DM Reference Export System
+[33md96b5ff[m feat: Add NPC combat stats, tavern patrons, loot quick bundles, and battle map initiative integration (v1.9.2)
+[33mfc5f67c[m Add tavern events/rumors (190+ options), battle map unsaved changes indicator, and sync README version reference
+[33m84ebadc[m hotfix spacing on tex area boxes on Detailed Notes section of character page
+[33m448b854[m Add shop-to-character inventory integration, battle map measurement shapes (cone/circle), aura radius fix, and shop UI overhaul
+[33m5b4afc6[m integrating character page with token system in battle map page.
+[33m6876b30[m Add Tavern→NPC, NPC→Name, Shop negotiate, and Initiative bulk HP features. Expand Name Generator to 30+ races. Expand loot Minor Magic items from 8 to 47.
+[33mf1cbc2c[m Expand character creation wizard with 33+ races, 13 classes, 8-step guided workflow, automatic stat calculations, and comprehensive skill/background selection
+[33mf16a9a3[m Add mobile toast notifications and collapsible sections to character manager
+[33maa45661[m updated ReadMe
+[33m0baf57b[m upodates to shop, npc, and inventory system on character sheet
+[33m18423ed[m Enhance encounter builder with stat block previews and expand loot generator features
+[33mf1b5978[m Add token features (labels/HP/status/auras/vision) to battle map
+[33mb56c403[m fixed versioning to refelct real updates
+[33m18c8081[m Added more complete spell list from other books as well as class specific spell list
+[33m0d09170[m Add fog shape resize handles, manual save system, fix rendering layer order
+[33m3c6e2fa[m Fixed memory leak in character creation wizard event handlers
+[33me2b6103[m Integrated IndexDB storage system for image storage on the site across pages
+[33m85757bf[m initative roll integration on character page
+[33me2aa6b2[m fixed save throw area spacing issue
+[33m9f3b996[m update to bug where image wasn't saving
+[33m82b653a[m Explicit Advantage/Disadvantage Buttons for all skill and saving throw rolls Three-button layout with color coding (Green/White/Red) Mobile optimization for roll buttons with touch-friendly sizing
+[33m576cded[m fixed damage rolling and advantage disadvantage made easier to use
+[33mdd1bd20[m Implements player-facing features including dice rolling with advantage/disadvantage, interactive roll buttons, combat tracking, character creation wizard, and full mobile responsiveness for the Characters page.
+[33m79c2c20[m Full dice functionality added to characters page with dice history including on actions
+[33mb3a430e[m Wire full auto-calculation for ability mods, saves, skills, passives, and spell DC/attack Normalize spell storage, add tag/class-aware search, and custom spell builder Add spell slot and pact slot tracking with long-rest reset behavior Implement attacks list with modal editor and per-character persistence Enable “Send to Tracker” from Characters page using append-mode import session Backfill legacy character imports with new fields (slots, attacks, currency, exhaustion)
+[33m2d9d967[m update to character sheet for spell slot functionality and adding the ability to keep track of these chages in saved sheets
+[33me489928[m Implemented full auto-calculation for abilities, saves, skills, and passive perception across the character sheet.
+[33m602e9bf[m Character Manager Integration Added and fixing a bug on the nav bar and updated README
+[33m05dd70d[m Add Character Sheet Manager with send-to-tracker support and update initiative imports to append without clearing.
+[33m4368b37[m Added a Readme
+[33m20ce923[m Edited version console logic as well as adding a changelog
+[33m20bb764[m added console stamp to all pages for versioning
+[33m99e9fb3[m liscencing update
+[33m7988923[m Updating duplicate logic and character ID to be unique in all situations so that updates to initiative are not copied across all version of the character
+[33mb5b2508[m map, token, fog, scale saving to local storage, and pinch zoom on moblie fixed
+[33mf795b88[m Refactor initiative.js; extract rules/spells data and add load guards
+[33m4

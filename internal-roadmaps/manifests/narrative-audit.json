@@ -1,0 +1,2081 @@
+{
+  "version": 1,
+  "generatedAt": "2026-01-24T07:00:36.652Z",
+  "docs": [
+    {
+      "path": "docs/ARCHITECTURE.md",
+      "wordCount": 1180,
+      "headings": [
+        {
+          "level": 1,
+          "text": "Architecture Overview"
+        },
+        {
+          "level": 2,
+          "text": "System Architecture"
+        },
+        {
+          "level": 2,
+          "text": "Key Data Flows"
+        },
+        {
+          "level": 3,
+          "text": "1. Character Creation Flow"
+        },
+        {
+          "level": 3,
+          "text": "2. Combat Flow"
+        },
+        {
+          "level": 3,
+          "text": "3. Generator to Inventory Flow"
+        },
+        {
+          "level": 3,
+          "text": "4. Journal Flow"
+        },
+        {
+          "level": 2,
+          "text": "Cross-Tool Integration Points"
+        },
+        {
+          "level": 2,
+          "text": "Storage Schema Versions"
+        },
+        {
+          "level": 2,
+          "text": "Module Dependency Rules"
+        },
+        {
+          "level": 2,
+          "text": "Error Handling"
+        }
+      ],
+      "source": "internal-doc",
+      "srdCitation": null,
+      "nonSrdReason": null,
+      "status": "original",
+      "notes": "Architecture overview written in-house; contains only technical guidance."
+    },
+    {
+      "path": "docs/BATTLEMAP.md",
+      "wordCount": 1347,
+      "headings": [
+        {
+          "level": 1,
+          "text": "Battle Map Documentation"
+        },
+        {
+          "level": 2,
+          "text": "Overview"
+        },
+        {
+          "level": 2,
+          "text": "Table of Contents"
+        },
+        {
+          "level": 2,
+          "text": "Core Features"
+        },
+        {
+          "level": 3,
+          "text": "Battle Map MVP (v1.4.0)"
+        },
+        {
+          "level": 2,
+          "text": "Token System"
+        },
+        {
+          "level": 3,
+          "text": "Token Enhancement Features (v1.8.3)"
+        },
+        {
+          "level": 3,
+          "text": "Aura Radius Auto-Adjustment (v1.9.0)"
+        },
+        {
+          "level": 2,
+          "text": "Fog of War"
+        },
+        {
+          "level": 3,
+          "text": "Fog Shapes Enhancement (v1.8.0)"
+        },
+        {
+          "level": 2,
+          "text": "Measurement Tools"
+        },
+        {
+          "level": 3,
+          "text": "Quick Measurement (v1.4.0)"
+        },
+        {
+          "level": 3,
+          "text": "Multi-Shape Measurement Tools (v1.9.0)"
+        },
+        {
+          "level": 3,
+          "text": "Persistent Measurement System (v1.10.6)"
+        },
+        {
+          "level": 2,
+          "text": "Performance & Architecture"
+        },
+        {
+          "level": 3,
+          "text": "Layered Canvas Architecture (v1.10.6)"
+        },
+        {
+          "level": 3,
+          "text": "Hit Detection Algorithms (v1.10.6)"
+        },
+        {
+          "level": 2,
+          "text": "Session Management"
+        },
+        {
+          "level": 3,
+          "text": "Manual Save System (v1.8.0)"
+        },
+        {
+          "level": 2,
+          "text": "Help Documentation"
+        },
+        {
+          "level": 3,
+          "text": "Enhanced Help System (v1.10.6)"
+        },
+        {
+          "level": 2,
+          "text": "Version History Summary"
+        },
+        {
+          "level": 2,
+          "text": "Technical Details"
+        },
+        {
+          "level": 3,
+          "text": "File Structure"
+        },
+        {
+          "level": 3,
+          "text": "Canvas Rendering"
+        },
+        {
+          "level": 3,
+          "text": "Storage System"
+        },
+        {
+          "level": 3,
+          "text": "Interaction Modes"
+        },
+        {
+          "level": 2,
+          "text": "Use Case"
+        }
+      ],
+      "source": "internal-doc",
+      "srdCitation": null,
+      "nonSrdReason": null,
+      "status": "original",
+      "notes": "Battle map feature write-up describing proprietary UX and release history."
+    },
+    {
+      "path": "docs/CHARACTER_MANAGER.md",
+      "wordCount": 2225,
+      "headings": [
+        {
+          "level": 1,
+          "text": "Character Manager Documentation"
+        },
+        {
+          "level": 2,
+          "text": "Overview"
+        },
+        {
+          "level": 2,
+          "text": "Table of Contents"
+        },
+        {
+          "level": 2,
+          "text": "Character Creation"
+        },
+        {
+          "level": 3,
+          "text": "Character Creation Wizard (v1.8.7, v1.5.7)"
+        },
+        {
+          "level": 3,
+          "text": "Race Support"
+        },
+        {
+          "level": 3,
+          "text": "Racial Features (v1.10.3)"
+        },
+        {
+          "level": 2,
+          "text": "Leveling System"
+        },
+        {
+          "level": 3,
+          "text": "Level-Up Wizard (v1.10.0)"
+        },
+        {
+          "level": 3,
+          "text": "Ability Score Improvements (v1.10.0)"
+        },
+        {
+          "level": 3,
+          "text": "Feat System (v1.10.0)"
+        },
+        {
+          "level": 3,
+          "text": "Subclass System (v1.10.1)"
+        },
+        {
+          "level": 3,
+          "text": "Multiclassing System (v1.10.1)"
+        },
+        {
+          "level": 3,
+          "text": "Spell Learning System (v1.10.1)"
+        },
+        {
+          "level": 2,
+          "text": "Combat Features"
+        },
+        {
+          "level": 3,
+          "text": "Dice Roller System (v1.5.6)"
+        },
+        {
+          "level": 3,
+          "text": "Interactive Roll Buttons (v1.5.6, v1.6.1)"
+        },
+        {
+          "level": 3,
+          "text": "Combat Snapshot (v1.5.6)"
+        },
+        {
+          "level": 3,
+          "text": "Combat/DM View (v1.10.4)"
+        },
+        {
+          "level": 2,
+          "text": "Spell Management"
+        },
+        {
+          "level": 3,
+          "text": "Spell Slot Tracking (v1.5.5)"
+        },
+        {
+          "level": 3,
+          "text": "Spell List Management (v1.5.5)"
+        },
+        {
+          "level": 2,
+          "text": "Inventory System"
+        },
+        {
+          "level": 3,
+          "text": "Structured Inventory (v1.8.5)"
+        },
+        {
+          "level": 3,
+          "text": "Encumbrance Calculation (v1.8.5)"
+        },
+        {
+          "level": 2,
+          "text": "Export & Sharing"
+        },
+        {
+          "level": 3,
+          "text": "Character Sheet Export (v1.10.7)"
+        },
+        {
+          "level": 3,
+          "text": "Send to Initiative Tracker (v1.5.4)"
+        },
+        {
+          "level": 2,
+          "text": "Mobile Support"
+        },
+        {
+          "level": 3,
+          "text": "Mobile Optimization (v1.8.6, v1.5.7)"
+        },
+        {
+          "level": 3,
+          "text": "Collapsible Sections (v1.8.6)"
+        },
+        {
+          "level": 3,
+          "text": "Mobile Toast Notifications (v1.8.6)"
+        },
+        {
+          "level": 2,
+          "text": "Help System"
+        },
+        {
+          "level": 3,
+          "text": "Comprehensive Help Modal (v1.10.3)"
+        },
+        {
+          "level": 2,
+          "text": "Implementation Files"
+        },
+        {
+          "level": 3,
+          "text": "Core Files"
+        },
+        {
+          "level": 3,
+          "text": "Data Structure"
+        },
+        {
+          "level": 2,
+          "text": "Version History Summary"
+        },
+        {
+          "level": 2,
+          "text": "Use Cases"
+        },
+        {
+          "level": 3,
+          "text": "For DMs"
+        },
+        {
+          "level": 3,
+          "text": "For Players"
+        },
+        {
+          "level": 3,
+          "text": "For New Players"
+        },
+        {
+          "level": 2,
+          "text": "Why Use This Instead of another tool?"
+        },
+        {
+          "level": 2,
+          "text": "Use Cases"
+        },
+        {
+          "level": 3,
+          "text": "For DMs"
+        },
+        {
+          "level": 3,
+          "text": "For Players"
+        },
+        {
+          "level": 3,
+          "text": "For New Players"
+        },
+        {
+          "level": 2,
+          "text": "Why Use This Instead of another tool?"
+        }
+      ],
+      "source": "internal-doc",
+      "srdCitation": null,
+      "nonSrdReason": null,
+      "status": "original",
+      "notes": "Character manager documentation authored by team; no licensed SRD quotes."
+    },
+    {
+      "path": "docs/CODEBASE_OVERVIEW.md",
+      "wordCount": 2138,
+      "headings": [
+        {
+          "level": 1,
+          "text": "Codebase Overview"
+        },
+        {
+          "level": 2,
+          "text": "Table of Contents"
+        },
+        {
+          "level": 2,
+          "text": "Project Structure"
+        },
+        {
+          "level": 2,
+          "text": "Page-Level Scripts"
+        },
+        {
+          "level": 3,
+          "text": "site.js"
+        },
+        {
+          "level": 3,
+          "text": "initiative.js"
+        },
+        {
+          "level": 3,
+          "text": "character.js"
+        },
+        {
+          "level": 3,
+          "text": "character-creation-wizard.js"
+        },
+        {
+          "level": 3,
+          "text": "level-up-system.js"
+        },
+        {
+          "level": 3,
+          "text": "multiclass-ui.js"
+        },
+        {
+          "level": 3,
+          "text": "character-sheet-export.js"
+        },
+        {
+          "level": 3,
+          "text": "journal-export.js"
+        },
+        {
+          "level": 3,
+          "text": "indexed-db-storage.js"
+        },
+        {
+          "level": 2,
+          "text": "Core Modules"
+        },
+        {
+          "level": 3,
+          "text": "dice.js"
+        },
+        {
+          "level": 3,
+          "text": "storage.js"
+        },
+        {
+          "level": 3,
+          "text": "validation.js"
+        },
+        {
+          "level": 3,
+          "text": "character-calculations.js"
+        },
+        {
+          "level": 3,
+          "text": "initiative-calculations.js"
+        },
+        {
+          "level": 3,
+          "text": "level-up-calculations.js"
+        },
+        {
+          "level": 3,
+          "text": "spell-utils.js"
+        },
+        {
+          "level": 3,
+          "text": "generators.js"
+        },
+        {
+          "level": 3,
+          "text": "export-utils.js"
+        },
+        {
+          "level": 2,
+          "text": "Data Files"
+        },
+        {
+          "level": 3,
+          "text": "spells-data.js"
+        },
+        {
+          "level": 3,
+          "text": "rules-data.js"
+        },
+        {
+          "level": 3,
+          "text": "level-up-data.js"
+        },
+        {
+          "level": 2,
+          "text": "Utility Files"
+        },
+        {
+          "level": 3,
+          "text": "Embedded Scripts (in HTML)"
+        },
+        {
+          "level": 2,
+          "text": "HTML Pages"
+        },
+        {
+          "level": 2,
+          "text": "External Dependencies"
+        },
+        {
+          "level": 3,
+          "text": "CDN Libraries"
+        },
+        {
+          "level": 3,
+          "text": "NPM Dev Dependencies"
+        },
+        {
+          "level": 2,
+          "text": "Dependency Graph"
+        },
+        {
+          "level": 2,
+          "text": "Revision History"
+        }
+      ],
+      "source": "internal-doc",
+      "srdCitation": null,
+      "nonSrdReason": null,
+      "status": "original",
+      "notes": "Codebase overview is wholly original engineering documentation."
+    },
+    {
+      "path": "docs/CODING_STANDARDS.md",
+      "wordCount": 1391,
+      "headings": [
+        {
+          "level": 1,
+          "text": "Coding Standards"
+        },
+        {
+          "level": 2,
+          "text": "Table of Contents"
+        },
+        {
+          "level": 2,
+          "text": "File Organization"
+        },
+        {
+          "level": 3,
+          "text": "File Naming"
+        },
+        {
+          "level": 3,
+          "text": "Directory Structure"
+        },
+        {
+          "level": 3,
+          "text": "Module Types"
+        },
+        {
+          "level": 2,
+          "text": "Naming Conventions"
+        },
+        {
+          "level": 3,
+          "text": "Functions"
+        },
+        {
+          "level": 3,
+          "text": "Variables"
+        },
+        {
+          "level": 3,
+          "text": "Constants"
+        },
+        {
+          "level": 3,
+          "text": "Parameters"
+        },
+        {
+          "level": 2,
+          "text": "Code Style"
+        },
+        {
+          "level": 3,
+          "text": "Variable Declarations"
+        },
+        {
+          "level": 3,
+          "text": "Array Methods vs Loops"
+        },
+        {
+          "level": 3,
+          "text": "Guard Clauses"
+        },
+        {
+          "level": 3,
+          "text": "Ternary Operator"
+        },
+        {
+          "level": 3,
+          "text": "String Handling"
+        },
+        {
+          "level": 2,
+          "text": "Comments & Documentation"
+        },
+        {
+          "level": 3,
+          "text": "JSDoc for Exported Functions"
+        },
+        {
+          "level": 3,
+          "text": "File Headers"
+        },
+        {
+          "level": 3,
+          "text": "Inline Comments"
+        },
+        {
+          "level": 3,
+          "text": "Section Comments"
+        },
+        {
+          "level": 2,
+          "text": "Error Handling"
+        },
+        {
+          "level": 3,
+          "text": "Guard Returns"
+        },
+        {
+          "level": 3,
+          "text": "Try/Catch"
+        },
+        {
+          "level": 3,
+          "text": "User-Facing Errors"
+        },
+        {
+          "level": 2,
+          "text": "Testing Patterns"
+        },
+        {
+          "level": 3,
+          "text": "Dependency Injection for Testability"
+        },
+        {
+          "level": 3,
+          "text": "Test File Location"
+        },
+        {
+          "level": 3,
+          "text": "Test Naming"
+        },
+        {
+          "level": 2,
+          "text": "Logging & Console Usage"
+        },
+        {
+          "level": 3,
+          "text": "Allowed Console Usage"
+        },
+        {
+          "level": 3,
+          "text": "Debug-Only Logging"
+        },
+        {
+          "level": 3,
+          "text": "Build Information"
+        },
+        {
+          "level": 2,
+          "text": "Summary Checklist"
+        },
+        {
+          "level": 2,
+          "text": "Revision History"
+        }
+      ],
+      "source": "internal-doc",
+      "srdCitation": null,
+      "nonSrdReason": null,
+      "status": "original",
+      "notes": "Coding standards are internal guidance only."
+    },
+    {
+      "path": "docs/DATA_SCHEMAS.md",
+      "wordCount": 1702,
+      "headings": [
+        {
+          "level": 1,
+          "text": "Data Schemas"
+        },
+        {
+          "level": 2,
+          "text": "Table of Contents"
+        },
+        {
+          "level": 2,
+          "text": "Overview"
+        },
+        {
+          "level": 3,
+          "text": "Schema Versioning"
+        },
+        {
+          "level": 3,
+          "text": "Current Versions"
+        },
+        {
+          "level": 2,
+          "text": "Character Schema"
+        },
+        {
+          "level": 3,
+          "text": "Core Fields"
+        },
+        {
+          "level": 3,
+          "text": "Character Info"
+        },
+        {
+          "level": 3,
+          "text": "Classes Array (v2+)"
+        },
+        {
+          "level": 3,
+          "text": "Combat Stats"
+        },
+        {
+          "level": 3,
+          "text": "Ability Scores"
+        },
+        {
+          "level": 3,
+          "text": "Skills & Saves"
+        },
+        {
+          "level": 3,
+          "text": "Spellcasting"
+        },
+        {
+          "level": 3,
+          "text": "Resources & Conditions"
+        },
+        {
+          "level": 3,
+          "text": "Inventory & Currency"
+        },
+        {
+          "level": 3,
+          "text": "Notes & Features"
+        },
+        {
+          "level": 2,
+          "text": "Battlemap Schema"
+        },
+        {
+          "level": 3,
+          "text": "Core Fields"
+        },
+        {
+          "level": 3,
+          "text": "Grid Settings"
+        },
+        {
+          "level": 3,
+          "text": "View State"
+        },
+        {
+          "level": 3,
+          "text": "Tokens"
+        },
+        {
+          "level": 3,
+          "text": "Measurements & Fog"
+        },
+        {
+          "level": 2,
+          "text": "Journal Schema"
+        },
+        {
+          "level": 3,
+          "text": "Core Fields"
+        },
+        {
+          "level": 3,
+          "text": "Optional Fields"
+        },
+        {
+          "level": 2,
+          "text": "Migration Policy"
+        },
+        {
+          "level": 3,
+          "text": "Backwards Compatibility"
+        },
+        {
+          "level": 3,
+          "text": "When Migrations Run"
+        },
+        {
+          "level": 3,
+          "text": "Adding New Migrations"
+        },
+        {
+          "level": 2,
+          "text": "Schema History"
+        },
+        {
+          "level": 3,
+          "text": "Character Schema"
+        },
+        {
+          "level": 3,
+          "text": "Battlemap Schema"
+        },
+        {
+          "level": 3,
+          "text": "Journal Schema"
+        },
+        {
+          "level": 2,
+          "text": "Usage Examples"
+        },
+        {
+          "level": 3,
+          "text": "Migrating Character Data"
+        },
+        {
+          "level": 3,
+          "text": "Checking If Migration Is Needed"
+        }
+      ],
+      "source": "internal-doc",
+      "srdCitation": null,
+      "nonSrdReason": null,
+      "status": "original",
+      "notes": "Schema documentation describes proprietary data formats; no SRD transcript."
+    },
+    {
+      "path": "docs/ENCOUNTER_BUILDER.md",
+      "wordCount": 421,
+      "headings": [
+        {
+          "level": 1,
+          "text": "Encounter Builder Documentation"
+        },
+        {
+          "level": 2,
+          "text": "Features"
+        },
+        {
+          "level": 3,
+          "text": "Monster Search"
+        },
+        {
+          "level": 3,
+          "text": "Custom Monster Creation"
+        },
+        {
+          "level": 3,
+          "text": "Encounter Roster"
+        },
+        {
+          "level": 3,
+          "text": "Encounter Difficulty"
+        },
+        {
+          "level": 3,
+          "text": "Stat Block Export"
+        },
+        {
+          "level": 3,
+          "text": "Direct Integration"
+        },
+        {
+          "level": 2,
+          "text": "Use Case"
+        }
+      ],
+      "source": "internal-doc",
+      "srdCitation": null,
+      "nonSrdReason": null,
+      "status": "original",
+      "notes": "Encounter builder description written by team; purely descriptive."
+    },
+    {
+      "path": "docs/ENGINEERING_ROADMAP.md",
+      "wordCount": 2590,
+      "headings": [
+        {
+          "level": 1,
+          "text": "Engineering Improvements Roadmap"
+        },
+        {
+          "level": 2,
+          "text": "Table of Contents"
+        },
+        {
+          "level": 2,
+          "text": "Overview"
+        },
+        {
+          "level": 3,
+          "text": "Current State"
+        },
+        {
+          "level": 3,
+          "text": "Target State"
+        },
+        {
+          "level": 2,
+          "text": "Phase 1: Codebase Inventory & Standards"
+        },
+        {
+          "level": 3,
+          "text": "1.1 File & Responsibility Inventory"
+        },
+        {
+          "level": 3,
+          "text": "1.2 Coding Standards & Conventions"
+        },
+        {
+          "level": 3,
+          "text": "1.3 Linting & Formatting"
+        },
+        {
+          "level": 2,
+          "text": "Phase 2: Module Architecture & Boundaries"
+        },
+        {
+          "level": 3,
+          "text": "2.1 Module Categorization"
+        },
+        {
+          "level": 3,
+          "text": "2.2 Enforce One-Way Dependencies"
+        },
+        {
+          "level": 3,
+          "text": "2.3 Extract Remaining Logic Pockets"
+        },
+        {
+          "level": 2,
+          "text": "Phase 3: Type Hygiene with JSDoc"
+        },
+        {
+          "level": 3,
+          "text": "3.1 Core Data Types"
+        },
+        {
+          "level": 3,
+          "text": "3.2 Function Annotations"
+        },
+        {
+          "level": 3,
+          "text": "3.3 Editor & Tooling Support"
+        },
+        {
+          "level": 2,
+          "text": "Phase 4: Build & Asset Pipeline (Optional, Lightweight)"
+        },
+        {
+          "level": 3,
+          "text": "4.1 Select Minimal Bundler"
+        },
+        {
+          "level": 3,
+          "text": "4.2 Script Loading Cleanup"
+        },
+        {
+          "level": 3,
+          "text": "4.3 Development Workflow"
+        },
+        {
+          "level": 2,
+          "text": "Phase 5: Performance & Load Optimization"
+        },
+        {
+          "level": 3,
+          "text": "5.1 Performance Profiling"
+        },
+        {
+          "level": 3,
+          "text": "5.2 Static Data Optimizations"
+        },
+        {
+          "level": 3,
+          "text": "5.3 Rendering Optimizations (Battle Map & Character Sheet)"
+        },
+        {
+          "level": 3,
+          "text": "5.4 Asset Optimizations"
+        },
+        {
+          "level": 2,
+          "text": "Phase 6: Error Handling & Diagnostic Tooling"
+        },
+        {
+          "level": 3,
+          "text": "6.1 Error Boundary Layer (Global)"
+        },
+        {
+          "level": 3,
+          "text": "6.2 Contextual Error Messages"
+        },
+        {
+          "level": 3,
+          "text": "6.3 Dev Diagnostics Panel"
+        },
+        {
+          "level": 2,
+          "text": "Phase 7: Data & Schema Stability"
+        },
+        {
+          "level": 3,
+          "text": "7.1 Schema Versioning"
+        },
+        {
+          "level": 3,
+          "text": "7.2 Migration Helpers"
+        },
+        {
+          "level": 3,
+          "text": "7.3 Backwards Compatibility Policy"
+        },
+        {
+          "level": 2,
+          "text": "Phase 8: Developer Experience & Internal Docs"
+        },
+        {
+          "level": 3,
+          "text": "8.1 High-Level Architecture Diagram"
+        },
+        {
+          "level": 3,
+          "text": "8.2 “How to Add a Feature” Guides"
+        },
+        {
+          "level": 3,
+          "text": "8.3 Maintenance Checklists"
+        },
+        {
+          "level": 2,
+          "text": "Progress Tracking"
+        },
+        {
+          "level": 2,
+          "text": "Revision History"
+        }
+      ],
+      "source": "internal-doc",
+      "srdCitation": null,
+      "nonSrdReason": null,
+      "status": "original",
+      "notes": "Engineering roadmap is internal planning content."
+    },
+    {
+      "path": "docs/GENERATORS.md",
+      "wordCount": 2779,
+      "headings": [
+        {
+          "level": 1,
+          "text": "Generators Documentation"
+        },
+        {
+          "level": 2,
+          "text": "Overview"
+        },
+        {
+          "level": 2,
+          "text": "Table of Contents"
+        },
+        {
+          "level": 2,
+          "text": "Loot Generator"
+        },
+        {
+          "level": 3,
+          "text": "Cursed Items System (v1.10.9)"
+        },
+        {
+          "level": 3,
+          "text": "Quick Bundle Presets (v1.9.2)"
+        },
+        {
+          "level": 3,
+          "text": "Monster-Specific Loot Templates (v1.8.4)"
+        },
+        {
+          "level": 3,
+          "text": "Loot Categories (v1.8.8, v1.8.4)"
+        },
+        {
+          "level": 3,
+          "text": "Loot Modes (v1.8.4)"
+        },
+        {
+          "level": 3,
+          "text": "Custom Systems (v1.8.4)"
+        },
+        {
+          "level": 2,
+          "text": "Tavern Generator"
+        },
+        {
+          "level": 3,
+          "text": "Cultural Immersion System (v1.10.5)"
+        },
+        {
+          "level": 3,
+          "text": "Expanded Cultural Menus (v1.10.8)"
+        },
+        {
+          "level": 3,
+          "text": "Context & Metrics System (v1.10.2)"
+        },
+        {
+          "level": 3,
+          "text": "Patron System (v1.9.2)"
+        },
+        {
+          "level": 2,
+          "text": "NPC Generator"
+        },
+        {
+          "level": 3,
+          "text": "Combat Stat Block System (v1.9.2)"
+        },
+        {
+          "level": 2,
+          "text": "Name Generator"
+        },
+        {
+          "level": 3,
+          "text": "Expanded Race Support (v1.8.8)"
+        },
+        {
+          "level": 2,
+          "text": "Shop Generator"
+        },
+        {
+          "level": 3,
+          "text": "Negotiate Price Mechanic (v1.8.8)"
+        },
+        {
+          "level": 2,
+          "text": "Cross-Generator Integration"
+        },
+        {
+          "level": 3,
+          "text": "NPC ↔ Name Generator (v1.8.8)"
+        },
+        {
+          "level": 3,
+          "text": "Tavern → NPC Generator (v1.8.8)"
+        },
+        {
+          "level": 2,
+          "text": "Version History Summary"
+        },
+        {
+          "level": 2,
+          "text": "Use Cases"
+        },
+        {
+          "level": 3,
+          "text": "Shop Generator"
+        }
+      ],
+      "source": "internal-doc",
+      "srdCitation": null,
+      "nonSrdReason": null,
+      "status": "original",
+      "notes": "Generator documentation summarizes proprietary systems and flavor text prompts."
+    },
+    {
+      "path": "docs/INITIATIVE_TRACKER.md",
+      "wordCount": 185,
+      "headings": [
+        {
+          "level": 1,
+          "text": "Initiative Tracker Documentation"
+        },
+        {
+          "level": 2,
+          "text": "Features"
+        },
+        {
+          "level": 2,
+          "text": "Use Case"
+        }
+      ],
+      "source": "internal-doc",
+      "srdCitation": null,
+      "nonSrdReason": null,
+      "status": "original",
+      "notes": "Initiative tracker notes are internally authored."
+    },
+    {
+      "path": "docs/INTEGRATION.md",
+      "wordCount": 1340,
+      "headings": [
+        {
+          "level": 1,
+          "text": "Cross-Tool Integration Protocol"
+        },
+        {
+          "level": 2,
+          "text": "Table of Contents"
+        },
+        {
+          "level": 2,
+          "text": "Overview"
+        },
+        {
+          "level": 3,
+          "text": "Common Conventions"
+        },
+        {
+          "level": 2,
+          "text": "Integration Patterns"
+        },
+        {
+          "level": 3,
+          "text": "Pattern 1: localStorage + Navigation"
+        },
+        {
+          "level": 3,
+          "text": "Pattern 2: Direct Storage Modification"
+        },
+        {
+          "level": 3,
+          "text": "Pattern 3: URL Parameters + localStorage"
+        },
+        {
+          "level": 2,
+          "text": "Character Integrations"
+        },
+        {
+          "level": 3,
+          "text": "Character → Initiative Tracker"
+        },
+        {
+          "level": 3,
+          "text": "Character → Battle Map (Token Generation)"
+        },
+        {
+          "level": 3,
+          "text": "Shop → Character (Inventory)"
+        },
+        {
+          "level": 2,
+          "text": "Generator Integrations"
+        },
+        {
+          "level": 3,
+          "text": "NPC → Name Generator"
+        },
+        {
+          "level": 3,
+          "text": "Tavern → NPC Generator"
+        },
+        {
+          "level": 2,
+          "text": "Battle Map Integrations"
+        },
+        {
+          "level": 3,
+          "text": "Encounter Builder → Initiative Tracker"
+        },
+        {
+          "level": 3,
+          "text": "Battle Map → Initiative Tracker"
+        },
+        {
+          "level": 2,
+          "text": "Storage Keys Reference"
+        },
+        {
+          "level": 3,
+          "text": "Cross-Tool Integration Keys"
+        },
+        {
+          "level": 3,
+          "text": "Shared Storage Keys"
+        },
+        {
+          "level": 3,
+          "text": "IndexedDB Stores"
+        },
+        {
+          "level": 2,
+          "text": "URL Parameters"
+        },
+        {
+          "level": 3,
+          "text": "Common Parameters"
+        },
+        {
+          "level": 3,
+          "text": "Hash Fragments"
+        },
+        {
+          "level": 2,
+          "text": "Integration Checklist"
+        },
+        {
+          "level": 2,
+          "text": "Version History"
+        }
+      ],
+      "source": "internal-doc",
+      "srdCitation": null,
+      "nonSrdReason": null,
+      "status": "original",
+      "notes": "Integration protocol guide is custom tooling documentation."
+    },
+    {
+      "path": "docs/JOURNAL.md",
+      "wordCount": 550,
+      "headings": [
+        {
+          "level": 1,
+          "text": "Journal Documentation"
+        },
+        {
+          "level": 2,
+          "text": "Features"
+        },
+        {
+          "level": 2,
+          "text": "Use Case"
+        }
+      ],
+      "source": "internal-doc",
+      "srdCitation": null,
+      "nonSrdReason": null,
+      "status": "original",
+      "notes": "Journal feature overview is internally written guidance."
+    },
+    {
+      "path": "docs/LEVEL_UP_SYSTEM.md",
+      "wordCount": 1210,
+      "headings": [
+        {
+          "level": 1,
+          "text": "D&D 5e Level-Up System"
+        },
+        {
+          "level": 2,
+          "text": "Overview"
+        },
+        {
+          "level": 2,
+          "text": "Phase 1: Core Implementation (Current)"
+        },
+        {
+          "level": 3,
+          "text": "Included Classes"
+        },
+        {
+          "level": 3,
+          "text": "What Works"
+        },
+        {
+          "level": 3,
+          "text": "Feats Included"
+        },
+        {
+          "level": 2,
+          "text": "How to Use"
+        },
+        {
+          "level": 3,
+          "text": "For Players"
+        },
+        {
+          "level": 3,
+          "text": "For DMs"
+        },
+        {
+          "level": 2,
+          "text": "File Structure"
+        },
+        {
+          "level": 2,
+          "text": "Technical Details"
+        },
+        {
+          "level": 3,
+          "text": "Data Structure"
+        },
+        {
+          "level": 3,
+          "text": "Integration Points"
+        },
+        {
+          "level": 2,
+          "text": "Future Enhancements (Phase 2+)"
+        },
+        {
+          "level": 3,
+          "text": "Planned Features"
+        },
+        {
+          "level": 3,
+          "text": "Additional Feat Sources"
+        },
+        {
+          "level": 2,
+          "text": "Implementation Notes"
+        },
+        {
+          "level": 3,
+          "text": "Class Feature Display"
+        },
+        {
+          "level": 3,
+          "text": "Spell Slot Philosophy"
+        },
+        {
+          "level": 3,
+          "text": "Validation"
+        },
+        {
+          "level": 2,
+          "text": "Troubleshooting"
+        },
+        {
+          "level": 3,
+          "text": "\"Unable to determine character class\""
+        },
+        {
+          "level": 3,
+          "text": "\"Level Up button doesn't appear\""
+        },
+        {
+          "level": 3,
+          "text": "Changes not saving"
+        },
+        {
+          "level": 2,
+          "text": "Example Workflows"
+        },
+        {
+          "level": 3,
+          "text": "Leveling a Wizard 4 → 5"
+        },
+        {
+          "level": 3,
+          "text": "Leveling a Fighter 3 → 4"
+        },
+        {
+          "level": 3,
+          "text": "Taking a Feat (Rogue 3 → 4)"
+        },
+        {
+          "level": 2,
+          "text": "Developer Guide"
+        },
+        {
+          "level": 3,
+          "text": "Adding a New Feat"
+        },
+        {
+          "level": 3,
+          "text": "Adding a New Class"
+        },
+        {
+          "level": 3,
+          "text": "Testing"
+        },
+        {
+          "level": 2,
+          "text": "Credits"
+        },
+        {
+          "level": 2,
+          "text": "Support"
+        }
+      ],
+      "source": "internal-doc",
+      "srdCitation": null,
+      "nonSrdReason": "Document references full 5e class/feat coverage, including non-SRD sources. Needs scrub before public release.",
+      "status": "non-srd",
+      "notes": "Contains descriptive notes about classes/feats beyond SRD scope."
+    },
+    {
+      "path": "docs/RELEASE_CHECKLIST.md",
+      "wordCount": 770,
+      "headings": [
+        {
+          "level": 1,
+          "text": "Release & Maintenance Checklists"
+        },
+        {
+          "level": 2,
+          "text": "Release Checklist"
+        },
+        {
+          "level": 3,
+          "text": "Pre-Release"
+        },
+        {
+          "level": 3,
+          "text": "Functional Testing"
+        },
+        {
+          "level": 3,
+          "text": "Cross-Browser Testing"
+        },
+        {
+          "level": 3,
+          "text": "Post-Release"
+        },
+        {
+          "level": 2,
+          "text": "Refactor Checklist"
+        },
+        {
+          "level": 3,
+          "text": "Before Refactoring"
+        },
+        {
+          "level": 3,
+          "text": "During Refactoring"
+        },
+        {
+          "level": 3,
+          "text": "Data Changes"
+        },
+        {
+          "level": 3,
+          "text": "Module Changes"
+        },
+        {
+          "level": 3,
+          "text": "Performance-Sensitive Changes"
+        },
+        {
+          "level": 3,
+          "text": "After Refactoring"
+        },
+        {
+          "level": 2,
+          "text": "Quick Reference: Common Tasks"
+        },
+        {
+          "level": 3,
+          "text": "Bump Version"
+        },
+        {
+          "level": 3,
+          "text": "Add Migration"
+        },
+        {
+          "level": 3,
+          "text": "Add New Module"
+        }
+      ],
+      "source": "internal-doc",
+      "srdCitation": null,
+      "nonSrdReason": null,
+      "status": "original",
+      "notes": "Release checklist is internal process documentation."
+    },
+    {
+      "path": "docs/SPELLS.md",
+      "wordCount": 743,
+      "headings": [
+        {
+          "level": 1,
+          "text": "Spell Database Documentation"
+        },
+        {
+          "level": 2,
+          "text": "Overview"
+        },
+        {
+          "level": 2,
+          "text": "Version History"
+        },
+        {
+          "level": 3,
+          "text": "1.8.1 - Complete D&D 5e Spell Database Expansion (2025-12-05)"
+        },
+        {
+          "level": 4,
+          "text": "Added Spell Collections"
+        },
+        {
+          "level": 2,
+          "text": "Database Statistics"
+        },
+        {
+          "level": 3,
+          "text": "By Source Book"
+        },
+        {
+          "level": 3,
+          "text": "By Spell Level"
+        },
+        {
+          "level": 3,
+          "text": "By Class (Primary Coverage)"
+        },
+        {
+          "level": 2,
+          "text": "Complete Class Spell Coverage"
+        },
+        {
+          "level": 3,
+          "text": "Paladin"
+        },
+        {
+          "level": 3,
+          "text": "Ranger"
+        },
+        {
+          "level": 3,
+          "text": "Warlock"
+        },
+        {
+          "level": 3,
+          "text": "Artificer"
+        },
+        {
+          "level": 3,
+          "text": "Druid / Wizard / Sorcerer / Cleric"
+        },
+        {
+          "level": 2,
+          "text": "Modern D&D Content"
+        },
+        {
+          "level": 2,
+          "text": "Implementation Details"
+        },
+        {
+          "level": 2,
+          "text": "Integration with Character Manager"
+        }
+      ],
+      "source": "internal-doc",
+      "srdCitation": null,
+      "nonSrdReason": "Spell database overview references non-SRD spell lists and modern supplements.",
+      "status": "non-srd",
+      "notes": "Needs parity review to trim non-SRD references before SRD-only publication."
+    },
+    {
+      "path": "docs/TESTING_ROADMAP.md",
+      "wordCount": 3766,
+      "headings": [
+        {
+          "level": 1,
+          "text": "Testing Implementation Roadmap"
+        },
+        {
+          "level": 2,
+          "text": "Table of Contents"
+        },
+        {
+          "level": 2,
+          "text": "Overview"
+        },
+        {
+          "level": 3,
+          "text": "Current State"
+        },
+        {
+          "level": 3,
+          "text": "Target State"
+        },
+        {
+          "level": 3,
+          "text": "Technology Stack"
+        },
+        {
+          "level": 2,
+          "text": "Phase 1: Foundation Setup ✅ COMPLETE"
+        },
+        {
+          "level": 3,
+          "text": "1.1 Initialize npm Project"
+        },
+        {
+          "level": 3,
+          "text": "1.2 Install Testing Dependencies"
+        },
+        {
+          "level": 3,
+          "text": "1.3 Configure Vitest"
+        },
+        {
+          "level": 3,
+          "text": "1.4 Create Test Directory Structure"
+        },
+        {
+          "level": 3,
+          "text": "1.5 Create Test Helpers"
+        },
+        {
+          "level": 3,
+          "text": "1.6 Verify Setup"
+        },
+        {
+          "level": 2,
+          "text": "Phase 2: Code Refactoring for Testability ✅ COMPLETE"
+        },
+        {
+          "level": 3,
+          "text": "2.1 Create Module Export Layer"
+        },
+        {
+          "level": 3,
+          "text": "2.2 Extract Character Calculation Logic"
+        },
+        {
+          "level": 3,
+          "text": "2.3 Extract Initiative Logic"
+        },
+        {
+          "level": 3,
+          "text": "2.4 Extract Level-Up Logic"
+        },
+        {
+          "level": 3,
+          "text": "2.5 Extract Dice Logic"
+        },
+        {
+          "level": 3,
+          "text": "2.6 Extract Spell Logic"
+        },
+        {
+          "level": 3,
+          "text": "2.7 Extract Storage Logic"
+        },
+        {
+          "level": 2,
+          "text": "Phase 3: Unit Tests - Core Systems ✅ COMPLETE"
+        },
+        {
+          "level": 3,
+          "text": "3.1 Character Calculations (`tests/unit/character-calculations.test.js`) - 36 tests"
+        },
+        {
+          "level": 3,
+          "text": "3.2 Initiative Calculations (`tests/unit/initiative-calculations.test.js`) - 30 tests"
+        },
+        {
+          "level": 3,
+          "text": "3.3 Level-Up Calculations (`tests/unit/level-up-calculations.test.js`) - 28 tests"
+        },
+        {
+          "level": 3,
+          "text": "3.4 Dice Module (`tests/unit/dice.test.js`) - 35 tests"
+        },
+        {
+          "level": 3,
+          "text": "3.5 Spell Utilities (`tests/unit/spell-utils.test.js`) - 42 tests"
+        },
+        {
+          "level": 2,
+          "text": "Phase 4: Unit Tests - Secondary Systems ✅ COMPLETE"
+        },
+        {
+          "level": 3,
+          "text": "4.1 Storage Module (`tests/unit/storage.test.js`) - 37 tests"
+        },
+        {
+          "level": 3,
+          "text": "4.2 Data Validation (`tests/unit/validation.test.js`) - 50 tests"
+        },
+        {
+          "level": 3,
+          "text": "4.3 Generator Logic (`tests/unit/generators.test.js`) - 42 tests"
+        },
+        {
+          "level": 3,
+          "text": "4.4 Export Utilities (`tests/unit/export-utils.test.js`) - 39 tests"
+        },
+        {
+          "level": 2,
+          "text": "Phase 5: Integration Tests ✅ COMPLETE"
+        },
+        {
+          "level": 3,
+          "text": "5.1 Character Creation Flow (`tests/integration/character-creation.test.js`) - 37 tests"
+        },
+        {
+          "level": 3,
+          "text": "5.2 Level-Up Flow (`tests/integration/level-up.test.js`) - 41 tests"
+        },
+        {
+          "level": 3,
+          "text": "5.3 Combat Flow (`tests/integration/combat.test.js`) - 46 tests"
+        },
+        {
+          "level": 3,
+          "text": "5.4 Cross-Tool Integration (`tests/integration/cross-tool.test.js`) - 31 tests"
+        },
+        {
+          "level": 3,
+          "text": "5.5 Storage Integration (`tests/integration/storage.test.js`) - 47 tests"
+        },
+        {
+          "level": 2,
+          "text": "Phase 6: End-to-End Tests ✅ COMPLETE"
+        },
+        {
+          "level": 3,
+          "text": "6.1 Setup Playwright"
+        },
+        {
+          "level": 3,
+          "text": "6.2 Character Wizard E2E (`tests/e2e/character-wizard.spec.js`) - 5 tests"
+        },
+        {
+          "level": 3,
+          "text": "6.3 Initiative Tracker E2E (`tests/e2e/initiative-tracker.spec.js`) - 28 tests"
+        },
+        {
+          "level": 3,
+          "text": "6.4 Character Sheet E2E (`tests/e2e/character-sheet.spec.js`) - 17 tests"
+        },
+        {
+          "level": 3,
+          "text": "6.5 Navigation E2E (`tests/e2e/navigation.spec.js`) - 22 tests"
+        },
+        {
+          "level": 2,
+          "text": "Phase 7: CI/CD & Automation ✅ COMPLETE"
+        },
+        {
+          "level": 3,
+          "text": "7.1 GitHub Actions Setup"
+        },
+        {
+          "level": 3,
+          "text": "7.2 Pre-Commit Hooks"
+        },
+        {
+          "level": 3,
+          "text": "7.3 Coverage Requirements"
+        },
+        {
+          "level": 3,
+          "text": "7.4 Test Documentation"
+        },
+        {
+          "level": 2,
+          "text": "Testing Cheat Sheet"
+        },
+        {
+          "level": 3,
+          "text": "Running Tests"
+        },
+        {
+          "level": 1,
+          "text": "Run all unit/integration tests in watch mode"
+        },
+        {
+          "level": 1,
+          "text": "Run tests once"
+        },
+        {
+          "level": 1,
+          "text": "Run with coverage"
+        },
+        {
+          "level": 1,
+          "text": "Run specific test file"
+        },
+        {
+          "level": 1,
+          "text": "Run tests matching pattern"
+        },
+        {
+          "level": 1,
+          "text": "Run E2E tests"
+        },
+        {
+          "level": 1,
+          "text": "Run E2E tests with UI"
+        },
+        {
+          "level": 1,
+          "text": "Run E2E tests in headed browser"
+        },
+        {
+          "level": 3,
+          "text": "Writing a Unit Test"
+        },
+        {
+          "level": 3,
+          "text": "Mocking localStorage"
+        },
+        {
+          "level": 3,
+          "text": "Sample Test Data"
+        },
+        {
+          "level": 2,
+          "text": "Lessons Learned"
+        },
+        {
+          "level": 3,
+          "text": "Phase 4: Unit Test Adjustments"
+        },
+        {
+          "level": 3,
+          "text": "Phase 5: Integration Test Adjustments"
+        },
+        {
+          "level": 3,
+          "text": "Phase 6: E2E Test Adjustments"
+        },
+        {
+          "level": 3,
+          "text": "Recommendations for Future Development"
+        },
+        {
+          "level": 2,
+          "text": "Progress Tracking"
+        },
+        {
+          "level": 3,
+          "text": "Test Summary"
+        },
+        {
+          "level": 3,
+          "text": "Coverage Summary"
+        },
+        {
+          "level": 3,
+          "text": "CI/CD Summary"
+        },
+        {
+          "level": 2,
+          "text": "Future Work: Lighthouse Improvements"
+        },
+        {
+          "level": 3,
+          "text": "Priority Improvements"
+        },
+        {
+          "level": 3,
+          "text": "Full Lighthouse Scores (January 2026)"
+        },
+        {
+          "level": 3,
+          "text": "Suggested Actions"
+        },
+        {
+          "level": 2,
+          "text": "Revision History"
+        }
+      ],
+      "source": "internal-doc",
+      "srdCitation": null,
+      "nonSrdReason": null,
+      "status": "original",
+      "notes": "Testing roadmap is original engineering process content."
+    },
+    {
+      "path": "docs/licensing/README.md",
+      "wordCount": 222,
+      "headings": [
+        {
+          "level": 1,
+          "text": "Licensing Overview"
+        },
+        {
+          "level": 2,
+          "text": "Code vs. SRD Content"
+        },
+        {
+          "level": 2,
+          "text": "Deliverables for Phase 0"
+        },
+        {
+          "level": 2,
+          "text": "Placement Checklist"
+        }
+      ],
+      "source": "internal-doc",
+      "srdCitation": null,
+      "nonSrdReason": null,
+      "status": "original",
+      "notes": "Licensing overview is authored by the team to explain compliance steps."
+    },
+    {
+      "path": "docs/licensing/SRD-5.1-CC-BY-4.0.md",
+      "wordCount": 2628,
+      "headings": [
+        {
+          "level": 1,
+          "text": "Creative Commons Attribution 4.0 International (CC BY 4.0)"
+        },
+        {
+          "level": 2,
+          "text": "Using Creative Commons Public Licenses"
+        },
+        {
+          "level": 2,
+          "text": "Creative Commons Attribution 4.0 International Public License"
+        },
+        {
+          "level": 3,
+          "text": "Section 1 – Definitions."
+        },
+        {
+          "level": 3,
+          "text": "Section 2 – Scope."
+        },
+        {
+          "level": 4,
+          "text": "a. License grant."
+        },
+        {
+          "level": 4,
+          "text": "b. Other rights."
+        },
+        {
+          "level": 3,
+          "text": "Section 3 – License Conditions."
+        },
+        {
+          "level": 4,
+          "text": "a. Attribution."
+        },
+        {
+          "level": 3,
+          "text": "Section 4 – Sui Generis Database Rights."
+        },
+        {
+          "level": 3,
+          "text": "Section 5 – Disclaimer of Warranties and Limitation of Liability."
+        },
+        {
+          "level": 3,
+          "text": "Section 6 – Term and Termination."
+        },
+        {
+          "level": 3,
+          "text": "Section 7 – Other Terms and Conditions."
+        },
+        {
+          "level": 3,
+          "text": "Section 8 – Interpretation."
+        }
+      ],
+      "source": "srd-legal",
+      "srdCitation": "SRD 5.1, Legal: Creative Commons Attribution 4.0 International License",
+      "nonSrdReason": null,
+      "status": "srd-ok",
+      "notes": "Verbatim CC BY 4.0 text redistributed per SRD requirements."
+    }
+  ],
+  "tooltips": [
+    {
+      "path": "name.html",
+      "line": 681,
+      "text": "Choose the race/culture flavor.",
+      "snippet": "style\" class=\"form-label small\">Race / Culture <i class=\"bi bi-question-circle help-badge\" data-bs-toggle=\"tooltip\" title=\"Choose the race/culture flavor.\"></i> </label> <select id=\"ng-style\" cl",
+      "source": "ui-tooltip",
+      "srdCitation": null,
+      "nonSrdReason": null,
+      "status": "original",
+      "notes": "Tooltip copy describing UI selection, not sourced from SRD."
+    }
+  ]
+}

@@ -1,0 +1,1544 @@
+<!DOCTYPE html>
+<html lang="en" data-bs-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>The DM's Toolbox: Encounter Builder</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" crossorigin="anonymous" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.8.3/font/bootstrap-icons.css" />
+  <!-- Custom CSS -->
+  <link href="/css/site.css" rel="stylesheet" />
+  <!-- Dev Icons -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/devicons/devicon@v2.15.1/devicon.min.css" />
+  <!-- Favicon -->
+  <link rel="icon" type="image/png" href="/images/dndFavicon (2).png" />
+  <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" crossorigin="anonymous"></script>
+  <script src="/js/site.js"></script>
+  <script src="/js/generated/srd-allowlist.js"></script>
+  <script src="/js/modules/srd-content-filter.js"></script>
+  <style>
+    .bgimage{
+      background: url('images/BGMap.png') no-repeat center center fixed;
+      background-size: cover;
+    }
+    .bg-orange { background-color: #fd7e14 !important; color: #212529 !important; }
+    .drag-handle { cursor: move; }
+    .active-turn {
+      border-left: 5px solid #1d9e6d !important;
+      color: #f8f9fa !important;
+      font-weight: bold;
+    }
+    #saveHistorySelect { min-width: 200px; }
+
+    /* Stat Block Tooltips */
+    .monster-preview-trigger:hover {
+      background-color: #495057 !important;
+      transition: background-color 0.2s;
+    }
+
+    .stat-block-preview {
+      position: absolute;
+      z-index: 9999;
+      background: #2d3748;
+      border: 2px solid #4a5568;
+      border-radius: 8px;
+      padding: 12px;
+      min-width: 350px;
+      max-width: 500px;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+      font-size: 0.9rem;
+      line-height: 1.4;
+      pointer-events: none;
+    }
+
+    .stat-block-preview .preview-header {
+      font-weight: bold;
+      font-size: 1.1rem;
+      margin-bottom: 8px;
+      color: #f7fafc;
+      border-bottom: 2px solid #e53e3e;
+      padding-bottom: 4px;
+    }
+
+    .stat-block-preview .preview-subtitle {
+      font-style: italic;
+      color: #cbd5e0;
+      margin-bottom: 8px;
+    }
+
+    .stat-block-preview .stat-line {
+      margin: 4px 0;
+      color: #e2e8f0;
+    }
+
+    .stat-block-preview .stat-label {
+      font-weight: 600;
+      color: #fc8181;
+    }
+
+    .stat-block-preview .action-block {
+      margin: 8px 0;
+      padding: 6px;
+      background: #1a202c;
+      border-radius: 4px;
+      border-left: 3px solid #e53e3e;
+    }
+
+    .stat-block-preview .action-name {
+      font-weight: bold;
+      color: #fc8181;
+      margin-bottom: 2px;
+    }
+
+    .stat-block-preview .action-desc {
+      color: #cbd5e0;
+      font-size: 0.85rem;
+      margin-left: 8px;
+    }
+
+    .stat-block-preview .section-header {
+      font-weight: bold;
+      color: #fc8181;
+      margin-top: 10px;
+      margin-bottom: 4px;
+      text-transform: uppercase;
+      font-size: 0.85rem;
+      letter-spacing: 0.5px;
+    }
+
+    /* Expandable roster details */
+    .roster-expanded {
+      margin-top: 8px;
+      padding: 8px;
+      background: #1a202c;
+      border-radius: 4px;
+      font-size: 0.85rem;
+    }
+
+    .roster-actions {
+      display: grid;
+      gap: 6px;
+    }
+
+    .roster-action-item {
+      padding: 6px;
+      background: #2d3748;
+      border-radius: 3px;
+      border-left: 2px solid #e53e3e;
+    }
+  </style>
+</head>
+<body class="bgimage">
+  <nav class="navbar navbar-expand-lg navbar-dark fixed-top text-light" id="mainNav">
+    <div class="container-fluid">
+      <a class="navbar-brand" href="index.html">
+        <img src="/images/dndFavicon (2).png" height="40" width="40" alt="App Logo" class="d-inline-block" />
+        The DM Toolbox
+      </a>
+      <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarSupportedContent"
+        aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+        <span class="navbar-toggler-icon"></span>
+      </button>
+      <div class="collapse navbar-collapse" id="navbarSupportedContent">
+        <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+          <li class="nav-item dropdown">
+            <a class="nav-link dropdown-toggle active" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+              Combat
+            </a>
+            <ul class="dropdown-menu">
+              <li><a class="dropdown-item" href="initiative.html">Initiative Tracker</a></li>
+              <li><a class="dropdown-item" href="battlemap.html">Battle Map</a></li>
+              <li><a class="dropdown-item active" aria-current="page" href="encounterbuilder.html">Encounter Builder</a></li>
+            </ul>
+          </li>
+          <li class="nav-item dropdown">
+            <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+              Generators
+            </a>
+            <ul class="dropdown-menu">
+              <li><a class="dropdown-item" href="name.html">Name Generator</a></li>
+              <li><a class="dropdown-item" href="loot.html">Loot Generator</a></li>
+              <li><a class="dropdown-item" href="shop.html">Shop Generator</a></li>
+              <li><a class="dropdown-item" href="npc.html">NPC Generator</a></li>
+              <li><a class="dropdown-item" href="tav.html">Tavern/Inn Generator</a></li>
+            </ul>
+          </li>
+          <li class="nav-item dropdown">
+            <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+              Campaign
+            </a>
+            <ul class="dropdown-menu">
+              <li><a class="dropdown-item" href="characters.html">Characters</a></li>
+              <li><a class="dropdown-item" href="journal.html">Journal</a></li>
+            </ul>
+          </li>
+        </ul>
+      </div>
+    </div>
+  </nav>
+
+  <main class="content pt-3">
+    <div class="container-fluid text-center backdrop">
+      <div class="alert alert-warning text-start" role="status">
+        <div class="fw-semibold"><i class="bi bi-shield-lock me-1"></i>SRD Scope</div>
+        <small>Monster searches, previews, and exports only surface SRD stat blocks in the public build. Additional books remain hidden unless you load a private content pack locally, ensuring no restricted text ships from this page.</small>
+      </div>
+      <section class="container py-4">
+        <h1 class="display-5 fw-bold mb-1">Encounter Builder</h1>
+        <p class="text-secondary mb-4">Search SRD monsters, add homebrew, auto-calc CR/XP, and export to your Initiative Tracker.</p>
+
+        <!-- Party Setup -->
+        <div class="card bg-dark border-secondary mb-3">
+          <div class="card-body">
+            <div class="row g-2 align-items-end">
+              <div class="col-12 col-lg-3">
+                <label class="form-label">Party Levels (comma or space-separated)</label>
+                <input id="eb-party-levels" class="form-control" placeholder="e.g. 3 3 3 3">
+              </div>
+              <div class="col-6 col-lg-2">
+                <label class="form-label">Adv. Resist?</label>
+                <select id="eb-resist-mode" class="form-select">
+                  <option value="none" selected>None</option>
+                  <option value="resist">Some</option>
+                  <option value="heavy">Heavy</option>
+                </select>
+              </div>
+              <div class="col-6 col-lg-2">
+                <label class="form-label">Export Mode</label>
+                <select id="eb-export-mode" class="form-select">
+                  <option value="session" selected>Full Session JSON</option>
+                  <option value="append">Append (addCharacters)</option>
+                </select>
+              </div>
+              <div class="col-12 col-lg-5 text-lg-end">
+                <button id="eb-export" class="btn btn-outline-warning me-2"><i class="bi bi-download me-1"></i>Export</button>
+                <button id="eb-clear" class="btn btn-outline-light"><i class="bi bi-trash me-1"></i>Clear</button>
+                <button id="eb-send-to-tracker" class="btn btn-warning"><i class="bi bi-box-arrow-in-right me-1"></i>Send to Tracker</button>
+              </div>
+            </div>
+            <div class="mt-3 small text-secondary" id="eb-party-summary">No party set.</div>
+          </div>
+        </div>
+
+        <div class="row g-3">
+          <!-- Left: Monster Search -->
+          <div class="col-12 col-lg-4">
+            <div class="card bg-dark border-secondary h-100">
+              <div class="card-header d-flex align-items-center justify-content-between">
+                <span class="fw-semibold"><i class="bi bi-search me-1"></i>SRD Monsters</span>
+                <button id="eb-refresh" class="btn btn-sm btn-outline-info"><i class="bi bi-arrow-repeat"></i></button>
+              </div>
+              <div class="card-body">
+                <input id="eb-search" class="form-control form-control-sm mb-2" placeholder="Search name/type/CR…">
+                <div class="d-flex gap-2 mb-2">
+                  <select id="eb-cr-filter" class="form-select form-select-sm">
+                    <option value="">CR: Any</option>
+                    <option value="0">0</option><option value="0.125">1/8</option><option value="0.25">1/4</option><option value="0.5">1/2</option>
+                    <option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option>
+                    <option value="5">5</option><option value="6">6</option><option value="7">7</option><option value="8">8</option>
+                    <option value="9">9</option><option value="10">10</option><option value="11">11</option><option value="12">12</option>
+                    <option value="13">13</option><option value="14">14</option><option value="15">15</option>
+                  </select>
+                  <select id="eb-type-filter" class="form-select form-select-sm">
+                    <option value="">Type: Any</option>
+                    <option>Beast</option><option>Humanoid</option><option>Undead</option><option>Dragon</option>
+                    <option>Fiend</option><option>Celestial</option><option>Construct</option><option>Giant</option>
+                    <option>Elemental</option><option>Monstrosity</option><option>Ooze</option><option>Plant</option><option>Fey</option>
+                  </select>
+                </div>
+                <div id="eb-results" class="list-group small" style="max-height: 420px; overflow:auto;"></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Middle: Custom Monster -->
+          <div class="col-12 col-lg-4">
+            <div class="card bg-dark border-secondary h-100">
+              <div class="card-header fw-semibold d-flex justify-content-between align-items-center">
+                <span><i class="bi bi-plus-circle me-1"></i>Custom Monster</span>
+                <button id="cm-toggle-advanced" class="btn btn-sm btn-outline-info">Simple / Advanced</button>
+              </div>
+              <div class="card-body" style="max-height: 500px; overflow-y: auto;">
+                <!-- Basic Info -->
+                <div class="row g-2">
+                  <div class="col-12"><input id="cm-name" class="form-control" placeholder="Monster Name *"></div>
+                  <div class="col-6">
+                    <select id="cm-size" class="form-select">
+                      <option value="">Size</option>
+                      <option value="Tiny">Tiny</option>
+                      <option value="Small">Small</option>
+                      <option value="Medium" selected>Medium</option>
+                      <option value="Large">Large</option>
+                      <option value="Huge">Huge</option>
+                      <option value="Gargantuan">Gargantuan</option>
+                    </select>
+                  </div>
+                  <div class="col-6"><input id="cm-type" class="form-control" placeholder="Type (e.g., Undead) *"></div>
+                  <div class="col-4"><input id="cm-ac" class="form-control" type="number" placeholder="AC *"></div>
+                  <div class="col-4"><input id="cm-hp" class="form-control" type="number" placeholder="HP *"></div>
+                  <div class="col-4"><input id="cm-speed" class="form-control" placeholder="Speed (30 ft.)"></div>
+                </div>
+
+                <!-- Advanced Fields (Collapsible) -->
+                <div id="cm-advanced-fields" style="display:none;">
+                  <hr class="my-2">
+                  <div class="small text-secondary mb-2">Ability Scores (optional, for reference)</div>
+                  <div class="row g-1">
+                    <div class="col-4"><input id="cm-str" class="form-control form-control-sm" type="number" placeholder="STR"></div>
+                    <div class="col-4"><input id="cm-dex" class="form-control form-control-sm" type="number" placeholder="DEX"></div>
+                    <div class="col-4"><input id="cm-con" class="form-control form-control-sm" type="number" placeholder="CON"></div>
+                    <div class="col-4"><input id="cm-int" class="form-control form-control-sm" type="number" placeholder="INT"></div>
+                    <div class="col-4"><input id="cm-wis" class="form-control form-control-sm" type="number" placeholder="WIS"></div>
+                    <div class="col-4"><input id="cm-cha" class="form-control form-control-sm" type="number" placeholder="CHA"></div>
+                  </div>
+                  <div class="row g-1 mt-1">
+                    <div class="col-12"><input id="cm-saves" class="form-control form-control-sm" placeholder="Saving Throws (e.g., Dex +5, Wis +3)"></div>
+                    <div class="col-12"><input id="cm-skills" class="form-control form-control-sm" placeholder="Skills (e.g., Stealth +7, Perception +4)"></div>
+                    <div class="col-12"><input id="cm-senses" class="form-control form-control-sm" placeholder="Senses (e.g., darkvision 60 ft., passive Perception 14)"></div>
+                  </div>
+                </div>
+
+                <hr class="my-2">
+
+                <!-- Special Abilities -->
+                <div class="mb-2">
+                  <label class="form-label mb-1 small fw-semibold">Special Abilities (one per line)</label>
+                  <textarea id="cm-special" rows="2" class="form-control form-control-sm" placeholder="Name: Description&#10;Pack Tactics: Advantage on attack rolls if ally is within 5 ft. of target."></textarea>
+                </div>
+
+                <!-- Actions -->
+                <div class="mb-2">
+                  <label class="form-label mb-1 small fw-semibold">Actions (one per line)</label>
+                  <textarea id="cm-actions" rows="3" class="form-control form-control-sm" placeholder="Longsword; toHit:+5; damage:1d8+3; attacks:1&#10;Fire Breath; saveDC:15; damage:6d6; targets:3"></textarea>
+                  <div class="form-text small">Format: <code>Name; toHit:+X; damage:XdX+X</code> or <code>Name; saveDC:X; damage:XdX</code><br>
+                  Optional: <code>attacks:X</code>, <code>targets:X</code>, <code>avg:X</code></div>
+                </div>
+
+                <!-- Reactions -->
+                <div class="mb-2">
+                  <label class="form-label mb-1 small fw-semibold">Reactions (one per line, optional)</label>
+                  <textarea id="cm-reactions" rows="2" class="form-control form-control-sm" placeholder="Name: Description&#10;Parry: +2 AC against one melee attack."></textarea>
+                </div>
+
+                <!-- Legendary Actions -->
+                <div class="mb-2">
+                  <label class="form-label mb-1 small fw-semibold">Legendary Actions (one per line, optional)</label>
+                  <textarea id="cm-legendary" rows="2" class="form-control form-control-sm" placeholder="Name: Description&#10;Tail Attack: Makes one tail attack."></textarea>
+                </div>
+
+                <!-- Notes -->
+                <div class="mb-2">
+                  <label class="form-label mb-1 small fw-semibold">Notes (optional)</label>
+                  <textarea id="cm-notes" rows="1" class="form-control form-control-sm" placeholder="Additional DM notes..."></textarea>
+                </div>
+
+                <hr class="my-2">
+
+                <!-- CR Auto-calc info -->
+                <div class="small text-info mb-2">
+                  <i class="bi bi-info-circle"></i> CR will be auto-calculated when you add the monster based on HP, AC, and actions.
+                </div>
+
+                <div class="d-flex justify-content-between gap-2">
+                  <button id="cm-add" class="btn btn-sm btn-success flex-grow-1"><i class="bi bi-cart-plus me-1"></i>Add to Encounter</button>
+                  <button id="cm-clear" class="btn btn-sm btn-outline-secondary">Clear</button>
+                </div>
+
+                <hr class="my-2">
+
+                <div class="accordion accordion-flush" id="jsonAccordion">
+                  <div class="accordion-item bg-dark border-secondary">
+                    <h2 class="accordion-header">
+                      <button class="accordion-button collapsed bg-dark text-light small" type="button" data-bs-toggle="collapse" data-bs-target="#jsonCollapse">
+                        Or paste Monster JSON
+                      </button>
+                    </h2>
+                    <div id="jsonCollapse" class="accordion-collapse collapse" data-bs-parent="#jsonAccordion">
+                      <div class="accordion-body">
+                        <textarea id="cm-json" rows="4" class="form-control small" placeholder='{"name":"Shadow","type":"Undead","ac":12,"hp":16,"actions":[{"name":"Strength Drain","toHit":4,"damage":"2d6"}]}'></textarea>
+                        <button id="cm-json-add" class="btn btn-sm btn-outline-info mt-2">Add JSON</button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Right: Roster & Totals -->
+          <div class="col-12 col-lg-4">
+            <div class="card bg-dark border-secondary h-100">
+              <div class="card-header d-flex align-items-center justify-content-between">
+                <span class="fw-semibold"><i class="bi bi-list-ul me-1"></i>Encounter Roster</span>
+                <span class="small text-secondary">Drag to reorder</span>
+              </div>
+              <div class="card-body">
+                <ul id="eb-roster" class="list-group list-group-flush" style="max-height: 390px; overflow:auto;"></ul>
+                <hr>
+                <div id="eb-summary" class="small"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+    </div>
+  </main>
+
+  <!-- Footer -->
+  <footer class="container-fluid mt-5 site-footer" role="contentinfo">
+    <div class="footer-main py-3">
+      <div class="container">
+        <div class="row align-items-center text-center text-md-start">
+          <!-- Left: Copyright -->
+          <div class="col-12 col-md-4 mb-2 mb-md-0 text-md-start text-center">
+            <small class="text-muted">&copy; 2025 Maybeme | The DM’s Toolbox</small>
+          </div>
+
+          <!-- Center: Logo -->
+          <div class="col-12 col-md-4 text-center mb-2 mb-md-0">
+            <img src="/images/White logo - no background.png" height="40" alt="Logo" class="footer-logo">
+          </div>
+
+          <!-- Right: Social Links -->
+          <div class="col-12 col-md-4 d-flex justify-content-center justify-content-md-end align-items-center gap-2">
+            <a href="https://www.linkedin.com/in/marlo-mayberry-930ab9b7/" class="socialicons" target="_blank" rel="noopener" aria-label="LinkedIn">
+              <i class="bi bi-linkedin"></i>
+            </a>
+            <a href="https://github.com/M-ybeme" class="socialicons" target="_blank" rel="noopener" aria-label="GitHub">
+              <i class="bi bi-github"></i>
+            </a>
+            <a href="https://ko-fi.com/maybemestoolbox" class="socialicons d-flex align-items-center" target="_blank" rel="noopener" title="Support The DM’s Toolbox on Ko-fi">
+              <i class="bi bi-cup-hot"></i>
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </footer>
+
+  <script>
+  (() => {
+    // -------------------- Utilities --------------------
+    const $  = s => document.querySelector(s);
+    const $$ = s => Array.from(document.querySelectorAll(s));
+
+    // -------------------- Minimal CR/XP Tables --------------------
+    const HP_BANDS = [
+      { cr:0, min:1, max:6, expAC:13 }, { cr:0.125, min:7, max:35, expAC:13 }, { cr:0.25, min:36, max:49, expAC:13 }, { cr:0.5, min:50, max:70, expAC:13 },
+      { cr:1, min:71, max:85, expAC:13 }, { cr:2, min:86, max:100, expAC:13 }, { cr:3, min:101, max:115, expAC:13 }, { cr:4, min:116, max:130, expAC:14 },
+      { cr:5, min:131, max:145, expAC:15 }, { cr:6, min:146, max:160, expAC:15 }, { cr:7, min:161, max:175, expAC:15 }, { cr:8, min:176, max:190, expAC:16 },
+      { cr:9, min:191, max:205, expAC:16 }, { cr:10, min:206, max:220, expAC:17 }, { cr:11, min:221, max:235, expAC:17 }, { cr:12, min:236, max:250, expAC:17 },
+      { cr:13, min:251, max:265, expAC:18 }, { cr:14, min:266, max:280, expAC:18 }, { cr:15, min:281, max:295, expAC:18 }, { cr:16, min:296, max:310, expAC:19 },
+      { cr:17, min:311, max:325, expAC:19 }, { cr:18, min:326, max:340, expAC:19 }, { cr:19, min:341, max:355, expAC:19 }, { cr:20, min:356, max:400, expAC:19 },
+      { cr:21, min:401, max:445, expAC:19 }, { cr:22, min:446, max:490, expAC:19 }, { cr:23, min:491, max:535, expAC:19 }, { cr:24, min:536, max:580, expAC:19 },
+      { cr:25, min:581, max:625, expAC:19 }, { cr:26, min:626, max:670, expAC:19 }, { cr:27, min:671, max:715, expAC:19 }, { cr:28, min:716, max:760, expAC:19 },
+      { cr:29, min:761, max:805, expAC:19 }, { cr:30, min:806, max:850, expAC:19 }
+    ];
+    const DPR_BANDS = [
+      { cr:0, min:0, max:1, expAtk:3, expDC:13 }, { cr:0.125, min:2, max:3, expAtk:3, expDC:13 }, { cr:0.25, min:4, max:5, expAtk:3, expDC:13 },
+      { cr:0.5, min:6, max:8, expAtk:3, expDC:13 }, { cr:1, min:9, max:14, expAtk:3, expDC:13 }, { cr:2, min:15, max:20, expAtk:3, expDC:13 },
+      { cr:3, min:21, max:26, expAtk:4, expDC:13 }, { cr:4, min:27, max:32, expAtk:5, expDC:14 }, { cr:5, min:33, max:38, expAtk:6, expDC:15 },
+      { cr:6, min:39, max:44, expAtk:6, expDC:15 }, { cr:7, min:45, max:50, expAtk:6, expDC:15 }, { cr:8, min:51, max:56, expAtk:7, expDC:16 },
+      { cr:9, min:57, max:62, expAtk:7, expDC:16 }, { cr:10, min:63, max:68, expAtk:7, expDC:16 }, { cr:11, min:69, max:74, expAtk:8, expDC:17 },
+      { cr:12, min:75, max:80, expAtk:8, expDC:17 }, { cr:13, min:81, max:86, expAtk:8, expDC:18 }, { cr:14, min:87, max:92, expAtk:8, expDC:18 },
+      { cr:15, min:93, max:98, expAtk:8, expDC:18 }, { cr:16, min:99, max:104, expAtk:9, expDC:18 }, { cr:17, min:105, max:110, expAtk:10, expDC:19 },
+      { cr:18, min:111, max:116, expAtk:10, expDC:19 }, { cr:19, min:117, max:122, expAtk:10, expDC:19 }, { cr:20, min:123, max:140, expAtk:10, expDC:19 },
+      { cr:21, min:141, max:158, expAtk:11, expDC:20 }, { cr:22, min:159, max:176, expAtk:11, expDC:20 }, { cr:23, min:177, max:194, expAtk:11, expDC:20 },
+      { cr:24, min:195, max:212, expAtk:12, expDC:21 }, { cr:25, min:213, max:230, expAtk:12, expDC:21 }, { cr:26, min:231, max:248, expAtk:12, expDC:21 },
+      { cr:27, min:249, max:266, expAtk:13, expDC:22 }, { cr:28, min:267, max:284, expAtk:13, expDC:22 }, { cr:29, min:285, max:302, expAtk:13, expDC:22 },
+      { cr:30, min:303, max:320, expAtk:14, expDC:23 }
+    ];
+    const CR_XP = { "0":10,"0.125":25,"0.25":50,"0.5":100,"1":200,"2":450,"3":700,"4":1100,"5":1800,"6":2300,"7":2900,"8":3900,"9":5000,"10":5900,"11":7200,"12":8400,"13":10000,"14":11500,"15":13000,"16":15000,"17":18000,"18":20000,"19":22000,"20":25000 };
+    const PARTY_THRESH = {
+      1:{ easy:25,  med:50,   hard:75,   dead:100 },
+      2:{ easy:50,  med:100,  hard:150,  dead:200 },
+      3:{ easy:75,  med:150,  hard:225,  dead:400 },
+      4:{ easy:125, med:250,  hard:375,  dead:500 },
+      5:{ easy:250, med:500,  hard:750,  dead:1100 },
+      6:{ easy:300, med:600,  hard:900,  dead:1400 },
+      7:{ easy:350, med:750,  hard:1100, dead:1700 },
+      8:{ easy:450, med:900,  hard:1400, dead:2100 },
+      9:{ easy:550, med:1100, hard:1600, dead:2400 },
+      10:{ easy:600, med:1200, hard:1900, dead:2800 },
+      11:{ easy:800, med:1600, hard:2400, dead:3600 },
+      12:{ easy:1000,med:2000, hard:3000, dead:4500 },
+      13:{ easy:1100,med:2200, hard:3400, dead:5100 },
+      14:{ easy:1250,med:2500, hard:3800, dead:5700 },
+      15:{ easy:1400,med:2800, hard:4300, dead:6400 },
+      16:{ easy:1600,med:3200, hard:4800, dead:7200 },
+      17:{ easy:2000,med:3900, hard:5900, dead:8800 },
+      18:{ easy:2100,med:4200, hard:6300, dead:9500 },
+      19:{ easy:2400,med:4900, hard:7300, dead:10900 },
+      20:{ easy:2800,med:5700, hard:8500, dead:12700 }
+    };
+
+    const STEPS = [0,0.125,0.25,0.5,...Array.from({length:30},(_,i)=>i+1)];
+
+    function findBand(v, bands){
+      for(const b of bands){ if(v>=b.min && v<=b.max) return b; }
+      return v<bands[0].min?bands[0]:bands[bands.length-1];
+    }
+
+    // ---------- Dice & DPR helpers (improved) ----------
+    function avgDice(expr){
+      if(!expr) return 0; // supports "2d6+3 + 1d4"
+      return expr.split('+').map(t=>t.trim()).reduce((s,term)=>{
+        const m = term.match(/^(\d*)d(\d+)([+-]\d+)?$/i);
+        if(!m){
+          const n = Number(term);
+          return s + (isNaN(n)?0:n);
+        }
+        const c = Number(m[1]||'1'), sides = Number(m[2]), mod = Number(m[3]||'0');
+        return s + c*((sides+1)/2) + mod;
+      },0);
+    }
+
+    const BASE_EXPECTED_AC = 15;   // simple baseline for hit chance
+    const BASE_EXPECTED_DC = 15;   // simple baseline for save chance
+
+    function hitChance(toHit, expAC = BASE_EXPECTED_AC){
+      // P(hit) with nat 1 fail, nat 20 success
+      const need = expAC - toHit;       // roll >= need
+      const raw  = (21 - need) / 20;    // linear from d20
+      return Math.max(0.05, Math.min(0.95, raw));
+    }
+
+    function failChance(dc, expDC = BASE_EXPECTED_DC){
+      // baseline 60% fail at parity, ±5% per DC step
+      const delta = (dc - expDC);
+      const p = 0.60 + 0.05 * delta;
+      return Math.max(0.05, Math.min(0.95, p));
+    }
+
+    function usageFrequencyFromText(name = "", desc = ""){
+      const text = `${name} ${desc}`.toLowerCase();
+      // recharge
+      if (/recharge\s*6/.test(text)) return 1/6;
+      if (/recharge\s*5[-–—]?\s*6/.test(text)) return 1/3;
+      // per-day style
+      const mPerDay = text.match(/(\d)\s*\/\s*day/);
+      if (mPerDay) {
+        const n = Number(mPerDay[1]||'1');
+        return Math.max(1/10, Math.min(1, n/10)); // rough: assume 10 rounds budget
+      }
+      if (/once\s+per\s+day/.test(text)) return 1/10;
+      return 1; // at-will or default
+    }
+
+    function estimateDPR(mon){
+      if(!mon.actions || !mon.actions.length) return 0;
+      let d = 0;
+
+      for(const a of mon.actions){
+        const base = (typeof a.avgDamage === 'number' ? a.avgDamage : avgDice(a.damage||'')) || 0;
+        if (!base) continue; // ignore non-damaging (e.g., pure Multiattack text)
+
+        const swings  = Math.max(1, Number(a.attacksPerAction||1));
+        const targets = Math.max(1, Number(a.targetCount||1));
+        const freq    = usageFrequencyFromText(a.name, a.desc || "");
+
+        // Prefer to-hit math if present; else use save math if present; else raw
+        let effectiveEach = base;
+        if (typeof a.toHit === 'number') {
+          const p = hitChance(a.toHit, BASE_EXPECTED_AC);
+          effectiveEach = base * p;
+        } else if (typeof a.saveDC === 'number') {
+          const pFail = failChance(a.saveDC, BASE_EXPECTED_DC);
+          effectiveEach = base * pFail;
+        }
+
+        d += effectiveEach * swings * targets * freq;
+      }
+      return Math.round(d);
+    }
+
+    function defensiveCR(mon, resistMode){
+      let effHP = mon.hp||1;
+      if(resistMode==='resist'){
+        const mult = mon.cr && mon.cr<=4 ? 1.5 : 1.25;
+        effHP = Math.round(effHP*mult);
+      } else if(resistMode==='heavy'){
+        const mult = mon.cr && mon.cr<=4 ? 2.0 : 1.5;
+        effHP = Math.round(effHP*mult);
+      }
+      const band = findBand(effHP, HP_BANDS);
+      let cr = band.cr;
+      const acDiff = (mon.ac??10) - (band.expAC??13);
+      cr += (acDiff/2);
+      return Math.max(0, cr);
+    }
+
+    function offensiveCR(mon){
+      const dpr = estimateDPR(mon);
+      const band = findBand(dpr, DPR_BANDS);
+      let cr = band.cr;
+
+      // fine-tune for listed attack bonus / save DC vs expected
+      const atkList = (mon.actions||[]).filter(a=>typeof a.toHit==='number').map(a=>a.toHit);
+      const dcList  = (mon.actions||[]).filter(a=>typeof a.saveDC==='number').map(a=>a.saveDC);
+
+      if(atkList.length){
+        const atk = Math.max(...atkList);
+        cr += ((atk - (band.expAtk??3))/2);
+      } else if(dcList.length){
+        const dc = Math.max(...dcList);
+        cr += ((dc - (band.expDC??13))/2);
+      }
+      return Math.max(0, cr);
+    }
+
+    function roundCR(x){
+      let best=STEPS[0], diff=Infinity;
+      for(const s of STEPS){ const d=Math.abs(s-x); if(d<diff){best=s; diff=d;} }
+      return best;
+    }
+
+    // XP / multipliers
+    function crToXp(cr){ return CR_XP[String(cr)] ?? 0; }
+
+    // === Monster count bucket + party size adjustment (DMG-style) ===
+    function monsterCountBucket(n){
+      if (n <= 1) return 0;       // ×1
+      if (n === 2) return 1;      // ×1.5
+      if (n <= 6) return 2;       // ×2
+      if (n <= 10) return 3;      // ×2.5
+      if (n <= 14) return 4;      // ×3
+      return 5;                   // ×4
+    }
+    const MULTIPLIERS = [1, 1.5, 2, 2.5, 3, 4];
+
+    function partySizeAdjBucket(partySize){
+      if (partySize <= 3) return +1;  // harder
+      if (partySize >= 6) return -1;  // easier
+      return 0;                       // 4–5 PCs
+    }
+    function adjustedMultiplier(monsterCount, partySize){
+      const baseIdx = monsterCountBucket(monsterCount);
+      const adj     = partySizeAdjBucket(partySize);
+      const idx     = Math.max(0, Math.min(MULTIPLIERS.length - 1, baseIdx + adj));
+      return MULTIPLIERS[idx];
+    }
+
+    function thresholdsForParty(levels){
+      const sums = {easy:0,med:0,hard:0,dead:0};
+      for(const lv of levels){
+        const t = PARTY_THRESH[lv];
+        if(!t) continue;
+        sums.easy+=t.easy; sums.med+=t.med; sums.hard+=t.hard; sums.dead+=t.dead;
+      }
+      return sums;
+    }
+
+    // -------------------- State --------------------
+    let SRD_INDEX = [];      // [{index,name,url}]
+    const SRD_META = new Map(); // index -> {cr, type}
+    const roster = [];       // [{...monsterCore, qty, calc:{offCR,defCR,cr}}]
+    let partyLevels = [];
+    let resistMode = 'none';
+
+    // -------------------- SRD fetch & search --------------------
+    async function loadSrdList(){
+      const res = await fetch('https://www.dnd5eapi.co/api/monsters');
+      if(!res.ok) throw new Error('Failed to load SRD monster index');
+      const data = await res.json();
+      SRD_INDEX = (data.results || []);
+    }
+    async function fetchSrdMonster(index){
+      const res = await fetch(`https://www.dnd5eapi.co/api/monsters/${index}`);
+      if(!res.ok) throw new Error('SRD monster fetch failed');
+      const m = await res.json();
+      // normalize
+      const ac = Array.isArray(m.armor_class) ? (m.armor_class[0]?.value ?? 10) : (m.armor_class ?? 10);
+      const speed = (typeof m.speed === 'object') ? Object.entries(m.speed).map(([k,v]) => `${k} ${v}`).join(', ') : (m.speed||'');
+      const actions = (m.actions||[]).map(a=>({
+        name:a.name,
+        desc:a.desc || "",
+        toHit: (typeof a.attack_bonus==='number' ? a.attack_bonus : undefined),
+        saveDC: (a.dc?.dc_value ?? undefined),
+        damage: (a.damage && a.damage.length) ? a.damage.map(d=>d.damage_dice).filter(Boolean).join(' + ') : undefined,
+        avgDamage: undefined,
+        // keep Multiattack from falsely inflating swings (it has no damage dice)
+        attacksPerAction: /multiattack/i.test(a.name) ? undefined : 1
+      }));
+      const special_abilities = (m.special_abilities||[]).map(sa=>({
+        name: sa.name,
+        desc: sa.desc || ""
+      }));
+      const legendary_actions = (m.legendary_actions||[]).map(la=>({
+        name: la.name,
+        desc: la.desc || ""
+      }));
+      const reactions = (m.reactions||[]).map(r=>({
+        name: r.name,
+        desc: r.desc || ""
+      }));
+      const cr = (typeof m.challenge_rating === 'number') ? m.challenge_rating : Number(m.challenge_rating);
+      return {
+        name:m.name, type:m.type, size:m.size, cr: isNaN(cr)?undefined:cr, ac, hp:m.hit_points||1, speed,
+        actions, special_abilities, legendary_actions, reactions, notes:''
+      };
+    }
+
+    // meta cache + concurrency-limited enrichment
+    async function getMeta(index){
+      if (SRD_META.has(index)) return SRD_META.get(index);
+      const metaFull = await fetchSrdMonster(index);
+      const slim = { cr: metaFull.cr, type: (metaFull.type || '') };
+      SRD_META.set(index, slim);
+      return slim;
+    }
+
+    // -------------------- Stat Block Preview Tooltip --------------------
+    let currentPreview = null;
+    let previewTimeout = null;
+
+    function createStatBlockPreview(monster) {
+      const div = document.createElement('div');
+      div.className = 'stat-block-preview';
+
+      let html = `
+        <div class="preview-header">${monster.name}</div>
+        <div class="preview-subtitle">${monster.size || ''} ${monster.type || ''}, CR ${monster.cr ?? '—'}</div>
+        <div class="stat-line"><span class="stat-label">AC:</span> ${monster.ac ?? '—'}</div>
+        <div class="stat-line"><span class="stat-label">HP:</span> ${monster.hp ?? '—'}</div>
+        <div class="stat-line"><span class="stat-label">Speed:</span> ${monster.speed || '—'}</div>
+      `;
+
+      // Special Abilities
+      if (monster.special_abilities && monster.special_abilities.length > 0) {
+        html += '<div class="section-header">Special Abilities</div>';
+        monster.special_abilities.forEach(sa => {
+          html += `<div class="action-block">
+            <div class="action-name">${sa.name}</div>
+            <div class="action-desc">${sa.desc}</div>
+          </div>`;
+        });
+      }
+
+      // Actions
+      if (monster.actions && monster.actions.length > 0) {
+        html += '<div class="section-header">Actions</div>';
+        monster.actions.forEach(action => {
+          const attackInfo = [];
+          if (action.toHit !== undefined) attackInfo.push(`+${action.toHit} to hit`);
+          if (action.saveDC !== undefined) attackInfo.push(`DC ${action.saveDC}`);
+          if (action.damage) attackInfo.push(`${action.damage} damage`);
+
+          const attackLine = attackInfo.length > 0 ? ` (${attackInfo.join(', ')})` : '';
+
+          html += `<div class="action-block">
+            <div class="action-name">${action.name}${attackLine}</div>
+            <div class="action-desc">${action.desc}</div>
+          </div>`;
+        });
+      }
+
+      // Reactions
+      if (monster.reactions && monster.reactions.length > 0) {
+        html += '<div class="section-header">Reactions</div>';
+        monster.reactions.forEach(r => {
+          html += `<div class="action-block">
+            <div class="action-name">${r.name}</div>
+            <div class="action-desc">${r.desc}</div>
+          </div>`;
+        });
+      }
+
+      // Legendary Actions
+      if (monster.legendary_actions && monster.legendary_actions.length > 0) {
+        html += '<div class="section-header">Legendary Actions</div>';
+        monster.legendary_actions.forEach(la => {
+          html += `<div class="action-block">
+            <div class="action-name">${la.name}</div>
+            <div class="action-desc">${la.desc}</div>
+          </div>`;
+        });
+      }
+
+      div.innerHTML = html;
+      return div;
+    }
+
+    function showPreview(element, monster) {
+      clearTimeout(previewTimeout);
+      hidePreview();
+
+      currentPreview = createStatBlockPreview(monster);
+      document.body.appendChild(currentPreview);
+
+      // Position the preview
+      const rect = element.getBoundingClientRect();
+      const previewRect = currentPreview.getBoundingClientRect();
+
+      let left = rect.right + 10;
+      let top = rect.top;
+
+      // Adjust if goes off right side
+      if (left + previewRect.width > window.innerWidth) {
+        left = rect.left - previewRect.width - 10;
+      }
+
+      // Adjust if goes off bottom
+      if (top + previewRect.height > window.innerHeight) {
+        top = window.innerHeight - previewRect.height - 10;
+      }
+
+      // Adjust if goes off top
+      if (top < 0) {
+        top = 10;
+      }
+
+      currentPreview.style.left = `${left}px`;
+      currentPreview.style.top = `${top}px`;
+    }
+
+    function hidePreview() {
+      if (currentPreview) {
+        currentPreview.remove();
+        currentPreview = null;
+      }
+    }
+
+    function scheduleHidePreview() {
+      previewTimeout = setTimeout(hidePreview, 200);
+    }
+    async function mapLimit(items, limit, fn) {
+      const ret = new Array(items.length);
+      let i = 0;
+      async function worker() {
+        while (i < items.length) {
+          const cur = i++;
+          ret[cur] = await fn(items[cur], cur);
+        }
+      }
+      const workers = Array.from({ length: Math.min(limit, items.length) }, worker);
+      await Promise.all(workers);
+      return ret;
+    }
+
+    async function renderResults(){
+      const q   = ($('#eb-search')?.value||'').toLowerCase().trim();
+      const crf = $('#eb-cr-filter')?.value || '';
+      const tf  = $('#eb-type-filter')?.value || '';
+      const wrap = $('#eb-results'); if(!wrap) return;
+
+      wrap.innerHTML = '<div class="text-secondary p-2">Loading…</div>';
+
+      // 1) name search against index (fast)
+      let list = SRD_INDEX.slice();
+      if (q) {
+        list = list.filter(x =>
+          x.name.toLowerCase().includes(q) ||
+          x.index.toLowerCase().includes(q)
+        );
+      }
+
+      // 2) no filters -> render first 200 quickly
+      if (!crf && !tf) {
+        wrap.innerHTML = '';
+        list.slice(0,200).forEach(it=>{
+          const a = document.createElement('a');
+          a.href="#"; a.className='list-group-item list-group-item-action bg-dark text-light monster-preview-trigger';
+          a.textContent = it.name;
+          a.dataset.index = it.index;
+          a.onclick = async (e)=>{ e.preventDefault(); addToRoster(await fetchSrdMonster(it.index)); };
+
+          // Add hover preview
+          let hoverMonster = null;
+          a.addEventListener('mouseenter', async function() {
+            if (!hoverMonster) {
+              hoverMonster = await fetchSrdMonster(it.index);
+            }
+            showPreview(this, hoverMonster);
+          });
+          a.addEventListener('mouseleave', scheduleHidePreview);
+
+          wrap.appendChild(a);
+        });
+        if (!wrap.children.length) {
+          wrap.innerHTML = '<div class="text-secondary p-2">No results.</div>';
+        }
+        return;
+      }
+
+      // 3) pre-enrich with meta (concurrency-limited)
+      const cap = 400; // keep snappy
+      const slice = list.slice(0, cap);
+      try {
+        await mapLimit(slice, 12, async (it) => {
+          const meta = await getMeta(it.index);
+          it._cr   = meta.cr;
+          it._type = (meta.type || '');
+        });
+      } catch (err) {
+        console.warn('Meta prefetch failed:', err);
+      }
+
+      // 4) filter by CR / Type
+      let filtered = slice;
+      if (crf) filtered = filtered.filter(it => String(it._cr) === crf);
+      if (tf)  filtered = filtered.filter(it => it._type.toLowerCase() === tf.toLowerCase());
+
+      // 5) render
+      wrap.innerHTML = '';
+      filtered.slice(0,200).forEach(it=>{
+        const a = document.createElement('a');
+        a.href="#"; a.className='list-group-item list-group-item-action bg-dark text-light monster-preview-trigger';
+        a.textContent = it.name;
+        a.dataset.index = it.index;
+        a.onclick = async (e)=>{ e.preventDefault(); addToRoster(await fetchSrdMonster(it.index)); };
+
+        // Add hover preview
+        let hoverMonster = null;
+        a.addEventListener('mouseenter', async function() {
+          if (!hoverMonster) {
+            hoverMonster = await fetchSrdMonster(it.index);
+          }
+          showPreview(this, hoverMonster);
+        });
+        a.addEventListener('mouseleave', scheduleHidePreview);
+
+        wrap.appendChild(a);
+      });
+      if (!wrap.children.length) {
+        const msgParts = [];
+        if (q)   msgParts.push(`query "${q}"`);
+        if (crf) msgParts.push(`CR ${crf}`);
+        if (tf)  msgParts.push(`type ${tf}`);
+        const msg = msgParts.length ? msgParts.join(', ') : 'your filters';
+        wrap.innerHTML = `<div class="text-secondary p-2">No monsters match ${msg}. Try clearing a filter.</div>`;
+      }
+    }
+
+    // -------------------- Roster --------------------
+    function addToRoster(mon){
+      const calc = computeCR(mon);
+      roster.push({...mon, qty:1, calc});
+      renderRoster();
+    }
+    function computeCR(mon){
+      const off = offensiveCR(mon);
+      const def = defensiveCR(mon, resistMode);
+      const raw = (off+def)/2;
+      const cr = roundCR(raw);
+      return { cr, offCR: Math.round(off*100)/100, defCR: Math.round(def*100)/100, raw: Math.round(raw*100)/100 };
+    }
+    function parseActionsQuick(text){
+      // Lines like: "Claw; toHit:+5; damage:2d6+3; attacks:2; targets:1"
+      return text.split('\n').map(l=>l.trim()).filter(Boolean).map(line=>{
+        const [namePart, ...rest] = line.split(';').map(s=>s.trim());
+        const obj = { name:namePart || 'Action' };
+        for(const part of rest){
+          const [k,v] = part.split(':').map(s=>s.trim());
+          if(!k) continue;
+          if(k==='toHit') obj.toHit = Number(v);
+          else if(k==='saveDC') obj.saveDC = Number(v);
+          else if(k==='damage') obj.damage = v;
+          else if(k==='attacks') obj.attacksPerAction = Number(v);
+          else if(k==='targets') obj.targetCount = Number(v);
+          else if(k==='avg') obj.avgDamage = Number(v);
+        }
+        return obj;
+      });
+    }
+
+    function renderRoster(){
+      const ul = $('#eb-roster'); if(!ul) return;
+      ul.innerHTML='';
+      roster.forEach((m, idx)=>{
+        const li = document.createElement('li');
+        li.className='list-group-item bg-dark text-light border-secondary';
+
+        // Build action summary
+        let actionSummary = '';
+        if (m.actions && m.actions.length > 0) {
+          const actionNames = m.actions.slice(0, 3).map(a => a.name).join(', ');
+          const remaining = m.actions.length > 3 ? ` +${m.actions.length - 3} more` : '';
+          actionSummary = `<div class="small text-info mt-1"><i class="bi bi-lightning-charge"></i> ${actionNames}${remaining}</div>`;
+        }
+
+        li.innerHTML = `
+          <div class="d-flex justify-content-between align-items-start">
+            <div style="flex: 1;">
+              <div class="fw-semibold">${m.name} <span class="text-secondary">(${m.type||'—'}${m.size?`, ${m.size}`:''})</span></div>
+              <div class="small text-secondary">AC ${m.ac ?? '—'} • HP ${m.hp ?? '—'} • CR ${m.calc?.cr ?? (m.cr ?? '—')}
+                <span class="ms-2">[off ${m.calc?.offCR ?? '—'} / def ${m.calc?.defCR ?? '—'}]</span>
+              </div>
+              ${actionSummary}
+              <button class="btn btn-sm btn-link text-warning p-0 mt-1" data-role="toggle" data-i="${idx}">
+                <i class="bi bi-chevron-down"></i> Show Details
+              </button>
+              <div class="roster-expanded" style="display:none;" data-i="${idx}"></div>
+            </div>
+            <div class="d-flex align-items-center gap-2">
+              <input class="form-control form-control-sm" type="number" min="1" value="${m.qty}" style="width:70px" data-role="qty" data-i="${idx}">
+              <button class="btn btn-sm btn-outline-info" title="Recalc" data-role="recalc" data-i="${idx}"><i class="bi bi-arrow-clockwise"></i></button>
+              <button class="btn btn-sm btn-outline-danger" title="Remove" data-role="del" data-i="${idx}"><i class="bi bi-x-lg"></i></button>
+            </div>
+          </div>`;
+        ul.appendChild(li);
+      });
+      // Wire buttons
+      ul.querySelectorAll('button[data-role="del"]').forEach(b=> b.onclick = e=>{
+        const i = Number(e.currentTarget.dataset.i);
+        roster.splice(i,1); renderRoster();
+      });
+      ul.querySelectorAll('button[data-role="recalc"]').forEach(b=> b.onclick = e=>{
+        const i = Number(e.currentTarget.dataset.i);
+        roster[i].calc = computeCR(roster[i]); renderRoster();
+      });
+      ul.querySelectorAll('input[data-role="qty"]').forEach(inp => inp.oninput = e=>{
+        const i = Number(e.currentTarget.dataset.i);
+        const v = Math.max(1, Number(e.currentTarget.value||1));
+        roster[i].qty = v; renderSummary();
+      });
+
+      // Wire toggle details buttons
+      ul.querySelectorAll('button[data-role="toggle"]').forEach(btn => btn.onclick = e => {
+        const i = Number(e.currentTarget.dataset.i);
+        const expanded = ul.querySelector(`.roster-expanded[data-i="${i}"]`);
+        const icon = e.currentTarget.querySelector('i');
+
+        if (expanded.style.display === 'none') {
+          // Show details
+          expanded.style.display = 'block';
+          e.currentTarget.innerHTML = '<i class="bi bi-chevron-up"></i> Hide Details';
+
+          // Build detailed view
+          const m = roster[i];
+          let html = '';
+
+          // Ability scores (if available)
+          if (m.str || m.dex || m.con || m.int || m.wis || m.cha) {
+            html += '<div class="mt-2 mb-2"><div class="fw-bold text-warning mb-1">Ability Scores</div>';
+            html += '<div class="small">';
+            if (m.str) html += `STR ${m.str} `;
+            if (m.dex) html += `DEX ${m.dex} `;
+            if (m.con) html += `CON ${m.con} `;
+            if (m.int) html += `INT ${m.int} `;
+            if (m.wis) html += `WIS ${m.wis} `;
+            if (m.cha) html += `CHA ${m.cha}`;
+            html += '</div></div>';
+          }
+
+          // Saves, skills, senses
+          if (m.saves) html += `<div class="small mt-1"><span class="fw-bold text-warning">Saving Throws:</span> ${m.saves}</div>`;
+          if (m.skills) html += `<div class="small mt-1"><span class="fw-bold text-warning">Skills:</span> ${m.skills}</div>`;
+          if (m.senses) html += `<div class="small mt-1"><span class="fw-bold text-warning">Senses:</span> ${m.senses}</div>`;
+          if (m.speed) html += `<div class="small mt-1"><span class="fw-bold text-warning">Speed:</span> ${m.speed}</div>`;
+
+          // Special Abilities
+          if (m.special_abilities && m.special_abilities.length > 0) {
+            html += '<div class="fw-bold text-warning mt-2 mb-1">Special Abilities</div>';
+            html += '<div class="roster-actions">';
+            m.special_abilities.forEach(sa => {
+              html += `<div class="roster-action-item">
+                <div class="fw-semibold">${sa.name}</div>
+                <div class="small text-secondary">${sa.desc || ''}</div>
+              </div>`;
+            });
+            html += '</div>';
+          }
+
+          // Actions
+          if (m.actions && m.actions.length > 0) {
+            html += '<div class="fw-bold text-warning mt-2 mb-1">Actions</div>';
+            html += '<div class="roster-actions">';
+            m.actions.forEach(action => {
+              const attackInfo = [];
+              if (action.toHit !== undefined) attackInfo.push(`+${action.toHit} to hit`);
+              if (action.saveDC !== undefined) attackInfo.push(`DC ${action.saveDC}`);
+              if (action.damage) attackInfo.push(`${action.damage} damage`);
+              const attackLine = attackInfo.length > 0 ? ` <span class="text-info">(${attackInfo.join(', ')})</span>` : '';
+
+              html += `<div class="roster-action-item">
+                <div class="fw-semibold">${action.name}${attackLine}</div>
+                <div class="small text-secondary">${action.desc || ''}</div>
+              </div>`;
+            });
+            html += '</div>';
+          }
+
+          // Reactions
+          if (m.reactions && m.reactions.length > 0) {
+            html += '<div class="fw-bold text-warning mt-2 mb-1">Reactions</div>';
+            html += '<div class="roster-actions">';
+            m.reactions.forEach(r => {
+              html += `<div class="roster-action-item">
+                <div class="fw-semibold">${r.name}</div>
+                <div class="small text-secondary">${r.desc || ''}</div>
+              </div>`;
+            });
+            html += '</div>';
+          }
+
+          // Legendary Actions
+          if (m.legendary_actions && m.legendary_actions.length > 0) {
+            html += '<div class="fw-bold text-warning mt-2 mb-1">Legendary Actions</div>';
+            html += '<div class="roster-actions">';
+            m.legendary_actions.forEach(la => {
+              html += `<div class="roster-action-item">
+                <div class="fw-semibold">${la.name}</div>
+                <div class="small text-secondary">${la.desc || ''}</div>
+              </div>`;
+            });
+            html += '</div>';
+          }
+
+          expanded.innerHTML = html || '<div class="text-secondary">No additional details available.</div>';
+        } else {
+          // Hide details
+          expanded.style.display = 'none';
+          e.currentTarget.innerHTML = '<i class="bi bi-chevron-down"></i> Show Details';
+        }
+      });
+      renderSummary();
+      // Drag sort
+      if(window.Sortable && !ul._sortable){
+        ul._sortable = Sortable.create(ul, {
+          animation: 150,
+          onEnd: evt => {
+            const [m] = roster.splice(evt.oldIndex,1);
+            roster.splice(evt.newIndex,0,m);
+            renderRoster();
+          }
+        });
+      }
+    }
+
+    function renderSummary(){
+      const party = parsePartyLevels();
+      const t = thresholdsForParty(party);
+      // XP calc with multiplier
+      let baseXP=0, count=0;
+      roster.forEach(m=>{
+        const xpEach = crToXp(m.calc?.cr ?? m.cr ?? 0);
+        baseXP += xpEach * (m.qty||1);
+        count  += (m.qty||1);
+      });
+      const mult  = adjustedMultiplier(count, party.length || 0);
+      const adjXP = Math.round(baseXP * mult);
+      const diff = (!party.length) ? '—' :
+        (adjXP < t.easy ? 'Trivial' :
+         adjXP < t.med  ? 'Easy'    :
+         adjXP < t.hard ? 'Medium'  :
+         adjXP < t.dead ? 'Hard'    : 'Deadly');
+      const partyAdjNote = (party.length && (party.length <= 3 || party.length >= 6))
+        ? ` <span class="text-secondary">(party-size adjusted)</span>` : '';
+      $('#eb-summary').innerHTML = `
+        <div><strong>Monsters:</strong> ${count} • <strong>Base XP:</strong> ${baseXP} • <strong>Multiplier:</strong> ×${mult}${partyAdjNote}</div>
+        <div><strong>Adjusted XP:</strong> ${adjXP} • <strong>Difficulty:</strong> ${diff}</div>`;
+    }
+
+    // -------------------- Party --------------------
+    function parsePartyLevels(){
+      const raw = ($('#eb-party-levels')?.value||'')
+        .replace(/[,]/g,' ')
+        .split(/\s+/).map(x=>x.trim()).filter(Boolean).map(Number).filter(n=>n>0&&n<=20);
+      partyLevels = raw;
+      return raw;
+    }
+    function renderPartySummary(){
+      const lv = parsePartyLevels();
+      const t = thresholdsForParty(lv);
+      $('#eb-party-summary').textContent =
+        lv.length ? `Party: [${lv.join(', ')}] • Thresholds → Easy ${t.easy}, Medium ${t.med}, Hard ${t.hard}, Deadly ${t.dead}` :
+                    'No party set.';
+    }
+
+    // -------------------- Custom Monster --------------------
+    function parseSpecialAbilities(text){
+      // Parse "Name: Description" format
+      return text.split('\n').map(l=>l.trim()).filter(Boolean).map(line=>{
+        const idx = line.indexOf(':');
+        if(idx === -1) return { name: line, desc: '' };
+        return {
+          name: line.substring(0, idx).trim(),
+          desc: line.substring(idx + 1).trim()
+        };
+      });
+    }
+
+    function readCustomForm(){
+      const name = $('#cm-name').value.trim();
+      const type = $('#cm-type').value.trim() || '—';
+      const size = $('#cm-size').value.trim() || 'Medium';
+      const ac = Number($('#cm-ac').value||'0');
+      const hp = Number($('#cm-hp').value||'1');
+      const speed = $('#cm-speed').value.trim() || '';
+      const actions = parseActionsQuick($('#cm-actions').value||'');
+      const special_abilities = parseSpecialAbilities($('#cm-special').value||'');
+      const reactions = parseSpecialAbilities($('#cm-reactions').value||'');
+      const legendary_actions = parseSpecialAbilities($('#cm-legendary').value||'');
+      const notes = $('#cm-notes').value.trim();
+
+      // Advanced fields (optional)
+      const str = $('#cm-str').value ? Number($('#cm-str').value) : undefined;
+      const dex = $('#cm-dex').value ? Number($('#cm-dex').value) : undefined;
+      const con = $('#cm-con').value ? Number($('#cm-con').value) : undefined;
+      const int = $('#cm-int').value ? Number($('#cm-int').value) : undefined;
+      const wis = $('#cm-wis').value ? Number($('#cm-wis').value) : undefined;
+      const cha = $('#cm-cha').value ? Number($('#cm-cha').value) : undefined;
+      const saves = $('#cm-saves').value.trim();
+      const skills = $('#cm-skills').value.trim();
+      const senses = $('#cm-senses').value.trim();
+
+      const mon = {
+        name, type, size, ac, hp, speed, actions,
+        special_abilities, reactions, legendary_actions, notes
+      };
+
+      // Only include advanced fields if provided
+      if (str !== undefined) mon.str = str;
+      if (dex !== undefined) mon.dex = dex;
+      if (con !== undefined) mon.con = con;
+      if (int !== undefined) mon.int = int;
+      if (wis !== undefined) mon.wis = wis;
+      if (cha !== undefined) mon.cha = cha;
+      if (saves) mon.saves = saves;
+      if (skills) mon.skills = skills;
+      if (senses) mon.senses = senses;
+
+      return mon;
+    }
+
+    function clearCustomForm(){
+      const fields = [
+        '#cm-name','#cm-type','#cm-ac','#cm-hp','#cm-speed',
+        '#cm-actions','#cm-special','#cm-reactions','#cm-legendary','#cm-notes',
+        '#cm-str','#cm-dex','#cm-con','#cm-int','#cm-wis','#cm-cha',
+        '#cm-saves','#cm-skills','#cm-senses','#cm-json'
+      ];
+      fields.forEach(sel => {
+        const elem = $(sel);
+        if (elem) elem.value = '';
+      });
+      // Reset size to Medium
+      const sizeElem = $('#cm-size');
+      if (sizeElem) sizeElem.value = 'Medium';
+    }
+
+    // -------------------- Export --------------------
+    function monstersToTrackerCharacters(){
+      const out = [];
+      roster.forEach(m=>{
+        const qty = m.qty||1;
+        for(let i=0;i<qty;i++){
+          out.push({
+            name: qty>1 ? `${m.name} #${i+1}` : m.name,
+            type: "Enemy",
+            initiative: 0,
+            currentHP: m.hp ?? 1,
+            maxHP: m.hp ?? 1,
+            tempHP: 0,
+            ac: m.ac ?? null,
+            notes: `CR ${m.calc?.cr ?? (m.cr ?? '—')} • ${m.type||'—'}${m.size?`, ${m.size}`:''}`,
+            concentration: false,
+            deathSaves: { s:0, f:0, stable:false },
+            status: []
+          });
+        }
+      });
+      return out;
+    }
+    function downloadJSON(obj, name){
+      const safe = name.replace(/[:.]/g, '-');
+      const blob = new Blob([JSON.stringify(obj,null,2)], {type:'application/json'});
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a'); a.href=url; a.download=safe;
+      document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
+    }
+
+    // -------------------- Text File Export --------------------
+    function generateEnemyStatBlockText(){
+      if(!roster.length) return '';
+
+      let text = '═══════════════════════════════════════════════════════\n';
+      text += '           ENCOUNTER BUILDER - ENEMY ROSTER\n';
+      text += '═══════════════════════════════════════════════════════\n\n';
+
+      roster.forEach((m, idx) => {
+        const qty = m.qty || 1;
+        text += `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
+        text += `${m.name.toUpperCase()}`;
+        if (qty > 1) text += ` (x${qty})`;
+        text += `\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n`;
+
+        // Basic Info
+        text += `${m.size || 'Medium'} ${m.type || 'creature'}, CR ${m.calc?.cr ?? (m.cr ?? '—')}\n\n`;
+
+        // Core Stats
+        text += `Armor Class: ${m.ac ?? '—'}\n`;
+        text += `Hit Points: ${m.hp ?? '—'}\n`;
+        if (m.speed) text += `Speed: ${m.speed}\n`;
+        text += `\n`;
+
+        // Ability Scores (if available)
+        if (m.str || m.dex || m.con || m.int || m.wis || m.cha) {
+          text += `Ability Scores:\n`;
+          if (m.str) text += `  STR ${m.str}\n`;
+          if (m.dex) text += `  DEX ${m.dex}\n`;
+          if (m.con) text += `  CON ${m.con}\n`;
+          if (m.int) text += `  INT ${m.int}\n`;
+          if (m.wis) text += `  WIS ${m.wis}\n`;
+          if (m.cha) text += `  CHA ${m.cha}\n`;
+          text += `\n`;
+        }
+
+        // Saves, skills, senses
+        if (m.saves) text += `Saving Throws: ${m.saves}\n`;
+        if (m.skills) text += `Skills: ${m.skills}\n`;
+        if (m.senses) text += `Senses: ${m.senses}\n`;
+        if (m.saves || m.skills || m.senses) text += `\n`;
+
+        // Calculated CR breakdown
+        if (m.calc) {
+          text += `CR Breakdown: Off ${m.calc.offCR} / Def ${m.calc.defCR} = ${m.calc.cr}\n\n`;
+        }
+
+        // Special Abilities
+        if (m.special_abilities && m.special_abilities.length > 0) {
+          text += `─── SPECIAL ABILITIES ───\n\n`;
+          m.special_abilities.forEach(sa => {
+            text += `• ${sa.name}\n`;
+            if (sa.desc) text += `  ${sa.desc}\n`;
+            text += `\n`;
+          });
+        }
+
+        // Actions
+        if (m.actions && m.actions.length > 0) {
+          text += `─── ACTIONS ───\n\n`;
+          m.actions.forEach(action => {
+            text += `• ${action.name}`;
+
+            // Attack info
+            const attackInfo = [];
+            if (action.toHit !== undefined) attackInfo.push(`+${action.toHit} to hit`);
+            if (action.saveDC !== undefined) attackInfo.push(`DC ${action.saveDC}`);
+            if (action.damage) attackInfo.push(`${action.damage} damage`);
+
+            if (attackInfo.length > 0) {
+              text += ` (${attackInfo.join(', ')})`;
+            }
+            text += `\n`;
+
+            if (action.desc) text += `  ${action.desc}\n`;
+            text += `\n`;
+          });
+        }
+
+        // Reactions
+        if (m.reactions && m.reactions.length > 0) {
+          text += `─── REACTIONS ───\n\n`;
+          m.reactions.forEach(r => {
+            text += `• ${r.name}\n`;
+            if (r.desc) text += `  ${r.desc}\n`;
+            text += `\n`;
+          });
+        }
+
+        // Legendary Actions
+        if (m.legendary_actions && m.legendary_actions.length > 0) {
+          text += `─── LEGENDARY ACTIONS ───\n\n`;
+          m.legendary_actions.forEach(la => {
+            text += `• ${la.name}\n`;
+            if (la.desc) text += `  ${la.desc}\n`;
+            text += `\n`;
+          });
+        }
+
+        // Notes
+        if (m.notes) {
+          text += `─── NOTES ───\n${m.notes}\n\n`;
+        }
+
+        text += `\n`;
+      });
+
+      // Summary at the end
+      const party = parsePartyLevels();
+      const t = thresholdsForParty(party);
+      let baseXP=0, count=0;
+      roster.forEach(m=>{
+        const xpEach = crToXp(m.calc?.cr ?? m.cr ?? 0);
+        baseXP += xpEach * (m.qty||1);
+        count  += (m.qty||1);
+      });
+      const mult  = adjustedMultiplier(count, party.length || 0);
+      const adjXP = Math.round(baseXP * mult);
+      const diff = (!party.length) ? '—' :
+        (adjXP < t.easy ? 'Trivial' :
+         adjXP < t.med  ? 'Easy'    :
+         adjXP < t.hard ? 'Medium'  :
+         adjXP < t.dead ? 'Hard'    : 'Deadly');
+
+      text += `═══════════════════════════════════════════════════════\n`;
+      text += `                  ENCOUNTER SUMMARY\n`;
+      text += `═══════════════════════════════════════════════════════\n\n`;
+      text += `Total Monsters: ${count}\n`;
+      text += `Base XP: ${baseXP}\n`;
+      text += `Multiplier: ×${mult}\n`;
+      text += `Adjusted XP: ${adjXP}\n`;
+      text += `Difficulty: ${diff}\n`;
+      if (party.length) {
+        text += `\nParty: [${party.join(', ')}]\n`;
+        text += `Thresholds → Easy: ${t.easy}, Medium: ${t.med}, Hard: ${t.hard}, Deadly: ${t.dead}\n`;
+      }
+      text += `\n`;
+      text += `Generated by The DM's Toolbox - Encounter Builder\n`;
+      text += `${new Date().toLocaleString()}\n`;
+
+      return text;
+    }
+
+    function downloadTextFile(content, filename){
+      const blob = new Blob([content], {type:'text/plain;charset=utf-8'});
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    }
+
+    // -------------------- Wire UI --------------------
+    $('#eb-refresh').onclick = async ()=>{ await loadSrdList(); renderResults(); };
+    $('#eb-search').oninput = renderResults;
+    $('#eb-cr-filter').onchange = renderResults;
+    $('#eb-type-filter').onchange = renderResults;
+
+    // Advanced fields toggle
+    $('#cm-toggle-advanced').onclick = ()=>{
+      const advFields = $('#cm-advanced-fields');
+      if(advFields.style.display === 'none'){
+        advFields.style.display = 'block';
+      } else {
+        advFields.style.display = 'none';
+      }
+    };
+
+    $('#eb-party-levels').oninput = ()=>{ renderPartySummary(); renderSummary(); };
+    $('#eb-resist-mode').onchange = e=>{ resistMode = e.target.value; // recalc all
+      roster.forEach((m,i)=>{ roster[i].calc = computeCR(m); }); renderRoster();
+    };
+
+    $('#cm-add').onclick = ()=>{
+      const mon = readCustomForm();
+      if(!mon.name || !mon.ac || !mon.hp) { alert('Name, AC, and HP are required.'); return; }
+      addToRoster(mon);
+      clearCustomForm();
+    };
+    $('#cm-json-add').onclick = ()=>{
+      try{
+        const mon = JSON.parse($('#cm-json').value||'{}');
+        if(!mon.name || !mon.ac || !mon.hp) { alert('JSON must include at least name, ac, hp.'); return; }
+        addToRoster(mon);
+      }catch{ alert('Invalid JSON.'); }
+    };
+    $('#cm-clear').onclick = clearCustomForm;
+
+    $('#eb-clear').onclick = ()=>{ roster.splice(0,roster.length); renderRoster(); };
+    $('#eb-export').onclick = ()=>{
+      const mode = $('#eb-export-mode').value;
+      const chars = monstersToTrackerCharacters();
+      if(!chars.length){ alert('No monsters in roster.'); return; }
+      if(mode==='append'){
+        downloadJSON({ addCharacters: chars }, `initiative_add_${new Date().toISOString()}.json`);
+      }else{
+        downloadJSON({ characters: chars, currentTurn:0, combatRound:1, diceHistory:[] }, `initiative_session_${new Date().toISOString()}.json`);
+      }
+    };
+
+  function normalizeForTracker(c) {
+    return {
+      name: c.name ?? "Unknown",
+      type: "Enemy",
+      initiative: 1,
+      currentHP: Number(c.hp ?? c.currentHP ?? 1),
+      maxHP:     Number(c.hp ?? c.maxHP     ?? 1),
+      tempHP: 0,
+      ac: (c.ac ?? null),
+      notes: c.notes ?? (c.calc?.cr != null ? `CR ${c.calc.cr}` : ""),
+      concentration: false,
+      deathSaves: { s:0, f:0, stable:false },
+      status: []
+    };
+  }
+  
+  // Build a flat list of characters from the roster,
+  // numbering duplicates as "Name", "Name 2", "Name 3", ...
+  function buildCharactersFromRoster(roster) {
+    const counts = Object.create(null);
+    const out = [];
+  
+    for (const m of roster) {
+      const qty = Math.max(1, Number(m.qty || 1));
+      const baseName = (m.name || "Unknown").trim();
+    
+      for (let i = 0; i < qty; i++) {
+        counts[baseName] = (counts[baseName] || 0) + 1;
+        const idx = counts[baseName];
+      
+        const ch = normalizeForTracker(m);
+        ch.name = idx === 1 ? baseName : `${baseName} ${idx}`;
+        out.push(ch);
+      }
+    }
+    return out;
+  }
+  
+  function monstersToTrackerSession() {
+    const characters = buildCharactersFromRoster(roster);
+    return {
+      __dmtoolsVersion: 1,
+      mode: "append",      // <- do not wipe existing tracker state
+      characters,
+      currentTurn: 0,
+      combatRound: 1,
+      diceHistory: []
+    };
+  }
+
+    document.getElementById("eb-send-to-tracker").addEventListener("click", () => {
+    const session = monstersToTrackerSession();
+
+    if (!session.characters.length) {
+      alert("No monsters in the roster.");
+      return;
+    }
+
+    // Prompt user to download stat block text file
+    if (confirm("Would you like to download a text file with all enemy stat blocks for DM reference?\n\n(This will include all actions, reactions, special abilities, and stats from the API)")) {
+      const textContent = generateEnemyStatBlockText();
+      const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+      downloadTextFile(textContent, `encounter_statblocks_${timestamp}.txt`);
+    }
+
+    try {
+      localStorage.setItem("dmtools.pendingImport", JSON.stringify(session));
+    } catch (e) {
+      console.error("localStorage error:", e);
+      alert("Could not stage data for the tracker (localStorage error).");
+      return;
+    }
+    location.href = "initiative.html#autoinput";
+  });
+
+    // Initial boot
+    (async function init(){
+      resistMode = $('#eb-resist-mode').value;
+      renderPartySummary();
+      try{ await loadSrdList(); }catch(e){ console.warn(e); }
+      renderResults();
+    })();
+  })();
+  </script>
+  <script data-goatcounter="https://maybeme1990.goatcounter.com/count"
+        async src="//gc.zgo.at/count.js"></script>
+</body>
+</html>

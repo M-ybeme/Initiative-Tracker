@@ -1,0 +1,304 @@
+{
+  "meta": {
+    "description": "SRD 5.2 (2024) corrections for srd-audit.json manifest",
+    "createdAt": "2026-01-26",
+    "basedOn": "External audit comparing current allowlist against SRD 5.2 specification",
+    "targetVersion": "SRD 5.2 (2024 PHB)",
+    "previousVersion": "SRD 5.1 (2016)"
+  },
+  "changes": {
+    "race": {
+      "summary": "SRD 5.2 includes 9 species total. Current list has 5, missing 4.",
+      "addToAllowlist": [
+        "Dwarf",
+        "Gnome",
+        "Goliath",
+        "Orc"
+      ],
+      "removeFromAllowlist": [],
+      "moveFromBlocklistToAllowlist": [
+        "Dwarf",
+        "Goliath",
+        "Orc"
+      ],
+      "notes": "Gnome may need to be added if not present. All 9 SRD 5.2 species: Dragonborn, Dwarf, Elf, Gnome, Goliath, Halfling, Human, Orc, Tiefling"
+    },
+    "background": {
+      "summary": "SRD 5.2 contains exactly 4 backgrounds. Current list has 11.",
+      "addToAllowlist": [],
+      "removeFromAllowlist": [
+        "Charlatan",
+        "Entertainer",
+        "Folk Hero",
+        "Guild Artisan",
+        "Hermit",
+        "Sailor",
+        "Urchin"
+      ],
+      "keepInAllowlist": [
+        "Acolyte",
+        "Criminal",
+        "Sage",
+        "Soldier"
+      ],
+      "notes": "Noble and Outlander are also non-SRD but weren't in the original allowlist"
+    },
+    "feat": {
+      "summary": "Major overhaul needed. SRD 5.2 has different feat set than 5.1.",
+      "removeFromAllowlist": [
+        "Ability Score Improvement",
+        "Athlete",
+        "Charger",
+        "Resilient",
+        "Ritual Caster",
+        "Savage Attacker",
+        "Sentinel",
+        "Sharpshooter",
+        "Shield Master",
+        "Skulker",
+        "Spell Sniper",
+        "Tavern Brawler",
+        "Weapon Master"
+      ],
+      "moveFromBlocklistToAllowlist": [
+        "Crossbow Expert",
+        "Elemental Adept",
+        "Grappler",
+        "Great Weapon Master",
+        "Lightly Armored",
+        "Lucky",
+        "Mage Slayer",
+        "Magic Initiate",
+        "Polearm Master"
+      ],
+      "addToAllowlist": [
+        "Crafter",
+        "Durable",
+        "Heavily Armored",
+        "Martial Adept",
+        "Archery",
+        "Defense",
+        "Dueling",
+        "Great Weapon Fighting",
+        "Protection",
+        "Two-Weapon Fighting",
+        "Boon of Combat Prowess",
+        "Boon of Dimensional Travel",
+        "Boon of Fate",
+        "Boon of Irresistible Offense",
+        "Boon of Night Spirit",
+        "Boon of Spell Recall",
+        "Boon of Truesight"
+      ],
+      "keepInAllowlist": [
+        "Alert",
+        "Skilled",
+        "Tough"
+      ],
+      "notes": "Fighting Style feats and Epic Boons are new to SRD 5.2. Ability Score Improvement is a class feature, not a feat in 5.2."
+    },
+    "spell": {
+      "summary": "Dozens of corrections needed. Many SRD spells incorrectly blocked.",
+      "moveFromBlocklistToAllowlist": [
+        "Conjure Animals",
+        "Conjure Celestial",
+        "Conjure Elemental",
+        "Conjure Fey",
+        "Grasping Vine",
+        "Ice Knife",
+        "Shape Water",
+        "Skywrite",
+        "Psychic Scream",
+        "Scatter",
+        "Vitriolic Sphere",
+        "Transmute Rock",
+        "Word of Radiance",
+        "Wrath of Nature",
+        "Investiture of Flame",
+        "Investiture of Ice",
+        "Investiture of Stone",
+        "Investiture of Wind",
+        "Primordial Ward",
+        "Catapult"
+      ],
+      "removeFromAllowlist": [
+        "Control Flames"
+      ],
+      "addToAllowlist": [
+        "Blade Ward",
+        "Dancing Lights",
+        "Friends",
+        "Frostbite",
+        "Green-Flame Blade",
+        "Booming Blade",
+        "Magic Stone",
+        "Toll the Dead",
+        "Thunderclap",
+        "Tidal Wave",
+        "Wall of Water",
+        "Summon Beast",
+        "Summon Fey",
+        "Summon Undead",
+        "Summon Draconic Spirit",
+        "Tasha's Mind Whip",
+        "Synaptic Static",
+        "Encode Thoughts"
+      ],
+      "spellNameAliases": {
+        "notes": "Some spells have name variations between editions",
+        "Acid Arrow": ["Melf's Acid Arrow"],
+        "Freezing Sphere": ["Otiluke's Freezing Sphere"],
+        "Faithful Hound": ["Mordenkainen's Faithful Hound"]
+      },
+      "notes": "Full spell list resync recommended rather than incremental patching. Current allowlist may have name mismatches."
+    },
+    "beast": {
+      "summary": "Many non-SRD beasts in allowlist, missing some SRD ones.",
+      "removeFromAllowlist": [
+        "Giant Elk (CR 2)",
+        "Saber-Toothed Tiger (CR 2)",
+        "Triceratops (CR 5)",
+        "Killer Whale (CR 3)",
+        "Reef Shark (CR 1/2)",
+        "Giant Crocodile (CR 5)",
+        "Giant Shark (CR 5)",
+        "Giant Eagle (CR 1)",
+        "Giant Wasp (CR 1/2)",
+        "Stirge (CR 1/8)"
+      ],
+      "addToAllowlist": [
+        "Axe Beak (CR 1/4)",
+        "Giant Badger (CR 1/4)",
+        "Panther (CR 1/4)",
+        "Mastiff (CR 1/8)",
+        "Pony (CR 1/8)",
+        "Bat (CR 0)",
+        "Owl (CR 0)",
+        "Weasel (CR 0)"
+      ],
+      "moveFromBlocklistToAllowlist": [],
+      "notes": "Many beasts in current list are from Monster Manual, not SRD"
+    },
+    "equipment": {
+      "summary": "Several SRD items incorrectly blocked.",
+      "moveFromBlocklistToAllowlist": [
+        "Club",
+        "Component Pouch",
+        "Wooden Shield",
+        "Crossbow Bolts (20)"
+      ],
+      "addToAllowlist": [
+        "Blowgun",
+        "Morningstar",
+        "Pike",
+        "Net",
+        "Sling Bullets (20)"
+      ],
+      "removeFromAllowlist": [],
+      "notes": "Tools and adventuring gear sections may need additional review"
+    },
+    "class": {
+      "summary": "Missing Monk and Paladin from allowlist.",
+      "addToAllowlist": [
+        "Monk",
+        "Paladin"
+      ],
+      "removeFromAllowlist": [],
+      "notes": "All 12 core classes are in SRD 5.2"
+    },
+    "subclass": {
+      "summary": "SRD 5.2 contains NO subclass text. All must be removed.",
+      "removeFromAllowlist": [
+        "Barbarian:Path of the Berserker",
+        "Barbarian:Path of the Totem Warrior",
+        "Bard:College of Lore",
+        "Bard:College of Valor",
+        "Cleric:Knowledge Domain",
+        "Cleric:Life Domain",
+        "Cleric:Light Domain",
+        "Cleric:Nature Domain",
+        "Cleric:Tempest Domain",
+        "Cleric:Trickery Domain",
+        "Cleric:War Domain",
+        "Fighter:Battle Master",
+        "Fighter:Champion",
+        "Fighter:Eldritch Knight",
+        "Paladin:Oath of Devotion",
+        "Paladin:Oath of Vengeance",
+        "Paladin:Oath of the Ancients",
+        "Ranger:Hunter",
+        "Rogue:Thief",
+        "Sorcerer:Draconic Bloodline",
+        "Sorcerer:Wild Magic",
+        "Warlock:The Archfey",
+        "Warlock:The Fiend",
+        "Warlock:The Great Old One",
+        "Wizard:School of Abjuration",
+        "Wizard:School of Conjuration",
+        "Wizard:School of Divination",
+        "Wizard:School of Enchantment",
+        "Wizard:School of Evocation",
+        "Wizard:School of Illusion",
+        "Wizard:School of Necromancy",
+        "Wizard:School of Transmutation"
+      ],
+      "addToAllowlist": [],
+      "notes": "SRD 5.2 only provides class progression tables, not subclass features. Sample subclasses (Champion, Thief, Life, Evoker) are for reference only."
+    },
+    "subclass-spell": {
+      "summary": "All subclass spells should be blocked since subclasses aren't SRD.",
+      "action": "Move all current subclass-spell entries from allowlist to blocklist",
+      "notes": "Domain spells, expanded spell lists, etc. are subclass features"
+    },
+    "subclass-cantrip": {
+      "summary": "All subclass cantrips should be blocked since subclasses aren't SRD.",
+      "action": "Move all current subclass-cantrip entries from allowlist to blocklist",
+      "notes": "Light Domain's Light cantrip grant, Nature Domain druid cantrip, etc."
+    },
+    "racial-base-feature": {
+      "summary": "Only 9 SRD species should have racial base features.",
+      "keepInAllowlist": [
+        "racial-base:Dragonborn",
+        "racial-base:Elf",
+        "racial-base:Halfling",
+        "racial-base:Human",
+        "racial-base:Tiefling"
+      ],
+      "addToAllowlist": [
+        "racial-base:Dwarf",
+        "racial-base:Gnome",
+        "racial-base:Goliath",
+        "racial-base:Orc"
+      ],
+      "removeFromAllowlist": [
+        "racial-base:Half-Elf",
+        "racial-base:Half-Orc"
+      ],
+      "notes": "Half-Elf and Half-Orc are not in SRD 5.2. Features should use 2024 species rules, not 2014 PHB traits."
+    },
+    "racial-feature": {
+      "summary": "Update to SRD 2024 species traits only.",
+      "notes": "Current features based on 2014 PHB. Need full review against 2024 SRD species traits."
+    },
+    "racial-spell": {
+      "summary": "Update to match SRD 5.2 species innate spellcasting.",
+      "notes": "Tiefling spells may need update for 2024 version. Gnome, Dwarf, Goliath, Orc spell features need review."
+    }
+  },
+  "implementation": {
+    "steps": [
+      "1. Create backup of current srd-audit.json",
+      "2. For each category, update entity status values in manifest",
+      "3. Run npm run generate-srd-allowlist to regenerate js/generated/srd-allowlist.js",
+      "4. Run npm run generate-srd-regression-pack to update test pack",
+      "5. Manual QA to verify filtering works correctly",
+      "6. Update generate-srd-regression-pack.mjs to remove subclass record generation"
+    ],
+    "risks": [
+      "Users may notice missing content they assumed was SRD",
+      "Spell name matching must be exact - aliases may cause mismatches",
+      "Subclass removal affects character creation significantly",
+      "Some data structures may need updates for new SRD 5.2 categories (Epic Boons, Fighting Styles)"
+    ]
+  }
+}
