@@ -199,18 +199,7 @@ body.player-view .card .health-input {
   line-height: 1;
 }
 
-/* Keep modals and backdrop above the fixed navbar (z-index: 1200) */
-.modal-backdrop {
-  z-index: 1240;
-}
-#statusModal,
-#notesModal,
-#bulkHPModal,
-#combatLogModal,
-#savedCharsModal,
-#rulesModal {
-  z-index: 1250;
-}
+/* Keep modals clear of the fixed navbar */
 #statusModal .modal-dialog,
 #notesModal .modal-dialog,
 #bulkHPModal .modal-dialog,
