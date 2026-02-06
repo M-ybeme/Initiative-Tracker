@@ -18,7 +18,8 @@
       "Bash(git -C \"C:/Users/Marlo/OneDrive/Documents/codingStuff/Initiative Tracker\" log --all --oneline -- .gitignore)",
       "Bash(git -C \"C:/Users/Marlo/OneDrive/Documents/codingStuff/Initiative Tracker\" show 847339f:.gitignore)",
       "Bash(git -C \"C:/Users/Marlo/OneDrive/Documents/codingStuff/Initiative Tracker\" show 936716c:.gitignore)",
-      "Bash(git -C \"C:/Users/Marlo/OneDrive/Documents/codingStuff/Initiative Tracker\" rm -r --cached internal-roadmaps/)"
+      "Bash(git -C \"C:/Users/Marlo/OneDrive/Documents/codingStuff/Initiative Tracker\" rm -r --cached internal-roadmaps/)",
+      "Bash(xargs:*)"
     ]
   }
 }

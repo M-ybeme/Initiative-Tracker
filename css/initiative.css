@@ -199,14 +199,25 @@ body.player-view .card .health-input {
   line-height: 1;
 }
 
-/* Keep modals clear of the fixed navbar */
+/* Keep modals and backdrop above the fixed navbar (z-index: 1200) */
+.modal-backdrop {
+  z-index: 1240;
+}
+#statusModal,
+#notesModal,
+#bulkHPModal,
+#combatLogModal,
+#savedCharsModal,
+#rulesModal {
+  z-index: 1250;
+}
 #statusModal .modal-dialog,
 #notesModal .modal-dialog,
 #bulkHPModal .modal-dialog,
 #combatLogModal .modal-dialog,
 #savedCharsModal .modal-dialog,
 #rulesModal .modal-dialog {
-  margin-top: 5.5rem;
+  margin-top: 6.5rem;
 }
 
 @media (max-width: 576px) {
@@ -216,6 +227,6 @@ body.player-view .card .health-input {
   #combatLogModal .modal-dialog,
   #savedCharsModal .modal-dialog,
   #rulesModal .modal-dialog {
-    margin-top: 4.5rem;
+    margin-top: 5.5rem;
   }
 }

@@ -7,8 +7,6 @@ playwright-report/
 test-results/
 dist/
 
-# Generated runtime artifacts
-js/generated/
 
 # OS files
 .DS_Store
