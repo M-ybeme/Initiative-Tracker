@@ -150,6 +150,10 @@ main.content {
 .modal-backdrop {
   z-index: 1240;
 }
+/* Ensure tooltips and popovers always render above modals */
+.tooltip {
+  z-index: 1300 !important;
+}
 #mainNav button {
   border-color: var(--mdm-secondary-color);
 }

@@ -14,7 +14,27 @@ The DM's Toolbox has evolved through focused feature releases:
 - **1.9.x**: Battle map measurement tools, persistent fog shapes, and generator integration across NPC/Tavern/Shop systems
 - **1.8.x**: Spell database expansion to 432+ spells, inventory management, loot generator overhaul, and character token generation
 
-**Current version: 2.0.8.1 (February 2026)**
+**Current version: 2.0.9 (February 2026)**
+
+---
+
+## [2.0.9] - 2026-02-18
+**Structured Sense Tracking & Inventory Equip Toggle**
+
+### Added
+- **Sense type fields on character sheet** – The Senses section now has dedicated numeric inputs for Darkvision, Blindsight, Tremorsense, and Truesight (in feet), replacing the single freeform textarea. An "Other Senses" notes field remains for anything unusual.
+- **Auto-population from character creation wizard** – When creating a character, race traits are scanned for sense keywords and their ranges are extracted and pre-filled automatically. Races with Superior Darkvision (e.g. Drow, Duergar) correctly get 120 ft. instead of the base 60 ft.
+- **Sense types in character sheet export** – Exported character sheets now render Darkvision, Blindsight, Tremorsense, and Truesight as labeled stat boxes when they are set.
+- **Inventory equip toggle button** – The equipped indicator in the inventory list is now a one-click button. Green filled button = equipped; muted outline button = unequipped. Toggling saves instantly without opening the edit modal.
+- **Equipment pack info icons** – Each equipment choice option in the character creation wizard now displays a blue `?` icon (consistent with the spell list pattern) when the option has associated contents. Hovering or focusing the icon shows the full pack contents — e.g., Dungeoneer's Pack lists its crowbar, torches, rations, rope, etc.; Arcane Focus shows available form options; multi-item options list each piece with its own notes. The previous subtle dotted-underline approach on item names has been replaced by this more discoverable icon.
+
+### Fixed
+- **Warlock spells in combat view** – Cast button now works correctly for Warlocks. Previously it tried to consume regular spell slots (which Warlocks don't have), producing "No level X spell slots remaining!" for every leveled spell. Spells now draw from pact slots, with the cast confirmation and button tooltip updated to say "pact slot (lvl X)".
+- **Warlock pact slots not set after character creation wizard** – Pact slots were silently skipped because the initialization block was nested inside a `if (spellSlots)` guard that is intentionally `null` for Warlocks. The block now runs unconditionally for Warlocks, correctly populating the Pact Max, Pact Level, and Pact Used fields in the Spells tab.
+- **Warlock pact slots not tracked as a resource** – After wizard completion, pact slots are now also written to the first available tracked resource slot (e.g. "Pact Slots (Lvl 2): 2/2") so they appear alongside other class resources.
+- **Hit dice remaining not set on character creation** – The wizard set total hit dice (`charHitDice`) but not current hit dice (`charHitDiceRemaining`). Both fields are now set to the same value on creation (e.g. "5d8" for a level 5 character), so newly created characters start with all hit dice available.
+- **Spell tooltips hidden behind modal** – Bootstrap tooltips defaulted to z-index 1070, lower than the character creation wizard modal's z-index of 1250, causing spell info and feat info tooltips to appear invisible or behind the modal backdrop. All tooltips now render at z-index 1300, consistently above all modals.
+- **Warlock spells not appearing in combat view continued** – After completing the character creation wizard, `window.currentSpellList` was never updated (only the internal closure variable was), so the combat view always saw an empty spell list. All spell categories (selected spells, cantrips, subclass spells, racial spells) now sync to `window.currentSpellList` immediately after the wizard populates the form. Additionally, spell objects were being built with wrong field names (`castingTime`, `description`) instead of the standard ones (`casting_time`, `body`); they now go through `normalizeSpellEntry` like the rest of the app.
 
 ---
 

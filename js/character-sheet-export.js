@@ -880,8 +880,24 @@ class CharacterSheetExporter {
     html += this.createStatBox('Passive Insight', s.passiveInsight || '10', '#4a5568');
     html += '</div>';
 
+    // Additional sense types
+    const senseTypes = [
+      { key: 'darkvision',  label: 'Darkvision' },
+      { key: 'blindsight',  label: 'Blindsight' },
+      { key: 'tremorsense', label: 'Tremorsense' },
+      { key: 'truesight',   label: 'Truesight' }
+    ].filter(({ key }) => s[key]);
+
+    if (senseTypes.length > 0) {
+      html += '<div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 20px;">';
+      senseTypes.forEach(({ key, label }) => {
+        html += this.createStatBox(label, `${s[key]} ft.`, '#2d6a4f');
+      });
+      html += '</div>';
+    }
+
     if (s.notes) {
-      html += `<div style="padding: 10px; border: 2px solid #ccc; background: #fafafa; color: #000; margin-bottom: 20px;"><strong>Sense Notes:</strong> ${s.notes}</div>`;
+      html += `<div style="padding: 10px; border: 2px solid #ccc; background: #fafafa; color: #000; margin-bottom: 20px;"><strong>Other Senses:</strong> ${s.notes}</div>`;
     }
 
     return html;

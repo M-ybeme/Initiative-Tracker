@@ -2265,9 +2265,27 @@
                   </div>
                 
                   <div class="col-12">
-                    <label for="sensesNotes" class="form-label">Additional Sense Types</label>
-                    <textarea id="sensesNotes" rows="2" class="form-control form-control-sm"
-                              placeholder="Darkvision, tremorsense, blindsight, truesight, special perception rules, etc."></textarea>
+                    <label class="form-label">Additional Sense Types</label>
+                    <div class="row g-2 mb-2">
+                      <div class="col-6 col-md-3">
+                        <label for="senseDarkvision" class="form-label small">Darkvision (ft.)</label>
+                        <input type="number" id="senseDarkvision" class="form-control form-control-sm text-center" placeholder="—" min="0" />
+                      </div>
+                      <div class="col-6 col-md-3">
+                        <label for="senseBlindsight" class="form-label small">Blindsight (ft.)</label>
+                        <input type="number" id="senseBlindsight" class="form-control form-control-sm text-center" placeholder="—" min="0" />
+                      </div>
+                      <div class="col-6 col-md-3">
+                        <label for="senseTremorsense" class="form-label small">Tremorsense (ft.)</label>
+                        <input type="number" id="senseTremorsense" class="form-control form-control-sm text-center" placeholder="—" min="0" />
+                      </div>
+                      <div class="col-6 col-md-3">
+                        <label for="senseTruesight" class="form-label small">Truesight (ft.)</label>
+                        <input type="number" id="senseTruesight" class="form-control form-control-sm text-center" placeholder="—" min="0" />
+                      </div>
+                    </div>
+                    <textarea id="sensesNotes" rows="1" class="form-control form-control-sm"
+                              placeholder="Other senses or special perception notes..."></textarea>
                   </div>
                 </div>
               </div>
@@ -4620,6 +4638,9 @@
 
         combatSpellsSection.classList.remove('d-none');
 
+        // Determine if this character uses pact slots instead of regular slots
+        const hasPactMagic = (parseInt(document.getElementById('pactMax')?.value, 10) || 0) > 0;
+
         // Group spells by level
         const spellsByLevel = {};
         spellList.forEach(spell => {
@@ -4668,7 +4689,7 @@
               data-spell-index="${spellIndex}"
               data-spell-level="${level}"
               data-spell-name="${title.replace(/"/g, '&quot;')}"
-              title="${isCantrip ? 'Cast cantrip' : 'Cast using spell slot'}">
+              title="${isCantrip ? 'Cast cantrip' : hasPactMagic ? 'Cast using pact slot' : 'Cast using spell slot'}">
               <i class="bi bi-magic"></i> Cast
             </button>`;
 
@@ -5400,6 +5421,15 @@
       // ========================================
 
       // Get spell slot status for a level
+      function getPactSlotStatus() {
+        const pactMax  = parseInt(document.getElementById('pactMax')?.value,  10) || 0;
+        const pactUsed = parseInt(document.getElementById('pactUsed')?.value, 10) || 0;
+        const pactLevel = parseInt(document.getElementById('pactLevel')?.value, 10) || 1;
+        const remaining = Math.max(0, pactMax - pactUsed);
+        const percentage = pactMax > 0 ? (remaining / pactMax) * 100 : 0;
+        return { max: pactMax, used: pactUsed, remaining, percentage, pactLevel, isCantrip: false, isPact: true };
+      }
+
       function getSpellSlotStatus(level) {
         if (level === 0) return { max: 0, used: 0, remaining: Infinity, percentage: 100, isCantrip: true };
 
@@ -5410,37 +5440,57 @@
         const remaining = Math.max(0, max - used);
         const percentage = max > 0 ? (remaining / max) * 100 : 0;
 
-        return { max, used, remaining, percentage, isCantrip: false };
+        // No regular slots at this level — fall back to pact slots (Warlock / pact magic)
+        if (max === 0) {
+          const pact = getPactSlotStatus();
+          if (pact.max > 0) return pact;
+        }
+
+        return { max, used, remaining, percentage, isCantrip: false, isPact: false };
       }
 
       // Use a spell slot from combat view
       function useSpellSlotFromCombat(level) {
         if (level === 0) return true; // Cantrips don't use slots
 
+        const maxEl  = document.getElementById(`slots${level}Max`);
         const usedEl = document.getElementById(`slots${level}Used`);
-        const maxEl = document.getElementById(`slots${level}Max`);
-        if (!usedEl || !maxEl) return false;
+        const max  = parseInt(maxEl?.value,  10) || 0;
+        const used = parseInt(usedEl?.value, 10) || 0;
 
-        const max = parseInt(maxEl.value, 10) || 0;
-        const used = parseInt(usedEl.value, 10) || 0;
+        // No regular slots — try pact slots
+        if (max === 0) {
+          const pactMaxEl  = document.getElementById('pactMax');
+          const pactUsedEl = document.getElementById('pactUsed');
+          const pactMax  = parseInt(pactMaxEl?.value,  10) || 0;
+          const pactUsed = parseInt(pactUsedEl?.value, 10) || 0;
 
+          if (pactMax === 0 || !pactMaxEl || !pactUsedEl) {
+            alert(`No spell slots or pact slots remaining!`);
+            return false;
+          }
+          if (pactUsed >= pactMax) {
+            alert(`No pact slots remaining!`);
+            return false;
+          }
+
+          pactUsedEl.value = pactUsed + 1;
+          pactUsedEl.dispatchEvent(new Event('input', { bubbles: true }));
+          updateCombatSpellSlots();
+          if (typeof window.saveCurrentCharacter === 'function') window.saveCurrentCharacter();
+          return true;
+        }
+
+        // Regular slot
         if (used >= max) {
           alert(`No level ${level} spell slots remaining!`);
           return false;
         }
 
-        // Increment used slots
         usedEl.value = used + 1;
         usedEl.dispatchEvent(new Event('input', { bubbles: true }));
-
-        // Update combat spell slots display
         updateCombatSpellSlots();
-
-        // Save character
-        if (typeof window.saveCurrentCharacter === 'function') {
-          window.saveCurrentCharacter();
-        }
-
+        if (typeof window.saveCurrentCharacter === 'function') window.saveCurrentCharacter();
         return true;
       }
 
@@ -5471,22 +5521,24 @@
           return;
         }
 
+        const slotLabel = status.isPact ? `pact slot (lvl ${status.pactLevel})` : `level ${level} slot`;
+
         // No slots available
         if (status.remaining === 0) {
-          alert(`No level ${level} spell slots remaining!\n\nYou have used all ${status.max} slots.`);
+          alert(`No ${slotLabel}s remaining!\n\nYou have used all ${status.max}.`);
           return;
         }
 
         // Last slot warning
         if (status.remaining === 1) {
-          const proceed = confirm(`This is your last level ${level} spell slot!\n\nCast ${spellName}?`);
+          const proceed = confirm(`This is your last ${slotLabel}!\n\nCast ${spellName}?`);
           if (!proceed) return;
         }
 
         // Use the slot
         if (useSpellSlotFromCombat(level)) {
           const newStatus = getSpellSlotStatus(level);
-          let feedbackMsg = `Cast ${spellName}! (${newStatus.remaining}/${newStatus.max} slots left)`;
+          let feedbackMsg = `Cast ${spellName}! (${newStatus.remaining}/${newStatus.max} ${status.isPact ? 'pact slots' : 'slots'} left)`;
 
           // Handle concentration
           if (requiresConcentration && typeof window.setConcentration === 'function') {

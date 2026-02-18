@@ -1,14 +1,12 @@
 const DM_TOOLBOX_BUILD = {
   name: "The DM's Toolbox",
-  version: "2.0.8.1",
+  version: "2.0.9",
   recentChanges: [
-    "Content packs can now add subraces, fighting styles, pact boons, invocations, and metamagic",
-    "Content packs now properly unlock non-SRD subraces, races, and other content",
-    "Fixed data restoration when toggling content packs on/off",
-    "SRD 5.2 compliance overhaul – allowlist updated to match 2024 PHB rules",
-    "Fog shape rotation – drag the orange handle to rotate rectangle/square fog shapes",
-    "Footer settings button for mobile access to diagnostics panel",
-    "Export/Import All Data buttons for complete backup and restoration"
+    "Wizard spell list fix – spells chosen in the character creation wizard now immediately appear in the combat view spell list",
+    "Spell tooltip z-index fix – spell and equipment info tooltips in the character creation wizard now appear above the modal instead of behind it",
+    "Equipment pack info icons – each equipment choice now shows a ? icon revealing full pack contents (e.g. what's in a Dungeoneer's Pack or Arcane Focus)",
+    "Warlock combat fix – Warlock spells in the combat view now correctly use pact slots instead of failing with 'no slots remaining'",
+    "Warlock character creation – pact slots are now properly set in the Spells tab and added to the tracked resource area after wizard completion"
   ],
   buildTime: new Date().toISOString(),
   author: "Maybeme"

@@ -3041,6 +3041,53 @@ const CharacterCreationWizard = (function() {
     return `**${background} Background Feature:**\n- See Player's Handbook for full background feature details.`;
   }
 
+  /**
+   * Extract structured sense type ranges from race traits
+   * @param {string} race - Character's species
+   * @param {string} subrace - Character's subspecies (optional)
+   * @param {number} level - Character's level
+   * @returns {Object} - Map of sense type to range in feet (e.g. { darkvision: 60 })
+   */
+  function gatherSpeciesSenses(race, subrace, level) {
+    const senses = {};
+    if (!window.LevelUpData || typeof window.LevelUpData.getFullSpeciesFeatures !== 'function') {
+      return senses;
+    }
+
+    const features = window.LevelUpData.getFullSpeciesFeatures(race, subrace, level);
+    if (!features || !features.traits) return senses;
+
+    // Map of data key → trait name aliases (case-insensitive)
+    const senseAliases = {
+      darkvision:  ['superior darkvision', 'darkvision'],
+      blindsight:  ['blindsight'],
+      tremorsense: ['tremorsense'],
+      truesight:   ['truesight']
+    };
+
+    features.traits.forEach(trait => {
+      const name = (trait.name || '').toLowerCase();
+      const desc = trait.description || '';
+
+      for (const [key, aliases] of Object.entries(senseAliases)) {
+        if (aliases.some(alias => name.includes(alias))) {
+          // Extract the first number of feet from the description
+          const match = desc.match(/(\d+)\s*feet/i);
+          if (match) {
+            const range = parseInt(match[1], 10);
+            // Keep the highest range (superior darkvision overrides regular)
+            if (!senses[key] || range > senses[key]) {
+              senses[key] = range;
+            }
+          }
+          break;
+        }
+      }
+    });
+
+    return senses;
+  }
+
   // ============================================================
   // EQUIPMENT SELECTION STEP HELPERS
   // ============================================================
@@ -3123,15 +3170,28 @@ const CharacterCreationWizard = (function() {
         const isWeaponChoice = typeof option.items === 'string';
         const inputId = `equipment_${choice.id}_${option.id}`;
 
+        // Build tooltip content from item notes (for packs, focuses, etc.)
+        const notesItems = !isWeaponChoice
+          ? option.items.filter(item => item.notes && item.notes.length > 5)
+          : [];
+        const hasTooltip = notesItems.length > 0;
+        const tooltipHtml = hasTooltip
+          ? notesItems.map(item =>
+              notesItems.length > 1
+                ? `<strong>${item.name}:</strong> ${item.notes}`
+                : item.notes
+            ).join('<br>').replace(/"/g, '&quot;')
+          : '';
+
         html += `
-          <div class="form-check mb-2">
+          <div class="form-check mb-2 d-flex align-items-center">
             <input class="form-check-input equipment-choice" type="radio"
                    name="equipment_${choice.id}"
                    id="${inputId}"
                    value="${option.id}"
                    data-choice-id="${choice.id}"
                    ${idx === 0 ? 'checked' : ''}>
-            <label class="form-check-label" for="${inputId}">
+            <label class="form-check-label flex-grow-1" for="${inputId}">
         `;
 
         if (isWeaponChoice) {
@@ -3139,22 +3199,26 @@ const CharacterCreationWizard = (function() {
           html += `<span>${option.label}:</span> `;
           html += getWeaponDropdownHtml(choice.id, option.id, option.items);
         } else {
-          // Fixed items - add tooltips for items with notes (like packs)
-          html += option.items.map(item => {
-            const hasNotes = item.notes && item.notes.length > 10;
-            if (hasNotes) {
-              // Escape quotes for HTML attribute
-              const tooltipText = item.notes.replace(/"/g, '&quot;');
-              return `<span class="equipment-item-tooltip" data-bs-toggle="tooltip" data-bs-placement="top" title="${tooltipText}" style="border-bottom: 1px dotted #888; cursor: help;">${item.name}${item.quantity > 1 ? ` (${item.quantity})` : ''}</span>`;
-            }
-            return `${item.name}${item.quantity > 1 ? ` (${item.quantity})` : ''}`;
-          }).join(', ');
+          // Fixed items - render names plainly; tooltip on the ? icon instead
+          html += option.items.map(item =>
+            `${item.name}${item.quantity > 1 ? ` (${item.quantity})` : ''}`
+          ).join(', ');
         }
 
-        html += `
-            </label>
-          </div>
-        `;
+        html += `</label>`;
+
+        if (hasTooltip) {
+          html += `
+            <i class="bi bi-question-circle text-info ms-2 equipment-info-icon"
+               data-bs-toggle="tooltip"
+               data-bs-placement="left"
+               data-bs-html="true"
+               title="${tooltipHtml}"
+               style="cursor: help; font-size: 0.85rem; opacity: 0.7; flex-shrink: 0;"></i>
+          `;
+        }
+
+        html += `</div>`;
       });
 
       // Add "Take Gold Instead" option for this choice
@@ -3199,7 +3263,7 @@ const CharacterCreationWizard = (function() {
     setTimeout(() => {
       const tooltipElements = container.querySelectorAll('[data-bs-toggle="tooltip"]');
       tooltipElements.forEach(el => {
-        new bootstrap.Tooltip(el);
+        new bootstrap.Tooltip(el, { trigger: 'hover focus', html: true });
       });
     }, 100);
   }
@@ -3605,6 +3669,12 @@ const CharacterCreationWizard = (function() {
     // Gather species features
     wizardData.racialFeatures = gatherSpeciesFeatures(wizardData.race, wizardData.subrace, wizardData.level);
     console.log(`🧬 Gathered species features for ${wizardData.race}${wizardData.subrace ? ` (${wizardData.subrace})` : ''}`);
+
+    // Gather species senses (darkvision, blindsight, tremorsense, truesight)
+    wizardData.speciesSenses = gatherSpeciesSenses(wizardData.race, wizardData.subrace, wizardData.level);
+    if (Object.keys(wizardData.speciesSenses).length > 0) {
+      console.log('👁️ Gathered species senses:', wizardData.speciesSenses);
+    }
 
     // Gather background feature
     wizardData.backgroundFeature = gatherBackgroundFeature(wizardData.background);

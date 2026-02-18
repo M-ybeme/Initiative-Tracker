@@ -1887,7 +1887,9 @@
             <td class="text-center">${quantity}</td>
             <td class="text-center">${weight.toFixed(1)}</td>
             <td class="text-center">
-              ${item.equipped ? '<i class="bi bi-check-circle-fill text-success"></i>' : '<i class="bi bi-circle text-muted"></i>'}
+              <button type="button" class="btn btn-sm ${item.equipped ? 'btn-success' : 'btn-outline-secondary'}" data-inventory-equip="${index}" title="${item.equipped ? 'Unequip' : 'Equip'}">
+                <i class="bi ${item.equipped ? 'bi-check-circle-fill' : 'bi-circle'}"></i>
+              </button>
             </td>
             <td class="text-center">
               ${item.attuned ? '<i class="bi bi-star-fill text-warning"></i>' : '<i class="bi bi-star text-muted"></i>'}
@@ -2425,6 +2427,10 @@
           $('charPassivePerception').value = senses.passivePerception ?? '';
           $('charPassiveInvestigation').value = senses.passiveInvestigation ?? '';
           $('charPassiveInsight').value = senses.passiveInsight ?? '';
+          if ($('senseDarkvision')) $('senseDarkvision').value = senses.darkvision || '';
+          if ($('senseBlindsight')) $('senseBlindsight').value = senses.blindsight || '';
+          if ($('senseTremorsense')) $('senseTremorsense').value = senses.tremorsense || '';
+          if ($('senseTruesight')) $('senseTruesight').value = senses.truesight || '';
           $('sensesNotes').value = senses.notes || '';
 
           // Resources & rests
@@ -2641,7 +2647,10 @@
         }
         if (wizardData.ac) $('charAC').value = wizardData.ac;
         if (wizardData.speed) $('charSpeed').value = wizardData.speed;
-        if (wizardData.hitDie) $('charHitDice').value = wizardData.hitDie;
+        if (wizardData.hitDie) {
+          $('charHitDice').value = wizardData.hitDie;
+          if ($('charHitDiceRemaining')) $('charHitDiceRemaining').value = wizardData.hitDie;
+        }
 
         // Fill in proficiency bonus
         if (wizardData.proficiencyBonus && $('charProfBonus')) {
@@ -2716,77 +2725,55 @@
         recalcSkillsFromForm(false);
         recalcPassivesFromForm();
 
+        // Populate sense types from wizard data
+        if (wizardData.speciesSenses) {
+          const ss = wizardData.speciesSenses;
+          if (ss.darkvision && $('senseDarkvision')) $('senseDarkvision').value = ss.darkvision;
+          if (ss.blindsight && $('senseBlindsight')) $('senseBlindsight').value = ss.blindsight;
+          if (ss.tremorsense && $('senseTremorsense')) $('senseTremorsense').value = ss.tremorsense;
+          if (ss.truesight && $('senseTruesight')) $('senseTruesight').value = ss.truesight;
+        }
+
         // Add wizard-selected spells to the spell list
+        // Use normalizeSpellEntry so field names (casting_time, body, etc.) are always consistent
+        // and window.currentSpellList is kept in sync with the closure variable.
         if (wizardData.selectedSpells && wizardData.selectedSpells.length > 0) {
-          currentSpellList = wizardData.selectedSpells.map(spell => ({
-            name: spell.title,
-            level: spell.level,
-            school: spell.school,
-            castingTime: spell.casting_time,
-            range: spell.range,
-            components: spell.components,
-            duration: spell.duration,
-            concentration: spell.concentration || false,
-            ritual: spell.ritual || false,
-            description: spell.body || ''
-          }));
+          currentSpellList = wizardData.selectedSpells
+            .map(spell => normalizeSpellEntry(spell))
+            .filter(Boolean);
         }
 
         // Add cantrips
         if (wizardData.selectedCantrips && wizardData.selectedCantrips.length > 0) {
-          const cantrips = wizardData.selectedCantrips.map(spell => ({
-            name: spell.title,
-            level: 0,
-            school: spell.school,
-            castingTime: spell.casting_time,
-            range: spell.range,
-            components: spell.components,
-            duration: spell.duration,
-            concentration: spell.concentration || false,
-            ritual: spell.ritual || false,
-            description: spell.body || ''
-          }));
+          const cantrips = wizardData.selectedCantrips
+            .map(spell => normalizeSpellEntry(spell))
+            .filter(Boolean);
           currentSpellList = [...(currentSpellList || []), ...cantrips];
         }
 
         // Add subclass spells (always prepared)
         if (wizardData.subclassSpells && wizardData.subclassSpells.length > 0) {
-          const subclassSpells = wizardData.subclassSpells.map(spell => ({
-            name: spell.title,
-            level: spell.level,
-            school: spell.school,
-            castingTime: spell.casting_time,
-            range: spell.range,
-            components: spell.components,
-            duration: spell.duration,
-            concentration: spell.concentration || false,
-            ritual: spell.ritual || false,
-            description: spell.body || '',
-            prepared: true, // Show as prepared in UI
-            alwaysPrepared: true // Mark as always prepared (doesn't count toward limit)
-          }));
+          const subclassSpells = wizardData.subclassSpells.map(spell => {
+            const n = normalizeSpellEntry(spell);
+            if (n) { n.prepared = true; n.alwaysPrepared = true; }
+            return n;
+          }).filter(Boolean);
           currentSpellList = [...(currentSpellList || []), ...subclassSpells];
           console.log(`✨ Added ${subclassSpells.length} subclass spells (always prepared)`);
         }
 
         // Add subclass bonus cantrips (e.g., Light Domain's Light, Celestial Warlock's Light + Sacred Flame)
         if (wizardData.subclassBonusCantrips && wizardData.subclassBonusCantrips.length > 0) {
-          const bonusCantrips = wizardData.subclassBonusCantrips.map(spell => ({
-            name: spell.title,
-            level: spell.level,
-            school: spell.school,
-            castingTime: spell.casting_time,
-            range: spell.range,
-            components: spell.components,
-            duration: spell.duration,
-            concentration: spell.concentration || false,
-            ritual: spell.ritual || false,
-            description: spell.body || '',
-            prepared: true,
-            alwaysPrepared: true,
-            subclassCantrip: true,
-            subclassNote: `(Bonus from ${spell.subclassSource || wizardData.subclass})`
-          }));
+          const bonusCantrips = wizardData.subclassBonusCantrips.map(spell => {
+            const n = normalizeSpellEntry(spell);
+            if (n) {
+              n.prepared = true;
+              n.alwaysPrepared = true;
+              n.subclassCantrip = true;
+              n.subclassNote = `(Bonus from ${spell.subclassSource || wizardData.subclass})`;
+            }
+            return n;
+          }).filter(Boolean);
           currentSpellList = [...(currentSpellList || []), ...bonusCantrips];
           console.log(`🌟 Added ${bonusCantrips.length} subclass bonus cantrip(s)`);
         }
@@ -2794,7 +2781,6 @@
         // Add racial spells (innate spellcasting from race)
         if (wizardData.racialSpells && wizardData.racialSpells.length > 0) {
           const racialSpells = wizardData.racialSpells.map(spell => {
-            // Build note for racial spells based on type
             let racialNote = '';
             if (spell.racialType === 'cantrip') {
               racialNote = '(Racial cantrip)';
@@ -2805,27 +2791,21 @@
             } else if (spell.racialType === 'at_will') {
               racialNote = '(Racial: at will)';
             }
-
-            return {
-              name: spell.title,
-              level: spell.level,
-              school: spell.school,
-              castingTime: spell.casting_time,
-              range: spell.range,
-              components: spell.components,
-              duration: spell.duration,
-              concentration: spell.concentration || false,
-              ritual: spell.ritual || false,
-              description: spell.body || '',
-              prepared: true, // Always "prepared" since it's innate
-              alwaysPrepared: true, // Doesn't count toward prepared limit
-              racialSpell: true,
-              racialNote: racialNote
-            };
-          });
+            const n = normalizeSpellEntry(spell);
+            if (n) {
+              n.prepared = true;
+              n.alwaysPrepared = true;
+              n.racialSpell = true;
+              n.racialNote = racialNote;
+            }
+            return n;
+          }).filter(Boolean);
           currentSpellList = [...(currentSpellList || []), ...racialSpells];
           console.log(`🧬 Added ${racialSpells.length} racial spells (innate spellcasting)`);
         }
+
+        // Sync global reference so combat view can read the updated spell list immediately
+        window.currentSpellList = currentSpellList;
 
         // Render the spell list if spells were added
         if (currentSpellList && currentSpellList.length > 0) {
@@ -2895,14 +2875,28 @@
                 console.log(`  Slot level ${i}: Max=${slotValue}, Used=0`);
               }
             }
+          }
 
-            // Handle Warlock pact magic separately
-            if (wizardData.class === 'Warlock' && wizardData.level >= 1) {
-              const pactSlots = getPactMagicSlots(wizardData.level);
-              if (pactSlots && $('pactMax')) {
-                $('pactMax').value = pactSlots.slots;
-                $('pactLevel').value = pactSlots.level;
-                if ($('pactUsed')) $('pactUsed').value = 0;
+          // Handle Warlock pact magic — moved outside if(spellSlots) because
+          // getSpellSlotsForClassLevel returns null for Warlocks intentionally
+          if (wizardData.class === 'Warlock' && wizardData.level >= 1) {
+            const pactSlots = getPactMagicSlots(wizardData.level);
+            if (pactSlots) {
+              if ($('pactMax'))   $('pactMax').value   = pactSlots.slots;
+              if ($('pactLevel')) $('pactLevel').value = pactSlots.level;
+              if ($('pactUsed'))  $('pactUsed').value  = 0;
+              updateSpellSlotsDisplay();
+              console.log(`🔮 Set Warlock pact slots: ${pactSlots.slots} × level ${pactSlots.level}`);
+
+              // Add pact slots to the tracked resource area (first empty slot)
+              for (let i = 1; i <= 3; i++) {
+                const nameEl = $(`res${i}Name`);
+                if (nameEl && !nameEl.value) {
+                  nameEl.value = `Pact Slots (Lvl ${pactSlots.level})`;
+                  if ($(`res${i}Current`)) $(`res${i}Current`).value = pactSlots.slots;
+                  if ($(`res${i}Max`))     $(`res${i}Max`).value     = pactSlots.slots;
+                  break;
+                }
               }
             }
           }
@@ -3110,6 +3104,10 @@
             passivePerception: '',
             passiveInvestigation: '',
             passiveInsight: '',
+            darkvision: '',
+            blindsight: '',
+            tremorsense: '',
+            truesight: '',
             notes: ''
           },
 
@@ -3388,6 +3386,10 @@
           char.senses.passivePerception = getNum('charPassivePerception');
           char.senses.passiveInvestigation = getNum('charPassiveInvestigation');
           char.senses.passiveInsight = getNum('charPassiveInsight');
+          char.senses.darkvision = getNum('senseDarkvision');
+          char.senses.blindsight = getNum('senseBlindsight');
+          char.senses.tremorsense = getNum('senseTremorsense');
+          char.senses.truesight = getNum('senseTruesight');
           char.senses.notes = getVal('sensesNotes');
 
           // Resources & rests
@@ -4853,6 +4855,18 @@
             if (editBtn) {
               const index = parseInt(editBtn.getAttribute('data-inventory-edit'), 10);
               openInventoryItemModal(index);
+              return;
+            }
+
+            // Toggle equipped
+            const equipBtn = e.target.closest('button[data-inventory-equip]');
+            if (equipBtn) {
+              const index = parseInt(equipBtn.getAttribute('data-inventory-equip'), 10);
+              if (index >= 0 && index < currentInventoryList.length) {
+                currentInventoryList[index].equipped = !currentInventoryList[index].equipped;
+                renderInventoryTable();
+                saveCharacterData();
+              }
               return;
             }
 
