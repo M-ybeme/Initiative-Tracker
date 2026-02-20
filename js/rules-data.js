@@ -1,4 +1,5 @@
-    const RULES_DATA = [
+    // eslint-disable-next-line no-unused-vars
+    const RULES_DATA = window.RULES_DATA = [
     {
       cat: "Vision",
       items: [

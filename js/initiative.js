@@ -21,7 +21,7 @@ const statusEffects = [
   let statusModal = null;
   let notesModal = null;
   let sortableInstance = null;
-  let concQueue = [];
+  const concQueue = [];
   let concToast = null;
   let concPromptActive = false;
   let playerView = false;
@@ -139,7 +139,7 @@ const statusEffects = [
   let autoSaveEnabled = true;
   let diceHistory = [];
   let modalCharacterIndex = null; 
-  let undoStack = [];             
+  const undoStack = [];             
   const UNDO_LIMIT = 50;          
   const COMBAT_LOG_LIMIT = 100;
   let combatLog = [];
@@ -433,7 +433,7 @@ function buildDiceHistory(){
 const termRe = /([+-]?)\s*(?:(\d*)d(\d+)(?:k(h|l)(\d+))?)|([+-]?\d+)/ig;
 function rollDiceExpr(exprRaw) {
   const expr = exprRaw.replace(/\s+/g,'').toLowerCase();
-  let total = 0, parts = [], match;
+  let total = 0; const parts = []; let match;
   let any = false;
   // Basic validation – only digits, d, k, h/l, +/-, and letters a/d/v/i/s for "adv/dis" passthrough handling
   if (!/^[0-9dkhl+\-\sadvini]*$/i.test(expr)) {
@@ -1756,7 +1756,7 @@ $('clear-dice-history').addEventListener('click', ()=>{
         c.currentHP = c.maxHP;
         if (c.currentHP > 0) c.deathSaves = { s:0, f:0, stable:false };
       } else if (action === 'heal') {
-        const oldHP = c.currentHP;
+        const _oldHP = c.currentHP;
         c.currentHP = Math.min(c.maxHP, c.currentHP + amount);
         if (c.currentHP > 0) c.deathSaves = { s:0, f:0, stable:false };
       } else if (action === 'damage') {

@@ -6,9 +6,14 @@ The Level-Up System provides a comprehensive, guided leveling experience for D&D
 
 - ✅ **Hit Point increases** (roll or average)
 - ✅ **Ability Score Improvements** (ASI)
-- ✅ **Feat selection** (40+ PHB feats)
+- ✅ **Feat selection** (40+ PHB feats, plus homebrew via content packs)
 - ✅ **Spell slot progression** (automatic)
-- ✅ **Class features** (informative display)
+- ✅ **Subclass selection** at class-prescribed levels
+- ✅ **Spell learning** for known-spell and half-caster classes
+- ✅ **Multiclassing** with correct spell slot math
+- ✅ **Interactive class feature selection** (Fighting Style, Pact Boon, Eldritch Invocations, Metamagic)
+- ✅ **Homebrew class support** via content packs
+- ✅ **Class features** (auto-granted features displayed; selectable features show choice UI)
 - ✅ **Proficiency bonus** (automatic)
 
 ## SRD Content Scope
@@ -31,8 +36,16 @@ The public build exposes only SRD classes, subclasses, feats, and spell lists. A
    - Standard ASI: +2 to one score, or +1 to two scores
    - OR choose from 40+ feats with prerequisites checking
 4. **Spell slot auto-update** for all casters
-5. **Pact Magic support** for Warlocks
-6. **Class features display** at each level
+5. **Pact Magic support** for Warlocks — pact slots initialized correctly, written to tracked resources
+6. **Subclass selection** at class-prescribed levels with descriptive text and feature previews
+7. **Spell learning** for known-spell casters (Bard, Sorcerer, Warlock) and half-casters (Paladin, Ranger)
+8. **Interactive class feature selection** for features requiring player choice:
+   - **Fighting Style** – Fighter, Paladin, Ranger; homebrew styles from content packs appear with a "Homebrew" badge
+   - **Pact Boon** – Warlock; homebrew boons supported
+   - **Eldritch Invocations** – Warlock; prerequisites shown; homebrew invocations supported
+   - **Metamagic** – Sorcerer; cost shown; homebrew options supported
+9. **Auto-granted features** displayed separately from selectable features; selection UI only shown when a choice is required
+10. **Homebrew class support** — classes added via content pack records appear in the wizard
 
 ### Feats Included
 Over 40 official feats from the Player's Handbook:
@@ -67,9 +80,11 @@ Over 40 official feats from the Player's Handbook:
 
 ```
 /js/
-  ├── level-up-data.js       # Class progression tables, feats, proficiency bonuses
-  ├── level-up-system.js     # UI and level-up flow logic
-  ├── character.js           # Main character manager (exports API for level-up)
+  ├── level-up-system.js          # UI and level-up flow logic
+  ├── character.js                # Main character manager (exports API for level-up)
+  └── ...
+/data/srd/
+  ├── level-up-data.js            # Class progression tables, feats, proficiency bonuses
   └── ...
 ```
 
@@ -77,7 +92,7 @@ Over 40 official feats from the Player's Handbook:
 
 ### Data Structure
 
-**`level-up-data.js`** contains:
+**`data/srd/level-up-data.js`** contains:
 - `FEATS`: Object with all feat data including prerequisites, benefits, descriptions
 - `PROFICIENCY_BONUS`: Level → proficiency bonus lookup
 - `CLASS_DATA`: Comprehensive class progression:
@@ -87,6 +102,11 @@ Over 40 official feats from the Player's Handbook:
   - Spell slots by level (for casters)
   - Pact magic slots (Warlock)
   - Features gained at each level
+- `FIGHTING_STYLE_DATA`: Fighting style options by class
+- `PACT_BOON_DATA`: Warlock pact boon options
+- `ELDRITCH_INVOCATION_DATA`: Invocation options with prerequisites
+- `METAMAGIC_DATA`: Sorcerer metamagic options with cost
+- `SUBRACE_DATA`: Subrace definitions (keyed as `Race:SubraceName`)
 
 **`level-up-system.js`** handles:
 - Modal UI creation
@@ -104,36 +124,26 @@ window.saveCurrentCharacter()   // Save changes to storage
 window.loadCharacterIntoForm()  // Refresh UI after level-up
 ```
 
-## Future Enhancements (Phase 2+)
+## Possible Future Enhancements
 
-### Planned Features
-- [ ] **Subclass selection** at appropriate levels
-  - Each class has 3-5+ official subclasses
-  - Custom subclass support
-- [ ] **Multiclassing**
-  - Prerequisites checking
-  - Spell slot calculations
-  - Proficiency restrictions
-- [ ] **Spell learning** for casters
-  - Automatic prompts for new spells
-  - Integration with spell database
-- [ ] **Custom feats** creation
-- [ ] **Racial level features** (e.g., Aasimar transformations)
-- [ ] **Homebrew class support**
 - [ ] **Level-down** (for corrections)
 - [ ] **Level-up history** tracking
+- [ ] **Racial level features** (e.g., level-gated transformations)
 
-### Additional Feat Sources
-- Private content packs can register additional feat definitions for tables that own other books.
+### Additional Content Sources
+- Private content packs can register additional feat, fighting style, pact boon, eldritch invocation, metamagic, and class definitions. Homebrew options appear alongside SRD options in the selection UI with a "Homebrew" badge.
 - The default repository build remains SRD-only; any non-SRD entries stay hidden until a pack enables them locally.
 
 ## Implementation Notes
 
 ### Class Feature Display
-Currently, class features are **displayed but not automated**. For example:
-- "Rage (3/day)" is shown at level 3 Barbarian
-- The DM/player must manually update their resources or notes
-- Future versions may auto-populate resource trackers
+Class features are split into two categories during level-up:
+- **Auto-granted features** — displayed as a list; no player action required
+- **Selectable features** — features that require a player choice (Fighting Style, Pact Boon, Eldritch Invocations, Metamagic) display an interactive selection UI with full descriptions
+
+Selected features are stored on the character object (`character.fightingStyles`, `character.pactBoon`, `character.eldritchInvocations`, `character.metamagic`) and full descriptions are written to the character's features field.
+
+Resource quantities (e.g., "Rage 3/day") must still be tracked manually via the tracked resources section.
 
 ### Spell Slot Philosophy
 - Spell slots are **auto-updated** based on class tables
@@ -262,5 +272,5 @@ For issues, feature requests, or questions:
 
 ---
 
-**Version**: 1.0.0 (Phase 1 - Core Classes)
-**Last Updated**: January 2025
+**Version**: 2.0.9
+**Last Updated**: February 2026

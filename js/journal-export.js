@@ -10,7 +10,8 @@ const JOURNAL_LICENSE_DEFAULTS = {
   srdUrl: SRD_PDF_URL
 };
 
-const JournalExport = {
+// eslint-disable-next-line no-unused-vars
+const JournalExport = window.JournalExport = {
   getLicenseNotices() {
     if (typeof window !== 'undefined') {
       if (typeof window.getSrdLicenseNotices === 'function') {
@@ -220,7 +221,7 @@ const JournalExport = {
       return;
     }
 
-    const { Document, Packer, Paragraph, TextRun, HeadingLevel, AlignmentType } = docx;
+    const { Document, Packer, Paragraph, TextRun, HeadingLevel } = docx;
 
     const tempDiv = document.createElement('div');
     tempDiv.innerHTML = htmlContent;
@@ -309,7 +310,7 @@ const JournalExport = {
       }
 
       const tagName = node.tagName.toLowerCase();
-      let newStyle = { ...style };
+      const newStyle = { ...style };
 
       switch (tagName) {
         case 'strong':
@@ -531,7 +532,7 @@ const JournalExport = {
             return;
           }
 
-          const { Document, Packer, Paragraph, TextRun, HeadingLevel, PageBreak } = docx;
+          const { Document, Packer, Paragraph, HeadingLevel, PageBreak } = docx;
           const children = [];
 
           // Add main title

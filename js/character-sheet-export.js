@@ -51,7 +51,7 @@ class CharacterSheetExporter {
         backgroundColor: '#ffffff',
         logging: true,
         imageTimeout: 15000,
-        onclone: (clonedDoc) => {
+        onclone: (_clonedDoc) => {
           console.log('html2canvas cloned document');
         }
       });
@@ -175,7 +175,7 @@ class CharacterSheetExporter {
     try {
       await this.loadLibrary('docx', 'https://unpkg.com/docx@7.8.2/build/index.js');
 
-      const { Document, Packer, Paragraph, TextRun, HeadingLevel, AlignmentType, ImageRun, Table, TableRow, TableCell, WidthType, BorderStyle } = docx;
+      const { Document, Packer, Paragraph, HeadingLevel, AlignmentType } = docx;
 
       const children = [];
 
@@ -293,8 +293,8 @@ class CharacterSheetExporter {
         Object.keys(skillNames).forEach(skillKey => {
           const skill = character.skills[skillKey];
           if (skill) {
-            let profStr = skill.exp ? '(Expertise)' : skill.prof ? '(Proficient)' : '';
-            let bonus = skill.bonus ? ` ${skill.bonus >= 0 ? '+' : ''}${skill.bonus}` : '';
+            const profStr = skill.exp ? '(Expertise)' : skill.prof ? '(Proficient)' : '';
+            const bonus = skill.bonus ? ` ${skill.bonus >= 0 ? '+' : ''}${skill.bonus}` : '';
             children.push(new Paragraph({ text: `${skillNames[skillKey]}: ${profStr}${bonus}` }));
           }
         });
@@ -773,7 +773,7 @@ class CharacterSheetExporter {
     `;
   }
 
-  createSaveBox(name, save, abilityMod) {
+  createSaveBox(name, save, _abilityMod) {
     const prof = save?.prof ? '●' : '○';
     const bonus = save?.bonus || (save?.prof ? this.getProficiencyBonus(1) : '') || '';
     return `

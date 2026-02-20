@@ -66,11 +66,13 @@ Press **Ctrl+Alt+D** or click the gear icon in the footer to open the diagnostic
 
 ### Character Creation & Management
 
-* **13-step character wizard** – Guided creation from species selection through equipment
-* **Species selection** with SRD subspecies (High Elf, Hill Dwarf, etc.)
+* **13-step character wizard** – Guided creation from species selection through equipment, with info icons on equipment packs showing full contents
+* **Species selection** with SRD subspecies (High Elf, Hill Dwarf, etc.) — senses auto-populated from race traits
 * **Background bonuses** – 2024 PHB system with flexible +2/+1 ability increases
 * **Origin feats** – Automatic feat from background (Magic Initiate, Alert, etc.)
-* **Level-up system** – HP rolls, ASI/feat choices, spell slot progression
+* **Level-up system** – HP rolls, ASI/feat choices, interactive class feature selection (Fighting Style, Pact Boon, Eldritch Invocations, Metamagic), spell slot progression
+* **Structured senses** – Dedicated fields for Darkvision, Blindsight, Tremorsense, and Truesight (in feet) on the character sheet and in exports
+* **Inventory equip toggle** – One-click equipped/unequipped button per item, saves instantly
 * **Exportable sheets** – PDF and JSON export for backup or sharing
 
 ### Combat & Encounters
@@ -78,8 +80,10 @@ Press **Ctrl+Alt+D** or click the gear icon in the footer to open the diagnostic
 * **Initiative tracking** with automatic turn order and round counter
 * **HP management** – Damage, healing, temp HP, and death saves
 * **Condition tracking** – All 2024 PHB conditions with exhaustion penalties
+* **Ability check rolls** – Roll raw ability checks (advantage/normal/disadvantage) from the character sheet and combat view
 * **Encounter balancing** – CR calculator with difficulty ratings
 * **Monster stat blocks** – Full SRD bestiary with searchable filters
+* **Custom monster creator** – Simple/Full mode builder with all 5e stat block fields (legendary, mythic, lair actions, spellcasting, and more)
 
 ### Improvisation Tools
 
@@ -264,10 +268,6 @@ The DM's Toolbox includes accessibility features:
 ### SRD Attribution Text
 
 This work includes material from the System Reference Document 5.2 by Wizards of the Coast LLC and is licensed for our use under the Creative Commons Attribution 4.0 International License.
-
-### Product Identity Disclaimer
-
-The DM's Toolbox references rules and mechanics from the Dungeons & Dragons 5e System Reference Document 5.2. Wizards of the Coast, Dungeons & Dragons, Forgotten Realms, Ravenloft, Eberron, the dragon ampersand, beholders, githyanki, githzerai, mind flayers, yuan-ti, and all other Wizards of the Coast product identity are trademarks of Wizards of the Coast LLC in the U.S.A. and other countries. The DM's Toolbox is not affiliated with, endorsed, sponsored, or specifically approved by Wizards of the Coast LLC.
 
 ### Reference Materials
 

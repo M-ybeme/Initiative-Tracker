@@ -800,7 +800,7 @@
   <nav class="navbar navbar-expand-lg navbar-dark fixed-top text-light" id="mainNav">
     <div class="container-fluid">
       <a class="navbar-brand" href="index.html">
-        <img src="/images/dndFavicon (2).png" height="40" width="40" alt="App Logo" class="d-inline-block" />
+        <img src="/images/DMsToolboxLogo.png" height="40" width="40" alt="App Logo" class="d-inline-block" />
         The DM Toolbox
       </a>
       <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarSupportedContent"
@@ -3716,18 +3716,31 @@
                             <li>Character portrait (if available)</li>
                             <li>Essential stats: AC, HP, Speed</li>
                             <li>Combat info: Initiative, Proficiency Bonus, Passive Perception</li>
-                            <li>All saving throws</li>
+                            <li>All ability checks and saving throws (click to roll)</li>
                             <li>Active conditions</li>
-                            <li>All attacks with to-hit bonuses and damage</li>
-                            <li>All spells organized by level</li>
+                            <li>All attacks with to-hit bonuses and damage (click to roll inline)</li>
+                            <li>Spell slots and spells organized by level</li>
+                            <li>Death saves tracker with Roll button</li>
+                            <li>Hit Dice with Roll button</li>
                           </ul>
                         </li>
                         <li>Toggle back to access the full sheet for editing</li>
                       </ol>
 
+                      <h6>Interactive Rolls</h6>
+                      <ul>
+                        <li><strong>Ability checks & saves:</strong> Click any stat to roll (normal, advantage, or disadvantage)</li>
+                        <li><strong>Initiative:</strong> Click the initiative value to roll for initiative</li>
+                        <li><strong>Attacks:</strong> Click an attack to roll to-hit and damage inline</li>
+                        <li><strong>Hit Dice:</strong> Click the Roll button to roll a hit die during short rest</li>
+                      </ul>
+
+                      <h6>HP in Combat View</h6>
+                      <p>Click the HP area to reveal inline damage, heal, and temp HP controls without leaving combat view.</p>
+
                       <div class="alert alert-info">
                         <i class="bi bi-lightbulb me-1"></i>
-                        <strong>Tip:</strong> Perfect for DMs who need quick combat reference, or players who want a cleaner battle interface!
+                        <strong>Tip:</strong> Use the <strong>Dice History</strong> button in combat view to review your last 50 rolls!
                       </div>
 
                       <div class="alert alert-success">
@@ -3752,7 +3765,7 @@
                         <li><strong>Left Column:</strong> Character info (name, race, class, level, backstory, portrait)</li>
                         <li><strong>Center Column:</strong> Stats (abilities, skills, proficiency, senses)</li>
                         <li><strong>Right Column:</strong> Combat info (HP, AC, attacks, death saves)</li>
-                        <li><strong>Bottom Tabs:</strong> Inventory, Spells, Features & Traits</li>
+                        <li><strong>Bottom Tabs:</strong> Action Notes, Spells, Inventory, Features & Traits, Background, Notes</li>
                       </ul>
                       <div class="alert alert-success">
                         <i class="bi bi-phone me-1"></i>
@@ -3875,6 +3888,14 @@
                         <li><strong>Save:</strong> Checkbox for proficiency + calculated bonus</li>
                       </ul>
                       <p class="text-muted">Modifiers are used for skills, saves, and attacks. They update automatically when you change scores.</p>
+
+                      <h6>Rolling Checks</h6>
+                      <p>Each ability and saving throw has three roll buttons:</p>
+                      <ul>
+                        <li><strong>+ (Advantage):</strong> Roll two d20s, take the higher result</li>
+                        <li><strong>Normal:</strong> Roll one d20</li>
+                        <li><strong>− (Disadvantage):</strong> Roll two d20s, take the lower result</li>
+                      </ul>
                     </div>
                   </div>
                 </div>
@@ -3891,7 +3912,8 @@
                       <ul>
                         <li><strong>Checkbox:</strong> Check if proficient</li>
                         <li><strong>Expertise (⭐):</strong> Click star icon for double proficiency</li>
-                        <li><strong>Bonus:</strong> Auto-calculated total</li>
+                        <li><strong>Bonus:</strong> Auto-calculated total (ability modifier + proficiency if applicable)</li>
+                        <li><strong>Roll buttons:</strong> Advantage (+), Normal, and Disadvantage (−) roll buttons for quick in-session checks</li>
                       </ul>
                       <p><strong>Proficiency Bonus:</strong> Shown at the top, increases at levels 5, 9, 13, 17.</p>
                       <p><strong>Initiative:</strong> Uses DEX modifier + any bonuses (like Alert feat).</p>
@@ -3912,7 +3934,7 @@
                         <li><strong>Current HP:</strong> Your current hit points</li>
                         <li><strong>Max HP:</strong> Maximum hit points</li>
                         <li><strong>Temp HP:</strong> Temporary hit points (absorbed first)</li>
-                        <li><strong>Hit Dice:</strong> Click to roll for recovery during short rest</li>
+                        <li><strong>Hit Dice:</strong> Remaining hit dice available for short rests. Recover half on a long rest.</li>
                       </ul>
 
                       <h6>Armor Class (AC)</h6>
@@ -3922,7 +3944,16 @@
                       <p>Movement speed in feet per turn.</p>
 
                       <h6>Death Saves</h6>
-                      <p>When at 0 HP, track successes and failures. 3 successes = stabilized, 3 failures = death.</p>
+                      <p>When at 0 HP, track successes and failures. 3 successes = stabilized, 3 failures = death. Reset after a long rest.</p>
+
+                      <h6>Inspiration & Concentration</h6>
+                      <ul>
+                        <li><strong>Inspiration:</strong> Check the box when the DM grants inspiration.</li>
+                        <li><strong>Concentration:</strong> Check when maintaining a concentration spell — a reminder to track concentration checks when damaged.</li>
+                      </ul>
+
+                      <h6>Exhaustion</h6>
+                      <p>Track exhaustion level (0–10) in the right column. Levels impose increasingly severe penalties per the D&D 5e rules.</p>
                     </div>
                   </div>
                 </div>
@@ -4146,7 +4177,8 @@
                         <li><strong>Items:</strong> Potions, scrolls, misc items</li>
                         <li><strong>Currency:</strong> CP, SP, EP, GP, PP</li>
                       </ul>
-                      <p>Click <strong>"Add Item"</strong> to open the item modal with name, quantity, weight, and description fields.</p>
+                      <p>Click <strong>"Add Item"</strong> to open the item modal with name, quantity, weight, and description fields. Items can also be marked as <strong>Equipped</strong> or <strong>Attuned</strong>.</p>
+                      <p><strong>Encumbrance:</strong> Total carried weight and carrying capacity are shown at the top of the tab. The status indicator changes color as you approach your limit.</p>
                     </div>
                   </div>
                 </div>
@@ -4167,6 +4199,39 @@
                         <li>Special abilities</li>
                       </ul>
                       <p>This is automatically populated as you level up. You can also add custom features manually.</p>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="accordion-item bg-dark">
+                  <h2 class="accordion-header">
+                    <button class="accordion-button bg-dark text-light collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#action-notes-tab">
+                      <i class="bi bi-journal-text me-2"></i>Action Notes Tab
+                    </button>
+                  </h2>
+                  <div id="action-notes-tab" class="accordion-collapse collapse" data-bs-parent="#featuresAccordion">
+                    <div class="accordion-body">
+                      <p>The <strong>Action Notes tab</strong> contains two sections:</p>
+                      <ul>
+                        <li><strong>Attacks & Actions:</strong> Your saved attacks with quick roll buttons. Attack rolls are color-coded — green for advantage/crit, white for normal, red for disadvantage/half.</li>
+                        <li><strong>At-the-Table Reminders:</strong> A freeform text area for session notes, reminders, or anything you need handy during play.</li>
+                      </ul>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="accordion-item bg-dark">
+                  <h2 class="accordion-header">
+                    <button class="accordion-button bg-dark text-light collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#background-notes-tab">
+                      <i class="bi bi-book me-2"></i>Background & Notes Tabs
+                    </button>
+                  </h2>
+                  <div id="background-notes-tab" class="accordion-collapse collapse" data-bs-parent="#featuresAccordion">
+                    <div class="accordion-body">
+                      <ul>
+                        <li><strong>Background tab:</strong> A dedicated text area for story hooks, secrets, faction ties, relationships, and long-form narrative notes.</li>
+                        <li><strong>Notes tab:</strong> A general-purpose scratchpad for anything that doesn't fit elsewhere — session summaries, treasure leads, NPC names, etc.</li>
+                      </ul>
                     </div>
                   </div>
                 </div>
@@ -4203,11 +4268,14 @@
                       <ul>
                         <li><strong>Always Save:</strong> Click Save after making changes to ensure they persist</li>
                         <li><strong>Export Regularly:</strong> Create backup JSON files of important characters</li>
+                        <li><strong>Short Rest button:</strong> Resets short-rest resources. Roll hit dice from the right column to recover HP.</li>
+                        <li><strong>Long Rest button:</strong> Resets spell slots, hit dice (half recovered), death saves, and other long-rest resources.</li>
                         <li><strong>Use Multiclass Manager:</strong> Better control over level distribution than manual editing</li>
                         <li><strong>Spell Slots:</strong> Use +/- buttons for quick tracking during sessions</li>
                         <li><strong>Death Saves:</strong> Reset these after a long rest!</li>
                         <li><strong>Hit Dice:</strong> Track what you've used and recover half on long rest</li>
                         <li><strong>Portrait Zoom:</strong> Adjust your portrait position in the modal for perfect framing</li>
+                        <li><strong>Dice History:</strong> Use the Dice History button in combat view to review recent rolls</li>
                       </ul>
                     </div>
                   </div>

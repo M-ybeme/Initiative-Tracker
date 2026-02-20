@@ -11,7 +11,7 @@
       }
 
       // ---------- Dice Roller Utility ----------
-      let rollHistory = [];
+      const rollHistory = [];
       const MAX_ROLL_HISTORY = 50;
 
       function rollDie(sides) {
@@ -221,7 +221,7 @@
           return;
         }
 
-        rollHistory.forEach((roll, index) => {
+        rollHistory.forEach((roll, _index) => {
           const div = document.createElement('div');
           div.className = 'roll-history-item p-2 border-bottom border-secondary';
 
@@ -231,7 +231,7 @@
 
           let rollDisplay = '';
           if (roll.isAdvantage || roll.isDisadvantage) {
-            const unchosen = roll.rolls.find(r => r !== roll.chosen);
+            const _unchosen = roll.rolls.find(r => r !== roll.chosen);
             rollDisplay = `[${roll.rolls[0]}, ${roll.rolls[1]}] → <span class="${resultClass}">${roll.chosen}</span>`;
           } else {
             rollDisplay = roll.rolls.length > 1
@@ -1923,7 +1923,7 @@
         const strScore = char ? (parseInt(char.str) || 10) : 10;
         const carryingCapacity = strScore * 15; // Standard D&D 5e rule
         const heavyLoad = strScore * 10;
-        const pushDragLift = carryingCapacity * 2;
+        const _pushDragLift = carryingCapacity * 2;
 
         // Update display
         const totalWeightEl = $('totalWeight');
@@ -2506,47 +2506,6 @@
             document.dispatchEvent(new CustomEvent('characterLoaded', { detail: { character: char } }));
           }, 100);
         }
-
-      // ---------- Wizard Integration ----------
-      // This function is called by the character creation wizard to populate the form
-      /**
-       * Calculate spell slots for a character (handles both single-class and multiclass)
-       * @param {Object} character - Character data with multiclass info
-       * @returns {Object} - {sharedSlots: Array|null, pactSlots: Object|null}
-       */
-      function calculateCharacterSpellSlots(character) {
-        // Check if character is multiclassed
-        const isMulticlass = character.multiclass && character.classes && character.classes.length > 0;
-
-        if (isMulticlass) {
-          // Use multiclass spell slot calculation
-          const sharedSlots = window.LevelUpData
-            ? window.LevelUpData.getMulticlassSpellSlots(character.classes)
-            : null;
-
-          // Check for Warlock levels (Pact Magic is separate)
-          const warlockClass = character.classes.find(c => c.className === 'Warlock');
-          const pactSlots = warlockClass && window.LevelUpData
-            ? window.LevelUpData.getWarlockPactSlots(warlockClass.level)
-            : null;
-
-          return { sharedSlots, pactSlots };
-        } else {
-          // Single class - use standard calculation
-          const className = character.charClass;
-          const level = parseInt(character.level, 10);
-
-          if (className === 'Warlock') {
-            // Warlock only has Pact Magic
-            const pactSlots = getPactMagicSlots(level);
-            return { sharedSlots: null, pactSlots };
-          } else {
-            // Regular spellcaster
-            const sharedSlots = getSpellSlotsForClassLevel(className, level);
-            return { sharedSlots, pactSlots: null };
-          }
-        }
-      }
 
       function getSpellSlotsForClassLevel(className, level) {
         // First try to use LevelUpData if available
@@ -3835,7 +3794,7 @@
       }
 
       // Token preview modal state
-      let tokenPreviewState = {
+      const tokenPreviewState = {
         char: null,
         image: null,
         zoom: 1,
@@ -4105,7 +4064,7 @@
         hitDiceModalData.rolledHealing = Math.max(total, count); // Minimum 1 HP per hit die spent
 
         // Display results
-        const rollDetails = rolls.map((r, i) => `${r}+${conMod >= 0 ? conMod : `(${conMod})`}`).join(', ');
+        const rollDetails = rolls.map((r, _i) => `${r}+${conMod >= 0 ? conMod : `(${conMod})`}`).join(', ');
         $('hdRollDetails').textContent = `[${rollDetails}]`;
         $('hdTotalHealing').textContent = `+${hitDiceModalData.rolledHealing} HP`;
         $('hdRollResults').style.display = '';
@@ -4865,7 +4824,7 @@
               if (index >= 0 && index < currentInventoryList.length) {
                 currentInventoryList[index].equipped = !currentInventoryList[index].equipped;
                 renderInventoryTable();
-                saveCharacterData();
+                saveCurrentCharacter();
               }
               return;
             }

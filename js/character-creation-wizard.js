@@ -3,7 +3,8 @@
  * A step-by-step guide for new D&D 5e players creating their first character
  */
 
-const CharacterCreationWizard = (function() {
+// eslint-disable-next-line no-unused-vars
+const CharacterCreationWizard = window.CharacterCreationWizard = (function() {
   'use strict';
 
   let currentStep = 0;
@@ -545,7 +546,7 @@ const CharacterCreationWizard = (function() {
           homebrewClasses.sort((a, b) => a[0].localeCompare(b[0])).forEach(([className, data]) => {
             const option = document.createElement('option');
             option.value = className;
-            const hitDie = data.hitDice || data.hitDie || 'd8';
+            const _hitDie = data.hitDice || data.hitDie || 'd8';
             // Handle primaryAbility as string or array
             let abilityStr = '';
             if (data.primaryAbility) {
@@ -1034,7 +1035,7 @@ const CharacterCreationWizard = (function() {
       onShow: () => {
         // Point buy cost table (score -> cumulative cost from 8)
         const pointCosts = { 8: 0, 9: 1, 10: 2, 11: 3, 12: 4, 13: 5, 14: 7, 15: 9 };
-        let pointBuyScores = { str: 8, dex: 8, con: 8, int: 8, wis: 8, cha: 8 };
+        const pointBuyScores = { str: 8, dex: 8, con: 8, int: 8, wis: 8, cha: 8 };
         let totalPointsSpent = 0;
         const maxPoints = 27;
 
@@ -1710,8 +1711,8 @@ const CharacterCreationWizard = (function() {
         } else {
           // Multi-level calculation with options
           const avgPerLevel = Math.floor(hitDie / 2) + 1;
-          const rollMin = 1 + conMod;
-          const rollMax = hitDie + conMod;
+          const _rollMin = 1 + conMod;
+          const _rollMax = hitDie + conMod;
           const avgHPTotal = level1HP + ((avgPerLevel + conMod) * (level - 1));
 
           // Initialize HP method tracking
@@ -2373,10 +2374,6 @@ const CharacterCreationWizard = (function() {
     }
   ];
 
-  function rollDie(sides) {
-    return Math.floor(Math.random() * sides) + 1;
-  }
-
   function openWizard() {
     console.log('🪄 Opening Character Creation Wizard');
     currentStep = 0;
@@ -2477,7 +2474,7 @@ const CharacterCreationWizard = (function() {
     const searchId = type === 'cantrip' ? 'cantripSearch' : 'spellSearch';
     const selectedKey = type === 'cantrip' ? 'selectedCantrips' : 'selectedSpells';
 
-    let filteredSpells = [...spells];
+    const filteredSpells = [...spells];
     let searchTerm = '';
     let levelFilter = 'all';
 
@@ -3570,7 +3567,7 @@ const CharacterCreationWizard = (function() {
       seenWeapons.add(weapon.name);
 
       const isFinesse = weapon.properties && weapon.properties.includes('Finesse');
-      const isRanged = weapon.ranged || (weapon.properties && weapon.properties.includes('Thrown'));
+      const _isRanged = weapon.ranged || (weapon.properties && weapon.properties.includes('Thrown'));
 
       // Determine ability modifier
       let ability = 'str';
@@ -3924,7 +3921,7 @@ const CharacterCreationWizard = (function() {
 
     // Apply ASI bonuses from character creation
     if (wizardData.asiChoices && wizardData.asiChoices.length > 0) {
-      wizardData.asiChoices.forEach((choice, index) => {
+      wizardData.asiChoices.forEach((choice, _index) => {
         if (choice.type === 'asi' && choice.increases) {
           choice.increases.forEach(inc => {
             const ability = inc.ability;

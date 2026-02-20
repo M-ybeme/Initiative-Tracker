@@ -884,7 +884,7 @@ async function gatherAllData() {
  * @returns {Promise<Array>}
  */
 function getAllCharacters() {
-  return new Promise((resolve, reject) => {
+  return new Promise((resolve, _reject) => {
     try {
       const request = indexedDB.open('DMToolboxDB', 1);
 
@@ -927,7 +927,7 @@ function getAllCharacters() {
  * @returns {Promise<Array>}
  */
 function getAllJournalEntries() {
-  return new Promise((resolve, reject) => {
+  return new Promise((resolve, _reject) => {
     try {
       const request = indexedDB.open('JournalDB', 1);
 

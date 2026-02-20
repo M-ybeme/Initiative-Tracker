@@ -8,7 +8,7 @@ The Character Manager is a complete D&D 5e character sheet system integrated int
 
 ## SRD Scope
 
-- The public build only surfaces races, subclasses, feats, and spells that appear in the System Reference Document 5.1.
+- The public build only surfaces races, subclasses, feats, and spells that appear in the System Reference Document 5.2.
 - UI elements tied to non-SRD data now carry `data-srd-block` annotations so players understand why an option is unavailable.
 - Historical data for additional sources (Volo's, Xanathar's, Eberron, etc.) remains in the data files for tables that load a private content pack; nothing outside the SRD ships in the default experience.
 - Diagnostics in `js/site.js` expose the currently active allowlist so you can verify whether a given option originates from SRD data or from a private pack.
@@ -20,6 +20,7 @@ The Character Manager is a complete D&D 5e character sheet system integrated int
 - [Combat Features](#combat-features)
 - [Spell Management](#spell-management)
 - [Inventory System](#inventory-system)
+- [Senses Tracking](#senses-tracking)
 - [Export & Sharing](#export--sharing)
 - [Mobile Support](#mobile-support)
 - [Implementation Files](#implementation-files)
@@ -30,16 +31,21 @@ The Character Manager is a complete D&D 5e character sheet system integrated int
 
 ### Character Creation Wizard (v1.8.7, v1.5.7)
 
-**8-Step Guided Process:**
+**13-Step Guided Process:**
 
 1. **Basic Information** - Name, player, alignment
 2. **Ability Scores** - Interactive 4d6-drop-lowest roller with visual dice display
-3. **Species Selection** - SRD species/subspecies with clear lock states for anything outside the SRD
-4. **Class Selection** - 12 PHB classes included in SRD; Artificer and other expansions unlock only through a private content pack
+3. **Species Selection** - SRD species/subspecies with clear lock states for anything outside the SRD; senses auto-populated from race traits
+4. **Class Selection** - 12 PHB classes included in SRD; homebrew classes from content packs appear in a dedicated "Homebrew Classes" group; Artificer unlocks via private content pack
 5. **Background** - 4 SRD backgrounds with skill proficiencies, ability score increases (+2/+1), and origin feats
 6. **Skills** - Interactive proficiency selection (2-4 based on class)
 7. **HP & Combat Stats** - Automatic AC/HP/Speed calculation
-8. **Review & Summary** - Complete character preview
+8. **Starting Equipment** - Equipment pack choices with info icons showing full pack contents (crowbar, torches, rations, etc.); fixed items and gold alternative also shown
+9. **Spells** - Spell selection for caster classes
+10. **Subclass** - Subclass selection at appropriate levels
+11. **Class Features** - Interactive selection for features requiring player choice (Fighting Style, Pact Boon, Eldritch Invocations, Metamagic)
+12. **Level-Up Features** - Auto-granted features displayed; selectable features shown with choice UI only
+13. **Review & Summary** - Complete character preview
 
 ### Species Support
 
@@ -157,6 +163,7 @@ The Character Manager is a complete D&D 5e character sheet system integrated int
 - Red (Disadvantage/Half)
 
 **Roll Types:**
+- Ability checks: All 6 raw ability modifier rolls (advantage/normal/disadvantage) from character sheet and combat view
 - Skill rolls: All 18 skills
 - Saving throws: All 6 saves
 - Attack rolls: To-hit and damage
@@ -191,6 +198,11 @@ The Character Manager is a complete D&D 5e character sheet system integrated int
 - Casting time, range, school
 - Concentration requirements
 - Prepared spell badges
+- Warlocks draw from pact slots; cast button and tooltip reflect pact slot level
+
+**Ability Scores in Combat View:**
+- Click any ability (STR, DEX, CON, INT, WIS, CHA) to roll a raw ability check
+- Results appear in a toast notification and are stored in roll history
 
 ---
 
@@ -224,11 +236,11 @@ See [SPELLS.md](SPELLS.md) for complete spell database details.
 
 ## Inventory System
 
-### Structured Inventory (v1.8.5)
+### Structured Inventory (v1.8.5, v2.0.9)
 
 **Inventory Table:**
 - Item name, quantity, weight per item
-- Equipped status
+- **Equip toggle button** – Green filled = equipped; muted outline = unequipped. One click saves without opening the edit modal
 - Attunement tracking
 - Notes field
 - Edit and delete buttons
@@ -241,6 +253,27 @@ See [SPELLS.md](SPELLS.md) for complete spell database details.
 - Color-coded badges (green/info/warning/danger)
 - Real-time weight tracking
 - Auto-updates with STR changes
+
+---
+
+## Senses Tracking
+
+### Structured Senses (v2.0.9)
+
+The Senses section of the character sheet provides dedicated numeric fields (in feet) for the four common special senses, plus a free-form notes field for anything unusual.
+
+**Supported Sense Types:**
+- **Darkvision** – default 60 ft. for most races; auto-set to 120 ft. for Superior Darkvision races (Drow, Duergar)
+- **Blindsight**
+- **Tremorsense**
+- **Truesight**
+- **Other Senses** – freeform notes field
+
+**Auto-Population:**
+During character creation, race traits are scanned for sense keywords and their ranges are extracted and pre-filled automatically. No manual entry required for standard races.
+
+**Export:**
+Exported character sheets render each set sense as a labeled stat box (e.g., "Darkvision 60 ft."). Only senses with a value set are included.
 
 ---
 
@@ -377,6 +410,8 @@ See [SPELLS.md](SPELLS.md) for complete spell database details.
 10. **v1.10.3** - Racial features and comprehensive help system
 11. **v1.10.4** - Combat/DM view toggle
 12. **v1.10.7** - Character sheet export (PDF/PNG/Word/Print)
+13. **v2.0.8.1** - Interactive class feature selection (Fighting Style, Pact Boon, Eldritch Invocations, Metamagic); homebrew class support in wizard; ability check rolls; SRD 5.1 → 5.2 updates
+14. **v2.0.9** - Structured sense fields with race auto-population; inventory equip toggle; Warlock pact slot fixes; spell tooltip z-index fix; hit dice remaining set on creation
 
 ## Use Cases
 

@@ -20,11 +20,37 @@
   - Smart positioning prevents tooltips from going off-screen
 - Search by name, CR, type, size
 
-### Custom Monster Creation
-- Build custom monsters from scratch
-- **Automatic CR calculation** based on stats (offensive/defensive CR)
-- Custom stat blocks with full action/ability support
-- Save custom monsters to roster
+### Custom Monster Creation (v2.0.8.1)
+
+A fully rebuilt custom monster creator with **Simple** and **Full** mode toggle.
+
+**Simple Mode** – Quick entry for basic monsters: name, size, type, CR, AC, HP, speed, ability scores, and a freeform actions field. Ideal for on-the-fly improvisation.
+
+**Full Mode** – Complete D&D 5e stat block authoring, organized into accordion sections:
+
+| Section | Fields |
+|---|---|
+| **Basic Info** | Name, size, type, subtype, alignment, CR override, proficiency bonus |
+| **Combat Stats** | AC (with armor type), HP (with hit dice formula), multi-mode speed (walk/fly/swim/climb/burrow/hover flag) |
+| **Ability Scores** | All six abilities with auto-calculated modifiers |
+| **Defenses** | Saving throw proficiencies, damage vulnerabilities, resistances, immunities, condition immunities |
+| **Skills & Senses** | Skill proficiencies, passive Perception, senses (darkvision, blindsight, etc.), languages |
+| **Special Abilities** | Name/description pairs |
+| **Spellcasting** | Innate or standard; spell save DC, attack bonus; at-will, per-day (1×/2×/3×), and slot-based spells |
+| **Actions** | Name, to-hit bonus, save DC, damage dice + type, description |
+| **Bonus Actions** | Name/description pairs |
+| **Reactions** | Name/description pairs |
+| **Legendary Actions** | Action count per round, name/description pairs |
+| **Mythic Actions** | Mythic trait description, name/description pairs |
+| **Lair Actions** | Name/description pairs for lair phase |
+| **Regional Effects** | Description of regional effects |
+| **Notes** | Freeform DM notes |
+
+**CR Calculation:** Automatic offensive/defensive CR estimation updates as you fill in stats.
+
+**Help Example:** A collapsible "Example Monster" panel in Full mode shows a complete homebrew stat block ("Crystalwing Marauder") demonstrating all available fields.
+
+**Text Export Enhancement:** The stat block `.txt` export includes all new fields — subtype, alignment, AC type, hit dice, proficiency bonus, languages, damage/condition modifiers, spellcasting details, bonus actions, mythic actions, lair actions, regional effects, and legendary action count.
 
 ### Encounter Roster
 - Add monsters with quantity selector (bulk add: 1 monster × 5 = 5 in roster)

@@ -6,8 +6,6 @@
 const LevelUpSystem = (function() {
   'use strict';
 
-  const $ = (id) => document.getElementById(id);
-
   // ============================================================
   // HELPER FUNCTIONS
   // ============================================================
@@ -200,7 +198,7 @@ const LevelUpSystem = (function() {
   // STATE
   // ============================================================
   let currentCharacter = null;
-  let levelUpInProgress = false;
+  let _levelUpInProgress = false;
 
   // ============================================================
   // LEVEL UP FLOW
@@ -238,7 +236,7 @@ const LevelUpSystem = (function() {
     character.spellList = getKnownSpellsSnapshot(character);
 
     currentCharacter = character;
-    levelUpInProgress = true;
+    _levelUpInProgress = true;
 
     const newLevel = currentLevel + 1;
     const changes = LevelUpData.getLevelUpChanges(className, currentLevel, newLevel, character);
@@ -333,7 +331,7 @@ const LevelUpSystem = (function() {
     // Clean up when modal is closed
     modal.addEventListener('hidden.bs.modal', () => {
       modal.remove();
-      levelUpInProgress = false;
+      _levelUpInProgress = false;
     });
   }
 
@@ -658,11 +656,10 @@ const LevelUpSystem = (function() {
    * Step: Spell Learning (if applicable)
    */
   function renderSpellLearningStep(character, spellRules, stepNum) {
-    const { type, isPreparedCaster, newSpells, preparationFormula, canSwap, maxSpellLevel, className } = spellRules;
+    const { type: _type, isPreparedCaster, newSpells, preparationFormula: _preparationFormula, canSwap, maxSpellLevel, className } = spellRules;
 
     const spellsToSelect = newSpells; // Already calculated in getSpellLearningRules
     const actionVerb = isPreparedCaster ? 'Prepare' : 'Learn';
-    const actionNoun = isPreparedCaster ? 'Preparation' : 'Learning';
 
     return `
       <div class="accordion-item bg-dark border-secondary">
@@ -833,7 +830,7 @@ const LevelUpSystem = (function() {
    * Step 2: Ability Score Improvement or Feat
    */
   function renderASIFeatStep(character, stepNum) {
-    const allFeats = LevelUpData.getAllFeats();
+    const _allFeats = LevelUpData.getAllFeats();
 
     return `
       <div class="accordion-item bg-dark border-secondary">
@@ -1442,7 +1439,7 @@ const LevelUpSystem = (function() {
       const asiOptions = modal.querySelector('#asiOptions');
       const featOptions = modal.querySelector('#featOptions');
       const featSearch = modal.querySelector('#featSearch');
-      const featList = modal.querySelector('#featList');
+      const _featList = modal.querySelector('#featList');
       const selectedFeatBadge = modal.querySelector('#selectedFeatBadge');
       const asiBadge = modal.querySelector('#asiBadge');
       const asiIncreaseSelects = modal.querySelectorAll('.asi-increase');
@@ -1820,14 +1817,14 @@ const LevelUpSystem = (function() {
     if (featureInputs.length === 0) return;
 
     featureInputs.forEach(input => {
-      input.addEventListener('change', (e) => {
+      input.addEventListener('change', (_e) => {
         const featureType = input.dataset.featureType;
         const storageKey = input.dataset.storageKey;
         const singular = input.dataset.singular === 'true';
         const maxCount = parseInt(input.dataset.maxCount, 10) || 1;
-        const optionsList = input.closest('.feature-options-list');
+        const _optionsList = input.closest('.feature-options-list');
         const badge = modal.querySelector(`.feature-selection-badge[data-feature-type="${featureType}"]`);
-        const featuresBadge = modal.querySelector('#featuresBadge');
+        const _featuresBadge = modal.querySelector('#featuresBadge');
 
         // Initialize storage for this feature type
         if (!changes.featureSelections[storageKey]) {
@@ -1893,7 +1890,7 @@ const LevelUpSystem = (function() {
     let anyStarted = false;
 
     sections.forEach(section => {
-      const featureType = section.dataset.featureType;
+      const _featureType = section.dataset.featureType;
       const optionsList = section.querySelector('.feature-options-list');
       if (!optionsList) return;
 
@@ -2388,7 +2385,7 @@ const LevelUpSystem = (function() {
     }
 
     // Update class resources based on new level
-    let resourceUpdateStatus = { updated: 0, expected: 0, needsManualUpdate: false };
+    const resourceUpdateStatus = { updated: 0, expected: 0, needsManualUpdate: false };
     try {
       const resourceClassName = extractClassName(character.charClass || character.class);
       if (resourceClassName && LevelUpData.getClassResources) {
@@ -2525,7 +2522,7 @@ const LevelUpSystem = (function() {
     }
 
     // Check for new racial features at this level
-    let racialFeaturesGained = [];
+    const racialFeaturesGained = [];
     try {
       let race = character.race;
       let subrace = character.subrace;
@@ -2573,7 +2570,7 @@ const LevelUpSystem = (function() {
     }
 
     // Check for new racial spells at this level
-    let racialSpellsGained = [];
+    const racialSpellsGained = [];
     try {
       let race = character.race;
       let subrace = character.subrace;

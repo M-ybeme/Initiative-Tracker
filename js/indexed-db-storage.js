@@ -4,7 +4,8 @@
  * Provides backward compatibility with localStorage
  */
 
-const IndexedDBStorage = (function() {
+// eslint-disable-next-line no-unused-vars
+const IndexedDBStorage = window.IndexedDBStorage = (function() {
   'use strict';
 
   const DB_NAME = 'DMToolboxDB';
@@ -83,7 +84,7 @@ const IndexedDBStorage = (function() {
           return;
         }
 
-        characters.forEach((character, index) => {
+        characters.forEach((character, _index) => {
           const addRequest = store.add(character);
 
           addRequest.onsuccess = () => {
