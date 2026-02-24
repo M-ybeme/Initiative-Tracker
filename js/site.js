@@ -1,13 +1,13 @@
 const DM_TOOLBOX_BUILD = {
   name: "The DM's Toolbox",
-  version: "2.1.0",
+  version: "2.1.1",
   recentChanges: [
-    "Rules reference overhaul – rewrote rules-data.js from 22 to 88 entries across 16 categories with full 2024 combat, spellcasting, conditions, and DM tool coverage",
+    "Compendium page – new mid-session reference with Spells, Bestiary, and Rules tabs; search, filter, and pin cards for any entry",
+    "Bestiary search fix – look-ahead now fetches the full query (debounced) instead of just the first letter, returning targeted results",
+    "Bestiary sort fix – all monster load paths (initial, infinite-scroll, look-ahead) sort alphabetically after every deduplication",
+    "Rules reference overhaul – rewrote rules-data.js from 22 to 88 entries across 16 categories with full 2024 combat, spellcasting, and conditions coverage",
     "Combat log clear button – added a Clear Log button to the initiative tracker's combat log modal",
-    "Mobile dice roll history fix – roll history panel no longer follows scroll on mobile; sticky behavior is now desktop-only",
-    "Name generator mobile fix – settings offcanvas no longer hidden behind the fixed navbar on mobile",
-    "NPC name quality – NPC page name generator syllable tables now match the dedicated name generator page for consistent quality",
-    "SRD regression pack gaps closed – added Artificer subclasses to allowlist, Ability Score Improvement to feat allowlist, and spell lists for Oath of the Crown, The Genie, and The Undead"
+    "Mobile dice roll history fix – roll history panel no longer follows scroll on mobile; sticky behavior is now desktop-only"
   ],
   buildTime: new Date().toISOString(),
   author: "Maybeme"

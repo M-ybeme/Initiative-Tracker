@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html lang="en" data-bs-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>The DM's Toolbox: Compendium</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" crossorigin="anonymous" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" />
+  <link href="/css/site.css" rel="stylesheet" />
+  <link rel="icon" type="image/png" href="/images/dndFavicon (2).png" />
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" crossorigin="anonymous"></script>
+  <script src="/js/site.js"></script>
+  <script src="/js/generated/srd-allowlist.js"></script>
+  <script src="/js/modules/srd-content-filter.js"></script>
+  <style>
+    .ref-results-list {
+      max-height: 280px;
+      overflow-y: auto;
+    }
+    .ref-result-row {
+      cursor: pointer;
+      transition: background 0.15s;
+      padding: 0.4rem 0.75rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      border-bottom: 1px solid rgba(255,255,255,.07);
+    }
+    .ref-result-row:hover { background: rgba(255,255,255,.08); }
+    .ref-result-row.is-pinned { background: rgba(13,202,240,.07); }
+    .ref-result-row.is-pinned .pin-icon { opacity: 1; color: #0dcaf0; }
+    .pin-icon { opacity: 0.25; flex-shrink: 0; margin-left: auto; }
+    .ref-cards-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+      gap: 1rem;
+    }
+    .ref-card {
+      border: 1px solid rgba(255,255,255,.15);
+      border-radius: .5rem;
+      background: rgba(0,0,0,.3);
+    }
+    .ref-card-header {
+      border-bottom: 1px solid rgba(255,255,255,.1);
+      padding: 0.6rem 0.75rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    .ref-card-body { padding: 0.75rem; }
+    .ability-grid {
+      display: grid;
+      grid-template-columns: repeat(6, 1fr);
+      text-align: center;
+      gap: 0.25rem;
+      margin-bottom: 0.75rem;
+    }
+    .ability-cell {
+      background: rgba(255,255,255,.05);
+      border-radius: .25rem;
+      padding: 0.25rem;
+    }
+    .ability-label { font-size: .65rem; text-transform: uppercase; color: #adb5bd; }
+    .ability-value { font-size: .9rem; font-weight: 600; }
+    .ability-mod   { font-size: .75rem; color: #adb5bd; }
+    .stat-row { font-size: .85rem; color: #dee2e6; margin-bottom: 0.4rem; }
+    .results-empty  { color: #6c757d; font-style: italic; padding: 1rem; text-align: center; }
+    .bestiary-loading { text-align: center; padding: 2rem; color: #6c757d; }
+    #spellCardsContainer, #monsterCardsContainer, #ruleCardsContainer { display: none; }
+    #spellCardsContainer.has-cards, #monsterCardsContainer.has-cards, #ruleCardsContainer.has-cards { display: block; }
+    /* Tighten accordion buttons inside cards */
+    .ref-card .accordion-button::after { filter: invert(1); }
+    .ref-card .accordion-button:not(.collapsed) { box-shadow: none; }
+    /* Rule accordion cards (full-width, expand in place) */
+    .rule-accordion-item {
+      background: rgba(0,0,0,.3);
+      border: 1px solid rgba(255,255,255,.15) !important;
+      border-radius: .5rem !important;
+      margin-bottom: 0.5rem;
+      overflow: hidden;
+    }
+    .rule-accordion-item .accordion-button {
+      background: transparent;
+      color: #dee2e6;
+    }
+    .rule-accordion-item .accordion-button:not(.collapsed) {
+      background: rgba(13,202,240,.08);
+      color: #e2e8f0;
+      box-shadow: none;
+    }
+    .rule-accordion-item .accordion-button::after { filter: invert(1); }
+    .rule-accordion-item .accordion-button:focus  { box-shadow: none; }
+    .rule-accordion-item .accordion-body { background: transparent; }
+  </style>
+</head>
+<body class="bgimage">
+
+  <!-- ═══════════════ NAVBAR ═══════════════ -->
+  <nav class="navbar navbar-expand-lg navbar-dark fixed-top text-light" id="mainNav">
+    <div class="container-fluid">
+      <a class="navbar-brand" href="index.html">
+        <img src="/images/DMsToolboxLogo.png" height="40" width="40" alt="App Logo" class="d-inline-block" />
+        The DM Toolbox
+      </a>
+      <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarSupportedContent"
+        aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+        <span class="navbar-toggler-icon"></span>
+      </button>
+      <div class="collapse navbar-collapse" id="navbarSupportedContent">
+        <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+          <li class="nav-item dropdown">
+            <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+              Combat
+            </a>
+            <ul class="dropdown-menu">
+              <li><a class="dropdown-item" href="initiative.html">Initiative Tracker</a></li>
+              <li><a class="dropdown-item" href="battlemap.html">Battle Map</a></li>
+              <li><a class="dropdown-item" href="encounterbuilder.html">Encounter Builder</a></li>
+            </ul>
+          </li>
+          <li class="nav-item dropdown">
+            <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+              Generators
+            </a>
+            <ul class="dropdown-menu">
+              <li><a class="dropdown-item" href="name.html">Name Generator</a></li>
+              <li><a class="dropdown-item" href="loot.html">Loot Generator</a></li>
+              <li><a class="dropdown-item" href="shop.html">Shop Generator</a></li>
+              <li><a class="dropdown-item" href="npc.html">NPC Generator</a></li>
+              <li><a class="dropdown-item" href="tav.html">Tavern/Inn Generator</a></li>
+            </ul>
+          </li>
+          <li class="nav-item dropdown">
+            <a class="nav-link dropdown-toggle active" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+              Campaign
+            </a>
+            <ul class="dropdown-menu">
+              <li><a class="dropdown-item" href="characters.html">Characters</a></li>
+              <li><a class="dropdown-item" href="journal.html">Journal</a></li>
+              <li><a class="dropdown-item active" aria-current="page" href="reference.html">Compendium</a></li>
+            </ul>
+          </li>
+        </ul>
+      </div>
+    </div>
+  </nav>
+
+  <!-- ═══════════════ MAIN CONTENT ═══════════════ -->
+  <main class="content pt-3">
+    <div class="container-fluid backdrop">
+
+      <div class="d-flex align-items-center gap-3 mb-3 flex-wrap">
+        <h2 class="mb-0"><i class="bi bi-book-half text-info me-2"></i>Compendium</h2>
+        <span class="text-muted small">Click a row to pin · Click again to dismiss</span>
+      </div>
+
+      <!-- Tabs -->
+      <ul class="nav nav-pills mb-3" id="refTabs" role="tablist">
+        <li class="nav-item" role="presentation">
+          <button class="nav-link active" id="spells-tab" data-bs-toggle="pill" data-bs-target="#spells-pane"
+            type="button" role="tab" aria-controls="spells-pane" aria-selected="true">
+            <i class="bi bi-stars me-1"></i>Spells
+          </button>
+        </li>
+        <li class="nav-item" role="presentation">
+          <button class="nav-link" id="bestiary-tab" data-bs-toggle="pill" data-bs-target="#bestiary-pane"
+            type="button" role="tab" aria-controls="bestiary-pane" aria-selected="false">
+            <i class="bi bi-shield-exclamation me-1"></i>Bestiary
+          </button>
+        </li>
+        <li class="nav-item" role="presentation">
+          <button class="nav-link" id="rules-tab" data-bs-toggle="pill" data-bs-target="#rules-pane"
+            type="button" role="tab" aria-controls="rules-pane" aria-selected="false">
+            <i class="bi bi-journal-text me-1"></i>Rules
+          </button>
+        </li>
+      </ul>
+
+      <div class="tab-content">
+
+        <!-- ═══════════════ SPELLS PANE ═══════════════ -->
+        <div class="tab-pane fade show active" id="spells-pane" role="tabpanel" aria-labelledby="spells-tab">
+
+          <!-- Spell Filters -->
+          <div class="row g-2 mb-3">
+            <div class="col-12 col-md-4">
+              <input type="text" class="form-control form-control-sm bg-dark text-light border-secondary"
+                id="spellSearch" placeholder="Search spells, classes, tags...">
+            </div>
+            <div class="col-6 col-sm-4 col-md-2">
+              <select class="form-select form-select-sm bg-dark text-light border-secondary" id="spellLevel">
+                <option value="">All Levels</option>
+                <option value="0">Cantrip</option>
+                <option value="1">1st Level</option>
+                <option value="2">2nd Level</option>
+                <option value="3">3rd Level</option>
+                <option value="4">4th Level</option>
+                <option value="5">5th Level</option>
+                <option value="6">6th Level</option>
+                <option value="7">7th Level</option>
+                <option value="8">8th Level</option>
+                <option value="9">9th Level</option>
+              </select>
+            </div>
+            <div class="col-6 col-sm-4 col-md-2">
+              <select class="form-select form-select-sm bg-dark text-light border-secondary" id="spellClass">
+                <option value="">All Classes</option>
+              </select>
+            </div>
+            <div class="col-6 col-sm-4 col-md-2">
+              <select class="form-select form-select-sm bg-dark text-light border-secondary" id="spellSchool">
+                <option value="">All Schools</option>
+              </select>
+            </div>
+            <div class="col-6 col-sm-4 col-md-1">
+              <select class="form-select form-select-sm bg-dark text-light border-secondary" id="spellConc"
+                title="Filter by Concentration">
+                <option value="">Conc?</option>
+                <option value="yes">Yes</option>
+                <option value="no">No</option>
+              </select>
+            </div>
+            <div class="col-6 col-sm-4 col-md-1">
+              <select class="form-select form-select-sm bg-dark text-light border-secondary" id="spellRitual"
+                title="Filter by Ritual">
+                <option value="">Ritual?</option>
+                <option value="yes">Yes</option>
+                <option value="no">No</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Spell Results -->
+          <div class="ref-results-list border border-secondary rounded mb-3" id="spellResults">
+            <div class="results-empty">Loading spells...</div>
+          </div>
+
+          <!-- Pinned Spell Cards -->
+          <div id="spellCardsContainer">
+            <h6 class="text-info mb-2"><i class="bi bi-pin-fill me-1"></i>Pinned Spells</h6>
+            <div class="ref-cards-grid" id="spellCards"></div>
+          </div>
+        </div>
+
+        <!-- ═══════════════ BESTIARY PANE ═══════════════ -->
+        <div class="tab-pane fade" id="bestiary-pane" role="tabpanel" aria-labelledby="bestiary-tab">
+
+          <!-- Monster Filters -->
+          <div class="row g-2 mb-3">
+            <div class="col-12 col-md-4">
+              <input type="text" class="form-control form-control-sm bg-dark text-light border-secondary"
+                id="monsterSearch" placeholder="Search monsters...">
+            </div>
+            <div class="col-6 col-md-3">
+              <select class="form-select form-select-sm bg-dark text-light border-secondary" id="monsterCR">
+                <option value="">All CRs</option>
+                <option value="0">CR 0</option>
+                <option value="1/8">CR 1/8</option>
+                <option value="1/4">CR 1/4</option>
+                <option value="1/2">CR 1/2</option>
+                <option value="1-5">CR 1&ndash;5</option>
+                <option value="6-10">CR 6&ndash;10</option>
+                <option value="11-15">CR 11&ndash;15</option>
+                <option value="16-20">CR 16&ndash;20</option>
+                <option value="21+">CR 21+</option>
+              </select>
+            </div>
+            <div class="col-6 col-md-3">
+              <select class="form-select form-select-sm bg-dark text-light border-secondary" id="monsterType">
+                <option value="">All Types</option>
+                <option>Aberration</option>
+                <option>Beast</option>
+                <option>Celestial</option>
+                <option>Construct</option>
+                <option>Dragon</option>
+                <option>Elemental</option>
+                <option>Fey</option>
+                <option>Fiend</option>
+                <option>Giant</option>
+                <option>Humanoid</option>
+                <option>Monstrosity</option>
+                <option>Ooze</option>
+                <option>Plant</option>
+                <option>Undead</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Bestiary search status (shown during API look-ahead fetch) -->
+          <div id="monsterSearchStatus" style="display:none; min-height:1.4rem;" class="small mb-1"></div>
+
+          <!-- Bestiary Results -->
+          <div class="ref-results-list border border-secondary rounded mb-3" id="monsterResults">
+            <div class="bestiary-loading">
+              <i class="bi bi-hourglass-split me-2"></i>Switch to this tab to load monsters&hellip;
+            </div>
+          </div>
+
+          <!-- Pinned Monster Cards -->
+          <div id="monsterCardsContainer">
+            <h6 class="text-info mb-2"><i class="bi bi-pin-fill me-1"></i>Pinned Creatures</h6>
+            <div class="ref-cards-grid" id="monsterCards"></div>
+          </div>
+        </div>
+
+        <!-- ═══════════════ RULES PANE ═══════════════ -->
+        <div class="tab-pane fade" id="rules-pane" role="tabpanel" aria-labelledby="rules-tab">
+
+          <!-- Rules Filters -->
+          <div class="row g-2 mb-3">
+            <div class="col-12 col-md-5">
+              <input type="text" class="form-control form-control-sm bg-dark text-light border-secondary"
+                id="ruleSearch" placeholder="Search rules by title, category, or description...">
+            </div>
+            <div class="col-12 col-md-4">
+              <select class="form-select form-select-sm bg-dark text-light border-secondary" id="ruleCategory">
+                <option value="">All Categories</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Rules Results -->
+          <div class="ref-results-list border border-secondary rounded mb-3" id="ruleResults">
+            <div class="results-empty">Loading rules...</div>
+          </div>
+
+          <!-- Pinned Rule Cards (full-width accordion) -->
+          <div id="ruleCardsContainer">
+            <h6 class="text-info mb-2"><i class="bi bi-pin-fill me-1"></i>Pinned Rules</h6>
+            <div class="accordion accordion-flush" id="ruleCards"></div>
+          </div>
+        </div>
+
+      </div><!-- /tab-content -->
+    </div><!-- /backdrop -->
+  </main>
+
+  <script src="/data/srd/spells-data.js"></script>
+  <script src="/js/rules-data.js"></script>
+  <script src="/js/reference.js"></script>
+</body>
+</html>

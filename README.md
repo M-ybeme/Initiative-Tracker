@@ -16,6 +16,7 @@ Free D&D 5e toolkit using **2024 PHB rules (SRD 5.2)**. No login, no tracking, w
 * **[Battle Map](docs/BATTLEMAP.md)** – Lightweight VTT with fog of war, tokens, and grid overlay
 * **[Character Manager](docs/CHARACTER_MANAGER.md)** – Full character sheets with guided creation wizard and level-up system
 * **[Encounter Builder](docs/ENCOUNTER_BUILDER.md)** – CR budgeting, monster stat blocks, and one-click initiative export
+* **[Compendium](reference.html)** – Mid-session spell, monster, and rules reference with full-text search, filters, and pinnable stat-block cards
 * **[Journal](docs/JOURNAL.md)** – Rich text campaign notes with persistent storage
 * **[Generators](docs/GENERATORS.md)** – Random shops, taverns, loot tables, NPCs, and names
 
@@ -24,8 +25,9 @@ Free D&D 5e toolkit using **2024 PHB rules (SRD 5.2)**. No login, no tracking, w
 * **9 SRD species** (Dwarf, Elf, Halfling, Human, Dragonborn, Gnome, Half-Elf, Half-Orc, Tiefling) with subspecies
 * **12 classes** with full progression tables, spell slots, and class features
 * **4 backgrounds** with 2024 PHB ability score increases (+2/+1) and origin feats
-* **300+ SRD spells** searchable by class, level, school, and ritual tag
+* **437 SRD spells** searchable by class, level, school, concentration, ritual, and free text
 * **400+ monsters** with full stat blocks for encounter building
+* **88 rules entries** across 16 categories (combat, spellcasting, conditions, resting, and more)
 * **2024 PHB exhaustion rules** (−2 per level to all d20 rolls)
 
 All data stored locally via LocalStorage and IndexedDB. No accounts, no server, complete privacy, full offline capability after first load.
@@ -84,6 +86,14 @@ Press **Ctrl+Alt+D** or click the gear icon in the footer to open the diagnostic
 * **Encounter balancing** – CR calculator with difficulty ratings
 * **Monster stat blocks** – Full SRD bestiary with searchable filters
 * **Custom monster creator** – Simple/Full mode builder with all 5e stat block fields (legendary, mythic, lair actions, spellcasting, and more)
+
+### Campaign Reference
+
+* **Compendium** – Mid-session lookup tool under the Campaign nav with three tabs:
+  * **Spells** – Search 437 spells by name, school, class, level, concentration, and ritual; click any row to pin a full spell card
+  * **Bestiary** – Browse the full D&D 5e monster list (Open5e API); infinite scroll + debounced look-ahead search; pin full stat-block cards
+  * **Rules** – Search 88 SRD rules entries (title, body, category, tags); pin any rule as an expandable accordion card
+* **Journal** – Rich text campaign notes with persistent storage and export
 
 ### Improvisation Tools
 
@@ -204,6 +214,7 @@ Every guide under `/docs` reflects the SRD-only build. Start with the index for 
 * [Documentation Index](docs/README.md) – SRD scope overview plus pointers to every guide.
 * [Battle Map](docs/BATTLEMAP.md) – Lightweight VTT usage with SRD-safe assets.
 * [Character Manager](docs/CHARACTER_MANAGER.md) – Wizard flows, level-up rules, and export coverage.
+* [Compendium](reference.html) – Spell, monster, and rules reference with search and pinnable cards.
 * [Encounter Builder](docs/ENCOUNTER_BUILDER.md) – Encounter math, CR budgeting, and SRD stat sources.
 * [Generators](docs/GENERATORS.md) – Loot, tavern, shop, NPC, and name coverage after the data scrub.
 * [Initiative Tracker](docs/INITIATIVE_TRACKER.md) – Turn automation, damage logging, and gating behavior.

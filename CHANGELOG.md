@@ -8,14 +8,31 @@ The format is based on Keep a Changelog, and this project adheres to Semantic Ve
 The DM's Toolbox has evolved through focused feature releases:
 
 
-- **2.1.x**: Rules reference overhaul to 2024 standards, mobile UI polish, NPC name generator quality improvements, and SRD regression pack completeness fixes
 - **2.0.x**: Starting equipment selection, subclass bonus cantrips, enhanced feat selection UI, interactive class feature selection, ability check rolls, full custom monster creator, and content pack integration
 - **1.11.x**: Journal system with rich text editor, import/export (Word/PDF/TXT/Markdown), and Battle Map → Initiative Tracker integration
 - **1.10.x**: Full character manager with multiclass support, spell learning, subclass selection, and character sheet export
 - **1.9.x**: Battle map measurement tools, persistent fog shapes, and generator integration across NPC/Tavern/Shop systems
 - **1.8.x**: Spell database expansion to 432+ spells, inventory management, loot generator overhaul, and character token generation
 
-**Current version: 2.1.0 (February 2026)**
+**Current version: 2.1.1 (February 2026)**
+
+---
+
+## [2.1.1] - 2026-02-24
+**Compendium: Spell, Monster & Rules Reference**
+
+### Added
+- **Compendium page** – New mid-session reference page (`reference.html`) under the Campaign nav. Three browsable, searchable, pinnable tabs in one place:
+  - **Spells tab** – All 437 pack-filtered spells in a compact scrollable list. Filter by name/body/class/tag (text search), level, class, school, concentration, and ritual. Click any row to pin a full spell card below showing casting time, range, duration, components, description, and tags, with a Copy to Clipboard button. Click again to dismiss.
+  - **Bestiary tab** – Full monster list via the Open5e API (dnd5eapi.co fallback). Infinite scroll progressively loads alphabetical pages; a debounced search look-ahead fetches targeted matches from the API when the local list is incomplete. Filter by name, CR (exact and range buckets), and creature type. Pinned stat-block cards show AC, HP, speed, ability scores, saving throws, skills, damage modifiers, senses, languages, actions, special abilities, and legendary actions.
+  - **Rules tab** – All 88 SRD rules entries from `rules-data.js` in a compact list. Full-text search across title, body, category, and tags. Filter by category dropdown. Pinned rules appear as full-width Bootstrap accordion cards — each one expands to show the complete rule text and tags inline.
+- **Compendium on index.html** – Feature card added to the Campaign section of the homepage.
+- **Compendium in all nav files** – "Compendium" link added to the Campaign dropdown across all 11 HTML nav files.
+
+### Fixed
+- **Bestiary: D-monsters (and other mid-alphabet letters) incomplete when searching** – The look-ahead previously fetched `?search=<firstLetter>` (e.g. `?search=d`), a substring match that consumed the 500-result limit with A/B/C monsters containing "d" before finishing all D-starters. Look-ahead now fetches `?search=<full query>` (debounced 300 ms after the user pauses typing), so searching "drow" returns precisely the Drow monsters instead of 500 unrelated entries.
+- **Bestiary: monsters out of alphabetical order after scroll-load** – `loadMoreMonsters` deduplicated new pages but did not re-sort, causing late-loaded monsters (e.g. "Bugbear Chief") to appear below monsters they should precede alphabetically. All three load paths (initial fetch, infinite-scroll page, search look-ahead) now sort `allMonsters` after every deduplication.
+- **Bestiary: search results not updated after look-ahead completes** – If the look-ahead fetch failed, `renderMonsterResults()` was only called inside the `try` block and was silently skipped on failure, leaving the "No monsters match" state permanently frozen. Results now always re-render after the fetch attempt regardless of success or failure.
 
 ---
 
