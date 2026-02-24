@@ -1910,6 +1910,13 @@ $('clear-dice-history').addEventListener('click', ()=>{
     a.remove();
     URL.revokeObjectURL(url);
   });
+  $('clear-combat-log')?.addEventListener('click', () => {
+    if (!combatLog.length) return;
+    if (!confirm('Clear the entire combat log?')) return;
+    combatLog = [];
+    buildCombatLog();
+    if (autoSaveEnabled) saveState();
+  });
   // Keyboard shortcuts (not when typing)
   document.addEventListener('keydown', e=>{
     const tag = document.activeElement?.tagName || '';

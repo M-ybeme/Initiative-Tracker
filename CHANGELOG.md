@@ -8,13 +8,33 @@ The format is based on Keep a Changelog, and this project adheres to Semantic Ve
 The DM's Toolbox has evolved through focused feature releases:
 
 
+- **2.1.x**: Rules reference overhaul to 2024 standards, mobile UI polish, NPC name generator quality improvements, and SRD regression pack completeness fixes
 - **2.0.x**: Starting equipment selection, subclass bonus cantrips, enhanced feat selection UI, interactive class feature selection, ability check rolls, full custom monster creator, and content pack integration
 - **1.11.x**: Journal system with rich text editor, import/export (Word/PDF/TXT/Markdown), and Battle Map → Initiative Tracker integration
 - **1.10.x**: Full character manager with multiclass support, spell learning, subclass selection, and character sheet export
 - **1.9.x**: Battle map measurement tools, persistent fog shapes, and generator integration across NPC/Tavern/Shop systems
 - **1.8.x**: Spell database expansion to 432+ spells, inventory management, loot generator overhaul, and character token generation
 
-**Current version: 2.0.9 (February 2026)**
+**Current version: 2.1.0 (February 2026)**
+
+---
+
+## [2.1.0] - 2026-02-23
+**Rules Reference Overhaul, Mobile Polish & Data Quality**
+
+### Added
+- **Combat log clear button** – The combat log modal in the Initiative Tracker now has a "Clear Log" button in the footer. Clicking it prompts for confirmation and wipes the log, saving state automatically.
+- **Rules reference: Complete 2024 rewrite** – `rules-data.js` rebuilt from scratch: 22 entries across 8 categories expanded to 88 entries across 16 categories. New coverage includes:
+  - Combat split into 6 focused sub-categories: Initiative & Setup, Action Economy, Movement & Position, Attacks & Damage, Special Situations (grappling, shoving, cover, flanking, mounted/underwater), and HP/Death/Recovery
+  - Full Spellcasting section: spell slots, components, concentration, cantrips, upcasting, rituals, bonus-action and reaction spell rules, spell save DC formula, AoE shapes, Counterspell, and casting in armor
+  - Resting & Recovery section with short rest, long rest, Hit Dice mechanics, and a healing spell quick reference
+  - Conditions expanded with practical DM notes and common sources for each
+  - 2024 rule callouts on: Exhaustion (−2/level stacking), Initiative order swapping, Heroic Inspiration, and Two-Weapon Fighting (one-handed weapons, not just Light)
+
+### Fixed
+- **Mobile: Dice roll history scrolls with page** – `#rollHistoryPanel` had Bootstrap's `sticky-top` class applied globally. Removed from HTML; sticky positioning now applied only via CSS at the `lg` breakpoint (992 px+), so on mobile the panel flows normally with the page.
+- **Name generator: Settings offcanvas hidden behind navbar** – The mobile settings offcanvas (`#settingsOffcanvas`) on `name.html` now opens below the fixed navbar via `top: 70px`.
+- **NPC page: Name generator output quality** – The NPC name picker used a smaller, older copy of the syllable tables. All tables replaced with the exact data from `name.html`'s `TABLES.Styles` so both pages draw from the same pool.
 
 ---
 

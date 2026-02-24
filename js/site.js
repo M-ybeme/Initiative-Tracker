@@ -1,12 +1,13 @@
 const DM_TOOLBOX_BUILD = {
   name: "The DM's Toolbox",
-  version: "2.0.9",
+  version: "2.1.0",
   recentChanges: [
-    "Wizard spell list fix – spells chosen in the character creation wizard now immediately appear in the combat view spell list",
-    "Spell tooltip z-index fix – spell and equipment info tooltips in the character creation wizard now appear above the modal instead of behind it",
-    "Equipment pack info icons – each equipment choice now shows a ? icon revealing full pack contents (e.g. what's in a Dungeoneer's Pack or Arcane Focus)",
-    "Warlock combat fix – Warlock spells in the combat view now correctly use pact slots instead of failing with 'no slots remaining'",
-    "Warlock character creation – pact slots are now properly set in the Spells tab and added to the tracked resource area after wizard completion"
+    "Rules reference overhaul – rewrote rules-data.js from 22 to 88 entries across 16 categories with full 2024 combat, spellcasting, conditions, and DM tool coverage",
+    "Combat log clear button – added a Clear Log button to the initiative tracker's combat log modal",
+    "Mobile dice roll history fix – roll history panel no longer follows scroll on mobile; sticky behavior is now desktop-only",
+    "Name generator mobile fix – settings offcanvas no longer hidden behind the fixed navbar on mobile",
+    "NPC name quality – NPC page name generator syllable tables now match the dedicated name generator page for consistent quality",
+    "SRD regression pack gaps closed – added Artificer subclasses to allowlist, Ability Score Improvement to feat allowlist, and spell lists for Oath of the Crown, The Genie, and The Undead"
   ],
   buildTime: new Date().toISOString(),
   author: "Maybeme"

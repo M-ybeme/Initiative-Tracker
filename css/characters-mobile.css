@@ -134,12 +134,6 @@
   }
 
   /* === ROLL HISTORY === */
-  /* Make roll history collapsible on mobile */
-  #rollHistoryPanel {
-    position: relative !important;
-    top: auto !important;
-  }
-
   #rollHistoryPanel .card-body {
     max-height: 200px !important;
   }
@@ -395,6 +389,14 @@
   /* Skills table more readable */
   .table {
     font-size: 0.9rem;
+  }
+}
+
+/* === ROLL HISTORY STICKY (desktop/large screens only) === */
+@media (min-width: 992px) {
+  #rollHistoryPanel {
+    position: sticky;
+    top: 70px;
   }
 }
 
