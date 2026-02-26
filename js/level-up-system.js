@@ -130,7 +130,7 @@ const LevelUpSystem = (function() {
           const hasEldritchBlast = (character?.spellList || []).some(s =>
             (s.name || s.title || '').toLowerCase() === 'eldritch blast'
           );
-          return LevelUpData.getAvailableInvocationsForLevel(level + 1, pactBoon, hasEldritchBlast);
+          return Object.keys(LevelUpData.getAvailableInvocationsForLevel(level + 1, pactBoon, hasEldritchBlast));
         }
         return LevelUpData.getAllEldritchInvocations ? LevelUpData.getAllEldritchInvocations() : [];
       },
@@ -2505,6 +2505,9 @@ const LevelUpSystem = (function() {
               ritual: newSpellData.ritual || false,
               description: newSpellData.body || ''
             });
+            if (window.appendPolymorphNotesToSpellNotes) {
+              window.appendPolymorphNotesToSpellNotes(newSpellData.title, levelUpData.newLevel, character);
+            }
           }
         }
       }
@@ -2517,6 +2520,9 @@ const LevelUpSystem = (function() {
         );
         if (!exists) {
           character.spellList.push(spell);
+          if (window.appendPolymorphNotesToSpellNotes) {
+            window.appendPolymorphNotesToSpellNotes(spell.name, levelUpData.newLevel, character);
+          }
         }
       });
     }
@@ -2682,6 +2688,41 @@ const LevelUpSystem = (function() {
 
           if (wildShapeUpdated) {
             levelUpData.wildShapeUpdated = true;
+
+            // Also update Detailed Notes (At-the-Table Reminders) with Wild Shape info
+            try {
+              const tableNotes = character.tableNotes || '';
+              const wildShapeNoticeMarker = '=== WILD SHAPE ===';
+
+              if (levelUpData.newLevel === 2) {
+                // First Wild Shape - replace the level-1 notice if present, or append full list
+                if (tableNotes.includes(wildShapeNoticeMarker)) {
+                  const noticeStart = tableNotes.indexOf(wildShapeNoticeMarker);
+                  const prefix = tableNotes.substring(0, noticeStart).trimEnd();
+                  character.tableNotes = (prefix ? prefix + '\n\n' : '') + newWildShapeRef;
+                } else {
+                  character.tableNotes = tableNotes ? tableNotes + '\n\n' + newWildShapeRef : newWildShapeRef;
+                }
+                console.log('🐻 Added Wild Shape forms to At-the-Table Reminders (level 2)');
+              } else {
+                // Append only the beasts newly unlocked at this level
+                const prevBeasts = LevelUpData.getAvailableBeastForms ? LevelUpData.getAvailableBeastForms(levelUpData.newLevel - 1, subclass) : [];
+                const currBeasts = LevelUpData.getAvailableBeastForms ? LevelUpData.getAvailableBeastForms(levelUpData.newLevel, subclass) : [];
+                const prevNames = new Set(prevBeasts.map(b => b.name));
+                const newBeasts = currBeasts.filter(b => !prevNames.has(b.name));
+
+                if (newBeasts.length > 0 && LevelUpData.getWildShapeLimits && LevelUpData.formatBeastForm) {
+                  const limits = LevelUpData.getWildShapeLimits(levelUpData.newLevel, subclass);
+                  const flySwimText = (limits.canFly ? ', can fly' : '') + (limits.canSwim ? ', can swim' : '');
+                  let newBeastsText = `\n\n--- Wild Shape: New Forms at Level ${levelUpData.newLevel} (Max CR ${limits.maxCR}${flySwimText}) ---\n`;
+                  newBeastsText += newBeasts.map(b => LevelUpData.formatBeastForm(b)).join('\n\n');
+                  character.tableNotes = tableNotes + newBeastsText;
+                  console.log(`🐻 Added ${newBeasts.length} new Wild Shape form(s) to At-the-Table Reminders`);
+                }
+              }
+            } catch (notesErr) {
+              console.warn('Could not update Wild Shape in Detailed Notes:', notesErr);
+            }
           }
         }
       }
@@ -2787,6 +2828,11 @@ const LevelUpSystem = (function() {
     // Now save the character (which reads from the form)
     if (window.saveCurrentCharacter) {
       window.saveCurrentCharacter();
+    }
+
+    // Refresh XP bar so progress reflects the new level threshold
+    if (window.updateXPDisplay) {
+      window.updateXPDisplay(character.xp || 0, levelUpData.newLevel);
     }
 
     // Show success message
@@ -2936,6 +2982,9 @@ const LevelUpSystem = (function() {
   }
 
 })();
+
+// Expose globally so other modules (e.g. character.js XP system) can call startLevelUp
+window.LevelUpSystem = LevelUpSystem;
 
 // Initialize when DOM is ready
 if (document.readyState === 'loading') {

@@ -14,7 +14,44 @@ The DM's Toolbox has evolved through focused feature releases:
 - **1.9.x**: Battle map measurement tools, persistent fog shapes, and generator integration across NPC/Tavern/Shop systems
 - **1.8.x**: Spell database expansion to 432+ spells, inventory management, loot generator overhaul, and character token generation
 
-**Current version: 2.1.1 (February 2026)**
+**Current version: 2.1.2 (February 2026)**
+
+---
+
+## [2.1.2] - 2026-02-26
+**XP Tracking, Wild Shape Notes, Class Resource Overhaul & Bug Fixes**
+
+### Added
+- **XP tracking** – Optional XP system in the Basic Information section for tables using experience-point leveling. Milestone players can ignore it entirely.
+  - Clickable badge displays current XP and next-level threshold (e.g. `1,250 / 2,700`). Clicking opens a small modal with Add / Subtract buttons.
+  - Color-coded progress bar: gray (0%), red (1–33%), yellow (34–66%), green (67–99%), cyan + "⬆ Level Up!" badge when the threshold is crossed.
+  - Clicking the "⬆ Level Up!" badge opens the level-up wizard directly.
+  - Adding XP that crosses a level threshold offers a confirm dialog to open the wizard immediately.
+  - XP overage carries forward — 350 XP at the 300 threshold shows 50 XP toward the next level after leveling up.
+  - Characters created at levels 3 or 5 start with the correct XP floor (900 / 6,500) so the progress bar reflects their actual position.
+  - 2024 PHB thresholds baked into `LevelUpData.XP_THRESHOLDS` and read by the character sheet.
+- **Wild Shape notes for Druids** – At-the-Table Reminders (Detailed Notes tab) are automatically populated with Wild Shape information.
+  - Level 1 creation: notice explaining Wild Shape arrives at level 2 with 2024 PHB basics (uses, temp HP, Known Forms, can-speak).
+  - Level 3 or 5 creation (Circle of the Moon included): full formatted beast list for all available forms at that level.
+  - Level-up to 2: the notice is replaced with the full beast list.
+  - Each subsequent level-up appends newly unlocked beast forms.
+- **Wild Shape resource tracking** – Wild Shape added to the Resources tab for Druids with correct 2024 PHB scaling: 2 uses (levels 2–5), 3 uses (levels 6–16), 4 uses (levels 17–20). Hidden below level 2 via `minLevel: 2`.
+- **Class resources overhaul (2024 PHB)** – All class resource definitions in `CLASS_RESOURCES` updated to match the 2024 Player's Handbook:
+  - **Bard** – Bardic Inspiration uses Proficiency Bonus formula instead of the 2014 Charisma modifier.
+  - **Cleric** – Channel Divinity starts at level 2 with 2 uses (not 1 use from level 1).
+  - **Monk** – Ki Points renamed to Discipline Points; `minLevel: 2` added.
+  - **Paladin** – Divine Sense (Cha-mod uses, 2014) replaced with Channel Divinity (level 3+, 2 uses, short rest).
+  - **Druid** – Wild Shape added (see above).
+- **Polymorph / True Polymorph spell notes** – Adding either spell to a character (via spell lookup, character creation wizard, or level-up wizard) automatically appends a reference block to the Spells tab Notes textarea:
+  - 2024 PHB rules summary: CR limit, stat block replacement, HP behavior, fly/swim note (Polymorph has no restriction).
+  - True Polymorph: includes permanent-transformation rules, any-creature-type option, and object-transform rules.
+  - Full beast-form list from `BEAST_FORMS` data organized by CR tier, capped at the character's current level.
+  - Duplicate check — notes are only inserted once even if the spell is re-added.
+
+### Fixed
+- **Level-up wizard not launching from XP system or Level Up button** – `LevelUpSystem` was defined as a module-level IIFE constant and never assigned to `window`, so `window.LevelUpSystem.startLevelUp()` was always `undefined`. Added `window.LevelUpSystem = LevelUpSystem` after the IIFE closes.
+- **Warlock level-up wizard crash** – `options.filter is not a function` at `renderFeatureSelectionUI` (level-up-system.js). `getAvailableInvocationsForLevel` returns a plain object `{}`, not an array; the Eldritch Invocation `dataGetter` now wraps the result in `Object.keys()`.
+- **`def.getMax is not a function` on character creation** – `site.js` backed up `CLASS_RESOURCES` using `JSON.parse(JSON.stringify(...))`, which silently strips all arrow-function properties. On the next backup-restore cycle (triggered by content-pack events), every `getMax` became `undefined`. `CLASS_RESOURCES` is now excluded from the backup/restore cycle; content packs never modify it so it needs no restore path.
 
 ---
 

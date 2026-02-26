@@ -995,6 +995,35 @@
                     <input type="text" id="charAlignment" class="form-control form-control-sm" placeholder="NG" />
                   </div>
 
+                  <!-- XP Tracking (optional — milestone users can ignore) -->
+                  <div class="col-12">
+                    <div class="d-flex align-items-center gap-2 flex-wrap">
+                      <label class="form-label mb-0 small text-nowrap">XP</label>
+                      <span id="xpDisplay"
+                            class="badge bg-secondary border border-secondary px-2 py-1"
+                            style="cursor:pointer; font-size:0.85rem; min-width:8rem; text-align:center;"
+                            title="Click to add or subtract XP">
+                        <span id="xpValue">0</span><span id="xpNextDisplay" class="text-muted"> / —</span>
+                      </span>
+                      <div class="flex-grow-1">
+                        <div class="progress mb-1" style="height:10px;">
+                          <div id="xpProgressBar"
+                               class="progress-bar bg-secondary"
+                               role="progressbar"
+                               style="width:0%"
+                               aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"></div>
+                        </div>
+                        <div class="d-flex justify-content-between align-items-center">
+                          <small id="xpProgressLabel" class="text-muted"></small>
+                          <small id="xpLevelUpBadge"
+                                 class="text-warning fw-bold d-none"
+                                 style="cursor:pointer;"
+                                 title="Click to open Level Up wizard">&#x2B06; Level Up!</small>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
                   <div class="col-md-12">
                     <label for="charRoleNotes" class="form-label">Party Role / DM Notes</label>
                     <textarea id="charRoleNotes" rows="2" class="form-control form-control-sm"
@@ -5991,6 +6020,41 @@
       });
     })();
   </script>
+  <!-- XP Adjustment Modal -->
+  <div class="modal fade" id="xpAdjustModal" tabindex="-1" aria-labelledby="xpAdjustModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-sm modal-dialog-centered">
+      <div class="modal-content bg-dark border-secondary">
+        <div class="modal-header border-secondary py-2">
+          <h6 class="modal-title text-warning" id="xpAdjustModalLabel">
+            <i class="bi bi-star-fill me-1"></i>Adjust XP
+          </h6>
+          <button type="button" class="btn-close btn-close-white btn-sm" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body py-2">
+          <div class="text-center mb-2 small">
+            <span class="text-muted">Current: </span>
+            <span id="xpModalCurrent" class="text-warning fw-bold"></span>
+            <br>
+            <span id="xpModalNextLabel" class="text-muted"></span>
+          </div>
+          <input type="number"
+                 id="xpAdjustAmount"
+                 class="form-control form-control-sm bg-dark text-light border-secondary text-center"
+                 placeholder="Amount"
+                 min="0" />
+        </div>
+        <div class="modal-footer border-secondary py-1 d-flex gap-2">
+          <button type="button" class="btn btn-sm btn-success flex-fill" id="xpAddBtn">
+            <i class="bi bi-plus-circle me-1"></i>Add XP
+          </button>
+          <button type="button" class="btn btn-sm btn-danger flex-fill" id="xpSubtractBtn">
+            <i class="bi bi-dash-circle me-1"></i>Subtract
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <script data-goatcounter="https://maybeme1990.goatcounter.com/count"
         async src="//gc.zgo.at/count.js"></script>
 </body>

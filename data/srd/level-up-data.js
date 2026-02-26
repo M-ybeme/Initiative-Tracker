@@ -3080,26 +3080,29 @@ window.LevelUpData = (function() {
     'Bard': [
       {
         name: 'Bardic Inspiration',
-        resetOn: 'long', // Becomes short rest at level 5 (Font of Inspiration)
-        getMax: (level, stats) => Math.max(1, Math.floor((stats.cha - 10) / 2))
+        resetOn: 'long', // 2024 PHB: Long Rest; at level 5 Font of Inspiration also regains 1 on Initiative
+        getMax: (level) => Math.floor((level - 1) / 4) + 2 // = Proficiency Bonus
       }
     ],
     'Cleric': [
       {
         name: 'Channel Divinity',
-        resetOn: 'short',
-        getMax: (level) => {
-          if (level < 6) return 1;
-          if (level < 18) return 2;
-          return 3;
-        }
+        resetOn: 'short', // 2024 PHB: Short or Long Rest
+        minLevel: 2,
+        getMax: (level) => 2 // 2024 PHB: 2 uses at all levels (options expand via subclass)
       }
     ],
     'Druid': [
       {
         name: 'Wild Shape',
-        resetOn: 'short',
-        getMax: (level) => 2 // Always 2 uses
+        resetOn: 'short', // 2024 PHB: regain 1 on Short Rest, all on Long Rest
+        minLevel: 2,
+        getMax: (level) => {
+          // 2024 PHB Druid Features table
+          if (level >= 17) return 4;
+          if (level >= 6)  return 3;
+          return 2; // levels 2–5
+        }
       }
     ],
     'Fighter': [
@@ -3117,22 +3120,23 @@ window.LevelUpData = (function() {
     ],
     'Monk': [
       {
-        name: 'Ki Points',
+        name: 'Discipline Points', // Renamed from Ki Points in 2024 PHB
         resetOn: 'short',
-        getMax: (level) => level >= 2 ? level : 0,
-        minLevel: 2
+        minLevel: 2,
+        getMax: (level) => level // 2024 PHB: equals Monk level (starts at 2 with minLevel guard)
       }
     ],
     'Paladin': [
       {
         name: 'Lay on Hands',
         resetOn: 'long',
-        getMax: (level) => level * 5
+        getMax: (level) => level * 5 // Pool of HP = 5 × Paladin level
       },
       {
-        name: 'Divine Sense',
-        resetOn: 'long',
-        getMax: (level, stats) => 1 + Math.max(0, Math.floor((stats.cha - 10) / 2))
+        name: 'Channel Divinity',
+        resetOn: 'short', // 2024 PHB: Short or Long Rest
+        minLevel: 3,      // Sacred Oath chosen at level 3 in 2024 PHB
+        getMax: (level) => 2
       }
     ],
     'Ranger': [], // Uses spell slots
@@ -3693,6 +3697,13 @@ window.LevelUpData = (function() {
     DEFAULT_CLASS_WEAPONS,
     CLASS_RESOURCES,
     ARTIFICER_INFUSIONS,
+
+    // 2024 PHB XP thresholds — total XP required to reach each level
+    // Index 0 = level 1 (0 XP), index 1 = level 2 (300 XP), etc.
+    XP_THRESHOLDS: [
+      0, 300, 900, 2700, 6500, 14000, 23000, 34000, 48000, 64000,
+      85000, 100000, 120000, 140000, 165000, 195000, 225000, 265000, 305000, 355000
+    ],
 
     getClassData(className) {
       return CLASS_DATA[className] || null;
@@ -9062,22 +9073,26 @@ window.LevelUpData = (function() {
     getWildShapeLimits(druidLevel, druidCircle = '') {
       const isMoonDruid = druidCircle && druidCircle.toLowerCase().includes('moon');
 
-      if (isMoonDruid) {
-        // Circle of the Moon progression
+      if (isMoonDruid && druidLevel >= 3) {
+        // Circle of the Moon progression (2024 PHB — subclass chosen at level 3)
+        // Max CR = floor(druidLevel / 3); fly unlocks at level 8 (same as base)
         if (druidLevel >= 18) return { maxCR: '6', canFly: true, canSwim: true };
         if (druidLevel >= 15) return { maxCR: '5', canFly: true, canSwim: true };
         if (druidLevel >= 12) return { maxCR: '4', canFly: true, canSwim: true };
-        if (druidLevel >= 9) return { maxCR: '3', canFly: true, canSwim: true };
-        if (druidLevel >= 6) return { maxCR: '2', canFly: false, canSwim: true };
-        if (druidLevel >= 2) return { maxCR: '1', canFly: false, canSwim: true };
-        return { maxCR: '0', canFly: false, canSwim: false };
-      } else {
-        // Standard druid progression
-        if (druidLevel >= 8) return { maxCR: '1', canFly: true, canSwim: true };
-        if (druidLevel >= 4) return { maxCR: '1/2', canFly: false, canSwim: true };
-        if (druidLevel >= 2) return { maxCR: '1/4', canFly: false, canSwim: false };
-        return { maxCR: '0', canFly: false, canSwim: false };
+        if (druidLevel >= 9)  return { maxCR: '3', canFly: true, canSwim: true };
+        if (druidLevel >= 8)  return { maxCR: '2', canFly: true, canSwim: true };
+        if (druidLevel >= 6)  return { maxCR: '2', canFly: false, canSwim: true };
+        return { maxCR: '1', canFly: false, canSwim: true }; // levels 3–5
       }
+
+      // Standard druid progression (2024 PHB)
+      // Level 2–3: CR 1/4, swim OK, no fly
+      // Level 4–7: CR 1/2, swim OK, no fly
+      // Level 8+:  CR 1,   swim OK, fly OK
+      if (druidLevel >= 8) return { maxCR: '1', canFly: true, canSwim: true };
+      if (druidLevel >= 4) return { maxCR: '1/2', canFly: false, canSwim: true };
+      if (druidLevel >= 2) return { maxCR: '1/4', canFly: false, canSwim: true };
+      return { maxCR: '0', canFly: false, canSwim: false };
     },
 
     /**
@@ -9165,8 +9180,16 @@ window.LevelUpData = (function() {
       const lines = [];
       const isMoon = druidCircle && druidCircle.toLowerCase().includes('moon');
 
+      // 2024 PHB rules
+      const knownForms = druidLevel >= 8 ? 8 : druidLevel >= 4 ? 6 : 4;
+      const tempHP = isMoon ? druidLevel * 3 : druidLevel;
+      const durationHours = Math.max(1, Math.floor(druidLevel / 2));
+
       lines.push(`**Wild Shape Forms** (Max CR: ${limits.maxCR}${limits.canFly ? ', can fly' : ''}${limits.canSwim ? ', can swim' : ''})`);
-      lines.push(`Uses: ${Math.max(2, Math.floor(druidLevel / 2))}/short rest | Duration: ${Math.floor(druidLevel / 2)} hours`);
+      lines.push(`Uses: 2 (regain 1/Short Rest, all on Long Rest) | Duration: ${durationHours} hour(s)`);
+      lines.push(`Known Forms: choose ${knownForms} from the list below (can swap 1 after each Long Rest)`);
+      lines.push(`Temp HP on transform: ${tempHP} | You keep your own HP total`);
+      lines.push(`Bonus Action to transform or revert. You can speak while transformed.`);
       lines.push('');
 
       // Group beasts by CR for better organization

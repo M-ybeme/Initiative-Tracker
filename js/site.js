@@ -1,13 +1,14 @@
 const DM_TOOLBOX_BUILD = {
   name: "The DM's Toolbox",
-  version: "2.1.1",
+  version: "2.1.2",
   recentChanges: [
-    "Compendium page – new mid-session reference with Spells, Bestiary, and Rules tabs; search, filter, and pin cards for any entry",
-    "Bestiary search fix – look-ahead now fetches the full query (debounced) instead of just the first letter, returning targeted results",
-    "Bestiary sort fix – all monster load paths (initial, infinite-scroll, look-ahead) sort alphabetically after every deduplication",
-    "Rules reference overhaul – rewrote rules-data.js from 22 to 88 entries across 16 categories with full 2024 combat, spellcasting, and conditions coverage",
-    "Combat log clear button – added a Clear Log button to the initiative tracker's combat log modal",
-    "Mobile dice roll history fix – roll history panel no longer follows scroll on mobile; sticky behavior is now desktop-only"
+    "XP tracking – optional XP display with color-coded progress bar, level-up badge, and wizard trigger added to Basic Information",
+    "Wild Shape notes – Druids get a beast form reference in At-the-Table Reminders on creation; forms expand on level-up",
+    "Class resources overhaul – all 12 classes updated to 2024 PHB resource rules (Discipline Points, Channel Divinity, Bardic Inspiration by PB, etc.)",
+    "Polymorph / True Polymorph notes – adding either spell auto-populates the Spells tab Notes with 2024 rules and the full beast-form list",
+    "Level-up wizard fix – LevelUpSystem now exposed on window so XP threshold trigger and other external callers work correctly",
+    "Level-up Warlock fix – Eldritch Invocation options no longer crash the wizard (getAvailableInvocationsForLevel result wrapped in Object.keys)",
+    "Class resources restore fix – CLASS_RESOURCES removed from the JSON backup/restore cycle so getMax arrow functions are never stripped"
   ],
   buildTime: new Date().toISOString(),
   author: "Maybeme"
@@ -126,7 +127,9 @@ if (typeof IndexedDBStorage !== 'undefined' && IndexedDBStorage.isSupported()) {
       if (data.FEATS) dataBackups.LevelUpData.FEATS = JSON.parse(JSON.stringify(data.FEATS));
       if (data.CLASS_DATA) dataBackups.LevelUpData.CLASS_DATA = JSON.parse(JSON.stringify(data.CLASS_DATA));
       if (data.SUBCLASS_DATA) dataBackups.LevelUpData.SUBCLASS_DATA = JSON.parse(JSON.stringify(data.SUBCLASS_DATA));
-      if (data.CLASS_RESOURCES) dataBackups.LevelUpData.CLASS_RESOURCES = JSON.parse(JSON.stringify(data.CLASS_RESOURCES));
+      // CLASS_RESOURCES is intentionally excluded from backup — it contains
+      // getMax arrow functions that JSON.stringify strips. Content packs never
+      // modify CLASS_RESOURCES, so it needs no backup/restore cycle.
       if (data.DEFAULT_CLASS_WEAPONS) dataBackups.LevelUpData.DEFAULT_CLASS_WEAPONS = JSON.parse(JSON.stringify(data.DEFAULT_CLASS_WEAPONS));
       if (data.CLASS_STARTING_GOLD) dataBackups.LevelUpData.CLASS_STARTING_GOLD = JSON.parse(JSON.stringify(data.CLASS_STARTING_GOLD));
       if (data.CLASS_EQUIPMENT_CHOICES) dataBackups.LevelUpData.CLASS_EQUIPMENT_CHOICES = JSON.parse(JSON.stringify(data.CLASS_EQUIPMENT_CHOICES));
@@ -157,7 +160,7 @@ if (typeof IndexedDBStorage !== 'undefined' && IndexedDBStorage.isSupported()) {
     const backup = dataBackups.LevelUpData;
     if (data && backup) {
       const keysToRestore = [
-        'FEATS', 'CLASS_DATA', 'SUBCLASS_DATA', 'CLASS_RESOURCES', 'DEFAULT_CLASS_WEAPONS',
+        'FEATS', 'CLASS_DATA', 'SUBCLASS_DATA', 'DEFAULT_CLASS_WEAPONS',
         'CLASS_STARTING_GOLD', 'CLASS_EQUIPMENT_CHOICES', 'DEFAULT_CLASS_EQUIPMENT',
         'BACKGROUND_DATA', 'FIGHTING_STYLE_DATA', 'PACT_BOON_DATA', 'ELDRITCH_INVOCATION_DATA',
         'METAMAGIC_DATA', 'RACE_DATA', 'SUBRACE_DATA', 'BEAST_FORMS', 'ARTIFICER_INFUSIONS'

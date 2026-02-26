@@ -1503,6 +1503,8 @@
         window.currentSpellList = currentSpellList;
         renderCharacterSpellList();
         updatePreparedSpellCount();
+        // Polymorph / True Polymorph: append form reference to Spells tab Notes
+        appendPolymorphNotesToSpellNotes(spell.name, parseInt($('charLevel') && $('charLevel').value) || 1);
       }
 
       function removeSpellFromCurrentList(name) {
@@ -2471,6 +2473,7 @@
           $('charNotes').value = char.notes || '';
           $('charTableNotes').value = char.tableNotes || '';
           $('charExtraNotes').value = char.extraNotes || '';
+          updateXPDisplay(char.xp || 0, parseInt(char.level) || 1);
       
           $('portraitUrl').value = char.portraitType === 'url' ? (char.portraitData || '') : '';
 
@@ -2590,6 +2593,17 @@
         if (wizardData.background) $('charBackground').value = wizardData.background;
         if (wizardData.level) $('charLevel').value = wizardData.level;
         if (wizardData.alignment) $('charAlignment').value = wizardData.alignment;
+
+        // Set starting XP to the floor for the character's starting level
+        // (level 1 = 0 XP, level 3 = 900, level 5 = 6,500, etc.)
+        const startingLevel = parseInt(wizardData.level) || 1;
+        const xpThresholds = (window.LevelUpData && window.LevelUpData.XP_THRESHOLDS) ||
+          [0, 300, 900, 2700, 6500, 14000, 23000, 34000, 48000, 64000,
+           85000, 100000, 120000, 140000, 165000, 195000, 225000, 265000, 305000, 355000];
+        const startingXP = xpThresholds[startingLevel - 1] || 0;
+        const wizardChar = getCurrentCharacter();
+        if (wizardChar) wizardChar.xp = startingXP;
+        updateXPDisplay(startingXP, startingLevel);
 
         // Fill in ability scores (with racial bonuses already applied)
         if (wizardData.str) $('statStr').value = wizardData.str;
@@ -2772,6 +2786,11 @@
           updatePreparedSpellCount();
         }
 
+        // Check if any starting spell is Polymorph / True Polymorph
+        (currentSpellList || []).forEach(sp => {
+          appendPolymorphNotesToSpellNotes(sp.name, wizardData.level || 1);
+        });
+
         // Set spellcasting ability based on class
         if (wizardData.class) {
           const spellcastingAbilities = {
@@ -2866,6 +2885,30 @@
           // Use allFeatures if available (includes racial + class), fallback to classFeatures only
           const featuresText = wizardData.allFeatures || wizardData.classFeatures || '';
           $('charFeatures').value = featuresText;
+        }
+
+        // Add class-specific At-the-Table Reminders for Druids (Wild Shape)
+        if (wizardData.class === 'Druid' && $('charTableNotes')) {
+          const druidLevel = wizardData.level || 1;
+          let druidNote = '';
+          if (druidLevel < 2) {
+            druidNote = '=== WILD SHAPE ===\n' +
+              'At level 2, you gain Wild Shape! Transform into a prepared Beast form as a Bonus Action.\n\n' +
+              'Wild Shape basics (2024 PHB):\n' +
+              '- Uses: 2 (regain 1 on Short Rest, all on Long Rest)\n' +
+              '- Duration: half your Druid level in hours (min. 1 hour)\n' +
+              '- Temp HP equal to your Druid level (you keep your own HP total)\n' +
+              '- Known Forms: 4 at level 2, 6 at level 4, 8 at level 8\n' +
+              '- You can speak while transformed\n' +
+              '- No need to have previously seen the beast\n\n' +
+              'When you level up to level 2, your available beast forms will be listed here.';
+          } else if (wizardData.wildShapeReference) {
+            druidNote = wizardData.wildShapeReference;
+          }
+          if (druidNote) {
+            const existing = $('charTableNotes').value;
+            $('charTableNotes').value = existing ? existing + '\n\n' + druidNote : druidNote;
+          }
         }
 
         // Generate default attacks based on class and stats
@@ -2994,6 +3037,7 @@
           background: '',
           level: '',
           alignment: '',
+          xp: 0,
           roleNotes: '',
 
           // Multiclassing support
@@ -3247,6 +3291,7 @@
           char.background = getVal('charBackground');
           char.level = getNum('charLevel');
           char.alignment = getVal('charAlignment');
+          char.xp = char.xp || 0; // XP is maintained in-memory by adjustXP(); just guard against undefined
           char.roleNotes = getVal('charRoleNotes');
       
           char.ac = getNum('charAC');
@@ -4194,6 +4239,199 @@
       }
 
       // ---------- Events ----------
+      // ---- XP Tracking ----
+      const XP_THRESHOLDS = (window.LevelUpData && window.LevelUpData.XP_THRESHOLDS) ||
+        [0, 300, 900, 2700, 6500, 14000, 23000, 34000, 48000, 64000,
+         85000, 100000, 120000, 140000, 165000, 195000, 225000, 265000, 305000, 355000];
+
+      function updateXPDisplay(xp, currentLevel) {
+        const lvl = Math.min(Math.max(parseInt(currentLevel) || 1, 1), 20);
+        const currentLvlXP = XP_THRESHOLDS[lvl - 1];
+        const nextLvlXP    = lvl < 20 ? XP_THRESHOLDS[lvl] : null;
+
+        const xpValueEl = $('xpValue');
+        const xpNextEl  = $('xpNextDisplay');
+        if (xpValueEl) xpValueEl.textContent = xp.toLocaleString();
+        if (xpNextEl)  xpNextEl.textContent  = nextLvlXP ? ` / ${nextLvlXP.toLocaleString()}` : ' / Max';
+
+        const bar          = $('xpProgressBar');
+        const label        = $('xpProgressLabel');
+        const levelUpBadge = $('xpLevelUpBadge');
+
+        if (lvl >= 20 || !nextLvlXP) {
+          if (bar)   { bar.style.width = '100%'; bar.className = 'progress-bar bg-warning'; }
+          if (label) label.textContent = 'Max level reached';
+          if (levelUpBadge) levelUpBadge.classList.add('d-none');
+          return;
+        }
+
+        const range    = nextLvlXP - currentLvlXP;
+        const progress = Math.max(0, xp - currentLvlXP);
+        const pct      = Math.min(100, Math.round((progress / range) * 100));
+
+        let barClass = 'progress-bar ';
+        if (xp >= nextLvlXP) barClass += 'bg-info';
+        else if (pct >= 67)  barClass += 'bg-success';
+        else if (pct >= 34)  barClass += 'bg-warning';
+        else if (pct > 0)    barClass += 'bg-danger';
+        else                 barClass += 'bg-secondary';
+
+        if (bar) {
+          bar.style.width = pct + '%';
+          bar.className = barClass;
+          bar.setAttribute('aria-valuenow', pct);
+        }
+        if (label) {
+          label.textContent = xp >= nextLvlXP
+            ? `Ready for level ${lvl + 1}!`
+            : `${(nextLvlXP - xp).toLocaleString()} XP to level ${lvl + 1}`;
+        }
+        if (levelUpBadge) {
+          levelUpBadge.classList.toggle('d-none', xp < nextLvlXP);
+        }
+      }
+      window.updateXPDisplay = updateXPDisplay;
+
+      function adjustXP(delta) {
+        const character = getCurrentCharacter();
+        if (!character) return;
+
+        const oldXP = character.xp || 0;
+        const newXP = Math.max(0, oldXP + delta);
+        character.xp = newXP;
+
+        const currentLevel = parseInt($('charLevel')?.value) || 1;
+        const nextLvlXP    = currentLevel < 20 ? XP_THRESHOLDS[currentLevel] : null;
+
+        updateXPDisplay(newXP, currentLevel);
+        saveCurrentCharacter();
+
+        // Prompt level-up wizard if threshold just crossed
+        if (nextLvlXP && newXP >= nextLvlXP && oldXP < nextLvlXP) {
+          setTimeout(() => {
+            if (confirm(`🎉 ${character.name || 'This character'} has enough XP to reach level ${currentLevel + 1}!\n\nOpen the Level Up wizard now?`)) {
+              if (window.LevelUpSystem && window.LevelUpSystem.startLevelUp) {
+                window.LevelUpSystem.startLevelUp(character);
+              }
+            }
+          }, 300);
+        }
+      }
+
+      // ============================================================
+      // POLYMORPH / TRUE POLYMORPH SPELL NOTES
+      // ============================================================
+
+      /**
+       * Generates a formatted reference block for Polymorph or True Polymorph,
+       * including 2024 PHB rules and a beast-form list from BEAST_FORMS data.
+       * @param {string} spellName  - 'Polymorph' or 'True Polymorph' (case-insensitive)
+       * @param {number} charLevel  - Character level (used as CR cap for beast list)
+       * @returns {string|null}     - Formatted text, or null if not a polymorph spell
+       */
+      function generatePolymorphNotes(spellName, charLevel) {
+        const name = (spellName || '').toLowerCase().trim();
+        const isTruePolymorph = name === 'true polymorph';
+        const isPolymorph = name === 'polymorph';
+        if (!isPolymorph && !isTruePolymorph) return null;
+
+        const level = Math.max(1, parseInt(charLevel) || 1);
+        const lines = [];
+
+        if (isPolymorph) {
+          lines.push('=== POLYMORPH (4th Level) ===');
+          lines.push('Range: 60 ft | Duration: Concentration, up to 1 hour | Save: WIS (unwilling)');
+          lines.push('');
+          lines.push('2024 PHB Rules:');
+          lines.push("- CR Limit: Target's CR (or character level, if the target has no CR)");
+          lines.push("- Target assumes the Beast's full stat block (HP, AC, attacks, speed)");
+          lines.push("- Target retains alignment, personality, and memories; cannot cast spells");
+          lines.push("- If the Beast form drops to 0 HP, target reverts with original HP intact");
+          lines.push("- No fly or swim speed restrictions (unlike Wild Shape)");
+        } else {
+          lines.push('=== TRUE POLYMORPH (9th Level) ===');
+          lines.push('Range: 30 ft | Duration: Concentration, up to 1 hour (can become permanent) | Save: WIS (unwilling)');
+          lines.push('');
+          lines.push('2024 PHB Rules:');
+          lines.push("- CR Limit: Target's CR (or character level, if no CR)");
+          lines.push("- Can transform into ANY creature type — not just Beasts!");
+          lines.push("- Can transform a creature into an object, or an object into a creature");
+          lines.push("- PERMANENT: Maintain concentration for the full 1 hour to make it permanent");
+          lines.push("- Permanent transformation persists through unconsciousness and rests");
+          lines.push("- Dispel Magic (DC 10 + caster's original spell level) can end a permanent transformation");
+          lines.push("- If creature drops to 0 HP in new form, reverts (unless transformation is permanent)");
+        }
+
+        // Build beast forms list
+        const beastForms = window.LevelUpData && window.LevelUpData.BEAST_FORMS;
+        if (beastForms) {
+          lines.push('');
+          lines.push('--- Available Beast Forms (CR \u2264 ' + level + ') ---');
+          if (isPolymorph) lines.push('(No fly or swim restrictions for Polymorph)');
+          lines.push('');
+
+          const CR_ORDER = ['CR0', 'CR1/8', 'CR1/4', 'CR1/2', 'CR1', 'CR2'];
+          const CR_NUM   = { 'CR0': 0, 'CR1/8': 0.125, 'CR1/4': 0.25, 'CR1/2': 0.5, 'CR1': 1, 'CR2': 2 };
+          let listed = false;
+
+          for (const crKey of CR_ORDER) {
+            if (CR_NUM[crKey] > level) break;
+            const beasts = beastForms[crKey] || [];
+            if (!beasts.length) continue;
+
+            lines.push('-- CR ' + crKey.replace('CR', '') + ' --');
+            for (const beast of beasts) {
+              lines.push(beast.name + ' | AC ' + beast.ac + ' | HP ' + beast.hp + ' | Speed: ' + beast.speed);
+              lines.push('  Attacks: ' + beast.attacks);
+              if (beast.traits) lines.push('  Traits: ' + beast.traits);
+            }
+            lines.push('');
+            listed = true;
+          }
+
+          if (!listed) {
+            lines.push('No beast forms in our database at your current level.');
+          } else if (level >= 3) {
+            lines.push('Note: Higher CR beasts (CR 3+) exist in the Monster Manual.');
+            lines.push("Any Beast with CR \u2264 the target's CR or level is valid.");
+          }
+        }
+
+        return lines.join('\n');
+      }
+
+      /**
+       * Appends Polymorph or True Polymorph reference notes to the Spells tab
+       * Notes textarea (#charSpells) if not already present.
+       * @param {string} spellName          - Spell name to check
+       * @param {number} charLevel          - Character level for CR cap
+       * @param {Object} [characterOverride] - Pass the character object when the
+       *                                       textarea may not be active (e.g. level-up)
+       */
+      function appendPolymorphNotesToSpellNotes(spellName, charLevel, characterOverride) {
+        const name = (spellName || '').toLowerCase().trim();
+        if (name !== 'polymorph' && name !== 'true polymorph') return;
+
+        const marker = name === 'true polymorph' ? '=== TRUE POLYMORPH' : '=== POLYMORPH';
+        const character = characterOverride ||
+          (typeof getCurrentCharacter === 'function' ? getCurrentCharacter() : window.getCurrentCharacter && window.getCurrentCharacter());
+        const notesEl = $('charSpells');
+
+        // Prefer the live textarea value; fall back to the character object
+        const currentNotes = notesEl ? notesEl.value : (character ? (character.charSpells || '') : '');
+
+        if (currentNotes.includes(marker)) return; // Already present
+
+        const notes = generatePolymorphNotes(spellName, charLevel);
+        if (!notes) return;
+
+        const updated = currentNotes ? currentNotes + '\n\n' + notes : notes;
+        if (notesEl) notesEl.value = updated;
+        if (character) character.charSpells = updated;
+      }
+      // Expose globally so level-up-system.js can call it after spell additions
+      window.appendPolymorphNotesToSpellNotes = appendPolymorphNotesToSpellNotes;
+
       function attachEventHandlers() {
         const characterSelect = $('characterSelect');
         if (characterSelect) {
@@ -5034,6 +5272,74 @@
           }
         });
 
+        // ---- XP UI events ----
+        const xpDisplay = $('xpDisplay');
+        if (xpDisplay) {
+          xpDisplay.addEventListener('click', () => {
+            const character = getCurrentCharacter();
+            const lvl = parseInt($('charLevel')?.value) || 1;
+            const xp  = character?.xp || 0;
+            const next = lvl < 20 ? XP_THRESHOLDS[lvl] : null;
+
+            const cur      = $('xpModalCurrent');
+            const nextLbl  = $('xpModalNextLabel');
+            const amtInput = $('xpAdjustAmount');
+            if (cur)     cur.textContent    = xp.toLocaleString();
+            if (nextLbl) nextLbl.textContent = next
+              ? `${(next - xp).toLocaleString()} more XP needed for level ${lvl + 1}`
+              : 'Maximum level reached';
+            if (amtInput) { amtInput.value = ''; }
+
+            const modal = new bootstrap.Modal($('xpAdjustModal'));
+            modal.show();
+            // Focus the input after the modal animation finishes
+            $('xpAdjustModal').addEventListener('shown.bs.modal', () => {
+              if (amtInput) amtInput.focus();
+            }, { once: true });
+          });
+        }
+
+        const xpAddBtn = $('xpAddBtn');
+        if (xpAddBtn) {
+          xpAddBtn.addEventListener('click', () => {
+            const amount = parseInt($('xpAdjustAmount')?.value) || 0;
+            if (amount > 0) {
+              adjustXP(amount);
+              bootstrap.Modal.getInstance($('xpAdjustModal'))?.hide();
+            }
+          });
+        }
+
+        const xpSubtractBtn = $('xpSubtractBtn');
+        if (xpSubtractBtn) {
+          xpSubtractBtn.addEventListener('click', () => {
+            const amount = parseInt($('xpAdjustAmount')?.value) || 0;
+            if (amount > 0) {
+              adjustXP(-amount);
+              bootstrap.Modal.getInstance($('xpAdjustModal'))?.hide();
+            }
+          });
+        }
+
+        const xpLevelUpBadge = $('xpLevelUpBadge');
+        if (xpLevelUpBadge) {
+          xpLevelUpBadge.addEventListener('click', () => {
+            const character = getCurrentCharacter();
+            if (character && window.LevelUpSystem && window.LevelUpSystem.startLevelUp) {
+              window.LevelUpSystem.startLevelUp(character);
+            }
+          });
+        }
+
+        // Re-render XP bar when level is manually changed
+        const charLevelEl = $('charLevel');
+        if (charLevelEl) {
+          charLevelEl.addEventListener('change', () => {
+            const character = getCurrentCharacter();
+            updateXPDisplay(character?.xp || 0, parseInt(charLevelEl.value) || 1);
+          });
+        }
+
         // Auto-save when leaving the page or navigating away
         // Use pagehide as it's more reliable than beforeunload (especially on mobile)
         window.addEventListener('pagehide', () => {
@@ -5085,6 +5391,7 @@
           c.currency = c.currency || base.currency;
           c.deathSaves = c.deathSaves || base.deathSaves;
           c.exhaustion = c.exhaustion ?? 0;
+          c.xp = c.xp ?? 0;
           c.spellcastingAbility = c.spellcastingAbility || '';
 
           // existing spellList upgrade...
