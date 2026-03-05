@@ -87,6 +87,11 @@ Press **Ctrl+Alt+D** or click the gear icon in the footer to open the diagnostic
 * **HP management** – Damage, healing, temp HP, and death saves
 * **Condition tracking** – All 2024 PHB conditions with exhaustion penalties
 * **Ability check rolls** – Roll raw ability checks (advantage/normal/disadvantage) from the character sheet and combat view
+* **Combat card** – A condensed single-screen combat view with HP bar, AC, speed, spell slots, prepared spells, ability scores, saving throws, attacks, and resources all in one place
+* **Class resources in combat** – Ki Points, Rage, Bardic Inspiration, and any other named resources appear in the combat Resources panel with live `−`/`+` buttons; changes save automatically
+* **Spell casting with auto-roll** – Casting a spell in combat or on the character sheet automatically rolls to-hit and damage; results shown in a combined toast with attack roll and damage together (6-second display)
+* **Concentration check modal** – Tapping the Concentrating badge in combat opens a modal to roll a CON saving throw with live DC calculation (max 10 or half damage), or end concentration manually
+* **Dice roll history** – Every roll (spell attacks, damage, saves, initiative, hit dice) tracked in a scrollable history panel; accessible via the Roll History button in the combat header
 * **Encounter balancing** – CR calculator with difficulty ratings
 * **Monster stat blocks** – Full SRD bestiary with searchable filters
 * **Custom monster creator** – Simple/Full mode builder with all 5e stat block fields (legendary, mythic, lair actions, spellcasting, and more)

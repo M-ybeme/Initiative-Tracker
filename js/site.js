@@ -1,14 +1,15 @@
 const DM_TOOLBOX_BUILD = {
   name: "The DM's Toolbox",
-  version: "2.1.2",
+  version: "2.1.3",
   recentChanges: [
-    "XP tracking – optional XP display with color-coded progress bar, level-up badge, and wizard trigger added to Basic Information",
-    "Wild Shape notes – Druids get a beast form reference in At-the-Table Reminders on creation; forms expand on level-up",
-    "Class resources overhaul – all 12 classes updated to 2024 PHB resource rules (Discipline Points, Channel Divinity, Bardic Inspiration by PB, etc.)",
-    "Polymorph / True Polymorph notes – adding either spell auto-populates the Spells tab Notes with 2024 rules and the full beast-form list",
-    "Level-up wizard fix – LevelUpSystem now exposed on window so XP threshold trigger and other external callers work correctly",
-    "Level-up Warlock fix – Eldritch Invocation options no longer crash the wizard (getAvailableInvocationsForLevel result wrapped in Object.keys)",
-    "Class resources restore fix – CLASS_RESOURCES removed from the JSON backup/restore cycle so getMax arrow functions are never stripped"
+    "Spell upcast picker – casting a leveled spell in combat view with multiple slot options now opens a level picker modal showing remaining slots and a live damage preview (e.g. Fireball: 3rd→8d6, 4th→9d6, 5th→10d6)",
+    "Upcast damage scaling – 24 SRD spells (Fireball, Cure Wounds, Hellish Rebuke, Thunderwave, etc.) now auto-scale their damage or healing dice when cast above base level",
+    "Pact slot upcast support – Warlocks can cast any known spell at their pact slot level with correct upcast damage; pact slots appear as a named option in the picker alongside regular slots",
+    "Warlock pact slot fix – combat view no longer shows a spurious 'No level X spell slots' alert for Warlocks when pact slots are available to cover that spell level",
+    "Class resources in combat view – Ki Points, Rage, Bardic Inspiration, and other named resources now appear in the combat Resources panel with +/− buttons",
+    "Concentration check modal – tapping the Concentrating badge opens a modal to roll a CON saving throw (with live DC calculation from damage) or end concentration",
+    "Combined spell roll toast – casting an attack spell shows one toast with both the attack roll and damage, lasting 6 seconds",
+    "Dice roll history modal fixed – roll description, notation, and individual dice now display correctly in the Roll History modal"
   ],
   buildTime: new Date().toISOString(),
   author: "Maybeme"

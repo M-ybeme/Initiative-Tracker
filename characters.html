@@ -717,8 +717,9 @@
       transform: scale(0.98);
     }
 
-    /* Cast Spell Button */
-    .combat-cast-btn {
+    /* Cast / Roll Spell Buttons */
+    .combat-cast-btn,
+    .combat-roll-btn {
       padding: 0.15rem 0.5rem;
       font-size: 0.7rem;
       white-space: nowrap;
@@ -858,7 +859,7 @@
               <i class="bi bi-file-earmark-text me-1"></i>Create Your Own Content Pack
             </a>
             <span class="mx-2">|</span>
-            <span class="text-decoration-underline" data-bs-toggle="tooltip" data-bs-placement="top" title="Press Ctrl+Alt+D to open the diagnostics panel, then use Manage Content Packs to import purchased or homebrew data for the wizards.">
+            <span class="text-decoration-underline" data-bs-toggle="tooltip" data-bs-placement="top" title="Press Ctrl+Alt+D to open the Content Pack Manager, then import your JSON pack file.">
               How to load private packs
             </span>
           </small>
@@ -950,7 +951,7 @@
         <!-- Main layout -->
         <div id="fullCharacterSheet" class="row g-3">
           <!-- LEFT COLUMN -->
-          <div class="col-12 col-lg-8">
+          <div class="col-12 col-md-8">
             <!-- Basic Identity -->
             <div class="card bg-dark border-secondary mb-3">
               <div class="card-header border-secondary collapsible-header" data-bs-toggle="collapse" data-bs-target="#collapseBasicInfo" aria-expanded="true" aria-controls="collapseBasicInfo" style="cursor: pointer;">
@@ -1088,6 +1089,38 @@
                       </button>
                       <button type="button" class="btn btn-sm btn-warning" data-hp-adjust="max">
                         <i class="bi bi-arrow-up"></i> Max
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Turn Action Tracker -->
+                <div class="row g-2 mb-2">
+                  <div class="col-12">
+                    <div class="d-flex align-items-center gap-1">
+                      <span class="text-muted small fw-semibold me-1" style="white-space:nowrap">Turn:</span>
+                      <button type="button" id="btn-actionSlot"
+                              class="btn btn-sm btn-outline-success flex-fill"
+                              data-action-slot="actionUsed"
+                              title="Use Action">
+                        <i class="bi bi-circle me-1"></i>Action
+                      </button>
+                      <button type="button" id="btn-bonusActionSlot"
+                              class="btn btn-sm btn-outline-warning flex-fill"
+                              data-action-slot="bonusActionUsed"
+                              title="Use Bonus Action">
+                        <i class="bi bi-circle me-1"></i>Bonus
+                      </button>
+                      <button type="button" id="btn-reactionSlot"
+                              class="btn btn-sm btn-outline-info flex-fill"
+                              data-action-slot="reactionUsed"
+                              title="Use Reaction">
+                        <i class="bi bi-circle me-1"></i>Reaction
+                      </button>
+                      <button type="button" id="btn-newTurn"
+                              class="btn btn-sm btn-outline-secondary ms-1"
+                              title="New Turn — reset all actions">
+                        <i class="bi bi-arrow-counterclockwise"></i>
                       </button>
                     </div>
                   </div>
@@ -2199,13 +2232,13 @@
           </div>
 
           <!-- RIGHT COLUMN -->
-          <div class="col-12 col-lg-4">
+          <div class="col-12 col-md-4">
             <!-- Roll History Panel (Sticky) -->
             <div class="card bg-dark border-secondary mb-3" id="rollHistoryPanel">
-              <div class="card-header border-secondary d-flex justify-content-between align-items-center" id="rollHistoryHeader" style="cursor: pointer;">
-                <strong><i class="bi bi-dice-5 me-1"></i>Roll History</strong>
+              <div class="card-header border-secondary d-flex justify-content-between align-items-center" id="rollHistoryHeader" style="cursor: pointer;" title="Click to collapse/expand">
+                <strong><i class="bi bi-dice-5 me-1"></i>Roll History <i class="bi bi-chevron-down collapse-icon ms-1" style="font-size:0.8rem;"></i></strong>
                 <div>
-                  <button type="button" class="btn btn-sm btn-outline-danger" id="clearHistoryBtn">
+                  <button type="button" class="btn btn-sm btn-outline-danger" id="clearHistoryBtn" title="Clear roll history">
                     <i class="bi bi-trash"></i>
                   </button>
                 </div>
@@ -2992,6 +3025,32 @@
               <div id="combatConditions" class="combat-conditions">
                 <span class="text-muted fst-italic small">None</span>
               </div>
+              <!-- Turn Action Tracker (Combat View) -->
+              <div class="d-flex align-items-center gap-1 mt-2">
+                <button type="button" id="btn-combat-actionSlot"
+                        class="btn btn-sm btn-outline-success flex-fill"
+                        data-action-slot="actionUsed"
+                        title="Use Action">
+                  <i class="bi bi-circle me-1"></i>Action
+                </button>
+                <button type="button" id="btn-combat-bonusActionSlot"
+                        class="btn btn-sm btn-outline-warning flex-fill"
+                        data-action-slot="bonusActionUsed"
+                        title="Use Bonus Action">
+                  <i class="bi bi-circle me-1"></i>Bonus
+                </button>
+                <button type="button" id="btn-combat-reactionSlot"
+                        class="btn btn-sm btn-outline-info flex-fill"
+                        data-action-slot="reactionUsed"
+                        title="Use Reaction">
+                  <i class="bi bi-circle me-1"></i>Reaction
+                </button>
+                <button type="button" id="btn-combat-newTurn"
+                        class="btn btn-sm btn-outline-secondary"
+                        title="New Turn — reset all actions">
+                  <i class="bi bi-arrow-counterclockwise"></i>
+                </button>
+              </div>
               <!-- Dice History Button -->
               <button type="button" class="btn btn-outline-info btn-sm mt-2" data-bs-toggle="modal" data-bs-target="#diceHistoryModal">
                 <i class="bi bi-clock-history me-1"></i>Roll History
@@ -3191,6 +3250,8 @@
                   <span class="badge bg-warning text-dark" id="combatExhaustion">0</span>
                 </div>
               </div>
+              <!-- Class Resources (Ki Points, Rage, Bardic Inspiration, etc.) -->
+              <div id="combatClassResources"></div>
             </div>
 
           </div>
@@ -4345,6 +4406,58 @@
     </div>
   </div>
 
+  <!-- Upcast Level Picker Modal -->
+  <div class="modal fade" id="upcastModal" tabindex="-1" aria-labelledby="upcastModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content bg-dark text-light border-secondary">
+        <div class="modal-header border-secondary">
+          <h5 class="modal-title" id="upcastModalLabel">
+            <i class="bi bi-arrow-up-circle me-2 text-warning"></i>
+            <span id="upcastModalSpellName">—</span>
+          </h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <p class="small text-muted mb-3" id="upcastModalBaseLine"></p>
+          <div id="upcastModalOptions" class="d-flex flex-column gap-2"></div>
+        </div>
+        <div class="modal-footer border-secondary">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Concentration Check Modal -->
+  <div class="modal fade" id="concentrationCheckModal" tabindex="-1" aria-labelledby="concentrationCheckModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content bg-dark text-light border-secondary">
+        <div class="modal-header border-secondary">
+          <h5 class="modal-title" id="concentrationCheckModalLabel">
+            <i class="bi bi-lightning-charge me-2 text-warning"></i>Concentration
+          </h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <p class="mb-3">Concentrating on: <strong id="concModalSpellName">—</strong></p>
+          <label class="form-label small" for="concModalDamage">Damage received <span class="text-muted">(leave empty for DC 10 minimum)</span></label>
+          <input type="number" class="form-control bg-secondary text-light border-secondary" id="concModalDamage" min="0" placeholder="0">
+          <div class="form-text text-muted mt-2">
+            Save DC: <strong id="concModalDC">10</strong>
+            &nbsp;·&nbsp; CON save bonus: <span id="concModalBonus">+0</span>
+          </div>
+        </div>
+        <div class="modal-footer border-secondary d-flex gap-2">
+          <button type="button" class="btn btn-secondary me-auto" data-bs-dismiss="modal">Keep Concentrating</button>
+          <button type="button" class="btn btn-danger" id="concModalEndBtn">End Concentration</button>
+          <button type="button" class="btn btn-primary" id="concModalRollBtn">
+            <i class="bi bi-dice-5 me-1"></i>Roll Save
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <script src="/js/indexed-db-storage.js"></script>
   <script src="/data/srd/spells-data.js"></script>
   <script src="/data/srd/level-up-data.js"></script>
@@ -4493,7 +4606,291 @@
 
         // Update Spells
         updateCombatSpells();
+
+        // Update class resources (Ki, Rage, Bardic Inspiration, etc.)
+        updateCombatResources();
       }
+
+      // ---- Turn Action Tracker ----
+      const ACTION_SLOTS = [
+        { btnIds: ['btn-actionSlot',      'btn-combat-actionSlot'],      key: 'actionUsed',      label: 'Action',   availableClass: 'btn-outline-success', usedClass: 'btn-secondary' },
+        { btnIds: ['btn-bonusActionSlot', 'btn-combat-bonusActionSlot'], key: 'bonusActionUsed', label: 'Bonus',    availableClass: 'btn-outline-warning', usedClass: 'btn-secondary' },
+        { btnIds: ['btn-reactionSlot',    'btn-combat-reactionSlot'],    key: 'reactionUsed',    label: 'Reaction', availableClass: 'btn-outline-info',    usedClass: 'btn-secondary' }
+      ];
+
+      function updateActionTracker(char) {
+        if (!char) return;
+        ACTION_SLOTS.forEach(slot => {
+          const used = !!char[slot.key];
+          const iconClass = used ? 'bi-x-circle-fill' : 'bi-circle';
+          const labelHtml = used ? `<s>${slot.label}</s>` : slot.label;
+          const title = used
+            ? `${slot.label} already used — click to start a new turn`
+            : `Use ${slot.label}`;
+          slot.btnIds.forEach(id => {
+            const btn = document.getElementById(id);
+            if (!btn) return;
+            btn.classList.remove('btn-outline-success', 'btn-outline-warning', 'btn-outline-info', 'btn-secondary');
+            btn.classList.add(used ? slot.usedClass : slot.availableClass);
+            btn.innerHTML = `<i class="bi ${iconClass} me-1"></i>${labelHtml}`;
+            btn.title = title;
+          });
+        });
+      }
+
+      window.updateActionTracker = updateActionTracker;
+
+      /**
+       * Detect which action economy slot a spell uses from its casting_time string.
+       * Very permissive: lowercases and checks for keywords.
+       * Returns the character key string: 'reactionUsed', 'bonusActionUsed', 'actionUsed', or null.
+       */
+      function detectSpellActionType(castingTime) {
+        if (!castingTime) return null;
+        const t = castingTime.toLowerCase();
+        // "reaction" must come before "action" since "reaction" contains "action"
+        if (t.includes('reaction')) return 'reactionUsed';
+        if (t.includes('bonus')) return 'bonusActionUsed';
+        // Long casts (ritual, minute, hour, day) are not tracked
+        if (t.includes('minute') || t.includes('hour') || t.includes('day')) return null;
+        if (t.includes('action')) return 'actionUsed';
+        return null;
+      }
+      window.detectSpellActionType = detectSpellActionType;
+
+      /**
+       * Mark an action economy slot as used for the current character.
+       * If the slot is already used and silent=false, prompts the user to start a new turn.
+       * Returns true if the triggering action should proceed, false if the user cancelled.
+       */
+      function triggerActionEconomy(actionType, silent = false) {
+        if (!actionType) return true;
+        const char = typeof window.getCurrentCharacter === 'function' ? window.getCurrentCharacter() : null;
+        if (!char) return true;
+        const slot = ACTION_SLOTS.find(s => s.key === actionType);
+        if (!slot) return true;
+
+        if (char[actionType]) {
+          // Already used this turn
+          if (silent) return true; // Extra Attack etc. — just proceed
+          if (confirm(`Your ${slot.label} has already been used this turn.\n\nStart a new turn (reset all actions) and proceed?`)) {
+            resetAllActions(char);
+            return true;
+          }
+          return false; // User cancelled
+        }
+
+        // Not yet used — mark it
+        char[actionType] = true;
+        updateActionTracker(char);
+        if (typeof window.saveCurrentCharacter === 'function') window.saveCurrentCharacter();
+        return true;
+      }
+      window.triggerActionEconomy = triggerActionEconomy;
+
+      // ---- Spell Dice Rolling ----
+
+      /**
+       * Extract dice info from a spell object.
+       * Prefers structured fields (damage_dice, heal_dice) added to spells-data.js;
+       * falls back to regex-parsing body text for content-pack spells that lack them.
+       * Returns { dice: string[], rollType: 'attack'|'damage'|'heal'|null, saveAbility: string|null }
+       */
+      function parseSpellRollInfo(spell) {
+        if (!spell) return { dice: [], rollType: null, saveAbility: null };
+        const tags = Array.isArray(spell.tags) ? spell.tags.map(t => t.toLowerCase()) : [];
+
+        const hasDamage = tags.includes('damage');
+        const hasHeal   = tags.some(t => t.includes('heal'));
+        const hasAttack = tags.includes('attack');
+        const rollType  = hasAttack ? 'attack' : (hasHeal && !hasDamage) ? 'heal' : (hasDamage ? 'damage' : null);
+        const saveAbility = spell.save_dc_ability ? spell.save_dc_ability.toUpperCase() : null;
+
+        if (!rollType) return { dice: [], rollType: null, saveAbility: null };
+
+        // Prefer structured fields (set in spells-data.js or content-pack payload)
+        if (spell.damage_dice || spell.heal_dice) {
+          const raw = (spell.damage_dice || spell.heal_dice || '');
+          // Field may be a single notation string or comma-separated list
+          const dice = raw.split(',').map(d => d.trim().replace(/\s+/g, '')).filter(Boolean);
+          return { dice, rollType, saveAbility };
+        }
+
+        // Fallback: extract dice expressions from body text
+        const body = spell.body || '';
+        const matches = [...body.matchAll(/(\d+d\d+(?:\s*[+-]\s*\d+)?)/gi)];
+        const dice = [...new Set(matches.map(m => m[1].replace(/\s+/g, '')))];
+        return { dice, rollType, saveAbility };
+      }
+
+      /** Read the numeric spell attack bonus from whichever DOM element is currently visible. */
+      function getSpellAttackBonus() {
+        const sources = ['combatSpellAttack', 'spellAttackBonus'];
+        for (const id of sources) {
+          const text = (document.getElementById(id)?.textContent || '').trim();
+          const match = text.match(/([+-]?\d+)/);
+          if (match) return parseInt(match[1], 10);
+        }
+        return 0;
+      }
+
+      /**
+       * Roll attack/damage/healing dice for a spell by index in window.currentSpellList.
+       * castLevel (optional) — the slot level actually used; enables upcast damage scaling.
+       * Called from both the sheet and combat view Roll buttons.
+       */
+      function rollSpellDice(spellIndex, castLevel) {
+        const spellList = window.currentSpellList || [];
+        const spell = spellList[spellIndex];
+        if (!spell) return;
+
+        const { rollType, saveAbility } = parseSpellRollInfo(spell);
+        const spellName = spell.title || spell.name || 'Spell';
+        const rollFn = window.rollDice;
+
+        if (!rollFn) { alert('Dice roller not available.'); return; }
+
+        // Determine dice to roll — cantrip scaling, upcast scaling, or base
+        let dice;
+        if ((spell.level || 0) === 0 && (spell.damage_dice || spell.heal_dice)) {
+          // Cantrip: scale number of dice by character level (PHB table)
+          const charLevel = parseInt(document.getElementById('charLevel')?.value, 10) || 1;
+          const extraDice = charLevel >= 17 ? 3 : charLevel >= 11 ? 2 : charLevel >= 5 ? 1 : 0;
+          if (extraDice > 0) {
+            // Scale each dice expression: "1d10" → "2d10" at level 5, etc.
+            const raw = spell.damage_dice || spell.heal_dice || '';
+            dice = raw.split(',').map(d => {
+              d = d.trim().replace(/\s+/g, '');
+              const m = d.match(/^(\d+)(d\d+(?:[+-]\d+)?)$/i);
+              if (m) return `${parseInt(m[1], 10) + extraDice}${m[2]}`;
+              return d; // can't parse shape — return as-is
+            }).filter(Boolean);
+          } else {
+            dice = parseSpellRollInfo(spell).dice;
+          }
+        } else if (castLevel && castLevel > (spell.level || 0) && (spell.damage_dice || spell.heal_dice)) {
+          // Leveled spell upcast
+          dice = computeUpcastDice(spell, castLevel);
+        } else {
+          dice = parseSpellRollInfo(spell).dice;
+        }
+
+        // Collect all results then show one combined toast
+        const allResults = [];
+
+        if (rollType === 'attack') {
+          // Spell attack roll (1d20 + spell attack bonus), then damage
+          const bonus = getSpellAttackBonus();
+          const bonusStr = bonus >= 0 ? `+${bonus}` : `${bonus}`;
+          const hit = rollFn(`1d20${bonusStr}`, `${spellName} - Spell Attack`);
+          if (hit) allResults.push(hit);
+        }
+
+        if (!dice.length) {
+          if (rollType !== 'attack') alert(`${spellName}: no dice found. Add damage_dice to the spell data.`);
+          if (allResults.length && window.showRollToast) window.showRollToast(allResults);
+          return;
+        }
+
+        // Build damage/heal label, appending save type when relevant
+        const saveSuffix = saveAbility && rollType !== 'attack' ? ` (${saveAbility} Save)` : '';
+        dice.forEach((notation, i) => {
+          const baseLabel = rollType === 'heal'
+            ? `${spellName} - Healing`
+            : i === 0 ? `${spellName} - Damage${saveSuffix}` : `${spellName} - Damage ${i + 1}${saveSuffix}`;
+          const result = rollFn(notation, baseLabel);
+          if (result) allResults.push(result);
+        });
+
+        if (allResults.length && window.showRollToast) window.showRollToast(allResults);
+      }
+      window.rollSpellDice = rollSpellDice;
+      window.parseSpellRollInfo = parseSpellRollInfo;
+
+      // Exposed so character.js (regular page) can share slot-picker + cast logic
+      // Function declarations are hoisted so these assignments are valid even though
+      // the function bodies appear later in source order.
+      window.getAvailableSlotLevels = getAvailableSlotLevels;
+      window.showUpcastModal        = showUpcastModal;
+      window.executeCast            = executeCast;
+
+      // ---- Class Resources in Combat View ----
+      function updateCombatResources() {
+        const container = document.getElementById('combatClassResources');
+        if (!container) return;
+
+        const defs = [
+          { nameId: 'res1Name', curId: 'res1Current', maxId: 'res1Max' },
+          { nameId: 'res2Name', curId: 'res2Current', maxId: 'res2Max' },
+          { nameId: 'res3Name', curId: 'res3Current', maxId: 'res3Max' },
+        ];
+
+        const active = defs
+          .map(d => ({
+            name: document.getElementById(d.nameId)?.value?.trim() || '',
+            cur:  parseInt(document.getElementById(d.curId)?.value, 10) || 0,
+            max:  parseInt(document.getElementById(d.maxId)?.value, 10) || 0,
+            curId: d.curId,
+            maxId: d.maxId,
+          }))
+          .filter(r => r.name && r.max > 0);
+
+        if (!active.length) { container.innerHTML = ''; return; }
+
+        container.innerHTML = `
+          <div class="combat-resources-row mt-2 border-top border-secondary pt-2">
+            ${active.map(r => `
+              <div class="combat-resource-group">
+                <div class="small text-muted mb-1">${r.name}</div>
+                <div class="d-flex align-items-center gap-1">
+                  <button class="btn btn-sm btn-outline-secondary px-2 py-0"
+                    data-resource-use="${r.curId}" title="Use 1 ${r.name}">−</button>
+                  <span class="small fw-bold px-1">${r.cur}/${r.max}</span>
+                  <button class="btn btn-sm btn-outline-secondary px-2 py-0"
+                    data-resource-restore="${r.curId}" data-resource-max="${r.maxId}" title="Restore 1 ${r.name}">+</button>
+                </div>
+              </div>
+            `).join('')}
+          </div>`;
+      }
+
+      function resetAllActions(char) {
+        if (!char) return;
+        char.actionUsed = false;
+        char.bonusActionUsed = false;
+        char.reactionUsed = false;
+        updateActionTracker(char);
+        if (typeof window.saveCurrentCharacter === 'function') window.saveCurrentCharacter();
+      }
+
+      // Action slot button clicks
+      document.addEventListener('click', function(e) {
+        const actionBtn = e.target.closest('[data-action-slot]');
+        if (actionBtn) {
+          const char = typeof window.getCurrentCharacter === 'function' ? window.getCurrentCharacter() : null;
+          if (!char) return;
+          const key = actionBtn.dataset.actionSlot;
+          const slot = ACTION_SLOTS.find(s => s.key === key);
+          if (!slot) return;
+
+          if (char[key]) {
+            // Already used — offer to start a new turn
+            if (confirm(`Your ${slot.label} has already been used this turn.\n\nStart a new turn and reset all actions?`)) {
+              resetAllActions(char);
+            }
+          } else {
+            char[key] = true;
+            updateActionTracker(char);
+            if (typeof window.saveCurrentCharacter === 'function') window.saveCurrentCharacter();
+          }
+          return;
+        }
+
+        if (e.target.closest('#btn-newTurn') || e.target.closest('#btn-combat-newTurn')) {
+          const char = typeof window.getCurrentCharacter === 'function' ? window.getCurrentCharacter() : null;
+          resetAllActions(char);
+        }
+      });
 
       // Function to update conditions display
       function updateCombatConditions() {
@@ -4739,14 +5136,14 @@
         // Determine if this character uses pact slots instead of regular slots
         const hasPactMagic = (parseInt(document.getElementById('pactMax')?.value, 10) || 0) > 0;
 
-        // Group spells by level
+        // Group spells by level, preserving original array index for castSpell/rollSpellDice lookups
         const spellsByLevel = {};
-        spellList.forEach(spell => {
+        spellList.forEach((spell, originalIdx) => {
           const level = spell.level ?? 0;
           if (!spellsByLevel[level]) {
             spellsByLevel[level] = [];
           }
-          spellsByLevel[level].push(spell);
+          spellsByLevel[level].push({ spell, originalIdx });
         });
 
         let html = '';
@@ -4754,19 +5151,25 @@
         // Sort levels (cantrips first, then 1-9)
         const levels = Object.keys(spellsByLevel).map(Number).sort((a, b) => a - b);
 
-        let spellIndex = 0;
         levels.forEach(level => {
           const levelLabel = level === 0 ? 'Cantrips' : `Level ${level}`;
           const spells = spellsByLevel[level];
 
           html += `<div class="mb-2"><strong class="text-light">${levelLabel}</strong></div>`;
 
-          spells.forEach(spell => {
+          spells.forEach(({ spell, originalIdx }) => {
             const title = spell.title || spell.name || 'Unknown';
             const prepared = spell.prepared ? '<span class="badge bg-success bg-opacity-75 ms-1" style="font-size: 0.7rem;">Prep</span>' : '';
             const isCantrip = level === 0;
+            const sTags = Array.isArray(spell.tags) ? spell.tags.map(t => t.toLowerCase()) : [];
+            const _sDmgTag = sTags.includes('damage') || sTags.some(t => t.includes('heal'));
+            const _sHasDice = !!(spell.damage_dice || spell.heal_dice) || /\d+d\d+/.test(spell.body || '');
+            const hasRoll = _sDmgTag && _sHasDice;
+            const isSpellAttack = sTags.includes('attack');
+            const rollLabel = isSpellAttack ? 'Atk' : (sTags.some(t => t.includes('heal')) && !sTags.includes('damage') ? 'Heal' : 'Dmg');
+            const rollTitle = isSpellAttack ? 'Roll spell attack + damage' : 'Roll damage/healing dice';
 
-            html += `<div class="combat-spell-item d-flex justify-content-between align-items-start" data-spell-index="${spellIndex}" data-spell-level="${level}">`;
+            html += `<div class="combat-spell-item d-flex justify-content-between align-items-start" data-spell-index="${originalIdx}" data-spell-level="${level}">`;
             html += '<div class="flex-grow-1">';
             html += `<div class="combat-spell-name">${title} ${prepared}</div>`;
 
@@ -4782,17 +5185,25 @@
 
             html += '</div>';
 
-            // Cast button
-            html += `<button type="button" class="btn btn-outline-warning combat-cast-btn ms-2"
-              data-spell-index="${spellIndex}"
+            // Button column: Cast + optional Roll
+            html += '<div class="d-flex flex-column gap-1 ms-2">';
+            html += `<button type="button" class="btn btn-outline-warning combat-cast-btn"
+              data-spell-index="${originalIdx}"
               data-spell-level="${level}"
               data-spell-name="${title.replace(/"/g, '&quot;')}"
               title="${isCantrip ? 'Cast cantrip' : hasPactMagic ? 'Cast using pact slot' : 'Cast using spell slot'}">
               <i class="bi bi-magic"></i> Cast
             </button>`;
+            if (hasRoll) {
+              html += `<button type="button" class="btn btn-outline-info combat-roll-btn"
+                data-spell-index="${originalIdx}"
+                title="${rollTitle}">
+                <i class="bi bi-dice-6"></i> ${rollLabel}
+              </button>`;
+            }
+            html += '</div>';
 
             html += '</div>';
-            spellIndex++;
           });
         });
 
@@ -5008,6 +5419,11 @@
           const attackList = window.currentAttackList || [];
           const attack = attackList[attackIndex];
           if (!attack || !attack.bonus) return;
+
+          // Auto-mark the Action slot (silent=true so Extra Attack doesn't pop dialogs)
+          if (typeof window.triggerActionEconomy === 'function') {
+            window.triggerActionEconomy('actionUsed', true);
+          }
 
           const bonus = parseInt(attack.bonus, 10) || 0;
           let roll1 = rollDie(20);
@@ -5451,39 +5867,54 @@
         }
 
         let html = '';
-        // Show newest first
-        [...history].reverse().forEach((roll, index) => {
-          const isCrit = roll.isCrit || roll.details?.includes('CRIT');
-          const isFumble = roll.isFumble || roll.details?.includes('FUMBLE');
+        history.forEach((roll) => {
+          const isCrit   = roll.isCritical || false;
+          const isFumble = roll.isFumble   || false;
 
-          let badgeClass = 'bg-secondary';
-          if (isCrit) badgeClass = 'crit';
-          if (isFumble) badgeClass = 'fumble';
+          let resultClass = '';
+          let badgeClass  = 'bg-secondary';
+          if (isCrit)   { resultClass = 'text-success fw-bold'; badgeClass = 'bg-success'; }
+          if (isFumble) { resultClass = 'text-danger fw-bold';  badgeClass = 'bg-danger'; }
 
           // Format timestamp
           let timeStr = '';
           if (roll.timestamp) {
-            const date = new Date(roll.timestamp);
-            timeStr = date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            timeStr = new Date(roll.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
           }
 
-          // Icon based on roll type
+          // Icon inferred from description
+          const desc = (roll.description || '').toLowerCase();
           let icon = 'bi-dice-5';
-          if (roll.type === 'attack') icon = 'bi-crosshair';
-          if (roll.type === 'damage') icon = 'bi-fire';
-          if (roll.type === 'save') icon = 'bi-shield-check';
-          if (roll.type === 'skill') icon = 'bi-person-check';
+          if (desc.includes('attack'))    icon = 'bi-crosshair';
+          else if (desc.includes('damage') || desc.includes('healing')) icon = 'bi-fire';
+          else if (desc.includes('save'))  icon = 'bi-shield-check';
+          else if (desc.includes('check') || desc.includes('initiative')) icon = 'bi-person-check';
+
+          // Format individual rolls
+          let rollDisplay = '';
+          if (Array.isArray(roll.rolls)) {
+            if (roll.isAdvantage || roll.isDisadvantage) {
+              rollDisplay = `[${roll.rolls[0]}, ${roll.rolls[1]}] → <span class="${resultClass}">${roll.chosen ?? roll.total}</span>`;
+            } else {
+              rollDisplay = roll.rolls.length > 1
+                ? `[${roll.rolls.join(', ')}]`
+                : `<span class="${resultClass}">${roll.rolls[0]}</span>`;
+            }
+          }
+
+          const modDisplay = (roll.modifier && roll.modifier !== 0)
+            ? ` ${roll.modifier >= 0 ? '+' : ''}${roll.modifier}`
+            : '';
 
           html += `
-            <div class="dice-history-item d-flex align-items-center gap-3">
-              <div class="roll-badge rounded d-flex align-items-center justify-content-center ${badgeClass}">
-                ${roll.total || roll.result || '?'}
-              </div>
+            <div class="dice-history-item d-flex align-items-center gap-3 p-2 border-bottom border-secondary">
+              <div class="badge ${badgeClass} fs-5 flex-shrink-0">${roll.total ?? '?'}</div>
               <div class="flex-grow-1">
-                <div class="fw-bold"><i class="bi ${icon} me-1 text-muted"></i>${roll.label || roll.type || 'Roll'}</div>
-                <div class="small text-muted">${roll.details || ''}</div>
+                <div class="fw-bold small"><i class="bi ${icon} me-1 text-muted"></i>${roll.description || 'Roll'}</div>
+                <div class="small text-muted">${roll.notation || ''}${modDisplay}</div>
+                ${rollDisplay ? `<div class="small">${rollDisplay}${modDisplay ? ` = <span class="${resultClass}">${roll.total}</span>` : ''}</div>` : ''}
               </div>
-              <div class="small text-muted">${timeStr}</div>
+              <div class="small text-muted text-end flex-shrink-0">${timeStr}</div>
             </div>
           `;
         });
@@ -5518,6 +5949,62 @@
       // Spell Casting Functions
       // ========================================
 
+      /**
+       * Returns sorted array of available slot options for casting a spell of spellBaseLevel or higher.
+       * Each entry: { level, remaining, max, isPact }
+       */
+      function getAvailableSlotLevels(spellBaseLevel) {
+        const options = [];
+        for (let lvl = spellBaseLevel; lvl <= 9; lvl++) {
+          const max  = parseInt(document.getElementById(`slots${lvl}Max`)?.value, 10) || 0;
+          const used = parseInt(document.getElementById(`slots${lvl}Used`)?.value, 10) || 0;
+          const rem  = Math.max(0, max - used);
+          if (max > 0 && rem > 0) options.push({ level: lvl, remaining: rem, max, isPact: false });
+        }
+        const pMax  = parseInt(document.getElementById('pactMax')?.value,   10) || 0;
+        const pUsed = parseInt(document.getElementById('pactUsed')?.value,  10) || 0;
+        const pLvl  = parseInt(document.getElementById('pactLevel')?.value, 10) || 1;
+        const pRem  = Math.max(0, pMax - pUsed);
+        if (pMax > 0 && pRem > 0 && pLvl >= spellBaseLevel) {
+          options.push({ level: pLvl, remaining: pRem, max: pMax, isPact: true });
+        }
+        options.sort((a, b) => a.level - b.level || (a.isPact ? 1 : -1));
+        return options;
+      }
+
+      /**
+       * Computes upcast dice for a spell cast at castLevel.
+       * Returns array of notation strings. Merges dice when die types match.
+       * Requires spell.higher_level_dice (e.g. "1d6") to be present for scaling.
+       */
+      function computeUpcastDice(spell, castLevel) {
+        const levelsAbove = castLevel - (spell.level || 1);
+        const baseDice    = spell.damage_dice || spell.heal_dice || '';
+        const higherDice  = spell.higher_level_dice || '';
+
+        if (levelsAbove <= 0 || !higherDice || !baseDice) {
+          return baseDice ? baseDice.split(',').map(d => d.trim()) : [];
+        }
+
+        const baseM   = baseDice.match(/^(\d+)d(\d+)([+-]\d+)?$/i);
+        const higherM = higherDice.match(/^(\d+)d(\d+)([+-]\d+)?$/i);
+
+        if (baseM && higherM && baseM[2] === higherM[2]) {
+          // Same die type — merge counts and scale modifier (e.g. Magic Missile 1d4+1 per extra dart)
+          const newCount = parseInt(baseM[1]) + levelsAbove * parseInt(higherM[1]);
+          const baseMod  = parseInt(baseM[3]   || '0');
+          const extraMod = parseInt(higherM[3] || '0');
+          const newMod   = baseMod + levelsAbove * extraMod;
+          const modStr   = newMod > 0 ? `+${newMod}` : newMod < 0 ? `${newMod}` : '';
+          return [`${newCount}d${baseM[2]}${modStr}`];
+        }
+
+        // Different die types — append extra dice as a second entry
+        const extraCount = levelsAbove * parseInt(higherM?.[1] || '1');
+        const extraDie   = higherM?.[2] || '6';
+        return [...baseDice.split(',').map(d => d.trim()), `${extraCount}d${extraDie}`];
+      }
+
       // Get spell slot status for a level
       function getPactSlotStatus() {
         const pactMax  = parseInt(document.getElementById('pactMax')?.value,  10) || 0;
@@ -5538,10 +6025,13 @@
         const remaining = Math.max(0, max - used);
         const percentage = max > 0 ? (remaining / max) * 100 : 0;
 
-        // No regular slots at this level — fall back to pact slots (Warlock / pact magic)
-        if (max === 0) {
+        // Fall back to pact slots when: no regular slots at this level (max === 0),
+        // OR regular slots are exhausted (remaining === 0) and pact can cover this level.
+        // This ensures Warlocks who have stale regular slot values never see a
+        // "No level X slots" alert when pact slots are available.
+        if (max === 0 || remaining === 0) {
           const pact = getPactSlotStatus();
-          if (pact.max > 0) return pact;
+          if (pact.max > 0 && pact.pactLevel >= level) return pact;
         }
 
         return { max, used, remaining, percentage, isCantrip: false, isPact: false };
@@ -5556,14 +6046,22 @@
         const max  = parseInt(maxEl?.value,  10) || 0;
         const used = parseInt(usedEl?.value, 10) || 0;
 
-        // No regular slots — try pact slots
-        if (max === 0) {
-          const pactMaxEl  = document.getElementById('pactMax');
-          const pactUsedEl = document.getElementById('pactUsed');
-          const pactMax  = parseInt(pactMaxEl?.value,  10) || 0;
-          const pactUsed = parseInt(pactUsedEl?.value, 10) || 0;
+        // Determine whether to route through pact slots:
+        //   - No regular slots at this level (max === 0), OR
+        //   - Regular slots are fully exhausted (used >= max) and pact can cover this level.
+        // This prevents Warlocks from seeing a "No level X slots" alert when pact is available.
+        const pactMaxEl   = document.getElementById('pactMax');
+        const pactUsedEl  = document.getElementById('pactUsed');
+        const pactLevelEl = document.getElementById('pactLevel');
+        const pactMax     = parseInt(pactMaxEl?.value,   10) || 0;
+        const pactUsed    = parseInt(pactUsedEl?.value,  10) || 0;
+        const pactLevel   = parseInt(pactLevelEl?.value, 10) || 1;
+        const pactCanCover = pactMax > 0 && pactLevel >= level;
 
-          if (pactMax === 0 || !pactMaxEl || !pactUsedEl) {
+        const usePact = max === 0 || (used >= max && pactCanCover);
+
+        if (usePact) {
+          if (!pactMaxEl || !pactUsedEl || pactMax === 0) {
             alert(`No spell slots or pact slots remaining!`);
             return false;
           }
@@ -5592,12 +6090,133 @@
         return true;
       }
 
+      /** Ordinal suffix for a slot level number (1 → "1st", 3 → "3rd", etc.) */
+      function slotOrdinal(n) {
+        const s = ['','1st','2nd','3rd','4th','5th','6th','7th','8th','9th'];
+        return s[n] || `${n}th`;
+      }
+
+      /**
+       * Show the upcast level picker modal.
+       * slotOptions = array of { level, remaining, max, isPact } from getAvailableSlotLevels().
+       */
+      function showUpcastModal(spellIndex, spell, slotOptions) {
+        const spellName = spell.title || spell.name || 'Spell';
+        const baseDice  = spell.damage_dice || spell.heal_dice || '';
+
+        document.getElementById('upcastModalSpellName').textContent = spellName;
+        const baseLine = baseDice
+          ? `Base (level ${spell.level}): ${baseDice}`
+          : `Level ${spell.level} spell`;
+        document.getElementById('upcastModalBaseLine').textContent = baseLine;
+
+        const optEl = document.getElementById('upcastModalOptions');
+        optEl.innerHTML = slotOptions.map(opt => {
+          const label = opt.isPact
+            ? `Pact Slot (Level ${opt.level})`
+            : `${slotOrdinal(opt.level)} Level Slot`;
+
+          let dicePreview = '';
+          if (baseDice && spell.higher_level_dice && opt.level > (spell.level || 1)) {
+            const upcastArr = computeUpcastDice(spell, opt.level);
+            const upcastStr = upcastArr.join(' + ');
+            if (upcastStr && upcastStr !== baseDice) {
+              dicePreview = `<small class="text-warning ms-2">→ ${upcastStr}</small>`;
+            }
+          }
+
+          const badge = `<span class="badge bg-secondary ms-auto">${opt.remaining}/${opt.max} left</span>`;
+
+          return `<button type="button"
+            class="btn btn-outline-warning text-start d-flex align-items-center w-100"
+            data-upcast-level="${opt.level}"
+            data-upcast-pact="${opt.isPact ? '1' : '0'}"
+            data-upcast-remaining="${opt.remaining}"
+            data-upcast-max="${opt.max}">
+            <span>${label}${dicePreview}</span>${badge}
+          </button>`;
+        }).join('');
+
+        // Store spell context for click handler
+        optEl.dataset.spellIndex = spellIndex;
+        optEl.dataset.spellLevel = spell.level || 1;
+        optEl.dataset.spellName  = spellName;
+
+        new bootstrap.Modal(document.getElementById('upcastModal')).show();
+      }
+
+      /**
+       * Consume a slot and fire post-cast effects.
+       * slotOption = { level, remaining, max, isPact }
+       */
+      function executeCast(spellIndex, originalLevel, spellName, slotOption) {
+        const { level: castLevel, isPact, remaining } = slotOption;
+        const slotLabel = isPact ? `pact slot (lvl ${castLevel})` : `level ${castLevel} slot`;
+        const spell = (window.currentSpellList || [])[spellIndex];
+
+        // Last-slot warning (before committing action)
+        if (remaining === 1) {
+          const proceed = confirm(`This is your last ${slotLabel}!\n\nCast ${spellName}?`);
+          if (!proceed) return;
+        }
+
+        // Action economy — only committed here, so failed slot checks never consume an action
+        const castingTime = spell?.casting_time || '';
+        const actionType = detectSpellActionType(castingTime);
+        if (!triggerActionEconomy(actionType)) return;
+
+        // Consume the slot directly
+        if (isPact) {
+          const pactUsedEl = document.getElementById('pactUsed');
+          if (pactUsedEl) {
+            pactUsedEl.value = (parseInt(pactUsedEl.value, 10) || 0) + 1;
+            pactUsedEl.dispatchEvent(new Event('input', { bubbles: true }));
+          }
+        } else {
+          const usedEl = document.getElementById(`slots${castLevel}Used`);
+          if (usedEl) {
+            usedEl.value = (parseInt(usedEl.value, 10) || 0) + 1;
+            usedEl.dispatchEvent(new Event('input', { bubbles: true }));
+          }
+        }
+
+        updateCombatSpellSlots();
+        if (typeof window.saveCurrentCharacter === 'function') window.saveCurrentCharacter();
+
+        window.updateSpellSlotsDisplay?.();
+
+        // Post-cast status for feedback message
+        const newRemaining = remaining - 1;
+        const newMax       = slotOption.max;
+        const slotPoolLabel = isPact ? 'pact slots' : `level ${castLevel} slots`;
+        const castLevelLabel = castLevel !== originalLevel ? ` at level ${castLevel}` : '';
+        let feedbackMsg = `Cast ${spellName}${castLevelLabel}! (${newRemaining}/${newMax} ${slotPoolLabel} left)`;
+
+        // Handle concentration
+        const requiresConcentration = spell?.concentration || false;
+        if (requiresConcentration && typeof window.isConcentrating === 'function' && window.isConcentrating()) {
+          // Already checked and confirmed above castSpell — just update
+        }
+        if (requiresConcentration && typeof window.setConcentration === 'function') {
+          window.setConcentration(true, spellName);
+          feedbackMsg += ' [Concentrating]';
+          updateCombatConditions();
+        }
+
+        showCastFeedback(spellIndex, feedbackMsg, 'success');
+
+        // Roll dice (upcast-aware)
+        if (parseSpellRollInfo(spell).rollType) {
+          rollSpellDice(parseInt(spellIndex, 10), castLevel);
+        } else {
+          window.showRollToast?.('Spell Cast', spellName,
+            isPact ? `Pact Slot Level ${castLevel}` : `Level ${castLevel} Slot`);
+        }
+      }
+
       // Cast spell handler
       function castSpell(spellIndex, spellLevel, spellName) {
         const level = parseInt(spellLevel, 10);
-        const status = getSpellSlotStatus(level);
-
-        // Get the spell from the global spell list to check concentration
         const spellList = window.currentSpellList || [];
         const spell = spellList[spellIndex];
         const requiresConcentration = spell?.concentration || false;
@@ -5613,40 +6232,34 @@
           if (!proceed) return;
         }
 
-        // Cantrip - just show feedback
-        if (status.isCantrip) {
+        // Cantrip — no slot needed, just roll (action economy checked here since executeCast isn't called)
+        if (level === 0) {
+          const castingTime = spell?.casting_time || '';
+          const actionType = detectSpellActionType(castingTime);
+          if (!triggerActionEconomy(actionType)) return;
           showCastFeedback(spellIndex, `Cast ${spellName}!`, 'success');
-          return;
-        }
-
-        const slotLabel = status.isPact ? `pact slot (lvl ${status.pactLevel})` : `level ${level} slot`;
-
-        // No slots available
-        if (status.remaining === 0) {
-          alert(`No ${slotLabel}s remaining!\n\nYou have used all ${status.max}.`);
-          return;
-        }
-
-        // Last slot warning
-        if (status.remaining === 1) {
-          const proceed = confirm(`This is your last ${slotLabel}!\n\nCast ${spellName}?`);
-          if (!proceed) return;
-        }
-
-        // Use the slot
-        if (useSpellSlotFromCombat(level)) {
-          const newStatus = getSpellSlotStatus(level);
-          let feedbackMsg = `Cast ${spellName}! (${newStatus.remaining}/${newStatus.max} ${status.isPact ? 'pact slots' : 'slots'} left)`;
-
-          // Handle concentration
-          if (requiresConcentration && typeof window.setConcentration === 'function') {
-            window.setConcentration(true, spellName);
-            feedbackMsg += ' [Concentrating]';
-            // Update combat conditions display
-            updateCombatConditions();
+          if (parseSpellRollInfo(spell).rollType) {
+            rollSpellDice(parseInt(spellIndex, 10));
+          } else {
+            window.showRollToast?.('Spell Cast', spellName, 'Cantrip');
           }
+          return;
+        }
 
-          showCastFeedback(spellIndex, feedbackMsg, 'success');
+        // Get available slot options (this covers regular + pact slots)
+        const slotOptions = getAvailableSlotLevels(level);
+
+        if (slotOptions.length === 0) {
+          alert(`No spell slots available for a level ${level}+ spell!`);
+          return;
+        }
+
+        if (slotOptions.length === 1) {
+          // Only one option — cast directly (executeCast handles last-slot warning)
+          executeCast(spellIndex, level, spellName, slotOptions[0]);
+        } else {
+          // Multiple options — show upcast level picker
+          showUpcastModal(spellIndex, spell, slotOptions);
         }
       }
 
@@ -5674,7 +6287,7 @@
         }, 3000);
       }
 
-      // Event delegation for spell casting
+      // Event delegation for spell casting and spell dice rolling
       const combatSpellsEl = document.getElementById('combatSpells');
       if (combatSpellsEl) {
         combatSpellsEl.addEventListener('click', function(e) {
@@ -5685,27 +6298,89 @@
             const spellLevel = castBtn.dataset.spellLevel;
             const spellName = castBtn.dataset.spellName;
             castSpell(spellIndex, spellLevel, spellName);
+            return;
+          }
+          const rollBtn = e.target.closest('.combat-roll-btn');
+          if (rollBtn) {
+            e.preventDefault();
+            const spellIndex = parseInt(rollBtn.dataset.spellIndex, 10);
+            if (typeof window.rollSpellDice === 'function') window.rollSpellDice(spellIndex);
           }
         });
       }
 
-      // Event delegation for clicking Concentrating badge to end concentration
+      // Event delegation for clicking Concentrating badge — opens check modal
       const combatConditionsEl = document.getElementById('combatConditions');
       if (combatConditionsEl) {
         combatConditionsEl.addEventListener('click', function(e) {
           const badge = e.target.closest('.clickable-concentration');
-          if (badge) {
-            e.preventDefault();
-            const spellName = window.currentConcentrationSpell || 'your spell';
-            if (confirm(`End concentration on ${spellName}?`)) {
-              if (typeof window.setConcentration === 'function') {
-                window.setConcentration(false);
-              }
-              updateCombatConditions();
-            }
-          }
+          if (!badge) return;
+          e.preventDefault();
+
+          const spellName    = window.currentConcentrationSpell || 'your spell';
+          const conSaveBonus = parseInt(document.getElementById('saveConBonus')?.value, 10) || 0;
+
+          document.getElementById('concModalSpellName').textContent = spellName;
+          document.getElementById('concModalDamage').value = '';
+          document.getElementById('concModalDC').textContent = '10';
+          document.getElementById('concModalBonus').textContent =
+            conSaveBonus >= 0 ? `+${conSaveBonus}` : `${conSaveBonus}`;
+
+          new bootstrap.Modal(document.getElementById('concentrationCheckModal')).show();
         });
       }
+
+      // Concentration modal: live DC update as damage is typed
+      document.getElementById('concModalDamage')?.addEventListener('input', function() {
+        const dc = Math.max(10, Math.floor((parseInt(this.value, 10) || 0) / 2));
+        document.getElementById('concModalDC').textContent = dc;
+      });
+
+      // Concentration modal: End Concentration button
+      document.getElementById('concModalEndBtn')?.addEventListener('click', function() {
+        bootstrap.Modal.getInstance(document.getElementById('concentrationCheckModal'))?.hide();
+        if (typeof window.setConcentration === 'function') window.setConcentration(false);
+        updateCombatConditions();
+      });
+
+      // Concentration modal: Roll Concentration Save button
+      document.getElementById('concModalRollBtn')?.addEventListener('click', function() {
+        const damage       = parseInt(document.getElementById('concModalDamage')?.value, 10) || 0;
+        const dc           = Math.max(10, Math.floor(damage / 2));
+        const conSaveBonus = parseInt(document.getElementById('saveConBonus')?.value, 10) || 0;
+        const bonusStr     = conSaveBonus >= 0 ? `+${conSaveBonus}` : `${conSaveBonus}`;
+
+        const result = window.rollDice?.(`1d20${bonusStr}`, `CON Save (DC ${dc})`);
+        if (!result) return;
+
+        bootstrap.Modal.getInstance(document.getElementById('concentrationCheckModal'))?.hide();
+
+        const maintained = result.total >= dc;
+        window.showRollToast?.(
+          maintained ? 'Concentration Maintained' : 'Concentration Check Failed',
+          result.total,
+          `DC ${dc} — ${maintained ? 'Passed!' : 'Failed!'}`
+        );
+      });
+
+      // Upcast modal: click on a slot-level option button
+      document.getElementById('upcastModalOptions')?.addEventListener('click', function(e) {
+        const btn = e.target.closest('[data-upcast-level]');
+        if (!btn) return;
+
+        // Dismiss modal before casting
+        bootstrap.Modal.getInstance(document.getElementById('upcastModal'))?.hide();
+
+        const castLevel  = parseInt(btn.dataset.upcastLevel, 10);
+        const isPact     = btn.dataset.upcastPact === '1';
+        const remaining  = parseInt(btn.dataset.upcastRemaining, 10);
+        const max        = parseInt(btn.dataset.upcastMax, 10);
+        const spellIndex = parseInt(this.dataset.spellIndex, 10);
+        const originalLevel = parseInt(this.dataset.spellLevel, 10);
+        const spellName  = this.dataset.spellName || 'Spell';
+
+        executeCast(spellIndex, originalLevel, spellName, { level: castLevel, isPact, remaining, max });
+      });
 
       // Roll death save from combat view
       function rollCombatDeathSave() {
@@ -5943,6 +6618,36 @@
       if (hitDiceBtn) {
         hitDiceBtn.addEventListener('click', rollCombatHitDice);
       }
+
+      // Class resource +/- buttons
+      document.getElementById('combatClassResources')?.addEventListener('click', function(e) {
+        const useBtn     = e.target.closest('[data-resource-use]');
+        const restoreBtn = e.target.closest('[data-resource-restore]');
+        const btn = useBtn || restoreBtn;
+        if (!btn) return;
+
+        const curId = btn.dataset.resourceUse || btn.dataset.resourceRestore;
+        const maxId = btn.dataset.resourceMax || curId.replace('Current', 'Max');
+        const input = document.getElementById(curId);
+        const maxEl = document.getElementById(maxId);
+        if (!input) return;
+
+        const max    = parseInt(maxEl?.value, 10) || 0;
+        const oldVal = parseInt(input.value, 10) || 0;
+        const newVal = useBtn ? Math.max(0, oldVal - 1) : Math.min(max, oldVal + 1);
+
+        if (newVal === oldVal) {
+          // At limit — flash the button briefly
+          const flashCls = useBtn ? 'btn-danger' : 'btn-success';
+          btn.classList.add(flashCls);
+          setTimeout(() => btn.classList.remove(flashCls), 600);
+          return;
+        }
+
+        input.value = newVal;
+        if (typeof window.saveCurrentCharacter === 'function') window.saveCurrentCharacter();
+        updateCombatResources();
+      });
 
       // Toggle combat mode
       function toggleCombatMode() {

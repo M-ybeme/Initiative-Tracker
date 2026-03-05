@@ -131,80 +131,99 @@
       // showRollToast can be called two ways:
       // 1. showRollToast(resultObject) - from internal dice functions
       // 2. showRollToast(label, total, extra) - simple call from combat view
+      // showRollToast can be called three ways:
+      // 1. showRollToast(resultArray)  - combined multi-roll display (spell attack + damage)
+      // 2. showRollToast(resultObject) - single roll result object from rollDice()
+      // 3. showRollToast(label, total, extra) - simple string call for non-dice casts
       function showRollToast(labelOrResult, total, extra) {
         const toastElement = document.getElementById('rollToast');
         const toastBody = document.getElementById('rollToastBody');
         if (!toastElement || !toastBody) return;
 
-        let resultClass = '';
+        let bodyHTML = '';
         let bgClass = 'bg-secondary';
-        let description = '';
-        let details = '';
-        let displayTotal = 0;
 
-        // Check if called with result object or simple parameters
-        if (typeof labelOrResult === 'object' && labelOrResult !== null) {
-          // Called with result object (internal dice functions)
+        if (Array.isArray(labelOrResult)) {
+          // --- Multiple results (e.g. attack roll + damage roll) ---
+          const results = labelOrResult;
+          const hasCrit   = results.some(r => r.isCritical);
+          const hasFumble = results.some(r => r.isFumble && !r.isCritical);
+          if (hasCrit)   bgClass = 'bg-success';
+          if (hasFumble) bgClass = 'bg-danger';
+
+          // Derive spell name from first result description (strip " - Label" suffix)
+          const spellName = (results[0]?.description || 'Roll').replace(/ - .+$/, '');
+
+          const rows = results.map(r => {
+            const rc = r.isCritical ? 'text-success fw-bold' : r.isFumble ? 'text-danger fw-bold' : '';
+            const badge = r.isCritical ? 'bg-success' : r.isFumble ? 'bg-danger' : 'bg-dark bg-opacity-50';
+            // Short label: everything after " - "
+            const label = (r.description || '').replace(/^[^-]+ - /, '') || r.description || 'Roll';
+            let rollDisplay = '';
+            if (r.isAdvantage || r.isDisadvantage) {
+              rollDisplay = `[${r.rolls[0]}, ${r.rolls[1]}] → ${r.chosen}`;
+            } else {
+              rollDisplay = r.rolls.length > 1 ? `[${r.rolls.join(', ')}]` : `${r.rolls[0]}`;
+            }
+            const modStr = r.modifier !== 0 ? ` ${r.modifier >= 0 ? '+' : ''}${r.modifier}` : '';
+            return `
+              <div class="d-flex justify-content-between align-items-center gap-2 mt-1">
+                <div class="small">
+                  <span class="text-white-50">${label}:</span>
+                  <span class="${rc}">${rollDisplay}${modStr} = ${r.total}</span>
+                </div>
+                <div class="badge ${badge}">${r.total}</div>
+              </div>`;
+          }).join('');
+
+          bodyHTML = `<div class="fw-bold mb-1">${spellName}</div>${rows}`;
+
+        } else if (typeof labelOrResult === 'object' && labelOrResult !== null) {
+          // --- Single result object ---
           const result = labelOrResult;
-          if (result.isCritical) {
-            resultClass = 'text-success fw-bold';
-            bgClass = 'bg-success';
-          } else if (result.isFumble) {
-            resultClass = 'text-danger fw-bold';
-            bgClass = 'bg-danger';
-          }
+          let resultClass = '';
+          if (result.isCritical) { resultClass = 'text-success fw-bold'; bgClass = 'bg-success'; }
+          else if (result.isFumble) { resultClass = 'text-danger fw-bold'; bgClass = 'bg-danger'; }
 
           let rollDisplay = '';
           if (result.isAdvantage || result.isDisadvantage) {
             rollDisplay = `[${result.rolls[0]}, ${result.rolls[1]}] → ${result.chosen}`;
           } else {
-            rollDisplay = result.rolls.length > 1
-              ? `[${result.rolls.join(', ')}]`
-              : `${result.rolls[0]}`;
+            rollDisplay = result.rolls.length > 1 ? `[${result.rolls.join(', ')}]` : `${result.rolls[0]}`;
           }
+          const modDisplay = result.modifier !== 0 ? ` ${result.modifier >= 0 ? '+' : ''}${result.modifier}` : '';
+          const details = `${rollDisplay}${modDisplay} = <span class="${resultClass}">${result.total}</span>`;
 
-          const modDisplay = result.modifier !== 0
-            ? ` ${result.modifier >= 0 ? '+' : ''}${result.modifier}`
-            : '';
+          bodyHTML = `
+            <div class="d-flex align-items-center justify-content-between gap-2">
+              <div class="flex-grow-1">
+                ${result.description ? `<div class="fw-bold">${result.description}</div>` : ''}
+                <div class="small ${resultClass}">${details}</div>
+              </div>
+              <div class="badge ${bgClass} fs-5">${result.total}</div>
+            </div>`;
 
-          description = result.description || '';
-          details = `${rollDisplay}${modDisplay} = <span class="${resultClass}">${result.total}</span>`;
-          displayTotal = result.total;
         } else {
-          // Called with simple parameters (combat view)
-          description = labelOrResult || '';
-          displayTotal = total || 0;
-          details = extra || '';
+          // --- Simple string call (label, total, extra) ---
+          const description = labelOrResult || '';
+          const displayTotal = total || 0;
+          const details = extra || '';
+          if (extra && (extra.includes('20') || extra.toLowerCase().includes('crit'))) bgClass = 'bg-success';
+          else if (extra && (extra.includes('Fumble') || extra.includes('fumble'))) bgClass = 'bg-danger';
 
-          // Check for crit/fumble in extra text
-          if (extra && (extra.includes('20') || extra.includes('Crit'))) {
-            resultClass = 'text-success fw-bold';
-            bgClass = 'bg-success';
-          } else if (extra && (extra.includes('1') || extra.includes('Fumble'))) {
-            resultClass = 'text-danger fw-bold';
-            bgClass = 'bg-danger';
-          }
+          bodyHTML = `
+            <div class="d-flex align-items-center justify-content-between gap-2">
+              <div class="flex-grow-1">
+                ${description ? `<div class="fw-bold">${description}</div>` : ''}
+                ${details ? `<div class="small">${details}</div>` : ''}
+              </div>
+              <div class="badge ${bgClass} fs-5">${displayTotal}</div>
+            </div>`;
         }
 
-        toastBody.innerHTML = `
-          <div class="d-flex align-items-center justify-content-between gap-2">
-            <div class="flex-grow-1">
-              ${description ? `<div class="fw-bold">${description}</div>` : ''}
-              ${details ? `<div class="small ${resultClass}">${details}</div>` : ''}
-            </div>
-            <div class="badge ${bgClass} fs-5">${displayTotal}</div>
-          </div>
-        `;
-
-        // Update toast background based on result
+        toastBody.innerHTML = bodyHTML;
         toastElement.className = `toast align-items-center border-0 ${bgClass}`;
-
-        // Show the toast
-        const toast = new bootstrap.Toast(toastElement, {
-          autohide: true,
-          delay: 3000
-        });
-        toast.show();
+        new bootstrap.Toast(toastElement, { autohide: true, delay: 6000 }).show();
       }
 
       function renderRollHistory() {
@@ -271,6 +290,7 @@
       window.addToRollHistory = addToRollHistory;
       window.showRollToast = showRollToast;
       window.renderRollHistory = renderRollHistory;
+      window.rollDice = rollDice;
 
       // ---------- Player Action Functions ----------
 
@@ -336,6 +356,11 @@
       function rollAttack(attackIndex, rollType = 'normal') {
         if (attackIndex < 0 || attackIndex >= currentAttackList.length) return;
         const attack = currentAttackList[attackIndex];
+
+        // Auto-mark the Action slot. Silent=true so Extra Attack doesn't pop dialogs.
+        if (typeof window.triggerActionEconomy === 'function') {
+          window.triggerActionEconomy('actionUsed', true);
+        }
 
         // Roll to hit
         const bonusMatch = (attack.bonus || '').match(/([+-]?\d+)/);
@@ -606,10 +631,10 @@
       // Update derived values on the *character object*
       function recalcDerivedOnCharacter(char) {
         if (!char) return;
-      
+
         const stats = char.stats || {};
         const level = char.level || 1;
-      
+
         const mods = {
           str: getAbilityModFromScore(stats.str),
           dex: getAbilityModFromScore(stats.dex),
@@ -619,10 +644,47 @@
           cha: getAbilityModFromScore(stats.cha)
         };
         char.statMods = mods;
-      
+
         const pb = getProficiencyBonusFromLevel(level);
         char.proficiencyBonus = pb;
-      
+
+        // Recalculate saving throw bonuses from prof flags + ability mods (never store stale values)
+        if (char.savingThrows) {
+          ['str', 'dex', 'con', 'int', 'wis', 'cha'].forEach(ab => {
+            if (char.savingThrows[ab]) {
+              char.savingThrows[ab].bonus = mods[ab] + (char.savingThrows[ab].prof ? pb : 0);
+            }
+          });
+        }
+
+        // Recalculate skill bonuses from prof/exp flags + ability mods (SKILL_CONFIGS is in scope)
+        if (char.skills && typeof SKILL_CONFIGS !== 'undefined') {
+          SKILL_CONFIGS.forEach(cfg => {
+            const sk = char.skills[cfg.key];
+            if (sk) {
+              const abilMod = mods[cfg.ability] || 0;
+              const profBonus = sk.prof ? pb : 0;
+              const expBonus = (sk.exp && sk.prof) ? pb : 0; // expertise only if also proficient
+              sk.bonus = abilMod + profBonus + expBonus;
+            }
+          });
+        }
+
+        // Recalculate spell slot maxes from class data (single-class only; multiclass uses level-up system)
+        const classNameRaw = (char.charClass || '').replace(/\s+\d+$/, '').trim();
+        const isSingleClass = !char.classes || char.classes.length <= 1;
+        if (classNameRaw && isSingleClass && char.spellSlots && window.LevelUpData && window.LevelUpData.CLASS_DATA) {
+          const classData = window.LevelUpData.CLASS_DATA[classNameRaw];
+          if (classData && classData.spellSlots && classData.spellSlots[level]) {
+            const slots = classData.spellSlots[level];
+            for (let i = 1; i <= 9; i++) {
+              if (char.spellSlots[i]) {
+                char.spellSlots[i].max = slots[i - 1] || 0;
+              }
+            }
+          }
+        }
+
         const skills = char.skills || {};
         let perceptionBonus = 0;
         if (skills.perception && typeof skills.perception.bonus === 'number' && !isNaN(skills.perception.bonus)) {
@@ -630,7 +692,7 @@
         } else {
           perceptionBonus = mods.wis || 0;
         }
-      
+
         char.senses = char.senses || {};
         char.senses.passivePerception = 10 + (perceptionBonus || 0);
         char.passivePerception = char.senses.passivePerception;
@@ -1288,7 +1350,11 @@
               classes: Array.isArray(fromLib.classes) ? fromLib.classes : [],
               body: fromLib.body || '',
               tags: Array.isArray(fromLib.tags) ? fromLib.tags : [],
-              source: 'builtin'
+              source: 'builtin',
+              ...(fromLib.damage_dice       && { damage_dice:       fromLib.damage_dice }),
+              ...(fromLib.heal_dice         && { heal_dice:         fromLib.heal_dice }),
+              ...(fromLib.save_dc_ability   && { save_dc_ability:   fromLib.save_dc_ability }),
+              ...(fromLib.higher_level_dice && { higher_level_dice: fromLib.higher_level_dice }),
             };
           }
 
@@ -1320,23 +1386,32 @@
           (s.title || '').toLowerCase() === baseName.toLowerCase()
         );
 
-        const merged = Object.assign({}, fromLib || {}, spellLike);
+        // Library data is authoritative for all system fields (tags, dice, school, etc.)
+        // so that updates to spells-data.js or packs are reflected immediately on load.
+        // Character-specific fields (prepared, alwaysPrepared) come from spellLike.
+        const base = fromLib || spellLike;
+        const castingTime = base.casting_time || base.castingTime || base.casting || '';
 
         return {
-          name: merged.name || merged.title || baseName,
-          title: merged.title || merged.name || baseName,
-          level: merged.level ?? 0,
-          school: merged.school || '',
-          casting_time: merged.casting_time || '',
-          range: merged.range || '',
-          components: merged.components || '',
-          duration: merged.duration || '',
-          concentration: !!merged.concentration,
-          classes: Array.isArray(merged.classes) ? merged.classes : [],
-          body: merged.body || '',
-          tags: Array.isArray(merged.tags) ? merged.tags : [],
-          source: merged.source || (fromLib ? 'builtin' : 'custom'),
-          prepared: !!(spellLike.prepared ?? merged.prepared)
+          name: base.name || base.title || baseName,
+          title: base.title || base.name || baseName,
+          level: base.level ?? 0,
+          school: base.school || '',
+          casting_time: castingTime,
+          range: base.range || '',
+          components: base.components || '',
+          duration: base.duration || '',
+          concentration: !!base.concentration,
+          classes: Array.isArray(base.classes) ? base.classes : [],
+          body: base.body || '',
+          tags: Array.isArray(base.tags) ? base.tags : [],
+          source: spellLike.source || (fromLib ? 'builtin' : 'custom'),
+          prepared: !!(spellLike.prepared ?? base.prepared),
+          ...(spellLike.alwaysPrepared ? { alwaysPrepared: true } : {}),
+          ...(base.damage_dice       && { damage_dice:       base.damage_dice }),
+          ...(base.heal_dice         && { heal_dice:         base.heal_dice }),
+          ...(base.save_dc_ability   && { save_dc_ability:   base.save_dc_ability }),
+          ...(base.higher_level_dice && { higher_level_dice: base.higher_level_dice }),
         };
       }
 
@@ -1393,6 +1468,15 @@
           const prepared = !!spell.prepared;
           const isCantrip = spell.level === 0;
           const showCastButton = prepared || isCantrip;
+          const spellTags = Array.isArray(spell.tags) ? spell.tags.map(t => t.toLowerCase()) : [];
+          // Show Roll button only when there are actually dice to roll
+          const _hasDmgTag = spellTags.includes('damage') || spellTags.some(t => t.includes('heal'));
+          const _hasStructuredDice = !!(spell.damage_dice || spell.heal_dice);
+          const _hasBodyDice = /\d+d\d+/.test(spell.body || '');
+          const hasRoll = _hasDmgTag && (_hasStructuredDice || _hasBodyDice);
+          const isSpellAttack = spellTags.includes('attack');
+          const rollLabel = isSpellAttack ? 'Atk' : (spellTags.some(t => t.includes('heal')) && !spellTags.includes('damage') ? 'Heal' : 'Dmg');
+          const rollTitle = isSpellAttack ? 'Roll spell attack + damage' : 'Roll damage/healing dice';
 
           li.innerHTML = `
             <div class="d-flex justify-content-between align-items-start">
@@ -1436,6 +1520,14 @@
                           data-spell-name="${(spell.name || title).replace(/"/g, '&quot;')}"
                           title="${isCantrip ? 'Cast cantrip' : 'Cast using spell slot'}">
                     <i class="bi bi-magic"></i> Cast
+                  </button>
+                ` : ''}
+                ${hasRoll ? `
+                  <button type="button"
+                          class="btn btn-sm btn-outline-info spell-roll-btn"
+                          data-spell-index="${index}"
+                          title="${rollTitle}">
+                    <i class="bi bi-dice-6"></i> ${rollLabel}
                   </button>
                 ` : ''}
                 <div class="form-check form-check-sm">
@@ -1529,23 +1621,10 @@
       // Cast spell from the main character sheet
       function castSpellFromSheet(spellIndex, spellLevel, spellName) {
         const level = spellLevel;
-        const isCantrip = level === 0;
-
-        // Get the spell from the list to check if it requires concentration
         const spell = currentSpellList[spellIndex];
-        const requiresConcentration = spell?.concentration || false;
-
-        // Show feedback in the spell item
-        const showFeedback = (message, type) => {
-          const feedbackEl = document.querySelector(`.spell-cast-feedback[data-spell-index="${spellIndex}"]`);
-          if (feedbackEl) {
-            feedbackEl.innerHTML = `<span class="badge bg-${type === 'success' ? 'success' : 'warning'} bg-opacity-75"><i class="bi bi-check-circle me-1"></i>${message}</span>`;
-            setTimeout(() => { feedbackEl.innerHTML = ''; }, 3000);
-          }
-        };
 
         // Check if already concentrating on a different spell
-        if (requiresConcentration && isConcentrating()) {
+        if (spell?.concentration && isConcentrating()) {
           const currentSpell = window.currentConcentrationSpell || 'another spell';
           const proceed = confirm(
             `You are currently concentrating on ${currentSpell}.\n\n` +
@@ -1553,64 +1632,37 @@
             `Continue?`
           );
           if (!proceed) return;
-          // Will set new concentration below
         }
 
-        // Cantrip - just show feedback (cantrips don't require concentration checks)
-        if (isCantrip) {
-          showFeedback(`Cast ${spellName}!`, 'success');
-          if (typeof showRollToast === 'function') {
-            showRollToast('Spell Cast', spellName, 'Cantrip');
+        // Cantrip — action economy committed here since executeCast is not used for cantrips
+        if (level === 0) {
+          if (typeof window.detectSpellActionType === 'function' && typeof window.triggerActionEconomy === 'function') {
+            const actionType = window.detectSpellActionType(spell?.casting_time || '');
+            if (!window.triggerActionEconomy(actionType)) return;
           }
+          const feedbackEl = document.querySelector(`.spell-cast-feedback[data-spell-index="${spellIndex}"]`);
+          if (feedbackEl) {
+            feedbackEl.innerHTML = `<span class="badge bg-success bg-opacity-75"><i class="bi bi-check-circle me-1"></i>Cast ${spellName}!</span>`;
+            setTimeout(() => { feedbackEl.innerHTML = ''; }, 3000);
+          }
+          if (window.parseSpellRollInfo?.(spell)?.rollType) window.rollSpellDice?.(spellIndex);
+          else showRollToast('Spell Cast', spellName, 'Cantrip');
           return;
         }
 
-        // Get slot status
-        const maxEl = $(`slots${level}Max`);
-        const usedEl = $(`slots${level}Used`);
-        if (!maxEl || !usedEl) {
-          alert(`No spell slot tracking for level ${level}.`);
+        // Leveled spell — delegate slot lookup, upcast picker, action economy, and slot
+        // consumption to the shared functions exposed from characters.html IIFE.
+        const slotOptions = window.getAvailableSlotLevels?.(level);
+        if (!slotOptions || slotOptions.length === 0) {
+          alert(`No spell slots available for a level ${level}+ spell!`);
           return;
         }
 
-        const max = parseInt(maxEl.value, 10) || 0;
-        const used = parseInt(usedEl.value, 10) || 0;
-        const remaining = Math.max(0, max - used);
-
-        // No slots available
-        if (remaining === 0) {
-          alert(`No level ${level} spell slots remaining!\n\nYou have used all ${max} slots.`);
-          return;
+        if (slotOptions.length === 1) {
+          window.executeCast(spellIndex, level, spellName, slotOptions[0]);
+        } else {
+          window.showUpcastModal(spellIndex, spell, slotOptions);
         }
-
-        // Last slot warning
-        if (remaining === 1) {
-          const proceed = confirm(`This is your last level ${level} spell slot!\n\nCast ${spellName}?`);
-          if (!proceed) return;
-        }
-
-        // Use the slot
-        usedEl.value = used + 1;
-        usedEl.dispatchEvent(new Event('input', { bubbles: true }));
-
-        const newRemaining = remaining - 1;
-        let feedbackMsg = `Cast ${spellName}! (${newRemaining}/${max} slots left)`;
-
-        // Handle concentration
-        if (requiresConcentration) {
-          setConcentration(true, spellName);
-          feedbackMsg += ' [Concentrating]';
-        }
-
-        showFeedback(feedbackMsg, 'success');
-
-        if (typeof showRollToast === 'function') {
-          const extra = requiresConcentration ? `Level ${level} - Concentrating` : `Level ${level} (${newRemaining}/${max} slots)`;
-          showRollToast('Spell Cast', spellName, extra);
-        }
-
-        // Save character
-        saveCurrentCharacter();
       }
 
       // ---------- Attack management ----------
@@ -2340,6 +2392,11 @@
             }
           }
 
+          // Sync action tracker buttons to loaded character state
+          if (typeof window.updateActionTracker === 'function') {
+            window.updateActionTracker(char);
+          }
+
           // Currency
           const currency = char.currency || {};
           $('currencyCP').value = currency.cp ?? 0;
@@ -3056,6 +3113,10 @@
           inspiration: false,
           concentrating: false,
           concentrationSpell: '',
+          // Turn action tracking (reset each turn)
+          actionUsed: false,
+          bonusActionUsed: false,
+          reactionUsed: false,
 
           // Currency
           currency: { cp: 0, sp: 0, ep: 0, gp: 0, pp: 0 },
@@ -3546,6 +3607,11 @@
               c.spellcastingAbility = c.spellcastingAbility || '';
               c.portraitSettings = c.portraitSettings || base.portraitSettings;
               if (typeof c.extraNotes !== 'string') c.extraNotes = '';
+
+              // Recalculate all derived values so stale data from old exports doesn't persist.
+              // This fixes statMods, proficiencyBonus, save/skill bonuses, passivePerception,
+              // and spell slot maxes based on authoritative source fields (stats, level, class).
+              recalcDerivedOnCharacter(c);
 
               tempCharacters.push(c);
             });
@@ -4923,6 +4989,15 @@
               return;
             }
 
+            // Roll spell dice button
+            const rollBtn = e.target.closest('.spell-roll-btn');
+            if (rollBtn) {
+              e.preventDefault();
+              const spellIndex = parseInt(rollBtn.dataset.spellIndex, 10);
+              if (typeof window.rollSpellDice === 'function') window.rollSpellDice(spellIndex);
+              return;
+            }
+
             // Toggle prepared
             const prepToggle = e.target.closest('.spell-prepared-toggle');
             if (prepToggle) {
@@ -5434,35 +5509,21 @@
 
       // ---------- Mobile Features ----------
       function initMobileFeatures() {
-        // Make roll history collapsible on mobile by tapping header
+        // Make roll history collapsible on all screen sizes
         const rollHistoryHeader = document.getElementById('rollHistoryHeader');
         const rollHistoryPanel = document.getElementById('rollHistoryPanel');
 
         if (rollHistoryHeader && rollHistoryPanel) {
           rollHistoryHeader.addEventListener('click', (e) => {
             // Don't toggle if clicking the clear button
-            if (e.target.closest('#clearHistoryBtn')) {
-              return;
-            }
-
-            // Only collapse on mobile screens
-            if (window.innerWidth < 768) {
-              rollHistoryPanel.classList.toggle('collapsed');
-            }
+            if (e.target.closest('#clearHistoryBtn')) return;
+            rollHistoryPanel.classList.toggle('collapsed');
           });
 
-          // Start collapsed on mobile if screen is small
+          // Start collapsed on mobile only
           if (window.innerWidth < 768) {
             rollHistoryPanel.classList.add('collapsed');
           }
-
-          // Re-check on window resize
-          window.addEventListener('resize', () => {
-            if (window.innerWidth >= 768) {
-              // Remove collapsed class on larger screens
-              rollHistoryPanel.classList.remove('collapsed');
-            }
-          });
         }
 
         // Handle collapse icon rotation for all collapsible sections
@@ -5505,6 +5566,7 @@
       window.getCurrentCharacter = getCurrentCharacter;
       window.saveCurrentCharacter = saveCurrentCharacter;
       window.loadCharacterIntoForm = fillFormFromCharacter;
+      window.updateSpellSlotsDisplay = updateSpellSlotsDisplay;
 
       if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', init);

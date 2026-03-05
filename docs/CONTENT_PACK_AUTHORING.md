@@ -23,12 +23,15 @@ Use this guide if you want to:
 Download or duplicate [docs/examples/content-pack-template.json](examples/content-pack-template.json). Rename it to something meaningful (for example, `my-homebrew-pack.json`). The template already contains every top-level section the loader understands:
 
 ```text
+_doc          → Inline documentation (ignored by the runtime — safe to edit or delete)
 metadata      → Who owns this pack?
 dependencies  → Other packs you rely on (optional)
 allowlist     → IDs that should become visible in the UI
 records       → The actual classes/spells/items you add
 notes         → Freeform reminders for your future self
 ```
+
+The `_doc` block at the top of the template is a JSON object for human readers. The validator and runtime both ignore any top-level keys they do not recognise, so you can keep it, edit it, or delete it entirely — it has no effect on how your pack loads.
 
 > Tip: Keep one pack per book/source. Smaller files are easier to audit and share with a trusted co-DM.
 
@@ -89,12 +92,14 @@ Each entry inside `records` represents data the runtime merges into its registri
     "title": "Arcane Surge",
     "level": 2,
     "school": "Evocation",
-    "casting": "1 action",
+    "casting_time": "1 action",
     "range": "Self (30-foot cone)",
     "components": "V, S",
     "duration": "Instantaneous",
-    "description": "A wave of raw arcane energy bursts from your hands. Each creature in the area must make a Dexterity saving throw or take 3d8 force damage.",
-    "classes": ["Wizard", "Sorcerer"]
+    "body": "A wave of raw arcane energy bursts from your hands. Each creature in the area must make a Dexterity saving throw or take 3d8 force damage.",
+    "classes": ["Wizard", "Sorcerer"],
+    "tags": ["damage", "evocation"],
+    "damage_dice": "3d8"
   }
 }
 ```
@@ -103,6 +108,41 @@ Each entry inside `records` represents data the runtime merges into its registri
 - `id`: Unique identifier for that record.
 - `operation`: `add`, `replace`, or `remove`. Use `replace` only when you intentionally override an SRD entry and include that rationale in `notes`.
 - `payload`: Matches the structure from the built-in data files (for example, `data/srd/spells-data.js`).
+
+### Merge Behaviour for Existing Records
+
+When a record's `id` matches an existing spell in the base data, the runtime **merges** your payload into the existing entry rather than replacing it wholesale. This means:
+
+- Fields you include in `payload` override the base values.
+- Fields you **omit** are preserved from the base data — in particular, `tags`, `damage_dice`, `heal_dice`, and `save_dc_ability` are kept even if your record doesn't specify them.
+- This is intentional: a pack author who only wants to change a spell's `school` or `body` description does not need to copy every other field.
+
+> **Important**: If you are patching a homebrew spell that the base data does not know about, you must provide all fields yourself — there is nothing to merge into.
+
+### Spell Tags
+
+Tags control how the spell roll buttons behave. If you are adding a new spell or correcting an existing one, include a `tags` array:
+
+| Tag | Effect |
+|-----|--------|
+| `"attack"` | Rolls 1d20 + spell attack bonus first, then damage |
+| `"damage"` | Rolls damage dice only (no attack roll) |
+| `"heal"` | Rolls healing dice using `heal_dice` |
+| `"cantrip"` | Marks the spell as a cantrip (level 0, unlimited use) |
+| `"concentration"` | Marks the spell as requiring concentration |
+| `"save"` + `save_dc_ability` | Rolls damage against a saving throw DC |
+
+Missing or incorrect tags are the most common reason a spell does not produce a roll when cast. When adding a ranged/melee spell attack spell, always include `"attack"` in `tags`.
+
+### Dice Fields for Roll Support
+
+To enable automatic dice rolling when the spell is cast, add the relevant field to `payload`:
+
+| Field | Format | Used for |
+|-------|--------|----------|
+| `damage_dice` | `"2d6"`, `"1d10+3"` | Damage and mixed damage/save spells |
+| `heal_dice` | `"2d4+2"` | Healing spells |
+| `save_dc_ability` | `"dex"`, `"con"` | Save label shown on damage roll |
 
 ### Writing Safe Descriptions
 

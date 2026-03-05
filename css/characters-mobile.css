@@ -392,43 +392,32 @@
   }
 }
 
-/* === ROLL HISTORY STICKY (desktop/large screens only) === */
-@media (min-width: 992px) {
+/* === ROLL HISTORY STICKY (any 2-column layout: md+) === */
+@media (min-width: 768px) {
   #rollHistoryPanel {
     position: sticky;
     top: 70px;
   }
 }
 
-/* === COLLAPSIBLE ROLL HISTORY === */
-/* Show/hide toggle button only on mobile */
-@media (min-width: 768px) {
-  #rollHistoryToggle {
-    display: none;
-  }
+/* === COLLAPSIBLE ROLL HISTORY (all screen sizes) === */
+
+/* Collapsed state hides the body everywhere */
+#rollHistoryPanel.collapsed {
+  margin-bottom: 0.5rem;
 }
 
-@media (max-width: 767px) {
-  #rollHistoryToggle {
-    display: inline-block;
-    padding: 0.25rem 0.5rem;
-    font-size: 0.8rem;
-  }
+#rollHistoryPanel.collapsed .card-body {
+  display: none;
+}
 
-  /* Collapsed state */
-  #rollHistoryPanel.collapsed {
-    margin-bottom: 0.5rem;
-  }
+/* Chevron rotates to indicate state */
+#rollHistoryPanel .collapse-icon {
+  transition: transform 0.2s ease;
+}
 
-  #rollHistoryPanel.collapsed .card-body {
-    display: none;
-  }
-
-  #rollHistoryPanel.collapsed .card-header::after {
-    content: " (tap to expand)";
-    font-size: 0.7rem;
-    opacity: 0.6;
-  }
+#rollHistoryPanel.collapsed .collapse-icon {
+  transform: rotate(-90deg);
 }
 
 /* === LANDSCAPE MOBILE === */

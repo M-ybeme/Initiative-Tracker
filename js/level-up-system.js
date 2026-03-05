@@ -2382,6 +2382,22 @@ const LevelUpSystem = (function() {
       character.pactMax = levelUpData.pactSlots.slots;
       // Reset pact slots used to 0 (fully replenish on level up)
       character.pactUsed = 0;
+      // Sync the pactSlots object read by fillFormFromCharacter
+      character.pactSlots = {
+        level: levelUpData.pactSlots.level,
+        max:   levelUpData.pactSlots.slots,
+        used:  0
+      };
+      // Update a matching "Pact Slots" resource tab entry if one exists
+      character.resources = character.resources || {};
+      const newPactResName = `Pact Slots (Lvl ${levelUpData.pactSlots.level})`;
+      for (const key of ['res1', 'res2', 'res3']) {
+        const res = character.resources[key];
+        if (res && res.name && res.name.toLowerCase().includes('pact slot')) {
+          character.resources[key] = { name: newPactResName, max: levelUpData.pactSlots.slots, current: levelUpData.pactSlots.slots };
+          break;
+        }
+      }
     }
 
     // Update class resources based on new level

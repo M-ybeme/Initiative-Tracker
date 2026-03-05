@@ -1,4 +1,36 @@
 {
+  "_doc": {
+    "overview": "Content packs let you add homebrew content or patch existing SRD content without touching core files. Drop your pack JSON into the packs folder and it is applied automatically on load.",
+    "structure": {
+      "metadata": "Required. Identifies the pack — set a unique id (reverse-domain style recommended), name, version, and authors.",
+      "dependencies": "Optional array of other pack ids that must be loaded before this one.",
+      "allowlist": "Controls which of your records appear in character creation dropdowns. Keys match the record types below. Values are arrays of record ids. Omit a key entirely if you have no content of that type.",
+      "records": "The actual content. An array of record objects — see 'record_format' below.",
+      "notes": "Optional freeform string. Shown in the pack manager UI."
+    },
+    "record_format": {
+      "type": "What kind of content. Supported values: 'class', 'subclass', 'race', 'subrace', 'spell', 'feat', 'background', 'fighting-style', 'pact-boon', 'eldritch-invocation', 'metamagic'.",
+      "id": "Unique identifier for this record. For subclasses use 'ClassName:SubclassName'. For subraces use 'RaceName:SubraceName'. For spells the id must match the spell's title exactly (used to find and patch existing spells).",
+      "operation": "'add' — creates the record if new, or merges into the existing entry if the id already exists in the base data (only fields you provide are overridden; everything else is kept). 'remove' — deletes the record from the data entirely, useful for hiding SRD content from your campaign.",
+      "payload": "The content object. Fields vary by type — see the examples below."
+    },
+    "patching_existing_content": "To modify a built-in SRD spell (or any other base record), use operation 'add' with only the fields you want to change. You do NOT need to copy the entire record. For example, to add dice data and a corrected description to Fireball, just supply those three fields — level, school, casting time, classes etc. are all preserved automatically from the base data.",
+    "spell_tags": {
+      "purpose": "The 'tags' array on a spell controls whether a Roll button appears in the spell list and what kind of roll it makes.",
+      "attack": "Include 'attack' if the spell requires a spell attack roll (ranged or melee). The Cast/Roll button will show a 1d20 + spell attack bonus first, then the damage dice.",
+      "damage": "Include 'damage' for any spell that deals damage. Required for the Roll button to appear on damage spells.",
+      "heal": "Include 'heal' or 'healing' for spells that restore hit points. The Roll button will be labeled 'Heal' instead of 'Dmg'.",
+      "save": "Include 'save' for spells that require a saving throw. Use save_dc_ability to specify which ability.",
+      "other_common_tags": "aoe, concentration, cantrip, control, buff, debuff, utility — these are informational and affect search/filtering but not roll behavior."
+    },
+    "spell_dice_fields": {
+      "damage_dice": "Enables the Roll button on damage spells. Use standard dice notation: '8d6', '2d10+5'. For spells with multiple separate damage types (e.g. Flame Strike deals fire AND radiant), use comma-separated expressions: '4d6,4d6'.",
+      "heal_dice": "Same as damage_dice but for healing spells. '1d8', '3d8+3', etc.",
+      "save_dc_ability": "The ability used for the saving throw. One of: 'Str', 'Dex', 'Con', 'Int', 'Wis', 'Cha'. Shown in the roll result label so the DM knows which save to call for."
+    },
+    "copyright_notice": "Always write spell descriptions and other content in your own words. Never paste copyrighted text (e.g. from official sourcebooks) verbatim into a pack.",
+    "race_limitation": "Base races are handled by a separate character creation data structure and cannot be injected via pack records alone. Add the race id to the allowlist so it appears in dropdowns, but the race data itself must be in the pack's race record payload."
+  },
   "metadata": {
     "id": "com.yourname.homebrew-pack",
     "name": "My Homebrew Content Pack",
@@ -172,7 +204,9 @@
         "components": "V, S",
         "duration": "Instantaneous",
         "description": "You project a beam of multicolored light at a creature within range. Make a ranged spell attack. On a hit, the target takes 2d8 radiant damage and must succeed on a Constitution saving throw or be blinded until the end of your next turn. At Higher Levels: The damage increases by 1d8 for each slot level above 1st.",
-        "classes": ["Resonant", "Sorcerer", "Wizard"]
+        "classes": ["Resonant", "Sorcerer", "Wizard"],
+        "tags": ["damage", "radiant", "attack", "ranged"],
+        "damage_dice": "2d8"
       }
     },
     {
@@ -204,7 +238,10 @@
         "components": "V, S",
         "duration": "Instantaneous",
         "description": "You release a concentrated wave of vibrational energy in a 30-foot line that is 5 feet wide. Each creature in the line must make a Constitution saving throw. On a failure, a creature takes 4d10 thunder damage and is deafened for 1 minute. On a success, a creature takes half damage and isn't deafened. At Higher Levels: The damage increases by 1d10 for each slot level above 3rd.",
-        "classes": ["Resonant", "Bard", "Sorcerer"]
+        "classes": ["Resonant", "Bard", "Sorcerer"],
+        "tags": ["damage", "thunder", "aoe", "save"],
+        "damage_dice": "4d10",
+        "save_dc_ability": "Con"
       }
     },
     {
@@ -221,6 +258,17 @@
         "duration": "Concentration, up to 1 minute",
         "description": "You touch an object or creature and identify structural weaknesses. If targeting a creature, for the duration, your attacks against it score a critical hit on a roll of 18-20, and the creature has vulnerability to one damage type of your choice. If targeting an object, it has vulnerability to all damage for the duration.",
         "classes": ["Resonant", "Wizard"]
+      }
+    },
+    {
+      "type": "spell",
+      "id": "Fireball",
+      "operation": "add",
+      "payload": {
+        "description": "A streaking mote of fire explodes into a blazing inferno. Each creature in a 20-foot-radius sphere must make a Dexterity saving throw, taking 8d6 fire damage on a failure or half on a success. The fire spreads around corners and ignites flammable objects.",
+        "damage_dice": "8d6",
+        "save_dc_ability": "Dex",
+        "tags": ["damage", "fire", "aoe", "save"]
       }
     },
     {
@@ -319,5 +367,5 @@
       }
     }
   ],
-  "notes": "This template demonstrates all supported content types with original homebrew examples. The Crystalborn race and Resonant class shown here are purely illustrative. Replace these examples with your own creations. Always summarize content in your own words - never paste copyrighted text verbatim. Note: Races can only be referenced via allowlist entries since the character creation system uses a different data structure for base races."
+  "notes": "The Crystalborn race and Resonant class shown here are purely illustrative — replace them with your own creations. The Fireball record is a patch example showing how to override only specific fields of an existing SRD spell. See the _doc block at the top of this file for full documentation."
 }

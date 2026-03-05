@@ -310,7 +310,9 @@ function applySpellRecords(records = [], spells = []) {
     }
     normalized.title = normalized.title?.trim() || id;
     if (index >= 0) {
-      spells[index] = normalized;
+      // Merge: existing fields are the base, pack fields override.
+      // This preserves tags, srd, damage_dice etc. when the pack omits them.
+      spells[index] = Object.assign({}, spells[index], normalized);
     } else {
       spells.push(normalized);
     }

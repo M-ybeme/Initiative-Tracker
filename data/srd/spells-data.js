@@ -11,6 +11,8 @@
       classes: ["Sorcerer","Wizard"],
       body: `You draw the moisture from every creature in a 30-foot cube within range. Each creature in that area must make a Constitution saving throw. Constructs and undead aren't affected, and plants and water elementals make this saving throw with disadvantage. A creature takes 12d8 necrotic damage on a failed save, or half as much damage on a successful one. Nonmagical plants in the area that aren't creatures, such as trees and shrubs, wither and die instantly.`,
       tags: ["damage","necrotic","area","save"],
+    damage_dice: "12d8",
+    save_dc_ability: "Con",
     srd: false,
     },
     {
@@ -24,6 +26,8 @@
       classes: ["Wizard"],
       body: `Ranged spell attack dealing acid damage now and again at the end of the target’s next turn.`,
       tags: ["damage","acid","attack","ranged"],
+    damage_dice: "4d4",
+    higher_level_dice: "2d4",
     srd: true,
     },
     {
@@ -37,6 +41,8 @@
       classes: ["Sorcerer","Wizard"],
       body: `Dex save or take acid damage. You can target two creatures if they're within 5 feet of each other.`,
       tags: ["cantrip","damage","acid","save"],
+    damage_dice: "1d6",
+    save_dc_ability: "Con",
     srd: true,
     },
     {
@@ -154,6 +160,7 @@
       classes: ["Bard","Sorcerer","Wizard","Artificer"],
       body: `Animate up to 10 unattended objects; they become flying attackers with stats by size. Bonus action to command.`,
       tags: ["summon","damage","control","minions"],
+    damage_dice: "1d4+4",
     srd: true,
     },
     {
@@ -222,6 +229,7 @@
       classes: ["Sorcerer","Wizard"],
       body: `Summons a Large spectral hand to strike, shove, interpose, or grasp using your bonus action each round.`,
       tags: ["control","damage","force","battlefield"],
+    damage_dice: "2d6",
     srd: true,
     },
     {
@@ -274,6 +282,8 @@
       classes: ["Warlock"],
       body: `Dark tentacles erupt in a 10-foot radius. Each creature in the area must make a Strength saving throw or take necrotic damage and be unable to take reactions until the start of its next turn.`,
       tags: ["damage","necrotic","aoe","control"],
+    damage_dice: "2d6",
+    save_dc_ability: "Str",
     srd: true,
     },
     {
@@ -339,6 +349,7 @@
       classes: ["Cleric","Paladin"],
       body: `Healing energy radiates from you in a 30-foot aura. On each of your turns, you can use a bonus action to cause one creature in the aura (including yourself) to regain 2d6 hit points.`,
       tags: ["aura","healing","bonus action","concentration"],
+    heal_dice: "2d6",
     srd: true,
     },
     {
@@ -392,6 +403,7 @@
     classes: ["Paladin"],
     body: `The next time you hit a creature with a weapon attack before this spell ends, your weapon crackles with force and the attack deals an extra 5d10 force damage. If the attack reduces the target to 50 hit points or fewer, you banish it. If the target is native to a different plane, it returns there. Otherwise, it's sent to a harmless demiplane until the spell ends.`,
     tags: ["smite","damage","force","banish","concentration"],
+    damage_dice: "5d10",
     srd: true,
   },
   {
@@ -471,6 +483,8 @@
     classes: ["Cleric"],
     body: `Create a wall of whirling blades. The wall is difficult terrain; creatures that enter it for the first time on a turn or start their turn there take slashing damage (Dex save for half).`,
     tags: ["wall","area control","damage","zone"],
+    damage_dice: "6d10",
+    save_dc_ability: "Dex",
     srd: true,
   },
   {
@@ -484,6 +498,7 @@
     classes: ["Sorcerer","Warlock","Wizard"],
     body: `Create a blade of dark energy. As a bonus action, move it 30ft and attack with it. On hit: 4d12 force damage with crit on 18-20.`,
     tags: ["damage","force","bonus action","attack","critical"],
+    damage_dice: "2d12",
     srd: false,
   },
   {
@@ -510,6 +525,9 @@
     classes: ["Druid","Sorcerer","Warlock","Wizard"],
     body: `A creature makes a Con save or takes heavy necrotic damage (plants and plant creatures are especially harmed).`,
     tags: ["damage","necrotic","save"],
+    damage_dice: "8d8",
+    higher_level_dice: "2d8",
+    save_dc_ability: "Con",
     srd: true,
   },
   {
@@ -550,6 +568,7 @@
     classes: ["Artificer","Sorcerer","Warlock","Wizard"],
     body: `You brandish the weapon used in the spell's casting and make a melee attack with it against one creature within 5 feet of you. On a hit, the target suffers the weapon attack's normal effects and becomes sheathed in booming energy until the start of your next turn. If the target willingly moves 5 feet or more before then, the target takes 1d8 thunder damage, and the spell ends. At higher levels, both the initial damage and the movement damage increase.`,
     tags: ["cantrip","damage","thunder","melee","attack","control"],
+    damage_dice: "1d8",
     srd: false,
   },
   {
@@ -576,6 +595,7 @@
     classes: ["Druid"],
     body: `You cause up to six pillars of stone to burst from places on the ground that you can see within range. Each pillar is a cylinder that has a diameter of 5 feet and a height of up to 30 feet. The ground where a pillar appears must be wide enough for its diameter, and you can target ground under a creature if that creature is Medium or smaller. Each pillar has AC 5 and 30 hit points. If a pillar is created under a creature, that creature must succeed on a Dexterity saving throw or be lifted by the pillar. A creature can choose to fail the save. If a pillar is prevented from reaching its full height because of a ceiling or other obstacle, a creature on the pillar takes 6d6 bludgeoning damage and is restrained, pinched between the pillar and the obstacle. The restrained creature can use an action to make a Strength or Dexterity check against the spell's save DC. On a success, the creature is no longer restrained and must either move off the pillar or fall off it.`,
     tags: ["control","terrain","damage","bludgeoning"],
+    damage_dice: "1d6",
     srd: false,
   },
   {
@@ -602,6 +622,9 @@
     classes: ["Sorcerer","Wizard","Artificer"],
     body: `Creatures in a close cone make Dex saves for fire damage (half on success). Unattended flammables may ignite.`,
     tags: ["aoe","fire","damage","cone"],
+    damage_dice: "3d6",
+    higher_level_dice: "1d6",
+    save_dc_ability: "Dex",
     srd: true,
   },
   // ===== C =====
@@ -616,6 +639,8 @@
     classes: ["Artificer","Sorcerer","Wizard"],
     body: `Choose an unattended object weighing 1 to 5 pounds within range and fling it toward a creature. The target must make a Dexterity saving throw, taking 3d8 bludgeoning damage on a failed save, or half as much on a success. The object flies in a straight line up to 90 feet before falling. If it hits a solid surface, the object and any creature in its path take damage.`,
     tags: ["damage","dexterity save","object"],
+    damage_dice: "3d8",
+    save_dc_ability: "Dex",
     srd: false,
   },
   {
@@ -640,6 +665,9 @@
     duration: "Up to 10 minutes (Concentration)",
     classes: ["Druid"],
     tags: ["damage","storm","outdoor boost"],
+    damage_dice: "3d10",
+    higher_level_dice: "1d10",
+    save_dc_ability: "Dex",
     srd: true,
     body: `Conjure a storm cloud and call down a bolt on a point you can see. Creatures in the area make a Dex save, taking lightning damage on a failure. While the spell lasts, you can use subsequent actions to call more bolts; outdoors in stormy conditions, damage improves.`
   },
@@ -677,6 +705,8 @@
     duration: "Instant",
     classes: ["Sorcerer","Wizard"],
     tags: ["damage","multi-target"],
+    damage_dice: "10d8",
+    save_dc_ability: "Dex",
     srd: true,
     body: `A primary lightning bolt arcs to additional targets within range. Each creature struck makes a Dex save, taking heavy lightning damage on a failure or half on a success.`
   },
@@ -713,7 +743,8 @@
     components: "V, S",
     duration: "1 round",
     classes: ["Sorcerer","Warlock","Wizard"],
-    tags: ["cantrip","damage","heal-block"],
+    tags: ["cantrip","damage","heal-block","attack"],
+    damage_dice: "1d10",
     srd: true,
     body: `Ranged spell attack deals necrotic damage and prevents the target from regaining hit points until your next turn. If the target is undead, it has disadvantage on attack rolls against you until then.`
   },
@@ -726,6 +757,8 @@
     duration: "Instant",
     classes: ["Sorcerer","Warlock","Wizard"],
     tags: ["damage","area"],
+    damage_dice: "8d6",
+    save_dc_ability: "Con",
     srd: true,
     body: `A necrotic wave erupts in a large sphere, forcing Con saves. On a failure, creatures take significant necrotic damage; half on a success.`
   },
@@ -765,6 +798,7 @@
     classes: ["Bard","Sorcerer","Warlock","Wizard"],
     body: `You fill the air with spinning daggers in a 5-foot cube centered on a point within range. A creature takes 4d4 slashing damage when it enters the spell's area for the first time on a turn or starts its turn there.`,
     tags: ["damage","area","slashing","concentration"],
+    damage_dice: "4d4",
     srd: true,
   },
   {
@@ -788,6 +822,8 @@
     duration: "Up to 10 minutes (Concentration)",
     classes: ["Sorcerer","Wizard"],
     tags: ["damage","area","control"],
+    damage_dice: "5d8",
+    save_dc_ability: "Con",
     srd: true,
     body: `Create a moving cloud of poisonous fog. Creatures starting their turn in it save vs poison damage; on a failure they take heavy damage, half on success. The cloud drifts away from you each round.`
   },
@@ -872,6 +908,9 @@
     duration: "Instant",
     classes: ["Sorcerer","Wizard"],
     tags: ["damage","area","cold"],
+    damage_dice: "8d8",
+    higher_level_dice: "1d8",
+    save_dc_ability: "Con",
     srd: true,
     body: `Unleash a sub-zero blast. Creatures in the cone make Con saves, taking heavy cold damage on a failure or half on success.`
   },
@@ -910,6 +949,8 @@
     classes: ["Ranger"],
     body: `You throw a nonmagical weapon or fire a piece of nonmagical ammunition into the air to create a cone of identical weapons that shoot forward and then disappear. Each creature in the 60-foot cone must make a Dexterity saving throw, taking 3d8 damage on a failed save or half as much on a success. The damage type is the same as the weapon or ammunition used.`,
     tags: ["damage","aoe","cone","weapon"],
+    damage_dice: "3d8",
+    save_dc_ability: "Dex",
     srd: true,
   },
   {
@@ -959,6 +1000,8 @@
     classes: ["Ranger"],
     body: `You fire a piece of nonmagical ammunition from a ranged weapon or throw a nonmagical weapon into the air and choose a point within range. Hundreds of duplicates rain down in a 40-foot-radius, 20-foot-high cylinder centered on that point. Each creature in the area must make a Dexterity saving throw, taking 8d8 damage on a failed save or half as much on a success. The damage type is the same as the weapon or ammunition used.`,
     tags: ["damage","aoe","weapon","cylinder"],
+    damage_dice: "8d8",
+    save_dc_ability: "Dex",
     srd: true,
   },
   {
@@ -1107,6 +1150,8 @@
     classes: ["Artificer","Druid","Sorcerer","Warlock","Wizard"],
     body: `You create a bonfire on ground that you can see within range. Until the spell ends, the bonfire fills a 5-foot cube. Any creature in the bonfire's space when you cast the spell must succeed on a Dexterity saving throw or take 1d8 fire damage. A creature must also make the saving throw when it enters the bonfire's space for the first time on a turn or ends its turn there. The damage increases when you reach higher levels.`,
     tags: ["cantrip","damage","fire","area","save","concentration"],
+    damage_dice: "1d8",
+    save_dc_ability: "Dex",
     srd: false,
   },
   {
@@ -1168,7 +1213,8 @@
     concentration: false,
     classes: ["Sorcerer","Warlock","Wizard"],
     body: `Seven star-like motes of light appear and orbit your head until the spell ends. You can use a bonus action to send one mote streaking toward one creature or object within 120 feet. When you do so, make a ranged spell attack. On a hit, the target takes 4d12 radiant damage. Whether you hit or miss, the mote is expended.`,
-    tags: ["damage","radiant","bonus action","long duration"],
+    tags: ["damage","radiant","bonus action","long duration","attack"],
+    damage_dice: "4d12",
     srd: false,
   },
   {
@@ -1182,6 +1228,7 @@
     classes: ["Paladin"],
     body: `Holy power radiates from you in a 30-foot radius, awakening boldness in friendly creatures. Until the spell ends, the aura moves with you, centered on you. Each nonhostile creature in the aura (including you) deals an extra 1d4 radiant damage when it hits with a weapon attack.`,
     tags: ["aura","damage","radiant","buff","concentration"],
+    damage_dice: "1d4",
     srd: true,
   },
   {
@@ -1205,6 +1252,8 @@
     duration: "Instant",
     classes: ["Bard","Cleric","Druid","Paladin","Ranger","Artificer"],
     tags: ["healing","touch"],
+    heal_dice: "1d8",
+    higher_level_dice: "1d8",
     srd: true,
     body: `Touch a creature to restore hit points. The spell has no effect on constructs or undead unless a feature says otherwise.`
   },
@@ -1279,6 +1328,8 @@
     duration: "Up to 1 minute (Concentration)",
     classes: ["Sorcerer","Wizard"],
     tags: ["damage","area","setup"],
+    damage_dice: "12d6",
+    save_dc_ability: "Dex",
     srd: true,
     body: "A bead of fire grows in power while you concentrate. When it detonates (or if concentration ends), it explodes like a fireball with extra damage per round delayed."
   },
@@ -1339,6 +1390,8 @@
     duration: "Instant",
     classes: ["Paladin"],
     tags: ["damage","prone","radiant/necrotic"],
+    damage_dice: "5d6",
+    save_dc_ability: "Con",
     srd: true,
     body: "Smash the ground with divine force. Creatures of your choice in range save or take thunder plus radiant or necrotic damage and fall prone; half damage on success, no prone."
   },
@@ -1369,6 +1422,9 @@
     duration: "Instant",
     classes: ["Sorcerer","Wizard"],
     tags: ["damage","force","save-or-chunk"],
+    damage_dice: "10d6+40",
+    higher_level_dice: "3d6",
+    save_dc_ability: "Dex",
     srd: true,
     body: "A thin green ray forces a Dex save; on a failure, the target takes massive force damage. Creatures reduced to 0 HP are disintegrated; objects can be destroyed."
   },
@@ -1379,6 +1435,9 @@
     duration: "Instant",
     classes: ["Bard","Warlock (some lists)"],
     tags: ["damage","control","reaction-provoker"],
+    damage_dice: "3d6",
+    higher_level_dice: "1d6",
+    save_dc_ability: "Wis",
     srd: true,
     body: "On a failed Wis save, the target takes psychic damage and must immediately use its reaction to move away from you (provoking OAs)."
   },
@@ -1419,6 +1478,7 @@
     duration: "Up to 1 minute (Concentration)",
     classes: ["Paladin"],
     tags: ["buff","damage"],
+    damage_dice: "1d4",
     srd: true,
     body: "Your weapon attacks deal extra radiant damage while you maintain the spell."
   },
@@ -1483,6 +1543,8 @@
     classes: ["Sorcerer","Wizard"],
     body: `Touch willing creature. Until spell ends, creature can use action to exhale 15ft cone of elemental energy (acid/cold/fire/lightning/poison). Dex save or 3d6 damage.`,
     tags: ["buff","damage","bonus action","elemental"],
+    damage_dice: "3d6",
+    save_dc_ability: "Dex",
     srd: false,
   },
   {
@@ -1522,6 +1584,8 @@
     classes: ["Druid","Sorcerer","Wizard"],
     body: `Create 5ft diameter, 30ft tall cylinder whirlwind. Str save or 1d8 bludgeoning + pushed 10ft. Bonus action to move 30ft.`,
     tags: ["damage","control","area","bonus action"],
+    damage_dice: "1d8",
+    save_dc_ability: "Str",
     srd: false,
   },
   {
@@ -1564,7 +1628,8 @@
     casting_time: "1 action", range: "120 ft", components: "V, S",
     duration: "Instant",
     classes: ["Warlock"],
-    tags: ["damage","cantrip","force"],
+    tags: ["damage","cantrip","force","attack"],
+    damage_dice: "1d10",
     srd: true,
     body: "Make a ranged spell attack dealing force damage. At higher levels you fire multiple beams that can target the same or different creatures."
   },
@@ -1575,6 +1640,7 @@
     duration: "Up to 1 hour (Concentration)",
     classes: ["Paladin"],
     tags: ["buff","damage","weapon"],
+    damage_dice: "2d4",
     srd: true,
     body: "Imbue a weapon with elemental power, granting a bonus to attack rolls and adding acid, cold, fire, lightning, or thunder damage to hits."
   },
@@ -1589,6 +1655,7 @@
     classes: ["Artificer","Druid","Warlock","Wizard"],
     body: `Choose one creature you can see within range, and choose one of the following damage types: acid, cold, fire, lightning, or thunder. The target must succeed on a Constitution saving throw or be affected by the spell for its duration. The first time each turn the affected target takes damage of the chosen type, it takes an extra 2d6 damage of that type. The target also loses any resistance to that damage type until the spell ends.`,
     tags: ["debuff","damage","vulnerability","concentration"],
+    damage_dice: "2d6",
     srd: false,
   },
   {
@@ -1635,6 +1702,7 @@
     classes: ["Sorcerer","Warlock","Wizard"],
     body: `A tendril of inky darkness reaches out from you, touching a creature you can see within range to drain life. The target must make a Dexterity saving throw. On a success, the target takes 2d8 necrotic damage, and the spell ends. On a failed save, the target takes 4d8 necrotic damage, and until the spell ends, you can use your action on each of your turns to automatically deal 4d8 necrotic damage to the target. The spell ends if you use your action to do anything else, if the target is ever outside the spell's range, or if the target has total cover. Whenever the spell deals damage, you regain hit points equal to half the amount of necrotic damage dealt.`,
     tags: ["damage","necrotic","healing","concentration"],
+    damage_dice: "4d8",
     srd: false,
   },
   {
@@ -1644,6 +1712,8 @@
     duration: "Up to 1 minute (Concentration)",
     classes: ["Paladin","Ranger"],
     tags: ["damage","control","bonus action"],
+    damage_dice: "1d6",
+    save_dc_ability: "Str",
     srd: true,
     body: "Next time you hit with a weapon attack, vines spring forth to restrain the target on a failed Strength save, dealing piercing damage each turn until freed."
   },
@@ -1678,6 +1748,8 @@
     classes: ["Druid","Sorcerer","Wizard"],
     body: `Choose point. Ground erupts in 20ft cube. Creatures make Dex save or take 3d12 bludgeoning and area becomes difficult terrain.`,
     tags: ["damage","area","terrain","save"],
+    damage_dice: "3d12",
+    save_dc_ability: "Dex",
     srd: false,
   },
   {
@@ -1864,6 +1936,9 @@
     duration: "Instant",
     classes: ["Sorcerer","Warlock","Wizard"],
     tags: ["damage","necrotic"],
+    damage_dice: "7d8+30",
+    higher_level_dice: "2d8",
+    save_dc_ability: "Con",
     srd: true,
     body: "Target makes a Con save or takes massive necrotic damage (half on success). Humanoids slain by it rise as your zombie on the next turn."
   },
@@ -1873,7 +1948,8 @@
     casting_time: "1 action", range: "120 ft", components: "V, S",
     duration: "Instant",
     classes: ["Sorcerer","Wizard","Artificer"],
-    tags: ["damage","cantrip","fire"],
+    tags: ["damage","cantrip","fire","attack"],
+    damage_dice: "1d10",
     srd: true,
     body: "Make a ranged spell attack that deals fire damage to a creature or flammable object."
   },
@@ -1884,6 +1960,7 @@
     duration: "10 minutes",
     classes: ["Sorcerer","Wizard"],
     tags: ["defense","damage","elemental"],
+    damage_dice: "2d8",
     srd: true,
     body: "Wreathe yourself in flame. Choose warm or chill shield: attackers that hit you take fire or cold damage; you gain resistance to the opposite type."
   },
@@ -1894,6 +1971,8 @@
     duration: "Instant",
     classes: ["Cleric","Druid","Sorcerer"],
     tags: ["damage","area","fire"],
+    damage_dice: "7d10",
+    save_dc_ability: "Dex",
     srd: true,
     body: "Fill a massive area with roaring flames in a shape you choose. Creatures make Dex saves for half damage; vegetation may ignite."
   },
@@ -1904,6 +1983,9 @@
     duration: "Instant",
     classes: ["Sorcerer","Wizard"],
     tags: ["damage","area","fire"],
+    damage_dice: "8d6",
+    higher_level_dice: "1d6",
+    save_dc_ability: "Dex",
     srd: true,
     body: "A classic explosive spell—point of origin within range erupts in fire; creatures make Dex saves for half damage."
   },
@@ -1913,7 +1995,8 @@
     casting_time: "1 bonus action", range: "Self", components: "V, S, M (leaf of sumac)",
     duration: "Up to 10 minutes (Concentration)",
     classes: ["Druid"],
-    tags: ["damage","melee","fire"],
+    tags: ["damage","melee","fire","attack"],
+    damage_dice: "3d6",
     srd: true,
     body: "Create a fiery scimitar that deals fire damage on melee spell attacks and sheds light."
   },
@@ -1924,6 +2007,8 @@
     duration: "Instant",
     classes: ["Cleric"],
     tags: ["damage","radiant","fire"],
+    damage_dice: "4d6,4d6",
+    save_dc_ability: "Dex",
     srd: true,
     body: "A vertical column of divine fire scorches a cylinder area. On a failed Dex save, creatures take half fire and half radiant damage."
   },
@@ -1938,6 +2023,7 @@
     classes: ["Artificer","Druid","Ranger","Sorcerer","Wizard"],
     body: `You touch a quiver containing arrows or bolts. When a target is hit by a ranged weapon attack using a piece of ammunition drawn from the quiver, the target takes an extra 1d6 fire damage. The spell's magic ends on a piece of ammunition when it hits or misses, and the spell ends when twelve pieces of ammunition have been drawn from the quiver.`,
     tags: ["buff","damage","fire","weapon","concentration"],
+    damage_dice: "1d6",
     srd: false,
   },
   {
@@ -1947,6 +2033,8 @@
     duration: "Up to 1 minute (Concentration)",
     classes: ["Druid","Wizard"],
     tags: ["damage","control","fire"],
+    damage_dice: "2d6",
+    save_dc_ability: "Dex",
     srd: true,
     body: "Create a 5-ft diameter flaming sphere you can move as a bonus action. It damages creatures ending their turn adjacent to it."
   },
@@ -2037,6 +2125,8 @@
     duration: "Instant",
     classes: ["Sorcerer","Wizard"],
     tags: ["damage","cold","area"],
+    damage_dice: "10d6",
+    save_dc_ability: "Con",
     srd: true,
     body: "Hurl a sphere of cold that explodes in a large radius, dealing cold damage to creatures and freezing water. You can instead throw the sphere as a delayed ice grenade."
   },
@@ -2051,6 +2141,8 @@
     classes: ["Artificer","Druid","Sorcerer","Warlock","Wizard"],
     body: `You cause numbing frost to form on one creature that you can see within range. The target must make a Constitution saving throw. On a failed save, the target takes 1d6 cold damage, and it has disadvantage on the next weapon attack roll it makes before the end of its next turn. The spell's damage increases by 1d6 when you reach higher levels.`,
     tags: ["cantrip","damage","cold","save","debuff"],
+    damage_dice: "1d6",
+    save_dc_ability: "Con",
     srd: false,
   },
   // ===== G =====
@@ -2141,6 +2233,7 @@
     duration: "Instant",
     classes: ["Druid","Ranger"],
     tags: ["healing","food","survival"],
+    heal_dice: "1",
     srd: true,
     body: "Up to ten berries appear, each restoring 1 HP when eaten and providing nourishment for one day. Lasts 24 hours before spoiling."
   },
@@ -2198,6 +2291,7 @@
     classes: ["Artificer","Sorcerer","Warlock","Wizard"],
     body: `You brandish the weapon used in the spell's casting and make a melee attack with it against one creature within 5 feet of you. On a hit, the target suffers the weapon attack's normal effects, and you can cause green fire to leap from the target to a different creature of your choice that you can see within 5 feet of it. The second creature takes fire damage equal to your spellcasting ability modifier. At higher levels, both the initial and splash damage increase.`,
     tags: ["cantrip","damage","fire","melee","attack"],
+    damage_dice: "1d8",
     srd: false,
   },
   {
@@ -2262,7 +2356,9 @@
     casting_time: "1 action", range: "120 ft", components: "V, S",
     duration: "1 round",
     classes: ["Cleric"],
-    tags: ["damage","radiant","support"],
+    tags: ["damage","radiant","support","attack"],
+    damage_dice: "4d6",
+    higher_level_dice: "2d6",
     srd: true,
     body: "Make a ranged spell attack that deals radiant damage. The next attack roll made against the target before your next turn has advantage due to glowing light."
   },
@@ -2288,6 +2384,8 @@
     classes: ["Ranger"],
     body: `Next time you hit with ranged weapon attack, target and all within 5ft make Dex save or take 1d10 piercing.`,
     tags: ["damage","bonus action","area","ranger"],
+    damage_dice: "1d10",
+    save_dc_ability: "Dex",
     srd: true,
   },
   {
@@ -2317,6 +2415,9 @@
     duration: "Instant",
     classes: ["Cleric"],
     tags: ["damage","debuff","necrotic"],
+    damage_dice: "14d6",
+    higher_level_dice: "1d6",
+    save_dc_ability: "Con",
     srd: true,
     body: "Inflict massive necrotic damage on a creature. On a failed Con save it also has its maximum hit points reduced for the duration."
   },
@@ -2351,6 +2452,7 @@
     classes: ["Druid","Ranger"],
     body: `You call forth a nature spirit to soothe the wounded. The spirit appears in a 5-foot cube in a space you can see within range. Each creature you choose that starts its turn in the spirit's space or moves into it for the first time on a turn regains hit points equal to 1d6. The spirit can heal up to six times total before disappearing. As a bonus action, you can move the spirit up to 30 feet to a space you can see.`,
     tags: ["healing","bonus action","concentration","summon"],
+    heal_dice: "1d6",
     srd: false,
   },
   {
@@ -2360,6 +2462,8 @@
     duration: "Instant",
     classes: ["Bard","Cleric","Druid"],
     tags: ["healing","bonus action","ranged"],
+    heal_dice: "1d4",
+    higher_level_dice: "1d4",
     srd: true,
     body: "A quick verbal prayer heals an ally within range for a small amount. You can’t cast another leveled spell in the same turn except a cantrip."
   },
@@ -2370,6 +2474,8 @@
     duration: "Up to 1 minute (Concentration)",
     classes: ["Bard","Druid"],
     tags: ["damage","control","fire"],
+    damage_dice: "2d8",
+    save_dc_ability: "Con",
     srd: true,
     body: "Cause metal objects to glow red hot. The bearer takes fire damage each round and may drop or remove the item to avoid continued burns."
   },
@@ -2380,6 +2486,9 @@
     duration: "Instant",
     classes: ["Warlock"],
     tags: ["reaction","damage","fire"],
+    damage_dice: "2d10",
+    higher_level_dice: "1d10",
+    save_dc_ability: "Dex",
     srd: true,
     body: "Point at your attacker and engulf them in flames. They make a Dex save for half damage. Damage increases with higher slots."
   },
@@ -2414,6 +2523,7 @@
     classes: ["Warlock"],
     body: `You place a curse on a creature that you can see within range. Until the spell ends, you deal an extra 1d6 necrotic damage to the target whenever you hit it with an attack. Also, choose one ability when you cast the spell. The target has disadvantage on ability checks made with the chosen ability. If the target drops to 0 hit points before this spell ends, you can use a bonus action on a subsequent turn to curse a new creature.`,
     tags: ["damage","necrotic","debuff","bonus action","concentration"],
+    damage_dice: "1d6",
     srd: true,
   },
   {
@@ -2467,6 +2577,7 @@
     classes: ["Warlock"],
     body: `You open a gateway to the dark between the stars, a region infested with unknown horrors. A 20-foot-radius sphere of blackness and bitter cold appears, centered on a point within range and lasting for the duration. The sphere is difficult terrain, and it is filled with cacophonous whispers. Any creature that starts its turn in the area takes 2d6 cold damage. Any creature that ends its turn there must make a Dexterity saving throw or take 2d6 acid damage as milky, otherworldly tentacles rub against it. The void creates an area of magical darkness.`,
     tags: ["damage","cold","acid","area","darkness","concentration"],
+    damage_dice: "2d6",
     srd: true,
   },
   {
@@ -2476,6 +2587,7 @@
     duration: "Up to 1 hour (Concentration)",
     classes: ["Ranger"],
     tags: ["damage","tracking","bonus action"],
+    damage_dice: "1d6",
     srd: true,
     body: "Mark a target as your quarry. You deal extra weapon damage to it and gain advantage on Perception and Survival checks to find it."
   },
@@ -2501,6 +2613,8 @@
     classes: ["Druid","Sorcerer","Wizard"],
     body: `Ranged spell attack. On hit: 1d10 piercing. Hit or miss: shards explode 5ft radius, Dex save or 2d6 cold.`,
     tags: ["damage","piercing","cold","attack","area"],
+    damage_dice: "1d10,2d6",
+    save_dc_ability: "Dex",
     srd: false,
   },
   {
@@ -2553,6 +2667,8 @@
     classes: ["Druid","Sorcerer","Warlock","Wizard"],
     body: `You cause mites, fleas, and other parasites to appear momentarily on one creature you can see within range. The target must succeed on a Constitution saving throw, or it takes 1d6 poison damage and moves 5 feet in a random direction if it can move and its speed is at least 5 feet. Roll a d4 for the direction: 1, north; 2, south; 3, east; or 4, west. This movement doesn't provoke opportunity attacks, and if the direction rolled is blocked, the target doesn't move. The spell's damage increases when you reach higher levels.`,
     tags: ["cantrip","damage","poison","save","control"],
+    damage_dice: "1d6",
+    save_dc_ability: "Con",
     srd: false,
   },
   {
@@ -2592,6 +2708,7 @@
     classes: ["Druid","Sorcerer","Warlock","Wizard"],
     body: `Immunity to fire, resistance to cold, 1d10 fire to creatures within 5ft, action to cast 15ft line dealing 4d8 fire.`,
     tags: ["buff","fire","damage","immunity","resistance"],
+    damage_dice: "1d10",
     srd: false,
   },
   {
@@ -2697,6 +2814,8 @@
     classes: ["Bard","Cleric","Wizard"],
     body: `Take 4d8 necrotic damage (ignores resistance). Target heals twice that amount.`,
     tags: ["healing","damage","necrotic","sacrifice"],
+    damage_dice: "4d8",
+    heal_dice: "4d8",
     srd: false,
   },
   {
@@ -2720,6 +2839,8 @@
     classes: ["Ranger"],
     body: `The next time you make a ranged weapon attack during the spell's duration, the weapon's ammunition (or the weapon itself if it's a thrown weapon) transforms into a bolt of lightning. Make the attack roll as normal. The target takes 4d8 lightning damage on a hit, or half as much on a miss. Whether you hit or miss, each creature within 10 feet of the target must make a Dexterity saving throw, taking 2d8 lightning damage on a failed save or half as much on a success.`,
     tags: ["damage","lightning","weapon","bonus action","concentration"],
+    damage_dice: "4d8",
+    save_dc_ability: "Dex",
     srd: true,
   },
   {
@@ -2733,6 +2854,8 @@
     classes: ["Artificer","Sorcerer","Warlock","Wizard"],
     body: `You create a lash of lightning energy that strikes at one creature of your choice that you can see within 15 feet of you. The target must succeed on a Strength saving throw or be pulled up to 10 feet in a straight line toward you and then take 1d8 lightning damage if it is within 5 feet of you. The spell's damage increases when you reach higher levels.`,
     tags: ["cantrip","damage","lightning","save","control"],
+    damage_dice: "1d8",
+    save_dc_ability: "Str",
     srd: false,
   },
   {
@@ -2742,6 +2865,9 @@
     duration: "Instantaneous",
     classes: ["Sorcerer","Wizard"],
     tags: ["damage","area"],
+    damage_dice: "8d6",
+    higher_level_dice: "1d6",
+    save_dc_ability: "Dex",
     srd: true,
     body: "A bolt of lightning forms a 100-foot-long, 5-foot-wide line. Each creature in the line makes a Dexterity saving throw, taking 8d6 lightning damage on a failed save or half as much on a success."
   },
@@ -2797,6 +2923,8 @@
     classes: ["Wizard"],
     body: `10ft radius sphere. Str save or 2d8 force + pulled 10ft toward center. Area is difficult terrain until spell ends.`,
     tags: ["damage","force","control","area","terrain"],
+    damage_dice: "2d8",
+    save_dc_ability: "Str",
     srd: false,
   },
   {
@@ -2846,6 +2974,8 @@
     duration: "Instantaneous",
     classes: ["Sorcerer","Wizard"],
     tags: ["damage","force"],
+    damage_dice: "3d4+3",
+    higher_level_dice: "1d4+1",
     srd: true,
     body: "Create three glowing darts of magical force that automatically hit and deal 1d4 + 1 force damage each. Higher-level casting adds one dart per slot above 1st."
   },
@@ -2870,6 +3000,7 @@
     classes: ["Artificer","Druid","Warlock"],
     body: `You touch one to three pebbles and imbue them with magic. You or someone else can make a ranged spell attack with one of the pebbles by throwing it or hurling it with a sling. If thrown, a pebble has a range of 60 feet. If someone else attacks with a pebble, they add your spellcasting ability modifier, not the attacker's, to the attack roll. On a hit, the target takes bludgeoning damage equal to 1d6 + your spellcasting ability modifier. Whether the attack hits or misses, the spell then ends on the stone.`,
     tags: ["cantrip","damage","attack","bludgeoning","bonus action"],
+    damage_dice: "1d6+1",
     srd: true,
   },
   {
@@ -2893,6 +3024,8 @@
     classes: ["Warlock","Wizard"],
     body: `Magical darkness spreads from a point within range to fill a 60-foot-radius sphere until the spell ends. The darkness spreads around corners. Darkvision can't penetrate it, and no natural light can illuminate it. Shrieks, gibbering, and mad laughter can be heard in the sphere. Whenever a creature starts its turn in the sphere, it must make a Wisdom saving throw, taking 8d8 psychic damage on a failed save or half as much on a success.`,
     tags: ["damage","psychic","darkness","area","concentration"],
+    damage_dice: "8d8",
+    save_dc_ability: "Wis",
     srd: false,
   },
   {
@@ -2922,6 +3055,8 @@
     duration: "Instantaneous",
     classes: ["Bard","Cleric","Druid"],
     tags: ["healing","area"],
+    heal_dice: "3d8",
+    higher_level_dice: "1d8",
     srd: true,
     body: "Choose up to six creatures in a 30-foot radius sphere. Each regains 3d8 + your spellcasting modifier hit points."
   },
@@ -2942,6 +3077,8 @@
     duration: "Instantaneous",
     classes: ["Bard","Cleric"],
     tags: ["healing"],
+    heal_dice: "1d4",
+    higher_level_dice: "1d4",
     srd: true,
     body: "Up to six creatures you choose within range each regain hit points equal to 1d4 + your spellcasting modifier."
   },
@@ -2986,6 +3123,7 @@
     classes: ["Sorcerer","Wizard"],
     body: `Create 6 tiny meteors. Bonus action to shoot 1 or 2 up to 120ft. Ranged spell attack dealing 2d6 fire each.`,
     tags: ["damage","fire","bonus action","attack","concentration"],
+    damage_dice: "2d6",
     srd: false,
   },
   {
@@ -3015,6 +3153,8 @@
     duration: "Instantaneous",
     classes: ["Sorcerer","Wizard"],
     tags: ["damage","area"],
+    damage_dice: "20d6,20d6",
+    save_dc_ability: "Dex",
     srd: true,
     body: "Four blazing meteors strike at points you choose within range. Each creature in a 40-foot-radius sphere at those points takes 20d6 fire damage and 20d6 bludgeoning damage."
   },
@@ -3029,6 +3169,8 @@
     classes: ["Sorcerer","Warlock","Wizard"],
     body: `You attempt to bind a creature within an illusory cell that only it perceives. One creature you can see within range must make an Intelligence saving throw. On a success, the spell has no effect. On a failed save, the creature takes 5d10 psychic damage and is restrained for the duration. If the target moves more than 10 feet from where it was when you cast the spell, it takes 10d10 psychic damage and the spell ends.`,
     tags: ["damage","psychic","control","restrained","concentration"],
+    damage_dice: "5d10",
+    save_dc_ability: "Int",
     srd: false,
   },
   {
@@ -3065,6 +3207,8 @@
     classes: ["Sorcerer","Warlock","Wizard"],
     body: `You drive a disorienting spike of psychic energy into the mind of one creature you can see within range. The target must succeed on an Intelligence saving throw or take 1d6 psychic damage and subtract 1d4 from the next saving throw it makes before the end of your next turn. The spell's damage increases when you reach higher levels.`,
     tags: ["cantrip","damage","psychic","save","debuff"],
+    damage_dice: "1d6",
+    save_dc_ability: "Int",
     srd: false,
   },
   {
@@ -3078,6 +3222,8 @@
     classes: ["Sorcerer","Warlock","Wizard"],
     body: `Target makes Wis save or takes 3d8 psychic. You know target's location while spell lasts.`,
     tags: ["damage","psychic","divination","tracking","concentration"],
+    damage_dice: "3d8",
+    save_dc_ability: "Wis",
     srd: false,
   },
   {
@@ -3160,6 +3306,8 @@
     duration: "Concentration, up to 1 minute",
     classes: ["Druid","Paladin"],
     tags: ["damage","radiant"],
+    damage_dice: "2d10",
+    save_dc_ability: "Con",
     srd: true,
     body: "A beam of silvery light shines down in a 5-foot radius, 40-foot-high cylinder. Creatures entering or starting their turn take 2d10 radiant damage (Constitution save for half)."
   },
@@ -3185,6 +3333,8 @@
     classes: ["Warlock","Wizard"],
     body: `You send ribbons of negative energy at one creature you can see within range. The target must make a Constitution saving throw. On a failed save, it takes 5d12 necrotic damage and you regain hit points equal to half the necrotic damage dealt. If the target is a humanoid that is reduced to 0 hit points by this spell, it immediately rises as a zombie that follows your verbal commands.`,
     tags: ["damage","necrotic","healing","zombie","summon"],
+    damage_dice: "5d12",
+    save_dc_ability: "Con",
     srd: false,
   },
   {
@@ -3225,6 +3375,8 @@
     duration: "Up to 1 minute (Concentration)",
     classes: ["Wizard"],
     tags: ["fear","damage","psychic"],
+    damage_dice: "4d10",
+    save_dc_ability: "Wis",
     srd: true,
     body: "You create an illusory manifestation of the target’s worst fear. The creature makes a Wisdom save or becomes frightened and takes ongoing psychic damage each turn."
   },
@@ -3285,6 +3437,8 @@
     duration: "Instantaneous",
     classes: ["Sorcerer","Warlock","Wizard"],
     tags: ["damage","poison"],
+    damage_dice: "1d12",
+    save_dc_ability: "Con",
     srd: true,
     body: "You extend your hand and release a puff of noxious gas. The creature must succeed on a Constitution save or take 1d12 poison damage. Increases with character level."
   },
@@ -3305,6 +3459,7 @@
     duration: "Instantaneous",
     classes: ["Bard","Sorcerer","Warlock","Wizard"],
     tags: ["damage","instant death"],
+    damage_dice: "instant",
     srd: true,
     body: "Speak a word of power that instantly kills one creature with 100 hit points or fewer. No save or resistance applies."
   },
@@ -3325,6 +3480,8 @@
     duration: "Instantaneous",
     classes: ["Cleric"],
     tags: ["healing","group"],
+    heal_dice: "2d8",
+    higher_level_dice: "1d8",
     srd: true,
     body: "Up to six creatures of your choice regain 2d8 + your spellcasting modifier hit points after 10 minutes of prayer."
   },
@@ -3339,6 +3496,7 @@
     classes: ["Druid"],
     body: `You channel primal magic to cause your teeth or fingernails to sharpen, ready to deliver a corrosive attack. Make a melee spell attack against one creature within 5 feet of you. On a hit, the target takes 1d10 acid damage. After you make the attack, your teeth or fingernails return to normal. The spell's damage increases when you reach higher levels.`,
     tags: ["cantrip","damage","acid","melee","attack"],
+    damage_dice: "1d10",
     srd: false,
   },
   {
@@ -3371,6 +3529,8 @@
     duration: "Instantaneous",
     classes: ["Sorcerer","Wizard"],
     tags: ["damage","area","random"],
+    damage_dice: "10d6",
+    save_dc_ability: "Dex",
     srd: true,
     body: "Eight multicolored rays shoot from your hand, each with different effects—fire, acid, poison, petrification, or banishment—determined by a random roll."
   },
@@ -3401,6 +3561,7 @@
     duration: "10 minutes",
     classes: ["Druid"],
     tags: ["light","damage"],
+    damage_dice: "1d8",
     srd: true,
     body: "A flame appears in your hand. It sheds light and can be thrown to deal 1d8 fire damage on a hit. The flame doesn't harm you or your equipment."
   },
@@ -3415,6 +3576,8 @@
     classes: ["Bard","Sorcerer","Warlock","Wizard"],
     body: `You unleash the power of your mind to blast the intellect of up to ten creatures of your choice that you can see within range. Creatures with an Intelligence score of 2 or lower are unaffected. Each target must make an Intelligence saving throw. On a failed save, a target takes 14d6 psychic damage and is stunned. On a successful save, it takes half as much damage and isn't stunned. If a target is killed by this damage, its head explodes.`,
     tags: ["damage","psychic","stun","high-level"],
+    damage_dice: "14d6",
+    save_dc_ability: "Int",
     srd: false,
   },
   {
@@ -3507,7 +3670,8 @@
     casting_time: "1 action", range: "60 feet", components: "V, S",
     duration: "Concentration, up to 1 minute",
     classes: ["Warlock","Wizard"],
-    tags: ["debuff","damage"],
+    tags: ["debuff","damage","attack"],
+    damage_dice: "2d8",
     srd: true,
     body: "Make a ranged spell attack; on a hit, the target deals only half damage with weapon attacks that use Strength until the spell ends."
   },
@@ -3517,7 +3681,8 @@
     casting_time: "1 action", range: "60 feet", components: "V, S",
     duration: "Instantaneous",
     classes: ["Sorcerer","Wizard","Artificer"],
-    tags: ["damage","cold","cantrip"],
+    tags: ["damage","cold","cantrip","attack"],
+    damage_dice: "1d8",
     srd: true,
     body: "Make a ranged spell attack dealing 1d8 cold damage and reducing the target’s speed by 10 feet until the start of your next turn. Damage increases with character level."
   },
@@ -3528,6 +3693,7 @@
     duration: "1 hour",
     classes: ["Bard","Cleric","Druid"],
     tags: ["healing","restoration"],
+    heal_dice: "4d8+15",
     srd: true,
     body: "The target regains 4d8 + 15 hit points immediately, then 1 hit point every round for the next hour. The spell also restores severed body parts after 2 minutes."
   },
@@ -3622,6 +3788,8 @@
     duration: "Instantaneous",
     classes: ["Cleric"],
     tags: ["damage","radiant"],
+    damage_dice: "1d8",
+    save_dc_ability: "Dex",
     srd: true,
     body: "Flame-like radiance descends on a creature within range. It must succeed on a Dexterity save or take 1d8 radiant damage. The target gains no benefit from cover against this save."
   },
@@ -3654,7 +3822,8 @@
     casting_time: "1 action", range: "120 feet", components: "V, S",
     duration: "Instantaneous",
     classes: ["Sorcerer","Wizard"],
-    tags: ["damage","fire"],
+    tags: ["damage","fire","attack"],
+    damage_dice: "2d6",
     srd: true,
     body: "You create three rays of fire and hurl them at targets within range. Each ray is a ranged spell attack dealing 2d6 fire damage. Add one ray for every slot level above 2nd."
   },
@@ -3689,6 +3858,7 @@
     classes: ["Paladin"],
     body: `The next time you hit a creature with a melee weapon attack during the spell's duration, your weapon flares with white-hot intensity, and the attack deals an extra 1d6 fire damage. Additionally, the target must make a Constitution saving throw or be set ablaze. At the start of each of its turns until the spell ends, the creature takes 1d6 fire damage unless it uses an action to douse the flames.`,
     tags: ["smite","damage","fire","bonus action","concentration"],
+    damage_dice: "1d6",
     srd: true,
   },
   {
@@ -3738,6 +3908,7 @@
     duration: "Up to 1 minute (Concentration)",
     classes: ["Warlock"],
     tags: ["defense","damage","darkness"],
+    damage_dice: "2d8",
     srd: false,
     body: "Flames of shadow wreathe your body, heavily obscuring you from others. You take on a dim light aura and deal fire damage to attackers who hit you with melee attacks."
   },
@@ -3752,6 +3923,7 @@
     classes: ["Sorcerer","Warlock","Wizard"],
     body: `You weave together threads of shadow to create a sword of solidified gloom in your hand. This magic sword lasts until the spell ends. It counts as a simple melee weapon with which you are proficient. It deals 2d8 psychic damage on a hit and has the finesse, light, and thrown properties (range 20/60). In addition, when you use the sword to attack a target that is in dim light or darkness, you make the attack roll with advantage.`,
     tags: ["conjuration","weapon","psychic","damage","bonus action","concentration"],
+    damage_dice: "2d8",
     srd: false,
   },
   {
@@ -3784,6 +3956,9 @@
     duration: "Instantaneous",
     classes: ["Bard","Sorcerer","Warlock","Wizard"],
     tags: ["damage","thunder"],
+    damage_dice: "3d8",
+    higher_level_dice: "1d8",
+    save_dc_ability: "Con",
     srd: true,
     body: "A loud ringing noise erupts from a point you choose, dealing 3d8 thunder damage (Con save for half) to creatures and objects. Deals extra damage to inorganic materials."
   },
@@ -3818,6 +3993,8 @@
     classes: ["Sorcerer","Warlock","Wizard"],
     body: `Dim, greenish light spreads within a 30-foot-radius sphere centered on a point you choose within range. The light spreads around corners, and it lasts until the spell ends. When a creature moves into the spell's area for the first time on a turn or starts its turn there, that creature must make a Constitution saving throw, taking 4d10 radiant damage on a failed save or half as much on a success. Additionally, the creature gains one level of exhaustion on a failed save.`,
     tags: ["damage","radiant","exhaustion","area","concentration"],
+    damage_dice: "4d10",
+    save_dc_ability: "Con",
     srd: false,
   },
   {
@@ -3870,6 +4047,8 @@
     classes: ["Sorcerer","Wizard"],
     body: `A flurry of magic snowballs erupts from a point you choose within range. Each creature in a 5-foot-radius sphere centered on that point must make a Dexterity saving throw. A creature takes 3d6 cold damage on a failed save, or half as much damage on a successful one.`,
     tags: ["damage","cold","area","save"],
+    damage_dice: "3d6",
+    save_dc_ability: "Dex",
     srd: false,
   },
   {
@@ -3883,6 +4062,7 @@
     classes: ["Warlock","Wizard"],
     body: `This spell snatches the soul of a humanoid as it dies and traps it inside a tiny cage. While you have a soul inside the cage, you can use it to gain benefits: you can steal life energy (regain hit points), ask questions, borrow their experience, or see through the soul's eyes.`,
     tags: ["necromancy","utility","heal","information"],
+    heal_dice: "2d8",
     srd: false,
   },
   {
@@ -3896,6 +4076,7 @@
     classes: ["Paladin"],
     body: `The next time you hit a creature with a melee weapon attack during this spell's duration, your weapon pierces both body and mind, and the attack deals an extra 4d6 psychic damage to the target. The target must make a Wisdom saving throw. On a failed save, it has disadvantage on attack rolls and ability checks, and can't take reactions, until the end of its next turn.`,
     tags: ["smite","damage","psychic","debuff","paladin","concentration"],
+    damage_dice: "4d6",
     srd: true,
   },
   {
@@ -3909,6 +4090,7 @@
     classes: ["Ranger","Wizard"],
     body: `You flourish the weapon used in the casting and then vanish to strike like the wind. Choose up to five creatures you can see within range. Make a melee spell attack against each target. On a hit, a target takes 6d10 force damage. You can then teleport to an unoccupied space you can see within 5 feet of one of the targets you hit or missed.`,
     tags: ["damage","force","melee","teleport","attack","multi-target"],
+    damage_dice: "6d10",
     srd: false,
   },
   {
@@ -3927,7 +4109,8 @@
     casting_time: "1 action", range: "Touch", components: "V, S",
     duration: "Instantaneous",
     classes: ["Sorcerer","Wizard","Artificer"],
-    tags: ["damage","melee","lightning"],
+    tags: ["damage","melee","lightning","attack"],
+    damage_dice: "1d8",
     srd: true,
     body: "Lightning springs from your hand for a melee spell attack. The target takes 1d8 lightning damage and can’t take reactions until its next turn."
   },
@@ -4048,6 +4231,7 @@
     duration: "Up to 10 minutes (Concentration)",
     classes: ["Druid","Ranger"],
     tags: ["damage","terrain","control"],
+    damage_dice: "2d4",
     srd: true,
     body: "Twisting vines and spikes erupt in a 20-foot radius. Creatures moving through the area take 2d4 piercing damage for every 5 feet moved."
   },
@@ -4062,6 +4246,7 @@
     classes: ["Cleric","Paladin","Warlock","Wizard"],
     body: `You call forth spirits of the dead, which flit around you for the spell's duration. You choose one of the following forms: Funereal (radiant), Festive (radiant), or Fearsome (necrotic/cold). When you deal damage to a creature within 10 feet of you, you can deal an extra 1d8 damage of the chosen type to that creature. Any creature that starts its turn within 10 feet of you has its speed reduced by 10 feet until the start of that creature's next turn.`,
     tags: ["damage","buff","necrotic","radiant","cold","concentration","bonus action"],
+    damage_dice: "1d8",
     srd: false,
   },
   {
@@ -4071,6 +4256,8 @@
     duration: "Up to 10 minutes (Concentration)",
     classes: ["Cleric"],
     tags: ["damage","control","radiant"],
+    damage_dice: "3d8",
+    save_dc_ability: "Wis",
     srd: true,
     body: "You summon spirits that protect you. Enemies entering the area take 3d8 radiant or necrotic damage (Wisdom save for half) and have halved speed."
   },
@@ -4080,7 +4267,8 @@
     casting_time: "1 bonus action", range: "60 feet", components: "V, S",
     duration: "1 minute",
     classes: ["Cleric"],
-    tags: ["damage","bonus action"],
+    tags: ["damage","bonus action","attack"],
+    damage_dice: "1d8",
     srd: true,
     body: "You create a floating spectral weapon that deals 1d8 + your modifier force damage. It can move and strike as a bonus action each round."
   },
@@ -4121,6 +4309,7 @@
     duration: "Up to 1 minute (Concentration)",
     classes: ["Cleric","Druid"],
     tags: ["area","damage","control"],
+    damage_dice: "3d6",
     srd: true,
     body: "A massive storm cloud forms overhead. Each round brings new effects: acid rain, lightning, hail, and gale-force winds. Extremely destructive over wide areas."
   },
@@ -4135,6 +4324,8 @@
     classes: ["Sorcerer","Wizard"],
     body: `A 20-foot-radius sphere of whirling air springs into existence centered on a point you choose within range. The sphere remains for the spell's duration. Each creature in the sphere when it appears or that ends its turn there must succeed on a Strength saving throw or take 2d6 bludgeoning damage. The sphere's space is difficult terrain. Until the spell ends, you can use a bonus action on each of your turns to cause a bolt of lightning to leap from the center of the sphere toward one creature you choose within 60 feet of the center. Make a ranged spell attack. You have advantage on the attack roll if the target is in the sphere. On a hit, the target takes 4d6 lightning damage.`,
     tags: ["damage","lightning","area","control","concentration"],
+    damage_dice: "2d6",
+    save_dc_ability: "Dex",
     srd: false,
   },
   {
@@ -4301,6 +4492,8 @@
     classes: ["Bard","Sorcerer","Warlock","Wizard"],
     body: `You choose a point within range and cause psychic energy to explode there. Each creature in a 20-foot-radius sphere centered on that point must make an Intelligence saving throw. A creature with an Intelligence score of 2 or lower can't be affected. A target takes 8d6 psychic damage on a failed save, or half as much damage on a successful one. After a failed save, a target has muddled thoughts for 1 minute. During that time, it rolls a d6 and subtracts the number rolled from all its attack rolls and ability checks, as well as its Constitution saving throws to maintain concentration.`,
     tags: ["damage","psychic","area","debuff","intelligence"],
+    damage_dice: "8d6",
+    save_dc_ability: "Int",
     srd: false,
   },
   {
@@ -4310,6 +4503,9 @@
     duration: "Up to 1 minute (Concentration)",
     classes: ["Druid","Sorcerer","Wizard"],
     tags: ["damage","radiant"],
+    damage_dice: "6d8",
+    higher_level_dice: "1d8",
+    save_dc_ability: "Con",
     srd: true,
     body: "A brilliant beam of sunlight flashes out from your hand. Each creature in the line makes a Con save or takes 6d8 radiant damage and is blinded."
   },
@@ -4320,6 +4516,9 @@
     duration: "Instantaneous",
     classes: ["Druid","Sorcerer","Wizard"],
     tags: ["area","radiant","damage"],
+    damage_dice: "12d6",
+    higher_level_dice: "1d6",
+    save_dc_ability: "Con",
     srd: true,
     body: "Brilliant sunlight flashes in a 60-foot radius sphere. Creatures make Con saves or take 12d6 radiant damage and are blinded for 1 minute."
   },
@@ -4334,6 +4533,8 @@
     classes: ["Artificer","Sorcerer","Warlock","Wizard"],
     body: `You create a momentary circle of spectral blades that sweep around you. Each creature within 5 feet of you must succeed on a Dexterity saving throw or take 1d6 force damage. The spell's damage increases when you reach higher levels.`,
     tags: ["cantrip","damage","force","save","area"],
+    damage_dice: "1d6",
+    save_dc_ability: "Dex",
     srd: false,
   },
   {
@@ -4358,6 +4559,8 @@
     classes: ["Artificer","Sorcerer","Wizard"],
     body: `A stream of acid emanates from you in a line 30 feet long and 5 feet wide in a direction you choose. Each creature in the line must succeed on a Dexterity saving throw or be covered in acid for the spell's duration or until a creature uses its action to scrape or wash the acid off itself or another creature. A creature covered in the acid takes 2d4 acid damage at start of each of its turns.`,
     tags: ["damage","acid","concentration","line"],
+    damage_dice: "2d4",
+    save_dc_ability: "Dex",
     srd: false,
   },
   {
@@ -4371,6 +4574,8 @@
     classes: ["Sorcerer","Wizard"],
     body: `You psychically lash out at one creature you can see within range. The target must make an Intelligence saving throw. On a failed save, the target takes 3d6 psychic damage, and it can't take a reaction until the end of its next turn. Moreover, on its next turn, it must choose whether it gets a move, an action, or a bonus action; it gets only one of the three. On a successful save, the target takes half as much damage and suffers none of the spell's other effects.`,
     tags: ["damage","psychic","debuff","control"],
+    damage_dice: "3d6",
+    save_dc_ability: "Int",
     srd: false,
   },
   {
@@ -4459,7 +4664,8 @@
     concentration: false,
     classes: ["Druid","Artificer"],
     body: `You create a long, vine-like whip covered in thorns that lashes out at your command toward a creature in range. Make a melee spell attack against the target. If the attack hits, the creature takes 1d6 piercing damage, and if the creature is Large or smaller, you pull the creature up to 10 feet closer to you. This spell's damage increases by 1d6 when you reach 5th level (2d6), 11th level (3d6), and 17th level (4d6).`,
-    tags: ["cantrip","damage","piercing","control","melee","pull"],
+    tags: ["cantrip","damage","piercing","control","melee","pull","attack"],
+    damage_dice: "1d6",
     srd: true,
   },
   {
@@ -4473,6 +4679,8 @@
     classes: ["Paladin"],
     body: `The first time you hit with a melee weapon attack during this spell's duration, your weapon rings with thunder that is audible within 300 feet of you, and the attack deals an extra 2d6 thunder damage to the target. Additionally, if the target is a creature, it must succeed on a Strength saving throw or be pushed 10 feet away from you and knocked prone.`,
     tags: ["smite","damage","thunder","buff","paladin","concentration"],
+    damage_dice: "2d6",
+    save_dc_ability: "Str",
     srd: true,
   },
   {
@@ -4486,6 +4694,8 @@
     classes: ["Artificer","Bard","Druid","Sorcerer","Warlock","Wizard"],
     body: `You create a burst of thunderous sound that can be heard up to 100 feet away. Each creature within 5 feet of you must succeed on a Constitution saving throw or take 1d6 thunder damage. The spell's damage increases when you reach higher levels.`,
     tags: ["cantrip","damage","thunder","save","area"],
+    damage_dice: "1d6",
+    save_dc_ability: "Con",
     srd: false,
   },
   {
@@ -4495,6 +4705,9 @@
     duration: "Instantaneous",
     classes: ["Bard","Cleric","Druid","Sorcerer","Wizard"],
     tags: ["damage","thunder","area"],
+    damage_dice: "2d8",
+    higher_level_dice: "1d8",
+    save_dc_ability: "Con",
     srd: true,
     body: "A wave of thunderous force sweeps from you. Creatures in the area make Con saves or take 2d8 thunder damage and are pushed 10 feet. Loose objects are pushed away and audibly boom out to 300 feet."
   },
@@ -4519,6 +4732,8 @@
     classes: ["Druid","Sorcerer","Wizard"],
     body: `You conjure up a wave of water that crashes down on an area within range. The area can be up to 30 feet long, up to 10 feet wide, and up to 10 feet tall. Each creature in that area must make a Dexterity saving throw. On a failure, a creature takes 4d8 bludgeoning damage and is knocked prone. On a success, a creature takes half as much damage and isn't knocked prone. The water then spreads out across the ground in all directions, extinguishing unprotected flames in its area and within 30 feet of it.`,
     tags: ["damage","bludgeoning","area","water","control"],
+    damage_dice: "4d8",
+    save_dc_ability: "Dex",
     srd: false,
   },
   {
@@ -4555,6 +4770,8 @@
     classes: ["Cleric","Warlock","Wizard"],
     body: `You point at one creature you can see within range, and the sound of a dolorous bell fills the air around it for a moment. The target must succeed on a Wisdom saving throw or take 1d8 necrotic damage. If the target is missing any of its hit points, it instead takes 1d12 necrotic damage. The spell's damage increases when you reach higher levels.`,
     tags: ["cantrip","damage","necrotic","save"],
+    damage_dice: "1d8",
+    save_dc_ability: "Wis",
     srd: false,
   },
   {
@@ -4659,6 +4876,9 @@
     duration: "Concentration, up to 1 minute",
     classes: ["Warlock","Wizard"],
     tags: ["attack","healing","melee"],
+    damage_dice: "3d6",
+    heal_dice: "3d6",
+    higher_level_dice: "1d6",
     srd: true,
     body: "Your hand becomes a conduit of life-draining magic. Make a melee spell attack; on hit, the target takes necrotic damage and you regain hit points equal to half the damage dealt each round while concentration is maintained."
   },
@@ -4683,6 +4903,8 @@
     classes: ["Sorcerer","Wizard"],
     body: `You point at a location within range, and a glowing, 1-foot-diameter ball of emerald acid streaks there and explodes in a 20-foot-radius sphere. Each creature in that area must make a Dexterity saving throw. On a failed save, a creature takes 10d4 acid damage and another 5d4 acid damage at the end of its next turn. On a successful save, a creature takes half the initial damage and no damage at the end of its next turn.`,
     tags: ["damage","acid","area","save"],
+    damage_dice: "10d4,5d4",
+    save_dc_ability: "Dex",
     srd: false,
   },
   // ===== W =====
@@ -4693,6 +4915,8 @@
     duration: "Concentration, up to 1 minute",
     classes: ["Druid","Sorcerer","Wizard"],
     tags: ["damage","area","control"],
+    damage_dice: "5d8",
+    save_dc_ability: "Dex",
     srd: true,
     body: "You create a wall of flames that burns creatures on one side. The wall deals fire damage to creatures when it appears and to those ending their turn nearby."
   },
@@ -4713,6 +4937,8 @@
     duration: "Concentration, up to 10 minutes",
     classes: ["Wizard"],
     tags: ["barrier","damage","control"],
+    damage_dice: "10d6",
+    save_dc_ability: "Con",
     srd: true,
     body: "A wall of ice appears, either as a flat barrier or dome. Each section has hit points and can be destroyed; when broken, the shards explode with cold damage."
   },
@@ -4733,6 +4959,8 @@
     duration: "Concentration, up to 10 minutes",
     classes: ["Druid"],
     tags: ["damage","control","terrain"],
+    damage_dice: "7d8",
+    save_dc_ability: "Dex",
     srd: true,
     body: "A thick wall of twisting vines and thorns sprouts up, dealing piercing damage to creatures entering or ending their turn in it and slowing their movement."
   },
@@ -4843,6 +5071,8 @@
     classes: ["Druid","Sorcerer","Wizard"],
     body: `A whirlwind howls down to a point on the ground you specify. The whirlwind is a 10-foot-radius, 30-foot-high cylinder centered on that point. Until the spell ends, you can use your action to move the whirlwind up to 30 feet in any direction along the ground. The whirlwind sucks up any Medium or smaller objects that aren't secured to anything and that aren't worn or carried by anyone. A creature must make a Dexterity saving throw the first time on a turn that it enters the whirlwind or that the whirlwind enters its space, including when the whirlwind first appears. A creature takes 10d6 bludgeoning damage on a failed save, or half as much damage on a successful one. In addition, a Large or smaller creature that fails the save must succeed on a Strength saving throw or become restrained in the whirlwind until the spell ends.`,
     tags: ["damage","bludgeoning","control","area","concentration"],
+    damage_dice: "2d6",
+    save_dc_ability: "Str",
     srd: false,
   },
   {
@@ -4856,6 +5086,8 @@
     classes: ["Sorcerer","Warlock","Wizard"],
     body: `A beam of crackling, blue energy lances out toward a creature within range, forming a sustained arc of lightning between you and the target. Make a ranged spell attack against that creature. On a hit, the target takes 1d12 lightning damage, and on each of your turns for the duration, you can use your action to deal 1d12 lightning damage to the target automatically. The spell ends if you use your action to do anything else or if the target is ever outside the spell's range or if it has total cover from you.`,
     tags: ["damage","lightning","attack","concentration"],
+    damage_dice: "1d12",
+    higher_level_dice: "1d12",
     srd: true,
   },
   {
@@ -4869,6 +5101,7 @@
     classes: ["Druid","Ranger"],
     body: `You call out to the spirits of nature to rouse them against your enemies. Choose a point you can see within range. The spirits cause trees, rocks, grass, and other natural features in a 60-foot cube centered on that point to become animated until the spell ends. Creatures in the area may be grasped by grass and roots, battered by rocks, struck by tree branches, or lashed by vines. Each creature in the area must make a Dexterity saving throw or take damage and be subject to various effects based on the terrain.`,
     tags: ["damage","area","control","nature","concentration"],
+    damage_dice: "4d6",
     srd: false,
   },
   {
@@ -4882,6 +5115,7 @@
     classes: ["Paladin"],
     body: `The next time you hit with a melee weapon attack during this spell's duration, your attack deals an extra 1d6 psychic damage. Additionally, if the target is a creature, it must make a Wisdom saving throw or be frightened of you until the spell ends. As an action, the creature can make a Wisdom check against your spell save DC to steel its resolve and end this spell.`,
     tags: ["smite","damage","psychic","debuff","paladin","concentration"],
+    damage_dice: "1d6",
     srd: true,
   },
   {
@@ -4915,6 +5149,8 @@
     classes: ["Cleric"],
     body: `You utter a divine word, and burning radiance erupts from you. Each creature of your choice that you can see within 5 feet of you must succeed on a Constitution saving throw or take 1d6 radiant damage. The spell's damage increases when you reach higher levels.`,
     tags: ["cantrip","damage","radiant","save","area"],
+    damage_dice: "1d6",
+    save_dc_ability: "Con",
     srd: false,
   },
   // ===== Z =====
@@ -4929,6 +5165,7 @@
     classes: ["Ranger"],
     body: `You move like the wind. Until the spell ends, your movement doesn't provoke opportunity attacks. Once before the spell ends, you can give yourself advantage on one weapon attack roll on your turn. That attack deals an extra 1d8 force damage on a hit. Whether you hit or miss, your walking speed increases by 30 feet until the end of that turn.`,
     tags: ["buff","mobility","damage","force","ranger","concentration"],
+    damage_dice: "1d8",
     srd: false,
   },
   {
