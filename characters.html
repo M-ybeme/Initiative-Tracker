@@ -4775,6 +4775,26 @@
           dice = parseSpellRollInfo(spell).dice;
         }
 
+        // Agonizing Blast: add CHA modifier × beam count to Eldritch Blast damage
+        const spellTitle = (spell.title || spell.name || '').toLowerCase();
+        if ((spell.level || 0) === 0 && spellTitle.includes('eldritch blast') && dice.length) {
+          const char = window.getCurrentCharacter?.();
+          if (char?.eldritchInvocations?.includes('Agonizing Blast')) {
+            const chaMod = Math.floor(((char.stats?.cha || 10) - 10) / 2);
+            if (chaMod !== 0) {
+              const beamCount = parseInt(dice[0].match(/^(\d+)/)?.[1] || '1', 10);
+              const totalBonus = beamCount * chaMod;
+              dice = dice.map((d, i) => {
+                if (i !== 0) return d;
+                const m = d.match(/^(\d+d\d+)([+-]\d+)?$/i);
+                if (!m) return d;
+                const newMod = parseInt(m[2] || '0', 10) + totalBonus;
+                return `${m[1]}${newMod > 0 ? '+' + newMod : newMod < 0 ? String(newMod) : ''}`;
+              });
+            }
+          }
+        }
+
         // Collect all results then show one combined toast
         const allResults = [];
 
@@ -4792,6 +4812,15 @@
           return;
         }
 
+        // For attack-type spells, ask about concentration bonus before rolling damage
+        // (Hex applies to each beam that hits, Hunter's Mark to marked target, etc.)
+        let concBonus = null;
+        let applyConc = false;
+        if (rollType === 'attack') {
+          concBonus = window.getConcentrationAttackBonus?.();
+          applyConc = concBonus ? confirm(concBonus.prompt) : false;
+        }
+
         // Build damage/heal label, appending save type when relevant
         const saveSuffix = saveAbility && rollType !== 'attack' ? ` (${saveAbility} Save)` : '';
         dice.forEach((notation, i) => {
@@ -4801,6 +4830,11 @@
           const result = rollFn(notation, baseLabel);
           if (result) allResults.push(result);
         });
+
+        if (applyConc) {
+          const r = rollFn(concBonus.notation, `${spellName} - ${concBonus.label}`);
+          if (r) allResults.push(r);
+        }
 
         if (allResults.length && window.showRollToast) window.showRollToast(allResults);
       }
@@ -5375,6 +5409,48 @@
         return Math.floor(Math.random() * sides) + 1;
       }
 
+      /**
+       * Like parseDiceAndRoll() but supports GWF (reroll 1s & 2s) and
+       * Savage Attacker (roll twice, take higher total).
+       */
+      function parseDiceAndRollWithFeatures(notation, doubleDice, { rerollLowDice = false, rollTwiceTakeBest = false } = {}) {
+        if (!rerollLowDice && !rollTwiceTakeBest) return parseDiceAndRoll(notation, doubleDice);
+
+        const parts = notation.match(/(\d+)d(\d+)([+-]\d+)?/i);
+        if (!parts) return parseDiceAndRoll(notation, doubleDice);
+
+        let numDice  = parseInt(parts[1], 10);
+        const sides   = parseInt(parts[2], 10);
+        const modifier = parts[3] ? parseInt(parts[3], 10) : 0;
+        if (doubleDice) numDice *= 2;
+
+        function rollOnce() {
+          return Array.from({ length: numDice }, () => {
+            const r = rollDie(sides);
+            return (rerollLowDice && r <= 2) ? rollDie(sides) : r;
+          });
+        }
+
+        const rolls1 = rollOnce();
+        let finalRolls, featNote = '';
+
+        if (rollTwiceTakeBest) {
+          const rolls2 = rollOnce();
+          const t1 = rolls1.reduce((a, b) => a + b, 0);
+          const t2 = rolls2.reduce((a, b) => a + b, 0);
+          if (t1 >= t2) { finalRolls = rolls1; featNote = ` [SA: ${t1} vs ${t2}]`; }
+          else          { finalRolls = rolls2; featNote = ` [SA: ${t2} vs ${t1}]`; }
+        } else {
+          finalRolls = rolls1;
+        }
+        if (rerollLowDice) featNote += ' [GWF]';
+
+        const total   = finalRolls.reduce((a, b) => a + b, 0) + modifier;
+        const modStr  = modifier >= 0 ? `+${modifier}` : String(modifier);
+        const breakdown = `${numDice}d${sides}${modStr} = [${finalRolls.join(', ')}]${modStr} = ${total}${featNote}`;
+        return { total, breakdown, rolls: finalRolls, sides, modifier };
+      }
+
       // Parse dice notation (e.g., "2d6+3") and roll
       function parseDiceAndRoll(notation, doubleDice = false) {
         if (!notation) return { total: 0, breakdown: '0', rolls: [] };
@@ -5502,15 +5578,61 @@
           if (!attack || !attack.damage) return;
 
           const isCrit = rollType === 'critical';
-          const result1 = parseDiceAndRoll(attack.damage, isCrit);
+
+          // Apply always-on feature bonuses (Dueling +2, Improved Divine Smite, GWF, SA, etc.)
+          const char = window.getCurrentCharacter?.();
+          const { flatBonus, extraRolls, rerollLowDice, rollTwiceTakeBest } =
+            window.getAttackFeatureBonuses?.(char, attack) || { flatBonus: 0, extraRolls: [], rerollLowDice: false, rollTwiceTakeBest: false };
+          const mainNotation = (flatBonus && window.addFlatBonusToNotation)
+            ? window.addFlatBonusToNotation(attack.damage, flatBonus)
+            : attack.damage;
+          const diceFeatures = { rerollLowDice, rollTwiceTakeBest };
+
+          // Ask about concentration bonus before any dice are rolled so the answer
+          // is included in the same result display (Hex, Hunter's Mark, Spirit Shroud)
+          const concBonus = window.getConcentrationAttackBonus?.();
+          const applyConc = concBonus ? confirm(concBonus.prompt) : false;
+
+          const result1 = parseDiceAndRollWithFeatures(mainNotation, isCrit, diceFeatures);
           let total = result1.total;
           let breakdown = result1.breakdown;
+          if (flatBonus) breakdown += ` <span class="text-info-emphasis">(+${flatBonus})</span>`;
 
           // Handle secondary damage
           if (attack.damage2) {
             const result2 = parseDiceAndRoll(attack.damage2, isCrit);
             total += result2.total;
             breakdown += ` + ${result2.breakdown}`;
+          }
+
+          // Extra feature rolls (e.g. Improved Divine Smite 1d8 radiant)
+          extraRolls.forEach(({ notation: en, label }) => {
+            const rx = parseDiceAndRoll(en, isCrit);
+            total += rx.total;
+            breakdown += ` + ${rx.breakdown} <span class="text-warning-emphasis">${label}</span>`;
+            if (typeof window.addToRollHistory === 'function') {
+              window.addToRollHistory({
+                notation: en + (isCrit ? ' (crit)' : ''),
+                description: `${attack.name} - ${label}${isCrit ? ' (Crit)' : ''}`,
+                rolls: rx.rolls, modifier: rx.modifier || 0,
+                total: rx.total, timestamp: new Date().toISOString()
+              });
+            }
+          });
+
+          // Concentration bonus (Hex, Hunter's Mark, Spirit Shroud — crits don't double these)
+          if (applyConc) {
+            const cr = parseDiceAndRoll(concBonus.notation, false);
+            total += cr.total;
+            breakdown += ` + ${cr.breakdown} <span class="text-info-emphasis">${concBonus.label}</span>`;
+            if (typeof window.addToRollHistory === 'function') {
+              window.addToRollHistory({
+                notation: concBonus.notation,
+                description: `${attack.name} - ${concBonus.label}`,
+                rolls: cr.rolls, modifier: cr.modifier || 0,
+                total: cr.total, timestamp: new Date().toISOString()
+              });
+            }
           }
 
           // Build result display

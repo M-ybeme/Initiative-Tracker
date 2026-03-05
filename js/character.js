@@ -34,6 +34,120 @@
         return { count, sides, modifier };
       }
 
+      /** Adds a flat bonus to a dice notation string: "1d8+3" + 2 → "1d8+5" */
+      function addFlatBonusToNotation(notation, bonus) {
+        if (!bonus) return notation;
+        const m = notation.trim().match(/^(\d*d\d+)([+-]\d+)?$/i);
+        if (!m) return notation;
+        const newMod = parseInt(m[2] || '0', 10) + bonus;
+        return `${m[1]}${newMod > 0 ? '+' + newMod : newMod < 0 ? String(newMod) : ''}`;
+      }
+
+      /**
+       * Concentration spells that add bonus damage to every attack roll while active.
+       * keyed by lowercase spell name matching window.currentConcentrationSpell.
+       */
+      const CONCENTRATION_ATTACK_BONUSES = {
+        'hex':            { notation: '1d6', label: 'Necrotic (Hex)',          prompt: 'Concentrating on Hex — add +1d6 Necrotic to this attack?' },
+        "hunter's mark":  { notation: '1d6', label: "Weapon (Hunter's Mark)",  prompt: "Concentrating on Hunter's Mark — add +1d6 to this attack?" },
+        'spirit shroud':  { notation: '1d8', label: 'Spirit Shroud',           prompt: 'Concentrating on Spirit Shroud — add +1d8 to this attack?' },
+      };
+
+      /**
+       * Returns the concentration attack bonus entry if the character is concentrating
+       * on a damage-adding spell, otherwise null.
+       */
+      function getConcentrationAttackBonus() {
+        if (!isConcentrating()) return null;
+        const key = (window.currentConcentrationSpell || '').toLowerCase().trim();
+        return CONCENTRATION_ATTACK_BONUSES[key] || null;
+      }
+
+      /**
+       * Returns always-on feature-based damage bonuses for a weapon attack.
+       * flatBonus  – flat number to add to the damage modifier (e.g. Dueling +2)
+       * extraRolls – additional dice to roll after the main damage { notation, label }
+       *              (e.g. Improved Divine Smite 1d8 radiant)
+       */
+      /**
+       * Returns always-on feature-based damage modifiers for a weapon attack.
+       * flatBonus         – flat bonus added to the damage modifier (e.g. Dueling +2)
+       * extraRolls        – extra dice rolled after main damage { notation, label }
+       * rerollLowDice     – GWF: reroll any die showing 1 or 2, must use new roll
+       * rollTwiceTakeBest – Savage Attacker: roll all dice twice, keep higher total
+       */
+      function getAttackFeatureBonuses(char, attack) {
+        const out = { flatBonus: 0, extraRolls: [], rerollLowDice: false, rollTwiceTakeBest: false };
+        if (!char || !attack) return out;
+
+        const charClass = (char.charClass || '').replace(/\s+\d+$/, '').trim();
+        const charLevel = parseInt((char.charClass || '').match(/(\d+)$/)?.[1] || String(char.level || 1), 10);
+        const isMelee = attack.type === 'melee-weapon';
+        const styles  = char.fightingStyles || [];
+        const feats   = char.feats || [];
+
+        if (isMelee && styles.includes('Dueling'))
+          out.flatBonus += 2;
+
+        if (isMelee && styles.includes('Great Weapon Fighting'))
+          out.rerollLowDice = true;
+
+        if (isMelee && feats.includes('Savage Attacker'))
+          out.rollTwiceTakeBest = true;
+
+        if (isMelee && charClass === 'Paladin' && charLevel >= 11)
+          out.extraRolls.push({ notation: '1d8', label: 'Radiant (Improved Divine Smite)' });
+
+        return out;
+      }
+
+      /**
+       * Like rollDice() but supports:
+       *   rerollLowDice     – GWF: reroll each die that shows 1 or 2 (must use new roll)
+       *   rollTwiceTakeBest – SA: roll all dice twice, take the higher total
+       * Both flags can be active at the same time (GWF applied on each individual roll).
+       */
+      function rollDiceWithFeatures(notation, description, { rerollLowDice = false, rollTwiceTakeBest = false } = {}) {
+        if (!rerollLowDice && !rollTwiceTakeBest) return rollDice(notation, description);
+
+        const parsed = parseDiceNotation(notation);
+        if (!parsed) return rollDice(notation, description);
+        const { count, sides, modifier } = parsed;
+
+        function rollOnce() {
+          return Array.from({ length: count }, () => {
+            const r = rollDie(sides);
+            return (rerollLowDice && r <= 2) ? rollDie(sides) : r;
+          });
+        }
+
+        const rolls1 = rollOnce();
+        let finalRolls, descSuffix = '';
+
+        if (rollTwiceTakeBest) {
+          const rolls2 = rollOnce();
+          const t1 = rolls1.reduce((a, b) => a + b, 0);
+          const t2 = rolls2.reduce((a, b) => a + b, 0);
+          if (t1 >= t2) { finalRolls = rolls1; descSuffix = ` [SA: ${t1} vs ${t2}]`; }
+          else          { finalRolls = rolls2; descSuffix = ` [SA: ${t2} vs ${t1}]`; }
+        } else {
+          finalRolls = rolls1;
+        }
+        if (rerollLowDice) descSuffix += ' [GWF]';
+
+        const total = finalRolls.reduce((a, b) => a + b, 0) + modifier;
+        const result = {
+          notation,
+          description: description + descSuffix,
+          rolls: finalRolls,
+          modifier,
+          total,
+          timestamp: new Date().toISOString(),
+        };
+        addToRollHistory(result);
+        return result;
+      }
+
       function rollDice(notation, description = '') {
         const parsed = parseDiceNotation(notation);
         if (!parsed) {
@@ -383,39 +497,58 @@
         const attack = currentAttackList[attackIndex];
         if (!attack.damage) return;
 
+        // Apply always-on feature bonuses
+        const char = getCurrentCharacter();
+        const { flatBonus, extraRolls, rerollLowDice, rollTwiceTakeBest } = getAttackFeatureBonuses(char, attack);
+        const notation = flatBonus ? addFlatBonusToNotation(attack.damage, flatBonus) : attack.damage;
+        const features = { rerollLowDice, rollTwiceTakeBest };
+
         const damageType = attack.damageType || 'Damage';
-        const description = `${attack.name} - ${damageType}`;
+        const bonusSuffix = flatBonus ? ` +${flatBonus}` : '';
+        const description = `${attack.name} - ${damageType}${bonusSuffix}`;
+
+        // Ask about concentration bonus before rolling so it's clear which attack it applies to
+        const concBonus = getConcentrationAttackBonus();
+        const applyConc = concBonus ? confirm(concBonus.prompt) : false;
 
         if (rollType === 'critical') {
-          // Critical hit: double the dice (not the modifier)
-          const parsed = parseDiceNotation(attack.damage);
-          if (!parsed) {
-            console.error('Invalid dice notation:', attack.damage);
-            return null;
-          }
-
+          const parsed = parseDiceNotation(notation);
+          if (!parsed) { console.error('Invalid dice notation:', notation); return null; }
           const { count, sides, modifier } = parsed;
-          const critCount = count * 2;
-          const critNotation = `${critCount}d${sides}${modifier >= 0 ? '+' : ''}${modifier}`;
-          return rollDice(critNotation, `${description} (CRIT!)`);
+          const critNotation = `${count * 2}d${sides}${modifier >= 0 ? '+' : ''}${modifier}`;
+          // GWF and SA apply to doubled crit dice too
+          const result = rollDiceWithFeatures(critNotation, `${description} (CRIT!)`, features);
+          extraRolls.forEach(({ notation: en, label }) => {
+            const p = parseDiceNotation(en);
+            const critEn = p ? `${p.count * 2}d${p.sides}${p.modifier >= 0 ? '+' : ''}${p.modifier}` : en;
+            rollDice(critEn, `${attack.name} - ${label} (CRIT!)`);
+          });
+          if (applyConc) rollDice(concBonus.notation, `${attack.name} - ${concBonus.label}`);
+          return result;
         } else if (rollType === 'half') {
-          // Half damage (resistance)
-          const result = rollDice(attack.damage, description);
+          const result = rollDiceWithFeatures(notation, description, features);
           if (result) {
-            const halfTotal = Math.floor(result.total / 2);
             addToRollHistory({
-              notation: 'Resistance',
-              description: `${description} (Halved)`,
-              rolls: [],
-              modifier: 0,
-              total: halfTotal,
+              notation: 'Resistance', description: `${description} (Halved)`,
+              rolls: [], modifier: 0, total: Math.floor(result.total / 2),
               timestamp: new Date().toISOString()
             });
           }
+          extraRolls.forEach(({ notation: en, label }) => {
+            const r = rollDice(en, `${attack.name} - ${label}`);
+            if (r) addToRollHistory({
+              notation: 'Resistance', description: `${attack.name} - ${label} (Halved)`,
+              rolls: [], modifier: 0, total: Math.floor(r.total / 2),
+              timestamp: new Date().toISOString()
+            });
+          });
+          if (applyConc) rollDice(concBonus.notation, `${attack.name} - ${concBonus.label}`);
           return result;
         } else {
-          // Normal damage
-          return rollDice(attack.damage, description);
+          const result = rollDiceWithFeatures(notation, description, features);
+          extraRolls.forEach(({ notation: en, label }) => rollDice(en, `${attack.name} - ${label}`));
+          if (applyConc) rollDice(concBonus.notation, `${attack.name} - ${concBonus.label}`);
+          return result;
         }
       }
 
@@ -5567,6 +5700,9 @@
       window.saveCurrentCharacter = saveCurrentCharacter;
       window.loadCharacterIntoForm = fillFormFromCharacter;
       window.updateSpellSlotsDisplay = updateSpellSlotsDisplay;
+      window.getAttackFeatureBonuses    = getAttackFeatureBonuses;
+      window.addFlatBonusToNotation     = addFlatBonusToNotation;
+      window.getConcentrationAttackBonus = getConcentrationAttackBonus;
 
       if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', init);

@@ -1,15 +1,13 @@
 const DM_TOOLBOX_BUILD = {
   name: "The DM's Toolbox",
-  version: "2.1.3",
+  version: "2.1.4",
   recentChanges: [
-    "Spell upcast picker – casting a leveled spell in combat view with multiple slot options now opens a level picker modal showing remaining slots and a live damage preview (e.g. Fireball: 3rd→8d6, 4th→9d6, 5th→10d6)",
-    "Upcast damage scaling – 24 SRD spells (Fireball, Cure Wounds, Hellish Rebuke, Thunderwave, etc.) now auto-scale their damage or healing dice when cast above base level",
-    "Pact slot upcast support – Warlocks can cast any known spell at their pact slot level with correct upcast damage; pact slots appear as a named option in the picker alongside regular slots",
-    "Warlock pact slot fix – combat view no longer shows a spurious 'No level X spell slots' alert for Warlocks when pact slots are available to cover that spell level",
-    "Class resources in combat view – Ki Points, Rage, Bardic Inspiration, and other named resources now appear in the combat Resources panel with +/− buttons",
-    "Concentration check modal – tapping the Concentrating badge opens a modal to roll a CON saving throw (with live DC calculation from damage) or end concentration",
-    "Combined spell roll toast – casting an attack spell shows one toast with both the attack roll and damage, lasting 6 seconds",
-    "Dice roll history modal fixed – roll description, notation, and individual dice now display correctly in the Roll History modal"
+    "Feature damage automation Phase 1 – Agonizing Blast adds CHA×beams to Eldritch Blast, Dueling adds +2 to melee damage, Improved Divine Smite auto-rolls 1d8 radiant after every Paladin 11+ melee hit",
+    "Feature damage automation Phase 2 – concentrating on Hex, Hunter's Mark, or Spirit Shroud prompts to add the bonus die (+1d6 / +1d6 / +1d8) to each weapon or spell-attack roll",
+    "Feature damage automation Phase 3 – Great Weapon Fighting rerolls 1s and 2s on damage dice [GWF]; Savage Attacker rolls twice and keeps the higher total [SA: X vs Y]",
+    "Cantrip damage scaling – cantrip dice scale automatically with character level (+1 die at 5, +2 at 11, +3 at 17) in both combat view and the regular sheet",
+    "Pact slot support on the regular sheet – Warlocks can now cast leveled spells from the character sheet using the same upcast picker, slot tracking, and dice preview as the combat view",
+    "Magic Missile fix – upcast now correctly adds one dart (+1d4+1) per slot level above 1st; rolls 3d4+3 at 1st through 9d4+9 at 9th"
   ],
   buildTime: new Date().toISOString(),
   author: "Maybeme"
