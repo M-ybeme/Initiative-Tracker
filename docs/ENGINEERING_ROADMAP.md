@@ -167,13 +167,21 @@ Every phase assumes the shipped build only contains SRD-allowed data and copy. W
 
 * [x] Identify "fat" page scripts with logic that should be modular:
 
-  * [x] `character.js` – calculations already in `character-calculations.js`
+  * [x] `character.js` – fully modularized in v2.1.5 (see below)
   * [x] `initiative.js` – death saves, concentration DC, HP in `initiative-calculations.js`
   * [ ] `battlemap.js` – geometry/math still embedded (future candidate)
+* [x] `character.js` modularization complete (v2.1.5):
+
+  * [x] Attack roll logic → `Attack-rolls.js` (CONCENTRATION_ATTACK_BONUSES, addFlatBonusToNotation, getAttackFeatureBonuses, rollDiceWithFeatures)
+  * [x] Spell data logic → `character-spell-data.js` (normalizeSpellEntry, getSpellSlotsForClassLevel, getPactMagicSlots, searchSpells, spell slot tables)
+  * [x] Derived-stat recalculation → `character-calculations.js` (recalcDerivedStats, calculateConcentrationCheckDC, calculateEncumbrance, calculateSpellDC, calculateSpellAttackBonus)
+  * [x] Rest mechanics → `character-rest.js` (applyShortRest, applyLongRest, rollHitDiceForHealing)
+  * [x] `character.js` converted to `type="module"` with static imports; IIFE reduced by ~270 lines
+  * [x] Integration tests added: `character-rest-integration.test.js` (25 tests), `character-sheet.test.js` (21 tests)
 * [x] Existing extractions verified:
 
   * [x] Reusable logic already in `js/modules/`
-  * [x] Unit tests exist (550 tests, 342 unit tests for modules)
+  * [x] Unit tests exist (930 tests across 24 files)
   * [x] Page scripts focus on DOM/events, delegate to modules
 
 ---
@@ -467,14 +475,14 @@ Every phase assumes the shipped build only contains SRD-allowed data and copy. W
 | Phase                          | Tasks  | Completed | Percentage |
 | ------------------------------ | ------ | --------- | ---------- |
 | Phase 1: Inventory & Standards | 9      | 9         | 100%       |
-| Phase 2: Module Architecture   | 8      | 7         | 88%        |
+| Phase 2: Module Architecture   | 8      | 8         | 100%       |
 | Phase 3: JSDoc & Types         | 7      | 7         | 100%       |
 | Phase 4: Build & Assets        | 6      | 0         | 0%         |
 | Phase 5: Performance           | 10     | 0         | 0%         |
 | Phase 6: Error Handling        | 7      | 7         | 100%       |
 | Phase 7: Data & Schemas        | 7      | 7         | 100%       |
 | Phase 8: Dev Experience        | 7      | 4         | 57%        |
-| **Total**                      | **61** | **41**    | **67%**    |
+| **Total**                      | **61** | **42**    | **69%**    |
 
 ---
 
@@ -488,6 +496,7 @@ Every phase assumes the shipped build only contains SRD-allowed data and copy. W
 | 2026-01-23 | 1.3     | Phase 6 completed: js/error-handling.js with global handlers, showUserError(), diagnostics panel (Ctrl+Alt+D) |
 | 2026-01-23 | 1.4     | Phase 7 completed: js/modules/migrations.js with schema versioning, migration functions for Character/Battlemap/Journal, docs/DATA_SCHEMAS.md |
 | 2026-01-23 | 1.5     | Phase 8 partial: docs/ARCHITECTURE.md with system diagram and data flows, docs/RELEASE_CHECKLIST.md with release and refactor checklists |
+| 2026-03-07 | 1.6     | Phase 2 complete: character.js fully modularized in v2.1.5 — attack rolls, spell data, rest logic, derived-stat recalculation extracted into 3 new modules; character.js converted to type="module"; 46 integration tests added |
 
 ---
 

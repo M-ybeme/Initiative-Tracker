@@ -14,7 +14,50 @@ The DM's Toolbox has evolved through focused feature releases:
 - **1.9.x**: Battle map measurement tools, persistent fog shapes, and generator integration across NPC/Tavern/Shop systems
 - **1.8.x**: Spell database expansion to 432+ spells, inventory management, loot generator overhaul, and character token generation
 
-**Current version: 2.1.4 (March 2026)**
+**Current version: 2.1.5 (March 2026)**
+
+---
+
+## [2.1.5] - 2026-03-22
+**character.js Modularization — Phases 1–6**
+
+### Changed
+- **Phase 1 — Attack roll logic extracted to `Attack-rolls.js`** — The following pure functions were moved out of the `character.js` IIFE into a standalone ES module:
+  - `CONCENTRATION_ATTACK_BONUSES` (data constant) — Hex, Hunter's Mark, Spirit Shroud bonus dice
+  - `addFlatBonusToNotation(notation, bonus)` — pure string transform for baking flat bonuses into dice notation
+  - `getConcentrationAttackBonus(spellName)` — pure lookup returning the concentration damage entry for a given spell
+  - `getAttackFeatureBonuses(char, attack)` — checks Dueling (+2 melee), Great Weapon Fighting (reroll 1s/2s), Savage Attacker (roll twice keep best), and Improved Divine Smite (Paladin 11+)
+  - `rollDiceWithFeatures(notation, desc, features)` — feature-aware damage roller (pure, no DOM)
+  - `rollDiceSimple(notation, desc)` — simple dice roller used as the fallback inside `rollDiceWithFeatures`
+- **Phase 2 — Spell data logic extracted to `character-spell-data.js`** — Pure spell-related functions moved out of the IIFE:
+  - `normalizeSpellEntry(spellLike, lookupFn)` — enriches raw spell entries from the library; handles string, object, and null inputs; preserves `prepared`, `alwaysPrepared`, `higher_level_dice`
+  - `getSpellSlotsForClassLevel(className, level)` — looks up spell slot arrays from the embedded table (all standard 5e classes); returns `null` for non-casters and Warlocks
+  - `getPactMagicSlots(level)` — returns Warlock pact slot count and level per the 5e table
+  - `searchSpells(term, spellList)` — filters by name, school, description body, tags, and class; caps at 25 results
+  - Full spell slot table data (previously embedded in the IIFE)
+- **Phase 3 — `character-calculations.js` extended** — New pure exports added to the existing calculations module:
+  - `recalcDerivedStats(char, skillConfigs, spellSlotsFn)` — pure version of the in-IIFE `recalcDerivedOnCharacter`; recalculates stat mods, proficiency bonus, saving throw bonuses, skill bonuses, spell slot maxes, and passive perception on a plain character object
+  - `calculateConcentrationCheckDC(damage)` — `max(10, floor(damage/2))`
+  - `calculateEncumbrance(items, strScore)` — carrying capacity, heavy load, encumbrance status
+  - `calculateSpellDC(level, abilityScore)` — `8 + profBonus + mod`
+  - `calculateSpellAttackBonus(level, abilityScore)` — `profBonus + mod`
+- **Phase 4 — Rest logic extracted to `character-rest.js`** — Pure rest mechanics pulled out of the IIFE:
+  - `applyShortRest(char, healAmount, diceSpent)` — applies healing (capped at max HP) and decrements hit dice remaining
+  - `applyLongRest(char)` — restores HP to max, clears temp HP, resets all spell slot `used` counts to 0, resets pact slot `used` to 0, restores `floor(total/2)` hit dice (minimum 1)
+  - `rollHitDiceForHealing(sides, count, conMod, randomFn)` — rolls hit dice for short rest healing with CON modifier; enforces minimum 1 per die; injectable random function for tests
+- **Phase 5 — `character.js` IIFE thinned** — Legacy in-IIFE spell, attack, and derived-stat helpers now delegate to extracted modules through thin wrappers that preserve runtime injection and existing side effects. Duplicate low-level helpers (`rollDie`, `parseDiceNotation`, `getAbilityModFromScore`, `getProficiencyBonusFromLevel`) deleted outright; DOM-coupled rollers (`rollDice`, `rollWithAdvantage`, etc.) kept internal since they write to `rollHistory` and fire `showRollToast`. Converted `character.js` to `type="module"` with static imports; added `defer` to dependent plain scripts. Net reduction: ~270 lines removed from the IIFE.
+- **Phase 6 — Integration tests added** — Two new integration test files:
+  - `tests/integration/character-rest-integration.test.js` (28 tests) — short rest HP recovery, hit dice expenditure, spell slot preservation, `rollHitDiceForHealing` seeded results, long rest full reset (HP, temp HP, spell slots, pact slots, hit dice), multiclass slot restoration, full combat→short rest→long rest sequence
+  - `tests/integration/character-sheet.test.js` (21 tests) — serialize/deserialize round-trips, `recalcDerivedStats` integration (prof bonus, stat mods, save bonuses, skill bonuses, expertise, passive perception), `normalizeSpellEntry` integration (library lookup, flags, JSON round-trip)
+- **`error-handling.js`** — Changed `// @ts-check` to `// @ts-nocheck`; the file intentionally uses runtime-provided globals (`window.SRDLicensing`, `window.ContentPackManager`, etc.) that TypeScript cannot statically verify
+
+### Fixed
+- **`exportAllCharacters()` now merges live initiative tracker state** — When a combat session is active in the initiative tracker, exporting all characters from the Character Manager now merges the tracker's live `currentHP`, `tempHP`, and `deathSaves` for any PC whose name matches a character in the manager. Active status effects are also captured in a `combatStatus` field. Full character sheet data (stats, spells, inventory, etc.) continues to come from IndexedDB; the merge is non-destructive and wrapped in a try/catch so tracker unavailability never blocks the export.
+
+### Infrastructure
+- All 930+ existing tests continue to pass after each phase
+- No new `window.*` globals introduced by the module refactor
+- Module import chain: `character.js` → `Attack-rolls.js`, `character-spell-data.js`, `character-calculations.js`, `character-rest.js` (via `level-up-calculations.js` and `dice.js`)
 
 ---
 

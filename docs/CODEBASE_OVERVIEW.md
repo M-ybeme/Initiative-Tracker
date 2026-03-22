@@ -48,11 +48,20 @@ This document provides a comprehensive inventory of **The DM's Toolbox** codebas
 │       ├── dice.js                    # Dice rolling engine
 │       ├── storage.js                 # Character serialization
 │       ├── validation.js              # D&D 5e data validation
-│       ├── character-calculations.js  # Character mechanics
+│       ├── character-calculations.js  # Character mechanics + derived-stat recalc
+│       ├── Attack-rolls.js  # Attack feature bonuses, notation helpers
+│       ├── character-spell-data.js    # Spell slot tables, normalization, search
+│       ├── character-rest.js          # Short/long rest mechanics
+│       ├── character-combat.js        # Combat card helpers
+│       ├── character-xp.js            # XP tracking and thresholds
 │       ├── initiative-calculations.js # Combat calculations
 │       ├── level-up-calculations.js   # Multiclass/leveling math
 │       ├── spell-utils.js             # Spell slot management
 │       ├── generators.js              # Random generation utilities
+│       ├── migrations.js              # Schema versioning and migration
+│       ├── content-pack-manager.js    # Content pack loading/merging
+│       ├── content-pack-runtime.js    # Applies pack records to window data
+│       ├── srd-content-filter.js      # SRD allowlist enforcement
 │       └── export-utils.js            # Export formatting
 ├── data/
 │   ├── README.md                      # Data bundle conventions
@@ -140,13 +149,19 @@ These scripts are loaded directly by HTML pages and contain UI logic.
 - Uses IndexedDB for portrait storage
 
 **Dependencies:**
+- `js/modules/dice.js` - Dice rolling (imported directly via ES module)
+- `js/modules/character-calculations.js` - D&D mechanics, `recalcDerivedStats`
+- `js/modules/Attack-rolls.js` - Attack feature bonuses, notation helpers
+- `js/modules/character-spell-data.js` - Spell slot tables, normalization, search
+- `js/modules/character-rest.js` - Short/long rest mechanics
 - `js/modules/storage.js` - Serialization
 - `js/modules/validation.js` - Data validation
-- `js/modules/character-calculations.js` - D&D mechanics
 - `js/modules/export-utils.js` - Export formatting
 - `js/indexed-db-storage.js` - Portrait storage
 - `data/srd/spells-data.js` - Spell database
 - `data/srd/level-up-data.js` - Class/feat data
+
+**Note:** `character.js` is loaded as `type="module"` and imports from the modules above directly. `multiclass-ui.js` and `character-sheet-export.js` use `defer` to ensure correct load order.
 
 ---
 
@@ -347,16 +362,82 @@ Pure logic modules under `js/modules/`. These do not touch the DOM.
 - Proficiency bonus from level
 - Skill bonuses with proficiency
 - Armor Class calculation
-- Initiative bonus calculation
 - Passive perception and other passives
+- Full derived-stat recalculation on a character object
+- Concentration check DC, spell DC/attack bonus, encumbrance
 
 **Exports:**
 - `getAbilityModifier(score)` - (score - 10) / 2
 - `getProficiencyBonus(level)` - Proficiency by total level
-- `getSkillBonus(character, skill)` - Skill modifier
-- `getPassivePerception(character)` - 10 + perception
-- `calculateAC(character, equipment)` - AC from armor/DEX
-- `calculateInitiative(character)` - Initiative modifier
+- `getSkillBonus(abilityScore, proficient, level, expertise)` - Skill modifier
+- `getPassivePerception(wisdomScore, proficient, level, expertise)` - 10 + perception
+- `recalcDerivedStats(char, skillConfigs, spellSlotsFn)` - Recalculates all derived fields on a plain character object (stat mods, prof bonus, save/skill bonuses, spell slot maxes, passive perception)
+- `calculateConcentrationCheckDC(damage)` - max(10, floor(damage/2))
+- `calculateEncumbrance(items, strScore)` - Carrying capacity and status
+- `calculateSpellDC(level, abilityScore)` - 8 + profBonus + mod
+- `calculateSpellAttackBonus(level, abilityScore)` - profBonus + mod
+- `getBarbarianUnarmoredAC`, `getMonkUnarmoredAC`, `getArmoredAC` - AC variants
+- `getLevel1HP`, `getLevelUpHP`, `getTotalHP`, `getMulticlassHP` - HP calculations
+
+**Dependencies:** None
+
+---
+
+### Attack-rolls.js
+
+**Location:** `/js/modules/Attack-rolls.js`
+
+**Responsibilities:**
+- Weapon attack feature bonuses (always-on)
+- Dice notation manipulation
+- Feature-aware damage rolling (GWF, Savage Attacker)
+- Concentration spell bonus lookup data
+
+**Exports:**
+- `CONCENTRATION_ATTACK_BONUSES` - Data constant for Hex, Hunter's Mark, Spirit Shroud
+- `getConcentrationAttackBonus(spellName)` - Returns bonus entry for a concentration spell
+- `getAttackFeatureBonuses(char, attack)` - Dueling (+2 melee), GWF (reroll 1s/2s), Savage Attacker (roll twice), Improved Divine Smite (Paladin 11+)
+- `addFlatBonusToNotation(notation, bonus)` - Bakes a flat bonus into a dice notation string
+- `rollDiceSimple(notation, description, randomFn)` - Pure dice roll, no side effects
+- `rollDiceWithFeatures(notation, description, features, randomFn)` - Feature-aware roll (pure)
+
+**Dependencies:** `dice.js`
+
+---
+
+### character-spell-data.js
+
+**Location:** `/js/modules/character-spell-data.js`
+
+**Responsibilities:**
+- Spell slot tables for all standard 5e classes
+- Pact magic (Warlock) slot tables
+- Spell entry normalization and enrichment
+- Spell search/filtering
+
+**Exports:**
+- `getSpellSlotsForClassLevel(className, level)` - Returns slot array `[1st..9th]` for a class at a given level; null for non-casters/Warlocks
+- `getPactMagicSlots(level)` - Returns `{ count, level }` for Warlock pact slots
+- `normalizeSpellEntry(spellLike, lookupFn)` - Enriches a raw spell entry from the library; preserves `prepared`, `alwaysPrepared`, `higher_level_dice`
+- `searchSpells(term, spellList)` - Filters by name, school, body, tags, class; caps at 25 results
+
+**Dependencies:** None
+
+---
+
+### character-rest.js
+
+**Location:** `/js/modules/character-rest.js`
+
+**Responsibilities:**
+- Short rest HP recovery and hit dice tracking
+- Long rest full reset (HP, spell slots, pact slots, hit dice)
+- Hit dice rolling for short rest healing
+
+**Exports:**
+- `applyShortRest(char, healAmount, diceSpent)` - Applies healing (capped at maxHP) and decrements hit dice remaining
+- `applyLongRest(char)` - Restores HP to max, clears temp HP, resets all spell slot `used` to 0, resets pact slot `used` to 0, restores `floor(total/2)` hit dice (minimum 1)
+- `rollHitDiceForHealing(sides, count, conMod, randomFn)` - Rolls hit dice with CON modifier; minimum 1 per die; injectable random function for tests
 
 **Dependencies:** None
 
@@ -598,12 +679,16 @@ Pages (UI Layer)
 │   │   └── modules/level-up-calculations.js
 │   ├── multiclass-ui.js
 │   │   └── modules/level-up-calculations.js
-│   ├── character.js
+│   ├── character.js  [type="module"]
+│   │   └── modules/dice.js
+│   │   └── modules/character-calculations.js
+│   │   └── modules/Attack-rolls.js
+│   │   └── modules/character-spell-data.js
+│   │   └── modules/character-rest.js
 │   │   └── modules/storage.js
 │   │   └── modules/validation.js
-│   │   └── modules/character-calculations.js
 │   │   └── modules/export-utils.js
-│   └── character-sheet-export.js
+│   └── character-sheet-export.js  [defer]
 │       └── modules/export-utils.js
 │
 ├── initiative.html
@@ -633,10 +718,17 @@ Core Modules (Logic Layer) - No DOM access
 ├── storage.js
 ├── validation.js
 ├── character-calculations.js
+├── Attack-rolls.js
+│   └── dice.js
+├── character-spell-data.js
+├── character-rest.js
+├── character-combat.js
+├── character-xp.js
 ├── initiative-calculations.js
 ├── level-up-calculations.js
 ├── spell-utils.js
 ├── generators.js
+├── migrations.js
 └── export-utils.js
     └── character-calculations.js
 
@@ -652,3 +744,4 @@ Storage Layer
 | Date | Version | Changes |
 |------|---------|---------|
 | 2026-01-23 | 1.0 | Initial codebase overview |
+| 2026-03-07 | 1.1 | Added Attack-rolls.js, character-spell-data.js, character-rest.js; updated character.js dependencies and dependency graph to reflect 2.1.5 modularization; added character-combat.js, character-xp.js, migrations.js, content-pack modules to project structure |

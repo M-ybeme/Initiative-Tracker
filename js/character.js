@@ -1,3 +1,8 @@
+import { rollDie, parseDiceNotation } from './modules/dice.js';
+import { getAbilityModifier, getProficiencyBonus, recalcDerivedStats } from './modules/character-calculations.js';
+import { getAttackFeatureBonuses as _getAttackFeatureBonuses, addFlatBonusToNotation as _addFlatBonusToNotation, getConcentrationAttackBonus as _getConcentrationAttackBonus } from '../Attack-rolls.js';
+import { getSpellSlotsForClassLevel as _getSpellSlotsForClassLevel, getPactMagicSlots as _getPactMagicSlots, normalizeSpellEntry as _normalizeSpellEntry, searchSpells as _searchSpells } from './modules/character-spell-data.js';
+
 (function () {
       const STORAGE_KEY = 'dmtoolboxCharactersV1';
       const USE_INDEXED_DB = IndexedDBStorage && IndexedDBStorage.isSupported();
@@ -14,44 +19,8 @@
       const rollHistory = [];
       const MAX_ROLL_HISTORY = 50;
 
-      function rollDie(sides) {
-        return Math.floor(Math.random() * sides) + 1;
-      }
-
-      function parseDiceNotation(notation) {
-        // Parse notation like "2d6+3", "1d20", "d8+2", or with spaces/parentheses like "(1d6 + 6)"
-        const match = notation.trim().match(/^\s*\(?\s*(\d*)d(\d+)\s*([+-]\s*\d+)?\s*\)?\s*$/i);
-        if (!match) return null;
-
-        const count = match[1] ? parseInt(match[1], 10) : 1;
-        const sides = parseInt(match[2], 10);
-        let modifier = 0;
-        if (match[3]) {
-          const modStr = match[3].replace(/\s+/g, '');
-          modifier = parseInt(modStr, 10) || 0;
-        }
-
-        return { count, sides, modifier };
-      }
-
       /** Adds a flat bonus to a dice notation string: "1d8+3" + 2 → "1d8+5" */
-      function addFlatBonusToNotation(notation, bonus) {
-        if (!bonus) return notation;
-        const m = notation.trim().match(/^(\d*d\d+)([+-]\d+)?$/i);
-        if (!m) return notation;
-        const newMod = parseInt(m[2] || '0', 10) + bonus;
-        return `${m[1]}${newMod > 0 ? '+' + newMod : newMod < 0 ? String(newMod) : ''}`;
-      }
-
-      /**
-       * Concentration spells that add bonus damage to every attack roll while active.
-       * keyed by lowercase spell name matching window.currentConcentrationSpell.
-       */
-      const CONCENTRATION_ATTACK_BONUSES = {
-        'hex':            { notation: '1d6', label: 'Necrotic (Hex)',          prompt: 'Concentrating on Hex — add +1d6 Necrotic to this attack?' },
-        "hunter's mark":  { notation: '1d6', label: "Weapon (Hunter's Mark)",  prompt: "Concentrating on Hunter's Mark — add +1d6 to this attack?" },
-        'spirit shroud':  { notation: '1d8', label: 'Spirit Shroud',           prompt: 'Concentrating on Spirit Shroud — add +1d8 to this attack?' },
-      };
+      const addFlatBonusToNotation = _addFlatBonusToNotation;
 
       /**
        * Returns the concentration attack bonus entry if the character is concentrating
@@ -59,8 +28,7 @@
        */
       function getConcentrationAttackBonus() {
         if (!isConcentrating()) return null;
-        const key = (window.currentConcentrationSpell || '').toLowerCase().trim();
-        return CONCENTRATION_ATTACK_BONUSES[key] || null;
+        return _getConcentrationAttackBonus(window.currentConcentrationSpell);
       }
 
       /**
@@ -76,30 +44,7 @@
        * rerollLowDice     – GWF: reroll any die showing 1 or 2, must use new roll
        * rollTwiceTakeBest – Savage Attacker: roll all dice twice, keep higher total
        */
-      function getAttackFeatureBonuses(char, attack) {
-        const out = { flatBonus: 0, extraRolls: [], rerollLowDice: false, rollTwiceTakeBest: false };
-        if (!char || !attack) return out;
-
-        const charClass = (char.charClass || '').replace(/\s+\d+$/, '').trim();
-        const charLevel = parseInt((char.charClass || '').match(/(\d+)$/)?.[1] || String(char.level || 1), 10);
-        const isMelee = attack.type === 'melee-weapon';
-        const styles  = char.fightingStyles || [];
-        const feats   = char.feats || [];
-
-        if (isMelee && styles.includes('Dueling'))
-          out.flatBonus += 2;
-
-        if (isMelee && styles.includes('Great Weapon Fighting'))
-          out.rerollLowDice = true;
-
-        if (isMelee && feats.includes('Savage Attacker'))
-          out.rollTwiceTakeBest = true;
-
-        if (isMelee && charClass === 'Paladin' && charLevel >= 11)
-          out.extraRolls.push({ notation: '1d8', label: 'Radiant (Improved Divine Smite)' });
-
-        return out;
-      }
+      const getAttackFeatureBonuses = _getAttackFeatureBonuses;
 
       /**
        * Like rollDice() but supports:
@@ -744,91 +689,12 @@
       }
 
       // ---------- Auto-calculation helpers ----------
-      // Standard 5e modifier from ability score
-      function getAbilityModFromScore(score) {
-        const n = typeof score === 'number' ? score : Number(score);
-        if (!Number.isFinite(n)) return 0;
-        return Math.floor((n - 10) / 2);
-      }
-
-      // 5e proficiency bonus from level
-      function getProficiencyBonusFromLevel(level) {
-        const lv = Number(level) || 1;
-        if (lv >= 17) return 6;
-        if (lv >= 13) return 5;
-        if (lv >= 9) return 4;
-        if (lv >= 5) return 3;
-        return 2;
-      }
+      const getAbilityModFromScore = getAbilityModifier;
+      const getProficiencyBonusFromLevel = getProficiencyBonus;
 
       // Update derived values on the *character object*
       function recalcDerivedOnCharacter(char) {
-        if (!char) return;
-
-        const stats = char.stats || {};
-        const level = char.level || 1;
-
-        const mods = {
-          str: getAbilityModFromScore(stats.str),
-          dex: getAbilityModFromScore(stats.dex),
-          con: getAbilityModFromScore(stats.con),
-          int: getAbilityModFromScore(stats.int),
-          wis: getAbilityModFromScore(stats.wis),
-          cha: getAbilityModFromScore(stats.cha)
-        };
-        char.statMods = mods;
-
-        const pb = getProficiencyBonusFromLevel(level);
-        char.proficiencyBonus = pb;
-
-        // Recalculate saving throw bonuses from prof flags + ability mods (never store stale values)
-        if (char.savingThrows) {
-          ['str', 'dex', 'con', 'int', 'wis', 'cha'].forEach(ab => {
-            if (char.savingThrows[ab]) {
-              char.savingThrows[ab].bonus = mods[ab] + (char.savingThrows[ab].prof ? pb : 0);
-            }
-          });
-        }
-
-        // Recalculate skill bonuses from prof/exp flags + ability mods (SKILL_CONFIGS is in scope)
-        if (char.skills && typeof SKILL_CONFIGS !== 'undefined') {
-          SKILL_CONFIGS.forEach(cfg => {
-            const sk = char.skills[cfg.key];
-            if (sk) {
-              const abilMod = mods[cfg.ability] || 0;
-              const profBonus = sk.prof ? pb : 0;
-              const expBonus = (sk.exp && sk.prof) ? pb : 0; // expertise only if also proficient
-              sk.bonus = abilMod + profBonus + expBonus;
-            }
-          });
-        }
-
-        // Recalculate spell slot maxes from class data (single-class only; multiclass uses level-up system)
-        const classNameRaw = (char.charClass || '').replace(/\s+\d+$/, '').trim();
-        const isSingleClass = !char.classes || char.classes.length <= 1;
-        if (classNameRaw && isSingleClass && char.spellSlots && window.LevelUpData && window.LevelUpData.CLASS_DATA) {
-          const classData = window.LevelUpData.CLASS_DATA[classNameRaw];
-          if (classData && classData.spellSlots && classData.spellSlots[level]) {
-            const slots = classData.spellSlots[level];
-            for (let i = 1; i <= 9; i++) {
-              if (char.spellSlots[i]) {
-                char.spellSlots[i].max = slots[i - 1] || 0;
-              }
-            }
-          }
-        }
-
-        const skills = char.skills || {};
-        let perceptionBonus = 0;
-        if (skills.perception && typeof skills.perception.bonus === 'number' && !isNaN(skills.perception.bonus)) {
-          perceptionBonus = skills.perception.bonus;
-        } else {
-          perceptionBonus = mods.wis || 0;
-        }
-
-        char.senses = char.senses || {};
-        char.senses.passivePerception = 10 + (perceptionBonus || 0);
-        char.passivePerception = char.senses.passivePerception;
+        recalcDerivedStats(char, SKILL_CONFIGS, getSpellSlotsForClassLevel);
       }
       
       // Update derived values based purely on current form inputs (live UI updates)
@@ -1109,26 +975,7 @@
       });
 
       function searchSpells(term) {
-        const q = (term || '').trim().toLowerCase();
-        if (!q) return [];
-
-        return getAllSpells().filter(spell => {
-          const name    = (spell.name || '').toLowerCase();
-          const title   = (spell.title || '').toLowerCase();
-          const school  = (spell.school || '').toLowerCase();
-          const body    = (spell.body || '').toLowerCase();
-          const tagsArr = Array.isArray(spell.tags) ? spell.tags : [];
-          const clsArr  = Array.isArray(spell.classes) ? spell.classes : [];
-
-          const inName   = name.includes(q);
-          const inTitle  = title.includes(q);
-          const inSchool = school.includes(q);
-          const inBody   = body.includes(q);
-          const inTags   = tagsArr.some(t => t.toLowerCase().includes(q));
-          const inClass  = clsArr.some(c => c.toLowerCase().includes(q));
-
-          return inName || inTitle || inSchool || inBody || inTags || inClass;
-        }).slice(0, 25);
+        return _searchSpells(term, getAllSpells());
       }
 
       function renderSpellSearchResults(term) {
@@ -1460,92 +1307,11 @@
       }
 
       function normalizeSpellEntry(spellLike) {
-        if (!spellLike) return null;
-
-        // Legacy: name string only
-        if (typeof spellLike === 'string') {
-          const fromLib = getAllSpells().find(s =>
-            (s.name || '').toLowerCase() === spellLike.toLowerCase() ||
-            (s.title || '').toLowerCase() === spellLike.toLowerCase()
-          );
-
-          if (fromLib) {
-            return {
-              name: fromLib.name || fromLib.title || spellLike,
-              title: fromLib.title || fromLib.name || spellLike,
-              level: fromLib.level ?? 0,
-              school: fromLib.school || '',
-              casting_time: fromLib.casting_time || '',
-              range: fromLib.range || '',
-              components: fromLib.components || '',
-              duration: fromLib.duration || '',
-              concentration: !!fromLib.concentration,
-              classes: Array.isArray(fromLib.classes) ? fromLib.classes : [],
-              body: fromLib.body || '',
-              tags: Array.isArray(fromLib.tags) ? fromLib.tags : [],
-              source: 'builtin',
-              ...(fromLib.damage_dice       && { damage_dice:       fromLib.damage_dice }),
-              ...(fromLib.heal_dice         && { heal_dice:         fromLib.heal_dice }),
-              ...(fromLib.save_dc_ability   && { save_dc_ability:   fromLib.save_dc_ability }),
-              ...(fromLib.higher_level_dice && { higher_level_dice: fromLib.higher_level_dice }),
-            };
-          }
-
-          // Fallback bare custom spell
-          return {
-            name: spellLike,
-            title: spellLike,
-            level: 0,
-            school: '',
-            casting_time: '',
-            range: '',
-            components: '',
-            duration: '',
-            concentration: false,
-            classes: [],
-            body: '',
-            tags: [],
-            source: 'custom',
-            prepared: false
-          };
-        }
-
-        // Already an object – normalize fields and optionally merge with library
-        const baseName = spellLike.name || spellLike.title || '';
-        if (!baseName) return null;
-
-        const fromLib = getAllSpells().find(s =>
-          (s.name || '').toLowerCase() === baseName.toLowerCase() ||
-          (s.title || '').toLowerCase() === baseName.toLowerCase()
-        );
-
-        // Library data is authoritative for all system fields (tags, dice, school, etc.)
-        // so that updates to spells-data.js or packs are reflected immediately on load.
-        // Character-specific fields (prepared, alwaysPrepared) come from spellLike.
-        const base = fromLib || spellLike;
-        const castingTime = base.casting_time || base.castingTime || base.casting || '';
-
-        return {
-          name: base.name || base.title || baseName,
-          title: base.title || base.name || baseName,
-          level: base.level ?? 0,
-          school: base.school || '',
-          casting_time: castingTime,
-          range: base.range || '',
-          components: base.components || '',
-          duration: base.duration || '',
-          concentration: !!base.concentration,
-          classes: Array.isArray(base.classes) ? base.classes : [],
-          body: base.body || '',
-          tags: Array.isArray(base.tags) ? base.tags : [],
-          source: spellLike.source || (fromLib ? 'builtin' : 'custom'),
-          prepared: !!(spellLike.prepared ?? base.prepared),
-          ...(spellLike.alwaysPrepared ? { alwaysPrepared: true } : {}),
-          ...(base.damage_dice       && { damage_dice:       base.damage_dice }),
-          ...(base.heal_dice         && { heal_dice:         base.heal_dice }),
-          ...(base.save_dc_ability   && { save_dc_ability:   base.save_dc_ability }),
-          ...(base.higher_level_dice && { higher_level_dice: base.higher_level_dice }),
-        };
+        const spells = getAllSpells();
+        return _normalizeSpellEntry(spellLike, name => spells.find(s =>
+          (s.name || '').toLowerCase() === name.toLowerCase() ||
+          (s.title || '').toLowerCase() === name.toLowerCase()
+        ));
       }
 
       function syncSpellListFromCharacter(char) {
@@ -2701,66 +2467,17 @@
         }
 
       function getSpellSlotsForClassLevel(className, level) {
-        // First try to use LevelUpData if available
+        // First try to use LevelUpData if available (supports homebrew classes via content packs)
         if (window.LevelUpData && typeof window.LevelUpData.getClassData === 'function') {
           const classData = window.LevelUpData.getClassData(className);
           if (classData && classData.spellSlots && classData.spellSlots[level]) {
             return classData.spellSlots[level];
           }
         }
-
-        // Fallback: Use hardcoded spell slot tables (PHB standard progression)
-        // Format: [1st, 2nd, 3rd, 4th, 5th, 6th, 7th, 8th, 9th]
-        const spellSlotTables = {
-          'Wizard': { 1: [2,0,0,0,0,0,0,0,0], 2: [3,0,0,0,0,0,0,0,0], 3: [4,2,0,0,0,0,0,0,0], 4: [4,3,0,0,0,0,0,0,0], 5: [4,3,2,0,0,0,0,0,0], 6: [4,3,3,0,0,0,0,0,0], 7: [4,3,3,1,0,0,0,0,0], 8: [4,3,3,2,0,0,0,0,0], 9: [4,3,3,3,1,0,0,0,0], 10: [4,3,3,3,2,0,0,0,0], 11: [4,3,3,3,2,1,0,0,0], 12: [4,3,3,3,2,1,0,0,0], 13: [4,3,3,3,2,1,1,0,0], 14: [4,3,3,3,2,1,1,0,0], 15: [4,3,3,3,2,1,1,1,0], 16: [4,3,3,3,2,1,1,1,0], 17: [4,3,3,3,2,1,1,1,1], 18: [4,3,3,3,3,1,1,1,1], 19: [4,3,3,3,3,2,1,1,1], 20: [4,3,3,3,3,2,2,1,1] },
-          'Sorcerer': { 1: [2,0,0,0,0,0,0,0,0], 2: [3,0,0,0,0,0,0,0,0], 3: [4,2,0,0,0,0,0,0,0], 4: [4,3,0,0,0,0,0,0,0], 5: [4,3,2,0,0,0,0,0,0], 6: [4,3,3,0,0,0,0,0,0], 7: [4,3,3,1,0,0,0,0,0], 8: [4,3,3,2,0,0,0,0,0], 9: [4,3,3,3,1,0,0,0,0], 10: [4,3,3,3,2,0,0,0,0], 11: [4,3,3,3,2,1,0,0,0], 12: [4,3,3,3,2,1,0,0,0], 13: [4,3,3,3,2,1,1,0,0], 14: [4,3,3,3,2,1,1,0,0], 15: [4,3,3,3,2,1,1,1,0], 16: [4,3,3,3,2,1,1,1,0], 17: [4,3,3,3,2,1,1,1,1], 18: [4,3,3,3,3,1,1,1,1], 19: [4,3,3,3,3,2,1,1,1], 20: [4,3,3,3,3,2,2,1,1] },
-          'Bard': { 1: [2,0,0,0,0,0,0,0,0], 2: [3,0,0,0,0,0,0,0,0], 3: [4,2,0,0,0,0,0,0,0], 4: [4,3,0,0,0,0,0,0,0], 5: [4,3,2,0,0,0,0,0,0], 6: [4,3,3,0,0,0,0,0,0], 7: [4,3,3,1,0,0,0,0,0], 8: [4,3,3,2,0,0,0,0,0], 9: [4,3,3,3,1,0,0,0,0], 10: [4,3,3,3,2,0,0,0,0], 11: [4,3,3,3,2,1,0,0,0], 12: [4,3,3,3,2,1,0,0,0], 13: [4,3,3,3,2,1,1,0,0], 14: [4,3,3,3,2,1,1,0,0], 15: [4,3,3,3,2,1,1,1,0], 16: [4,3,3,3,2,1,1,1,0], 17: [4,3,3,3,2,1,1,1,1], 18: [4,3,3,3,3,1,1,1,1], 19: [4,3,3,3,3,2,1,1,1], 20: [4,3,3,3,3,2,2,1,1] },
-          'Cleric': { 1: [2,0,0,0,0,0,0,0,0], 2: [3,0,0,0,0,0,0,0,0], 3: [4,2,0,0,0,0,0,0,0], 4: [4,3,0,0,0,0,0,0,0], 5: [4,3,2,0,0,0,0,0,0], 6: [4,3,3,0,0,0,0,0,0], 7: [4,3,3,1,0,0,0,0,0], 8: [4,3,3,2,0,0,0,0,0], 9: [4,3,3,3,1,0,0,0,0], 10: [4,3,3,3,2,0,0,0,0], 11: [4,3,3,3,2,1,0,0,0], 12: [4,3,3,3,2,1,0,0,0], 13: [4,3,3,3,2,1,1,0,0], 14: [4,3,3,3,2,1,1,0,0], 15: [4,3,3,3,2,1,1,1,0], 16: [4,3,3,3,2,1,1,1,0], 17: [4,3,3,3,2,1,1,1,1], 18: [4,3,3,3,3,1,1,1,1], 19: [4,3,3,3,3,2,1,1,1], 20: [4,3,3,3,3,2,2,1,1] },
-          'Druid': { 1: [2,0,0,0,0,0,0,0,0], 2: [3,0,0,0,0,0,0,0,0], 3: [4,2,0,0,0,0,0,0,0], 4: [4,3,0,0,0,0,0,0,0], 5: [4,3,2,0,0,0,0,0,0], 6: [4,3,3,0,0,0,0,0,0], 7: [4,3,3,1,0,0,0,0,0], 8: [4,3,3,2,0,0,0,0,0], 9: [4,3,3,3,1,0,0,0,0], 10: [4,3,3,3,2,0,0,0,0], 11: [4,3,3,3,2,1,0,0,0], 12: [4,3,3,3,2,1,0,0,0], 13: [4,3,3,3,2,1,1,0,0], 14: [4,3,3,3,2,1,1,0,0], 15: [4,3,3,3,2,1,1,1,0], 16: [4,3,3,3,2,1,1,1,0], 17: [4,3,3,3,2,1,1,1,1], 18: [4,3,3,3,3,1,1,1,1], 19: [4,3,3,3,3,2,1,1,1], 20: [4,3,3,3,3,2,2,1,1] },
-          'Paladin': { 1: [0,0,0,0,0,0,0,0,0], 2: [2,0,0,0,0,0,0,0,0], 3: [3,0,0,0,0,0,0,0,0], 4: [3,0,0,0,0,0,0,0,0], 5: [4,2,0,0,0,0,0,0,0], 6: [4,2,0,0,0,0,0,0,0], 7: [4,3,0,0,0,0,0,0,0], 8: [4,3,0,0,0,0,0,0,0], 9: [4,3,2,0,0,0,0,0,0], 10: [4,3,2,0,0,0,0,0,0], 11: [4,3,3,0,0,0,0,0,0], 12: [4,3,3,0,0,0,0,0,0], 13: [4,3,3,1,0,0,0,0,0], 14: [4,3,3,1,0,0,0,0,0], 15: [4,3,3,2,0,0,0,0,0], 16: [4,3,3,2,0,0,0,0,0], 17: [4,3,3,3,1,0,0,0,0], 18: [4,3,3,3,1,0,0,0,0], 19: [4,3,3,3,2,0,0,0,0], 20: [4,3,3,3,2,0,0,0,0] },
-          'Ranger': { 1: [0,0,0,0,0,0,0,0,0], 2: [2,0,0,0,0,0,0,0,0], 3: [3,0,0,0,0,0,0,0,0], 4: [3,0,0,0,0,0,0,0,0], 5: [4,2,0,0,0,0,0,0,0], 6: [4,2,0,0,0,0,0,0,0], 7: [4,3,0,0,0,0,0,0,0], 8: [4,3,0,0,0,0,0,0,0], 9: [4,3,2,0,0,0,0,0,0], 10: [4,3,2,0,0,0,0,0,0], 11: [4,3,3,0,0,0,0,0,0], 12: [4,3,3,0,0,0,0,0,0], 13: [4,3,3,1,0,0,0,0,0], 14: [4,3,3,1,0,0,0,0,0], 15: [4,3,3,2,0,0,0,0,0], 16: [4,3,3,2,0,0,0,0,0], 17: [4,3,3,3,1,0,0,0,0], 18: [4,3,3,3,1,0,0,0,0], 19: [4,3,3,3,2,0,0,0,0], 20: [4,3,3,3,2,0,0,0,0] },
-          'Artificer': { 1: [0,0,0,0,0,0,0,0,0], 2: [2,0,0,0,0,0,0,0,0], 3: [3,0,0,0,0,0,0,0,0], 4: [3,0,0,0,0,0,0,0,0], 5: [4,2,0,0,0,0,0,0,0], 6: [4,2,0,0,0,0,0,0,0], 7: [4,3,0,0,0,0,0,0,0], 8: [4,3,0,0,0,0,0,0,0], 9: [4,3,2,0,0,0,0,0,0], 10: [4,3,2,0,0,0,0,0,0], 11: [4,3,3,0,0,0,0,0,0], 12: [4,3,3,0,0,0,0,0,0], 13: [4,3,3,1,0,0,0,0,0], 14: [4,3,3,1,0,0,0,0,0], 15: [4,3,3,2,0,0,0,0,0], 16: [4,3,3,2,0,0,0,0,0], 17: [4,3,3,3,1,0,0,0,0], 18: [4,3,3,3,1,0,0,0,0], 19: [4,3,3,3,2,0,0,0,0], 20: [4,3,3,3,2,0,0,0,0] }
-        };
-
-        // Warlock uses Pact Magic (handled separately)
-        if (className === 'Warlock') {
-          return null;
-        }
-
-        // Return spell slots for the class and level
-        if (spellSlotTables[className] && spellSlotTables[className][level]) {
-          return spellSlotTables[className][level];
-        }
-
-        return null;
+        return _getSpellSlotsForClassLevel(className, level);
       }
 
-      function getPactMagicSlots(level) {
-        // Warlock pact magic progression
-        const pactMagic = {
-          1: { slots: 1, level: 1 },
-          2: { slots: 2, level: 1 },
-          3: { slots: 2, level: 2 },
-          4: { slots: 2, level: 2 },
-          5: { slots: 2, level: 3 },
-          6: { slots: 2, level: 3 },
-          7: { slots: 2, level: 4 },
-          8: { slots: 2, level: 4 },
-          9: { slots: 2, level: 5 },
-          10: { slots: 2, level: 5 },
-          11: { slots: 3, level: 5 },
-          12: { slots: 3, level: 5 },
-          13: { slots: 3, level: 5 },
-          14: { slots: 3, level: 5 },
-          15: { slots: 3, level: 5 },
-          16: { slots: 3, level: 5 },
-          17: { slots: 4, level: 5 },
-          18: { slots: 4, level: 5 },
-          19: { slots: 4, level: 5 },
-          20: { slots: 4, level: 5 }
-        };
-        return pactMagic[level] || null;
-      }
+      const getPactMagicSlots = _getPactMagicSlots;
 
       function fillFormFromWizardData(wizardData) {
         console.log('📝 fillFormFromWizardData called with data:', wizardData);
@@ -3696,7 +3413,38 @@
       }
       function exportAllCharacters() {
         if (!characters.length) return;
-        const dataStr = JSON.stringify(characters, null, 2);
+
+        // Deep-copy characters so we can merge live tracker state without mutating
+        const exportData = characters.map(c => JSON.parse(JSON.stringify(c)));
+
+        // Merge live combat state from initiative tracker if a session is active
+        try {
+          const trackerRaw = localStorage.getItem('initiativeTrackerData');
+          if (trackerRaw) {
+            const trackerData = JSON.parse(trackerRaw);
+            const trackerPCs = (trackerData.characters || []).filter(tc => tc.type === 'PC');
+            if (trackerPCs.length) {
+              for (const tc of trackerPCs) {
+                const match = exportData.find(
+                  c => c.name && tc.name && c.name.trim().toLowerCase() === tc.name.trim().toLowerCase()
+                );
+                if (match) {
+                  // Update live combat fields; full character data stays from IndexedDB
+                  match.currentHP = tc.currentHP ?? match.currentHP;
+                  match.tempHP = tc.tempHP ?? match.tempHP;
+                  match.deathSaves = tc.deathSaves ?? match.deathSaves;
+                  if (Array.isArray(tc.status) && tc.status.length) {
+                    match.combatStatus = tc.status;
+                  }
+                }
+              }
+            }
+          }
+        } catch (e) {
+          console.warn('exportAllCharacters: could not merge tracker state', e);
+        }
+
+        const dataStr = JSON.stringify(exportData, null, 2);
         const blob = new Blob([dataStr], { type: 'application/json' });
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');

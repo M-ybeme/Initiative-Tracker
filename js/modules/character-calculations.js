@@ -197,3 +197,101 @@ export function getMulticlassHP(classes, conScore) {
 
   return totalHP;
 }
+
+export function calculateEncumbrance(items, strScore) {
+  const str = Math.max(1, Number(strScore) || 10);
+  const carryingCapacity = str * 15;
+  const heavyLoad = str * 10;
+  const encumberedThreshold = heavyLoad * 0.66;
+  let totalWeight = 0;
+  (Array.isArray(items) ? items : []).forEach(item => {
+    const quantity = parseInt(item.quantity) || 1;
+    const weight = parseFloat(item.weight) || 0;
+    totalWeight += quantity * weight;
+  });
+  let status;
+  if (totalWeight > carryingCapacity) {
+    status = "over_capacity";
+  } else if (totalWeight > heavyLoad) {
+    status = "heavily_encumbered";
+  } else if (totalWeight > encumberedThreshold) {
+    status = "encumbered";
+  } else {
+    status = "normal";
+  }
+  return { totalWeight, carryingCapacity, heavyLoad, encumberedThreshold, status };
+}
+export function recalcDerivedStats(char, skillConfigs = [], spellSlotsFn = null) {
+  if (!char) return char;
+  const stats = char.stats || {};
+  const level = char.level || 1;
+  const mods = {
+    str: getAbilityModifier(stats.str),
+    dex: getAbilityModifier(stats.dex),
+    con: getAbilityModifier(stats.con),
+    int: getAbilityModifier(stats.int),
+    wis: getAbilityModifier(stats.wis),
+    cha: getAbilityModifier(stats.cha),
+  };
+  char.statMods = mods;
+  const pb = getProficiencyBonus(level);
+  char.proficiencyBonus = pb;
+  if (char.savingThrows) {
+    ["str","dex","con","int","wis","cha"].forEach(ab => {
+      if (char.savingThrows[ab]) {
+        char.savingThrows[ab].bonus = mods[ab] + (char.savingThrows[ab].prof ? pb : 0);
+      }
+    });
+  }
+  if (char.skills && skillConfigs.length > 0) {
+    skillConfigs.forEach(cfg => {
+      const sk = char.skills[cfg.key];
+      if (sk) {
+        const abilMod = mods[cfg.ability] || 0;
+        const profBonus = sk.prof ? pb : 0;
+        const expBonus = (sk.exp && sk.prof) ? pb : 0;
+        sk.bonus = abilMod + profBonus + expBonus;
+      }
+    });
+  }
+  if (typeof spellSlotsFn === "function" && char.spellSlots) {
+    const classNameRaw = (char.charClass || "").replace(/\s+\d+$/, "").trim();
+    const isSingleClass = !char.classes || char.classes.length <= 1;
+    if (classNameRaw && isSingleClass) {
+      const slots = spellSlotsFn(classNameRaw, level);
+      if (slots) {
+        for (let i = 1; i <= 9; i++) {
+          if (char.spellSlots[i]) char.spellSlots[i].max = slots[i - 1] || 0;
+        }
+      }
+    }
+  }
+  const skills = char.skills || {};
+  let perceptionBonus = 0;
+  if (skills.perception && typeof skills.perception.bonus === "number" && !isNaN(skills.perception.bonus)) {
+    perceptionBonus = skills.perception.bonus;
+  } else {
+    perceptionBonus = mods.wis || 0;
+  }
+  char.senses = char.senses || {};
+  char.senses.passivePerception = 10 + perceptionBonus;
+  char.passivePerception = char.senses.passivePerception;
+  return char;
+}
+
+export function calculateConcentrationCheckDC(damage) {
+  const dmg = Math.max(0, Math.floor(Number(damage) || 0));
+  return Math.max(10, Math.floor(dmg / 2));
+}
+
+export function calculateSpellDC(level, abilityScore) {
+  const pb = getProficiencyBonus(level);
+  const mod = getAbilityModifier(abilityScore);
+  return 8 + pb + mod;
+}
+
+export function calculateSpellAttackBonus(level, abilityScore) {
+  const pb = getProficiencyBonus(level);
+  const mod = getAbilityModifier(abilityScore);
+  return pb + mod;
+}

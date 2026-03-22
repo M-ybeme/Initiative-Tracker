@@ -51,15 +51,29 @@ This document provides a high-level view of **The DM's Toolbox** architecture, s
 │  │   calculations.js   │  │ - serialize/        │  │ - roll parsing      │ │
 │  │ - AC, HP, saves     │  │   deserialize       │  │ - dice rolling      │ │
 │  │ - skill bonuses     │  │ - validation        │  │                     │ │
-│  │                     │  │                     │  │ generators.js       │ │
-│  │ initiative-         │  │ migrations.js       │  │ - random tables     │ │
-│  │   calculations.js   │  │ - schema versions   │  │ - name generation   │ │
-│  │ - death saves       │  │ - data migration    │  │                     │ │
-│  │ - concentration DC  │  │                     │  │ export-utils.js     │ │
-│  │                     │  │ validation.js       │  │ - PDF/Word export   │ │
-│  │ level-up-           │  │ - D&D 5e rules      │  │                     │ │
-│  │   calculations.js   │  │                     │  │ spell-utils.js      │ │
-│  │ - multiclass rules  │  │                     │  │ - slot calculation  │ │
+│  │ - recalcDerived-    │  │                     │  │ generators.js       │ │
+│  │   Stats (pure)      │  │ migrations.js       │  │ - random tables     │ │
+│  │ - spell DC/attack   │  │ - schema versions   │  │ - name generation   │ │
+│  │ - concentration DC  │  │ - data migration    │  │                     │ │
+│  │                     │  │                     │  │ export-utils.js     │ │
+│  │ character-attack-   │  │ validation.js       │  │ - PDF/Word export   │ │
+│  │   rolls.js          │  │ - D&D 5e rules      │  │                     │ │
+│  │ - feature bonuses   │  │                     │  │ spell-utils.js      │ │
+│  │ - notation helpers  │  │                     │  │ - slot calculation  │ │
+│  │                     │  │                     │  │                     │ │
+│  │ character-spell-    │  │                     │  │ character-rest.js   │ │
+│  │   data.js           │  │                     │  │ - short rest        │ │
+│  │ - slot tables       │  │                     │  │ - long rest         │ │
+│  │ - normalization     │  │                     │  │ - hit dice rolling  │ │
+│  │ - search/filter     │  │                     │  │                     │ │
+│  │                     │  │                     │  │                     │ │
+│  │ initiative-         │  │                     │  │                     │ │
+│  │   calculations.js   │  │                     │  │                     │ │
+│  │ - death saves       │  │                     │  │                     │ │
+│  │                     │  │                     │  │                     │ │
+│  │ level-up-           │  │                     │  │                     │ │
+│  │   calculations.js   │  │                     │  │                     │ │
+│  │ - multiclass rules  │  │                     │  │                     │ │
 │  │ - spell slots       │  │                     │  │                     │ │
 │  └─────────────────────┘  └─────────────────────┘  └─────────────────────┘ │
 │                                                                             │

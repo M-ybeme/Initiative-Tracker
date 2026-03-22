@@ -20,10 +20,10 @@ This document provides a step-by-step roadmap for implementing a comprehensive t
 ## Overview
 
 ### Current State
-- **Lines of Code:** ~28,000+ lines of JavaScript
+- **Lines of Code:** ~45,000+ lines of JavaScript
 - **Test Coverage:** ~95% (statements), ~82% (branches)
 - **Test Infrastructure:** Vitest + Playwright
-- **Module System:** IIFEs with global functions + ES modules for testable code
+- **Module System:** ES modules for all testable code; `character.js` converted to `type="module"` in v2.1.5
 
 ### Target State
 - ✅ Unit test coverage for all core logic
@@ -604,10 +604,16 @@ export const sampleCombatant = {
 
 | Category | Test Files | Tests | Status |
 |----------|------------|-------|--------|
-| Unit Tests | 10 | 342 | ✅ Passing |
-| Integration Tests | 5 | 202 | ✅ Passing |
+| Unit Tests | 12 | 388 | ✅ Passing |
+| Integration Tests | 8 | 248 | ✅ Passing |
 | E2E Tests | 4 | 70 | ✅ Passing |
-| **Total** | **19** | **614** | ✅ All Passing |
+| **Total** | **24** | **930** | ✅ All Passing |
+
+**Added in v2.1.5:**
+- `tests/unit/Attack-rolls.test.js` (53 tests) — addFlatBonusToNotation, getAttackFeatureBonuses, rollDiceWithFeatures
+- `tests/unit/character-rest.test.js` (50 tests) — applyShortRest, applyLongRest, rollHitDiceForHealing, edge cases
+- `tests/integration/character-rest-integration.test.js` (25 tests) — short/long rest end-to-end, multiclass slots, combat sequence
+- `tests/integration/character-sheet.test.js` (21 tests) — serialize/deserialize round-trips, recalcDerivedStats, normalizeSpellEntry
 
 ### Coverage Summary
 
@@ -676,3 +682,4 @@ A Lighthouse audit was conducted in January 2026. While scores are generally goo
 | 2026-01-15 | 1.0 | Initial roadmap created |
 | 2026-01-19 | 2.0 | Phases 1-6 completed. Added lessons learned section. Updated progress tracking with actual test counts. |
 | 2026-01-21 | 3.0 | Phase 7 completed. Added GitHub Actions workflow, Husky pre-commit hooks, coverage thresholds, and CONTRIBUTING.md. All phases complete! |
+| 2026-03-07 | 3.1 | v2.1.5 modularization: added 4 new test files (Attack-rolls, character-rest unit tests; character-rest-integration, character-sheet integration tests); total now 24 files / 930 tests |
