@@ -50,6 +50,10 @@
         visibility: visible !important;
         background: transparent;
         border: none;
+        align-self: stretch;
+        width: 300px;
+        min-width: 300px;
+        flex-shrink: 0;
       }
       #controlsDrawer .offcanvas-header { display: none !important; }
       #controlsDrawer .offcanvas-body { padding: 0 !important; }
@@ -66,7 +70,7 @@
     .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 12px; overflow: auto; }
     .panel h2 { margin: 0 0 8px; font-size: 16px; letter-spacing: .3px; }
     .group h3 { margin: 0 0 8px; font-size: 13px; color: var(--muted); font-weight: 600; }
-    label { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 8px; margin: 6px 0; font-size: 13px; color: var(--ink); }
+    label { display: grid; grid-template-columns: minmax(0,1fr) auto; align-items: center; gap: 8px; margin: 6px 0; font-size: 13px; color: var(--ink); }
     input[type="number"], input[type="text"], input[type="color"], select {
       background: #0a111a; border: 1px solid var(--line); color: var(--ink);
       padding: 6px 8px; border-radius: 8px; font-size: 13px;
@@ -81,6 +85,12 @@
     .bar { padding: 8px 10px; display:flex; align-items:center; gap:8px; border: 1px solid var(--line); border-radius: 12px; background: #0c131d; margin-bottom: 12px; overflow-x: auto; -webkit-overflow-scrolling: touch; flex-wrap: wrap; }
     .bar span { font-size:12px; color: var(--muted); }
     .bar .active { outline: 2px solid var(--accent); }
+    .mode-tabs-bar { flex-direction: column; align-items: stretch; gap: 6px; }
+    .mode-tab-buttons { display: flex; gap: 4px; }
+    .mode-tab { padding: 5px 14px; background: #1a2233; border: 1px solid var(--line); border-radius: 8px 8px 0 0; color: var(--muted); cursor: pointer; font-size: 13px; transition: background 0.15s, color 0.15s; }
+    .mode-tab.active { background: var(--accent); color: #fff; border-color: var(--accent); outline: none; }
+    .mode-tab-panel { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; padding: 6px 4px 2px; border-top: 1px solid var(--line); }
+    .bar-sep { width: 1px; height: 24px; background: var(--line); margin: 0 4px; }
 
     .canvas-wrap { position: relative; flex: 1 1 auto; min-height: 0; }
     .canvas-wrap canvas {
@@ -116,6 +126,42 @@
       input, select, button { min-height: 44px; }
       label { grid-template-columns: 1fr; gap: 4px; }
       .row-inline { gap: 6px; }
+    }
+
+    /* Sidebar collapse (desktop only) */
+    @media (min-width: 992px){
+      #controlsDrawer.offcanvas-lg {
+        transition: width 0.2s ease, padding 0.2s ease, min-width 0.2s ease;
+      }
+      #controlsDrawer.offcanvas-lg.sidebar-collapsed {
+        width: 0 !important;
+        min-width: 0 !important;
+        padding: 0 !important;
+        border: none !important;
+        overflow: hidden !important;
+      }
+      #sidebarToggle {
+        display: flex;
+        position: absolute;
+        top: 8px;
+        left: 8px;
+        z-index: 5;
+        background: rgba(15,22,32,0.88);
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        width: 30px;
+        height: 30px;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        color: var(--muted);
+        font-size: 14px;
+        padding: 0;
+      }
+      #sidebarToggle:hover { border-color: #283345; color: var(--ink); }
+    }
+    @media (max-width: 991.98px){
+      #sidebarToggle { display: none; }
     }
   </style>
 </head>
@@ -210,11 +256,11 @@
               <div class="accordion-body">
                 <div class="group">
                   <h3>Map</h3>
-                  <label>Upload Map <input id="mapFile" type="file" accept="image/*" /></label>
-                  <label>Base Scale (px per cell) <input id="gridSize" type="number" min="4" max="256" value="140" /></label>
-                  <label>Units per cell <input id="unitsPerCell" type="number" min="1" value="5" /></label>
+                  <label style="display:flex;flex-direction:column;gap:4px;align-items:flex-start">Upload Map <input id="mapFile" type="file" accept="image/*" /></label>
+                  <label>Cell size (px) <input id="gridSize" type="number" min="4" max="256" value="140" style="width:65px" /></label>
+                  <label>Units per cell <input id="unitsPerCell" type="number" min="1" value="5" style="width:65px" /></label>
                   <label>Grid Color <input id="gridColor" type="color" value="#6aa5ff" /></label>
-                  <label>Grid Opacity <input id="gridAlpha" type="number" min="0" max="1" step="0.05" value="0.35" /></label>
+                  <label>Grid Opacity <input id="gridAlpha" type="number" min="0" max="1" step="0.05" value="0.35" style="width:65px" /></label>
                   <label>Show Grid <input id="showGrid" type="checkbox" checked /></label>
                   <div class="row-inline">
                     <button id="centerMap">Center</button>
@@ -225,23 +271,23 @@
                 <hr class="text-secondary"/>
                 <div class="group">
                   <h3>Map Transform</h3>
-                  <label>Map Scale (%) <input id="mapScale" type="number" min="10" max="400" step="1" value="100" /></label>
-                  <label>Map Offset X (px) <input id="mapOffsetX" type="number" step="1" value="0" /></label>
-                  <label>Map Offset Y (px) <input id="mapOffsetY" type="number" step="1" value="0" /></label>
+                  <label>Map Scale (%) <input id="mapScale" type="number" min="10" max="400" step="1" value="100" style="width:65px" /></label>
+                  <label>Offset X <input id="mapOffsetX" type="number" step="1" value="0" style="width:65px" /></label>
+                  <label>Offset Y <input id="mapOffsetY" type="number" step="1" value="0" style="width:65px" /></label>
                   <div class="row-inline">
-                    <button id="resetMapTransform">Reset Map Transform</button>
+                    <button id="resetMapTransform">Reset Transform</button>
                   </div>
                 </div>
                 <hr class="text-secondary"/>
                 <div class="group">
                   <h3>Grid Alignment</h3>
-                  <label>Grid Origin X (px) <input id="gridOffsetX" type="number" step="1" value="0" /></label>
-                  <label>Grid Origin Y (px) <input id="gridOffsetY" type="number" step="1" value="0" /></label>
+                  <label>Origin X <input id="gridOffsetX" type="number" step="1" value="0" style="width:65px" /></label>
+                  <label>Origin Y <input id="gridOffsetY" type="number" step="1" value="0" style="width:65px" /></label>
                   <div class="row-inline">
-                    <button id="pickGridOrigin">Pick Origin on Map</button>
-                    <button id="snapOriginToMap">Align to Clicked Intersection</button>
+                    <button id="pickGridOrigin">Pick Origin</button>
+                    <button id="snapOriginToMap">Align to Grid</button>
                   </div>
-                  <label>Calibrate: cells between clicks <input id="calibCells" type="number" min="1" step="1" value="10" /></label>
+                  <label>Calibrate (cells) <input id="calibCells" type="number" min="1" step="1" value="10" style="width:65px" /></label>
                   <div class="row-inline">
                     <button id="startCalibrate">Start Calibration</button>
                     <span class="muted" id="calibStatus"></span>
@@ -264,26 +310,26 @@
               <div class="accordion-body">
                 <div class="group">
                   <h3>Tokens</h3>
-                  <label>Upload Token Image <input id="tokenFile" type="file" accept="image/*" /></label>
+                  <label style="display:flex;flex-direction:column;gap:4px;align-items:flex-start">Upload Image <input id="tokenFile" type="file" accept="image/*" /></label>
                   <label>Name <input id="tokenName" type="text" placeholder="Goblin A" /></label>
                   <div class="row-inline">
                     <button id="addToken">Add Token</button>
                     <button id="deleteSelected">Delete Selected</button>
                   </div>
                   <label>Snap to Grid <input id="snap" type="checkbox" checked /></label>
-                  <label>Token Size (cells) <input id="tokenCells" type="number" min="0.5" step="0.5" value="1" /></label>
+                  <label>Size (cells) <input id="tokenCells" type="number" min="0.5" step="0.5" value="1" style="width:65px" /></label>
                 </div>
 
                 <hr class="text-secondary"/>
                 <div class="group">
                   <h3>Presets</h3>
                   <label>Choose Preset
-                    <select id="tokenPreset" style="min-width:220px">
+                    <select id="tokenPreset" style="min-width:0;width:100%">
                       <option value="">— select a token —</option>
                     </select>
                   </label>
                   <div class="row-inline">
-                    <button id="addPreset">Add Selected Preset</button>
+                    <button id="addPreset">Add Preset</button>
                   </div>
                   <div class="token-list" id="tokenList"></div>
                 </div>
@@ -330,8 +376,11 @@
             <div id="accShort" class="accordion-collapse collapse" data-bs-parent="#bmAccordion">
               <div class="accordion-body">
                 <div class="muted">
-                  Space+Drag: Pan • Wheel: Zoom • <strong>Brush Mode: Paint Fog</strong> (or Shift+Drag on desktop)
-                  • Measure: toggle button (or Alt on desktop) • R: Rotate • +/-: Resize • [ ]: Send/Bring • Esc: Clear selection • Del: Delete
+                  <strong>Navigation:</strong> Space+Drag or Middle Mouse: Pan • Wheel: Zoom<br>
+                  <strong>Tokens:</strong> R: Rotate • +/−: Resize • [ ]: Layer back • ]: Layer forward • Del: Delete • Esc: Deselect all<br>
+                  <strong>Fog:</strong> Shift+Drag (desktop): Paint fog brush • Brush Mode button (mobile): Paint fog<br>
+                  <strong>Measure:</strong> Alt+Drag (desktop): Quick measure • Measure button (mobile)<br>
+                  <strong>Save:</strong> Ctrl+S
                 </div>
               </div>
             </div>
@@ -373,12 +422,14 @@
                   <h3>Tokens</h3>
                   <div class="muted" style="line-height: 1.5;">
                     <strong>Add:</strong> Choose preset or upload image, then click "Add Token"<br>
-                    <strong>Move:</strong> Click and drag<br>
+                    <strong>Move:</strong> Click and drag (snaps to grid when enabled)<br>
                     <strong>Rotate:</strong> Select token, press R<br>
-                    <strong>Resize:</strong> Select token, press +/- keys<br>
-                    <strong>Delete:</strong> Select token, press Delete/Backspace<br>
-                    <strong>Right-click:</strong> Context menu (rename, duplicate, etc.)<br>
-                    <strong>Snap to Grid:</strong> Enable checkbox for auto-alignment
+                    <strong>Resize:</strong> Select token, press +/− keys<br>
+                    <strong>Layer order:</strong> Select token, press [ (back) or ] (forward)<br>
+                    <strong>Delete:</strong> Select token, press Delete/Backspace or use context menu<br>
+                    <strong>Right-click (desktop):</strong> Opens context menu<br>
+                    <strong>Long-press (mobile/touch):</strong> Opens context menu<br>
+                    <strong>Context menu options:</strong> Rename, toggle label, set HP, add status conditions, set aura, set vision cone, add to Initiative Tracker, duplicate, delete
                   </div>
                 </div>
 
@@ -401,20 +452,22 @@
                   <div class="muted" style="line-height: 1.5;">
                     <strong>Types:</strong> Rectangle, Square, Circle<br>
                     <strong>Modes:</strong><br>
-                    • <strong>Cover</strong> - Hides the map (default: black fog)<br>
-                    • <strong>Reveal</strong> - Cuts through cover fog to show map underneath<br>
-                    <strong>Color:</strong> Pick any color (default: black for fog effect)<br>
-                    <strong>Size:</strong> Set in grid cells (1-20) before adding<br>
-                    <strong>Add:</strong> Configure settings, click "Add Shape"<br>
-                    <strong>Move:</strong> Click and drag shape interior<br>
-                    <strong>Resize (Keyboard):</strong> Select shape, press +/- keys<br>
-                    <strong>Resize (Mouse):</strong><br>
-                    • Rectangles/Squares - Drag corner or edge handles<br>
-                    • Circles - Drag the blue handle on the right edge<br>
+                    • <strong>Cover</strong> — Hides the map area (use black for classic fog)<br>
+                    • <strong>Reveal</strong> — Cuts through any cover shapes beneath it<br>
+                    <strong>Color:</strong> Any color — use black for fog, colors for zones/auras<br>
+                    <strong>Size:</strong> Set in grid cells before adding<br>
+                    <strong>Add:</strong> Configure shape type, mode, color, and size, then click "Add Shape"<br>
+                    <strong>Move:</strong> Click and drag the shape interior<br>
+                    <strong>Resize (keyboard):</strong> Select shape, press +/− keys<br>
+                    <strong>Resize (mouse):</strong><br>
+                    • Rectangles/Squares — Drag any corner or edge handle<br>
+                    • Circles — Drag the blue handle on the right edge<br>
+                    <strong>Rotate (rectangles):</strong> Select shape, drag the orange circle handle above it<br>
                     <strong>Delete:</strong> Select shape, press Delete or click "Delete Shape"<br>
-                    <strong>Layering:</strong> Reveal shapes cut through all cover shapes<br>
-                    <strong>Saving:</strong> Use Ctrl+S or "Save Session" button<br>
-                    <em>Perfect for fog of war! Cover the map, then use reveal circles for spell areas or line-of-sight!</em>
+                    <strong>Layering:</strong> Reveal shapes always cut through cover shapes<br>
+                    <strong>Brush + shapes:</strong> Brush fog and shapes are independent — moving a shape never erases your brush work<br>
+                    <strong>⚠ Clear Fog:</strong> Removes both brush fog and all shapes — you will be asked to confirm<br>
+                    <em>Tip: Cover the whole map with a black rectangle, then add reveal circles for torchlight or spell areas!</em>
                   </div>
                 </div>
 
@@ -447,12 +500,11 @@
                 <div class="group">
                   <h3>Saving & Loading</h3>
                   <div class="muted" style="line-height: 1.5;">
-                    <strong>Manual Save:</strong> Click "Save Session" or press Ctrl+S<br>
-                    <strong>When to Save:</strong> After placing tokens, shapes, or adjusting fog<br>
-                    <strong>Export JSON:</strong> Download your session as file<br>
-                    <strong>Import JSON:</strong> Load a saved session file<br>
-                    <strong>Reset:</strong> Clear everything and start fresh<br>
-                    <em>Note: Manual saves prevent slowdown during grid adjustments!</em>
+                    <strong>Save:</strong> Click "Save Session" or press <kbd>Ctrl+S</kbd> — session auto-loads on refresh<br>
+                    <strong>Export JSON:</strong> Downloads current session as a file (always up-to-date)<br>
+                    <strong>Import JSON:</strong> Loads a previously exported session file<br>
+                    <strong>Reset:</strong> Clears everything and starts fresh<br>
+                    <em>Tip: Save before making large changes so you can re-import if needed!</em>
                   </div>
                 </div>
 
@@ -482,49 +534,58 @@
 
     <!-- Canvas column -->
     <section class="canvas-panel">
-      <div class="bar">
-        <button id="toggleFog">Fog: Off</button>
-        <button id="fogReveal" disabled>Reveal</button>
-        <button id="fogCover" disabled>Cover</button>
-        <label class="ms-2">Brush
-          <input id="fogBrush" type="number" min="5" max="400" step="5" value="80" style="width:90px" disabled>
-        </label>
-        <button id="fogClear" disabled>Clear Fog</button>
-
-        <!-- NEW: Fog shape controls -->
-        <label class="ms-2">Shape
-          <select id="fogShapeType" style="width:110px" disabled>
-            <option value="rect">Rectangle</option>
-            <option value="square">Square</option>
-            <option value="circle">Circle</option>
-          </select>
-        </label>
-        <label class="ms-2">Color
-          <input id="fogShapeColor" type="color" value="#000000" disabled />
-        </label>
-        <label class="ms-2">Size (cells)
-          <input id="fogShapeSize" type="number" min="1" max="20" step="0.5" value="3" style="width:90px" disabled>
-        </label>
-        <button id="addFogShape" disabled>Add Shape</button>
-        <button id="deleteFogShape" disabled>Delete Shape</button>
-
-        <!-- NEW: Mobile-friendly mode toggles -->
-        <button id="fogBrushMode" aria-pressed="false" title="Toggle brush mode for touch/mobile">Brush Mode</button>
-        <button id="measureToggle" aria-pressed="false" title="Toggle measure mode (mobile-friendly)">Measure</button>
-        <label class="ms-2">Shape
-          <select id="measureShape" style="width:90px">
-            <option value="line">Line</option>
-            <option value="cone">Cone</option>
-            <option value="circle">Circle</option>
-          </select>
-        </label>
-        <button id="persistentMeasureToggle" aria-pressed="false" title="Toggle persistent measure mode">Persistent</button>
-        <label class="ms-2" title="Measurement color">
-          <input type="color" id="measureColor" value="#8bd3ff" style="width:30px; height:24px; vertical-align:middle;">
-        </label>
+      <div class="bar mode-tabs-bar">
+        <div class="mode-tab-buttons" role="tablist">
+          <button id="tabFog" class="mode-tab active" role="tab" aria-selected="true" aria-controls="fogControlsPanel">🌫 Fog</button>
+          <button id="tabMeasure" class="mode-tab" role="tab" aria-selected="false" aria-controls="measureControlsPanel">📐 Measure</button>
+        </div>
+        <div id="fogControlsPanel" class="mode-tab-panel" role="tabpanel" aria-labelledby="tabFog">
+          <button id="toggleFog">Fog: Off</button>
+          <button id="fogReveal" disabled>Reveal</button>
+          <button id="fogCover" disabled>Cover</button>
+          <label class="ms-2">Brush
+            <input id="fogBrush" type="number" min="5" max="400" step="5" value="80" style="width:90px" disabled>
+          </label>
+          <button id="fogBrushMode" aria-pressed="false" title="Toggle brush mode for touch/mobile">Brush Mode</button>
+          <button id="fogClear" disabled>Clear Fog</button>
+          <span class="bar-sep"></span>
+          <label>Shape
+            <select id="fogShapeType" style="width:110px" disabled>
+              <option value="rect">Rectangle</option>
+              <option value="square">Square</option>
+              <option value="circle">Circle</option>
+            </select>
+          </label>
+          <label class="ms-2">Color
+            <input id="fogShapeColor" type="color" value="#000000" disabled />
+          </label>
+          <label class="ms-2">Size (cells)
+            <input id="fogShapeSize" type="number" min="1" max="20" step="0.5" value="3" style="width:90px" disabled>
+          </label>
+          <button id="addFogShape" disabled>Add Shape</button>
+          <button id="deleteFogShape" disabled>Delete Shape</button>
+        </div>
+        <div id="measureControlsPanel" class="mode-tab-panel" role="tabpanel" aria-labelledby="tabMeasure" style="display:none">
+          <button id="measureToggle" aria-pressed="false" title="Toggle measure mode (mobile-friendly)">Measure</button>
+          <label class="ms-2">Shape
+            <select id="measureShape" style="width:90px">
+              <option value="line">Line</option>
+              <option value="cone">Cone</option>
+              <option value="circle">Circle</option>
+            </select>
+          </label>
+          <button id="persistentMeasureToggle" aria-pressed="false" title="Toggle persistent measure mode">Persistent</button>
+          <label class="ms-2" title="Measurement color">
+            <input type="color" id="measureColor" value="#8bd3ff" style="width:30px; height:24px; vertical-align:middle;">
+          </label>
+          <button id="clearMeasures" title="Remove all persistent measurements">Clear Measures</button>
+        </div>
       </div>
 
       <div class="canvas-wrap">
+        <button id="sidebarToggle" title="Toggle controls panel" aria-label="Toggle controls panel">
+          <i class="bi bi-layout-sidebar"></i>
+        </button>
         <canvas id="mapLayer" width="1920" height="1080"></canvas>
         <canvas id="fogLayer" width="1920" height="1080"></canvas>
         <canvas id="tokenLayer" width="1920" height="1080"></canvas>
@@ -548,6 +609,174 @@
 
   <footer class="container-fluid site-footer" role="contentinfo"
           style="background:#0f1620;border-top:1px solid var(--line);position:fixed;left:0;right:0;bottom:0;display:none"></footer>
+
+  <!-- HP Modal -->
+  <div class="modal fade" id="hpModal" tabindex="-1" aria-labelledby="hpModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-sm">
+      <div class="modal-content" style="background:#0f1620;border:1px solid #1b2430;color:#e6f1ff">
+        <div class="modal-header" style="border-bottom:1px solid #1b2430">
+          <h5 class="modal-title" id="hpModalLabel" style="font-size:15px">HP Tracking</h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body" style="padding:12px">
+          <div class="row g-2 mb-3">
+            <div class="col">
+              <label style="font-size:12px;color:#8fa3bf;display:block;margin-bottom:4px">Current HP</label>
+              <input type="number" id="hpCurrent" class="form-control form-control-sm" style="background:#0a111a;color:#e6f1ff;border-color:#1b2430" />
+            </div>
+            <div class="col">
+              <label style="font-size:12px;color:#8fa3bf;display:block;margin-bottom:4px">Max HP</label>
+              <input type="number" id="hpMax" class="form-control form-control-sm" style="background:#0a111a;color:#e6f1ff;border-color:#1b2430" />
+            </div>
+          </div>
+          <div class="row g-2">
+            <div class="col">
+              <label style="font-size:12px;color:#8fa3bf;display:block;margin-bottom:4px">Damage</label>
+              <div class="input-group input-group-sm">
+                <input type="number" id="hpDmgAmt" class="form-control" min="0" placeholder="amt" style="background:#0a111a;color:#e6f1ff;border-color:#1b2430" />
+                <button class="btn btn-sm" id="hpDmgBtn" style="background:#5c1a1a;color:#fca5a5;border-color:#1b2430">Hit</button>
+              </div>
+            </div>
+            <div class="col">
+              <label style="font-size:12px;color:#8fa3bf;display:block;margin-bottom:4px">Heal</label>
+              <div class="input-group input-group-sm">
+                <input type="number" id="hpHealAmt" class="form-control" min="0" placeholder="amt" style="background:#0a111a;color:#e6f1ff;border-color:#1b2430" />
+                <button class="btn btn-sm" id="hpHealBtn" style="background:#1a3a1a;color:#86efac;border-color:#1b2430">Heal</button>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer" style="border-top:1px solid #1b2430;padding:8px 12px">
+          <button type="button" class="btn btn-sm" id="hpClearBtn" style="background:#0a111a;color:#8fa3bf;border-color:#1b2430">Clear HP</button>
+          <button type="button" class="btn btn-sm" id="hpSaveBtn" style="background:#0a111a;color:#8bd3ff;border-color:#1b2430">Save</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Status Conditions Modal -->
+  <div class="modal fade" id="statusModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-sm">
+      <div class="modal-content" style="background:#0f1620;border:1px solid #1b2430;color:#e6f1ff">
+        <div class="modal-header" style="border-bottom:1px solid #1b2430">
+          <h5 class="modal-title" style="font-size:15px">Status Conditions</h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body" style="padding:12px">
+          <div id="statusCheckboxes" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px"></div>
+          <div>
+            <label style="font-size:12px;color:#8fa3bf;display:block;margin-bottom:4px">Custom condition</label>
+            <div class="input-group input-group-sm">
+              <input type="text" id="statusCustom" class="form-control" placeholder="e.g. Concentrating" style="background:#0a111a;color:#e6f1ff;border-color:#1b2430" />
+              <button class="btn btn-sm" id="statusAddCustom" style="background:#0a111a;color:#e6f1ff;border-color:#1b2430">Add</button>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer" style="border-top:1px solid #1b2430;padding:8px 12px">
+          <button type="button" class="btn btn-sm" id="statusClearBtn" style="background:#0a111a;color:#8fa3bf;border-color:#1b2430">Clear All</button>
+          <button type="button" class="btn btn-sm" id="statusSaveBtn" style="background:#0a111a;color:#8bd3ff;border-color:#1b2430">Save</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Aura Modal -->
+  <div class="modal fade" id="auraModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-sm">
+      <div class="modal-content" style="background:#0f1620;border:1px solid #1b2430;color:#e6f1ff">
+        <div class="modal-header" style="border-bottom:1px solid #1b2430">
+          <h5 class="modal-title" style="font-size:15px">Token Aura</h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body" style="padding:12px">
+          <div class="mb-3">
+            <label style="font-size:12px;color:#8fa3bf;display:block;margin-bottom:4px">Radius in cells (0 = remove)</label>
+            <input type="number" id="auraRadius" min="0" step="0.5" class="form-control form-control-sm" style="background:#0a111a;color:#e6f1ff;border-color:#1b2430" />
+          </div>
+          <div>
+            <label style="font-size:12px;color:#8fa3bf;display:block;margin-bottom:4px">Color</label>
+            <input type="color" id="auraColor" class="form-control form-control-sm" style="background:#0a111a;border-color:#1b2430;height:38px" />
+          </div>
+        </div>
+        <div class="modal-footer" style="border-top:1px solid #1b2430;padding:8px 12px">
+          <button type="button" class="btn btn-sm" style="background:#0a111a;color:#8fa3bf;border-color:#1b2430" data-bs-dismiss="modal">Cancel</button>
+          <button type="button" class="btn btn-sm" id="auraSaveBtn" style="background:#0a111a;color:#8bd3ff;border-color:#1b2430">Save</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Vision Cone Modal -->
+  <div class="modal fade" id="visionModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-sm">
+      <div class="modal-content" style="background:#0f1620;border:1px solid #1b2430;color:#e6f1ff">
+        <div class="modal-header" style="border-bottom:1px solid #1b2430">
+          <h5 class="modal-title" style="font-size:15px">Vision Cone</h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body" style="padding:12px">
+          <div class="mb-3">
+            <label style="font-size:12px;color:#8fa3bf;display:block;margin-bottom:4px">Range in cells (0 = remove)</label>
+            <input type="number" id="visionRange" min="0" step="0.5" class="form-control form-control-sm" style="background:#0a111a;color:#e6f1ff;border-color:#1b2430" />
+          </div>
+          <div class="mb-3">
+            <label style="font-size:12px;color:#8fa3bf;display:block;margin-bottom:4px">Angle in degrees</label>
+            <input type="number" id="visionAngle" min="10" max="360" step="5" value="90" class="form-control form-control-sm" style="background:#0a111a;color:#e6f1ff;border-color:#1b2430" />
+          </div>
+          <div>
+            <label style="font-size:12px;color:#8fa3bf;display:block;margin-bottom:4px">Color</label>
+            <input type="color" id="visionColor" value="#ffff88" class="form-control form-control-sm" style="background:#0a111a;border-color:#1b2430;height:38px" />
+          </div>
+        </div>
+        <div class="modal-footer" style="border-top:1px solid #1b2430;padding:8px 12px">
+          <button type="button" class="btn btn-sm" style="background:#0a111a;color:#8fa3bf;border-color:#1b2430" data-bs-dismiss="modal">Cancel</button>
+          <button type="button" class="btn btn-sm" id="visionSaveBtn" style="background:#0a111a;color:#8bd3ff;border-color:#1b2430">Save</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Add to Initiative Modal -->
+  <div class="modal fade" id="initiativeModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-sm">
+      <div class="modal-content" style="background:#0f1620;border:1px solid #1b2430;color:#e6f1ff">
+        <div class="modal-header" style="border-bottom:1px solid #1b2430">
+          <h5 class="modal-title" style="font-size:15px">Add to Initiative Tracker</h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body" style="padding:12px">
+          <div class="mb-2">
+            <label style="font-size:12px;color:#8fa3bf;display:block;margin-bottom:4px">Name</label>
+            <input type="text" id="initName" class="form-control form-control-sm" style="background:#0a111a;color:#e6f1ff;border-color:#1b2430" />
+          </div>
+          <div class="row g-2 mb-2">
+            <div class="col">
+              <label style="font-size:12px;color:#8fa3bf;display:block;margin-bottom:4px">Current HP</label>
+              <input type="number" id="initCurrentHp" class="form-control form-control-sm" style="background:#0a111a;color:#e6f1ff;border-color:#1b2430" />
+            </div>
+            <div class="col">
+              <label style="font-size:12px;color:#8fa3bf;display:block;margin-bottom:4px">Max HP</label>
+              <input type="number" id="initMaxHp" class="form-control form-control-sm" style="background:#0a111a;color:#e6f1ff;border-color:#1b2430" />
+            </div>
+          </div>
+          <div class="row g-2">
+            <div class="col">
+              <label style="font-size:12px;color:#8fa3bf;display:block;margin-bottom:4px">AC</label>
+              <input type="number" id="initAc" value="10" class="form-control form-control-sm" style="background:#0a111a;color:#e6f1ff;border-color:#1b2430" />
+            </div>
+            <div class="col">
+              <label style="font-size:12px;color:#8fa3bf;display:block;margin-bottom:4px">Initiative roll</label>
+              <input type="number" id="initRoll" value="0" class="form-control form-control-sm" style="background:#0a111a;color:#e6f1ff;border-color:#1b2430" />
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer" style="border-top:1px solid #1b2430;padding:8px 12px">
+          <button type="button" class="btn btn-sm" style="background:#0a111a;color:#8fa3bf;border-color:#1b2430" data-bs-dismiss="modal">Cancel</button>
+          <button type="button" class="btn btn-sm" id="initSendBtn" style="background:#0a111a;color:#8bd3ff;border-color:#1b2430">Open Initiative Tracker ⚔️</button>
+        </div>
+      </div>
+    </div>
+  </div>
 
 <script>
 (function(){
@@ -1377,6 +1606,28 @@
     }
 
     uiCtx.setTransform(1,0,0,1,0,0);
+
+    // Brush cursor — shown when fog is on and brush mode is active or currently painting
+    if (fogState.enabled && (state.ui.brushMode || fogState.painting)) {
+      const rect = uiLayer.getBoundingClientRect();
+      const cx = (mouseScreen.x - rect.left) * DPR;
+      const cy = (mouseScreen.y - rect.top) * DPR;
+      const screenR = fogState.brush * 0.5 * state.mapTransform.scale * state.view.scale;
+      uiCtx.save();
+      uiCtx.beginPath();
+      uiCtx.arc(cx, cy, Math.max(2, screenR), 0, Math.PI * 2);
+      uiCtx.strokeStyle = fogState.mode === 'reveal' ? 'rgba(139,211,255,0.85)' : 'rgba(255,255,255,0.7)';
+      uiCtx.lineWidth = 1.5;
+      uiCtx.setLineDash([4, 4]);
+      uiCtx.stroke();
+      // Center dot
+      uiCtx.beginPath();
+      uiCtx.arc(cx, cy, 2, 0, Math.PI * 2);
+      uiCtx.fillStyle = fogState.mode === 'reveal' ? 'rgba(139,211,255,0.85)' : 'rgba(255,255,255,0.7)';
+      uiCtx.setLineDash([]);
+      uiCtx.fill();
+      uiCtx.restore();
+    }
   }
 
   function drawGrid(ctx){
@@ -2164,111 +2415,149 @@
   }
   function hideMenu(){ ctxMenu.style.display='none'; }
 
-  // Add token to initiative tracker
-  function addTokenToInitiativeTracker(token) {
-    // List of generic creature names that should prompt for a more specific name
-    const genericNames = [
-      'goblin', 'orc', 'kobold', 'skeleton', 'zombie', 'bandit', 'guard', 'cultist',
-      'dragon', 'beast', 'wolf', 'bear', 'spider', 'rat', 'snake', 'bat',
-      'paladin', 'wizard', 'fighter', 'rogue', 'cleric', 'barbarian', 'ranger', 'druid',
-      'warrior', 'mage', 'archer', 'soldier', 'mercenary', 'assassin',
-      'demon', 'devil', 'elemental', 'golem', 'giant', 'troll', 'ogre',
-      'token', 'creature', 'enemy', 'npc', 'monster', 'minion'
-    ];
+  // Modal references and active token
+  let activeModalToken = null;
+  const DND_CONDITIONS = [
+    'Blinded','Charmed','Deafened','Exhaustion','Frightened','Grappled',
+    'Incapacitated','Invisible','Paralyzed','Petrified','Poisoned',
+    'Prone','Restrained','Stunned','Unconscious'
+  ];
 
-    // Get current token data
-    let name = (token.name || '').trim();
-    let currentHP = token.hp || null;
-    let maxHP = token.maxHp || null;
-    let ac = null;
-    let initiative = null;
+  function getModal(id){ return bootstrap.Modal.getOrCreateInstance(document.getElementById(id)); }
 
-    // Check if name is generic
-    const isGeneric = !name || genericNames.some(generic =>
-      name.toLowerCase() === generic ||
-      name.toLowerCase().startsWith(generic + ' ') ||
-      name.toLowerCase().endsWith(' ' + generic)
-    );
+  // --- HP Modal ---
+  document.getElementById('hpDmgBtn').addEventListener('click', ()=>{
+    const amt = parseInt(document.getElementById('hpDmgAmt').value) || 0;
+    const cur = parseInt(document.getElementById('hpCurrent').value) || 0;
+    document.getElementById('hpCurrent').value = Math.max(0, cur - amt);
+    document.getElementById('hpDmgAmt').value = '';
+  });
+  document.getElementById('hpHealBtn').addEventListener('click', ()=>{
+    const amt  = parseInt(document.getElementById('hpHealAmt').value) || 0;
+    const cur  = parseInt(document.getElementById('hpCurrent').value) || 0;
+    const max  = parseInt(document.getElementById('hpMax').value) || 0;
+    document.getElementById('hpCurrent').value = max > 0 ? Math.min(max, cur + amt) : cur + amt;
+    document.getElementById('hpHealAmt').value = '';
+  });
+  document.getElementById('hpClearBtn').addEventListener('click', ()=>{
+    document.getElementById('hpCurrent').value = '0';
+    document.getElementById('hpMax').value = '0';
+  });
+  document.getElementById('hpSaveBtn').addEventListener('click', ()=>{
+    if (!activeModalToken) return;
+    activeModalToken.hp    = parseInt(document.getElementById('hpCurrent').value) || 0;
+    activeModalToken.maxHp = parseInt(document.getElementById('hpMax').value) || 0;
+    dirty.tokens = true; requestRender(); updateTokenList(); setDirty();
+    getModal('hpModal').hide();
+  });
 
-    // Prompt for specific name if generic
-    if (isGeneric) {
-      const newName = prompt('This token has a generic name. Please enter a more specific name:', name || 'Creature');
-      if (newName === null) return; // User cancelled
-      name = newName.trim();
-      if (!name) {
-        alert('A name is required to add to the initiative tracker.');
-        return;
-      }
-    }
-
-    // Prompt for missing HP info
-    if (maxHP === null || maxHP === 0) {
-      const maxHpInput = prompt('Enter Max HP:', '');
-      if (maxHpInput === null) return; // User cancelled
-      maxHP = parseInt(maxHpInput) || 0;
-    }
-
-    if (currentHP === null || currentHP === 0) {
-      const currentHpInput = prompt('Enter Current HP:', maxHP || '');
-      if (currentHpInput === null) return; // User cancelled
-      currentHP = parseInt(currentHpInput) || maxHP || 0;
-    }
-
-    // Prompt for AC
-    const acInput = prompt('Enter AC (Armor Class):', '10');
-    if (acInput === null) return; // User cancelled
-    ac = parseInt(acInput) || 10;
-
-    // Prompt for initiative (default to 0)
-    const initiativeInput = prompt('Enter Initiative roll (0 to roll later):', '0');
-    if (initiativeInput === null) return; // User cancelled
-    initiative = parseInt(initiativeInput) || 0;
-
-    // Prepare data for initiative tracker
-    const initiativeData = {
-      name: name,
-      maxHp: maxHP,
-      currentHp: currentHP,
-      ac: ac,
-      initiative: initiative,
-      useActualInitiative: true  // Flag to tell tracker to use the value directly, not as a bonus
-    };
-
-    // Show confirmation
-    const confirmed = confirm(
-      `Add "${name}" to Initiative Tracker?\n\n` +
-      `HP: ${currentHP}/${maxHP}\n` +
-      `AC: ${ac}\n` +
-      `Initiative: ${initiative}\n\n` +
-      `Click OK to open the Initiative Tracker.`
-    );
-
-    if (confirmed) {
-      // Store in localStorage for the initiative tracker to pick up
-      localStorage.setItem('dmtools.pendingInitiativeImport', JSON.stringify(initiativeData));
-      console.log('Saved to localStorage:', initiativeData);
-
-      // Try to open in new tab first
-      const newWindow = window.open('initiative.html#autoimport', '_blank');
-
-      // Check if popup was blocked
-      if (!newWindow || newWindow.closed || typeof newWindow.closed === 'undefined') {
-        // Popup blocked - offer alternative
-        const navigateHere = confirm(
-          'Popup blocked!\n\n' +
-          'Click OK to navigate to the Initiative Tracker in this tab,\n' +
-          'or click Cancel and manually click the "Initiative Tracker" link in the navbar.\n\n' +
-          'The character will be auto-added either way.'
-        );
-
-        if (navigateHere) {
-          window.location.href = 'initiative.html#autoimport';
-        }
-      }
-    } else {
-      console.log('User cancelled initiative tracker import');
-    }
+  // --- Status Modal ---
+  function buildStatusCheckboxes(token){
+    const box = document.getElementById('statusCheckboxes');
+    box.innerHTML = '';
+    const active = new Set(token.statusConditions || []);
+    // Standard conditions
+    DND_CONDITIONS.forEach(cond => {
+      const id = 'sc_' + cond;
+      const label = document.createElement('label');
+      label.style.cssText = 'display:flex;align-items:center;gap:4px;font-size:12px;padding:3px 7px;border:1px solid #1b2430;border-radius:999px;cursor:pointer;user-select:none';
+      if (active.has(cond)) label.style.borderColor = '#fbbf24';
+      const cb = document.createElement('input');
+      cb.type = 'checkbox'; cb.id = id; cb.value = cond; cb.checked = active.has(cond);
+      cb.style.accentColor = '#fbbf24';
+      cb.addEventListener('change', ()=>{ label.style.borderColor = cb.checked ? '#fbbf24' : '#1b2430'; });
+      label.appendChild(cb);
+      label.appendChild(document.createTextNode(cond));
+      box.appendChild(label);
+    });
+    // Custom conditions not in the standard list
+    (token.statusConditions || []).filter(c => !DND_CONDITIONS.includes(c)).forEach(cond => {
+      const label = document.createElement('label');
+      label.style.cssText = 'display:flex;align-items:center;gap:4px;font-size:12px;padding:3px 7px;border:1px solid #fbbf24;border-radius:999px;cursor:pointer;user-select:none';
+      const cb = document.createElement('input');
+      cb.type = 'checkbox'; cb.value = cond; cb.checked = true;
+      cb.style.accentColor = '#fbbf24';
+      cb.addEventListener('change', ()=>{ label.style.borderColor = cb.checked ? '#fbbf24' : '#1b2430'; });
+      label.appendChild(cb);
+      label.appendChild(document.createTextNode(cond));
+      box.appendChild(label);
+    });
   }
+  document.getElementById('statusAddCustom').addEventListener('click', ()=>{
+    const val = document.getElementById('statusCustom').value.trim();
+    if (!val) return;
+    document.getElementById('statusCustom').value = '';
+    // Add as a checked chip in the box
+    const box = document.getElementById('statusCheckboxes');
+    const label = document.createElement('label');
+    label.style.cssText = 'display:flex;align-items:center;gap:4px;font-size:12px;padding:3px 7px;border:1px solid #fbbf24;border-radius:999px;cursor:pointer;user-select:none';
+    const cb = document.createElement('input');
+    cb.type = 'checkbox'; cb.value = val; cb.checked = true;
+    cb.style.accentColor = '#fbbf24';
+    cb.addEventListener('change', ()=>{ label.style.borderColor = cb.checked ? '#fbbf24' : '#1b2430'; });
+    label.appendChild(cb);
+    label.appendChild(document.createTextNode(val));
+    box.appendChild(label);
+  });
+  document.getElementById('statusClearBtn').addEventListener('click', ()=>{
+    document.getElementById('statusCheckboxes').querySelectorAll('input[type=checkbox]').forEach(cb => {
+      cb.checked = false;
+      cb.closest('label').style.borderColor = '#1b2430';
+    });
+  });
+  document.getElementById('statusSaveBtn').addEventListener('click', ()=>{
+    if (!activeModalToken) return;
+    activeModalToken.statusConditions = [
+      ...document.getElementById('statusCheckboxes').querySelectorAll('input[type=checkbox]:checked')
+    ].map(cb => cb.value);
+    dirty.tokens = true; requestRender(); updateTokenList(); setDirty();
+    getModal('statusModal').hide();
+  });
+
+  // --- Aura Modal ---
+  document.getElementById('auraSaveBtn').addEventListener('click', ()=>{
+    if (!activeModalToken) return;
+    const r = parseFloat(document.getElementById('auraRadius').value) || 0;
+    if (r <= 0) { delete activeModalToken.aura; }
+    else { activeModalToken.aura = { radius: r, color: document.getElementById('auraColor').value }; }
+    dirty.tokens = true; requestRender(); setDirty();
+    getModal('auraModal').hide();
+  });
+
+  // --- Vision Modal ---
+  document.getElementById('visionSaveBtn').addEventListener('click', ()=>{
+    if (!activeModalToken) return;
+    const r = parseFloat(document.getElementById('visionRange').value) || 0;
+    if (r <= 0) { delete activeModalToken.visionCone; }
+    else {
+      activeModalToken.visionCone = {
+        range: r,
+        angle: parseFloat(document.getElementById('visionAngle').value) || 90,
+        color: document.getElementById('visionColor').value
+      };
+    }
+    dirty.tokens = true; requestRender(); setDirty();
+    getModal('visionModal').hide();
+  });
+
+  // --- Initiative Modal ---
+  document.getElementById('initSendBtn').addEventListener('click', ()=>{
+    const name = document.getElementById('initName').value.trim();
+    if (!name) { document.getElementById('initName').focus(); return; }
+    const maxHp     = parseInt(document.getElementById('initMaxHp').value) || 0;
+    const currentHp = parseInt(document.getElementById('initCurrentHp').value) || maxHp;
+    const ac        = parseInt(document.getElementById('initAc').value) || 10;
+    const initiative= parseInt(document.getElementById('initRoll').value) || 0;
+    const data = { name, maxHp, currentHp: currentHp, ac, initiative, useActualInitiative: true };
+    localStorage.setItem('dmtools.pendingInitiativeImport', JSON.stringify(data));
+    getModal('initiativeModal').hide();
+    const w = window.open('initiative.html#autoimport', '_blank');
+    if (!w || w.closed || typeof w.closed === 'undefined') {
+      if (confirm('Popup blocked — open Initiative Tracker in this tab?')) {
+        window.location.href = 'initiative.html#autoimport';
+      }
+    }
+  });
 
   ctxMenu.addEventListener('click', (e)=>{
     const cmd = e.target.dataset.cmd;
@@ -2276,79 +2565,50 @@
     if(!t) return;
     if (cmd==='rename'){
       const name = prompt('Token name:', t.name || '');
-      if (name!==null) {
-        t.name = name.trim();
-        setDirty();
-      }
+      if (name!==null) { t.name = name.trim(); dirty.tokens=true; requestRender(); updateTokenList(); setDirty(); }
     } else if (cmd==='toggleLabel'){
       t.showLabel = !t.showLabel;
-      setDirty();
+      dirty.tokens=true; requestRender(); setDirty();
     } else if (cmd==='setHp'){
-      const choice = prompt('HP: [S]et max/current, [D]amage, [H]eal, [C]lear', 'S').toUpperCase();
-      if (choice === 'S') {
-        const hp = prompt('Current HP:', t.hp || '');
-        const maxHp = prompt('Max HP:', t.maxHp || '');
-        if (hp !== null) t.hp = parseInt(hp) || 0;
-        if (maxHp !== null) t.maxHp = parseInt(maxHp) || 0;
-        setDirty();
-      } else if (choice === 'D') {
-        const dmg = prompt('Damage amount:', '');
-        if (dmg !== null) {
-          t.hp = Math.max(0, (t.hp || 0) - (parseInt(dmg) || 0));
-          setDirty();
-        }
-      } else if (choice === 'H') {
-        const heal = prompt('Heal amount:', '');
-        if (heal !== null) {
-          t.hp = Math.min((t.maxHp || 0), (t.hp || 0) + (parseInt(heal) || 0));
-          setDirty();
-        }
-      } else if (choice === 'C') {
-        t.hp = 0; t.maxHp = 0;
-        setDirty();
-      }
+      activeModalToken = t;
+      document.getElementById('hpCurrent').value = t.hp || 0;
+      document.getElementById('hpMax').value = t.maxHp || 0;
+      document.getElementById('hpDmgAmt').value = '';
+      document.getElementById('hpHealAmt').value = '';
+      hideMenu();
+      getModal('hpModal').show();
+      return;
     } else if (cmd==='addStatus'){
-      const choice = prompt('Status: [A]dd, [C]lear', 'A').toUpperCase();
-      if (choice === 'A') {
-        const status = prompt('Status condition (e.g., Poisoned, Stunned):', '');
-        if (status !== null && status.trim()) {
-          if (!t.statusConditions) t.statusConditions = [];
-          t.statusConditions.push(status.trim());
-          setDirty();
-        }
-      } else if (choice === 'C') {
-        t.statusConditions = [];
-        setDirty();
-      }
+      activeModalToken = t;
+      buildStatusCheckboxes(t);
+      hideMenu();
+      getModal('statusModal').show();
+      return;
     } else if (cmd==='setAura'){
-      const radius = prompt('Aura radius (in cells, 0 to remove):', t.aura?.radius || '');
-      if (radius !== null) {
-        const r = parseFloat(radius) || 0;
-        if (r <= 0) {
-          delete t.aura;
-        } else {
-          const color = prompt('Aura color (hex, e.g., #ff0000):', t.aura?.color || '#8bd3ff');
-          t.aura = { radius: r, color: color || '#8bd3ff' };
-        }
-        setDirty();
-      }
+      activeModalToken = t;
+      document.getElementById('auraRadius').value = t.aura?.radius || 0;
+      document.getElementById('auraColor').value  = t.aura?.color  || '#8bd3ff';
+      hideMenu();
+      getModal('auraModal').show();
+      return;
     } else if (cmd==='setVision'){
-      const range = prompt('Vision range (in cells, 0 to remove):', t.visionCone?.range || '');
-      if (range !== null) {
-        const r = parseFloat(range) || 0;
-        if (r <= 0) {
-          delete t.visionCone;
-        } else {
-          const angle = prompt('Vision angle (degrees, e.g., 90):', t.visionCone?.angle || '90');
-          const color = prompt('Vision color (hex):', t.visionCone?.color || '#ffff88');
-          t.visionCone = {
-            range: r,
-            angle: parseFloat(angle) || 90,
-            color: color || '#ffff88'
-          };
-        }
-        setDirty();
-      }
+      activeModalToken = t;
+      document.getElementById('visionRange').value = t.visionCone?.range || 0;
+      document.getElementById('visionAngle').value = t.visionCone?.angle || 90;
+      document.getElementById('visionColor').value = t.visionCone?.color || '#ffff88';
+      hideMenu();
+      getModal('visionModal').show();
+      return;
+    } else if (cmd==='addToInitiative'){
+      activeModalToken = t;
+      document.getElementById('initName').value      = t.name || '';
+      document.getElementById('initCurrentHp').value = t.hp   || '';
+      document.getElementById('initMaxHp').value     = t.maxHp || '';
+      document.getElementById('initAc').value        = 10;
+      document.getElementById('initRoll').value      = 0;
+      hideMenu();
+      getModal('initiativeModal').show();
+      return;
     } else if (cmd==='duplicate'){
       const copy = { ...t, id:'t_'+Math.random().toString(36).slice(2,9), x:t.x+10, y:t.y+10, selected:true };
       if(t.statusConditions) copy.statusConditions = [...t.statusConditions];
@@ -2363,8 +2623,6 @@
     } else if (cmd==='send'){
       const i = state.tokens.indexOf(t); if(i>=0){ state.tokens.splice(i,1); state.tokens.unshift(t); }
       setDirty();
-    } else if (cmd==='addToInitiative'){
-      addTokenToInitiativeTracker(t);
     } else if (cmd==='delete'){
       state.tokens = state.tokens.filter(x=>!x.selected);
       setDirty();
@@ -2373,58 +2631,48 @@
   });
 
   window.addEventListener('keydown', (e)=>{
+    // Don't intercept game hotkeys while the user is typing in an input or textarea
+    // (e.g. modal fields, sidebar number inputs). Escape is always allowed through.
+    const inInput = e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.isContentEditable;
+
+    if(e.key === 'Escape'){
+      state.tokens.forEach(t=> t.selected = false);
+      fogShapes.forEach(s=> s.selected = false);
+      persistentMeasurements.forEach(m=> m.selected = false);
+      dirty.ui = true; requestRender(); updateTokenList(); hideMenu();
+    }
+
+    if (inInput) return;
+
     if(e.code === 'Space') { state.ui.spaceDown = true; uiLayer.classList.add('dragging'); }
     if(e.key === 'Delete' || e.key === 'Backspace') {
       deleteSelected();
       deleteSelectedFogShapes();
       deleteSelectedPersistentMeasurements();
     }
-    if(e.key === 'Escape'){
-      state.tokens.forEach(t=> t.selected = false);
-      fogShapes.forEach(s=> s.selected = false);
-      persistentMeasurements.forEach(m=> m.selected = false);
-      dirty.ui = true;
-      requestRender();
-      updateTokenList();
-      hideMenu();
-    }
     if(e.altKey){ state.ui.measuring = true; }
 
-    // Handle fog shape resizing
+    // Fog shape resize/keyboard
     const fs = fogShapes.find(x=>x.selected);
     if(fs){
       if(e.key === '+' || e.key === '='){
-        if(fs.type === 'rect'){
-          fs.w *= 1.1;
-          fs.h *= 1.1;
-        } else if(fs.type === 'circle'){
-          fs.r *= 1.1;
-        }
-        renderFogShapes();
-        setDirty();
-        return;
+        if(fs.type === 'rect'){ fs.w *= 1.1; fs.h *= 1.1; } else if(fs.type === 'circle'){ fs.r *= 1.1; }
+        renderFogShapes(); setDirty(); return;
       }
       if(e.key === '-' || e.key === '_'){
-        if(fs.type === 'rect'){
-          fs.w *= 0.9;
-          fs.h *= 0.9;
-        } else if(fs.type === 'circle'){
-          fs.r *= 0.9;
-        }
-        renderFogShapes();
-        setDirty();
-        return;
+        if(fs.type === 'rect'){ fs.w *= 0.9; fs.h *= 0.9; } else if(fs.type === 'circle'){ fs.r *= 0.9; }
+        renderFogShapes(); setDirty(); return;
       }
     }
 
-    // Handle token operations
+    // Token hotkeys
     const t = state.tokens.find(x=>x.selected);
     if(!t) return;
-    if(e.key === 'r' || e.key === 'R'){ t.rot = (t.rot||0) + (Math.PI/12); setDirty(); }
-    if(e.key === '+'){ t.w*=1.1; t.h*=1.1; setDirty(); }
-    if(e.key === '-'){ t.w*=0.9; t.h*=0.9; setDirty(); }
-    if(e.key === '['){ const i=state.tokens.indexOf(t); if(i>0){ state.tokens.splice(i,1); state.tokens.splice(i-1,0,t); setDirty(); } }
-    if(e.key === ']'){ const i=state.tokens.indexOf(t); if(i>=0 && i<state.tokens.length-1){ state.tokens.splice(i,1); state.tokens.splice(i+1,0,t); setDirty(); } }
+    if(e.key === 'r' || e.key === 'R'){ t.rot = (t.rot||0) + (Math.PI/12); dirty.tokens=true; requestRender(); setDirty(); }
+    if(e.key === '+'){ t.w*=1.1; t.h*=1.1; dirty.tokens=true; requestRender(); setDirty(); }
+    if(e.key === '-'){ t.w*=0.9; t.h*=0.9; dirty.tokens=true; requestRender(); setDirty(); }
+    if(e.key === '['){ const i=state.tokens.indexOf(t); if(i>0){ state.tokens.splice(i,1); state.tokens.splice(i-1,0,t); dirty.tokens=true; requestRender(); setDirty(); } }
+    if(e.key === ']'){ const i=state.tokens.indexOf(t); if(i>=0 && i<state.tokens.length-1){ state.tokens.splice(i,1); state.tokens.splice(i+1,0,t); dirty.tokens=true; requestRender(); setDirty(); } }
   });
   window.addEventListener('keyup', (e)=>{
     if(e.code === 'Space'){ state.ui.spaceDown = false; uiLayer.classList.remove('dragging'); }
@@ -2508,8 +2756,12 @@
   document.getElementById('fogCover').addEventListener('click', ()=>{ fogState.mode='cover'; setFogUI(true); });
   document.getElementById('fogBrush').addEventListener('input', (e)=>{ fogState.brush = Math.max(5, Math.min(400, parseFloat(e.target.value)||80)); });
   document.getElementById('fogClear').addEventListener('click', ()=>{
+    const hasContent = (fog.width > 1 && fog.height > 1) || fogShapes.length > 0;
+    if (hasContent && !confirm('Clear all fog paint and all fog shapes? This cannot be undone.')) return;
     fctx.clearRect(0,0,fog.width,fog.height);
     fogShapes.length = 0;
+    dirty.fog = true;
+    requestRender();
     save();
   });
 
@@ -2544,14 +2796,52 @@
     e.currentTarget.setAttribute('aria-pressed', String(state.ui.persistentMeasureMode));
   });
 
+  document.getElementById('clearMeasures').addEventListener('click', ()=>{
+    if (persistentMeasurements.length === 0) return;
+    if (!confirm('Remove all persistent measurements?')) return;
+    persistentMeasurements.length = 0;
+    dirty.ui = true;
+    requestRender();
+    setDirty();
+  });
+
   // Presets
   document.getElementById('addPreset').addEventListener('click', addTokenFromPreset);
   loadTokenManifest().then(buildPresetDropdown);
 
   // Export / Import
   document.getElementById('exportJson').addEventListener('click', ()=>{
-    const payload = localStorage.getItem(STORAGE_KEY) || JSON.stringify({});
-    const blob = new Blob([payload], {type:'application/json'});
+    // Serialize current in-memory state so the export is always up-to-date,
+    // even when the session is too large for the localStorage backup.
+    const fogData = (fog.width > 1 && fog.height > 1) ? tryCanvasToDataURL(fog) : null;
+    const payload = {
+      map: { imgSrc: state.map.imgSrc, w: state.map.w, h: state.map.h },
+      mapTransform: state.mapTransform,
+      grid: state.grid,
+      view: state.view,
+      tokens: state.tokens.map(t => ({
+        id: t.id, name: t.name, imgSrc: t.imgSrc,
+        x: t.x, y: t.y, w: t.w, h: t.h, rot: t.rot,
+        selected: !!t.selected, hp: t.hp, maxHp: t.maxHp,
+        showLabel: t.showLabel, statusConditions: t.statusConditions,
+        aura: t.aura, visionCone: t.visionCone
+      })),
+      fog: fogData,
+      fogState: {
+        enabled: fogState.enabled, mode: fogState.mode, brush: fogState.brush,
+        shapeType: fogState.shapeType, shapeColor: fogState.shapeColor, shapeSize: fogState.shapeSize
+      },
+      fogShapes: fogShapes.map(s => ({
+        id: s.id, type: s.type, x: s.x, y: s.y,
+        w: s.w, h: s.h, r: s.r, rot: s.rot || 0,
+        mode: s.mode, color: s.color, selected: !!s.selected
+      })),
+      persistentMeasurements: persistentMeasurements.map(m => ({
+        id: m.id, type: m.type, x1: m.x1, y1: m.y1, x2: m.x2, y2: m.y2,
+        color: m.color, selected: !!m.selected
+      }))
+    };
+    const blob = new Blob([JSON.stringify(payload)], {type:'application/json'});
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a'); a.href = url; a.download = `battlemap_${new Date().toISOString()}.json`;
     document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
@@ -2703,54 +2993,27 @@
   });
 
   function fogDot(ix, iy) {
-    const r = fogState.brush * 0.5; // base brush in image px
+    const r = fogState.brush * 0.5;
     if (!fog.width || !fog.height) return;
     if (fogState.mode === 'reveal') {
-      fctx.globalCompositeOperation = 'destination-out'; // erase (reveal)
+      fctx.globalCompositeOperation = 'destination-out';
       fctx.beginPath(); fctx.arc(ix, iy, r, 0, Math.PI*2); fctx.fill();
     } else {
-      fctx.globalCompositeOperation = 'source-over'; // paint black (cover)
+      fctx.globalCompositeOperation = 'source-over';
       fctx.fillStyle = 'rgba(0,0,0,1)';
       fctx.beginPath(); fctx.arc(ix, iy, r, 0, Math.PI*2); fctx.fill();
     }
+    // Mark fog layer dirty so the canvas redraws immediately after each stroke
+    dirty.fog = true;
+    requestRender();
   }
 
   function renderFogShapes() {
-    if (!fog.width || !fog.height) return;
-    // Clear and redraw all fog shapes
-    fctx.clearRect(0, 0, fog.width, fog.height);
-
-    for (const shape of fogShapes) {
-      if (shape.mode === 'reveal') {
-        fctx.globalCompositeOperation = 'destination-out'; // erase (reveal)
-      } else {
-        fctx.globalCompositeOperation = 'source-over'; // paint with color (cover)
-        fctx.fillStyle = shape.color || '#000000';
-      }
-
-      if (shape.type === 'rect') {
-        const rot = shape.rot || 0;
-        if (rot !== 0) {
-          // Apply rotation around center of rectangle
-          const cx = shape.x + shape.w / 2;
-          const cy = shape.y + shape.h / 2;
-          fctx.save();
-          fctx.translate(cx, cy);
-          fctx.rotate(rot);
-          fctx.fillRect(-shape.w / 2, -shape.h / 2, shape.w, shape.h);
-          fctx.restore();
-        } else {
-          fctx.fillRect(shape.x, shape.y, shape.w, shape.h);
-        }
-      } else if (shape.type === 'circle') {
-        fctx.beginPath();
-        fctx.arc(shape.x + shape.r, shape.y + shape.r, shape.r, 0, Math.PI * 2);
-        fctx.fill();
-      }
-    }
-
-    // Reset composite operation
-    fctx.globalCompositeOperation = 'source-over';
+    // Shapes are rendered live in renderFogLayer() via drawFogShapes().
+    // Marking dirty is sufficient — no bitmap manipulation needed, and avoids
+    // clearing brush-painted fog whenever shapes move or resize.
+    dirty.fog = true;
+    requestRender();
   }
 
   function drawFogShapes(ctx) {
@@ -3072,6 +3335,37 @@
     if (state.ui.dragMode !== 'none' || fogState.painting) e.preventDefault();
   }, { passive: false });
 
+  // Mode tab switching
+  document.getElementById('tabFog').addEventListener('click', ()=>{
+    document.getElementById('fogControlsPanel').style.display = '';
+    document.getElementById('measureControlsPanel').style.display = 'none';
+    document.getElementById('tabFog').classList.add('active');
+    document.getElementById('tabFog').setAttribute('aria-selected','true');
+    document.getElementById('tabMeasure').classList.remove('active');
+    document.getElementById('tabMeasure').setAttribute('aria-selected','false');
+  });
+  document.getElementById('tabMeasure').addEventListener('click', ()=>{
+    document.getElementById('measureControlsPanel').style.display = '';
+    document.getElementById('fogControlsPanel').style.display = 'none';
+    document.getElementById('tabMeasure').classList.add('active');
+    document.getElementById('tabMeasure').setAttribute('aria-selected','true');
+    document.getElementById('tabFog').classList.remove('active');
+    document.getElementById('tabFog').setAttribute('aria-selected','false');
+  });
+
+  // Sidebar collapse toggle (desktop)
+  document.getElementById('sidebarToggle').addEventListener('click', ()=>{
+    const drawer = document.getElementById('controlsDrawer');
+    const btn = document.getElementById('sidebarToggle');
+    const collapsed = drawer.classList.toggle('sidebar-collapsed');
+    btn.innerHTML = collapsed
+      ? '<i class="bi bi-layout-sidebar-reverse"></i>'
+      : '<i class="bi bi-layout-sidebar"></i>';
+    btn.title = collapsed ? 'Open controls panel' : 'Close controls panel';
+    // Refit canvases after sidebar animates
+    setTimeout(resizeAllLayers, 220);
+  });
+
   // Boot
   // Hook brush/measure buttons initial state to UI
   document.getElementById('fogBrushMode').classList.toggle('active', state.ui.brushMode);
@@ -3144,19 +3438,19 @@
 
   // Keep continuous UI updates for smooth measurement and dragging
   function continuousUiUpdate() {
-    if (state.ui.measuring || state.ui.dragMode !== 'none') {
+    const needsUpdate = state.ui.measuring
+      || state.ui.dragMode !== 'none'
+      || fogState.painting
+      || (fogState.enabled && state.ui.brushMode);
+
+    if (needsUpdate) {
       dirty.ui = true;
 
-      // Pan affects all layers since they all use state.view transform
       if (state.ui.dragMode === 'pan') {
         dirty.map = dirty.fog = dirty.tokens = dirty.grid = true;
-      }
-      // Token drag only affects token layer
-      else if (state.ui.dragMode === 'token') {
+      } else if (state.ui.dragMode === 'token') {
         dirty.tokens = true;
-      }
-      // Fog shape operations affect fog layer
-      else if (state.ui.dragMode === 'fogShape' || state.ui.dragMode === 'fogShapeResize' || state.ui.dragMode === 'fogShapeRotate') {
+      } else if (state.ui.dragMode === 'fogShape' || state.ui.dragMode === 'fogShapeResize' || state.ui.dragMode === 'fogShapeRotate') {
         dirty.fog = true;
       }
 

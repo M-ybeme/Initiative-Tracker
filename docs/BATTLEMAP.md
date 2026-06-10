@@ -308,6 +308,55 @@ The Battle Map is a tactical combat visualization tool with support for fog-of-w
 3. **v1.8.3** - Token features (labels, HP, conditions, auras, vision)
 4. **v1.9.0** - Multi-shape measurements (line, cone, circle) and aura fixes
 5. **v1.10.6** - Performance optimization with layered canvas and persistent measurements
+6. **v2.1.7** - UX overhaul: mode tabs toolbar, Bootstrap modals, fog brush cursor, sidebar stabilization, slimmed controls
+
+---
+
+## UX Overhaul (v2.1.7)
+
+### Mode Tabs Toolbar
+
+The flat scrollable control bar has been replaced with a two-tab panel:
+
+- **🌫 Fog tab** (default) — All fog-of-war controls: enable/disable, Reveal/Cover mode, brush size, Brush Mode toggle, Clear Fog, and fog shape controls (type, color, size, Add/Delete).
+- **📐 Measure tab** — All measurement controls: Measure toggle, shape selector (Line/Cone/Circle), Persistent toggle, color picker, and Clear Measures.
+
+Clicking a tab shows its panel and hides the other, keeping the toolbar compact at all times.
+
+### Fog Brush Cursor
+
+While in brush mode (Shift+Drag on desktop or Brush Mode button), a dashed circle follows the cursor showing the exact paint radius:
+- Blue tint in Reveal mode
+- White in Cover mode
+
+Brush strokes also render immediately without needing to pan the map first.
+
+### Bootstrap Modals for Token Editing
+
+All token right-click context menu actions that previously used native `prompt()` dialogs now open Bootstrap modals:
+- **Set HP** — Current/max HP with damage and heal buttons
+- **Add Status** — Dropdown of all 2024 PHB conditions
+- **Set Aura** — Radius (cells) and color picker
+- **Set Vision** — Angle and range inputs
+- **Add to Initiative** — Name, AC, HP, and initiative fields
+
+Modals work correctly on mobile and do not lose canvas focus. Keyboard hotkeys (Delete, R, +, −) are guarded so they do not fire while typing inside modal inputs.
+
+### Sidebar Stabilization
+
+- Sidebar holds a fixed **300 px width** regardless of which accordions are open or closed.
+- Sidebar stretches to **full viewport height** at all times.
+- A floating **collapse toggle button** at the top-left of the canvas opens/closes the sidebar on desktop; canvases resize after the animation.
+
+### Slimmed Controls (Sections 1 & 2)
+
+Label text shortened and number inputs given explicit compact widths to eliminate horizontal overflow:
+- "Base Scale (px per cell)" → "Cell size (px)"
+- "Map Offset X/Y (px)" → "Offset X / Offset Y"
+- "Grid Origin X/Y (px)" → "Origin X / Origin Y"
+- "Reset Map Transform" → "Reset Transform"
+- "Align to Clicked Intersection" → "Align to Grid"
+- File inputs (Upload Map, Upload Image) stack vertically to prevent the browser file button from overlapping the label text.
 
 ---
 

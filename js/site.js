@@ -1,13 +1,15 @@
 const DM_TOOLBOX_BUILD = {
   name: "The DM's Toolbox",
-  version: "2.1.6",
+  version: "2.1.7",
   recentChanges: [
-    "Initiative Tracker: Reaction tracker added — ⚡ button per combatant marks reaction used; auto-resets on that creature's turn start",
-    "Initiative Tracker: Legendary Actions counter added — 👑 enable button in actions column; prompts for max (default 3); counter shows remaining/max and auto-resets each turn",
-    "Initiative Tracker: On-deck indicator shows next combatant in order with a dim caret",
-    "Initiative Tracker: Reaction uses and Legendary Action events now logged in Combat Log",
-    "Initiative Tracker Quick Help: added Combat Log, Bulk HP, and Reactions & Legendary Actions sections; added Compendium link; clarified precision damage usage",
-    "docs/INITIATIVE_TRACKER.md rewritten as full feature reference covering all tracker capabilities"
+    "Battle Map: Toolbar reworked to mode tabs — Fog controls and Measure controls now live in separate 🌫 Fog / 📐 Measure tabs",
+    "Battle Map: Fog brush cursor now shows a dashed circle preview while painting; brush strokes render immediately without needing to pan",
+    "Battle Map: Token context menu uses Bootstrap modals instead of browser prompt() for HP, status, aura, vision, and Initiative Tracker fields",
+    "Battle Map: Keyboard guard prevents token deletion when typing in modal input fields",
+    "Battle Map: Sidebar collapse toggle button added; sidebar maintains full height and fixed width regardless of accordion state",
+    "Battle Map: Sections 1 & 2 controls slimmed — shorter labels, compact number inputs, stacked file inputs",
+    "Battle Map: Export JSON now serializes current in-memory state instead of stale localStorage",
+    "Battle Map: Help panel updated with shortcuts, brush mode, fog shapes, and saving sections"
   ],
   buildTime: new Date().toISOString(),
   author: "Maybeme"

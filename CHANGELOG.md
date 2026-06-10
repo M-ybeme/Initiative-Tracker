@@ -14,11 +14,32 @@ The DM's Toolbox has evolved through focused feature releases:
 - **1.9.x**: Battle map measurement tools, persistent fog shapes, and generator integration across NPC/Tavern/Shop systems
 - **1.8.x**: Spell database expansion to 432+ spells, inventory management, loot generator overhaul, and character token generation
 
-**Current version: 2.1.6 (June 2026)**
+**Current version: 2.1.7 (June 2026)**
 
 ---
 
-## [2.1.6] - 2026-06-09
+## [2.1.7] - 2026-06-05
+**Battle Map — UX Overhaul**
+
+### Added
+- **Mode tabs toolbar** — Fog and Measure controls now live in separate tabbed panels (🌫 Fog / 📐 Measure) instead of a single flat scrollable bar. Switching tabs shows only the relevant controls, reducing clutter significantly.
+- **Fog brush cursor** — A dashed circle preview follows the cursor while in brush mode, showing the exact paint radius before and during strokes. Reveal mode uses a blue tint; Cover mode uses white.
+- **Bootstrap modals for token editing** — Right-click context menu actions (Set HP, Add Status, Set Aura, Set Vision, Add to Initiative Tracker) now open Bootstrap modals instead of chaining native browser `prompt()` dialogs. Allows editing without losing canvas focus and works properly on mobile.
+- **Sidebar collapse toggle** — A floating button at the top-left of the canvas opens and closes the controls sidebar on desktop. Canvases resize correctly after the CSS animation.
+- **Clear Measures confirmation** — "Clear Measures" and "Clear Fog" both ask for confirmation before destructive removal.
+
+### Changed
+- **Fog brush strokes render immediately** — Previously strokes were invisible until the map was panned. Fixed by setting the dirty flag and calling `requestRender()` inside `fogDot()`.
+- **Sidebar layout stabilized** — Sidebar now maintains a fixed 300 px width and stretches to full viewport height regardless of which accordions are open or closed.
+- **Section 1 (Map & Grid) controls slimmed** — Label text shortened ("Base Scale (px per cell)" → "Cell size (px)", "Map Offset X (px)" → "Offset X", etc.), buttons condensed ("Reset Map Transform" → "Reset Transform", "Align to Clicked Intersection" → "Align to Grid"), all number inputs given explicit compact widths, and file inputs stacked vertically to prevent overlap.
+- **Section 2 (Tokens & Presets) controls slimmed** — "Upload Token Image" → "Upload Image", "Token Size (cells)" → "Size (cells)", "Add Selected Preset" → "Add Preset"; preset `<select>` min-width removed; file input stacked vertically.
+- **Export JSON** now serializes the current in-memory session state rather than reading potentially stale localStorage.
+- **Keyboard guard added** — Window-level `keydown` handler skips game hotkeys (Delete, Backspace, R, +, −, [, ]) when focus is inside an input, textarea, or contenteditable element. Fixes token deletion when editing aura/HP values in modals.
+- **Help panel updated** — Shortcuts, Tokens, Fog of War, and Saving sections rewritten to cover brush mode, context menu modals, keyboard shortcuts, and the Ctrl+S save shortcut.
+
+---
+
+## [2.1.6] - 2026-06-01
 **Initiative Tracker — Combat Utility Improvements**
 
 ### Added

@@ -12,8 +12,8 @@ Free D&D 5e toolkit using **2024 PHB rules (SRD 5.2)**. No login, no tracking, w
 
 ### Core Tools
 
-* **[Initiative Tracker](docs/INITIATIVE_TRACKER.md)** – Combat management with HP tracking, damage history, conditions, and turn automation
-* **[Battle Map](docs/BATTLEMAP.md)** – Lightweight VTT with fog of war, tokens, and grid overlay
+* **[Initiative Tracker](docs/INITIATIVE_TRACKER.md)** – Combat management with HP tracking, conditions, turn automation, reaction tracking, and legendary action counters
+* **[Battle Map](docs/BATTLEMAP.md)** – Lightweight VTT: upload any map image, calibrate the grid, place and manage tokens with HP bars, status conditions, auras, and vision cones; paint or shape fog-of-war; place persistent line/cone/circle measurements; right-click tokens to send to Initiative Tracker
 * **[Character Manager](docs/CHARACTER_MANAGER.md)** – Full character sheets with guided creation wizard and level-up system
 * **[Encounter Builder](docs/ENCOUNTER_BUILDER.md)** – CR budgeting, monster stat blocks, and one-click initiative export
 * **[Compendium](reference.html)** – Mid-session spell, monster, and rules reference with full-text search, filters, and pinnable stat-block cards
@@ -83,8 +83,10 @@ Press **Ctrl+Alt+D** or click the gear icon in the footer to open the diagnostic
 
 ### Combat & Encounters
 
-* **Initiative tracking** with automatic turn order and round counter
-* **HP management** – Damage, healing, temp HP, and death saves
+* **Initiative tracking** with automatic turn order, round counter, and on-deck indicator
+* **HP management** – Damage, healing, temp HP, and death saves; quick ±1/±5 buttons and a precision amount input
+* **Reaction tracker** – Per-combatant ⚡ button marks reaction used and auto-resets at the start of that creature's turn
+* **Legendary Actions counter** – 👑 enable button for boss creatures; configurable max with auto-reset each turn and full Combat Log tracking
 * **Condition tracking** – All 2024 PHB conditions with exhaustion penalties
 * **Ability check rolls** – Roll raw ability checks (advantage/normal/disadvantage) from the character sheet and combat view
 * **Combat card** – A condensed single-screen combat view with HP bar, AC, speed, spell slots, prepared spells, ability scores, saving throws, attacks, and resources all in one place
@@ -226,7 +228,7 @@ Every guide under `/docs` reflects the SRD-only build. Start with the index for 
 * [Compendium](reference.html) – Spell, monster, and rules reference with search and pinnable cards.
 * [Encounter Builder](docs/ENCOUNTER_BUILDER.md) – Encounter math, CR budgeting, and SRD stat sources.
 * [Generators](docs/GENERATORS.md) – Loot, tavern, shop, NPC, and name coverage after the data scrub.
-* [Initiative Tracker](docs/INITIATIVE_TRACKER.md) – Turn automation, damage logging, and gating behavior.
+* [Initiative Tracker](docs/INITIATIVE_TRACKER.md) – Turn automation, HP tracking, reaction/legendary-action tracking, combat log, and SRD gating behavior.
 * [Journal](docs/JOURNAL.md) – Rich text tips plus how exports embed the license block.
 * [Integration Guide](docs/INTEGRATION.md) – Embed or extend modules without breaking the SRD boundary.
 * [Private Build Workflow](docs/PRIVATE_BUILD.md) – Generate a local bundle plus your own packs without committing private data.
