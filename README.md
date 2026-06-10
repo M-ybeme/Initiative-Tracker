@@ -15,7 +15,7 @@ Free D&D 5e toolkit using **2024 PHB rules (SRD 5.2)**. No login, no tracking, w
 * **[Initiative Tracker](docs/INITIATIVE_TRACKER.md)** – Combat management with HP tracking, conditions, turn automation, reaction tracking, and legendary action counters
 * **[Battle Map](docs/BATTLEMAP.md)** – Lightweight VTT: upload any map image, calibrate the grid, place and manage tokens with HP bars, status conditions, auras, and vision cones; paint or shape fog-of-war; place persistent line/cone/circle measurements; right-click tokens to send to Initiative Tracker
 * **[Character Manager](docs/CHARACTER_MANAGER.md)** – Full character sheets with guided creation wizard and level-up system
-* **[Encounter Builder](docs/ENCOUNTER_BUILDER.md)** – CR budgeting, monster stat blocks, and one-click initiative export
+* **[Encounter Builder](docs/ENCOUNTER_BUILDER.md)** – CR budgeting, monster stat blocks, save/load encounter slots, and one-click initiative export with optional pre-rolled initiative
 * **[Compendium](reference.html)** – Mid-session spell, monster, and rules reference with full-text search, filters, and pinnable stat-block cards
 * **[Journal](docs/JOURNAL.md)** – Rich text campaign notes with persistent storage
 * **[Generators](docs/GENERATORS.md)** – Random shops, taverns, loot tables, NPCs, and names
@@ -94,9 +94,11 @@ Press **Ctrl+Alt+D** or click the gear icon in the footer to open the diagnostic
 * **Spell casting with auto-roll** – Casting a spell in combat or on the character sheet automatically rolls to-hit and damage; results shown in a combined toast with attack roll and damage together (6-second display)
 * **Concentration check modal** – Tapping the Concentrating badge in combat opens a modal to roll a CON saving throw with live DC calculation (max 10 or half damage), or end concentration manually
 * **Dice roll history** – Every roll (spell attacks, damage, saves, initiative, hit dice) tracked in a scrollable history panel; accessible via the Roll History button in the combat header
-* **Encounter balancing** – CR calculator with difficulty ratings
-* **Monster stat blocks** – Full SRD bestiary with searchable filters
-* **Custom monster creator** – Simple/Full mode builder with all 5e stat block fields (legendary, mythic, lair actions, spellcasting, and more)
+* **Encounter balancing** – CR calculator with difficulty ratings and per-monster breakdown (e.g. 3× Goblin, 1× Bugbear)
+* **Monster stat blocks** – Full SRD bestiary with searchable filters (CR 0–30, type); hover tooltips auto-switch to two-column layout for large stat blocks
+* **Custom monster creator** – Simple/Full mode builder with all 5e stat block fields (legendary, mythic, lair actions, spellcasting, and more); edit SRD monsters directly from the roster
+* **Save/load encounters** – Named encounter slots persist in localStorage; restore roster + party config with one click across sessions
+* **Initiative pre-roll** – Optional d20 + DEX roll for every monster before sending to the tracker
 
 ### Campaign Reference
 

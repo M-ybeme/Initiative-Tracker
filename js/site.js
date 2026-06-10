@@ -1,15 +1,14 @@
 const DM_TOOLBOX_BUILD = {
   name: "The DM's Toolbox",
-  version: "2.1.7",
+  version: "2.1.8",
   recentChanges: [
-    "Battle Map: Toolbar reworked to mode tabs — Fog controls and Measure controls now live in separate 🌫 Fog / 📐 Measure tabs",
-    "Battle Map: Fog brush cursor now shows a dashed circle preview while painting; brush strokes render immediately without needing to pan",
-    "Battle Map: Token context menu uses Bootstrap modals instead of browser prompt() for HP, status, aura, vision, and Initiative Tracker fields",
-    "Battle Map: Keyboard guard prevents token deletion when typing in modal input fields",
-    "Battle Map: Sidebar collapse toggle button added; sidebar maintains full height and fixed width regardless of accordion state",
-    "Battle Map: Sections 1 & 2 controls slimmed — shorter labels, compact number inputs, stacked file inputs",
-    "Battle Map: Export JSON now serializes current in-memory state instead of stale localStorage",
-    "Battle Map: Help panel updated with shortcuts, brush mode, fog shapes, and saving sections"
+    "Encounter Builder: Stat-block tooltips now split into two columns automatically when taller than ~82% of the viewport — no more cut-off boss stat blocks",
+    "Encounter Builder: Save / Load encounter slots — name and persist your roster + party config to localStorage; restore in two clicks",
+    "Encounter Builder: Edit button (✏) on each roster entry pre-loads that monster into the Full Mode custom editor for quick tweaks",
+    "Encounter Builder: Roll Init checkbox — pre-rolls d20 + DEX mod initiative for every monster before sending to the tracker",
+    "Encounter Builder: Encounter Name field — used as export filename prefix and stat-block text header",
+    "Encounter Builder: CR filter now covers the full 0–30 range (was capped at 15)",
+    "Encounter Builder: Roster summary now shows a monster breakdown (e.g. 3× Goblin, 1× Bugbear) above the XP/difficulty line"
   ],
   buildTime: new Date().toISOString(),
   author: "Maybeme"

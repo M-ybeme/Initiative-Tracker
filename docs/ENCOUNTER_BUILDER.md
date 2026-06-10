@@ -18,7 +18,8 @@
   - All actions with attack bonuses (+X to hit), save DCs, damage dice
   - Reactions and legendary actions
   - Smart positioning prevents tooltips from going off-screen
-- Search by name, CR, type, size
+  - **Two-column layout** kicks in automatically when a stat block is taller than ~82% of the viewport — no scrolling needed even for massive boss stat blocks
+- Search by name, CR (0–30), and creature type
 
 ### Custom Monster Creation (v2.0.8.1)
 
@@ -60,15 +61,28 @@ A fully rebuilt custom monster creator with **Simple** and **Full** mode toggle.
   - Full stat block with organized sections (Special Abilities, Actions, Reactions, Legendary Actions)
   - Attack information highlighted: to-hit bonus, save DC, damage with type
   - Speed and movement details
+- **Edit button (pencil icon)** on each roster entry — pre-populates the Full Mode custom monster editor with that monster's data so you can tweak HP, add abilities, or reskin an SRD creature without starting from scratch
+- **Monster breakdown** in the summary line (e.g. "3× Goblin, 1× Bugbear") instead of just a raw count
 - Drag-to-reorder encounter roster
-- Edit monster names with smart duplicate numbering
+- When monsters are sent to the tracker, duplicates are auto-numbered ("Goblin", "Goblin 2", "Goblin 3")
 - Delete monsters from roster
 
 ### Encounter Difficulty
-- Party level configuration (4-8 players, levels 1-20)
+- Party level configuration (any number of players, levels 1-20)
 - XP budget calculator
-- Difficulty rating (Easy, Medium, Hard, Deadly) based on DMG thresholds
-- Adjusted XP for encounter balancing
+- Difficulty rating (Trivial/Easy/Medium/Hard/Deadly) based on DMG thresholds
+- Adjusted XP for encounter balancing with party-size modifier noted when active
+
+### Encounter Name & Save/Load
+- **Encounter Name** field — used as the prefix for all exported filenames and the header of the stat-block `.txt` file
+- **Save** — prompts for a name and stores the full roster + party levels to browser localStorage; prompts before overwriting an existing slot
+- **Load** — restores a saved encounter from the dropdown (prompts before replacing the current roster)
+- **Delete** — removes the selected saved slot
+- Saved slots persist across browser sessions; each slot stores roster, party levels, resist mode, and encounter name
+
+### Initiative Pre-Roll
+- **Roll Init checkbox** next to "Send to Tracker" — when checked, each monster gets a pre-rolled initiative value of `d20 + DEX modifier` instead of the default placeholder
+- Applies to both the Send to Tracker flow and file exports
 
 ### Stat Block Export
 - **"Download Stat Blocks" button** when sending to Initiative Tracker
@@ -89,8 +103,14 @@ A fully rebuilt custom monster creator with **Simple** and **Full** mode toggle.
 - Auto-exports encounter to Initiative Tracker with one click
 - Uses `mode: "append"` to preserve existing combat state
 - All monster data (HP, AC, actions) transfers automatically
-- Opens Initiative Tracker in new tab with roster pre-loaded
+- Opens Initiative Tracker with roster pre-loaded
 
-## Use Case
+## Use Cases
 
-Build an encounter with 6 Goblins + 1 Bugbear, review stat blocks in roster, download stat block reference file for combat, click "Send to Tracker"—combat ready in 30 seconds. Keep stat block file open on second screen for quick reference during battle.
+**Quick encounter:** Search for Goblin, add 6, search for Bugbear, add 1, type party levels, check difficulty. Click "Send to Tracker" — combat ready in 30 seconds.
+
+**Repeat encounters:** Save the encounter with a name. Load it next session in two clicks; roster, party levels, and resist mode all restore together.
+
+**Boss customization:** Add an Ancient Dragon from SRD search, click the pencil icon on its roster row, boost its HP and add a homebrew ability in Full Mode, recalc CR, then send to tracker — no need to rebuild the whole stat block.
+
+**Fast initiative:** Check "Roll Init" before clicking "Send to Tracker" — every enemy arrives in the tracker with a pre-rolled d20 + DEX initiative value.

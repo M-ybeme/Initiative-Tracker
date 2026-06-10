@@ -8,13 +8,31 @@ The format is based on Keep a Changelog, and this project adheres to Semantic Ve
 The DM's Toolbox has evolved through focused feature releases:
 
 
+- **2.1.x**: Battle Map UX overhaul (mode tabs, fog brush cursor, Bootstrap modals), Initiative Tracker reaction/legendary-action tracking, Encounter Builder power-user overhaul (two-col tooltips, save/load slots, edit-in-editor, roll initiative, encounter naming, CR 0–30 filter)
 - **2.0.x**: Starting equipment selection, subclass bonus cantrips, enhanced feat selection UI, interactive class feature selection, ability check rolls, full custom monster creator, and content pack integration
 - **1.11.x**: Journal system with rich text editor, import/export (Word/PDF/TXT/Markdown), and Battle Map → Initiative Tracker integration
 - **1.10.x**: Full character manager with multiclass support, spell learning, subclass selection, and character sheet export
 - **1.9.x**: Battle map measurement tools, persistent fog shapes, and generator integration across NPC/Tavern/Shop systems
 - **1.8.x**: Spell database expansion to 432+ spells, inventory management, loot generator overhaul, and character token generation
 
-**Current version: 2.1.7 (June 2026)**
+**Current version: 2.1.8 (June 2026)**
+
+---
+
+## [2.1.8] - 2026-06-10
+**Encounter Builder — Power-User Overhaul**
+
+### Added
+- **Two-column stat-block tooltips** — hover previews for large monsters (ancient dragons, liches, etc.) automatically reflow into a two-column layout when the content exceeds ~82% of viewport height. Headers/subtitles span full width; action blocks never break mid-entry.
+- **Save / Load encounter slots** — an Encounter Name field and Save / Load / Delete controls sit below the party row and persist named encounters (roster + party levels + resist mode) to `localStorage`. Slots survive browser sessions and can be overwritten with a confirmation prompt.
+- **Edit button on roster entries** — each monster row now has a pencil (✏) icon that pre-populates the Full Mode custom monster editor with all of that monster's data for in-place tweaking without starting from scratch.
+- **Roll Initiative checkbox** — when checked, every monster sent to the tracker or exported via JSON receives a pre-rolled `d20 + DEX modifier` initiative value instead of the default placeholder.
+- **Encounter Name field** — a text input that prefixes all exported filenames (`goblin_ambush_roster_...json`, `goblin_ambush_statblocks_...txt`) and appears as the header in the stat-block `.txt` file.
+- **CR filter expanded to 0–30** — was previously capped at CR 15, preventing filtering for any legendary monster (CR 16–30).
+- **Monster breakdown in summary** — the roster summary now shows `3× Goblin, 1× Bugbear` above the XP/difficulty line instead of just a raw count.
+
+### Fixed
+- `ENCOUNTER_BUILDER.md` incorrectly listed "size" as a searchable filter (no size filter exists) and described "edit monster names" in a way that implied inline renaming rather than send-to-tracker auto-numbering. Both corrected.
 
 ---
 

@@ -46,10 +46,25 @@
       padding: 12px;
       min-width: 350px;
       max-width: 500px;
+      max-height: 88vh;
+      overflow: hidden;
       box-shadow: 0 10px 25px rgba(0,0,0,0.5);
       font-size: 0.9rem;
       line-height: 1.4;
       pointer-events: none;
+    }
+
+    .stat-block-preview.two-col {
+      min-width: 620px;
+      max-width: 740px;
+      columns: 2;
+      column-gap: 14px;
+      column-rule: 1px solid #4a5568;
+    }
+
+    .stat-block-preview.two-col .preview-header,
+    .stat-block-preview.two-col .preview-subtitle {
+      column-span: all;
     }
 
     .stat-block-preview .preview-header {
@@ -83,6 +98,7 @@
       background: #1a202c;
       border-radius: 4px;
       border-left: 3px solid #e53e3e;
+      break-inside: avoid;
     }
 
     .stat-block-preview .action-name {
@@ -105,6 +121,7 @@
       text-transform: uppercase;
       font-size: 0.85rem;
       letter-spacing: 0.5px;
+      break-after: avoid;
     }
 
     /* Expandable roster details */
@@ -214,7 +231,28 @@
                 <button id="eb-import-roster" class="btn btn-outline-info me-2"><i class="bi bi-upload me-1"></i>Import Roster</button>
                 <input type="file" id="eb-import-roster-file" accept=".json" class="d-none">
                 <button id="eb-clear" class="btn btn-outline-light me-2"><i class="bi bi-trash me-1"></i>Clear</button>
+                <span class="me-2 d-inline-flex align-items-center gap-1">
+                  <input class="form-check-input" type="checkbox" id="eb-roll-initiative" title="Pre-roll initiative (d20 + DEX mod) for each monster">
+                  <label class="form-check-label small text-light" for="eb-roll-initiative">Roll Init</label>
+                </span>
                 <button id="eb-send-to-tracker" class="btn btn-warning"><i class="bi bi-box-arrow-in-right me-1"></i>Send to Tracker</button>
+              </div>
+            </div>
+            <div class="row g-2 align-items-end mt-2">
+              <div class="col-12 col-lg-4">
+                <label class="form-label mb-1 small">Encounter Name</label>
+                <input id="eb-encounter-name" class="form-control form-control-sm" placeholder="e.g. Goblin Ambush">
+              </div>
+              <div class="col-12 col-lg-8">
+                <label class="form-label mb-1 small d-none d-lg-block">&nbsp;</label>
+                <div class="input-group input-group-sm">
+                  <select id="eb-saved-select" class="form-select form-select-sm">
+                    <option value="">— Saved Encounters —</option>
+                  </select>
+                  <button id="eb-load" class="btn btn-outline-info" title="Load selected encounter"><i class="bi bi-folder2-open me-1"></i>Load</button>
+                  <button id="eb-save" class="btn btn-outline-success" title="Save current encounter"><i class="bi bi-floppy me-1"></i>Save</button>
+                  <button id="eb-delete-save" class="btn btn-outline-danger" title="Delete selected save"><i class="bi bi-x"></i></button>
+                </div>
               </div>
             </div>
             <div class="mt-3 small text-secondary" id="eb-party-summary">No party set.</div>
@@ -239,6 +277,11 @@
                     <option value="5">5</option><option value="6">6</option><option value="7">7</option><option value="8">8</option>
                     <option value="9">9</option><option value="10">10</option><option value="11">11</option><option value="12">12</option>
                     <option value="13">13</option><option value="14">14</option><option value="15">15</option>
+                    <option value="16">16</option><option value="17">17</option><option value="18">18</option>
+                    <option value="19">19</option><option value="20">20</option><option value="21">21</option>
+                    <option value="22">22</option><option value="23">23</option><option value="24">24</option>
+                    <option value="25">25</option><option value="26">26</option><option value="27">27</option>
+                    <option value="28">28</option><option value="29">29</option><option value="30">30</option>
                   </select>
                   <select id="eb-type-filter" class="form-select form-select-sm">
                     <option value="">Type: Any</option>
@@ -1251,27 +1294,23 @@
       currentPreview = createStatBlockPreview(monster);
       document.body.appendChild(currentPreview);
 
-      // Position the preview
+      // Switch to two-column layout when content is taller than ~82% of viewport
+      if (currentPreview.scrollHeight > window.innerHeight * 0.82) {
+        currentPreview.classList.add('two-col');
+      }
+
+      // Measure after final layout so width/height reflect the chosen column mode
       const rect = element.getBoundingClientRect();
-      const previewRect = currentPreview.getBoundingClientRect();
+      const pw = currentPreview.offsetWidth;
+      const ph = currentPreview.offsetHeight;
 
       let left = rect.right + 10;
       let top = rect.top;
 
-      // Adjust if goes off right side
-      if (left + previewRect.width > window.innerWidth) {
-        left = rect.left - previewRect.width - 10;
-      }
-
-      // Adjust if goes off bottom
-      if (top + previewRect.height > window.innerHeight) {
-        top = window.innerHeight - previewRect.height - 10;
-      }
-
-      // Adjust if goes off top
-      if (top < 0) {
-        top = 10;
-      }
+      if (left + pw > window.innerWidth) left = rect.left - pw - 10;
+      if (top + ph > window.innerHeight) top = window.innerHeight - ph - 10;
+      if (top < 0) top = 10;
+      if (left < 0) left = 10;
 
       currentPreview.style.left = `${left}px`;
       currentPreview.style.top = `${top}px`;
@@ -1457,7 +1496,8 @@
             </div>
             <div class="d-flex align-items-center gap-2">
               <input class="form-control form-control-sm" type="number" min="1" value="${m.qty}" style="width:70px" data-role="qty" data-i="${idx}">
-              <button class="btn btn-sm btn-outline-info" title="Recalc" data-role="recalc" data-i="${idx}"><i class="bi bi-arrow-clockwise"></i></button>
+              <button class="btn btn-sm btn-outline-secondary" title="Edit in Custom Monster editor" data-role="edit" data-i="${idx}"><i class="bi bi-pencil"></i></button>
+              <button class="btn btn-sm btn-outline-info" title="Recalc CR" data-role="recalc" data-i="${idx}"><i class="bi bi-arrow-clockwise"></i></button>
               <button class="btn btn-sm btn-outline-danger" title="Remove" data-role="del" data-i="${idx}"><i class="bi bi-x-lg"></i></button>
             </div>
           </div>`;
@@ -1471,6 +1511,10 @@
       ul.querySelectorAll('button[data-role="recalc"]').forEach(b=> b.onclick = e=>{
         const i = Number(e.currentTarget.dataset.i);
         roster[i].calc = computeCR(roster[i]); renderRoster();
+      });
+      ul.querySelectorAll('button[data-role="edit"]').forEach(b=> b.onclick = e=>{
+        const i = Number(e.currentTarget.dataset.i);
+        loadMonsterIntoEditor(roster[i]);
       });
       ul.querySelectorAll('input[data-role="qty"]').forEach(inp => inp.oninput = e=>{
         const i = Number(e.currentTarget.dataset.i);
@@ -1596,10 +1640,14 @@
       const t = thresholdsForParty(party);
       // XP calc with multiplier
       let baseXP=0, count=0;
+      const grouped = Object.create(null);
       roster.forEach(m=>{
         const xpEach = crToXp(m.calc?.cr ?? m.cr ?? 0);
-        baseXP += xpEach * (m.qty||1);
-        count  += (m.qty||1);
+        const qty = m.qty||1;
+        baseXP += xpEach * qty;
+        count  += qty;
+        const key = m.name || 'Unknown';
+        grouped[key] = (grouped[key] || 0) + qty;
       });
       const mult  = adjustedMultiplier(count, party.length || 0);
       const adjXP = Math.round(baseXP * mult);
@@ -1610,8 +1658,13 @@
          adjXP < t.dead ? 'Hard'    : 'Deadly');
       const partyAdjNote = (party.length && (party.length <= 3 || party.length >= 6))
         ? ` <span class="text-secondary">(party-size adjusted)</span>` : '';
+      const esc = s => s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+      const breakdownStr = Object.entries(grouped)
+        .map(([name, qty]) => qty > 1 ? `${qty}× ${esc(name)}` : esc(name))
+        .join(', ');
       $('#eb-summary').innerHTML = `
-        <div><strong>Monsters:</strong> ${count} • <strong>Base XP:</strong> ${baseXP} • <strong>Multiplier:</strong> ×${mult}${partyAdjNote}</div>
+        ${breakdownStr ? `<div class="text-info" style="font-size:0.8rem;">${breakdownStr}</div>` : ''}
+        <div><strong>Total:</strong> ${count} • <strong>Base XP:</strong> ${baseXP} • <strong>Multiplier:</strong> ×${mult}${partyAdjNote}</div>
         <div><strong>Adjusted XP:</strong> ${adjXP} • <strong>Difficulty:</strong> ${diff}</div>`;
     }
 
@@ -1902,6 +1955,118 @@
       });
     }
 
+    // -------------------- Edit monster in editor --------------------
+    function actionsToText(actions) {
+      return (actions || []).map(a => {
+        const parts = [a.name];
+        if (typeof a.toHit === 'number') parts.push(`toHit:+${a.toHit}`);
+        if (typeof a.saveDC === 'number') parts.push(`saveDC:${a.saveDC}`);
+        if (a.damage) parts.push(`damage:${a.damage}`);
+        if (a.attacksPerAction && a.attacksPerAction > 1) parts.push(`attacks:${a.attacksPerAction}`);
+        if (a.targetCount && a.targetCount > 1) parts.push(`targets:${a.targetCount}`);
+        if (parts.length === 1 && a.desc) return `${a.name}: ${a.desc}`;
+        return parts.join('; ');
+      }).join('\n');
+    }
+
+    function namedPairsToText(arr) {
+      return (arr || []).map(x => `${x.name}${x.desc ? ': ' + x.desc : ''}`).join('\n\n');
+    }
+
+    function loadMonsterIntoEditor(m) {
+      // Switch to Full mode
+      $('#cm-simple-mode').style.display = 'none';
+      $('#cm-full-mode').style.display = 'block';
+      $('#cm-mode-simple').classList.remove('active');
+      $('#cm-mode-full').classList.add('active');
+
+      // Basic info
+      if ($('#cm-name-full'))    $('#cm-name-full').value    = m.name    || '';
+      if ($('#cm-size-full'))    $('#cm-size-full').value    = m.size    || 'Medium';
+      if ($('#cm-type-full'))    $('#cm-type-full').value    = m.type    || '';
+      if ($('#cm-subtype'))      $('#cm-subtype').value      = m.subtype || '';
+      if ($('#cm-alignment'))    $('#cm-alignment').value    = m.alignment || '';
+      if ($('#cm-cr-override'))  $('#cm-cr-override').value  = String(m.cr_override ?? m.cr ?? '');
+      if ($('#cm-prof-bonus'))   $('#cm-prof-bonus').value   = m.proficiency_bonus || '';
+
+      // Combat stats
+      if ($('#cm-ac-full'))   $('#cm-ac-full').value   = m.ac   || '';
+      if ($('#cm-ac-type'))   $('#cm-ac-type').value   = m.ac_type  || '';
+      if ($('#cm-hp-full'))   $('#cm-hp-full').value   = m.hp   || '';
+      if ($('#cm-hit-dice'))  $('#cm-hit-dice').value  = m.hit_dice || '';
+
+      // Speed — parse individual components from the speed string
+      const sp = m.speed || '';
+      const walkM   = sp.match(/^(\d+)\s*ft/);
+      const flyM    = sp.match(/fly\s+(\d+)\s*ft/i);
+      const swimM   = sp.match(/swim\s+(\d+)\s*ft/i);
+      const climbM  = sp.match(/climb\s+(\d+)\s*ft/i);
+      const burrowM = sp.match(/burrow\s+(\d+)\s*ft/i);
+      if ($('#cm-speed-walk'))   $('#cm-speed-walk').value   = walkM   ? walkM[1]   : '';
+      if ($('#cm-speed-fly'))    $('#cm-speed-fly').value    = flyM    ? flyM[1]    : '';
+      if ($('#cm-speed-swim'))   $('#cm-speed-swim').value   = swimM   ? swimM[1]   : '';
+      if ($('#cm-speed-climb'))  $('#cm-speed-climb').value  = climbM  ? climbM[1]  : '';
+      if ($('#cm-speed-burrow')) $('#cm-speed-burrow').value = burrowM ? burrowM[1] : '';
+      if ($('#cm-speed-hover'))  $('#cm-speed-hover').checked = /hover/i.test(sp);
+
+      // Ability scores + live modifier display
+      ['str','dex','con','int','wis','cha'].forEach(stat => {
+        const input  = $(`#cm-${stat}`);
+        const modEl  = $(`#cm-${stat}-mod`);
+        if (input) {
+          input.value = m[stat] != null ? m[stat] : '';
+          if (modEl && m[stat] != null) modEl.textContent = formatMod(calcAbilityMod(Number(m[stat])));
+          else if (modEl) modEl.textContent = '(+0)';
+        }
+      });
+
+      // Saves, skills, senses, languages
+      if ($('#cm-saves'))     $('#cm-saves').value     = m.saves     || '';
+      if ($('#cm-skills'))    $('#cm-skills').value    = m.skills    || '';
+      if ($('#cm-senses'))    $('#cm-senses').value    = m.senses    || '';
+      if ($('#cm-languages')) $('#cm-languages').value = m.languages || '';
+
+      // Defenses
+      if ($('#cm-vulnerabilities'))       $('#cm-vulnerabilities').value       = m.damage_vulnerabilities  || '';
+      if ($('#cm-resistances'))           $('#cm-resistances').value           = m.damage_resistances      || '';
+      if ($('#cm-damage-immunities'))     $('#cm-damage-immunities').value     = m.damage_immunities       || '';
+      if ($('#cm-condition-immunities'))  $('#cm-condition-immunities').value  = m.condition_immunities    || '';
+
+      // Spellcasting
+      if (m.spellcasting) {
+        const sc = m.spellcasting;
+        if ($('#cm-spell-ability'))      $('#cm-spell-ability').value      = sc.ability || '';
+        if ($('#cm-spell-dc'))           $('#cm-spell-dc').value           = sc.dc      || '';
+        if ($('#cm-spell-atk'))          $('#cm-spell-atk').value          = sc.attack  || '';
+        if ($('#cm-innate-spellcasting')) $('#cm-innate-spellcasting').checked = sc.innate || false;
+        if ($('#cm-cantrips'))           $('#cm-cantrips').value           = sc.cantrips || '';
+        if ($('#cm-spells'))             $('#cm-spells').value             = sc.spells   || '';
+      }
+
+      // Narrative sections
+      if ($('#cm-special'))       $('#cm-special').value       = namedPairsToText(m.special_abilities);
+      if ($('#cm-actions-full'))  $('#cm-actions-full').value  = actionsToText(m.actions);
+      if ($('#cm-bonus-actions')) $('#cm-bonus-actions').value = namedPairsToText(m.bonus_actions);
+      if ($('#cm-reactions'))     $('#cm-reactions').value     = namedPairsToText(m.reactions);
+
+      // Legendary
+      if ($('#cm-legendary-count')) $('#cm-legendary-count').value = m.legendary_action_count || '3';
+      if ($('#cm-legendary'))       $('#cm-legendary').value       = namedPairsToText(m.legendary_actions);
+
+      // Mythic, lair, regional
+      if ($('#cm-mythic-trait'))    $('#cm-mythic-trait').value    = m.mythic_trait || '';
+      if ($('#cm-mythic-actions'))  $('#cm-mythic-actions').value  = namedPairsToText(m.mythic_actions);
+      if ($('#cm-lair-actions'))    $('#cm-lair-actions').value    = typeof m.lair_actions === 'string' ? m.lair_actions : '';
+      if ($('#cm-regional-effects'))$('#cm-regional-effects').value= typeof m.regional_effects === 'string' ? m.regional_effects : '';
+
+      // Description, notes
+      if ($('#cm-description')) $('#cm-description').value = m.description || '';
+      if ($('#cm-notes'))       $('#cm-notes').value       = m.notes       || '';
+
+      // Scroll the Custom Monster card into view
+      document.querySelector('#cm-full-mode')?.closest('.card')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+
     // -------------------- Export --------------------
     function buildTrackerNotes(m) {
       const parts = [];
@@ -2000,6 +2165,7 @@
     }
 
     function monstersToTrackerCharacters(){
+      const rollInit = document.getElementById('eb-roll-initiative')?.checked;
       const out = [];
       roster.forEach(m=>{
         const qty = m.qty||1;
@@ -2008,7 +2174,7 @@
           out.push({
             name: qty>1 ? `${m.name} #${i+1}` : m.name,
             type: "Enemy",
-            initiative: 0,
+            initiative: rollInit ? rollInitiativeFor(m) : 0,
             currentHP: m.hp ?? 1,
             maxHP: m.hp ?? 1,
             tempHP: 0,
@@ -2022,6 +2188,11 @@
       });
       return out;
     }
+    function getEncounterSlug() {
+      const raw = $('#eb-encounter-name')?.value?.trim() || '';
+      return raw.replace(/[^a-z0-9_\-\s]/gi, '').trim().replace(/\s+/g, '_') || 'encounter';
+    }
+
     function downloadJSON(obj, name){
       const safe = name.replace(/[:.]/g, '-');
       const blob = new Blob([JSON.stringify(obj,null,2)], {type:'application/json'});
@@ -2034,8 +2205,9 @@
     function generateEnemyStatBlockText(){
       if(!roster.length) return '';
 
+      const encTitle = ($('#eb-encounter-name')?.value?.trim() || 'ENCOUNTER BUILDER').toUpperCase();
       let text = '═══════════════════════════════════════════════════════\n';
-      text += '           ENCOUNTER BUILDER - ENEMY ROSTER\n';
+      text += `           ${encTitle} - ENEMY ROSTER\n`;
       text += '═══════════════════════════════════════════════════════\n\n';
 
       roster.forEach((m, idx) => {
@@ -2362,6 +2534,72 @@
       return mon;
     }
 
+    // -------------------- Save / Load Encounters --------------------
+    const SAVES_KEY = 'dmtools.savedEncounters';
+
+    function loadSavedEncounters() {
+      try { return JSON.parse(localStorage.getItem(SAVES_KEY) || '{}'); } catch { return {}; }
+    }
+
+    function populateSavesDropdown() {
+      const saves = loadSavedEncounters();
+      const sel = $('#eb-saved-select');
+      if (!sel) return;
+      const prev = sel.value;
+      sel.innerHTML = '<option value="">— Saved Encounters —</option>';
+      Object.keys(saves).sort().forEach(name => {
+        const opt = document.createElement('option');
+        opt.value = name;
+        opt.textContent = name;
+        sel.appendChild(opt);
+      });
+      if (prev && saves[prev]) sel.value = prev;
+    }
+
+    $('#eb-save').onclick = () => {
+      const suggested = ($('#eb-encounter-name')?.value?.trim()) || `Encounter ${new Date().toLocaleDateString()}`;
+      const name = prompt('Save encounter as:', suggested);
+      if (!name?.trim()) return;
+      const key = name.trim();
+      const saves = loadSavedEncounters();
+      if (saves[key] && !confirm(`"${key}" already exists. Overwrite?`)) return;
+      saves[key] = {
+        roster: roster.map(m => { const e = {...m}; delete e.calc; return e; }),
+        partyLevels: $('#eb-party-levels')?.value || '',
+        resistMode:  $('#eb-resist-mode')?.value  || 'none',
+        encounterName: key
+      };
+      localStorage.setItem(SAVES_KEY, JSON.stringify(saves));
+      populateSavesDropdown();
+      $('#eb-saved-select').value = key;
+      if ($('#eb-encounter-name')) $('#eb-encounter-name').value = key;
+    };
+
+    $('#eb-load').onclick = () => {
+      const name = $('#eb-saved-select')?.value;
+      if (!name) { alert('Select a saved encounter first.'); return; }
+      const saves = loadSavedEncounters();
+      const save  = saves[name];
+      if (!save) return;
+      if (roster.length && !confirm(`Load "${name}"? This will replace your current roster.`)) return;
+      roster.splice(0, roster.length);
+      (save.roster || []).forEach(m => addToRoster({...m, qty: m.qty || 1}));
+      if (save.partyLevels && $('#eb-party-levels')) $('#eb-party-levels').value = save.partyLevels;
+      if (save.resistMode  && $('#eb-resist-mode'))  { $('#eb-resist-mode').value = save.resistMode; resistMode = save.resistMode; }
+      if (save.encounterName && $('#eb-encounter-name')) $('#eb-encounter-name').value = save.encounterName;
+      renderPartySummary();
+    };
+
+    $('#eb-delete-save').onclick = () => {
+      const name = $('#eb-saved-select')?.value;
+      if (!name) return;
+      if (!confirm(`Delete saved encounter "${name}"?`)) return;
+      const saves = loadSavedEncounters();
+      delete saves[name];
+      localStorage.setItem(SAVES_KEY, JSON.stringify(saves));
+      populateSavesDropdown();
+    };
+
     $('#cm-json-add').onclick = ()=>{
       try{
         const parsed = JSON.parse($('#cm-json').value||'{}');
@@ -2414,6 +2652,8 @@
     $('#eb-export').onclick = ()=>{
       const mode = $('#eb-export-mode').value;
       if(!roster.length){ alert('No monsters in roster.'); return; }
+      const slug = getEncounterSlug();
+      const ts   = new Date().toISOString();
       if(mode==='roster'){
         // Export full monster data (preserves all fields for re-import)
         const rosterData = roster.map(m => {
@@ -2421,22 +2661,28 @@
           delete exported.calc; // CR calc is regenerated on import
           return exported;
         });
-        downloadJSON({ roster: rosterData }, `encounter_roster_${new Date().toISOString()}.json`);
+        downloadJSON({ roster: rosterData }, `${slug}_roster_${ts}.json`);
       }else{
         const chars = monstersToTrackerCharacters();
         if(mode==='append'){
-          downloadJSON({ addCharacters: chars }, `initiative_add_${new Date().toISOString()}.json`);
+          downloadJSON({ addCharacters: chars }, `${slug}_add_${ts}.json`);
         }else{
-          downloadJSON({ characters: chars, currentTurn:0, combatRound:1, diceHistory:[] }, `initiative_session_${new Date().toISOString()}.json`);
+          downloadJSON({ characters: chars, currentTurn:0, combatRound:1, diceHistory:[] }, `${slug}_session_${ts}.json`);
         }
       }
     };
 
+  function rollInitiativeFor(c) {
+    const dexMod = c.dex != null ? Math.floor((c.dex - 10) / 2) : 0;
+    return Math.floor(Math.random() * 20) + 1 + dexMod;
+  }
+
   function normalizeForTracker(c) {
+    const rollInit = document.getElementById('eb-roll-initiative')?.checked;
     return {
       name: c.name ?? "Unknown",
       type: "Enemy",
-      initiative: 1,
+      initiative: rollInit ? rollInitiativeFor(c) : 1,
       currentHP: Number(c.hp ?? c.currentHP ?? 1),
       maxHP:     Number(c.hp ?? c.maxHP     ?? 1),
       tempHP: 0,
@@ -2494,7 +2740,7 @@
     if (confirm("Would you like to download a text file with all enemy stat blocks for DM reference?\n\n(This will include all actions, reactions, special abilities, and stats from the API)")) {
       const textContent = generateEnemyStatBlockText();
       const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
-      downloadTextFile(textContent, `encounter_statblocks_${timestamp}.txt`);
+      downloadTextFile(textContent, `${getEncounterSlug()}_statblocks_${timestamp}.txt`);
     }
 
     try {
@@ -2511,6 +2757,7 @@
     (async function init(){
       resistMode = $('#eb-resist-mode').value;
       renderPartySummary();
+      populateSavesDropdown();
       try{ await loadSrdList(); }catch(e){ console.warn(e); }
       renderResults();
     })();
