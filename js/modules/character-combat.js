@@ -18,7 +18,7 @@ import { parseDiceNotation } from './dice.js';
 export function applyDamageToHP(currentHP, tempHP, maxHP, damage) {
   const cur = Math.max(0, Math.floor(currentHP) || 0);
   const tmp = Math.max(0, Math.floor(tempHP) || 0);
-  const mx  = Math.max(0, Math.floor(maxHP) || 0);
+  const _mx  = Math.max(0, Math.floor(maxHP) || 0); // maxHP accepted for API consistency; not needed for damage calc
   const dmg = Math.max(0, Math.floor(damage) || 0);
 
   let remaining = dmg;

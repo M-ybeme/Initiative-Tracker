@@ -243,7 +243,12 @@ const statusEffects = [
             }
       ),
       // keep any existing concDamagePending if present
-      concDamagePending: +c.concDamagePending || 0
+      concDamagePending: +c.concDamagePending || 0,
+      reactionUsed: !!c.reactionUsed,
+      legendaryActions: {
+        max: Math.max(0, +(c.legendaryActions?.max ?? 0)),
+        remaining: Math.max(0, +(c.legendaryActions?.remaining ?? c.legendaryActions?.max ?? 0))
+      }
     };
   }
   function saveState(manual=false){
@@ -708,7 +713,9 @@ $('clear-dice-history').addEventListener('click', ()=>{
         'status-auto': 'Auto Tick',
         'death-save': 'Death Save',
         'concentration': 'Concentration',
-        'concentration-check': 'Conc. Check'
+        'concentration-check': 'Conc. Check',
+        'reaction': 'Reaction',
+        'legendary-action': 'Legendary Action'
       };
       return map[src] || (src ? src.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase()) : 'Manual');
     }
@@ -949,13 +956,20 @@ $('clear-dice-history').addEventListener('click', ()=>{
       // const pct = Math.max(0, Math.round((c.currentHP / c.maxHP) * 100));
       const pct = safeHpPercent(c);
       const isDowned = (c.maxHP > 0 && c.currentHP <= 0);
+      const isOnDeck = characters.length > 1 && i === (currentTurn + 1) % characters.length;
+      const laMax = c.legendaryActions?.max ?? 0;
+      const laRem = c.legendaryActions?.remaining ?? 0;
       // Desktop row
       const tr = document.createElement('tr');
       tr.dataset.type = c.type;
       if (i === currentTurn) tr.classList.add('active-turn');
+      if (isOnDeck) tr.classList.add('on-deck');
       tr.innerHTML = `
         <td class="drag-handle col-drag"><i class="bi bi-grip-vertical"></i></td>
-        <td class="col-turn">${i===currentTurn ? '<i class="bi bi-caret-right-fill"></i>' : ''}</td>
+        <td class="col-turn">
+          ${i===currentTurn ? '<i class="bi bi-caret-right-fill text-success"></i>' : ''}
+          ${isOnDeck ? '<i class="bi bi-caret-right text-secondary on-deck-caret" title="On Deck"></i>' : ''}
+        </td>
         <td class="${isDowned ? 'text-decoration-line-through' : ''}">
           <input type="text" class="form-control form-control-sm name-input"
                  value="${c.name}" data-index="${i}" />
@@ -1006,17 +1020,33 @@ $('clear-dice-history').addEventListener('click', ()=>{
               </div>` : ``}
             </div>
             <div class="notes-actions">
-              <button class="btn btn-sm btn-outline-light notes-btn" data-index="${i}" title="Notes"><i class="bi bi-journal-text"></i></button>
-              <button class="btn btn-sm conc-btn ${c.concentration?'conc-on':''}" title="Toggle Concentration" data-index="${i}">
-                <i class="bi ${c.concentration?'bi-star-fill':'bi-star'}"></i>
-              </button>
-              <button class="btn btn-sm btn-outline-info status-btn" data-index="${i}" title="Edit Status"><i class="bi bi-emoji-smile"></i></button>
+              <div class="action-row">
+                <button class="btn btn-sm btn-outline-light notes-btn" data-index="${i}" title="Notes"><i class="bi bi-journal-text"></i></button>
+                <button class="btn btn-sm conc-btn ${c.concentration?'conc-on':''}" title="Toggle Concentration" data-index="${i}">
+                  <i class="bi ${c.concentration?'bi-star-fill':'bi-star'}"></i>
+                </button>
+                <button class="btn btn-sm btn-outline-info status-btn" data-index="${i}" title="Edit Status"><i class="bi bi-emoji-smile"></i></button>
+                <button class="btn btn-sm react-btn ${c.reactionUsed?'react-used':''}" data-index="${i}"
+                        title="${c.reactionUsed?'Reaction Used — click to restore':'Reaction Available — click to mark used'}">
+                  <i class="bi bi-lightning${c.reactionUsed?'-fill':''}"></i>
+                </button>
+              </div>
+              ${laMax > 0 ? `
+              <div class="la-row">
+                <span class="badge ${laRem>0?'bg-warning text-dark':'bg-secondary'}" title="Legendary Actions remaining">&#x1F451; ${laRem}/${laMax}</span>
+                <button class="btn btn-sm btn-outline-warning la-use-btn" data-index="${i}" title="Use 1 Legendary Action"${laRem<=0?' disabled':''}>&#x2212;</button>
+                <button class="btn btn-sm btn-outline-secondary la-reset-btn" data-index="${i}" title="Reset Legendary Actions">&#x21BA;</button>
+                <button class="btn btn-sm btn-outline-danger la-disable-btn" data-index="${i}" title="Disable Legendary Actions">&#x2715;</button>
+              </div>` : ''}
             </div>
           </div>
         </td>
-        <td class="d-flex gap-1 col-actions">
-          <button class="btn btn-sm btn-outline-success duplicate-btn" data-index="${i}" title="Duplicate"><i class="bi bi-files"></i></button>
-          <button class="btn btn-sm btn-outline-danger delete-btn" data-index="${i}" title="Delete"><i class="bi bi-trash"></i></button>
+        <td class="col-actions">
+          <div class="d-flex gap-1 flex-wrap align-items-start">
+            <button class="btn btn-sm btn-outline-success duplicate-btn" data-index="${i}" title="Duplicate"><i class="bi bi-files"></i></button>
+            <button class="btn btn-sm btn-outline-danger delete-btn" data-index="${i}" title="Delete"><i class="bi bi-trash"></i></button>
+            ${laMax === 0 ? `<button class="btn btn-sm la-enable-btn" data-index="${i}" title="Enable Legendary Actions">&#x1F451;</button>` : ''}
+          </div>
         </td>
       `;
       tableBody.appendChild(tr);
@@ -1056,11 +1086,24 @@ $('clear-dice-history').addEventListener('click', ()=>{
               }).join('') || '<span class="text-secondary" style="opacity:.6;">—</span>'}
             </div>
             <div class="notes-actions">
-              <button class="btn btn-sm btn-outline-light notes-btn" data-index="${i}" title="Notes"><i class="bi bi-journal-text"></i></button>
-              <button class="btn btn-sm conc-btn ${c.concentration?'conc-on':''}" title="Toggle Concentration" data-index="${i}">
-                <i class="bi ${c.concentration?'bi-star-fill':'bi-star'}"></i>
-              </button>
-              <button class="btn btn-sm btn-outline-info status-btn" data-index="${i}" title="Edit Status"><i class="bi bi-emoji-smile"></i></button>
+              <div class="action-row">
+                <button class="btn btn-sm btn-outline-light notes-btn" data-index="${i}" title="Notes"><i class="bi bi-journal-text"></i></button>
+                <button class="btn btn-sm conc-btn ${c.concentration?'conc-on':''}" title="Toggle Concentration" data-index="${i}">
+                  <i class="bi ${c.concentration?'bi-star-fill':'bi-star'}"></i>
+                </button>
+                <button class="btn btn-sm btn-outline-info status-btn" data-index="${i}" title="Edit Status"><i class="bi bi-emoji-smile"></i></button>
+                <button class="btn btn-sm react-btn ${c.reactionUsed?'react-used':''}" data-index="${i}"
+                        title="${c.reactionUsed?'Reaction Used — click to restore':'Reaction Available — click to mark used'}">
+                  <i class="bi bi-lightning${c.reactionUsed?'-fill':''}"></i>
+                </button>
+              </div>
+              ${laMax > 0 ? `
+              <div class="la-row mt-1">
+                <span class="badge ${laRem>0?'bg-warning text-dark':'bg-secondary'}" title="Legendary Actions remaining">&#x1F451; ${laRem}/${laMax}</span>
+                <button class="btn btn-sm btn-outline-warning la-use-btn" data-index="${i}" title="Use 1 Legendary Action"${laRem<=0?' disabled':''}>&#x2212;</button>
+                <button class="btn btn-sm btn-outline-secondary la-reset-btn" data-index="${i}" title="Reset Legendary Actions">&#x21BA;</button>
+                <button class="btn btn-sm btn-outline-danger la-disable-btn" data-index="${i}" title="Disable Legendary Actions">&#x2715;</button>
+              </div>` : ''}
             </div>
           </div>
           <div class="d-flex justify-content-end mt-2 gap-1">
@@ -1068,6 +1111,7 @@ $('clear-dice-history').addEventListener('click', ()=>{
             <button class="btn btn-sm btn-outline-light move-down" data-index="${i}"><i class="bi bi-arrow-down"></i></button>
             <button class="btn btn-sm btn-outline-success duplicate-btn" data-index="${i}"><i class="bi bi-files"></i></button>
             <button class="btn btn-sm btn-outline-danger delete-btn" data-index="${i}"><i class="bi bi-trash"></i></button>
+            ${laMax === 0 ? `<button class="btn btn-sm la-enable-btn" data-index="${i}" title="Enable Legendary Actions">&#x1F451;</button>` : ''}
           </div>
         </div>
       `;
@@ -1339,6 +1383,99 @@ $('clear-dice-history').addEventListener('click', ()=>{
         buildTable();
       });
     });
+    // Reaction toggle
+    document.querySelectorAll('.react-btn').forEach(btn => {
+      btn.addEventListener('click', function() {
+        const idx = +this.dataset.index;
+        const c = characters[idx];
+        pushHistory(`Toggle Reaction for ${c.name}`);
+        c.reactionUsed = !c.reactionUsed;
+        logEvent({
+          type: 'action',
+          summary: c.reactionUsed ? 'Reaction Used' : 'Reaction Restored',
+          targetId: c.id,
+          targetName: c.name,
+          source: 'reaction',
+          details: c.reactionUsed ? 'Reaction marked as used' : 'Reaction manually restored'
+        });
+        buildTable();
+      });
+    });
+    // Legendary Actions — use one
+    document.querySelectorAll('.la-use-btn').forEach(btn => {
+      btn.addEventListener('click', function() {
+        const idx = +this.dataset.index;
+        const c = characters[idx];
+        if (c.legendaryActions.remaining <= 0) return;
+        pushHistory(`Use Legendary Action for ${c.name}`);
+        c.legendaryActions.remaining = Math.max(0, c.legendaryActions.remaining - 1);
+        logEvent({
+          type: 'action',
+          summary: `Legendary Action Used`,
+          targetId: c.id,
+          targetName: c.name,
+          source: 'legendary-action',
+          details: `${c.legendaryActions.remaining}/${c.legendaryActions.max} remaining`
+        });
+        buildTable();
+      });
+    });
+    // Legendary Actions — reset remaining
+    document.querySelectorAll('.la-reset-btn').forEach(btn => {
+      btn.addEventListener('click', function() {
+        const idx = +this.dataset.index;
+        const c = characters[idx];
+        pushHistory(`Reset Legendary Actions for ${c.name}`);
+        c.legendaryActions.remaining = c.legendaryActions.max;
+        logEvent({
+          type: 'action',
+          summary: `Legendary Actions Reset`,
+          targetId: c.id,
+          targetName: c.name,
+          source: 'legendary-action',
+          details: `Restored to ${c.legendaryActions.max}/${c.legendaryActions.max}`
+        });
+        buildTable();
+      });
+    });
+    // Legendary Actions — disable
+    document.querySelectorAll('.la-disable-btn').forEach(btn => {
+      btn.addEventListener('click', function() {
+        const idx = +this.dataset.index;
+        const c = characters[idx];
+        pushHistory(`Disable Legendary Actions for ${c.name}`);
+        c.legendaryActions = { max: 0, remaining: 0 };
+        logEvent({
+          type: 'action',
+          summary: `Legendary Actions Disabled`,
+          targetId: c.id,
+          targetName: c.name,
+          source: 'legendary-action'
+        });
+        buildTable();
+      });
+    });
+    // Legendary Actions — enable (prompt for max)
+    document.querySelectorAll('.la-enable-btn').forEach(btn => {
+      btn.addEventListener('click', function() {
+        const idx = +this.dataset.index;
+        const c = characters[idx];
+        const raw = prompt(`Legendary Actions for ${c.name}\nEnter max (default: 3):`, '3');
+        if (raw === null) return; // cancelled
+        const val = Math.max(1, parseInt(raw, 10) || 3);
+        pushHistory(`Enable Legendary Actions for ${c.name}`);
+        c.legendaryActions = { max: val, remaining: val };
+        logEvent({
+          type: 'action',
+          summary: `Legendary Actions Enabled`,
+          targetId: c.id,
+          targetName: c.name,
+          source: 'legendary-action',
+          details: `Set to ${val} legendary actions`
+        });
+        buildTable();
+      });
+    });
     // Status Modal open
     document.querySelectorAll('.status-btn').forEach(btn=>{
       btn.addEventListener('click', function(){
@@ -1368,6 +1505,10 @@ $('clear-dice-history').addEventListener('click', ()=>{
         // Optional but sensible: reset per-creature transient stuff
         copy.concDamagePending = 0;
         copy.deathSaves = { s: 0, f: 0, stable: false };
+        copy.reactionUsed = false;
+        if (copy.legendaryActions?.max > 0) {
+          copy.legendaryActions = { max: copy.legendaryActions.max, remaining: copy.legendaryActions.max };
+        }
 
         characters.splice(idx + 1, 0, normalizeChar(copy));
         buildTable();
@@ -1660,8 +1801,15 @@ $('clear-dice-history').addEventListener('click', ()=>{
       }
       attempts++;
     } while ((characters[currentTurn].maxHP > 0 && characters[currentTurn].currentHP <= 0) && attempts < len);
-  
-    buildTable();  
+
+    // Reset per-turn transients for the creature whose turn is starting
+    const incoming = characters[currentTurn];
+    incoming.reactionUsed = false;
+    if (incoming.legendaryActions?.max > 0) {
+      incoming.legendaryActions.remaining = incoming.legendaryActions.max;
+    }
+
+    buildTable();
   });
   $('reset-turns').addEventListener('click', ()=>{ currentTurn=0; combatRound=1; buildTable(); });
   $('clear-all').addEventListener('click', ()=>{ characters=[]; currentTurn=0; combatRound=1; combatLog = []; buildTable(); });

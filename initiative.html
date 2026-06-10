@@ -673,6 +673,7 @@
             <li><strong>Battle Map</strong> - Visual combat grid with tokens and measurements</li>
             <li><strong>Character Manager</strong> - Create and store character sheets</li>
             <li><strong>Encounter Builder</strong> - Design balanced encounters with CR calculations</li>
+            <li><strong>Compendium</strong> - Mid-session spell, monster, and rules lookup</li>
             <li><strong>Generators</strong> - NPCs, Taverns, Shops, Names, and Loot</li>
           </ul>
 
@@ -694,6 +695,9 @@
             </a>
             <a href="battlemap.html" class="btn btn-sm btn-outline-warning">
               <i class="bi bi-map me-1"></i>Battle Map
+            </a>
+            <a href="reference.html" class="btn btn-sm btn-outline-info">
+              <i class="bi bi-journal-bookmark me-1"></i>Compendium
             </a>
           </div>
 
@@ -743,7 +747,8 @@
           <div id="helpHP" class="accordion-collapse collapse" data-bs-parent="#helpAccordion">
             <div class="accordion-body">
               <ul class="mb-2">
-                <li>Use <strong>HP +/-</strong> to apply damage or healing, or type directly into the HP field.</li>
+                <li>Use the <strong>−5/−1/+1/+5</strong> quick buttons for fast adjustments, or type directly into the HP field.</li>
+                <li>For exact values, enter an amount in the <strong>Amount</strong> box and click <i class="bi bi-dash-circle text-danger"></i> <strong>damage</strong> or <i class="bi bi-plus-circle text-success"></i> <strong>heal</strong> — great for spell damage rolls.</li>
                 <li><strong>Temp HP</strong> (THP) appears as a badge next to HP with its own <em>±</em> buttons.
                     Damage consumes THP first; only leftover damage reduces real HP.</li>
                 <li>Click the <strong>star</strong> <i class="bi bi-star"></i>/<i class="bi bi-star-fill text-warning"></i> to toggle <strong>Concentration</strong>.</li>
@@ -796,6 +801,65 @@
                 <li>Click the <strong>smiley</strong> <i class="bi bi-emoji-smile"></i> to add/remove conditions (e.g., Prone, Poisoned) with optional <strong>duration (rounds)</strong>.</li>
                 <li>Durations tick down automatically at the start of each new round; expired effects are removed.</li>
                 <li>Click <strong>Notes</strong> <i class="bi bi-journal-text"></i> to store character-specific reminders.</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+
+        <!-- Reactions & Legendary Actions -->
+        <div class="accordion-item bg-dark text-light border-secondary">
+          <h2 class="accordion-header">
+            <button class="accordion-button collapsed bg-dark text-light" type="button"
+                    data-bs-toggle="collapse" data-bs-target="#helpReactLA">
+              Reactions &amp; Legendary Actions
+            </button>
+          </h2>
+          <div id="helpReactLA" class="accordion-collapse collapse" data-bs-parent="#helpAccordion">
+            <div class="accordion-body">
+              <ul class="mb-0">
+                <li>Every combatant row has a <i class="bi bi-lightning text-warning"></i> <strong>Reaction</strong> button. Click it to mark the creature's reaction as used (it lights up). It automatically resets when that creature's turn begins.</li>
+                <li>For boss monsters, click the <strong>👑</strong> crown button to enable <strong>Legendary Actions</strong>. You'll be prompted for the maximum (default: 3). A counter appears showing remaining/max.</li>
+                <li>Click <strong>−</strong> to spend a legendary action, <strong>↺</strong> to reset manually, or <strong>✕</strong> to remove legendary actions from that creature. The counter auto-resets to full at the start of that creature's turn.</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+
+        <!-- Bulk HP Adjustment -->
+        <div class="accordion-item bg-dark text-light border-secondary">
+          <h2 class="accordion-header">
+            <button class="accordion-button collapsed bg-dark text-light" type="button"
+                    data-bs-toggle="collapse" data-bs-target="#helpBulkHP">
+              Bulk HP Adjustment
+            </button>
+          </h2>
+          <div id="helpBulkHP" class="accordion-collapse collapse" data-bs-parent="#helpAccordion">
+            <div class="accordion-body">
+              <ul class="mb-0">
+                <li>Use the <strong>Bulk HP</strong> button (in the combat controls area) to affect multiple creatures at once — ideal for AoE spells, traps, or long-rest healing.</li>
+                <li>Choose a <strong>target group</strong>: PCs only, Enemies only, or All combatants.</li>
+                <li>Choose an <strong>action</strong>: Heal (+X), Damage (−X), or Full Heal (restore everyone to max HP).</li>
+                <li>Enter the amount and hit <strong>Apply</strong>. All changes are logged individually in the Combat Log and count as a single undo step.</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+
+        <!-- Combat Log -->
+        <div class="accordion-item bg-dark text-light border-secondary">
+          <h2 class="accordion-header">
+            <button class="accordion-button collapsed bg-dark text-light" type="button"
+                    data-bs-toggle="collapse" data-bs-target="#helpCombatLog">
+              Combat Log
+            </button>
+          </h2>
+          <div id="helpCombatLog" class="accordion-collapse collapse" data-bs-parent="#helpAccordion">
+            <div class="accordion-body">
+              <ul class="mb-0">
+                <li>Click <strong>Combat Log</strong> in the controls area to open a full history of every HP change, death save, concentration check, and status event — grouped by round.</li>
+                <li>Each entry shows: who acted, who was targeted, HP before/after, the delta, and the source (Quick Adjust, Bulk HP, Precision, etc.).</li>
+                <li>Stores the last <strong>100 events</strong> automatically. You can <strong>Export</strong> the log as JSON (for parsing) or TXT (formatted table) for session records.</li>
+                <li>Use <strong>Clear Log</strong> to wipe it between encounters.</li>
               </ul>
             </div>
           </div>

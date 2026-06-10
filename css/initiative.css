@@ -19,8 +19,20 @@
 /* Sticky table header */
 table thead th{ position:sticky; top:0; background:#161a1d; z-index:2; }
 /* Keep Notes & Effects tidy */
-.notes-actions{ display:flex; gap:.35rem; align-items:center; }
+.notes-actions{ display:flex; flex-direction:column; gap:.25rem; align-items:flex-end; }
+.notes-actions .action-row{ display:flex; gap:.35rem; align-items:center; }
 .notes-actions .btn{ padding:.15rem .45rem; }
+/* Reaction button */
+.react-btn{ border:1px dashed rgba(255,193,7,.35); color:rgba(255,193,7,.55); }
+.react-btn.react-used{ border-color:#ffc107; color:#ffc107; }
+/* Legendary Actions row */
+.la-row{ display:flex; gap:.25rem; align-items:center; }
+/* LA enable button: always in actions column, dim until hover */
+.la-enable-btn{ opacity:.3; font-size:.8rem; padding:.15rem .45rem; border:1px dashed rgba(255,255,255,.3); background:transparent; color:rgba(255,255,255,.7); transition:opacity .15s; }
+.la-enable-btn:hover{ opacity:.9; }
+.la-use-btn,.la-reset-btn,.la-disable-btn{ padding:.1rem .35rem; font-size:.8rem; line-height:1; }
+/* On-deck indicator — caret only, no background change */
+.on-deck-caret{ font-size:.9rem; opacity:.45; }
 @media (max-width:576px){
   .btn,.form-control{ padding:.6rem .8rem; font-size:1rem; }
   .table td,.table th{ padding:.6rem .5rem; }
@@ -83,6 +95,8 @@ body.player-view #helpBtn {
 body.player-view .my-4.text-light {
   display: none !important;
 }
+/* Actions column: normal table-cell so it stretches with taller rows */
+td.col-actions { vertical-align: top; padding-top: .4rem; }
 /* Hide the Actions column (header + cells) in Player View */
 body.player-view table thead .col-actions,
 body.player-view table tbody .col-actions {

@@ -14,7 +14,29 @@ The DM's Toolbox has evolved through focused feature releases:
 - **1.9.x**: Battle map measurement tools, persistent fog shapes, and generator integration across NPC/Tavern/Shop systems
 - **1.8.x**: Spell database expansion to 432+ spells, inventory management, loot generator overhaul, and character token generation
 
-**Current version: 2.1.5 (March 2026)**
+**Current version: 2.1.6 (June 2026)**
+
+---
+
+## [2.1.6] - 2026-06-09
+**Initiative Tracker — Combat Utility Improvements**
+
+### Added
+- **Reaction tracker** — Every combatant row now has a ⚡ lightning bolt button. Click to mark a creature's reaction as used (fills yellow); the reaction automatically resets to available at the start of that creature's turn. Reaction use and restoration are logged in the Combat Log.
+- **Legendary Actions counter** — A dim 👑 crown button appears in the Actions column of every combatant row. Clicking it prompts for the maximum (default: 3) and enables a `remaining/max` counter with Use (−), Reset (↺), and Disable (✕) controls. The counter automatically resets to full at the start of that creature's turn. All LA events (use, reset, enable, disable) are logged in the Combat Log.
+- **On-deck indicator** — A subtle dim caret appears next to the next combatant in the turn order, giving players advance notice of who acts next.
+- **Combat Log now tracks reactions and legendary actions** — Source labels "Reaction" and "Legendary Action" added to the log formatter.
+- **Quick Help panel — three new sections**: "Reactions & Legendary Actions", "Bulk HP Adjustment", and "Combat Log". These features were fully implemented but had no help entries.
+- **Quick Help panel — Compendium** added to the Toolbox Overview card (both the tool list and the button grid), correcting an omission.
+- **Quick Help panel — HP section** updated to mention the precision Amount + damage/heal buttons, which were previously undiscovered by first-time users.
+
+### Changed
+- **`docs/INITIATIVE_TRACKER.md`** rewritten as a complete feature reference covering turn order, HP tracking, bulk HP, concentration, death saves, status effects, reactions, legendary actions, dice roller, character templates, saving, session notes, player view, rules reference, keyboard shortcuts, integrations, and SRD scope.
+- **`normalizeChar`** extended with `reactionUsed` (boolean) and `legendaryActions` (`{ max, remaining }`) fields; both are persisted through auto-save, manual save, and export/import transparently.
+
+### Fixed
+- On-deck row no longer shows a white/clear background that let the map bleed through; the indicator is the dim caret only.
+- LA enable button removed from the Notes & Effects column (where it added invisible height to every row); moved to the Actions column where it is always accessible but does not affect row height.
 
 ---
 

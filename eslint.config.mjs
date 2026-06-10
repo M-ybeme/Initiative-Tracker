@@ -23,6 +23,7 @@ export default [
         requestAnimationFrame: 'readonly',
         cancelAnimationFrame: 'readonly',
         fetch: 'readonly',
+        AbortController: 'readonly',
         URL: 'readonly',
         URLSearchParams: 'readonly',
         Blob: 'readonly',

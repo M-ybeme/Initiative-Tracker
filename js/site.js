@@ -1,12 +1,13 @@
 const DM_TOOLBOX_BUILD = {
   name: "The DM's Toolbox",
-  version: "2.1.5",
+  version: "2.1.6",
   recentChanges: [
-    "character.js modularization complete – attack rolls, spell data, rest logic, and derived-stat recalculation extracted into standalone ES modules; ~270 lines removed from the IIFE",
-    "New modules: Attack-rolls.js, character-spell-data.js, character-rest.js; character-calculations.js extended with recalcDerivedStats, concentration DC, encumbrance, spell DC/attack bonus",
-    "Integration test suite added – 49 new tests covering short/long rest mechanics, multiclass slot restoration, and character sheet serialize/deserialize round-trips",
-    "character.js converted to type=\"module\" with static imports; all 930+ existing tests continue to pass",
-    "error-handling.js @ts-check → @ts-nocheck to suppress false-positive TypeScript errors on intentional runtime globals"
+    "Initiative Tracker: Reaction tracker added — ⚡ button per combatant marks reaction used; auto-resets on that creature's turn start",
+    "Initiative Tracker: Legendary Actions counter added — 👑 enable button in actions column; prompts for max (default 3); counter shows remaining/max and auto-resets each turn",
+    "Initiative Tracker: On-deck indicator shows next combatant in order with a dim caret",
+    "Initiative Tracker: Reaction uses and Legendary Action events now logged in Combat Log",
+    "Initiative Tracker Quick Help: added Combat Log, Bulk HP, and Reactions & Legendary Actions sections; added Compendium link; clarified precision damage usage",
+    "docs/INITIATIVE_TRACKER.md rewritten as full feature reference covering all tracker capabilities"
   ],
   buildTime: new Date().toISOString(),
   author: "Maybeme"
