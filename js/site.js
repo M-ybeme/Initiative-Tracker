@@ -1,14 +1,14 @@
 const DM_TOOLBOX_BUILD = {
   name: "The DM's Toolbox",
-  version: "2.2.0",
+  version: "2.2.1",
   recentChanges: [
-    "Characters: Languages & Proficiencies card — dedicated fields for languages, armor/weapon proficiencies, and tool proficiencies",
-    "Characters: Jack of All Trades toggle on the Skills card — adds ½ proficiency bonus to all non-proficient skills (Bard feature)",
-    "Characters: Passive Investigation and Passive Insight now auto-calculate from skill bonuses (matching Passive Perception behavior)",
-    "Characters: Proficiency Bonus now displayed inline at the bottom of the Ability Scores card",
-    "Characters (v2.1.9): Styled 'Guided Wizard / Blank Sheet' choice modal replaces browser confirm()",
-    "Characters (v2.1.9): showAppToast() system replaces alert() calls; unsaved-changes indicator on Save button",
-    "Characters (v2.1.9): Header button bar reorganized with overflow ⋯ menu; duplicate detection on import"
+    "Characters: Combat Snapshot Area 3 — inline HP input + progress bar, Move turn slot, condition tooltips, Surprised/Raging conditions",
+    "Characters: Dynamic resource rows — unlimited named rows with short/long/manual reset types; replaces fixed 3-slot layout",
+    "Characters: Concentrating — prompt for spell name on activate, checkbox ↔ button two-way sync, tooltip always visible",
+    "Characters: Combat View HP popup redesigned — visible number input, stacked layout, appears below HP card",
+    "Characters: Combat View Proficiency Bonus now reads live from the character (was always +2)",
+    "Characters: Warlock wizard populates pact slots as a short-rest resource row",
+    "Characters: Exhaustion fixed for 2024 PHB — dead at level 10 (was incorrectly level 6)"
   ],
   buildTime: new Date().toISOString(),
   author: "Maybeme"

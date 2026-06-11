@@ -16,7 +16,33 @@ The DM's Toolbox has evolved through focused feature releases:
 - **1.9.x**: Battle map measurement tools, persistent fog shapes, and generator integration across NPC/Tavern/Shop systems
 - **1.8.x**: Spell database expansion to 432+ spells, inventory management, loot generator overhaul, and character token generation
 
-**Current version: 2.2.0 (June 2026)**
+**Current version: 2.2.1 (June 2026)**
+
+---
+
+## [2.2.1] - 2026-06-11
+**Characters — Area 3 Completeness (Combat Snapshot & Resource Tracking)**
+
+### Added
+- **Inline HP adjustment** — a number input sits alongside Heal / Damage / Temp / Max buttons on both the full sheet and Combat View, replacing all `prompt()` dialogs. Enter key on the input triggers Heal. Inputs clear after each action.
+- **HP progress bar** — color-coded bar on the HP card: green (> 50%), yellow (26–50%), red (11–25%), pulsing red (≤ 10% critical). Updates live as HP changes.
+- **HP last-change log** — a single line below the progress bar shows the most recent HP event (e.g. "Took 12 dmg: 47 → 35" or "+7 healed: 35 → 42").
+- **Move action slot** — the turn action tracker now has Action / Bonus / Reaction / Move; New Turn resets all four.
+- **Condition tooltips** — every condition button now shows a hover tooltip explaining the mechanical effect (e.g. Blinded: "Can't see, auto-fails sight-based checks, attacks against you have advantage...").
+- **Surprised and Raging conditions** — two new condition toggle buttons added to the Conditions row.
+- **Dynamic resource rows** — the fixed 3-slot resource section is replaced with an unlimited list. Each row has: Name, Now / Max counters (click to adjust), a Resets-on selector (SR / LR / —), and a remove button. An Add Resource button appends new rows.
+- **Warlock wizard** — pact slots now also appear as a "Pact Slots (Lvl X)" short-rest resource row alongside the dedicated pact section.
+
+### Changed
+- **Concentrating condition** — clicking the Concentrating button now opens a `prompt()` asking for the spell name. The button tooltip updates to "Concentrating on: [spell]" while active; reverting to the generic reminder when inactive. The Concentrating checkbox and the condition button are now two-way synced — toggling either drives the other.
+- **Combat View HP popup** — redesigned from a single cramped `input-group` row (which collapsed the number input to near-zero width) to a stacked layout: full-width number input on top, three equally-spaced buttons (Damage / Heal / Temp) below. Fixed `width: 156px`. Popup now opens below the HP card instead of overlapping its content.
+- **Short Rest** — only resets resource rows whose Resets-on is set to SR. Long Rest resets SR + LR rows. Manual rows (—) are never auto-reset.
+
+### Fixed
+- **Combat View HP controls closing on click** — buttons and the number input inside the HP popup no longer bubble a click up to the toggle handler. Clicking outside the popup still closes it.
+- **Combat View Proficiency Bonus** — was always showing +2 (hardcoded fallback due to a wrong element ID); now correctly reads the live value from the character.
+- **Exhaustion** — levels 1–4 now show the correct −2/−4/−6/−8 d20 penalty; level 5 adds Speed halved; level 10 is Dead. The old code was erroneously showing Dead at level 6 (2014 PHB rule).
+- **Old resource format migration** — characters saved with the previous `{res1, res2, res3}` object format are automatically converted to the array format on first load via the schema v2 migration in `migrations.js`.
 
 ---
 

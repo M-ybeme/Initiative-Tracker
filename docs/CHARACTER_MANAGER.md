@@ -173,15 +173,19 @@ The Character Manager is a complete D&D 5e character sheet system integrated int
 
 A **Jack of All Trades** checkbox sits above the Skills table. When enabled, `floor(proficiency bonus / 2)` is added to all non-proficient skill bonuses — covering the Bard class feature without requiring manual edits to every skill. The toggle is saved with the character and recalculates immediately on change.
 
-### Combat Snapshot (v1.5.6)
+### Combat Snapshot (v2.2.1)
 
 **Features:**
-- HP adjustment (Heal, Damage, Temp HP, Max HP)
+- HP adjustment: inline amount input + Heal / Damage / Temp / Max buttons (no browser prompts); Enter key on the amount field triggers Heal
+- HP progress bar (color-coded green/yellow/red/critical-flash) with last-change log line ("Took 8 dmg: 25 → 17")
+- Turn action tracker: Action / Bonus / Reaction / **Move** toggle buttons; New Turn resets all four
 - Inspiration checkbox
 - Concentration tracker with DC calculation
 - Death save automation
-- Exhaustion tracker (levels 0-6, using 2024 PHB rules: −2 to d20 rolls per level)
-- Condition toggle buttons
+- Exhaustion tracker (levels 0–10, 2024 PHB rules: −2 to all d20 tests per level; Speed halved at level 5; dead at level 10)
+- Condition toggle buttons with hover tooltips explaining each condition's mechanical effect
+- Conditions include all 14 standard conditions plus Surprised, Concentrating, Blessed, Hexed, Raging
+- Dynamic tracked resources: unlimited named rows, each with Name / Now / Max / Resets-on selector (SR = short rest, LR = long rest, — = manual); Short Rest only resets SR rows; Long Rest resets SR + LR rows
 
 ### Combat/DM View (v1.10.4)
 
@@ -442,7 +446,8 @@ Exported character sheets render each set sense as a labeled stat box (e.g., "Da
 14. **v2.0.9** - Structured sense fields with race auto-population; inventory equip toggle; Warlock pact slot fixes; spell tooltip z-index fix; hit dice remaining set on creation
 15. **v2.1.x** - Two-column stat block tooltips in Encounter Builder; save/load slots; edit-in-editor; roll initiative; encounter name; CR 0–30 filter; Battle Map UX overhaul (mode tabs, Bootstrap modals, fog brush cursor)
 16. **v2.1.9** - Area 1 UX overhaul: styled "Guided Wizard / Blank Sheet" choice modal replaces browser confirm(); `showAppToast()` system replaces alert() calls throughout; unsaved-changes indicator on Save button; wizard abandonment cleanup; delete-last-character no longer auto-creates; duplicate detection on import; header button bar reorganized with overflow ⋯ menu; help modal wizard steps corrected
-17. **v2.2.0** (current) - Area 2 completeness: Languages & Proficiencies card (languages, armor/weapon proficiencies, tool proficiencies); Jack of All Trades toggle on Skills card (½ prof bonus on non-proficient skills); Passive Investigation and Passive Insight now auto-calculate from skill bonuses (readonly, matching Passive Perception); Proficiency Bonus displayed inline at bottom of Ability Scores card
+17. **v2.2.0** - Area 2 completeness: Languages & Proficiencies card (languages, armor/weapon proficiencies, tool proficiencies); Jack of All Trades toggle on Skills card (½ prof bonus on non-proficient skills); Passive Investigation and Passive Insight now auto-calculate from skill bonuses (readonly, matching Passive Perception); Proficiency Bonus displayed inline at bottom of Ability Scores card
+18. **v2.2.1** (current) - Area 3 completeness: inline HP input (replaces browser prompt); HP progress bar + last-change log; Move button on turn tracker; condition tooltips; Surprised and Raging conditions; dynamic resource rows with per-row reset type (SR/LR/manual); exhaustion description fixed for 2024 PHB (dead at level 10)
 
 ## Use Cases
 

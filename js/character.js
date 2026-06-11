@@ -643,61 +643,61 @@ import { getSpellSlotsForClassLevel as _getSpellSlotsForClassLevel, getPactMagic
 
       function adjustHP(type) {
         const currentHPEl = $('charCurrentHP');
-        const maxHPEl = $('charMaxHP');
-        const tempHPEl = $('charTempHP');
+        const maxHPEl     = $('charMaxHP');
+        const tempHPEl    = $('charTempHP');
+        const amtEl       = $('hpAdjustAmount');
 
         if (!currentHPEl) return;
 
         const currentHP = Number(currentHPEl.value) || 0;
-        const maxHP = Number(maxHPEl?.value) || 0;
-        const tempHP = Number(tempHPEl?.value) || 0;
+        const maxHP     = Number(maxHPEl?.value)    || 0;
+        const tempHP    = Number(tempHPEl?.value)   || 0;
+        const prevHP    = currentHP;
 
-        if (type === 'heal') {
-          const amount = prompt('Heal how many HP?', '');
-          if (amount === null) return;
-          const healAmount = Number(amount) || 0;
-          currentHPEl.value = Math.min(currentHP + healAmount, maxHP);
-        } else if (type === 'damage') {
-          const amount = prompt('Take how much damage?', '');
-          if (amount === null) return;
-          const originalDamage = Number(amount) || 0;
-          let damageAmount = originalDamage;
-
-          // Apply temp HP first
-          if (tempHP > 0) {
-            if (damageAmount <= tempHP) {
-              tempHPEl.value = tempHP - damageAmount;
-              damageAmount = 0;
-            } else {
-              damageAmount -= tempHP;
-              tempHPEl.value = 0;
-            }
-          }
-
-          // Apply remaining damage to current HP
-          if (damageAmount > 0) {
-            currentHPEl.value = Math.max(0, currentHP - damageAmount);
-          }
-
-          // Check concentration using the new system
-          if (originalDamage > 0 && isConcentrating()) {
-            handleConcentrationCheck(originalDamage);
-          }
-        } else if (type === 'temp') {
-          const amount = prompt('Set temporary HP to:', '');
-          if (amount === null) return;
-          const tempAmount = Number(amount) || 0;
-          // Temp HP doesn't stack, you take the higher
-          tempHPEl.value = Math.max(tempAmount, tempHP);
-        } else if (type === 'max') {
+        if (type === 'max') {
           currentHPEl.value = maxHP;
+          if (tempHPEl) tempHPEl.value = 0;
+          setHPLastChange('Restored to max');
+        } else {
+          const raw = Number(amtEl?.value) || 0;
+          if (raw <= 0) {
+            amtEl?.focus();
+            showAppToast('Enter an amount first.', 'warning');
+            return;
+          }
+
+          if (type === 'heal') {
+            currentHPEl.value = Math.min(currentHP + raw, maxHP);
+            const gained = Number(currentHPEl.value) - prevHP;
+            setHPLastChange(`Healed ${raw}${gained < raw ? ' (capped)' : ''}: ${prevHP} → ${currentHPEl.value}`);
+          } else if (type === 'damage') {
+            let dmg = raw;
+            if (tempHP > 0) {
+              if (dmg <= tempHP) {
+                if (tempHPEl) tempHPEl.value = tempHP - dmg;
+                dmg = 0;
+              } else {
+                dmg -= tempHP;
+                if (tempHPEl) tempHPEl.value = 0;
+              }
+            }
+            if (dmg > 0) currentHPEl.value = Math.max(0, currentHP - dmg);
+            const lost = prevHP - Number(currentHPEl.value);
+            const tempNote = raw > lost ? ` (${raw - lost} absorbed by temp HP)` : '';
+            setHPLastChange(`Took ${raw} dmg${tempNote}: ${prevHP} → ${currentHPEl.value}`);
+            if (raw > 0 && isConcentrating()) handleConcentrationCheck(raw);
+          } else if (type === 'temp') {
+            if (tempHPEl) tempHPEl.value = Math.max(raw, tempHP);
+            setHPLastChange(`Temp HP: ${Math.max(raw, tempHP)}`);
+          }
+
+          // Clear the amount input and keep focus for quick re-entry
+          if (amtEl) { amtEl.value = ''; amtEl.focus(); }
         }
 
-        // Reset death saves if HP is now above 0
         const newHP = Number(currentHPEl.value) || 0;
-        if (newHP > 0) {
-          resetDeathSaves();
-        }
+        if (newHP > 0) resetDeathSaves();
+        updateHPBar();
       }
 
       // Reset all death save checkboxes
@@ -714,6 +714,84 @@ import { getSpellSlotsForClassLevel as _getSpellSlotsForClassLevel, getPactMagic
 
       // Expose globally for combat view
       window.resetDeathSaves = resetDeathSaves;
+
+      function updateHPBar() {
+        const cur  = Number($('charCurrentHP')?.value) || 0;
+        const max  = Number($('charMaxHP')?.value)     || 1;
+        const pct  = max > 0 ? Math.min(100, Math.round((cur / max) * 100)) : 0;
+        const fill = $('hpBarSheetFill');
+        if (!fill) return;
+        fill.style.width = pct + '%';
+        fill.className = 'progress-bar ' + (
+          pct > 66 ? 'bg-success' :
+          pct > 33 ? 'bg-warning' :
+          pct >  0 ? 'bg-danger'  : 'bg-danger'
+        );
+        if (pct <= 10 && pct > 0) fill.classList.add('progress-bar-striped', 'progress-bar-animated');
+      }
+      window.updateHPBar = updateHPBar;
+
+      function setHPLastChange(msg) {
+        const el = $('hpLastChange');
+        if (el) el.textContent = msg;
+      }
+
+      // -------- Dynamic resource rows --------
+
+      function buildResourceRowHTML(res = {}) {
+        const name     = (res.name    || '').replace(/"/g, '&quot;');
+        const cur      = res.current  ?? '';
+        const max      = res.max      ?? '';
+        const resetOn  = res.resetOn  || 'long';
+        return `<div class="resource-row row g-1 align-items-center mb-1">
+          <div class="col-5">
+            <input type="text" class="form-control form-control-sm res-name"
+                   placeholder="Name" value="${name}" />
+          </div>
+          <div class="col-2">
+            <input type="number" class="form-control form-control-sm text-center res-current"
+                   placeholder="Now" min="0" value="${cur}" />
+          </div>
+          <div class="col-2">
+            <input type="number" class="form-control form-control-sm text-center res-max"
+                   placeholder="Max" min="0" value="${max}" />
+          </div>
+          <div class="col-2">
+            <select class="form-select form-select-sm res-reset" title="When this resource resets">
+              <option value="short" ${resetOn === 'short'  ? 'selected' : ''}>SR</option>
+              <option value="long"  ${resetOn === 'long'   ? 'selected' : ''}>LR</option>
+              <option value="manual"${resetOn === 'manual' ? 'selected' : ''}>—</option>
+            </select>
+          </div>
+          <div class="col-1 text-center">
+            <button type="button" class="btn btn-sm btn-link text-danger p-0 res-remove"
+                    title="Remove this resource">&times;</button>
+          </div>
+        </div>`;
+      }
+
+      function renderResourceRows(resources = []) {
+        const list = $('resourcesList');
+        if (!list) return;
+        list.innerHTML = resources.map(buildResourceRowHTML).join('');
+      }
+      window.renderResourceRows = renderResourceRows;
+
+      function addResourceRow(res = {}) {
+        const list = $('resourcesList');
+        if (!list) return;
+        list.insertAdjacentHTML('beforeend', buildResourceRowHTML(res));
+      }
+
+      function collectResources() {
+        const rows = document.querySelectorAll('#resourcesList .resource-row');
+        return Array.from(rows).map(row => ({
+          name:    row.querySelector('.res-name')?.value?.trim()   || '',
+          current: Number(row.querySelector('.res-current')?.value) || 0,
+          max:     Number(row.querySelector('.res-max')?.value)     || 0,
+          resetOn: row.querySelector('.res-reset')?.value          || 'long',
+        })).filter(r => r.name || r.max > 0);
+      }
 
       function rollInitiative() {
         const char = getCurrentCharacter();
@@ -2046,16 +2124,19 @@ import { getSpellSlotsForClassLevel as _getSpellSlotsForClassLevel, getPactMagic
           input.value = 10;
         }
 
-        // 2024 PHB exhaustion: -2 penalty to d20 rolls per level
+        // 2024 PHB exhaustion: -2 penalty to d20 tests per level; halved speed at 5; dead at 10
         if (level === 0) {
           desc.textContent = '0 = No exhaustion';
-        } else if (level >= 1 && level <= 5) {
+        } else if (level >= 1 && level <= 4) {
           const penalty = level * 2;
-          desc.textContent = `${level} = −${penalty} to all d20 rolls`;
-        } else if (level === 6) {
-          desc.textContent = '6 = Dead';
-        } else if (level > 6 && level <= 10) {
-          desc.textContent = `${level} = Dead (level 6+)`;
+          desc.textContent = `${level} = −${penalty} to all d20 tests`;
+        } else if (level === 5) {
+          desc.textContent = '5 = −10 to all d20 tests, Speed halved';
+        } else if (level >= 6 && level <= 9) {
+          const penalty = level * 2;
+          desc.textContent = `${level} = −${penalty} to all d20 tests, Speed halved`;
+        } else if (level === 10) {
+          desc.textContent = '10 = Dead';
         } else {
           desc.textContent = '';
         }
@@ -2094,41 +2175,40 @@ import { getSpellSlotsForClassLevel as _getSpellSlotsForClassLevel, getPactMagic
       // Track currently concentrating spell
       window.currentConcentrationSpell = null;
 
+      const CONC_TOOLTIP = 'Maintaining a concentration spell. Takes concentration checks (DC = max(10, \xbd damage taken)) when damaged.';
+
       // Check if currently concentrating
       function isConcentrating() {
         const btn = document.querySelector('.condition-btn[data-condition="Concentrating"]');
         return btn?.classList.contains('active') || false;
       }
 
-      // Set concentration state
+      // Set concentration state — single source of truth for all concentration changes
       function setConcentration(active, spellName = null) {
-        const btn = document.querySelector('.condition-btn[data-condition="Concentrating"]');
+        const btn        = document.querySelector('.condition-btn[data-condition="Concentrating"]');
         const spellInput = $('charConcentrationSpell');
+        const checkbox   = $('charConcentrating');
 
         if (active) {
-          if (btn) btn.classList.add('active');
+          if (btn) {
+            btn.classList.add('active');
+            btn.title = spellName ? `Concentrating on: ${spellName}` : CONC_TOOLTIP;
+          }
+          if (checkbox) checkbox.checked = true;
           window.currentConcentrationSpell = spellName;
-          // Update the spell name input and button tooltip
-          if (spellInput && spellName) {
-            spellInput.value = spellName;
-          }
-          if (btn && spellName) {
-            btn.title = `Concentrating on: ${spellName}`;
-          }
+          if (spellInput && spellName) spellInput.value = spellName;
         } else {
           if (btn) {
             btn.classList.remove('active');
-            btn.title = '';
+            btn.title = CONC_TOOLTIP; // restore so tooltip still appears on hover
           }
+          if (checkbox) checkbox.checked = false;
           window.currentConcentrationSpell = null;
-          if (spellInput) {
-            spellInput.value = '';
-          }
+          if (spellInput) spellInput.value = '';
         }
         syncConditionsToField();
         saveCurrentCharacter();
 
-        // Dispatch event for combat view to update
         document.dispatchEvent(new CustomEvent('concentrationChanged', {
           detail: { active, spellName }
         }));
@@ -2333,7 +2413,7 @@ import { getSpellSlotsForClassLevel as _getSpellSlotsForClassLevel, getPactMagic
             window.currentConcentrationSpell = null;
             const concBtn = document.querySelector('.condition-btn[data-condition="Concentrating"]');
             if (concBtn) {
-              concBtn.title = '';
+              concBtn.title = CONC_TOOLTIP;
             }
           }
 
@@ -2445,22 +2525,27 @@ import { getSpellSlotsForClassLevel as _getSpellSlotsForClassLevel, getPactMagic
           $('charHitDice').value = char.hitDice || '';
           $('charHitDiceRemaining').value = char.hitDiceRemaining || '';
 
-          const res = char.resources || {};
-          const r1 = res.res1 || {};
-          const r2 = res.res2 || {};
-          const r3 = res.res3 || {};
-
-          $('res1Name').value = r1.name || '';
-          $('res1Current').value = r1.current ?? '';
-          $('res1Max').value = r1.max ?? '';
-
-          $('res2Name').value = r2.name || '';
-          $('res2Current').value = r2.current ?? '';
-          $('res2Max').value = r2.max ?? '';
-
-          $('res3Name').value = r3.name || '';
-          $('res3Current').value = r3.current ?? '';
-          $('res3Max').value = r3.max ?? '';
+          // Resources: support both new array format and old { res1, res2, res3 } format
+          {
+            const raw = char.resources || {};
+            let resources = [];
+            if (Array.isArray(raw)) {
+              resources = raw;
+            } else {
+              ['res1', 'res2', 'res3'].forEach(key => {
+                const r = raw[key];
+                if (r && (r.name || r.max)) {
+                  resources.push({
+                    name:    r.name    || '',
+                    current: r.current ?? 0,
+                    max:     r.max     ?? 0,
+                    resetOn: r.resetOn || 'long',
+                  });
+                }
+              });
+            }
+            renderResourceRows(resources);
+          }
       
           // Proficiency bonus displays
           {
@@ -2511,6 +2596,7 @@ import { getSpellSlotsForClassLevel as _getSpellSlotsForClassLevel, getPactMagic
           updateSpellSlotsDisplay();
           updateStorageUsageDisplay();
           recalcPassivesFromForm();
+          updateHPBar();
 
           // Clear loading flag after a small delay to allow all event handlers to settle
           setTimeout(() => {
@@ -2826,17 +2912,6 @@ import { getSpellSlotsForClassLevel as _getSpellSlotsForClassLevel, getPactMagic
               if ($('pactUsed'))  $('pactUsed').value  = 0;
               updateSpellSlotsDisplay();
               console.log(`🔮 Set Warlock pact slots: ${pactSlots.slots} × level ${pactSlots.level}`);
-
-              // Add pact slots to the tracked resource area (first empty slot)
-              for (let i = 1; i <= 3; i++) {
-                const nameEl = $(`res${i}Name`);
-                if (nameEl && !nameEl.value) {
-                  nameEl.value = `Pact Slots (Lvl ${pactSlots.level})`;
-                  if ($(`res${i}Current`)) $(`res${i}Current`).value = pactSlots.slots;
-                  if ($(`res${i}Max`))     $(`res${i}Max`).value     = pactSlots.slots;
-                  break;
-                }
-              }
             }
           }
         }
@@ -2907,15 +2982,22 @@ import { getSpellSlotsForClassLevel as _getSpellSlotsForClassLevel, getPactMagic
           const resources = window.LevelUpData.getClassResources(wizardData.class, level, stats);
 
           if (resources && resources.length > 0) {
-            // Populate up to 3 resource slots
-            for (let i = 0; i < Math.min(resources.length, 3); i++) {
-              const res = resources[i];
-              const idx = i + 1;
-              if ($(`res${idx}Name`)) $(`res${idx}Name`).value = res.name;
-              if ($(`res${idx}Current`)) $(`res${idx}Current`).value = res.current;
-              if ($(`res${idx}Max`)) $(`res${idx}Max`).value = res.max;
-            }
+            renderResourceRows(resources);
             console.log(`🎯 Generated ${resources.length} class resources for ${wizardData.class}`);
+          }
+
+          // Warlock: pact slots as a trackable short-rest resource row
+          // (rendered after renderResourceRows so it isn't overwritten)
+          if (wizardData.class === 'Warlock' && wizardData.level >= 1) {
+            const pactSlotData = getPactMagicSlots(wizardData.level);
+            if (pactSlotData) {
+              addResourceRow({
+                name: `Pact Slots (Lvl ${pactSlotData.level})`,
+                current: pactSlotData.slots,
+                max: pactSlotData.slots,
+                resetOn: 'short'
+              });
+            }
           }
         }
 
@@ -3021,6 +3103,7 @@ import { getSpellSlotsForClassLevel as _getSpellSlotsForClassLevel, getPactMagic
           actionUsed: false,
           bonusActionUsed: false,
           reactionUsed: false,
+          moveUsed: false,
 
           // Currency
           currency: { cp: 0, sp: 0, ep: 0, gp: 0, pp: 0 },
@@ -3082,11 +3165,7 @@ import { getSpellSlotsForClassLevel as _getSpellSlotsForClassLevel, getPactMagic
           // Resources & rests
           hitDice: '',
           hitDiceRemaining: '',
-          resources: {
-            res1: { name: '', current: '', max: '' },
-            res2: { name: '', current: '', max: '' },
-            res3: { name: '', current: '', max: '' }
-          },
+          resources: [],
 
           // Other text blocks
           features: '',
@@ -3376,24 +3455,7 @@ import { getSpellSlotsForClassLevel as _getSpellSlotsForClassLevel, getPactMagic
           // Resources & rests
           char.hitDice = getVal('charHitDice');
           char.hitDiceRemaining = getVal('charHitDiceRemaining');
-
-          char.resources = {
-          res1: {
-            name: getVal('res1Name'),
-            current: getNum('res1Current'),
-            max: getNum('res1Max')
-          },
-          res2: {
-            name: getVal('res2Name'),
-            current: getNum('res2Current'),
-            max: getNum('res2Max')
-          },
-          res3: {
-            name: getVal('res3Name'),
-            current: getNum('res3Current'),
-            max: getNum('res3Max')
-          }
-        };
+          char.resources = collectResources();
         
         // NEW: spell slots 1–9
         char.spellSlots = char.spellSlots || {};
@@ -4195,19 +4257,14 @@ import { getSpellSlotsForClassLevel as _getSpellSlotsForClassLevel, getPactMagic
         const pactUsedEl = $('pactUsed');
         if (pactUsedEl) pactUsedEl.value = 0;
 
-        // Reset generic resources that are marked for short rest
-        const pairs = [
-          { cur: 'res1Current', max: 'res1Max' },
-          { cur: 'res2Current', max: 'res2Max' },
-          { cur: 'res3Current', max: 'res3Max' }
-        ];
-
-        pairs.forEach(p => {
-          const curEl = $(p.cur);
-          const maxEl = $(p.max);
-          if (!curEl || !maxEl) return;
-          const maxVal = maxEl.value.trim();
-          if (maxVal !== '') curEl.value = maxVal;
+        // Reset resources that recover on short rest
+        document.querySelectorAll('#resourcesList .resource-row').forEach(row => {
+          const resetOn = row.querySelector('.res-reset')?.value;
+          if (resetOn === 'short') {
+            const maxEl = row.querySelector('.res-max');
+            const curEl = row.querySelector('.res-current');
+            if (maxEl && curEl && maxEl.value !== '') curEl.value = maxEl.value;
+          }
         });
 
         // Open hit dice healing modal
@@ -4254,19 +4311,14 @@ import { getSpellSlotsForClassLevel as _getSpellSlotsForClassLevel, getPactMagic
           }
         }
 
-        // Generic resources: set current = max where max is present
-        const pairs = [
-          { cur: 'res1Current', max: 'res1Max' },
-          { cur: 'res2Current', max: 'res2Max' },
-          { cur: 'res3Current', max: 'res3Max' }
-        ];
-
-        pairs.forEach(p => {
-          const curEl = $(p.cur);
-          const maxEl = $(p.max);
-          if (!curEl || !maxEl) return;
-          const maxVal = maxEl.value.trim();
-          if (maxVal !== '') curEl.value = maxVal;
+        // Reset resources that recover on long rest (short + long, not manual)
+        document.querySelectorAll('#resourcesList .resource-row').forEach(row => {
+          const resetOn = row.querySelector('.res-reset')?.value;
+          if (resetOn === 'short' || resetOn === 'long') {
+            const maxEl = row.querySelector('.res-max');
+            const curEl = row.querySelector('.res-current');
+            if (maxEl && curEl && maxEl.value !== '') curEl.value = maxEl.value;
+          }
         });
 
         // Reset spell slots (used -> 0)
@@ -4833,6 +4885,22 @@ import { getSpellSlotsForClassLevel as _getSpellSlotsForClassLevel, getPactMagic
           longRestBtn.addEventListener('click', handleLongRest);
         }
 
+        // Add Resource button
+        const addResourceBtn = $('addResourceBtn');
+        if (addResourceBtn) {
+          addResourceBtn.addEventListener('click', () => addResourceRow());
+        }
+
+        // Remove resource row (event delegation on container)
+        const resourcesList = $('resourcesList');
+        if (resourcesList) {
+          resourcesList.addEventListener('click', e => {
+            if (e.target.closest('.res-remove')) {
+              e.target.closest('.resource-row').remove();
+            }
+          });
+        }
+
         // Hit dice modal buttons
         const hdDecrementBtn = $('hdDecrement');
         const hdIncrementBtn = $('hdIncrement');
@@ -5228,55 +5296,80 @@ import { getSpellSlotsForClassLevel as _getSpellSlotsForClassLevel, getPactMagic
           exhaustionInput.addEventListener('input', updateExhaustionDescription);
         }
 
+        // HP bar — update live as HP fields change
+        [$('charCurrentHP'), $('charMaxHP')].forEach(el => {
+          if (el) el.addEventListener('input', updateHPBar);
+        });
+
+        // Bootstrap tooltips on condition buttons
+        if (window.bootstrap?.Tooltip) {
+          document.querySelectorAll('.condition-btn[data-bs-toggle="tooltip"]').forEach(el => {
+            new window.bootstrap.Tooltip(el, { trigger: 'hover focus' });
+          });
+        }
+
+        // HP adjust amount input: Enter key triggers Heal
+        const hpAdjEl = $('hpAdjustAmount');
+        if (hpAdjEl) {
+          hpAdjEl.addEventListener('keydown', e => {
+            if (e.key === 'Enter') { e.preventDefault(); adjustHP('heal'); }
+          });
+        }
+
         // Condition toggles
         const conditionToggles = document.querySelectorAll('.condition-btn');
         conditionToggles.forEach(btn => {
           btn.addEventListener('click', e => {
             e.preventDefault();
-            btn.classList.toggle('active');
 
-            // Special handling for Concentrating button
+            // Concentrating has special prompt-based flow — route through setConcentration()
             if (btn.dataset.condition === 'Concentrating') {
-              if (btn.classList.contains('active')) {
-                // When manually turning on concentration, check if spell name is set
-                const spellName = $('charConcentrationSpell')?.value || null;
-                window.currentConcentrationSpell = spellName;
-                if (spellName) {
-                  btn.title = `Concentrating on: ${spellName}`;
-                }
+              const turningOn = !btn.classList.contains('active');
+              if (turningOn) {
+                const existing = $('charConcentrationSpell')?.value || '';
+                const spellName = window.prompt('Concentrating on which spell?', existing);
+                if (spellName === null) return; // user cancelled
+                setConcentration(true, spellName.trim() || null);
               } else {
-                // When turning off concentration, clear spell name
-                window.currentConcentrationSpell = null;
-                btn.title = '';
-                const spellInput = $('charConcentrationSpell');
-                if (spellInput) spellInput.value = '';
+                setConcentration(false);
               }
-              // Dispatch event for combat view
-              document.dispatchEvent(new CustomEvent('concentrationChanged', {
-                detail: { active: btn.classList.contains('active'), spellName: window.currentConcentrationSpell }
-              }));
+              return; // setConcentration() handles sync + save
             }
 
+            btn.classList.toggle('active');
             syncConditionsToField();
+            saveCurrentCharacter();
           });
         });
 
-        // Sync concentration spell input changes to global state
+        // Sync concentration spell input changes to global state and tooltip
         const concSpellInput = $('charConcentrationSpell');
         if (concSpellInput) {
           concSpellInput.addEventListener('input', () => {
-            const spellName = concSpellInput.value || null;
+            const spellName = concSpellInput.value.trim() || null;
             window.currentConcentrationSpell = spellName;
             const concBtn = document.querySelector('.condition-btn[data-condition="Concentrating"]');
-            if (concBtn && spellName) {
-              concBtn.title = `Concentrating on: ${spellName}`;
-            } else if (concBtn) {
-              concBtn.title = '';
+            if (concBtn) {
+              concBtn.title = spellName ? `Concentrating on: ${spellName}` : CONC_TOOLTIP;
             }
-            // Dispatch event for combat view
             document.dispatchEvent(new CustomEvent('concentrationChanged', {
               detail: { active: concBtn?.classList.contains('active') || false, spellName }
             }));
+          });
+        }
+
+        // charConcentrating checkbox ↔ Concentrating condition button two-way sync
+        const concCheckbox = $('charConcentrating');
+        if (concCheckbox) {
+          concCheckbox.addEventListener('change', () => {
+            const spellName = $('charConcentrationSpell')?.value.trim() || null;
+            if (concCheckbox.checked) {
+              const entered = window.prompt('Concentrating on which spell?', spellName || '');
+              if (entered === null) { concCheckbox.checked = false; return; } // cancelled
+              setConcentration(true, entered.trim() || null);
+            } else {
+              setConcentration(false);
+            }
           });
         }
 

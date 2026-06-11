@@ -136,9 +136,13 @@ const CHARACTER_MIGRATIONS = {
       migrated.inventoryItems = [];
     }
 
-    // Ensure resources array exists
-    if (!migrated.resources) {
-      migrated.resources = [];
+    // Ensure resources is the new array format (migrate from old { res1, res2, res3 } objects)
+    if (!Array.isArray(migrated.resources)) {
+      const old = migrated.resources || {};
+      migrated.resources = ['res1', 'res2', 'res3']
+        .map(key => old[key])
+        .filter(r => r && (r.name || r.max))
+        .map(r => ({ name: r.name || '', current: r.current ?? 0, max: r.max ?? 0, resetOn: r.resetOn || 'long' }));
     }
 
     // Ensure spellList array exists

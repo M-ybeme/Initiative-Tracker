@@ -302,15 +302,14 @@ class CharacterSheetExporter {
 
       // Custom Resources
       if (character.resources) {
-        const hasResources = Object.values(character.resources).some(r => r.name);
-        if (hasResources) {
+        const resList = Array.isArray(character.resources)
+          ? character.resources.filter(r => r.name)
+          : ['res1', 'res2', 'res3'].map(k => character.resources[k]).filter(r => r && r.name);
+        if (resList.length > 0) {
           children.push(new Paragraph({ text: '', spacing: { after: 200 } }));
           children.push(new Paragraph({ text: 'Resources', heading: HeadingLevel.HEADING_2 }));
-          ['res1', 'res2', 'res3'].forEach(key => {
-            const res = character.resources[key];
-            if (res && res.name) {
-              children.push(new Paragraph({ text: `${res.name}: ${res.current || 0} / ${res.max || 0}` }));
-            }
+          resList.forEach(res => {
+            children.push(new Paragraph({ text: `${res.name}: ${res.current || 0} / ${res.max || 0}` }));
           });
         }
       }
@@ -815,9 +814,9 @@ class CharacterSheetExporter {
 
   generateResourcesHTML(character) {
     if (!character.resources) return '';
-    const resources = ['res1', 'res2', 'res3']
-      .map(key => character.resources[key])
-      .filter(r => r && r.name);
+    const resources = Array.isArray(character.resources)
+      ? character.resources.filter(r => r.name)
+      : ['res1', 'res2', 'res3'].map(k => character.resources[k]).filter(r => r && r.name);
 
     if (resources.length === 0) return '';
 

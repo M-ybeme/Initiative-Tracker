@@ -586,14 +586,15 @@
 
     .combat-hp-controls {
       position: absolute;
-      bottom: -50px;
+      top: calc(100% + 6px);
       left: 50%;
       transform: translateX(-50%);
       z-index: 100;
+      width: 156px;
       background: #1f2937;
       border: 1px solid rgba(255, 255, 255, 0.3);
       border-radius: 0.5rem;
-      padding: 0.35rem;
+      padding: 0.4rem;
       box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
     }
 
@@ -1080,25 +1081,33 @@
                   </div>
                 </div>
 
-                <!-- HP Adjustment Buttons -->
-                <div class="row g-2 mb-2">
+                <!-- HP Adjustment -->
+                <div class="row g-1 mb-1">
                   <div class="col-12">
-                    <div class="btn-group w-100" role="group" aria-label="HP adjustments">
-                      <button type="button" class="btn btn-sm btn-success" data-hp-adjust="heal">
+                    <div class="input-group input-group-sm">
+                      <input type="number" id="hpAdjustAmount" class="form-control text-center"
+                             placeholder="Amt" min="0" style="max-width:72px"
+                             title="Enter an amount, then click Heal or Damage (or press Enter to Heal)" />
+                      <button type="button" class="btn btn-success" data-hp-adjust="heal">
                         <i class="bi bi-plus-circle"></i> Heal
                       </button>
-                      <button type="button" class="btn btn-sm btn-danger" data-hp-adjust="damage">
+                      <button type="button" class="btn btn-danger" data-hp-adjust="damage">
                         <i class="bi bi-dash-circle"></i> Damage
                       </button>
-                      <button type="button" class="btn btn-sm btn-info" data-hp-adjust="temp">
-                        <i class="bi bi-shield-plus"></i> Temp HP
+                      <button type="button" class="btn btn-info" data-hp-adjust="temp">
+                        <i class="bi bi-shield-plus"></i> Temp
                       </button>
-                      <button type="button" class="btn btn-sm btn-warning" data-hp-adjust="max">
+                      <button type="button" class="btn btn-warning" data-hp-adjust="max">
                         <i class="bi bi-arrow-up"></i> Max
                       </button>
                     </div>
                   </div>
                 </div>
+                <!-- HP bar + last change -->
+                <div class="progress mb-1" style="height:5px" id="hpBarSheet">
+                  <div id="hpBarSheetFill" class="progress-bar bg-success" style="width:100%"></div>
+                </div>
+                <div id="hpLastChange" class="small text-muted mb-2" style="min-height:1.1em"></div>
 
                 <!-- Turn Action Tracker -->
                 <div class="row g-2 mb-2">
@@ -1122,6 +1131,12 @@
                               data-action-slot="reactionUsed"
                               title="Use Reaction">
                         <i class="bi bi-circle me-1"></i>Reaction
+                      </button>
+                      <button type="button" id="btn-moveSlot"
+                              class="btn btn-sm btn-outline-secondary flex-fill"
+                              data-action-slot="moveUsed"
+                              title="Mark full movement used">
+                        <i class="bi bi-circle me-1"></i>Move
                       </button>
                       <button type="button" id="btn-newTurn"
                               class="btn btn-sm btn-outline-secondary ms-1"
@@ -1195,24 +1210,46 @@
                 <div class="mt-3">
                   <label class="form-label small">Quick Conditions</label>
                   <div class="d-flex flex-wrap gap-1" id="conditionToggles">
-                    <!-- Common D&D 5e conditions -->
-                    <button type="button" class="btn btn-sm btn-outline-secondary condition-btn" data-condition="Blinded">Blinded</button>
-                    <button type="button" class="btn btn-sm btn-outline-secondary condition-btn" data-condition="Charmed">Charmed</button>
-                    <button type="button" class="btn btn-sm btn-outline-secondary condition-btn" data-condition="Deafened">Deafened</button>
-                    <button type="button" class="btn btn-sm btn-outline-secondary condition-btn" data-condition="Frightened">Frightened</button>
-                    <button type="button" class="btn btn-sm btn-outline-secondary condition-btn" data-condition="Grappled">Grappled</button>
-                    <button type="button" class="btn btn-sm btn-outline-secondary condition-btn" data-condition="Incapacitated">Incapacitated</button>
-                    <button type="button" class="btn btn-sm btn-outline-secondary condition-btn" data-condition="Invisible">Invisible</button>
-                    <button type="button" class="btn btn-sm btn-outline-secondary condition-btn" data-condition="Paralyzed">Paralyzed</button>
-                    <button type="button" class="btn btn-sm btn-outline-secondary condition-btn" data-condition="Petrified">Petrified</button>
-                    <button type="button" class="btn btn-sm btn-outline-secondary condition-btn" data-condition="Poisoned">Poisoned</button>
-                    <button type="button" class="btn btn-sm btn-outline-secondary condition-btn" data-condition="Prone">Prone</button>
-                    <button type="button" class="btn btn-sm btn-outline-secondary condition-btn" data-condition="Restrained">Restrained</button>
-                    <button type="button" class="btn btn-sm btn-outline-secondary condition-btn" data-condition="Stunned">Stunned</button>
-                    <button type="button" class="btn btn-sm btn-outline-secondary condition-btn" data-condition="Unconscious">Unconscious</button>
-                    <button type="button" class="btn btn-sm btn-outline-info condition-btn" data-condition="Concentrating">Concentrating</button>
-                    <button type="button" class="btn btn-sm btn-outline-success condition-btn" data-condition="Blessed">Blessed</button>
-                    <button type="button" class="btn btn-sm btn-outline-warning condition-btn" data-condition="Hexed">Hexed</button>
+                    <!-- Standard D&D 5e conditions (hover for rules summary) -->
+                    <button type="button" class="btn btn-sm btn-outline-secondary condition-btn" data-condition="Blinded"
+                      data-bs-toggle="tooltip" data-bs-placement="top" title="Can't see. Attacks at disadvantage; attackers have advantage. Auto-fail sight checks.">Blinded</button>
+                    <button type="button" class="btn btn-sm btn-outline-secondary condition-btn" data-condition="Charmed"
+                      data-bs-toggle="tooltip" data-bs-placement="top" title="Can't attack or target the charmer with harmful effects. Charmer has advantage on social checks against you.">Charmed</button>
+                    <button type="button" class="btn btn-sm btn-outline-secondary condition-btn" data-condition="Deafened"
+                      data-bs-toggle="tooltip" data-bs-placement="top" title="Can't hear. Auto-fail hearing ability checks.">Deafened</button>
+                    <button type="button" class="btn btn-sm btn-outline-secondary condition-btn" data-condition="Frightened"
+                      data-bs-toggle="tooltip" data-bs-placement="top" title="Disadvantage on ability checks and attacks while source is in sight. Can't willingly move closer to the source.">Frightened</button>
+                    <button type="button" class="btn btn-sm btn-outline-secondary condition-btn" data-condition="Grappled"
+                      data-bs-toggle="tooltip" data-bs-placement="top" title="Speed 0. Ends if grappler is incapacitated or you are moved out of reach.">Grappled</button>
+                    <button type="button" class="btn btn-sm btn-outline-secondary condition-btn" data-condition="Incapacitated"
+                      data-bs-toggle="tooltip" data-bs-placement="top" title="Can't take actions or reactions.">Incapacitated</button>
+                    <button type="button" class="btn btn-sm btn-outline-secondary condition-btn" data-condition="Invisible"
+                      data-bs-toggle="tooltip" data-bs-placement="top" title="Can't be seen without special senses. Attacks at advantage; attackers at disadvantage.">Invisible</button>
+                    <button type="button" class="btn btn-sm btn-outline-secondary condition-btn" data-condition="Paralyzed"
+                      data-bs-toggle="tooltip" data-bs-placement="top" title="Incapacitated. Can't move or speak. Auto-fail STR/DEX saves. Attacks have advantage. Hits from 5 ft are crits.">Paralyzed</button>
+                    <button type="button" class="btn btn-sm btn-outline-secondary condition-btn" data-condition="Petrified"
+                      data-bs-toggle="tooltip" data-bs-placement="top" title="Transformed to stone. Incapacitated. Resistant to all damage. Auto-fail STR/DEX saves. Attackers have advantage.">Petrified</button>
+                    <button type="button" class="btn btn-sm btn-outline-secondary condition-btn" data-condition="Poisoned"
+                      data-bs-toggle="tooltip" data-bs-placement="top" title="Disadvantage on attack rolls and ability checks.">Poisoned</button>
+                    <button type="button" class="btn btn-sm btn-outline-secondary condition-btn" data-condition="Prone"
+                      data-bs-toggle="tooltip" data-bs-placement="top" title="Disadvantage on attacks. Melee attackers have advantage; ranged at disadvantage. Standing costs half movement.">Prone</button>
+                    <button type="button" class="btn btn-sm btn-outline-secondary condition-btn" data-condition="Restrained"
+                      data-bs-toggle="tooltip" data-bs-placement="top" title="Speed 0. Attacks at disadvantage. Attackers have advantage. Disadvantage on DEX saves.">Restrained</button>
+                    <button type="button" class="btn btn-sm btn-outline-secondary condition-btn" data-condition="Stunned"
+                      data-bs-toggle="tooltip" data-bs-placement="top" title="Incapacitated. Can't move. Can only speak falteringly. Auto-fail STR/DEX saves. Attackers have advantage.">Stunned</button>
+                    <button type="button" class="btn btn-sm btn-outline-secondary condition-btn" data-condition="Unconscious"
+                      data-bs-toggle="tooltip" data-bs-placement="top" title="Incapacitated, prone. Can't move or speak. Auto-fail STR/DEX saves. Attackers have advantage. Hits from 5 ft are crits.">Unconscious</button>
+                    <button type="button" class="btn btn-sm btn-outline-danger condition-btn" data-condition="Surprised"
+                      data-bs-toggle="tooltip" data-bs-placement="top" title="Can't move or take actions/reactions on your first turn of combat.">Surprised</button>
+                    <!-- Positive / class states -->
+                    <button type="button" class="btn btn-sm btn-outline-info condition-btn" data-condition="Concentrating"
+                      data-bs-toggle="tooltip" data-bs-placement="top" title="Maintaining a concentration spell. Takes concentration checks (DC = max(10, ½ damage taken)) when damaged.">Concentrating</button>
+                    <button type="button" class="btn btn-sm btn-outline-success condition-btn" data-condition="Blessed"
+                      data-bs-toggle="tooltip" data-bs-placement="top" title="Bless spell: add 1d4 to attack rolls and saving throws.">Blessed</button>
+                    <button type="button" class="btn btn-sm btn-outline-warning condition-btn" data-condition="Hexed"
+                      data-bs-toggle="tooltip" data-bs-placement="top" title="Hex spell: +1d6 necrotic on attacks against target; disadvantage on chosen ability checks.">Hexed</button>
+                    <button type="button" class="btn btn-sm btn-outline-warning condition-btn" data-condition="Raging"
+                      data-bs-toggle="tooltip" data-bs-placement="top" title="Barbarian Rage: advantage on STR checks/saves, bonus damage, resistance to B/P/S. Can't cast/concentrate spells. Ends if no attack or damage each turn.">Raging</button>
                   </div>
                 </div>
               </div>
@@ -1342,80 +1379,22 @@
                   </div>
                 </div>
               
-                <label class="form-label small">Tracked Resources</label>
-                <div class="small text-muted mb-1">
-                  Use for rages, ki points, superiority dice, Channel Divinity, etc.
+                <div class="d-flex justify-content-between align-items-center mb-1">
+                  <label class="form-label small mb-0">Tracked Resources</label>
+                  <button type="button" id="addResourceBtn" class="btn btn-sm btn-outline-secondary py-0">
+                    <i class="bi bi-plus-circle me-1"></i>Add
+                  </button>
                 </div>
-              
-                <!-- Three generic resource rows -->
-                <div class="mb-2">
-                  <div class="row g-1 align-items-center mb-1">
-                    <div class="col-6">
-                      <input type="text"
-                             id="res1Name"
-                             class="form-control form-control-sm"
-                             placeholder="Resource name" />
-                    </div>
-                    <div class="col-3">
-                      <input type="number"
-                             id="res1Current"
-                             class="form-control form-control-sm text-center"
-                             placeholder="Now" />
-                    </div>
-                    <div class="col-3">
-                      <input type="number"
-                             id="res1Max"
-                             class="form-control form-control-sm text-center"
-                             placeholder="Max" />
-                    </div>
-                  </div>
+                <!-- Column headers -->
+                <div class="row g-1 mb-1 text-muted" style="font-size:0.72rem">
+                  <div class="col-5 ps-2">Name</div>
+                  <div class="col-2 text-center">Now</div>
+                  <div class="col-2 text-center">Max</div>
+                  <div class="col-2 text-center">Resets</div>
+                  <div class="col-1"></div>
                 </div>
-              
-                <div class="mb-2">
-                  <div class="row g-1 align-items-center mb-1">
-                    <div class="col-6">
-                      <input type="text"
-                             id="res2Name"
-                             class="form-control form-control-sm"
-                             placeholder="Resource name" />
-                    </div>
-                    <div class="col-3">
-                      <input type="number"
-                             id="res2Current"
-                             class="form-control form-control-sm text-center"
-                             placeholder="Now" />
-                    </div>
-                    <div class="col-3">
-                      <input type="number"
-                             id="res2Max"
-                             class="form-control form-control-sm text-center"
-                             placeholder="Max" />
-                    </div>
-                  </div>
-                </div>
-              
-                <div class="mb-2">
-                  <div class="row g-1 align-items-center mb-1">
-                    <div class="col-6">
-                      <input type="text"
-                             id="res3Name"
-                             class="form-control form-control-sm"
-                             placeholder="Resource name" />
-                    </div>
-                    <div class="col-3">
-                      <input type="number"
-                             id="res3Current"
-                             class="form-control form-control-sm text-center"
-                             placeholder="Now" />
-                    </div>
-                    <div class="col-3">
-                      <input type="number"
-                             id="res3Max"
-                             class="form-control form-control-sm text-center"
-                             placeholder="Max" />
-                    </div>
-                  </div>
-                </div>
+                <!-- Dynamic resource rows rendered by JS -->
+                <div id="resourcesList"></div>
               </div>
               </div>
             </div>
@@ -3094,6 +3073,12 @@
                         title="Use Reaction">
                   <i class="bi bi-circle me-1"></i>Reaction
                 </button>
+                <button type="button" id="btn-combat-moveSlot"
+                        class="btn btn-sm btn-outline-secondary flex-fill"
+                        data-action-slot="moveUsed"
+                        title="Mark full movement used">
+                  <i class="bi bi-circle me-1"></i>Move
+                </button>
                 <button type="button" id="btn-combat-newTurn"
                         class="btn btn-sm btn-outline-secondary"
                         title="New Turn — reset all actions">
@@ -3126,14 +3111,16 @@
                     <div class="combat-hp-bar-fill hp-full" id="combatHPBarFill" style="width: 100%;"></div>
                   </div>
                   <div class="combat-hp-controls d-none" id="combatHPControls">
-                    <div class="btn-group btn-group-sm">
-                      <button type="button" class="btn btn-danger" onclick="handleCombatHP('damage')" title="Take Damage">
+                    <input type="number" id="combatHPAdjAmount" class="form-control form-control-sm text-center mb-1"
+                           placeholder="Amount" min="0" />
+                    <div class="d-flex gap-1">
+                      <button type="button" class="btn btn-danger btn-sm flex-fill" data-combat-hp="damage" title="Damage">
                         <i class="bi bi-dash-lg"></i>
                       </button>
-                      <button type="button" class="btn btn-success" onclick="handleCombatHP('heal')" title="Heal">
+                      <button type="button" class="btn btn-success btn-sm flex-fill" data-combat-hp="heal" title="Heal">
                         <i class="bi bi-plus-lg"></i>
                       </button>
-                      <button type="button" class="btn btn-info" onclick="handleCombatHP('temp')" title="Add Temp HP">
+                      <button type="button" class="btn btn-info btn-sm flex-fill" data-combat-hp="temp" title="Temp HP">
                         <i class="bi bi-shield-plus"></i>
                       </button>
                     </div>
@@ -4575,7 +4562,7 @@
         const currentHp = document.getElementById('charCurrentHP')?.value || '10';
         const maxHp = document.getElementById('charMaxHP')?.value || '10';
         const speed = document.getElementById('charSpeed')?.value || '30';
-        const profBonus = document.getElementById('proficiencyBonus')?.value || '+2';
+        const profBonus = document.getElementById('charProfBonusAbilsDisplay')?.textContent || '+2';
         const passivePerception = document.getElementById('passivePerception')?.value || '10';
 
         // Initiative (DEX modifier)
@@ -4703,9 +4690,10 @@
 
       // ---- Turn Action Tracker ----
       const ACTION_SLOTS = [
-        { btnIds: ['btn-actionSlot',      'btn-combat-actionSlot'],      key: 'actionUsed',      label: 'Action',   availableClass: 'btn-outline-success', usedClass: 'btn-secondary' },
-        { btnIds: ['btn-bonusActionSlot', 'btn-combat-bonusActionSlot'], key: 'bonusActionUsed', label: 'Bonus',    availableClass: 'btn-outline-warning', usedClass: 'btn-secondary' },
-        { btnIds: ['btn-reactionSlot',    'btn-combat-reactionSlot'],    key: 'reactionUsed',    label: 'Reaction', availableClass: 'btn-outline-info',    usedClass: 'btn-secondary' }
+        { btnIds: ['btn-actionSlot',      'btn-combat-actionSlot'],      key: 'actionUsed',      label: 'Action',   availableClass: 'btn-outline-success',   usedClass: 'btn-secondary' },
+        { btnIds: ['btn-bonusActionSlot', 'btn-combat-bonusActionSlot'], key: 'bonusActionUsed', label: 'Bonus',    availableClass: 'btn-outline-warning',   usedClass: 'btn-secondary' },
+        { btnIds: ['btn-reactionSlot',    'btn-combat-reactionSlot'],    key: 'reactionUsed',    label: 'Reaction', availableClass: 'btn-outline-info',      usedClass: 'btn-secondary' },
+        { btnIds: ['btn-moveSlot',        'btn-combat-moveSlot'],        key: 'moveUsed',        label: 'Move',     availableClass: 'btn-outline-secondary', usedClass: 'btn-secondary' }
       ];
 
       function updateActionTracker(char) {
@@ -4943,19 +4931,13 @@
         const container = document.getElementById('combatClassResources');
         if (!container) return;
 
-        const defs = [
-          { nameId: 'res1Name', curId: 'res1Current', maxId: 'res1Max' },
-          { nameId: 'res2Name', curId: 'res2Current', maxId: 'res2Max' },
-          { nameId: 'res3Name', curId: 'res3Current', maxId: 'res3Max' },
-        ];
-
-        const active = defs
-          .map(d => ({
-            name: document.getElementById(d.nameId)?.value?.trim() || '',
-            cur:  parseInt(document.getElementById(d.curId)?.value, 10) || 0,
-            max:  parseInt(document.getElementById(d.maxId)?.value, 10) || 0,
-            curId: d.curId,
-            maxId: d.maxId,
+        const rows = Array.from(document.querySelectorAll('#resourcesList .resource-row'));
+        const active = rows
+          .map((row, idx) => ({
+            name:  row.querySelector('.res-name')?.value?.trim() || '',
+            cur:   parseInt(row.querySelector('.res-current')?.value, 10) || 0,
+            max:   parseInt(row.querySelector('.res-max')?.value,     10) || 0,
+            idx,
           }))
           .filter(r => r.name && r.max > 0);
 
@@ -4968,10 +4950,12 @@
                 <div class="small text-muted mb-1">${r.name}</div>
                 <div class="d-flex align-items-center gap-1">
                   <button class="btn btn-sm btn-outline-secondary px-2 py-0"
-                    data-resource-use="${r.curId}" title="Use 1 ${r.name}">−</button>
-                  <span class="small fw-bold px-1">${r.cur}/${r.max}</span>
+                    data-resource-idx="${r.idx}" data-resource-action="use"
+                    title="Use 1 ${r.name}">−</button>
+                  <span class="small fw-bold px-1" id="combatResVal-${r.idx}">${r.cur}/${r.max}</span>
                   <button class="btn btn-sm btn-outline-secondary px-2 py-0"
-                    data-resource-restore="${r.curId}" data-resource-max="${r.maxId}" title="Restore 1 ${r.name}">+</button>
+                    data-resource-idx="${r.idx}" data-resource-action="restore"
+                    title="Restore 1 ${r.name}">+</button>
                 </div>
               </div>
             `).join('')}
@@ -4983,6 +4967,7 @@
         char.actionUsed = false;
         char.bonusActionUsed = false;
         char.reactionUsed = false;
+        char.moveUsed = false;
         updateActionTracker(char);
         if (typeof window.saveCurrentCharacter === 'function') window.saveCurrentCharacter();
       }
@@ -5045,7 +5030,7 @@
 
         // Render condition badges
         let html = '';
-        const positiveConditions = ['Blessed', 'Inspired', 'Hasted'];
+        const positiveConditions = ['Blessed', 'Inspired', 'Hasted', 'Raging'];
         activeConditions.forEach(condition => {
           const isPositive = positiveConditions.includes(condition);
           // Add clickable class and spell name for Concentrating condition
@@ -5383,8 +5368,13 @@
       function toggleCombatHPControls(event) {
         event.stopPropagation();
         const controls = document.getElementById('combatHPControls');
-        if (controls) {
-          controls.classList.toggle('d-none');
+        if (!controls) return;
+        // Clicks inside the controls (input/buttons) should not close the panel
+        if (controls.contains(event.target)) return;
+        controls.classList.toggle('d-none');
+        // Focus the amount input when opening
+        if (!controls.classList.contains('d-none')) {
+          controls.querySelector('#combatHPAdjAmount')?.focus();
         }
       }
 
@@ -5399,7 +5389,6 @@
 
       // Handle HP actions (damage, heal, temp)
       window.handleCombatHP = function(action) {
-        event.stopPropagation();
 
         const currentHpInput = document.getElementById('charCurrentHP');
         const maxHpInput = document.getElementById('charMaxHP');
@@ -5412,24 +5401,20 @@
         const tempHp = parseInt(tempHpInput?.value, 10) || 0;
 
         let amount;
-        let promptText;
 
-        switch(action) {
-          case 'damage':
-            promptText = 'Enter damage amount:';
-            break;
-          case 'heal':
-            promptText = 'Enter healing amount:';
-            break;
-          case 'temp':
-            promptText = 'Enter temporary HP amount:';
-            break;
-          default:
+        if (action === 'max') {
+          // Max restore — no amount needed
+        } else {
+          // Read from the combat amount input, fall back to the sheet input
+          const combatAmtEl = document.getElementById('combatHPAdjAmount');
+          const sheetAmtEl  = document.getElementById('hpAdjustAmount');
+          const raw = combatAmtEl?.value || sheetAmtEl?.value || '';
+          amount = parseInt(raw, 10);
+          if (isNaN(amount) || amount <= 0) {
+            combatAmtEl?.focus();
             return;
+          }
         }
-
-        amount = parseInt(prompt(promptText), 10);
-        if (isNaN(amount) || amount <= 0) return;
 
         let newCurrentHp = currentHp;
         let newTempHp = tempHp;
@@ -5450,18 +5435,25 @@
           newCurrentHp = Math.max(0, newCurrentHp - amount);
         } else if (action === 'heal') {
           newCurrentHp = Math.min(maxHp, newCurrentHp + amount);
-          // Reset death saves if HP is now above 0
           if (newCurrentHp > 0 && typeof window.resetDeathSaves === 'function') {
             window.resetDeathSaves();
           }
         } else if (action === 'temp') {
-          // Temp HP doesn't stack, take higher value
           newTempHp = Math.max(newTempHp, amount);
+        } else if (action === 'max') {
+          newCurrentHp = maxHp;
+          newTempHp = 0;
         }
 
         // Update the main form inputs
         currentHpInput.value = newCurrentHp;
         if (tempHpInput) tempHpInput.value = newTempHp;
+
+        // Clear amount inputs after applying
+        const _combatAmt = document.getElementById('combatHPAdjAmount');
+        const _sheetAmt  = document.getElementById('hpAdjustAmount');
+        if (_combatAmt) _combatAmt.value = '';
+        if (_sheetAmt)  _sheetAmt.value  = '';
 
         // Trigger change event to sync and save
         currentHpInput.dispatchEvent(new Event('input', { bubbles: true }));
@@ -5484,10 +5476,24 @@
         }
       };
 
-      // HP box click handler
+      // HP box click handler (toggle panel open/close)
       const combatHPBox = document.getElementById('combatHPBox');
       if (combatHPBox) {
         combatHPBox.addEventListener('click', toggleCombatHPControls);
+      }
+
+      // Combat HP action buttons (delegation — stops propagation so panel stays open)
+      const combatHPControls = document.getElementById('combatHPControls');
+      if (combatHPControls) {
+        combatHPControls.addEventListener('click', function(e) {
+          e.stopPropagation();
+          const btn = e.target.closest('[data-combat-hp]');
+          if (btn) window.handleCombatHP(btn.dataset.combatHp);
+        });
+        // Enter key on the amount input triggers Heal
+        combatHPControls.addEventListener('keydown', function(e) {
+          if (e.key === 'Enter') { e.stopPropagation(); window.handleCombatHP('heal'); }
+        });
       }
 
       // ========================================
@@ -6833,30 +6839,33 @@
 
       // Class resource +/- buttons
       document.getElementById('combatClassResources')?.addEventListener('click', function(e) {
-        const useBtn     = e.target.closest('[data-resource-use]');
-        const restoreBtn = e.target.closest('[data-resource-restore]');
-        const btn = useBtn || restoreBtn;
+        const btn = e.target.closest('[data-resource-idx]');
         if (!btn) return;
 
-        const curId = btn.dataset.resourceUse || btn.dataset.resourceRestore;
-        const maxId = btn.dataset.resourceMax || curId.replace('Current', 'Max');
-        const input = document.getElementById(curId);
-        const maxEl = document.getElementById(maxId);
-        if (!input) return;
+        const idx    = parseInt(btn.dataset.resourceIdx, 10);
+        const action = btn.dataset.resourceAction;
+        const rows   = document.querySelectorAll('#resourcesList .resource-row');
+        const row    = rows[idx];
+        if (!row) return;
+
+        const curEl = row.querySelector('.res-current');
+        const maxEl = row.querySelector('.res-max');
+        if (!curEl) return;
 
         const max    = parseInt(maxEl?.value, 10) || 0;
-        const oldVal = parseInt(input.value, 10) || 0;
-        const newVal = useBtn ? Math.max(0, oldVal - 1) : Math.min(max, oldVal + 1);
+        const oldVal = parseInt(curEl.value,   10) || 0;
+        const newVal = action === 'use'
+          ? Math.max(0, oldVal - 1)
+          : Math.min(max, oldVal + 1);
 
         if (newVal === oldVal) {
-          // At limit — flash the button briefly
-          const flashCls = useBtn ? 'btn-danger' : 'btn-success';
+          const flashCls = action === 'use' ? 'btn-danger' : 'btn-success';
           btn.classList.add(flashCls);
           setTimeout(() => btn.classList.remove(flashCls), 600);
           return;
         }
 
-        input.value = newVal;
+        curEl.value = newVal;
         if (typeof window.saveCurrentCharacter === 'function') window.saveCurrentCharacter();
         updateCombatResources();
       });
