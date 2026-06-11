@@ -412,6 +412,8 @@ Exported character sheets render each set sense as a labeled stat box (e.g., "Da
 12. **v1.10.7** - Character sheet export (PDF/PNG/Word/Print)
 13. **v2.0.8.1** - Interactive class feature selection (Fighting Style, Pact Boon, Eldritch Invocations, Metamagic); homebrew class support in wizard; ability check rolls; SRD 5.1 → 5.2 updates
 14. **v2.0.9** - Structured sense fields with race auto-population; inventory equip toggle; Warlock pact slot fixes; spell tooltip z-index fix; hit dice remaining set on creation
+15. **v2.1.x** - Two-column stat block tooltips in Encounter Builder; save/load slots; edit-in-editor; roll initiative; encounter name; CR 0–30 filter; Battle Map UX overhaul (mode tabs, Bootstrap modals, fog brush cursor)
+16. **v2.1.8** (current) - Area 1 UX overhaul: styled "Guided Wizard / Blank Sheet" choice modal replaces browser confirm(); `showAppToast()` system replaces alert() calls throughout; unsaved-changes indicator on Save button; wizard abandonment cleanup; delete-last-character no longer auto-creates; duplicate detection on import; header button bar reorganized with overflow ⋯ menu; help modal wizard steps corrected
 
 ## Use Cases
 

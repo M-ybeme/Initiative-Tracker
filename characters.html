@@ -890,11 +890,16 @@
               </div>
             </div>
 
-            <div class="d-flex flex-wrap gap-2 justify-content-start justify-content-lg-end">
+            <div class="d-flex flex-wrap gap-2 justify-content-start justify-content-lg-end align-items-center">
+              <!-- Help — most important for new users, prominent position -->
+              <button type="button" class="btn btn-sm btn-primary" id="helpBtn" title="View help and guide" data-bs-toggle="modal" data-bs-target="#helpModal">
+                <i class="bi bi-question-circle me-1"></i>Help
+              </button>
+
               <!-- Print/Export Character Sheet Dropdown -->
               <div class="btn-group" role="group">
                 <button type="button" class="btn btn-sm btn-outline-light dropdown-toggle" id="printExportDropdown" data-bs-toggle="dropdown" aria-expanded="false" title="Print or export character sheet">
-                  <i class="bi bi-printer me-1"></i>Print/Export Sheet
+                  <i class="bi bi-printer me-1"></i>Print/Export
                 </button>
                 <ul class="dropdown-menu dropdown-menu-dark" aria-labelledby="printExportDropdown">
                   <li><a class="dropdown-item" href="#" id="printSheetBtn"><i class="bi bi-printer me-2"></i>Print Character Sheet</a></li>
@@ -905,28 +910,29 @@
                 </ul>
               </div>
 
-              <button type="button" class="btn btn-sm btn-outline-info" id="exportCharacterBtn" title="Export current character as JSON">
-                <i class="bi bi-download me-1"></i>Export
-              </button>
               <button type="button" class="btn btn-sm btn-outline-warning" id="sendToTrackerBtn" title="Send current character to the Initiative Tracker">
-                <i class="bi bi-arrow-right-circle me-1"></i>Send to Initiative Tracker
-              </button>
-              <button type="button" class="btn btn-sm btn-outline-success" id="sendToBattleMapBtn" title="Send current character as a token to the Battle Map">
-                <i class="bi bi-geo-alt-fill me-1"></i>Send to Battle Map
-              </button>
-              <button type="button" class="btn btn-sm btn-outline-info" id="exportAllCharactersBtn" title="Export all characters as JSON">
-                <i class="bi bi-archive me-1"></i>Export All
-              </button>
-              <button type="button" class="btn btn-sm btn-primary" id="helpBtn" title="View help and guide" data-bs-toggle="modal" data-bs-target="#helpModal">
-                <i class="bi bi-question-circle me-1"></i>Help
+                <i class="bi bi-arrow-right-circle me-1"></i>Send to Tracker
               </button>
 
-              <div class="position-relative">
-                <input type="file" id="importFileInput" accept="application/json" class="d-none" />
-                <button type="button" class="btn btn-sm btn-outline-warning" id="importCharacterBtn" title="Import character JSON">
-                  <i class="bi bi-upload me-1"></i>Import
+              <!-- More Actions overflow dropdown -->
+              <div class="btn-group" role="group">
+                <button type="button" class="btn btn-sm btn-outline-secondary dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false" title="More actions">
+                  <i class="bi bi-three-dots"></i>
                 </button>
+                <ul class="dropdown-menu dropdown-menu-dark dropdown-menu-end">
+                  <li><h6 class="dropdown-header">This Character</h6></li>
+                  <li><a class="dropdown-item" href="#" id="exportCharacterBtn"><i class="bi bi-download me-2"></i>Export as JSON</a></li>
+                  <li><a class="dropdown-item" href="#" id="sendToBattleMapBtn"><i class="bi bi-geo-alt-fill me-2"></i>Send to Battle Map</a></li>
+                  <li><hr class="dropdown-divider"></li>
+                  <li><h6 class="dropdown-header">All Characters</h6></li>
+                  <li><a class="dropdown-item" href="#" id="exportAllCharactersBtn"><i class="bi bi-archive me-2"></i>Export All as JSON</a></li>
+                  <li>
+                    <a class="dropdown-item" href="#" id="importCharacterMenuBtn"><i class="bi bi-upload me-2"></i>Import from JSON</a>
+                  </li>
+                </ul>
               </div>
+
+              <input type="file" id="importFileInput" accept="application/json" class="d-none" />
             </div>
           </div>
         </div>
@@ -3603,8 +3609,51 @@
     </div>
   </div>
 
+  <!-- New Character Choice Modal -->
+  <div class="modal fade" id="newCharacterChoiceModal" tabindex="-1" aria-labelledby="newCharacterChoiceLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content bg-dark text-light border-secondary">
+        <div class="modal-header border-secondary">
+          <h5 class="modal-title" id="newCharacterChoiceLabel">
+            <i class="bi bi-person-plus me-2 text-success"></i>Create New Character
+          </h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <p class="text-muted mb-4">How would you like to get started?</p>
+          <div class="d-grid gap-3">
+            <button type="button" class="btn btn-success btn-lg text-start p-3" id="chooseWizardBtn">
+              <div class="d-flex align-items-center gap-3">
+                <i class="bi bi-magic fs-3"></i>
+                <div>
+                  <div class="fw-bold">Guided Wizard <span class="badge bg-warning text-dark ms-1">Recommended</span></div>
+                  <small class="text-white-50">Step-by-step walkthrough — picks your race, class, stats, skills, and equipment. Best for new players.</small>
+                </div>
+              </div>
+            </button>
+            <button type="button" class="btn btn-outline-secondary btn-lg text-start p-3" id="chooseBlankBtn">
+              <div class="d-flex align-items-center gap-3">
+                <i class="bi bi-file-earmark-text fs-3"></i>
+                <div>
+                  <div class="fw-bold">Blank Sheet</div>
+                  <small class="text-white-50">Empty character sheet to fill in yourself. Best if you already know your character.</small>
+                </div>
+              </div>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- Toast Container for Mobile Roll Notifications -->
   <div class="toast-container position-fixed top-0 start-50 translate-middle-x p-3" style="z-index: 9999;">
+    <div id="appToast" class="toast align-items-center border-0 mb-2" role="alert" aria-live="assertive" aria-atomic="true">
+      <div class="d-flex">
+        <div class="toast-body fw-semibold" id="appToastBody"></div>
+        <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+      </div>
+    </div>
     <div id="rollToast" class="toast align-items-center border-0" role="alert" aria-live="assertive" aria-atomic="true">
       <div class="d-flex">
         <div class="toast-body" id="rollToastBody">
@@ -3747,10 +3796,10 @@
                         <li><strong>Follow the wizard:</strong>
                           <ul>
                             <li>Enter character name and basic info</li>
-                            <li>Choose race (see scaling features if applicable)</li>
-                            <li>Select class and subclass (if level 1-3)</li>
+                            <li>Choose species (race) and class</li>
                             <li>Roll or assign ability scores</li>
-                            <li>Pick skills and equipment</li>
+                            <li>Pick skills, background, and starting equipment</li>
+                            <li>Select spells (if your class casts)</li>
                           </ul>
                         </li>
                         <li><strong>Click "Create Character"</strong> to finish</li>
@@ -3852,11 +3901,9 @@
                     <div class="accordion-body">
                       <p>The character sheet is organized into sections:</p>
                       <ul>
-                        <li><strong>Top Bar:</strong> Character selection, New/Save/Delete, Export, Level Up, Help, Combat View toggle</li>
-                        <li><strong>Left Column:</strong> Character info (name, race, class, level, backstory, portrait)</li>
-                        <li><strong>Center Column:</strong> Stats (abilities, skills, proficiency, senses)</li>
-                        <li><strong>Right Column:</strong> Combat info (HP, AC, attacks, death saves)</li>
-                        <li><strong>Bottom Tabs:</strong> Action Notes, Spells, Inventory, Features & Traits, Background, Notes</li>
+                        <li><strong>Top Bar:</strong> Character selection, New/Save/Delete, Help, Print/Export, Send to Tracker, ⋯ more actions</li>
+                        <li><strong>Left Column (wide):</strong> Identity fields (name, class, race, level, XP), Combat Snapshot (HP, AC, Speed, initiative), Ability Scores, Saving Throws, Skills</li>
+                        <li><strong>Right Column (narrow):</strong> Roll History (sticky), Portrait, Senses, and the Detailed Notes tabs — Attacks, Spells, Inventory, Features &amp; Traits, Background, Notes</li>
                       </ul>
                       <div class="alert alert-success">
                         <i class="bi bi-phone me-1"></i>
@@ -3871,7 +3918,7 @@
             <!-- Character Info Tab -->
             <div class="tab-pane fade" id="character-info" role="tabpanel">
               <h5 class="text-primary mb-3">Character Information</h5>
-              <p>The left side of the sheet contains your character's identity and story.</p>
+              <p>The top of the left column contains your character's identity. Combat stats (HP, AC, abilities, skills) fill the rest of the left column. Portrait, notes, spells, and inventory live in the right column.</p>
 
               <div class="accordion accordion-flush" id="characterInfoAccordion">
                 <div class="accordion-item bg-dark">
@@ -4153,7 +4200,7 @@
                   <div id="level-up-process" class="accordion-collapse collapse" data-bs-parent="#levelUpAccordion">
                     <div class="accordion-body">
                       <ol>
-                        <li>Click the <strong>"Level Up" button</strong> at the top</li>
+                        <li>When your XP reaches the next threshold, a <strong>"⬆ Level Up!" badge</strong> appears in the XP section — click it to open the wizard. On milestone leveling, increase the Level field in Basic Information and the wizard will trigger automatically.</li>
                         <li>Follow the step-by-step wizard:
                           <ul>
                             <li><strong>Step 1:</strong> Choose to continue in current class or multiclass</li>

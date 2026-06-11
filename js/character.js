@@ -8,6 +8,44 @@ import { getSpellSlotsForClassLevel as _getSpellSlotsForClassLevel, getPactMagic
       const USE_INDEXED_DB = IndexedDBStorage && IndexedDBStorage.isSupported();
       const $ = (id) => document.getElementById(id);
 
+      // ---------- App Toast ----------
+      function showAppToast(message, type = 'success') {
+        const toastEl = document.getElementById('appToast');
+        const bodyEl  = document.getElementById('appToastBody');
+        if (!toastEl || !bodyEl) return;
+
+        const colorMap = { success: 'bg-success', danger: 'bg-danger', warning: 'bg-warning text-dark', info: 'bg-info text-dark' };
+        toastEl.className = `toast align-items-center border-0 mb-2 ${colorMap[type] || 'bg-secondary'}`;
+        bodyEl.textContent = message;
+
+        const bsToast = bootstrap.Toast.getOrCreateInstance(toastEl, { delay: 2500 });
+        bsToast.show();
+      }
+
+      // ---------- Dirty Tracking ----------
+      let isDirty = false;
+      let wizardIsOpen = false;
+      let _manualSave = false; // true only when user clicks the Save button
+
+      function markDirty() {
+        if (isDirty) return;
+        isDirty = true;
+        const btn = document.getElementById('saveCharacterBtn');
+        if (btn && !btn.querySelector('.dirty-dot')) {
+          const dot = document.createElement('span');
+          dot.className = 'dirty-dot ms-1 text-warning';
+          dot.textContent = '●';
+          dot.title = 'Unsaved changes';
+          btn.appendChild(dot);
+        }
+      }
+
+      function clearDirty() {
+        isDirty = false;
+        const dot = document.querySelector('#saveCharacterBtn .dirty-dot');
+        if (dot) dot.remove();
+      }
+
       function getNumber(id, fallback = 0) {
         const el = $(id);
         if (!el) return fallback;
@@ -1553,7 +1591,7 @@ import { getSpellSlotsForClassLevel as _getSpellSlotsForClassLevel, getPactMagic
         // consumption to the shared functions exposed from characters.html IIFE.
         const slotOptions = window.getAvailableSlotLevels?.(level);
         if (!slotOptions || slotOptions.length === 0) {
-          alert(`No spell slots available for a level ${level}+ spell!`);
+          showAppToast(`No spell slots available for a level ${level}+ spell.`, 'warning');
           return;
         }
 
@@ -1768,7 +1806,7 @@ import { getSpellSlotsForClassLevel as _getSpellSlotsForClassLevel, getPactMagic
         };
 
         if (!attack.name) {
-          alert('Attack must have a name.');
+          showAppToast('Attack must have a name.', 'warning');
           return;
         }
 
@@ -1945,7 +1983,7 @@ import { getSpellSlotsForClassLevel as _getSpellSlotsForClassLevel, getPactMagic
         const notes = $('inventoryItemNotes').value.trim();
 
         if (!name) {
-          alert('Please enter an item name.');
+          showAppToast('Please enter an item name.', 'warning');
           return;
         }
 
@@ -2117,7 +2155,7 @@ import { getSpellSlotsForClassLevel as _getSpellSlotsForClassLevel, getPactMagic
           if (typeof showRollToast === 'function') {
             showRollToast('Concentration', 'Lost!', `Failed DC ${dc}`);
           }
-          alert(`Concentration on ${spellName} has been lost!`);
+          showAppToast(`Concentration on ${spellName} has been lost!`, 'warning');
           return false;
         } else {
           if (typeof showRollToast === 'function') {
@@ -3073,33 +3111,41 @@ import { getSpellSlotsForClassLevel as _getSpellSlotsForClassLevel, getPactMagic
         };
       }
       function createNewCharacter() {
-        // Ask user if they want to use the wizard
-        const useWizard = confirm(
-          "Would you like to use the Character Creation Wizard?\n\n" +
-          "The wizard will guide you step-by-step through creating a new D&D character.\n\n" +
-          "Click OK to use the wizard, or Cancel to create a blank character sheet."
-        );
-
-        if (useWizard && typeof CharacterCreationWizard !== 'undefined') {
-          // Create new character first, then open wizard
-          const newChar = newCharacterTemplate();
-          characters.push(newChar);
-          currentCharacterId = newChar.id;
-          renderCharacterSelect();
-          fillFormFromCharacter(newChar);
-          saveCharactersToStorage();
-
-          // Open the wizard
-          CharacterCreationWizard.open();
+        // Show the styled choice modal instead of a raw confirm()
+        const choiceModal = document.getElementById('newCharacterChoiceModal');
+        if (choiceModal && typeof bootstrap !== 'undefined') {
+          const bsModal = bootstrap.Modal.getOrCreateInstance(choiceModal);
+          bsModal.show();
         } else {
-          // Create blank character normally
-          const newChar = newCharacterTemplate();
-          characters.push(newChar);
-          currentCharacterId = newChar.id;
-          renderCharacterSelect();
-          fillFormFromCharacter(newChar);
-          saveCharactersToStorage();
+          // Fallback if modal not present
+          _doCreateBlankCharacter();
         }
+      }
+
+      function _doCreateBlankCharacter() {
+        const newChar = newCharacterTemplate();
+        characters.push(newChar);
+        currentCharacterId = newChar.id;
+        renderCharacterSelect();
+        fillFormFromCharacter(newChar);
+        clearDirty();
+        saveCharactersToStorage();
+      }
+
+      function _doCreateWithWizard() {
+        if (typeof CharacterCreationWizard === 'undefined') {
+          _doCreateBlankCharacter();
+          return;
+        }
+        // Push a placeholder but don't persist yet — wizard abandonment cleanup will remove it if needed
+        const newChar = newCharacterTemplate();
+        characters.push(newChar);
+        currentCharacterId = newChar.id;
+        renderCharacterSelect();
+        fillFormFromCharacter(newChar);
+        clearDirty();
+        wizardIsOpen = true;
+        CharacterCreationWizard.open();
       }
       function saveCurrentCharacter() {
           // Don't save if we're in the middle of loading a character
@@ -3374,14 +3420,28 @@ import { getSpellSlotsForClassLevel as _getSpellSlotsForClassLevel, getPactMagic
           char.lastUpdated = new Date().toISOString();
 
           saveCharactersToStorage();
+          clearDirty();
+          if (_manualSave) {
+            showAppToast('Character saved', 'success');
+            _manualSave = false;
+          }
           renderCharacterSelect();
           setLastUpdatedText(char);
           updateStorageUsageDisplay();
         }
+      function clearFormToEmptyState() {
+        // Blank the visible fields without creating a character object
+        isLoadingCharacter = true;
+        const blank = newCharacterTemplate();
+        fillFormFromCharacter(blank);
+        isLoadingCharacter = false;
+        clearDirty();
+      }
+
       function deleteCurrentCharacter() {
         const char = getCurrentCharacter();
         if (!char) return;
-        if (!confirm(`Delete character "${char.name || 'Unnamed Character'}"? This cannot be undone.`)) return;
+        if (!confirm(`Delete "${char.name || 'Unnamed Character'}"? This cannot be undone.`)) return;
         characters = characters.filter(c => c.id !== char.id);
         saveCharactersToStorage();
 
@@ -3389,10 +3449,12 @@ import { getSpellSlotsForClassLevel as _getSpellSlotsForClassLevel, getPactMagic
           currentCharacterId = characters[0].id;
           renderCharacterSelect();
           fillFormFromCharacter(getCurrentCharacter());
+          clearDirty();
         } else {
           currentCharacterId = null;
           renderCharacterSelect();
-          createNewCharacter();
+          clearFormToEmptyState();
+          showAppToast('All characters deleted. Click New to create one.', 'info');
         }
       }
 
@@ -3497,6 +3559,27 @@ import { getSpellSlotsForClassLevel as _getSpellSlotsForClassLevel, getPactMagic
               tempCharacters.push(c);
             });
 
+            // Duplicate detection: find any imported names that already exist
+            const existingNames = new Set(characters.map(c => (c.name || '').trim().toLowerCase()));
+            const duplicates = tempCharacters.filter(c => existingNames.has((c.name || '').trim().toLowerCase()));
+            if (duplicates.length > 0) {
+              const dupeList = duplicates.map(c => `"${c.name}"`).join(', ');
+              const skipDupes = !confirm(
+                `The following character(s) already exist:\n${dupeList}\n\nClick OK to import anyway (creates a copy), or Cancel to skip duplicates.`
+              );
+              if (skipDupes) {
+                const filteredCount = tempCharacters.length - duplicates.length;
+                tempCharacters.splice(0, tempCharacters.length, ...tempCharacters.filter(
+                  c => !existingNames.has((c.name || '').trim().toLowerCase())
+                ));
+                if (tempCharacters.length === 0) {
+                  showAppToast('All imported characters already exist — nothing added.', 'info');
+                  return;
+                }
+                showAppToast(`Skipped ${duplicates.length} duplicate(s), importing ${tempCharacters.length} new character(s).`, 'info');
+              }
+            }
+
             // Try to save with portraits first
             const originalCharacters = [...characters];
             tempCharacters.forEach(c => characters.push(c));
@@ -3507,7 +3590,7 @@ import { getSpellSlotsForClassLevel as _getSpellSlotsForClassLevel, getPactMagic
               currentCharacterId = tempCharacters[tempCharacters.length - 1].id;
               renderCharacterSelect();
               fillFormFromCharacter(getCurrentCharacter());
-              alert(`Successfully imported ${tempCharacters.length} character(s)!`);
+              showAppToast(`Imported ${tempCharacters.length} character(s)`, 'success');
             } catch (error) {
               // Check if it's a quota error
               if (error.name === 'QuotaExceededError' || error.message.includes('quota')) {
@@ -3535,13 +3618,13 @@ import { getSpellSlotsForClassLevel as _getSpellSlotsForClassLevel, getPactMagic
                     currentCharacterId = tempCharacters[tempCharacters.length - 1].id;
                     renderCharacterSelect();
                     fillFormFromCharacter(getCurrentCharacter());
-                    alert(`Successfully imported ${tempCharacters.length} character(s) without portraits!`);
+                    showAppToast(`Imported ${tempCharacters.length} character(s) (portraits removed)`, 'warning');
                   } catch (retryError) {
                     characters = originalCharacters;
-                    alert('Import failed even without portraits. Your storage may be full.\n\nTry deleting some characters first.');
+                    showAppToast('Import failed — storage may be full. Try deleting a character first.', 'danger');
                   }
                 } else {
-                  alert('Import cancelled.');
+                  showAppToast('Import cancelled.', 'info');
                 }
               } else {
                 characters = originalCharacters;
@@ -3550,7 +3633,7 @@ import { getSpellSlotsForClassLevel as _getSpellSlotsForClassLevel, getPactMagic
             }
           } catch (error) {
             console.error('Import error:', error);
-            alert('Import failed: ' + (error.message || 'invalid JSON format'));
+            showAppToast('Import failed: ' + (error.message || 'invalid JSON format'), 'danger');
           }
         };
         reader.readAsText(file);
@@ -3713,13 +3796,13 @@ import { getSpellSlotsForClassLevel as _getSpellSlotsForClassLevel, getPactMagic
       function buildTrackerCharacterFromCurrent() {
         const char = getCurrentCharacter();
         if (!char) {
-          alert('No character selected.');
+          showAppToast('No character selected.', 'warning');
           return null;
         }
 
         const name = (char.name || '').trim();
         if (!name) {
-          alert('Character must have a name before sending to the tracker.');
+          showAppToast('Character needs a name before sending to the tracker.', 'warning');
           return null;
         }
 
@@ -3731,13 +3814,13 @@ import { getSpellSlotsForClassLevel as _getSpellSlotsForClassLevel, getPactMagic
           : (Number.isFinite(curHP) && curHP > 0 ? curHP : 0);
 
         if (!hpBase) {
-          alert('Character must have a valid Max HP (or Current HP) before sending to the tracker.');
+          showAppToast('Set a Max HP before sending to the tracker.', 'warning');
           return null;
         }
 
         const acVal = Number(char.ac);
         if (!Number.isFinite(acVal) || acVal <= 0) {
-          alert('Character must have a valid AC before sending to the tracker.');
+          showAppToast('Set a valid AC before sending to the tracker.', 'warning');
           return null;
         }
 
@@ -3777,7 +3860,7 @@ import { getSpellSlotsForClassLevel as _getSpellSlotsForClassLevel, getPactMagic
           localStorage.setItem('dmtools.pendingImport', JSON.stringify(session));
         } catch (e) {
           console.error('localStorage error:', e);
-          alert('Could not stage data for the tracker (localStorage error).');
+          showAppToast('Could not stage data for the tracker (localStorage error).', 'danger');
           return;
         }
 
@@ -3802,13 +3885,7 @@ import { getSpellSlotsForClassLevel as _getSpellSlotsForClassLevel, getPactMagic
 
         // Check for URL-based portrait CORS issue
         if (char.portraitData && char.portraitData.startsWith('http')) {
-          alert(
-            'Cannot generate token with URL-based portrait images due to browser security restrictions (CORS).\n\n' +
-            'To use custom character portraits on the battle map:\n' +
-            '1. Upload an image file instead of using a URL\n' +
-            '2. Or use the base token by removing your portrait URL\n\n' +
-            'The character will NOT be sent to the battle map.'
-          );
+          showAppToast('Portrait URLs cannot be used for battle map tokens (CORS restriction). Upload an image file instead.', 'warning');
           return;
         }
 
@@ -3826,7 +3903,7 @@ import { getSpellSlotsForClassLevel as _getSpellSlotsForClassLevel, getPactMagic
             modal.show();
           };
           img.onerror = () => {
-            alert('Failed to load character portrait image.');
+            showAppToast('Failed to load portrait image.', 'danger');
           };
           img.src = char.portraitData;
         } else {
@@ -3897,7 +3974,7 @@ import { getSpellSlotsForClassLevel as _getSpellSlotsForClassLevel, getPactMagic
 
         const name = (char.name || '').trim();
         if (!name) {
-          alert('Character must have a name before sending to the battle map.');
+          showAppToast('Character needs a name before sending to the battle map.', 'warning');
           return;
         }
 
@@ -3919,7 +3996,7 @@ import { getSpellSlotsForClassLevel as _getSpellSlotsForClassLevel, getPactMagic
           tokenData = await generateCharacterToken(customChar);
         } catch (error) {
           console.error('Failed to generate character token:', error);
-          alert('Failed to generate character token. Please try again.');
+          showAppToast('Failed to generate character token. Please try again.', 'danger');
           return;
         }
 
@@ -3940,7 +4017,7 @@ import { getSpellSlotsForClassLevel as _getSpellSlotsForClassLevel, getPactMagic
           localStorage.setItem('dmtools.pendingBattleMapImport', JSON.stringify(data));
         } catch (e) {
           console.error('localStorage error:', e);
-          alert('Could not stage data for the battle map (localStorage error).');
+          showAppToast('Could not stage data for the battle map (localStorage error).', 'danger');
           return;
         }
 
@@ -3953,13 +4030,13 @@ import { getSpellSlotsForClassLevel as _getSpellSlotsForClassLevel, getPactMagic
         saveCurrentCharacter();
         const char = getCurrentCharacter();
         if (!char) {
-          alert('No character selected.');
+          showAppToast('No character selected.', 'warning');
           return;
         }
 
         const name = (char.name || '').trim();
         if (!name) {
-          alert('Character must have a name before sending to the battle map.');
+          showAppToast('Character needs a name before sending to the battle map.', 'warning');
           return;
         }
 
@@ -3993,7 +4070,7 @@ import { getSpellSlotsForClassLevel as _getSpellSlotsForClassLevel, getPactMagic
         // Parse hit dice (e.g., "5d10" -> {count: 5, die: 10})
         const hdMatch = hdRemaining.match(/^(\d+)d(\d+)/);
         if (!hdMatch) {
-          alert('Invalid hit dice format. Expected format: XdY (e.g., 5d10)');
+          showAppToast('Invalid hit dice format — expected XdY (e.g., 5d10).', 'warning');
           return;
         }
 
@@ -4001,7 +4078,7 @@ import { getSpellSlotsForClassLevel as _getSpellSlotsForClassLevel, getPactMagic
         const dieSize = parseInt(hdMatch[2], 10);
 
         if (availableCount === 0) {
-          alert('No hit dice remaining! You must take a long rest to restore hit dice.');
+          showAppToast('No hit dice remaining — take a long rest to restore them.', 'warning');
           return;
         }
 
@@ -4036,7 +4113,7 @@ import { getSpellSlotsForClassLevel as _getSpellSlotsForClassLevel, getPactMagic
 
         const count = parseInt($('hdSpendCount').value, 10);
         if (count <= 0 || count > hitDiceModalData.availableCount) {
-          alert('Invalid number of hit dice to spend.');
+          showAppToast('Invalid number of hit dice to spend.', 'warning');
           return;
         }
 
@@ -4085,7 +4162,7 @@ import { getSpellSlotsForClassLevel as _getSpellSlotsForClassLevel, getPactMagic
         hitDiceModalData = null;
 
         // Show success message
-        alert(`Healed for ${rolledHealing} HP!\n\nNew HP: ${newHP} / ${maxHP}\nRemaining Hit Dice: ${newRemaining}d${dieSize}\n\nRemember to click Save!`);
+        showAppToast(`Healed ${rolledHealing} HP → ${newHP}/${maxHP} HP. ${newRemaining}d${dieSize} remaining. Remember to Save!`, 'success');
       }
 
       function handleShortRest() {
@@ -4182,7 +4259,7 @@ import { getSpellSlotsForClassLevel as _getSpellSlotsForClassLevel, getPactMagic
         const pactUsedEl = $('pactUsed');
         if (pactUsedEl) pactUsedEl.value = 0;
 
-        alert('Long Rest complete!\n\n✓ HP restored to maximum\n✓ Temp HP cleared\n✓ Hit dice restored (at least half)\n✓ All spell slots restored\n✓ Pact slots restored\n✓ All abilities/resources restored\n\nRemember to click Save!');
+        showAppToast('Long rest complete — HP, spell slots, and resources restored. Remember to Save!', 'success');
       }
 
       // ---------- Events ----------
@@ -4398,29 +4475,102 @@ import { getSpellSlotsForClassLevel as _getSpellSlotsForClassLevel, getPactMagic
               currentCharacterId = newId;
               fillFormFromCharacter(getCurrentCharacter());
               renderCharacterSelect(); // Update dropdown to reflect the new selection
+              clearDirty();
             }
           });
         } else {
           console.error('❌ Character select dropdown not found!');
         }
         $('newCharacterBtn').addEventListener('click', createNewCharacter);
-        $('saveCharacterBtn').addEventListener('click', saveCurrentCharacter);
+        $('saveCharacterBtn').addEventListener('click', () => { _manualSave = true; saveCurrentCharacter(); });
         $('deleteCharacterBtn').addEventListener('click', deleteCurrentCharacter);
-        $('exportCharacterBtn').addEventListener('click', () => {
-          const c = getCurrentCharacter();
-          if (!c) { alert('No character selected to export.'); return; }
-          exportCharacter(c);
+
+        // New Character choice modal buttons
+        const chooseWizardBtn = $('chooseWizardBtn');
+        if (chooseWizardBtn) {
+          chooseWizardBtn.addEventListener('click', () => {
+            bootstrap.Modal.getInstance(document.getElementById('newCharacterChoiceModal'))?.hide();
+            _doCreateWithWizard();
+          });
+        }
+        const chooseBlankBtn = $('chooseBlankBtn');
+        if (chooseBlankBtn) {
+          chooseBlankBtn.addEventListener('click', () => {
+            bootstrap.Modal.getInstance(document.getElementById('newCharacterChoiceModal'))?.hide();
+            _doCreateBlankCharacter();
+          });
+        }
+
+        // Wizard completion feedback
+        document.addEventListener('dmtoolbox:wizard-complete', (e) => {
+          const { name, level, race, charClass } = e.detail || {};
+          wizardIsOpen = false;
+          saveCurrentCharacter();
+          showAppToast(`${name} — Level ${level} ${race} ${charClass} created!`, 'success');
         });
-        $('exportAllCharactersBtn').addEventListener('click', () => {
-          if (!characters.length) { alert('No characters to export.'); return; }
-          exportAllCharacters();
+        document.addEventListener('dmtoolbox:wizard-error', () => {
+          wizardIsOpen = false;
+          showAppToast('Wizard error: could not populate sheet. Refresh and try again.', 'danger');
         });
-        $('importCharacterBtn').addEventListener('click', () => $('importFileInput').click());
+
+        // Wizard abandonment cleanup: if wizard modal closes without completing, remove the empty shell
+        const wizardModal = document.getElementById('characterCreationModal');
+        if (wizardModal) {
+          wizardModal.addEventListener('hidden.bs.modal', () => {
+            if (!wizardIsOpen) return;
+            wizardIsOpen = false;
+            const char = getCurrentCharacter();
+            // Remove the placeholder if it's still empty (name untouched, no class/race set)
+            if (char && !char.name && !char.charClass && !char.race) {
+              characters = characters.filter(c => c.id !== char.id);
+              if (characters.length > 0) {
+                currentCharacterId = characters[0].id;
+                fillFormFromCharacter(getCurrentCharacter());
+              } else {
+                currentCharacterId = null;
+                clearFormToEmptyState();
+              }
+              renderCharacterSelect();
+            }
+          });
+        }
+
+        // Overflow dropdown — items are <a> tags, need preventDefault
+        const exportCharBtn = $('exportCharacterBtn');
+        if (exportCharBtn) {
+          exportCharBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            const c = getCurrentCharacter();
+            if (!c) { showAppToast('No character selected to export.', 'warning'); return; }
+            exportCharacter(c);
+          });
+        }
+        const exportAllBtn = $('exportAllCharactersBtn');
+        if (exportAllBtn) {
+          exportAllBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            if (!characters.length) { showAppToast('No characters to export.', 'warning'); return; }
+            exportAllCharacters();
+          });
+        }
+
+        // Import — triggered from the overflow menu item
+        const importMenuBtn = $('importCharacterMenuBtn');
+        if (importMenuBtn) {
+          importMenuBtn.addEventListener('click', (e) => { e.preventDefault(); $('importFileInput').click(); });
+        }
         $('importFileInput').addEventListener('change', e => {
           const file = e.target.files[0];
           if (file) importCharactersFromFile(file);
           e.target.value = '';
         });
+
+        // Dirty tracking — single delegated listener on the full sheet
+        const sheetContainer = document.getElementById('fullCharacterSheet');
+        if (sheetContainer) {
+          sheetContainer.addEventListener('input', markDirty);
+          sheetContainer.addEventListener('change', markDirty);
+        }
 
         // Print/Export Character Sheet buttons
         $('printSheetBtn').addEventListener('click', (e) => {
@@ -4429,7 +4579,7 @@ import { getSpellSlotsForClassLevel as _getSpellSlotsForClassLevel, getPactMagic
           if (char) {
             window.characterSheetExporter.printSheet(char);
           } else {
-            alert('Please select a character first.');
+            showAppToast('Please select a character first.', 'warning');
           }
         });
         $('exportPdfBtn').addEventListener('click', (e) => {
@@ -4438,7 +4588,7 @@ import { getSpellSlotsForClassLevel as _getSpellSlotsForClassLevel, getPactMagic
           if (char) {
             window.characterSheetExporter.exportToPDF(char);
           } else {
-            alert('Please select a character first.');
+            showAppToast('Please select a character first.', 'warning');
           }
         });
         $('exportPngBtn').addEventListener('click', (e) => {
@@ -4447,7 +4597,7 @@ import { getSpellSlotsForClassLevel as _getSpellSlotsForClassLevel, getPactMagic
           if (char) {
             window.characterSheetExporter.exportToPNG(char);
           } else {
-            alert('Please select a character first.');
+            showAppToast('Please select a character first.', 'warning');
           }
         });
         $('exportWordBtn').addEventListener('click', (e) => {
@@ -4456,7 +4606,7 @@ import { getSpellSlotsForClassLevel as _getSpellSlotsForClassLevel, getPactMagic
           if (char) {
             window.characterSheetExporter.exportToWord(char);
           } else {
-            alert('Please select a character first.');
+            showAppToast('Please select a character first.', 'warning');
           }
         });
 
@@ -4464,7 +4614,7 @@ import { getSpellSlotsForClassLevel as _getSpellSlotsForClassLevel, getPactMagic
           const file = e.target.files[0];
           if (!file) return;
           if (!file.type || !file.type.startsWith('image/')) {
-            alert('Please select a valid image file.');
+            showAppToast('Please select a valid image file.', 'warning');
             return;
           }
           const reader = new FileReader();
@@ -4475,13 +4625,13 @@ import { getSpellSlotsForClassLevel as _getSpellSlotsForClassLevel, getPactMagic
         });
         $('applyPortraitUrlBtn').addEventListener('click', () => {
           const url = ($('portraitUrl').value || '').trim();
-          if (!url) { alert('Enter an image URL first.'); return; }
+          if (!url) { showAppToast('Enter an image URL first.', 'warning'); return; }
           openPortraitModalFor('url', url, { scale: 1, offsetX: 0, offsetY: 0 });
         });
         $('editPortraitBtn').addEventListener('click', () => {
           const char = getCurrentCharacter();
           if (!char || !char.portraitData) {
-            alert('No portrait to edit. Upload or set a URL first.');
+            showAppToast('No portrait to edit — upload an image or set a URL first.', 'warning');
             return;
           }
           openPortraitModalFor(char.portraitType || 'data', char.portraitData, ensurePortraitSettings(char));
@@ -4766,7 +4916,10 @@ import { getSpellSlotsForClassLevel as _getSpellSlotsForClassLevel, getPactMagic
 
         const sendToBattleMapBtn = $('sendToBattleMapBtn');
         if (sendToBattleMapBtn) {
-          sendToBattleMapBtn.addEventListener('click', sendCurrentCharacterToBattleMap);
+          sendToBattleMapBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            sendCurrentCharacterToBattleMap();
+          });
         }
 
         // Token preview modal events
@@ -4942,7 +5095,7 @@ import { getSpellSlotsForClassLevel as _getSpellSlotsForClassLevel, getPactMagic
           saveCustomSpellBtn.addEventListener('click', () => {
             const spell = buildCustomSpellFromForm();
             if (!spell) {
-              alert('Custom spell needs at least a name.');
+              showAppToast('Custom spell needs at least a name.', 'warning');
               return;
             }
             addSpellToCurrentList(spell);

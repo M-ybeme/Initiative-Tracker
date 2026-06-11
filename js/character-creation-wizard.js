@@ -3823,12 +3823,14 @@ const CharacterCreationWizard = window.CharacterCreationWizard = (function() {
           if (bsModal) bsModal.hide();
         }
 
-        // Show success message
-        alert(`Character created successfully!\n\n${wizardData.name}, the Level ${wizardData.level} ${wizardData.race} ${wizardData.class}\n\nYour character sheet has been populated with:\n✓ Ability scores (with species bonuses)\n✓ HP: ${wizardData.maxHP}, AC: ${wizardData.ac}\n✓ Skills, saving throws, and proficiency bonus\n✓ Speed and basic stats\n\nYou can now add equipment, spells, and customize further!`);
+        // Notify the app via toast (character.js handles the event)
+        document.dispatchEvent(new CustomEvent('dmtoolbox:wizard-complete', {
+          detail: { name: wizardData.name, level: wizardData.level, race: wizardData.race, charClass: wizardData.class }
+        }));
       }, 200); // Wait 200ms to ensure fillFormFromWizardData completes
     } else {
       console.error('fillFormFromWizardData function not found. Make sure character.js is loaded.');
-      alert('Error: Unable to populate character sheet. Please refresh the page and try again.');
+      document.dispatchEvent(new CustomEvent('dmtoolbox:wizard-error'));
     }
   }
 
