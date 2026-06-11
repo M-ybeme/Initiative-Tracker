@@ -1,14 +1,14 @@
 const DM_TOOLBOX_BUILD = {
   name: "The DM's Toolbox",
-  version: "2.1.8",
+  version: "2.2.0",
   recentChanges: [
-    "Encounter Builder: Stat-block tooltips now split into two columns automatically when taller than ~82% of the viewport — no more cut-off boss stat blocks",
-    "Encounter Builder: Save / Load encounter slots — name and persist your roster + party config to localStorage; restore in two clicks",
-    "Encounter Builder: Edit button (✏) on each roster entry pre-loads that monster into the Full Mode custom editor for quick tweaks",
-    "Encounter Builder: Roll Init checkbox — pre-rolls d20 + DEX mod initiative for every monster before sending to the tracker",
-    "Encounter Builder: Encounter Name field — used as export filename prefix and stat-block text header",
-    "Encounter Builder: CR filter now covers the full 0–30 range (was capped at 15)",
-    "Encounter Builder: Roster summary now shows a monster breakdown (e.g. 3× Goblin, 1× Bugbear) above the XP/difficulty line"
+    "Characters: Languages & Proficiencies card — dedicated fields for languages, armor/weapon proficiencies, and tool proficiencies",
+    "Characters: Jack of All Trades toggle on the Skills card — adds ½ proficiency bonus to all non-proficient skills (Bard feature)",
+    "Characters: Passive Investigation and Passive Insight now auto-calculate from skill bonuses (matching Passive Perception behavior)",
+    "Characters: Proficiency Bonus now displayed inline at the bottom of the Ability Scores card",
+    "Characters (v2.1.9): Styled 'Guided Wizard / Blank Sheet' choice modal replaces browser confirm()",
+    "Characters (v2.1.9): showAppToast() system replaces alert() calls; unsaved-changes indicator on Save button",
+    "Characters (v2.1.9): Header button bar reorganized with overflow ⋯ menu; duplicate detection on import"
   ],
   buildTime: new Date().toISOString(),
   author: "Maybeme"

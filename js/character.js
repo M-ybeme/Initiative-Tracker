@@ -765,10 +765,13 @@ import { getSpellSlotsForClassLevel as _getSpellSlotsForClassLevel, getPactMagic
         if ($('modWis')) $('modWis').value = mods.wis;
         if ($('modCha')) $('modCha').value = mods.cha;
 
-        // Update proficiency bonus display
+        // Update proficiency bonus displays
         const pb = getProficiencyBonusFromLevel(level);
+        const pbStr = (pb >= 0 ? '+' : '') + pb;
         const pbSpan = $('charProficiencyBonusDisplay');
-        if (pbSpan) pbSpan.textContent = (pb >= 0 ? '+' : '') + pb;
+        if (pbSpan) pbSpan.textContent = pbStr;
+        const pbAbils = $('charProfBonusAbilsDisplay');
+        if (pbAbils) pbAbils.textContent = pbStr;
 
         // Keep Perception in sync with either the skill bonus or WIS mod
         let perceptionBonus = 0;
@@ -856,6 +859,8 @@ import { getSpellSlotsForClassLevel as _getSpellSlotsForClassLevel, getPactMagic
         const levelInput = $('charLevel');
         const level = levelInput ? Number(levelInput.value || '') || 1 : 1;
         const pb = getProficiencyBonusFromLevel(level);
+        const halfPb = Math.floor(pb / 2);
+        const joat = !!$('skillJoAT')?.checked;
 
         const scores = {
           str: Number($('statStr')?.value || '') || 0,
@@ -888,9 +893,12 @@ import { getSpellSlotsForClassLevel as _getSpellSlotsForClassLevel, getPactMagic
           const isExp = expEl && expEl.checked;
 
           // Expertise = double proficiency, but only if proficient
+          // Jack of All Trades adds half proficiency to non-proficient skills
           let prof = 0;
           if (isProf) {
             prof = isExp ? (pb * 2) : pb;
+          } else if (joat) {
+            prof = halfPb;
           }
 
           const total = abilMod + prof;
@@ -2417,6 +2425,10 @@ import { getSpellSlotsForClassLevel as _getSpellSlotsForClassLevel, getPactMagic
           setSkill('skillSurvival', 'survival');
       
           $('skillsNotes').value = char.skillsNotes || '';
+          if ($('skillJoAT')) $('skillJoAT').checked = !!char.skillJoAT;
+          if ($('charLanguages')) $('charLanguages').value = char.languages || '';
+          if ($('charArmorWeaponProf')) $('charArmorWeaponProf').value = char.armorWeaponProf || '';
+          if ($('charToolProf')) $('charToolProf').value = char.toolProf || '';
 
           // Senses (passive perception, investigation, insight)
           const senses = char.senses || {};
@@ -2450,13 +2462,16 @@ import { getSpellSlotsForClassLevel as _getSpellSlotsForClassLevel, getPactMagic
           $('res3Current').value = r3.current ?? '';
           $('res3Max').value = r3.max ?? '';
       
-          // Proficiency bonus display
-          const pbSpan = $('charProficiencyBonusDisplay');
-          if (pbSpan) {
+          // Proficiency bonus displays
+          {
             const pb = typeof char.proficiencyBonus === 'number' && !isNaN(char.proficiencyBonus)
               ? char.proficiencyBonus
               : getProficiencyBonusFromLevel(char.level || 1);
-            pbSpan.textContent = (pb >= 0 ? '+' : '') + pb;
+            const pbStr = (pb >= 0 ? '+' : '') + pb;
+            const pbSpan = $('charProficiencyBonusDisplay');
+            if (pbSpan) pbSpan.textContent = pbStr;
+            const pbAbils = $('charProfBonusAbilsDisplay');
+            if (pbAbils) pbAbils.textContent = pbStr;
           }
       
           $('charFeatures').value = char.features || '';
@@ -2495,6 +2510,7 @@ import { getSpellSlotsForClassLevel as _getSpellSlotsForClassLevel, getPactMagic
           setLastUpdatedText(char);
           updateSpellSlotsDisplay();
           updateStorageUsageDisplay();
+          recalcPassivesFromForm();
 
           // Clear loading flag after a small delay to allow all event handlers to settle
           setTimeout(() => {
@@ -3342,7 +3358,11 @@ import { getSpellSlotsForClassLevel as _getSpellSlotsForClassLevel, getPactMagic
           readSkill('skillSurvival', 'survival');
       
           char.skillsNotes = getVal('skillsNotes');
-      
+          char.skillJoAT = !!$('skillJoAT')?.checked;
+          char.languages = getVal('charLanguages');
+          char.armorWeaponProf = getVal('charArmorWeaponProf');
+          char.toolProf = getVal('charToolProf');
+
           char.senses = char.senses || {};
           char.senses.passivePerception = getNum('charPassivePerception');
           char.senses.passiveInvestigation = getNum('charPassiveInvestigation');
@@ -4775,6 +4795,15 @@ import { getSpellSlotsForClassLevel as _getSpellSlotsForClassLevel, getPactMagic
             });
           }
         });
+
+        // Jack of All Trades toggle recalcs all skill bonuses
+        const joatEl = $('skillJoAT');
+        if (joatEl) {
+          joatEl.addEventListener('change', () => {
+            recalcSkillsFromForm(false);
+            recalcPassivesFromForm();
+          });
+        }
 
         // Auto-calc: if user clears a save/skill bonus and leaves the field, recompute it
         const bonusFieldIds = [

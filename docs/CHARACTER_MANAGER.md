@@ -169,6 +169,10 @@ The Character Manager is a complete D&D 5e character sheet system integrated int
 - Attack rolls: To-hit and damage
 - Death saves: Automatic tracking
 
+### Jack of All Trades (v2.2.0)
+
+A **Jack of All Trades** checkbox sits above the Skills table. When enabled, `floor(proficiency bonus / 2)` is added to all non-proficient skill bonuses — covering the Bard class feature without requiring manual edits to every skill. The toggle is saved with the character and recalculates immediately on change.
+
 ### Combat Snapshot (v1.5.6)
 
 **Features:**
@@ -256,6 +260,21 @@ See [SPELLS.md](SPELLS.md) for complete spell database details.
 
 ---
 
+## Languages & Proficiencies
+
+### Languages & Proficiencies Card (v2.2.0)
+
+A dedicated card in the left column provides structured fields for all non-skill proficiencies that every character carries.
+
+**Fields:**
+- **Languages** – comma-separated list of known languages (e.g., Common, Elvish, Draconic)
+- **Armor & Weapon Proficiencies** – free-form text for armor categories and weapon types (e.g., Light armor, simple weapons, longswords)
+- **Tool Proficiencies** – instruments, kits, and tools the character is trained with (e.g., Thieves' tools, herbalism kit, lute)
+
+All three fields are saved with the character and included in PDF/Word exports.
+
+---
+
 ## Senses Tracking
 
 ### Structured Senses (v2.0.9)
@@ -268,6 +287,14 @@ The Senses section of the character sheet provides dedicated numeric fields (in 
 - **Tremorsense**
 - **Truesight**
 - **Other Senses** – freeform notes field
+
+**Passive Scores (auto-calculated):**
+All three passive scores derive from the corresponding skill bonus and are read-only:
+- **Passive Perception** = 10 + Perception bonus
+- **Passive Investigation** = 10 + Investigation bonus (v2.2.0)
+- **Passive Insight** = 10 + Insight bonus (v2.2.0)
+
+Values update automatically whenever ability scores, proficiency toggles, or skill bonuses change. No manual entry required.
 
 **Auto-Population:**
 During character creation, race traits are scanned for sense keywords and their ranges are extracted and pre-filled automatically. No manual entry required for standard races.
@@ -386,8 +413,9 @@ Exported character sheets render each set sense as a labeled stat box (e.g., "Da
 - Multiclass: classes array, multiclass flag
 - Abilities: 6 ability scores with modifiers
 - Combat: HP (current/max/temp), AC, speed, initiative, hit dice
-- Skills: 18 skills with proficiency/expertise/bonus
+- Skills: 18 skills with proficiency/expertise/bonus; `skillJoAT` flag for Jack of All Trades
 - Saves: 6 saving throws with proficiency/bonus
+- Proficiencies: `languages`, `armorWeaponProf`, `toolProf` (free-text fields)
 - Spells: spell slots, pact slots, spell list, spellcasting ability
 - Inventory: inventory items array
 - Features: features & traits, notes
@@ -413,7 +441,8 @@ Exported character sheets render each set sense as a labeled stat box (e.g., "Da
 13. **v2.0.8.1** - Interactive class feature selection (Fighting Style, Pact Boon, Eldritch Invocations, Metamagic); homebrew class support in wizard; ability check rolls; SRD 5.1 → 5.2 updates
 14. **v2.0.9** - Structured sense fields with race auto-population; inventory equip toggle; Warlock pact slot fixes; spell tooltip z-index fix; hit dice remaining set on creation
 15. **v2.1.x** - Two-column stat block tooltips in Encounter Builder; save/load slots; edit-in-editor; roll initiative; encounter name; CR 0–30 filter; Battle Map UX overhaul (mode tabs, Bootstrap modals, fog brush cursor)
-16. **v2.1.8** (current) - Area 1 UX overhaul: styled "Guided Wizard / Blank Sheet" choice modal replaces browser confirm(); `showAppToast()` system replaces alert() calls throughout; unsaved-changes indicator on Save button; wizard abandonment cleanup; delete-last-character no longer auto-creates; duplicate detection on import; header button bar reorganized with overflow ⋯ menu; help modal wizard steps corrected
+16. **v2.1.9** - Area 1 UX overhaul: styled "Guided Wizard / Blank Sheet" choice modal replaces browser confirm(); `showAppToast()` system replaces alert() calls throughout; unsaved-changes indicator on Save button; wizard abandonment cleanup; delete-last-character no longer auto-creates; duplicate detection on import; header button bar reorganized with overflow ⋯ menu; help modal wizard steps corrected
+17. **v2.2.0** (current) - Area 2 completeness: Languages & Proficiencies card (languages, armor/weapon proficiencies, tool proficiencies); Jack of All Trades toggle on Skills card (½ prof bonus on non-proficient skills); Passive Investigation and Passive Insight now auto-calculate from skill bonuses (readonly, matching Passive Perception); Proficiency Bonus displayed inline at bottom of Ability Scores card
 
 ## Use Cases
 

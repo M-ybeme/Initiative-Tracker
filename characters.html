@@ -1574,6 +1574,10 @@
                     </div>
                   </div>
                 </div>
+                <!-- Derived stat bar -->
+                <div class="mt-2 pt-2 border-top border-secondary d-flex justify-content-center">
+                  <span class="small text-muted">Proficiency Bonus: <strong id="charProfBonusAbilsDisplay" class="text-light">+2</strong></span>
+                </div>
               </div>
               </div>
             </div>
@@ -1744,6 +1748,14 @@
               </div>
               <div class="collapse show" id="collapseSkills">
               <div class="card-body">
+                <div class="d-flex align-items-center mb-2">
+                  <div class="form-check">
+                    <input class="form-check-input" type="checkbox" id="skillJoAT" />
+                    <label class="form-check-label small" for="skillJoAT">
+                      Jack of All Trades <span class="text-muted">(adds ½ prof to non-proficient skills)</span>
+                    </label>
+                  </div>
+                </div>
                 <div class="table-responsive">
                   <table class="table table-sm table-dark table-striped align-middle mb-2 skill-table">
                     <thead>
@@ -2235,6 +2247,33 @@
               </div>
               </div>
             </div>
+            <!-- Languages & Proficiencies -->
+            <div class="card bg-dark border-secondary mb-3">
+              <div class="card-header border-secondary collapsible-header" data-bs-toggle="collapse" data-bs-target="#collapseProficiencies" aria-expanded="true" aria-controls="collapseProficiencies" style="cursor: pointer;">
+                <strong><i class="bi bi-chevron-down me-1 collapse-icon"></i>Languages &amp; Proficiencies</strong>
+              </div>
+              <div class="collapse show" id="collapseProficiencies">
+              <div class="card-body">
+                <div class="row g-2">
+                  <div class="col-12">
+                    <label for="charLanguages" class="form-label small">Languages</label>
+                    <textarea id="charLanguages" rows="2" class="form-control form-control-sm"
+                              placeholder="Common, Elvish, Draconic…"></textarea>
+                  </div>
+                  <div class="col-md-6">
+                    <label for="charArmorWeaponProf" class="form-label small">Armor &amp; Weapon Proficiencies</label>
+                    <textarea id="charArmorWeaponProf" rows="2" class="form-control form-control-sm"
+                              placeholder="Light armor, simple weapons, longswords…"></textarea>
+                  </div>
+                  <div class="col-md-6">
+                    <label for="charToolProf" class="form-label small">Tool Proficiencies</label>
+                    <textarea id="charToolProf" rows="2" class="form-control form-control-sm"
+                              placeholder="Thieves' tools, herbalism kit, lute…"></textarea>
+                  </div>
+                </div>
+              </div>
+              </div>
+            </div>
           </div>
 
           <!-- RIGHT COLUMN -->
@@ -2324,13 +2363,17 @@
                     <label for="charPassiveInvestigation" class="form-label small">Passive Investigation</label>
                     <input type="number"
                            id="charPassiveInvestigation"
-                           class="form-control form-control-sm text-center" />
+                           class="form-control form-control-sm text-center"
+                           placeholder="Auto"
+                           readonly />
                   </div>
                   <div class="col-4">
                     <label for="charPassiveInsight" class="form-label small">Passive Insight</label>
                     <input type="number"
                            id="charPassiveInsight"
-                           class="form-control form-control-sm text-center" />
+                           class="form-control form-control-sm text-center"
+                           placeholder="Auto"
+                           readonly />
                   </div>
                 
                   <div class="col-12">

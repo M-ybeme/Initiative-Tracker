@@ -8,14 +8,52 @@ The format is based on Keep a Changelog, and this project adheres to Semantic Ve
 The DM's Toolbox has evolved through focused feature releases:
 
 
-- **2.1.x**: Battle Map UX overhaul (mode tabs, fog brush cursor, Bootstrap modals), Initiative Tracker reaction/legendary-action tracking, Encounter Builder power-user overhaul (two-col tooltips, save/load slots, edit-in-editor, roll initiative, encounter naming, CR 0–30 filter)
+- **2.2.x**: Characters page Area 2 completeness — Languages & Proficiencies card, Jack of All Trades toggle, auto-calculated passive scores, Proficiency Bonus inline display
+- **2.1.x**: Characters page UX overhaul (modals, toasts, first-run flow), Battle Map UX overhaul (mode tabs, fog brush cursor, Bootstrap modals), Initiative Tracker reaction/legendary-action tracking, Encounter Builder power-user overhaul (two-col tooltips, save/load slots, edit-in-editor, roll initiative, encounter naming, CR 0–30 filter)
 - **2.0.x**: Starting equipment selection, subclass bonus cantrips, enhanced feat selection UI, interactive class feature selection, ability check rolls, full custom monster creator, and content pack integration
 - **1.11.x**: Journal system with rich text editor, import/export (Word/PDF/TXT/Markdown), and Battle Map → Initiative Tracker integration
 - **1.10.x**: Full character manager with multiclass support, spell learning, subclass selection, and character sheet export
 - **1.9.x**: Battle map measurement tools, persistent fog shapes, and generator integration across NPC/Tavern/Shop systems
 - **1.8.x**: Spell database expansion to 432+ spells, inventory management, loot generator overhaul, and character token generation
 
-**Current version: 2.1.8 (June 2026)**
+**Current version: 2.2.0 (June 2026)**
+
+---
+
+## [2.2.0] - 2026-06-11
+**Characters — Area 2 Completeness (Identity, Stats & Skills)**
+
+### Added
+- **Languages & Proficiencies card** — dedicated section at the bottom of the left column with three fields: Languages, Armor & Weapon Proficiencies, and Tool Proficiencies. All fields save with the character and round out the information a physical character sheet would carry.
+- **Jack of All Trades toggle** — checkbox above the Skills table. When enabled, adds `floor(proficiency bonus / 2)` to all non-proficient skill bonuses, covering the Bard class feature without manual edits. Saves with the character; recalculates immediately on toggle or level change.
+- **Proficiency Bonus inline display** — shown at the bottom of the Ability Scores & Modifiers card so the number driving all save and skill math is always visible without scrolling to the Senses card.
+
+### Fixed
+- **Passive Investigation and Passive Insight** were editable inputs that silently drifted out of sync. Both fields are now `readonly` and auto-calculate from their respective skill bonus (10 + Investigation bonus / 10 + Insight bonus), matching the existing Passive Perception behavior. Values update immediately when ability scores, proficiency toggles, or skill bonuses change.
+
+---
+
+## [2.1.9] - 2026-06-10
+**Characters — UX Overhaul (Area 1: Modals, Toasts, and First-Run Flow)**
+
+### Added
+- **New Character choice modal** — clicking New Character now opens a Bootstrap modal with "Guided Wizard (Recommended)" and "Blank Sheet" options, replacing a native `confirm()` dialog.
+- **`showAppToast()` helper** — styled Bootstrap toast replaces ~40 `alert()` calls across the character management flow (import feedback, send-to-tracker/battle-map validation, spell/attack/inventory guards, rest results, portrait errors).
+- **Unsaved-changes indicator** — a yellow dot (●) appears on the Save button whenever the form has been edited but not yet saved; cleared on manual save, auto-save, or character switch.
+- **Silent auto-save** — the 30-second background save timer no longer shows a toast. "Character saved" only fires on explicit Save button clicks.
+- **Duplicate import detection** — importing a file whose character names already exist in storage shows a warning toast and offers skip or add-as-copy per duplicate.
+- **Wizard abandonment cleanup** — closing the creation wizard without finishing removes the empty character shell that was prematurely pushed to storage, preventing ghost entries.
+- **Delete last character** — deleting the final character no longer auto-fires the new character flow; shows an info toast instead and leaves a blank form ready for input.
+
+### Changed
+- **Header button bar reorganized** — Help promoted to the first position; Export All, Import, and Send to Battle Map consolidated into a `⋯` overflow dropdown to reduce clutter.
+- **Wizard completion** — success and error `alert()` calls replaced with custom DOM events (`dmtoolbox:wizard-complete`, `dmtoolbox:wizard-error`) that `character.js` listens to for toast feedback.
+
+### Fixed
+- **Help modal — wizard steps** no longer mention subclass selection (SRD-gated, unavailable without a content pack); updated to reflect the actual 13-step wizard.
+- **Help modal — Level Up location** now correctly describes the XP badge click path instead of a non-existent "Level Up button at the top."
+- **Help modal — page layout** left/right column descriptions were swapped; corrected to match the real layout (identity/combat/abilities/skills on the left; portrait/notes/history tabs on the right).
+- **Character Info tab intro paragraph** corrected to match the same left/right layout fix.
 
 ---
 
