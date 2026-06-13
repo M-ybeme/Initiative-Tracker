@@ -2,7 +2,7 @@
 
 **A comprehensive, browser-based suite of tools for tabletop RPG Game Masters**
 
-**Live Site:** [https://dnddmtoolbox.netlify.app/](https://dnddmtoolbox.netlify.app/)
+**Live Site:** [https://dnddmtoolbox.netlify.app/](https://dnddmtoolbox.netlify.app/) · **Version:** 2.2.3
 
 ---
 

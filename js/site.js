@@ -1,12 +1,11 @@
 const DM_TOOLBOX_BUILD = {
   name: "The DM's Toolbox",
-  version: "2.2.2",
+  version: "2.2.3",
   recentChanges: [
-    "Characters: Spell list now grouped by level — Cantrips, 1st Level … 9th Level section headers",
-    "Characters: Ritual spells show a cyan Ritual badge; Ritual cast button casts without using a slot (+10 min casting time)",
-    "Characters: Ritual checkbox added to the custom/homebrew spell form",
-    "Characters: Pact Magic section now has Use / Regain / Reset buttons matching the regular spell slot table",
-    "Characters: Pact Magic section labeled with short-rest recovery note"
+    "Characters: Inventory — magical item badge + rarity (Common → Artifact) shown inline on items",
+    "Characters: Inventory — coin weight toggle in encumbrance panel (50 coins = 1 lb, RAW)",
+    "Characters: Attacks — off-hand toggle for Two-Weapon Fighting with inline label and reminder",
+    "Characters: Notes tab — category dropdown (General / Session Notes / Loot Leads / Quest Hooks)"
   ],
   buildTime: new Date().toISOString(),
   author: "Maybeme"

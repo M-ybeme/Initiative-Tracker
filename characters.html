@@ -2991,6 +2991,12 @@
                               </div>
                             </div>
                           </div>
+                          <div class="mt-2 pt-1 border-top border-secondary-subtle text-center">
+                            <div class="form-check form-switch d-inline-flex align-items-center gap-2 mb-0">
+                              <input class="form-check-input" type="checkbox" id="includeCoinWeight" title="50 coins = 1 lb (RAW)" />
+                              <label class="form-check-label small text-muted" for="includeCoinWeight">Include coin weight (50 coins = 1 lb)</label>
+                            </div>
+                          </div>
                         </div>
                       </div>
 
@@ -3050,7 +3056,15 @@
                        role="tabpanel"
                        aria-labelledby="detail-notes-tab">
                     <div class="mt-2">
-                      <label for="charExtraNotes" class="form-label">Miscellaneous Notes</label>
+                      <div class="d-flex align-items-center gap-2 mb-2">
+                        <label for="notesCategorySelect" class="form-label mb-0 text-nowrap">Category:</label>
+                        <select id="notesCategorySelect" class="form-select form-select-sm">
+                          <option value="general">General</option>
+                          <option value="sessionNotes">Session Notes</option>
+                          <option value="lootLeads">Loot Leads</option>
+                          <option value="questHooks">Quest Hooks</option>
+                        </select>
+                      </div>
                       <textarea id="charExtraNotes" rows="10" class="form-control form-control-sm"
                                 placeholder="Scratch space, prep notes, anything that doesn’t fit the other tabs."></textarea>
                     </div>
@@ -3441,6 +3455,13 @@
             <label for="attackProperties" class="form-label">Properties / Notes</label>
             <textarea class="form-control form-control-sm" id="attackProperties" rows="2" placeholder="Versatile (1d10), reach, finesse, magical..."></textarea>
           </div>
+
+          <div class="form-check form-switch mb-1">
+            <input class="form-check-input" type="checkbox" id="attackOffhand" />
+            <label class="form-check-label small" for="attackOffhand">
+              Off-hand attack <span class="text-muted">(Two-Weapon Fighting — no ability modifier to damage unless you have the Fighting Style)</span>
+            </label>
+          </div>
         </div>
         <div class="modal-footer border-secondary">
           <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
@@ -3530,6 +3551,29 @@
                   Attuned
                 </label>
               </div>
+            </div>
+          </div>
+
+          <div class="row g-2 mb-3">
+            <div class="col-6">
+              <div class="form-check form-switch">
+                <input class="form-check-input" type="checkbox" id="inventoryItemMagical" />
+                <label class="form-check-label" for="inventoryItemMagical">
+                  Magical Item
+                </label>
+              </div>
+            </div>
+            <div class="col-6">
+              <label for="inventoryItemRarity" class="form-label small mb-1">Rarity</label>
+              <select class="form-select form-select-sm" id="inventoryItemRarity">
+                <option value="">— None —</option>
+                <option value="common">Common</option>
+                <option value="uncommon">Uncommon</option>
+                <option value="rare">Rare</option>
+                <option value="very-rare">Very Rare</option>
+                <option value="legendary">Legendary</option>
+                <option value="artifact">Artifact</option>
+              </select>
             </div>
           </div>
 

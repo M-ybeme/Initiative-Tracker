@@ -1039,6 +1039,11 @@ import { getSpellSlotsForClassLevel as _getSpellSlotsForClassLevel, getPactMagic
       let currentAttackList = [];
       let isLoadingCharacter = false; // Flag to prevent saves during character load
 
+      // Categorized notes — keyed by category id
+      const NOTE_CATEGORIES = ['general', 'sessionNotes', 'lootLeads', 'questHooks'];
+      let currentCategorizedNotes = { general: '', sessionNotes: '', lootLeads: '', questHooks: '' };
+      let currentNotesCategory = 'general';
+
       // Expose spell and attack lists globally for combat view
       window.currentSpellList = currentSpellList;
       window.currentAttackList = currentAttackList;
@@ -1775,6 +1780,7 @@ import { getSpellSlotsForClassLevel as _getSpellSlotsForClassLevel, getPactMagic
           // Build the attack info display
           let attackInfo = `<span class="text-muted">${attackTypeLabel}</span>`;
           if (attack.range) attackInfo += ` · <span class="text-muted">${attack.range}</span>`;
+          if (attack.offhand) attackInfo += ` · <span class="badge bg-info bg-opacity-75 text-dark">off-hand</span>`;
 
           let hitInfo = '';
           if (attack.bonus) {
@@ -1901,6 +1907,7 @@ import { getSpellSlotsForClassLevel as _getSpellSlotsForClassLevel, getPactMagic
         $('attackDamage2').value = '';
         $('attackDamageType2').value = '';
         $('attackProperties').value = '';
+        $('attackOffhand').checked = false;
 
         if (editIndex !== null && currentAttackList[editIndex]) {
           // Editing existing attack
@@ -1916,6 +1923,7 @@ import { getSpellSlotsForClassLevel as _getSpellSlotsForClassLevel, getPactMagic
           $('attackDamage2').value = attack.damage2 || '';
           $('attackDamageType2').value = attack.damageType2 || '';
           $('attackProperties').value = attack.properties || '';
+          $('attackOffhand').checked = !!attack.offhand;
           $('attackModalLabel').textContent = 'Edit Attack';
         } else {
           // Adding new attack
@@ -1938,7 +1946,8 @@ import { getSpellSlotsForClassLevel as _getSpellSlotsForClassLevel, getPactMagic
           damageType: ($('attackDamageType').value || '').trim(),
           damage2: ($('attackDamage2').value || '').trim(),
           damageType2: ($('attackDamageType2').value || '').trim(),
-          properties: ($('attackProperties').value || '').trim()
+          properties: ($('attackProperties').value || '').trim(),
+          offhand: !!$('attackOffhand').checked
         };
 
         if (!attack.name) {
@@ -2006,9 +2015,26 @@ import { getSpellSlotsForClassLevel as _getSpellSlotsForClassLevel, getPactMagic
           const weight = parseFloat(item.weight) || 0;
           const totalWeight = quantity * weight;
 
+          const rarityBadge = (() => {
+            if (!item.magical && !item.rarity) return '';
+            const rarityColors = {
+              common: 'secondary', uncommon: 'success', rare: 'primary',
+              'very-rare': 'info', legendary: 'warning', artifact: 'danger'
+            };
+            const rarityLabel = {
+              common: 'Common', uncommon: 'Uncommon', rare: 'Rare',
+              'very-rare': 'Very Rare', legendary: 'Legendary', artifact: 'Artifact'
+            };
+            if (item.rarity) {
+              const color = rarityColors[item.rarity] || 'secondary';
+              return `<span class="badge bg-${color} ms-1">${rarityLabel[item.rarity]}</span>`;
+            }
+            return '<span class="badge bg-secondary ms-1"><i class="bi bi-stars"></i> Magical</span>';
+          })();
+
           tr.innerHTML = `
             <td>
-              <strong>${item.name || 'Unnamed Item'}</strong>
+              <strong>${item.name || 'Unnamed Item'}</strong>${rarityBadge}
               ${item.notes ? `<br><small class="text-muted">${item.notes}</small>` : ''}
             </td>
             <td class="text-center">${quantity}</td>
@@ -2044,6 +2070,17 @@ import { getSpellSlotsForClassLevel as _getSpellSlotsForClassLevel, getPactMagic
           const weight = parseFloat(item.weight) || 0;
           totalWeight += quantity * weight;
         });
+
+        // Optionally include coin weight (50 coins = 1 lb per RAW)
+        const coinWeightToggle = $('includeCoinWeight');
+        if (coinWeightToggle && coinWeightToggle.checked) {
+          const cp = parseInt(($('currencyCP') || {}).value) || 0;
+          const sp = parseInt(($('currencySP') || {}).value) || 0;
+          const ep = parseInt(($('currencyEP') || {}).value) || 0;
+          const gp = parseInt(($('currencyGP') || {}).value) || 0;
+          const pp = parseInt(($('currencyPP') || {}).value) || 0;
+          totalWeight += (cp + sp + ep + gp + pp) / 50;
+        }
 
         // Get strength score for carrying capacity
         const char = getCurrentCharacter();
@@ -2093,6 +2130,8 @@ import { getSpellSlotsForClassLevel as _getSpellSlotsForClassLevel, getPactMagic
           $('inventoryItemWeight').value = item.weight || 0;
           $('inventoryItemEquipped').checked = !!item.equipped;
           $('inventoryItemAttuned').checked = !!item.attuned;
+          $('inventoryItemMagical').checked = !!item.magical;
+          $('inventoryItemRarity').value = item.rarity || '';
           $('inventoryItemNotes').value = item.notes || '';
           $('inventoryItemModalLabel').textContent = 'Edit Item';
         } else {
@@ -2102,6 +2141,8 @@ import { getSpellSlotsForClassLevel as _getSpellSlotsForClassLevel, getPactMagic
           $('inventoryItemWeight').value = 0;
           $('inventoryItemEquipped').checked = false;
           $('inventoryItemAttuned').checked = false;
+          $('inventoryItemMagical').checked = false;
+          $('inventoryItemRarity').value = '';
           $('inventoryItemNotes').value = '';
           $('inventoryItemModalLabel').textContent = 'Add Item';
         }
@@ -2116,6 +2157,8 @@ import { getSpellSlotsForClassLevel as _getSpellSlotsForClassLevel, getPactMagic
         const weight = parseFloat($('inventoryItemWeight').value) || 0;
         const equipped = $('inventoryItemEquipped').checked;
         const attuned = $('inventoryItemAttuned').checked;
+        const magical = $('inventoryItemMagical').checked;
+        const rarity = $('inventoryItemRarity').value;
         const notes = $('inventoryItemNotes').value.trim();
 
         if (!name) {
@@ -2129,6 +2172,8 @@ import { getSpellSlotsForClassLevel as _getSpellSlotsForClassLevel, getPactMagic
           weight,
           equipped,
           attuned,
+          magical,
+          rarity,
           notes
         };
 
@@ -2480,6 +2525,9 @@ import { getSpellSlotsForClassLevel as _getSpellSlotsForClassLevel, getPactMagic
           $('currencyGP').value = currency.gp ?? 0;
           $('currencyPP').value = currency.pp ?? 0;
 
+          // Coin weight toggle
+          if ($('includeCoinWeight')) $('includeCoinWeight').checked = !!char.includeCoinWeight;
+
           // Death saves
           const ds = char.deathSaves || {};
           $('deathSaveSuccess1').checked = (ds.successes >= 1);
@@ -2616,7 +2664,18 @@ import { getSpellSlotsForClassLevel as _getSpellSlotsForClassLevel, getPactMagic
           if (charInventoryEl) charInventoryEl.value = char.inventory || '';
           $('charNotes').value = char.notes || '';
           $('charTableNotes').value = char.tableNotes || '';
-          $('charExtraNotes').value = char.extraNotes || '';
+
+          // Categorized notes — migrate old flat extraNotes into general if no structured data yet
+          const saved = char.categorizedNotes || {};
+          currentCategorizedNotes = {
+            general: saved.general ?? char.extraNotes ?? '',
+            sessionNotes: saved.sessionNotes ?? '',
+            lootLeads: saved.lootLeads ?? '',
+            questHooks: saved.questHooks ?? ''
+          };
+          currentNotesCategory = 'general';
+          if ($('notesCategorySelect')) $('notesCategorySelect').value = 'general';
+          $('charExtraNotes').value = currentCategorizedNotes.general;
           updateXPDisplay(char.xp || 0, parseInt(char.level) || 1);
       
           $('portraitUrl').value = char.portraitType === 'url' ? (char.portraitData || '') : '';
@@ -3415,6 +3474,7 @@ import { getSpellSlotsForClassLevel as _getSpellSlotsForClassLevel, getPactMagic
             gp: getNum('currencyGP'),
             pp: getNum('currencyPP')
           };
+          char.includeCoinWeight = !!$('includeCoinWeight')?.checked;
 
           // Death saves - count checked boxes
           const countChecked = (ids) => ids.reduce((sum, id) => sum + ($(id)?.checked ? 1 : 0), 0);
@@ -3537,7 +3597,9 @@ import { getSpellSlotsForClassLevel as _getSpellSlotsForClassLevel, getPactMagic
           char.inventory = getVal('charInventory'); // Keep legacy field for backward compatibility
           char.notes = getVal('charNotes');
           char.tableNotes = getVal('charTableNotes');
-          char.extraNotes = getVal('charExtraNotes');
+          // Flush any unsaved edits to current category before saving
+          currentCategorizedNotes[currentNotesCategory] = $('charExtraNotes').value;
+          char.categorizedNotes = { ...currentCategorizedNotes };
 
           // Portrait data - preserve existing portrait data (don't overwrite with form fields)
           // The portrait is managed through the portrait modal, not the main form
@@ -5363,6 +5425,36 @@ import { getSpellSlotsForClassLevel as _getSpellSlotsForClassLevel, getPactMagic
         if (statStrEl) {
           statStrEl.addEventListener('input', () => {
             updateEncumbrance();
+          });
+        }
+
+        // Update encumbrance when coin weight toggle or currency amounts change
+        const coinWeightToggleEl = $('includeCoinWeight');
+        if (coinWeightToggleEl) {
+          coinWeightToggleEl.addEventListener('change', updateEncumbrance);
+        }
+        ['currencyCP', 'currencySP', 'currencyEP', 'currencyGP', 'currencyPP'].forEach(id => {
+          const el = $(id);
+          if (el) el.addEventListener('input', () => {
+            if ($('includeCoinWeight')?.checked) updateEncumbrance();
+          });
+        });
+
+        // Notes category switcher
+        const notesCatSelect = $('notesCategorySelect');
+        if (notesCatSelect) {
+          notesCatSelect.addEventListener('change', () => {
+            // Save current category's content before switching
+            currentCategorizedNotes[currentNotesCategory] = $('charExtraNotes').value;
+            currentNotesCategory = notesCatSelect.value;
+            const placeholders = {
+              general: 'Scratch space, prep notes, anything that doesn\'t fit the other tabs.',
+              sessionNotes: 'What happened this session, key decisions, cliffhangers...',
+              lootLeads: 'Rumored treasures, reward offers, leads on magic items...',
+              questHooks: 'Active quests, leads, rumours, faction asks...'
+            };
+            $('charExtraNotes').placeholder = placeholders[currentNotesCategory] || '';
+            $('charExtraNotes').value = currentCategorizedNotes[currentNotesCategory];
           });
         }
 

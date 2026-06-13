@@ -8,7 +8,7 @@ The format is based on Keep a Changelog, and this project adheres to Semantic Ve
 The DM's Toolbox has evolved through focused feature releases:
 
 
-- **2.2.x**: Characters page Areas 2–4 completeness — Languages & Proficiencies, Jack of All Trades, passive scores, inline HP controls, HP progress bar, dynamic resource rows, condition tooltips, spell list grouped by level, ritual casting, pact slot action buttons
+- **2.2.x**: Characters page Areas 2–5 completeness — Languages & Proficiencies, Jack of All Trades, passive scores, inline HP controls, HP progress bar, dynamic resource rows, condition tooltips, spell list grouped by level, ritual casting, pact slot action buttons, magical item badges, coin weight toggle, TWF off-hand attacks, categorized notes
 - **2.1.x**: Characters page UX overhaul (modals, toasts, first-run flow), Battle Map UX overhaul (mode tabs, fog brush cursor, Bootstrap modals), Initiative Tracker reaction/legendary-action tracking, Encounter Builder power-user overhaul (two-col tooltips, save/load slots, edit-in-editor, roll initiative, encounter naming, CR 0–30 filter)
 - **2.0.x**: Starting equipment selection, subclass bonus cantrips, enhanced feat selection UI, interactive class feature selection, ability check rolls, full custom monster creator, and content pack integration
 - **1.11.x**: Journal system with rich text editor, import/export (Word/PDF/TXT/Markdown), and Battle Map → Initiative Tracker integration
@@ -16,7 +16,21 @@ The DM's Toolbox has evolved through focused feature releases:
 - **1.9.x**: Battle map measurement tools, persistent fog shapes, and generator integration across NPC/Tavern/Shop systems
 - **1.8.x**: Spell database expansion to 432+ spells, inventory management, loot generator overhaul, and character token generation
 
-**Current version: 2.2.2 (June 2026)**
+**Current version: 2.2.3 (June 2026)**
+
+---
+
+## [2.2.3] - 2026-06-13
+**Characters — Area 5 Completeness (Attacks, Inventory & Notes)**
+
+### Added
+- **Magical item badge** — the inventory item modal now has a "Magical Item" switch and a Rarity dropdown (Common / Uncommon / Rare / Very Rare / Legendary / Artifact). The inventory table shows a color-coded badge next to the item name: gray = Common, green = Uncommon, blue = Rare, teal = Very Rare, yellow = Legendary, red = Artifact. Items with the magical flag but no rarity set show a generic "✦ Magical" badge. Fully backward-compatible with existing inventory data.
+- **Coin weight toggle** — the encumbrance panel in the Inventory tab now includes a "Include coin weight (50 coins = 1 lb)" toggle switch. When enabled, the total from all five currency denominations (cp/sp/ep/gp/pp) is divided by 50 and added to carried weight, matching D&D 5e RAW. The toggle state is saved per character. Currency inputs update encumbrance live while the toggle is on.
+- **Off-hand attack (TWF)** — the attack modal now has an "Off-hand attack" switch at the bottom, with an inline reminder that no ability modifier is added to damage unless the character has the Two-Weapon Fighting Style. Off-hand attacks display an `off-hand` badge in the attack list alongside the attack type. The player still enters the full damage notation; the flag is informational.
+- **Categorized Notes** — the Notes tab now has a Category dropdown with four slots: General, Session Notes, Loot Leads, and Quest Hooks. Each category stores its own text independently; switching categories flushes and loads content automatically. Each category has a contextual placeholder. Data is stored as `char.categorizedNotes`; existing `extraNotes` strings migrate into General automatically.
+
+### Fixed
+- **CHANGELOG** — [2.1.2] resources list still referenced "Ki Points" for Monk; corrected to "Discipline Points" (2024 PHB rename).
 
 ---
 
