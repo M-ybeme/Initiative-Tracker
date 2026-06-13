@@ -157,6 +157,7 @@
           "vitals"
           "abilities"
           "saves"
+          "skills"
           "actions"
           "spells"
           "resources";
@@ -168,43 +169,44 @@
       .combat-layout {
         grid-template-columns: 1fr 1fr;
         grid-template-areas:
-          "header header"
-          "vitals abilities"
-          "saves saves"
+          "header  header"
+          "vitals  abilities"
+          "saves   skills"
           "actions spells"
           "resources resources";
       }
     }
 
-    /* Desktop: 3+ columns */
+    /* Desktop: 3 columns, header left-anchored */
     @media (min-width: 992px) {
       .combat-layout {
         grid-template-columns: minmax(200px, 280px) 1fr 1fr;
         grid-template-areas:
-          "header vitals abilities"
-          "header saves saves"
-          "actions actions spells"
+          "header vitals    abilities"
+          "header saves     skills"
+          "header actions   spells"
           "resources resources resources";
       }
     }
 
-    /* Large desktop: even wider */
+    /* Large desktop: 4 columns */
     @media (min-width: 1200px) {
       .combat-layout {
         grid-template-columns: minmax(220px, 300px) 1fr 1fr 1fr;
         grid-template-areas:
-          "header vitals abilities saves"
-          "header actions actions spells"
+          "header vitals    abilities saves"
+          "header skills    actions   spells"
           "resources resources resources resources";
       }
     }
 
-    .combat-area-header { grid-area: header; }
-    .combat-area-vitals { grid-area: vitals; }
+    .combat-area-header    { grid-area: header; }
+    .combat-area-vitals    { grid-area: vitals; }
     .combat-area-abilities { grid-area: abilities; }
-    .combat-area-saves { grid-area: saves; }
-    .combat-area-actions { grid-area: actions; }
-    .combat-area-spells { grid-area: spells; }
+    .combat-area-saves     { grid-area: saves; }
+    .combat-area-skills    { grid-area: skills; }
+    .combat-area-actions   { grid-area: actions; }
+    .combat-area-spells    { grid-area: spells; }
     .combat-area-resources { grid-area: resources; }
 
     .combat-portrait-frame {
@@ -794,6 +796,172 @@
       font-size: 3rem;
       margin-bottom: 1rem;
       display: block;
+    }
+
+    /* ===== Skills in Combat View ===== */
+    .combat-skills-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 0.2rem;
+    }
+
+    @media (min-width: 768px) and (max-width: 991.98px) {
+      .combat-skills-grid {
+        grid-template-columns: repeat(3, 1fr);
+      }
+    }
+
+    .combat-skill-btn {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 0.25rem 0.15rem;
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 0.3rem;
+      cursor: pointer;
+      transition: all 0.15s ease;
+      font-size: 0.65rem;
+      line-height: 1.2;
+      color: #d1d5db;
+      text-align: center;
+      user-select: none;
+    }
+
+    .combat-skill-btn:hover {
+      background: rgba(139, 92, 246, 0.2);
+      border-color: rgba(139, 92, 246, 0.5);
+      color: #e9d5ff;
+      transform: scale(1.04);
+    }
+
+    .combat-skill-btn:active {
+      transform: scale(0.96);
+    }
+
+    .combat-skill-btn .skill-bonus {
+      font-size: 0.85rem;
+      font-weight: 700;
+      color: #c4b5fd;
+      line-height: 1;
+    }
+
+    .combat-skill-btn.proficient {
+      border-color: rgba(251, 191, 36, 0.8);
+      background: rgba(251, 191, 36, 0.12);
+    }
+
+    .combat-skill-btn.proficient .skill-bonus {
+      color: #fcd34d;
+    }
+
+    .combat-skill-btn.expertise {
+      border-color: rgba(45, 212, 191, 0.8);
+      background: rgba(45, 212, 191, 0.12);
+    }
+
+    .combat-skill-btn.expertise .skill-bonus {
+      color: #5eead4;
+    }
+
+    /* ===== Interactive Condition Toggles in Combat View ===== */
+    .combat-condition-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.2rem;
+      background: rgba(239, 68, 68, 0.2);
+      border: 1px solid rgba(239, 68, 68, 0.4);
+      color: #fca5a5;
+      padding: 0.2rem 0.35rem 0.2rem 0.5rem;
+      border-radius: 0.3rem;
+      font-size: 0.75rem;
+      font-weight: 500;
+    }
+
+    .combat-condition-badge .cond-remove {
+      background: none;
+      border: none;
+      color: inherit;
+      opacity: 0.6;
+      padding: 0;
+      font-size: 0.85rem;
+      line-height: 1;
+      cursor: pointer;
+      transition: opacity 0.15s;
+    }
+
+    .combat-condition-badge .cond-remove:hover {
+      opacity: 1;
+    }
+
+    .combat-condition-badge.positive {
+      background: rgba(34, 197, 94, 0.2);
+      border-color: rgba(34, 197, 94, 0.4);
+      color: #86efac;
+    }
+
+    .combat-condition-badge.clickable-concentration {
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .combat-condition-badge.clickable-concentration:hover {
+      background: rgba(239, 68, 68, 0.4);
+      transform: scale(1.05);
+    }
+
+    /* ===== HP last-change log ===== */
+    .combat-hp-last-change {
+      font-size: 0.6rem;
+      color: #6b7280;
+      text-align: center;
+      min-height: 0.8rem;
+      margin-top: 0.15rem;
+    }
+
+    /* ===== Exhaustion interactive ===== */
+    .combat-exhaust-row {
+      display: flex;
+      align-items: center;
+      gap: 0.35rem;
+    }
+
+    /* ===== Short/Long Rest in combat resources ===== */
+    .combat-rest-btns {
+      display: flex;
+      gap: 0.4rem;
+      flex-wrap: wrap;
+    }
+
+    /* ===== Adv/Disadv popup for saves and ability checks ===== */
+    .combat-roll-popup {
+      position: absolute;
+      z-index: 200;
+      background: #1f2937;
+      border: 1px solid rgba(255, 255, 255, 0.25);
+      border-radius: 0.4rem;
+      padding: 0.25rem;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.5);
+      display: flex;
+      flex-direction: column;
+      gap: 0.15rem;
+      min-width: 110px;
+    }
+
+    .combat-roll-popup button {
+      font-size: 0.7rem;
+      padding: 0.2rem 0.5rem;
+      text-align: left;
+      white-space: nowrap;
+    }
+
+    /* ===== Combat toggle visibility affordance ===== */
+    #dmCombatModeToggle:not(:checked) + label {
+      opacity: 0.75;
+    }
+    #dmCombatModeToggle:checked + label {
+      color: #fbbf24;
+      font-weight: 600;
     }
   </style>
 </head>
@@ -3094,7 +3262,36 @@
                 <span id="combatRace">-</span> <span id="combatClass">-</span> <span class="badge bg-secondary" id="combatLevel">1</span>
               </div>
               <!-- Conditions (shown under name on all sizes) -->
-              <div class="combat-section-title"><i class="bi bi-exclamation-triangle"></i> Conditions</div>
+              <div class="combat-section-title d-flex justify-content-between align-items-center">
+                <span><i class="bi bi-exclamation-triangle"></i> Conditions</span>
+                <div class="dropdown d-inline-block">
+                  <button class="btn btn-sm btn-outline-secondary py-0 px-1" style="font-size:0.7rem;" data-bs-toggle="dropdown" aria-expanded="false" title="Add condition">
+                    <i class="bi bi-plus-lg"></i>
+                  </button>
+                  <ul class="dropdown-menu dropdown-menu-dark dropdown-menu-end" id="combatAddConditionMenu" style="font-size:0.8rem; min-width:8rem;">
+                    <li><a class="dropdown-item" href="#" data-add-condition="Blinded">Blinded</a></li>
+                    <li><a class="dropdown-item" href="#" data-add-condition="Charmed">Charmed</a></li>
+                    <li><a class="dropdown-item" href="#" data-add-condition="Deafened">Deafened</a></li>
+                    <li><a class="dropdown-item" href="#" data-add-condition="Exhausted">Exhausted</a></li>
+                    <li><a class="dropdown-item" href="#" data-add-condition="Frightened">Frightened</a></li>
+                    <li><a class="dropdown-item" href="#" data-add-condition="Grappled">Grappled</a></li>
+                    <li><a class="dropdown-item" href="#" data-add-condition="Incapacitated">Incapacitated</a></li>
+                    <li><a class="dropdown-item" href="#" data-add-condition="Invisible">Invisible</a></li>
+                    <li><a class="dropdown-item" href="#" data-add-condition="Paralyzed">Paralyzed</a></li>
+                    <li><a class="dropdown-item" href="#" data-add-condition="Petrified">Petrified</a></li>
+                    <li><a class="dropdown-item" href="#" data-add-condition="Poisoned">Poisoned</a></li>
+                    <li><a class="dropdown-item" href="#" data-add-condition="Prone">Prone</a></li>
+                    <li><a class="dropdown-item" href="#" data-add-condition="Restrained">Restrained</a></li>
+                    <li><a class="dropdown-item" href="#" data-add-condition="Stunned">Stunned</a></li>
+                    <li><a class="dropdown-item" href="#" data-add-condition="Surprised">Surprised</a></li>
+                    <li><a class="dropdown-item" href="#" data-add-condition="Unconscious">Unconscious</a></li>
+                    <li><hr class="dropdown-divider"></li>
+                    <li><a class="dropdown-item" href="#" data-add-condition="Blessed">Blessed</a></li>
+                    <li><a class="dropdown-item" href="#" data-add-condition="Hasted">Hasted</a></li>
+                    <li><a class="dropdown-item" href="#" data-add-condition="Raging">Raging</a></li>
+                  </ul>
+                </div>
+              </div>
               <div id="combatConditions" class="combat-conditions">
                 <span class="text-muted fst-italic small">None</span>
               </div>
@@ -3155,6 +3352,7 @@
                   <div class="combat-hp-bar">
                     <div class="combat-hp-bar-fill hp-full" id="combatHPBarFill" style="width: 100%;"></div>
                   </div>
+                  <div class="combat-hp-last-change" id="combatHPLastChange"></div>
                   <div class="combat-hp-controls d-none" id="combatHPControls">
                     <input type="number" id="combatHPAdjAmount" class="form-control form-control-sm text-center mb-1"
                            placeholder="Amount" min="0" />
@@ -3238,6 +3436,9 @@
                   <div class="combat-ability-score" id="combatScoreCha">10</div>
                 </div>
               </div>
+              <div class="mt-1" style="font-size:0.6rem; color:#6b7280;">
+                Left-click = normal · Shift = adv · Ctrl = disadv · Right-click/hold = popup
+              </div>
             </div>
 
             <!-- Saves Area: Saving throw bonuses -->
@@ -3268,6 +3469,20 @@
                   <div class="combat-save-label">CHA</div>
                   <div class="combat-save-value" id="combatSaveCha">+0</div>
                 </div>
+              </div>
+              <div class="mt-1" style="font-size:0.6rem; color:#6b7280;">
+                Left-click = normal · Shift = adv · Ctrl = disadv · Right-click/hold = popup
+              </div>
+            </div>
+
+            <!-- Skills Area: Compact skill check grid -->
+            <div class="combat-area-skills combat-panel">
+              <div class="combat-section-title"><i class="bi bi-clipboard-check"></i> Skill Checks</div>
+              <div class="combat-skills-grid" id="combatSkillsGrid">
+                <!-- Populated by JS -->
+              </div>
+              <div class="mt-1" style="font-size:0.6rem; color:#6b7280;">
+                Left-click = normal · Shift = adv · Ctrl = disadv · Right-click/hold = popup · <span style="color:#fcd34d;">■</span> prof · <span style="color:#5eead4;">■</span> expertise
               </div>
             </div>
 
@@ -3328,11 +3543,24 @@
                 </div>
                 <div class="combat-resource-group">
                   <div class="small text-muted mb-1">Exhaustion</div>
-                  <span class="badge bg-warning text-dark" id="combatExhaustion">0</span>
+                  <div class="combat-exhaust-row">
+                    <button type="button" class="btn btn-sm btn-outline-secondary px-1 py-0" id="combatExhaustDown" title="Decrease exhaustion">−</button>
+                    <span class="badge bg-warning text-dark" id="combatExhaustion">0</span>
+                    <button type="button" class="btn btn-sm btn-outline-secondary px-1 py-0" id="combatExhaustUp" title="Increase exhaustion">+</button>
+                  </div>
                 </div>
               </div>
               <!-- Class Resources (Ki Points, Rage, Bardic Inspiration, etc.) -->
               <div id="combatClassResources"></div>
+              <!-- Rest Buttons -->
+              <div class="combat-rest-btns mt-2 pt-2 border-top border-secondary">
+                <button type="button" class="btn btn-sm btn-outline-info" id="combatShortRestBtn" title="Take a Short Rest — roll hit dice and recover SR resources">
+                  <i class="bi bi-moon me-1"></i>Short Rest
+                </button>
+                <button type="button" class="btn btn-sm btn-outline-primary" id="combatLongRestBtn" title="Take a Long Rest — recover all HP, spell slots, and LR resources">
+                  <i class="bi bi-moon-stars me-1"></i>Long Rest
+                </button>
+              </div>
             </div>
 
           </div>
@@ -3951,46 +4179,51 @@
                   <div id="combat-view" class="accordion-collapse collapse" data-bs-parent="#gettingStartedAccordion">
                     <div class="accordion-body">
                       <h6>What is Combat View?</h6>
-                      <p>Combat View transforms the full character sheet into a compact combat card that shows only the information needed during battle.</p>
+                      <p>Combat View transforms the full character sheet into a compact combat card — everything you need in battle, nothing you don't. Toggle the <strong>"Combat View"</strong> switch in the header to enter or exit. Your preference is remembered between sessions.</p>
 
-                      <h6>How to Use</h6>
-                      <ol>
-                        <li>Toggle the <strong>"Combat View"</strong> switch in the header (next to "Last Updated")</li>
-                        <li>The page transforms into a compact card showing:
-                          <ul>
-                            <li>Character portrait (if available)</li>
-                            <li>Essential stats: AC, HP, Speed</li>
-                            <li>Combat info: Initiative, Proficiency Bonus, Passive Perception</li>
-                            <li>All ability checks and saving throws (click to roll)</li>
-                            <li>Active conditions</li>
-                            <li>All attacks with to-hit bonuses and damage (click to roll inline)</li>
-                            <li>Spell slots and spells organized by level</li>
-                            <li>Death saves tracker with Roll button</li>
-                            <li>Hit Dice with Roll button</li>
-                          </ul>
-                        </li>
-                        <li>Toggle back to access the full sheet for editing</li>
-                      </ol>
-
-                      <h6>Interactive Rolls</h6>
+                      <h6>What's on the Card</h6>
                       <ul>
-                        <li><strong>Ability checks & saves:</strong> Click any stat to roll (normal, advantage, or disadvantage)</li>
-                        <li><strong>Initiative:</strong> Click the initiative value to roll for initiative</li>
-                        <li><strong>Attacks:</strong> Click an attack to roll to-hit and damage inline</li>
-                        <li><strong>Hit Dice:</strong> Click the Roll button to roll a hit die during short rest</li>
+                        <li><strong>Header:</strong> Character portrait, name, class/level, AC, initiative, speed, proficiency bonus, passive perception</li>
+                        <li><strong>Vitals:</strong> Current HP, max HP, temp HP, HP bar, and a last-change log (e.g. "−8" or "+5") — click the HP area to reveal inline damage/heal/temp controls</li>
+                        <li><strong>Ability Checks:</strong> All six ability modifiers — click to roll, right-click for advantage/disadvantage, or hold <kbd>Shift</kbd> (advantage) / <kbd>Ctrl</kbd> (disadvantage) and click</li>
+                        <li><strong>Saving Throws:</strong> All six saves with proficiency indicators — same click/right-click/Shift/Ctrl controls as ability checks</li>
+                        <li><strong>Skills:</strong> All 18 skill bonuses with proficiency (gold) and expertise (teal) badges — left-click = normal, Shift-click = advantage, Ctrl-click = disadvantage</li>
+                        <li><strong>Actions:</strong> All your attacks with to-hit and damage — click to roll; tracks Action / Bonus Action / Reaction usage for the turn</li>
+                        <li><strong>Spells:</strong> Spell slots and spells by level with cast buttons; cantrips never consume slots</li>
+                        <li><strong>Resources:</strong> Class resources (Ki, Rage, Bardic Inspiration, etc.), Exhaustion tracker, Hit Dice, Death Saves, concentration status, Short Rest and Long Rest buttons</li>
                       </ul>
 
-                      <h6>HP in Combat View</h6>
-                      <p>Click the HP area to reveal inline damage, heal, and temp HP controls without leaving combat view.</p>
+                      <h6>Rolling — Advantage &amp; Disadvantage</h6>
+                      <table class="table table-sm table-dark table-bordered mb-3">
+                        <thead><tr><th>Action</th><th>Result</th></tr></thead>
+                        <tbody>
+                          <tr><td>Click</td><td>Normal roll</td></tr>
+                          <tr><td><kbd>Shift</kbd> + Click</td><td>Advantage (roll twice, take higher)</td></tr>
+                          <tr><td><kbd>Ctrl</kbd> / <kbd>Cmd</kbd> + Click</td><td>Disadvantage (roll twice, take lower)</td></tr>
+                          <tr><td>Right-click</td><td>Popup with all three options (saves and ability checks)</td></tr>
+                        </tbody>
+                      </table>
 
-                      <div class="alert alert-info">
+                      <h6>Conditions</h6>
+                      <p>Active conditions appear as colored badges. Click <strong>×</strong> on any badge to remove it. Click the <strong>+</strong> button to add any of the 19 standard conditions from a dropdown. Changes sync automatically to the full sheet.</p>
+
+                      <h6>Exhaustion</h6>
+                      <p>The Exhaustion row shows your current level (0–6). Use the <strong>−</strong> and <strong>+</strong> buttons to adjust. Level is shown as a badge and saves automatically.</p>
+
+                      <h6>Action Economy</h6>
+                      <p>Each attack or ability that consumes an action marks the Action, Bonus Action, or Reaction slot. If a slot is already used, a modal asks whether to start a new turn. Use the <strong>New Turn</strong> button to reset all slots at the top of your next turn.</p>
+
+                      <h6>Short Rest &amp; Long Rest</h6>
+                      <p>Buttons at the bottom of the Resources panel. Short Rest opens the Hit Dice healing dialog. Long Rest fully restores HP, spell slots, and class resources — same as the buttons in the full sheet.</p>
+
+                      <div class="alert alert-info mb-2">
                         <i class="bi bi-lightbulb me-1"></i>
-                        <strong>Tip:</strong> Use the <strong>Dice History</strong> button in combat view to review your last 50 rolls!
+                        <strong>Tip:</strong> Right-click a saving throw or ability check button to get a quick advantage/disadvantage popup without any keyboard modifiers.
                       </div>
 
-                      <div class="alert alert-success">
+                      <div class="alert alert-success mb-0">
                         <i class="bi bi-check-circle me-1"></i>
-                        <strong>Auto-Updates:</strong> Combat view automatically refreshes when you switch characters or make changes to attacks/spells!
+                        <strong>Auto-Sync:</strong> Combat view reads live from the full sheet — switch characters or edit stats and the card updates instantly.
                       </div>
                     </div>
                   </div>
@@ -4582,6 +4815,29 @@
     </div>
   </div>
 
+  <!-- Action Already Used Modal -->
+  <div class="modal fade" id="actionAlreadyUsedModal" tabindex="-1" aria-labelledby="actionAlreadyUsedModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content bg-dark text-light border-secondary">
+        <div class="modal-header border-secondary">
+          <h5 class="modal-title" id="actionAlreadyUsedModalLabel">
+            <i class="bi bi-hourglass-split me-2 text-warning"></i>Action Already Used
+          </h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <p id="actionAlreadyUsedMsg" class="mb-0">This action has already been used this turn.</p>
+        </div>
+        <div class="modal-footer border-secondary">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" id="actionAlreadyUsedCancelBtn">Cancel</button>
+          <button type="button" class="btn btn-warning" id="actionAlreadyUsedConfirmBtn">
+            <i class="bi bi-arrow-clockwise me-1"></i>Start New Turn
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- Concentration Check Modal -->
   <div class="modal fade" id="concentrationCheckModal" tabindex="-1" aria-labelledby="concentrationCheckModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
@@ -4642,8 +4898,12 @@
         const profBonus = document.getElementById('charProfBonusAbilsDisplay')?.textContent || '+2';
         const passivePerception = document.getElementById('passivePerception')?.value || '10';
 
-        // Initiative (DEX modifier)
+        // Initiative — prefer charInitMod if set (Alert feat, custom bonus, etc.), else DEX mod
+        const initModField = document.getElementById('charInitMod')?.value;
         const dexMod = document.getElementById('modDex')?.value || '0';
+        const initModDisplay = (initModField !== undefined && initModField !== null && initModField !== '')
+          ? initModField
+          : dexMod;
 
         // Hit dice (show remaining, not total)
         const hitDiceRemaining = document.getElementById('charHitDiceRemaining')?.value || '0d8';
@@ -4709,7 +4969,7 @@
         document.getElementById('combatAC').textContent = ac;
         // HP is now updated via updateCombatHP() for interactive display
         document.getElementById('combatSpeed').textContent = `${speed} ft`;
-        document.getElementById('combatInitiative').textContent = formatMod(dexMod);
+        document.getElementById('combatInitiative').textContent = formatMod(initModDisplay);
         document.getElementById('combatHitDice').textContent = hitDice;
         document.getElementById('combatProfBonus').textContent = profBonus;
         document.getElementById('combatPassivePerception').textContent = passivePerception;
@@ -4763,6 +5023,16 @@
 
         // Update class resources (Ki, Rage, Bardic Inspiration, etc.)
         updateCombatResources();
+
+        // Update skills grid
+        updateCombatSkills();
+
+        // Sync HP last-change log from main sheet
+        const lastChangeEl = document.getElementById('hpLastChangeLog');
+        const combatLastChange = document.getElementById('combatHPLastChange');
+        if (combatLastChange && lastChangeEl) {
+          combatLastChange.textContent = lastChangeEl.textContent || '';
+        }
       }
 
       // ---- Turn Action Tracker ----
@@ -4828,11 +5098,8 @@
         if (char[actionType]) {
           // Already used this turn
           if (silent) return true; // Extra Attack etc. — just proceed
-          if (confirm(`Your ${slot.label} has already been used this turn.\n\nStart a new turn (reset all actions) and proceed?`)) {
-            resetAllActions(char);
-            return true;
-          }
-          return false; // User cancelled
+          _showActionAlreadyUsedModal(slot.label, () => { resetAllActions(char); });
+          return false; // Async — caller aborts; modal callback handles reset + re-trigger
         }
 
         // Not yet used — mark it
@@ -4851,6 +5118,108 @@
        * falls back to regex-parsing body text for content-pack spells that lack them.
        * Returns { dice: string[], rollType: 'attack'|'damage'|'heal'|null, saveAbility: string|null }
        */
+      // ======================================
+      // Skills Grid in Combat View
+      // ======================================
+      const COMBAT_SKILLS = [
+        { name: 'Acrobatics',     bonusId: 'skillAcrobaticsBonus',     profId: 'skillAcrobaticsProf',     expId: 'skillAcrobaticsExp',     key: 'acrobatics' },
+        { name: 'Animal Hand.',   bonusId: 'skillAnimalHandlingBonus', profId: 'skillAnimalHandlingProf', expId: 'skillAnimalHandlingExp', key: 'animalHandling' },
+        { name: 'Arcana',         bonusId: 'skillArcanaBonus',         profId: 'skillArcanaProf',         expId: 'skillArcanaExp',         key: 'arcana' },
+        { name: 'Athletics',      bonusId: 'skillAthleticsBonus',      profId: 'skillAthleticsProf',      expId: 'skillAthleticsExp',      key: 'athletics' },
+        { name: 'Deception',      bonusId: 'skillDeceptionBonus',      profId: 'skillDeceptionProf',      expId: 'skillDeceptionExp',      key: 'deception' },
+        { name: 'History',        bonusId: 'skillHistoryBonus',        profId: 'skillHistoryProf',        expId: 'skillHistoryExp',        key: 'history' },
+        { name: 'Insight',        bonusId: 'skillInsightBonus',        profId: 'skillInsightProf',        expId: 'skillInsightExp',        key: 'insight' },
+        { name: 'Intimidation',   bonusId: 'skillIntimidationBonus',   profId: 'skillIntimidationProf',   expId: 'skillIntimidationExp',   key: 'intimidation' },
+        { name: 'Investigation',  bonusId: 'skillInvestigationBonus',  profId: 'skillInvestigationProf',  expId: 'skillInvestigationExp',  key: 'investigation' },
+        { name: 'Medicine',       bonusId: 'skillMedicineBonus',       profId: 'skillMedicineProf',       expId: 'skillMedicineExp',       key: 'medicine' },
+        { name: 'Nature',         bonusId: 'skillNatureBonus',         profId: 'skillNatureProf',         expId: 'skillNatureExp',         key: 'nature' },
+        { name: 'Perception',     bonusId: 'skillPerceptionBonus',     profId: 'skillPerceptionProf',     expId: 'skillPerceptionExp',     key: 'perception' },
+        { name: 'Performance',    bonusId: 'skillPerformanceBonus',    profId: 'skillPerformanceProf',    expId: 'skillPerformanceExp',    key: 'performance' },
+        { name: 'Persuasion',     bonusId: 'skillPersuasionBonus',     profId: 'skillPersuasionProf',     expId: 'skillPersuasionExp',     key: 'persuasion' },
+        { name: 'Religion',       bonusId: 'skillReligionBonus',       profId: 'skillReligionProf',       expId: 'skillReligionExp',       key: 'religion' },
+        { name: 'Sleight of H.',  bonusId: 'skillSleightOfHandBonus',  profId: 'skillSleightOfHandProf',  expId: 'skillSleightOfHandExp',  key: 'sleightOfHand' },
+        { name: 'Stealth',        bonusId: 'skillStealthBonus',        profId: 'skillStealthProf',        expId: 'skillStealthExp',        key: 'stealth' },
+        { name: 'Survival',       bonusId: 'skillSurvivalBonus',       profId: 'skillSurvivalProf',       expId: 'skillSurvivalExp',       key: 'survival' }
+      ];
+
+      function updateCombatSkills() {
+        const grid = document.getElementById('combatSkillsGrid');
+        if (!grid) return;
+        const fmtB = v => { const n = parseInt(v, 10); return isNaN(n) ? '+0' : (n >= 0 ? `+${n}` : `${n}`); };
+        grid.innerHTML = COMBAT_SKILLS.map(s => {
+          const bonus = document.getElementById(s.bonusId)?.value ?? '0';
+          const isExp = document.getElementById(s.expId)?.checked;
+          const isProf = !isExp && document.getElementById(s.profId)?.checked;
+          const cls = isExp ? 'expertise' : isProf ? 'proficient' : '';
+          return `<button class="combat-skill-btn ${cls}" data-skill-key="${s.key}" title="${s.name} check (Shift=Adv, Ctrl=Disadv)">
+            <span class="skill-bonus">${fmtB(bonus)}</span>
+            <span>${s.name}</span>
+          </button>`;
+        }).join('');
+      }
+
+      // Skill check roll from combat view (Shift=adv, Ctrl=disadv)
+      function rollCombatSkillCheck(skillKey, rollType) {
+        const skill = COMBAT_SKILLS.find(s => s.key === skillKey);
+        if (!skill) return;
+        const bonusVal = parseInt(document.getElementById(skill.bonusId)?.value, 10) || 0;
+        const bonusStr = bonusVal >= 0 ? `+${bonusVal}` : String(bonusVal);
+
+        let roll1, roll2, chosen, isAdv = false, isDisadv = false;
+        if (rollType === 'advantage') {
+          roll1 = Math.ceil(Math.random() * 20); roll2 = Math.ceil(Math.random() * 20);
+          chosen = Math.max(roll1, roll2); isAdv = true;
+        } else if (rollType === 'disadvantage') {
+          roll1 = Math.ceil(Math.random() * 20); roll2 = Math.ceil(Math.random() * 20);
+          chosen = Math.min(roll1, roll2); isDisadv = true;
+        } else {
+          chosen = Math.ceil(Math.random() * 20);
+        }
+        const total = chosen + bonusVal;
+        const isCrit = chosen === 20, isFumble = chosen === 1;
+
+        try {
+          if (typeof window.addToRollHistory === 'function') {
+            window.addToRollHistory({
+              notation: '1d20', description: `${skill.name} Check`,
+              rolls: isAdv || isDisadv ? [roll1, roll2] : [chosen],
+              modifier: bonusVal, total, chosen,
+              isAdvantage: isAdv, isDisadvantage: isDisadv,
+              timestamp: new Date().toISOString(), isCritical: isCrit, isFumble
+            });
+          }
+        } catch(e) {}
+
+        const label = isAdv ? ` (Adv)` : isDisadv ? ` (Disadv)` : '';
+        const extra = isCrit ? 'Natural 20!' : isFumble ? 'Natural 1!' : null;
+        if (typeof window.showRollToast === 'function') {
+          window.showRollToast(`${skill.name}${label}`, total, extra);
+        } else {
+          alert(`${skill.name}${label}: ${total}`);
+        }
+      }
+
+      // Delegate skill clicks from the skills grid
+      const _combatSkillsGrid = document.getElementById('combatSkillsGrid');
+      if (_combatSkillsGrid) {
+        _combatSkillsGrid.addEventListener('click', function(e) {
+          const btn = e.target.closest('.combat-skill-btn');
+          if (!btn) return;
+          const key = btn.dataset.skillKey;
+          const rollType = e.shiftKey ? 'advantage' : (e.ctrlKey || e.metaKey) ? 'disadvantage' : 'normal';
+          rollCombatSkillCheck(key, rollType);
+        });
+        _combatSkillsGrid.addEventListener('contextmenu', function(e) {
+          const btn = e.target.closest('.combat-skill-btn');
+          if (!btn) return;
+          const key = btn.dataset.skillKey;
+          if (!key) return;
+          e.preventDefault();
+          _showRollPopupAtEl(btn, type => rollCombatSkillCheck(key, type));
+        });
+        _addLongPressPopup(_combatSkillsGrid, '.combat-skill-btn', el => type => rollCombatSkillCheck(el.dataset.skillKey, type));
+      }
+
       function parseSpellRollInfo(spell) {
         if (!spell) return { dice: [], rollType: null, saveAbility: null };
         const tags = Array.isArray(spell.tags) ? spell.tags.map(t => t.toLowerCase()) : [];
@@ -5039,6 +5408,30 @@
           </div>`;
       }
 
+      // Modal-based replacement for confirm() in action economy
+      let _actionAlreadyUsedCallback = null;
+      function _showActionAlreadyUsedModal(slotLabel, onConfirm) {
+        const msgEl = document.getElementById('actionAlreadyUsedMsg');
+        if (msgEl) msgEl.textContent = `Your ${slotLabel} has already been used this turn. Start a new turn and reset all actions?`;
+        _actionAlreadyUsedCallback = onConfirm;
+        const modal = bootstrap.Modal.getOrCreateInstance(document.getElementById('actionAlreadyUsedModal'));
+        modal.show();
+      }
+      document.addEventListener('click', function(e) {
+        if (e.target.closest('#actionAlreadyUsedConfirmBtn')) {
+          const modal = bootstrap.Modal.getInstance(document.getElementById('actionAlreadyUsedModal'));
+          if (modal) modal.hide();
+          if (typeof _actionAlreadyUsedCallback === 'function') {
+            const cb = _actionAlreadyUsedCallback;
+            _actionAlreadyUsedCallback = null;
+            cb();
+          }
+        }
+        if (e.target.closest('#actionAlreadyUsedCancelBtn')) {
+          _actionAlreadyUsedCallback = null;
+        }
+      });
+
       function resetAllActions(char) {
         if (!char) return;
         char.actionUsed = false;
@@ -5061,9 +5454,7 @@
 
           if (char[key]) {
             // Already used — offer to start a new turn
-            if (confirm(`Your ${slot.label} has already been used this turn.\n\nStart a new turn and reset all actions?`)) {
-              resetAllActions(char);
-            }
+            _showActionAlreadyUsedModal(slot.label, () => { resetAllActions(char); });
           } else {
             char[key] = true;
             updateActionTracker(char);
@@ -5083,20 +5474,15 @@
         const conditionsEl = document.getElementById('combatConditions');
         if (!conditionsEl) return;
 
-        // Get active conditions from the condition buttons
         const activeConditions = [];
         document.querySelectorAll('.condition-btn.active').forEach(btn => {
           activeConditions.push(btn.dataset.condition);
         });
-
-        // Also check text input for manual conditions
         const conditionsInput = document.getElementById('charConditions')?.value;
         if (conditionsInput && conditionsInput.trim()) {
           conditionsInput.split(',').forEach(c => {
-            const trimmed = c.trim();
-            if (trimmed && !activeConditions.includes(trimmed)) {
-              activeConditions.push(trimmed);
-            }
+            const t = c.trim();
+            if (t && !activeConditions.includes(t)) activeConditions.push(t);
           });
         }
 
@@ -5105,24 +5491,88 @@
           return;
         }
 
-        // Render condition badges
+        const positiveConditions = ['Blessed', 'Inspired', 'Hasted', 'Raging', 'Concentrating'];
         let html = '';
-        const positiveConditions = ['Blessed', 'Inspired', 'Hasted', 'Raging'];
         activeConditions.forEach(condition => {
           const isPositive = positiveConditions.includes(condition);
-          // Add clickable class and spell name for Concentrating condition
-          let extraClasses = '';
+          const isConc = condition === 'Concentrating';
+          let extraClasses = isConc ? ' clickable-concentration' : '';
           let displayText = condition;
-          if (condition === 'Concentrating') {
-            extraClasses = ' clickable-concentration';
-            if (window.currentConcentrationSpell) {
-              displayText = `Concentrating: ${window.currentConcentrationSpell}`;
-            }
+          if (isConc && window.currentConcentrationSpell) {
+            displayText = `Conc: ${window.currentConcentrationSpell}`;
           }
-          html += `<span class="combat-condition-badge ${isPositive ? 'positive' : ''}${extraClasses}" title="Click to end" data-condition="${condition}">${displayText}</span>`;
+          html += `<span class="combat-condition-badge ${isPositive ? 'positive' : ''}${extraClasses}" data-condition="${condition}">
+            ${displayText}
+            <button class="cond-remove" data-remove-condition="${condition}" title="Remove ${condition}">×</button>
+          </span>`;
         });
         conditionsEl.innerHTML = html;
       }
+
+      // Remove condition from combat view badge ×
+      document.getElementById('combatConditions')?.addEventListener('click', function(e) {
+        const removeBtn = e.target.closest('[data-remove-condition]');
+        if (removeBtn) {
+          e.stopPropagation();
+          const condName = removeBtn.dataset.removeCondition;
+          // Deactivate on the full sheet condition button
+          const condBtn = document.querySelector(`.condition-btn[data-condition="${condName}"]`);
+          if (condBtn && condBtn.classList.contains('active')) {
+            condBtn.classList.remove('active');
+            if (typeof window.syncConditionsToField === 'function') window.syncConditionsToField();
+            if (typeof window.saveCurrentCharacter === 'function') window.saveCurrentCharacter();
+          } else {
+            // It's from the text field — remove it
+            const field = document.getElementById('charConditions');
+            if (field) {
+              field.value = field.value.split(',').map(c=>c.trim()).filter(c=>c && c !== condName).join(', ');
+              if (typeof window.saveCurrentCharacter === 'function') window.saveCurrentCharacter();
+            }
+          }
+          updateCombatConditions();
+          return;
+        }
+        // Clicking the Concentrating badge (not the × button) opens the modal
+        const concBadge = e.target.closest('.clickable-concentration');
+        if (concBadge) {
+          const spellName = window.currentConcentrationSpell || '—';
+          const modal = document.getElementById('concentrationCheckModal');
+          if (modal) {
+            document.getElementById('concModalSpellName').textContent = spellName;
+            document.getElementById('concModalDamage').value = '';
+            document.getElementById('concModalDC').textContent = '10';
+            document.getElementById('concModalBonus').textContent =
+              `+${parseInt(document.getElementById('saveConBonus')?.value, 10) || 0}`;
+            new bootstrap.Modal(modal).show();
+          }
+        }
+      });
+
+      // Add condition from combat view dropdown
+      document.getElementById('combatAddConditionMenu')?.addEventListener('click', function(e) {
+        const item = e.target.closest('[data-add-condition]');
+        if (!item) return;
+        e.preventDefault();
+        const condName = item.dataset.addCondition;
+        const condBtn = document.querySelector(`.condition-btn[data-condition="${condName}"]`);
+        if (condBtn && !condBtn.classList.contains('active')) {
+          condBtn.classList.add('active');
+          if (typeof window.syncConditionsToField === 'function') window.syncConditionsToField();
+          if (typeof window.saveCurrentCharacter === 'function') window.saveCurrentCharacter();
+        } else if (!condBtn) {
+          // Condition not in the full-sheet buttons — add to the text field
+          const field = document.getElementById('charConditions');
+          if (field) {
+            const existing = field.value.split(',').map(c=>c.trim()).filter(Boolean);
+            if (!existing.includes(condName)) {
+              existing.push(condName);
+              field.value = existing.join(', ');
+              if (typeof window.saveCurrentCharacter === 'function') window.saveCurrentCharacter();
+            }
+          }
+        }
+        updateCombatConditions();
+      });
 
       // Function to update spell slots display
       function updateCombatSpellSlots() {
@@ -5861,143 +6311,58 @@
       }
 
       // Roll saving throw from combat view
-      function rollCombatSave(ability) {
-        try {
-          const saveBonus = document.getElementById(`save${ability}Bonus`)?.value || '0';
-          const bonus = parseInt(saveBonus, 10) || 0;
-
-          const roll = rollDie(20);
-          const total = roll + bonus;
-          const isCrit = roll === 20;
-          const isFumble = roll === 1;
-
-          const bonusStr = bonus >= 0 ? `+${bonus}` : String(bonus);
-          const abilityName = {
-            'Str': 'Strength', 'Dex': 'Dexterity', 'Con': 'Constitution',
-            'Int': 'Intelligence', 'Wis': 'Wisdom', 'Cha': 'Charisma'
-          }[ability] || ability;
-
-          // Try to add to roll history (optional)
-          try {
-            if (typeof window.addToRollHistory === 'function') {
-              window.addToRollHistory({
-                notation: '1d20',
-                description: `${abilityName} Save`,
-                rolls: [roll],
-                modifier: bonus,
-                total: total,
-                timestamp: new Date().toISOString(),
-                isCritical: isCrit,
-                isFumble: isFumble
-              });
-            }
-          } catch (e) { /* ignore history errors */ }
-
-          // Try to show toast, fallback to alert
-          let toastShown = false;
-          try {
-            if (typeof window.showRollToast === 'function') {
-              let extra = null;
-              if (isCrit) extra = 'Natural 20!';
-              if (isFumble) extra = 'Natural 1!';
-              window.showRollToast(`${abilityName} Save`, total, extra);
-              toastShown = true;
-            }
-          } catch (e) { /* ignore toast errors */ }
-
-          if (!toastShown) {
-            let result = `${abilityName} Save: ${total}\n(d20: ${roll} ${bonusStr})`;
-            if (isCrit) result += '\nNatural 20!';
-            if (isFumble) result += '\nNatural 1!';
-            alert(result);
-          }
-
-          // Update the save box to show the result briefly
-          const saveBox = document.getElementById(`combatSave${ability}Box`);
-          if (saveBox) {
-            const valueEl = saveBox.querySelector('.combat-save-value');
-            const originalText = valueEl?.textContent;
-            if (valueEl) {
-              valueEl.innerHTML = `<span class="${isCrit ? 'text-success' : isFumble ? 'text-danger' : ''}">${total}</span>`;
-              setTimeout(() => {
-                valueEl.textContent = originalText;
-              }, 2000);
-            }
-          }
-        } catch (err) {
-          console.error('Error rolling save:', err);
-          alert('Error rolling save. Check console for details.');
-        }
+      function _combatD20Roll(rollType) {
+        const r1 = Math.ceil(Math.random() * 20);
+        if (rollType === 'advantage')    { const r2 = Math.ceil(Math.random() * 20); return { chosen: Math.max(r1,r2), rolls:[r1,r2], isAdv:true }; }
+        if (rollType === 'disadvantage') { const r2 = Math.ceil(Math.random() * 20); return { chosen: Math.min(r1,r2), rolls:[r1,r2], isDisadv:true }; }
+        return { chosen: r1, rolls:[r1], isAdv:false, isDisadv:false };
       }
 
-      // Roll ability check from combat view (uses modifier only, not save proficiency)
-      function rollCombatAbilityCheck(ability) {
+      function _combatRollAndShow(label, bonusVal, rollType, flashSelector, flashValueSelector) {
         try {
-          const modValue = document.getElementById(`mod${ability}`)?.value || '0';
-          const modifier = parseInt(modValue, 10) || 0;
-
-          const roll = rollDie(20);
-          const total = roll + modifier;
-          const isCrit = roll === 20;
-          const isFumble = roll === 1;
-
-          const modStr = modifier >= 0 ? `+${modifier}` : String(modifier);
-          const abilityName = {
-            'Str': 'Strength', 'Dex': 'Dexterity', 'Con': 'Constitution',
-            'Int': 'Intelligence', 'Wis': 'Wisdom', 'Cha': 'Charisma'
-          }[ability] || ability;
-
-          // Try to add to roll history (optional)
+          const { chosen, rolls, isAdv, isDisadv } = _combatD20Roll(rollType);
+          const total = chosen + bonusVal;
+          const isCrit = chosen === 20, isFumble = chosen === 1;
+          const typeLabel = isAdv ? ' (Adv)' : isDisadv ? ' (Disadv)' : '';
           try {
             if (typeof window.addToRollHistory === 'function') {
               window.addToRollHistory({
-                notation: '1d20',
-                description: `${abilityName} Check`,
-                rolls: [roll],
-                modifier: modifier,
-                total: total,
-                timestamp: new Date().toISOString(),
-                isCritical: isCrit,
-                isFumble: isFumble
+                notation: isAdv||isDisadv ? '2d20' : '1d20', description: label+typeLabel,
+                rolls, chosen, modifier: bonusVal, total,
+                timestamp: new Date().toISOString(), isCritical: isCrit, isFumble,
+                isAdvantage: isAdv, isDisadvantage: isDisadv
               });
             }
-          } catch (e) { /* ignore history errors */ }
-
-          // Try to show toast, fallback to alert
-          let toastShown = false;
-          try {
-            if (typeof window.showRollToast === 'function') {
-              let extra = null;
-              if (isCrit) extra = 'Natural 20!';
-              if (isFumble) extra = 'Natural 1!';
-              window.showRollToast(`${abilityName} Check`, total, extra);
-              toastShown = true;
-            }
-          } catch (e) { /* ignore toast errors */ }
-
-          if (!toastShown) {
-            let result = `${abilityName} Check: ${total}\n(d20: ${roll} ${modStr})`;
-            if (isCrit) result += '\nNatural 20!';
-            if (isFumble) result += '\nNatural 1!';
-            alert(result);
+          } catch(e) {}
+          const extra = isCrit ? 'Natural 20!' : isFumble ? 'Natural 1!' : null;
+          if (typeof window.showRollToast === 'function') {
+            window.showRollToast(label+typeLabel, total, extra);
           }
-
-          // Update the ability box to show the result briefly
-          const abilityBox = document.querySelector(`.combat-ability-box[data-ability="${ability}"]`);
-          if (abilityBox) {
-            const modEl = abilityBox.querySelector('.combat-ability-mod');
-            const originalText = modEl?.textContent;
-            if (modEl) {
-              modEl.innerHTML = `<span class="${isCrit ? 'text-success' : isFumble ? 'text-danger' : ''}">${total}</span>`;
-              setTimeout(() => {
-                modEl.textContent = originalText;
-              }, 2000);
+          // Flash the box value briefly
+          if (flashSelector) {
+            const box = typeof flashSelector === 'string' ? document.querySelector(flashSelector) : flashSelector;
+            const el  = flashValueSelector ? box?.querySelector(flashValueSelector) : box;
+            if (el) {
+              const orig = el.textContent;
+              el.innerHTML = `<span class="${isCrit?'text-success':isFumble?'text-danger':''}">${total}</span>`;
+              setTimeout(() => { el.textContent = orig; }, 2000);
             }
           }
-        } catch (err) {
-          console.error('Error rolling ability check:', err);
-          alert('Error rolling ability check. Check console for details.');
-        }
+        } catch(err) { console.error(err); }
+      }
+
+      function rollCombatSave(ability, rollType = 'normal') {
+        const bonus = parseInt(document.getElementById(`save${ability}Bonus`)?.value, 10) || 0;
+        const names = { Str:'Strength', Dex:'Dexterity', Con:'Constitution', Int:'Intelligence', Wis:'Wisdom', Cha:'Charisma' };
+        _combatRollAndShow(`${names[ability]||ability} Save`, bonus, rollType,
+          `#combatSave${ability}Box`, '.combat-save-value');
+      }
+
+      function rollCombatAbilityCheck(ability, rollType = 'normal') {
+        const modifier = parseInt(document.getElementById(`mod${ability}`)?.value, 10) || 0;
+        const names = { Str:'Strength', Dex:'Dexterity', Con:'Constitution', Int:'Intelligence', Wis:'Wisdom', Cha:'Charisma' };
+        _combatRollAndShow(`${names[ability]||ability} Check`, modifier, rollType,
+          `.combat-ability-box[data-ability="${ability}"]`, '.combat-ability-mod');
       }
 
       // Roll initiative from combat view
@@ -6104,44 +6469,98 @@
         });
       }
 
-      // Event delegation for save boxes (using grid container)
+      // ── shared adv/disadv popup helper ─────────────────────────────────────
+      let _openPopup = null;
+
+      function _showRollPopupAtEl(el, rollFn) {
+        if (_openPopup) { _openPopup.remove(); _openPopup = null; }
+        const popup = document.createElement('div');
+        popup.className = 'combat-roll-popup';
+        popup.innerHTML = `
+          <button class="btn btn-sm btn-outline-success"  data-rtype="advantage">▲ Advantage</button>
+          <button class="btn btn-sm btn-outline-secondary" data-rtype="normal">● Normal</button>
+          <button class="btn btn-sm btn-outline-danger"   data-rtype="disadvantage">▼ Disadvantage</button>`;
+        const rect = el.getBoundingClientRect();
+        popup.style.position = 'absolute';
+        popup.style.top  = `${rect.bottom + window.scrollY + 4}px`;
+        popup.style.left = `${rect.left  + window.scrollX}px`;
+        document.body.appendChild(popup);
+        _openPopup = popup;
+        popup.addEventListener('click', ev => {
+          const btn = ev.target.closest('[data-rtype]');
+          if (btn) { rollFn(btn.dataset.rtype); popup.remove(); _openPopup = null; }
+          ev.stopPropagation();
+        });
+        const dismiss = () => {
+          popup.remove(); _openPopup = null;
+          document.removeEventListener('click', dismiss);
+          document.removeEventListener('touchstart', dismiss);
+        };
+        setTimeout(() => {
+          document.addEventListener('click', dismiss);
+          document.addEventListener('touchstart', dismiss);
+        }, 0);
+      }
+
+      // Long-press (mobile) popup support — wires to any grid with roll buttons
+      function _addLongPressPopup(grid, selector, rollFnFromEl) {
+        let _lpTimer = null;
+        grid.addEventListener('touchstart', function(e) {
+          const el = e.target.closest(selector);
+          if (!el) return;
+          _lpTimer = setTimeout(() => {
+            _lpTimer = null;
+            _showRollPopupAtEl(el, rollFnFromEl(el));
+          }, 500);
+        }, { passive: true });
+        const cancelLp = () => { clearTimeout(_lpTimer); _lpTimer = null; };
+        grid.addEventListener('touchend',   cancelLp);
+        grid.addEventListener('touchmove',  cancelLp);
+        grid.addEventListener('touchcancel', cancelLp);
+      }
+
+      // Event delegation for save boxes
       const combatSavesGrid = document.getElementById('combatSavesGrid');
       if (combatSavesGrid) {
         combatSavesGrid.addEventListener('click', function(e) {
-          try {
-            const saveBox = e.target.closest('.combat-save-box');
-            if (saveBox) {
-              const ability = saveBox.dataset.ability;
-              if (ability) {
-                rollCombatSave(ability);
-              }
-            }
-          } catch (err) {
-            console.error('Error in save box click:', err);
-          }
+          const saveBox = e.target.closest('.combat-save-box');
+          if (!saveBox) return;
+          const ability = saveBox.dataset.ability;
+          if (!ability) return;
+          const rollType = e.shiftKey ? 'advantage' : (e.ctrlKey||e.metaKey) ? 'disadvantage' : 'normal';
+          rollCombatSave(ability, rollType);
         });
-      } else {
-        console.warn('combatSavesGrid not found');
+        combatSavesGrid.addEventListener('contextmenu', function(e) {
+          const saveBox = e.target.closest('.combat-save-box');
+          if (!saveBox) return;
+          const ability = saveBox.dataset.ability;
+          if (!ability) return;
+          e.preventDefault();
+          _showRollPopupAtEl(saveBox, type => rollCombatSave(ability, type));
+        });
+        _addLongPressPopup(combatSavesGrid, '.combat-save-box', el => type => rollCombatSave(el.dataset.ability, type));
       }
 
-      // Event delegation for ability check boxes (using grid container)
+      // Event delegation for ability check boxes
       const combatAbilityGrid = document.getElementById('combatAbilityGrid');
       if (combatAbilityGrid) {
         combatAbilityGrid.addEventListener('click', function(e) {
-          try {
-            const abilityBox = e.target.closest('.combat-ability-box');
-            if (abilityBox) {
-              const ability = abilityBox.dataset.ability;
-              if (ability) {
-                rollCombatAbilityCheck(ability);
-              }
-            }
-          } catch (err) {
-            console.error('Error in ability check box click:', err);
-          }
+          const abilityBox = e.target.closest('.combat-ability-box');
+          if (!abilityBox) return;
+          const ability = abilityBox.dataset.ability;
+          if (!ability) return;
+          const rollType = e.shiftKey ? 'advantage' : (e.ctrlKey||e.metaKey) ? 'disadvantage' : 'normal';
+          rollCombatAbilityCheck(ability, rollType);
         });
-      } else {
-        console.warn('combatAbilityGrid not found');
+        combatAbilityGrid.addEventListener('contextmenu', function(e) {
+          const abilityBox = e.target.closest('.combat-ability-box');
+          if (!abilityBox) return;
+          const ability = abilityBox.dataset.ability;
+          if (!ability) return;
+          e.preventDefault();
+          _showRollPopupAtEl(abilityBox, type => rollCombatAbilityCheck(ability, type));
+        });
+        _addLongPressPopup(combatAbilityGrid, '.combat-ability-box', el => type => rollCombatAbilityCheck(el.dataset.ability, type));
       }
 
       // ========================================
@@ -6945,6 +7364,48 @@
         curEl.value = newVal;
         if (typeof window.saveCurrentCharacter === 'function') window.saveCurrentCharacter();
         updateCombatResources();
+      });
+
+      // ── Exhaustion controls in combat view ──────────────────────────────────
+      document.getElementById('combatExhaustUp')?.addEventListener('click', () => {
+        const el = document.getElementById('exhaustionLevel');
+        if (!el) return;
+        const cur = parseInt(el.value, 10) || 0;
+        if (cur < 10) {
+          el.value = cur + 1;
+          el.dispatchEvent(new Event('input'));
+          if (typeof window.saveCurrentCharacter === 'function') window.saveCurrentCharacter();
+          document.getElementById('combatExhaustion').textContent = el.value;
+        }
+      });
+      document.getElementById('combatExhaustDown')?.addEventListener('click', () => {
+        const el = document.getElementById('exhaustionLevel');
+        if (!el) return;
+        const cur = parseInt(el.value, 10) || 0;
+        if (cur > 0) {
+          el.value = cur - 1;
+          el.dispatchEvent(new Event('input'));
+          if (typeof window.saveCurrentCharacter === 'function') window.saveCurrentCharacter();
+          document.getElementById('combatExhaustion').textContent = el.value;
+        }
+      });
+
+      // ── Short Rest / Long Rest from combat view ──────────────────────────────
+      document.getElementById('combatShortRestBtn')?.addEventListener('click', () => {
+        const shortRestBtn = document.getElementById('shortRestBtn');
+        if (shortRestBtn) {
+          shortRestBtn.click();
+        } else if (typeof window.handleShortRest === 'function') {
+          window.handleShortRest();
+        }
+      });
+      document.getElementById('combatLongRestBtn')?.addEventListener('click', () => {
+        const longRestBtn = document.getElementById('longRestBtn');
+        if (longRestBtn) {
+          longRestBtn.click();
+        } else if (typeof window.handleLongRest === 'function') {
+          window.handleLongRest();
+        }
       });
 
       // Toggle combat mode

@@ -187,30 +187,43 @@ A **Jack of All Trades** checkbox sits above the Skills table. When enabled, `fl
 - Conditions include all 14 standard conditions plus Surprised, Concentrating, Blessed, Hexed, Raging
 - Dynamic tracked resources: unlimited named rows, each with Name / Now / Max / Resets-on selector (SR = short rest, LR = long rest, — = manual); Short Rest only resets SR rows; Long Rest resets SR + LR rows
 
-### Combat/DM View (v1.10.4)
+### Combat/DM View (v1.10.4 → v2.2.4)
 
-**Compact Combat Card:**
-- Max 400px centered card
-- Quick stat boxes: AC, HP, Speed
-- Essential combat info
-- All six saving throws
-- Conditions/status display
+Toggle the **Combat View** switch in the header to enter a focused, low-distraction card layout. The preference persists across sessions.
 
-**Actions & Attacks:**
-- Attack type, to-hit bonus, save DC
-- Range and damage with types
-- Attack notes
+**Layout (responsive grid, 1–4 columns):**
+- **Header** — character portrait, name, class/level, AC, initiative mod (respects Alert feat / `charInitMod`), speed, proficiency bonus, passive perception
+- **Vitals** — current HP, max HP, temp HP, HP progress bar, last-change log (e.g., "−8" or "+5"); click the HP bar area for inline Damage / Heal / Temp controls
+- **Ability Checks** — all six modifiers; click to roll d20 + modifier
+- **Saving Throws** — all six saves with proficiency/expertise dot indicators
+- **Skills** — all 18 skill bonuses; gold = proficient, teal = expertise
+- **Actions** — all attacks with to-hit and damage rolls; action economy tracker (Action / Bonus Action / Reaction) with per-slot used/unused state; New Turn resets all slots
+- **Spells** — spell slots by level with Use/Regain controls; spells listed with Cast buttons; pact slots noted separately; cantrips never consume slots
+- **Resources** — class resources (Ki, Rage, Bardic Inspiration, etc.), exhaustion tracker, hit dice, death saves, concentration status, Short Rest and Long Rest buttons
 
-**Spells in Combat View:**
-- Organized by level
-- Casting time, range, school
-- Concentration requirements
-- Prepared spell badges
-- Warlocks draw from pact slots; cast button and tooltip reflect pact slot level
+**Rolling — Advantage & Disadvantage:**
+All ability check, saving throw, and skill roll buttons support three modes:
+- **Click** → normal roll
+- **Shift+Click** → advantage (roll twice, take higher)
+- **Ctrl/Cmd+Click** → disadvantage (roll twice, take lower)
+- **Right-click** (saves and ability checks) → popup with all three options
 
-**Ability Scores in Combat View:**
-- Click any ability (STR, DEX, CON, INT, WIS, CHA) to roll a raw ability check
-- Results appear in a toast notification and are stored in roll history
+**Interactive Conditions:**
+- Active conditions appear as colored removal badges; click **×** to remove
+- **+** dropdown button adds any of the 19 standard conditions (Blinded, Charmed, Deafened, Exhaustion, Frightened, Grappled, Incapacitated, Invisible, Paralyzed, Petrified, Poisoned, Prone, Restrained, Stunned, Unconscious, Surprised, Concentrating, Blessed, Hexed, Raging)
+- Add/remove syncs immediately to the full sheet's condition buttons
+
+**Exhaustion:**
+`−` / `+` buttons adjust level 0–6; saves automatically.
+
+**Action Economy Modal:**
+When a slot (Action, Bonus Action, or Reaction) has already been used and is clicked again, a Bootstrap modal offers to start a new turn rather than using a browser `confirm()` dialog.
+
+**Short Rest / Long Rest:**
+Buttons at the bottom of the Resources panel. Short Rest opens the Hit Dice healing dialog (roll or take average, respects CON modifier, enforces max HP). Long Rest fully restores HP, spell slots, and class resources.
+
+**Rolls & History:**
+All rolls appear in the Dice History panel (last 50). The history button in combat view opens the full roll history modal.
 
 ---
 
@@ -254,16 +267,17 @@ See [SPELLS.md](SPELLS.md) for complete spell database details.
 
 ## Inventory System
 
-### Structured Inventory (v1.8.5, v2.0.9)
+### Structured Inventory (v1.8.5, v2.0.9, v2.2.3)
 
 **Inventory Table:**
 - Item name, quantity, weight per item
 - **Equip toggle button** – Green filled = equipped; muted outline = unequipped. One click saves without opening the edit modal
 - Attunement tracking
+- **Magical Item Badge (v2.2.3)** – A star icon marks any item flagged as magical; flagging is done via the item edit form. Useful for at-a-glance identification during play
 - Notes field
 - Edit and delete buttons
 
-### Encumbrance Calculation (v1.8.5)
+### Encumbrance Calculation (v1.8.5, v2.2.3)
 
 **D&D 5e Rules:**
 - Carrying capacity: STR × 15
@@ -271,6 +285,21 @@ See [SPELLS.md](SPELLS.md) for complete spell database details.
 - Color-coded badges (green/info/warning/danger)
 - Real-time weight tracking
 - Auto-updates with STR changes
+- **Coin Weight Toggle (v2.2.3)** – Checkbox option to include coin weight in the total (50 coins = 1 lb). Disabled by default; toggles in the encumbrance row
+
+### Two-Weapon Fighting Off-Hand Attacks (v2.2.3)
+
+When a character has two light melee weapons equipped and the Two-Weapon Fighting condition is met, a secondary off-hand attack row appears automatically in the Attacks table. The off-hand attack uses the same attack bonus as the main weapon but does **not** add the ability modifier to damage (per RAW), unless the character has the Two-Weapon Fighting Style, in which case the modifier is included. The off-hand badge and row are computed dynamically and require no manual entry.
+
+### Categorized Notes (v2.2.3)
+
+The Notes tab now supports multiple named sections instead of a single free-form field:
+- **General Notes** – freeform text for anything session-relevant
+- **Character Background / Backstory** – narrative history separate from the Background field
+- **Personality, Bonds & Flaws** – quick-reference for roleplay traits
+- **DM Notes** – GM-facing section (hidden in player-facing exports if desired)
+
+Each section collapses independently. All sections are saved with the character and included in exports.
 
 ---
 
@@ -458,7 +487,9 @@ Exported character sheets render each set sense as a labeled stat box (e.g., "Da
 16. **v2.1.9** - Area 1 UX overhaul: styled "Guided Wizard / Blank Sheet" choice modal replaces browser confirm(); `showAppToast()` system replaces alert() calls throughout; unsaved-changes indicator on Save button; wizard abandonment cleanup; delete-last-character no longer auto-creates; duplicate detection on import; header button bar reorganized with overflow ⋯ menu; help modal wizard steps corrected
 17. **v2.2.0** - Area 2 completeness: Languages & Proficiencies card (languages, armor/weapon proficiencies, tool proficiencies); Jack of All Trades toggle on Skills card (½ prof bonus on non-proficient skills); Passive Investigation and Passive Insight now auto-calculate from skill bonuses (readonly, matching Passive Perception); Proficiency Bonus displayed inline at bottom of Ability Scores card
 18. **v2.2.1** - Area 3 completeness: inline HP input (replaces browser prompt); HP progress bar + last-change log; Move button on turn tracker; condition tooltips; Surprised and Raging conditions; dynamic resource rows with per-row reset type (SR/LR/manual); exhaustion description fixed for 2024 PHB (dead at level 10)
-19. **v2.2.2** (current) - Area 4 completeness: spell list grouped by level (Cantrips → 9th); Ritual badge and Cast-as-Ritual button (no slot, +10 min); Ritual checkbox on custom spell form; pact slot Use/Regain/Reset action buttons matching regular slot table; pact section labeled with short-rest recovery note
+19. **v2.2.2** - Area 4 completeness: spell list grouped by level (Cantrips → 9th); Ritual badge and Cast-as-Ritual button (no slot, +10 min); Ritual checkbox on custom spell form; pact slot Use/Regain/Reset action buttons matching regular slot table; pact section labeled with short-rest recovery note
+20. **v2.2.3** - Area 5 completeness: magical item badge in inventory; coin weight toggle in encumbrance (50 coins = 1 lb); TWF off-hand attack switch on attack modal; categorized notes (General / Session Notes / Loot Leads / Quest Hooks)
+21. **v2.2.4** (current) - Area 6 completeness: Combat Card View redesign — responsive 4-breakpoint grid with named areas, skills panel (all 18 with prof/expertise indicators), interactive conditions (add via dropdown, × to remove, syncs to full sheet), adv/disadv for all rolls (Shift-click, Ctrl-click, right-click popup), exhaustion +/− controls, Short Rest / Long Rest buttons, HP last-change log synced from full sheet, action economy Bootstrap modal (replaces browser confirm()), initiative display fix (reads charInitMod, respects Alert feat)
 
 ## Use Cases
 

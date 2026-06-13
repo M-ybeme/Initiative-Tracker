@@ -1,11 +1,15 @@
 const DM_TOOLBOX_BUILD = {
   name: "The DM's Toolbox",
-  version: "2.2.3",
+  version: "2.2.4",
   recentChanges: [
-    "Characters: Inventory — magical item badge + rarity (Common → Artifact) shown inline on items",
-    "Characters: Inventory — coin weight toggle in encumbrance panel (50 coins = 1 lb, RAW)",
-    "Characters: Attacks — off-hand toggle for Two-Weapon Fighting with inline label and reminder",
-    "Characters: Notes tab — category dropdown (General / Session Notes / Loot Leads / Quest Hooks)"
+    "Characters: Combat View — responsive 4-column grid with header, vitals, abilities, saves, skills, actions, spells, resources",
+    "Characters: Combat View — skills panel (all 18, proficiency/expertise badges, adv/disadv on click)",
+    "Characters: Combat View — interactive conditions (add via dropdown, × to remove, syncs to full sheet)",
+    "Characters: Combat View — Shift/Ctrl/right-click popup for advantage and disadvantage on any roll",
+    "Characters: Combat View — exhaustion +/− buttons, Short Rest and Long Rest buttons",
+    "Characters: Combat View — HP last-change log synced from full sheet",
+    "Characters: Combat View — initiative display now reads charInitMod (respects Alert feat and custom bonuses)",
+    "Characters: Action economy — Bootstrap modal replaces browser confirm() when action slot already used"
   ],
   buildTime: new Date().toISOString(),
   author: "Maybeme"

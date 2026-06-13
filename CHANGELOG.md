@@ -8,7 +8,7 @@ The format is based on Keep a Changelog, and this project adheres to Semantic Ve
 The DM's Toolbox has evolved through focused feature releases:
 
 
-- **2.2.x**: Characters page Areas 2–5 completeness — Languages & Proficiencies, Jack of All Trades, passive scores, inline HP controls, HP progress bar, dynamic resource rows, condition tooltips, spell list grouped by level, ritual casting, pact slot action buttons, magical item badges, coin weight toggle, TWF off-hand attacks, categorized notes
+- **2.2.x**: Characters page Areas 2–6 completeness — Languages & Proficiencies, Jack of All Trades, passive scores, inline HP controls, HP progress bar, dynamic resource rows, condition tooltips, spell list grouped by level, ritual casting, pact slot action buttons, magical item badges, coin weight toggle, TWF off-hand attacks, categorized notes, Combat Card View redesign (responsive grid, skills panel, interactive conditions, adv/disadv rolls, exhaustion controls, rest buttons)
 - **2.1.x**: Characters page UX overhaul (modals, toasts, first-run flow), Battle Map UX overhaul (mode tabs, fog brush cursor, Bootstrap modals), Initiative Tracker reaction/legendary-action tracking, Encounter Builder power-user overhaul (two-col tooltips, save/load slots, edit-in-editor, roll initiative, encounter naming, CR 0–30 filter)
 - **2.0.x**: Starting equipment selection, subclass bonus cantrips, enhanced feat selection UI, interactive class feature selection, ability check rolls, full custom monster creator, and content pack integration
 - **1.11.x**: Journal system with rich text editor, import/export (Word/PDF/TXT/Markdown), and Battle Map → Initiative Tracker integration
@@ -16,7 +16,28 @@ The DM's Toolbox has evolved through focused feature releases:
 - **1.9.x**: Battle map measurement tools, persistent fog shapes, and generator integration across NPC/Tavern/Shop systems
 - **1.8.x**: Spell database expansion to 432+ spells, inventory management, loot generator overhaul, and character token generation
 
-**Current version: 2.2.3 (June 2026)**
+**Current version: 2.2.4 (June 2026)**
+
+---
+
+## [2.2.4] - 2026-06-13
+**Characters — Area 6 Completeness (Combat Card View Redesign)**
+
+### Added
+- **Combat View responsive grid** — the combat card now uses a named CSS grid with four breakpoints: single-column on mobile, 2-column on tablet, 3-column on desktop, and 4-column on large screens. Named areas: `header`, `vitals`, `abilities`, `saves`, `skills`, `actions`, `spells`, `resources`.
+- **Skills panel in Combat View** — all 18 skills are displayed as compact click-to-roll buttons. Proficient skills show a gold indicator; expertise shows teal. Bonus values are read live from the full sheet.
+- **Advantage / disadvantage on all Combat View rolls** — every skill, saving throw, and ability check button now supports three modes: left-click = normal, Shift+click = advantage, Ctrl/Cmd+click = disadvantage. Saving throw and ability check buttons also support right-click to open a small popup with all three options.
+- **Interactive conditions** — active conditions appear as removable badges with a × button. A + dropdown button lets you add any of the 19 standard conditions (Blinded, Charmed, Deafened, Exhaustion, Frightened, Grappled, Incapacitated, Invisible, Paralyzed, Petrified, Poisoned, Prone, Restrained, Stunned, Unconscious, Surprised, Concentrating, Blessed, Hexed, Raging). Add/remove syncs to the full sheet's condition buttons and `conditionsText` field.
+- **Exhaustion +/− controls** — the exhaustion row in Combat View now has − and + buttons to adjust level 0–6 without leaving the card. Changes save automatically.
+- **Short Rest and Long Rest buttons** — two buttons at the bottom of the Resources panel. Short Rest opens the hit dice healing dialog; Long Rest fully restores HP, spell slots, and class resources, matching the full sheet behavior.
+- **HP last-change log in Combat View** — the last HP event (e.g., "Took 8 dmg: 47 → 39") is now synced from the full sheet and displayed below the HP bar in Combat View.
+- **Action economy Bootstrap modal** — when an action slot (Action, Bonus Action, Reaction) is already used and clicked again, a styled Bootstrap modal asks whether to start a new turn. Replaces the browser `confirm()` dialog that was previously used.
+
+### Fixed
+- **Initiative display in Combat View** — was reading `modDex` (raw Dexterity modifier) instead of `charInitMod`, the field that accumulates Dex modifier plus any initiative feat bonuses (e.g., Alert +5). Characters with initiative-boosting feats now show the correct value.
+
+### Changed
+- **Help modal — Combat View section** — fully rewritten to document the skills panel, interactive conditions, adv/disadv mechanics (Shift/Ctrl/right-click), exhaustion controls, Short/Long Rest buttons, HP last-change log, and action economy modal.
 
 ---
 
