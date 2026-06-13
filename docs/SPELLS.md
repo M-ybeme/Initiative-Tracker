@@ -9,7 +9,7 @@ The public build now ships exclusively with spells that appear in the System Ref
 ## SRD Coverage
 
 - Base catalogue mirrors the SRD spell appendix (cantrips through 9th level).
-- Each spell carries standardized metadata: school, casting time, range, components, duration, tags, concentration/ritual flags, and class lists.
+- Each spell carries standardized metadata: school, casting time, range, components, duration, tags, concentration, `ritual` boolean, and class lists.
 - Prepared-caster rules read directly from the SRD subset so Cleric/Druid/Paladin spell counts stay accurate without referencing gated material.
 - The Character Manager and Level-Up system both query the SRD allowlist before displaying search results, so non-SRD spells never appear unless a private content pack merges them client-side.
 
@@ -24,13 +24,33 @@ This four-step path ensures older data can coexist with the SRD surface while ke
 
 ## Private Content Packs
 
-Upcoming tooling lets tables load a private JSON/IndexedDB payload that adds back the spells they personally licensed. When that happens:
+Tables can load a private JSON payload that adds back spells they personally licensed. When a pack is loaded:
 
 - The local pack registers additional spell IDs with `SRDContentFilter.registerPrivateContent()`.
 - UI controls automatically re-render, revealing the extra spells without any repository edits.
 - No non-SRD text ever ships from this repo—the content lives only in the player's browser.
 
-Until the pack workflow lands, the UI clearly explains why certain spells are hidden and points users toward the private-pack import flow in development.
+The UI marks gated spells with `data-srd-block` tooltips explaining why an option is unavailable and how to load a private pack to re-enable it.
+
+### Ritual Casting in Content Packs
+
+Set `"ritual": true` on any spell payload to enable the cyan Ritual badge and the Ritual cast button (casts without a slot, +10 min casting time). This is the canonical approach for both new homebrew spells and patches to existing entries. Fallback detection also works for packs that use the school string convention (`"Divination (Ritual)"`) or include `"ritual"` in `casting_time` — but the boolean is cleaner and future-proof.
+
+```json
+{
+  "type": "spell",
+  "id": "My Ritual Spell",
+  "operation": "add",
+  "payload": {
+    "title": "My Ritual Spell",
+    "level": 1,
+    "school": "Divination",
+    "ritual": true,
+    "tags": ["ritual", "utility"],
+    ...
+  }
+}
+```
 
 ## Integration Points
 

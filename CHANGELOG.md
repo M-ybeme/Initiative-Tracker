@@ -8,7 +8,7 @@ The format is based on Keep a Changelog, and this project adheres to Semantic Ve
 The DM's Toolbox has evolved through focused feature releases:
 
 
-- **2.2.x**: Characters page Area 2 completeness — Languages & Proficiencies card, Jack of All Trades toggle, auto-calculated passive scores, Proficiency Bonus inline display
+- **2.2.x**: Characters page Areas 2–4 completeness — Languages & Proficiencies, Jack of All Trades, passive scores, inline HP controls, HP progress bar, dynamic resource rows, condition tooltips, spell list grouped by level, ritual casting, pact slot action buttons
 - **2.1.x**: Characters page UX overhaul (modals, toasts, first-run flow), Battle Map UX overhaul (mode tabs, fog brush cursor, Bootstrap modals), Initiative Tracker reaction/legendary-action tracking, Encounter Builder power-user overhaul (two-col tooltips, save/load slots, edit-in-editor, roll initiative, encounter naming, CR 0–30 filter)
 - **2.0.x**: Starting equipment selection, subclass bonus cantrips, enhanced feat selection UI, interactive class feature selection, ability check rolls, full custom monster creator, and content pack integration
 - **1.11.x**: Journal system with rich text editor, import/export (Word/PDF/TXT/Markdown), and Battle Map → Initiative Tracker integration
@@ -16,7 +16,24 @@ The DM's Toolbox has evolved through focused feature releases:
 - **1.9.x**: Battle map measurement tools, persistent fog shapes, and generator integration across NPC/Tavern/Shop systems
 - **1.8.x**: Spell database expansion to 432+ spells, inventory management, loot generator overhaul, and character token generation
 
-**Current version: 2.2.1 (June 2026)**
+**Current version: 2.2.2 (June 2026)**
+
+---
+
+## [2.2.2] - 2026-06-12
+**Characters — Area 4 Completeness (Spells & Spellcasting)**
+
+### Added
+- **Spell list grouped by level** — the Known Spells list now renders section headers (Cantrips, 1st Level, 2nd Level, … 9th Level) and sorts spells within each group. All existing Cast / Roll / Prep / Remove buttons continue to work via their original `currentSpellList` indices.
+- **Ritual badge** — spells flagged as rituals (via `spell.ritual`, a "ritual" tag, school text containing "(ritual)", or casting_time containing "(ritual)") display a cyan **Ritual** badge alongside the spell name in the list.
+- **Cast-as-Ritual button** — ritual leveled spells show a **Ritual** button (hourglass icon) in addition to the normal Cast button. Clicking it casts the spell without consuming a spell slot; casting time increases by 10 minutes. Handles concentration replacement with a confirmation dialog. No action economy cost (ritual casting takes 10 minutes, not an action).
+- **Ritual checkbox on custom spell form** — the homebrew spell entry form now includes a **Ritual** checkbox beside the Concentration checkbox. The value is saved as `ritual: true/false` on the spell object and persists with the character.
+- **Pact Magic action buttons** — the Pact Magic (Warlock) section now shows Use (−) / Regain (+) / Reset (↺) buttons matching the layout of the regular spell slot table. Event handlers for these buttons were already wired; the UI now exposes them.
+- **Pact Magic label** — the pact slot section is now headed "Pact Magic (Warlock) — recovers on short rest" to clarify the different recovery rule.
+
+### Changed
+- **Help modal — Spell Slots** entry updated to accurately describe pact slot button behavior and short-rest recovery.
+- **Help modal — Known Spells** entry updated: lists level grouping, Cast with upcast picker, Ritual cast path, Prep toggle, and Remove; removes inaccurate "type name and press Enter" add instruction.
 
 ---
 

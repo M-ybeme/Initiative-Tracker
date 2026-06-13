@@ -21,6 +21,7 @@
       "damage": "Include 'damage' for any spell that deals damage. Required for the Roll button to appear on damage spells.",
       "heal": "Include 'heal' or 'healing' for spells that restore hit points. The Roll button will be labeled 'Heal' instead of 'Dmg'.",
       "save": "Include 'save' for spells that require a saving throw. Use save_dc_ability to specify which ability.",
+      "ritual": "Include 'ritual' (as a tag) when the spell can be cast as a ritual (+10 minutes, no slot used). You should also set the boolean field 'ritual: true' on the payload — that is the canonical flag the runtime checks first. Either the tag or the boolean alone is sufficient for detection, but using both is recommended for new spells.",
       "other_common_tags": "aoe, concentration, cantrip, control, buff, debuff, utility — these are informational and affect search/filtering but not roll behavior."
     },
     "spell_dice_fields": {
@@ -53,7 +54,8 @@
       "Prismatic Pulse",
       "Crystalline Shield",
       "Resonance Strike",
-      "Shatter Point"
+      "Shatter Point",
+      "Crystal Commune"
     ],
     "feat": ["Lattice Mind"],
     "background": ["Geomantic Apprentice"],
@@ -258,6 +260,25 @@
         "duration": "Concentration, up to 1 minute",
         "description": "You touch an object or creature and identify structural weaknesses. If targeting a creature, for the duration, your attacks against it score a critical hit on a roll of 18-20, and the creature has vulnerability to one damage type of your choice. If targeting an object, it has vulnerability to all damage for the duration.",
         "classes": ["Resonant", "Wizard"]
+      }
+    },
+    {
+      "type": "spell",
+      "id": "Crystal Commune",
+      "operation": "add",
+      "payload": {
+        "title": "Crystal Commune",
+        "level": 2,
+        "school": "Divination (Ritual)",
+        "casting_time": "1 minute",
+        "range": "Self",
+        "components": "V, S, M (a shard of quartz worth at least 1 gp)",
+        "duration": "Up to 10 minutes",
+        "concentration": true,
+        "ritual": true,
+        "classes": ["Resonant", "Wizard"],
+        "body": "You attune your senses to the nearest crystalline formation within 1 mile. For the duration you know its exact location, whether it has been disturbed in the last 24 hours, and whether any magical aura radiates from it.",
+        "tags": ["ritual", "detection", "utility"]
       }
     },
     {

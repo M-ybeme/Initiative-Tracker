@@ -224,19 +224,29 @@ A **Jack of All Trades** checkbox sits above the Skills table. When enabled, `fl
 - Auto-expand based on highest available level
 - Spellcasting ability tracking (INT/WIS/CHA)
 
-### Spell List Management (v1.5.5)
+### Spell List Management (v1.5.5, v2.2.2)
 
 **Normalized Spell Objects:**
 - Name, level, school, tags, classes
 - Complete spell description
 - Prepared status tracking
-- Ritual flag
+- Ritual flag (detected from `ritual` field, tags containing "ritual", school text, or casting time)
+
+**Spell List Display:**
+- Spells are grouped by level — Cantrips, 1st Level, 2nd Level, …, 9th Level
+- Each spell shows a **Prepared** badge (green) and **Ritual** badge (cyan) when applicable
+- Ritual spells show a separate **Ritual** cast button that consumes no slot (casting time +10 min)
+- The "ritual" tag is suppressed from generic tag badges to avoid duplication with the dedicated badge
 
 **Spell Search:**
 - Global SRD spell library pulled from the allowlisted dataset
 - Search by name, school, body text, tags
 - Top 25 results
 - Class filtering
+
+**Pact Magic (Warlock):**
+- Pact slot section has the same Use (−) / Regain (+) / Reset (↺) buttons as regular spell slots
+- Pact slots recover on a short rest; the Long Rest and Short Rest buttons in Combat Snapshot handle this automatically
 
 See [SPELLS.md](SPELLS.md) for complete spell database details.
 
@@ -447,7 +457,8 @@ Exported character sheets render each set sense as a labeled stat box (e.g., "Da
 15. **v2.1.x** - Two-column stat block tooltips in Encounter Builder; save/load slots; edit-in-editor; roll initiative; encounter name; CR 0–30 filter; Battle Map UX overhaul (mode tabs, Bootstrap modals, fog brush cursor)
 16. **v2.1.9** - Area 1 UX overhaul: styled "Guided Wizard / Blank Sheet" choice modal replaces browser confirm(); `showAppToast()` system replaces alert() calls throughout; unsaved-changes indicator on Save button; wizard abandonment cleanup; delete-last-character no longer auto-creates; duplicate detection on import; header button bar reorganized with overflow ⋯ menu; help modal wizard steps corrected
 17. **v2.2.0** - Area 2 completeness: Languages & Proficiencies card (languages, armor/weapon proficiencies, tool proficiencies); Jack of All Trades toggle on Skills card (½ prof bonus on non-proficient skills); Passive Investigation and Passive Insight now auto-calculate from skill bonuses (readonly, matching Passive Perception); Proficiency Bonus displayed inline at bottom of Ability Scores card
-18. **v2.2.1** (current) - Area 3 completeness: inline HP input (replaces browser prompt); HP progress bar + last-change log; Move button on turn tracker; condition tooltips; Surprised and Raging conditions; dynamic resource rows with per-row reset type (SR/LR/manual); exhaustion description fixed for 2024 PHB (dead at level 10)
+18. **v2.2.1** - Area 3 completeness: inline HP input (replaces browser prompt); HP progress bar + last-change log; Move button on turn tracker; condition tooltips; Surprised and Raging conditions; dynamic resource rows with per-row reset type (SR/LR/manual); exhaustion description fixed for 2024 PHB (dead at level 10)
+19. **v2.2.2** (current) - Area 4 completeness: spell list grouped by level (Cantrips → 9th); Ritual badge and Cast-as-Ritual button (no slot, +10 min); Ritual checkbox on custom spell form; pact slot Use/Regain/Reset action buttons matching regular slot table; pact section labeled with short-rest recovery note
 
 ## Use Cases
 

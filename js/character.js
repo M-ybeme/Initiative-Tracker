@@ -1460,6 +1460,20 @@ import { getSpellSlotsForClassLevel as _getSpellSlotsForClassLevel, getPactMagic
         clearSpellSearchResults();
       }
 
+      const SPELL_LEVEL_LABELS = [
+        'Cantrips', '1st Level', '2nd Level', '3rd Level', '4th Level',
+        '5th Level', '6th Level', '7th Level', '8th Level', '9th Level'
+      ];
+
+      function isRitualSpell(spell) {
+        if (spell.ritual) return true;
+        const tags = Array.isArray(spell.tags) ? spell.tags.map(t => t.toLowerCase()) : [];
+        if (tags.some(t => t === 'ritual')) return true;
+        if ((spell.school || '').toLowerCase().includes('ritual')) return true;
+        if ((spell.casting_time || '').toLowerCase().includes('ritual')) return true;
+        return false;
+      }
+
       function renderCharacterSpellList() {
         const listEl = $('characterSpellList');
         if (!listEl) return;
@@ -1473,103 +1487,139 @@ import { getSpellSlotsForClassLevel as _getSpellSlotsForClassLevel, getPactMagic
           return;
         }
 
-        currentSpellList.forEach((spell, index) => {
-          const li = document.createElement('li');
-          li.className = 'list-group-item bg-transparent small';
+        // Sort by level (cantrips first), preserving original indices for data-spell-index
+        const sorted = currentSpellList
+          .map((spell, index) => ({ spell, index }))
+          .sort((a, b) => (a.spell.level ?? 0) - (b.spell.level ?? 0));
 
-          const title = spell.title || spell.name || 'Unknown spell';
-          const levelText = spell.level === 0 ? 'Cantrip' : `Level ${spell.level ?? 0}`;
-          const schoolText = spell.school || '';
-          const metaLine = [
-            levelText,
-            schoolText,
-            spell.concentration ? 'Concentration' : null
-          ].filter(Boolean).join(' · ');
+        // Group into level buckets
+        const groups = new Map();
+        sorted.forEach(({ spell, index }) => {
+          const lvl = spell.level ?? 0;
+          if (!groups.has(lvl)) groups.set(lvl, []);
+          groups.get(lvl).push({ spell, index });
+        });
 
-          const bodyText = (spell.body || '').trim();
-          const preview = bodyText.length > 160 ? bodyText.slice(0, 160) + '…' : bodyText;
-          const prepared = !!spell.prepared;
-          const isCantrip = spell.level === 0;
-          const showCastButton = prepared || isCantrip;
-          const spellTags = Array.isArray(spell.tags) ? spell.tags.map(t => t.toLowerCase()) : [];
-          // Show Roll button only when there are actually dice to roll
-          const _hasDmgTag = spellTags.includes('damage') || spellTags.some(t => t.includes('heal'));
-          const _hasStructuredDice = !!(spell.damage_dice || spell.heal_dice);
-          const _hasBodyDice = /\d+d\d+/.test(spell.body || '');
-          const hasRoll = _hasDmgTag && (_hasStructuredDice || _hasBodyDice);
-          const isSpellAttack = spellTags.includes('attack');
-          const rollLabel = isSpellAttack ? 'Atk' : (spellTags.some(t => t.includes('heal')) && !spellTags.includes('damage') ? 'Heal' : 'Dmg');
-          const rollTitle = isSpellAttack ? 'Roll spell attack + damage' : 'Roll damage/healing dice';
+        groups.forEach((entries, lvl) => {
+          // Level section header
+          const header = document.createElement('li');
+          header.className = 'list-group-item bg-transparent pt-2 pb-1 border-0';
+          header.innerHTML = `<small class="text-uppercase fw-bold text-secondary">${SPELL_LEVEL_LABELS[lvl] ?? `${lvl}th Level`}</small>`;
+          listEl.appendChild(header);
 
-          li.innerHTML = `
-            <div class="d-flex justify-content-between align-items-start">
-              <div class="me-2">
-                <div>
-                  <strong>${title}</strong>
-                  ${prepared ? '<span class="badge bg-success bg-opacity-75 ms-1">Prepared</span>' : ''}
+          entries.forEach(({ spell, index }) => {
+            const li = document.createElement('li');
+            li.className = 'list-group-item bg-transparent small ps-3';
+
+            const title = spell.title || spell.name || 'Unknown spell';
+            // Strip "(ritual)" from school display — the badge handles it
+            const schoolText = (spell.school || '').replace(/\s*\(ritual\)/i, '').trim();
+            const isRitual = isRitualSpell(spell);
+            const isCantrip = lvl === 0;
+
+            const metaLine = [
+              schoolText,
+              spell.concentration ? 'Concentration' : null
+            ].filter(Boolean).join(' · ');
+
+            const bodyText = (spell.body || '').trim();
+            const preview = bodyText.length > 160 ? bodyText.slice(0, 160) + '…' : bodyText;
+            const prepared = !!spell.prepared;
+            const showCastButton = prepared || isCantrip;
+            const spellTags = Array.isArray(spell.tags) ? spell.tags.map(t => t.toLowerCase()) : [];
+            const _hasDmgTag = spellTags.includes('damage') || spellTags.some(t => t.includes('heal'));
+            const _hasStructuredDice = !!(spell.damage_dice || spell.heal_dice);
+            const _hasBodyDice = /\d+d\d+/.test(spell.body || '');
+            const hasRoll = _hasDmgTag && (_hasStructuredDice || _hasBodyDice);
+            const isSpellAttack = spellTags.includes('attack');
+            const rollLabel = isSpellAttack ? 'Atk' : (spellTags.some(t => t.includes('heal')) && !spellTags.includes('damage') ? 'Heal' : 'Dmg');
+            const rollTitle = isSpellAttack ? 'Roll spell attack + damage' : 'Roll damage/healing dice';
+
+            // Suppress "ritual" from generic tag badges — the Ritual badge above handles it
+            const displayTags = Array.isArray(spell.tags)
+              ? spell.tags.filter(t => !t.toLowerCase().includes('ritual'))
+              : [];
+
+            li.innerHTML = `
+              <div class="d-flex justify-content-between align-items-start">
+                <div class="me-2">
+                  <div>
+                    <strong>${title}</strong>
+                    ${prepared ? '<span class="badge bg-success bg-opacity-75 ms-1">Prepared</span>' : ''}
+                    ${isRitual ? '<span class="badge bg-info bg-opacity-75 ms-1" title="Can be cast as a ritual — no slot used, +10 min casting time">Ritual</span>' : ''}
+                  </div>
+                  ${metaLine ? `<div class="text-muted">${metaLine}</div>` : ''}
+                  <div class="small">
+                    <span class="text-muted">Cast:</span> ${spell.casting_time || '—'} |
+                    <span class="text-muted">Range:</span> ${spell.range || '—'} |
+                    <span class="text-muted">Components:</span> ${spell.components || '—'}
+                  </div>
+                  ${spell.duration
+                    ? `<div class="small"><span class="text-muted">Duration:</span> ${spell.duration}</div>`
+                    : ''
+                  }
+                  ${preview
+                    ? `<div class="small text-muted mt-1">${preview}</div>`
+                    : ''
+                  }
+                  ${displayTags.length
+                    ? `<div class="mt-1">
+                        ${displayTags.map(t => `<span class="badge bg-secondary bg-opacity-50 me-1">${t}</span>`).join('')}
+                       </div>`
+                    : ''
+                  }
+                  ${(Array.isArray(spell.classes) && spell.classes.length)
+                    ? `<div class="mt-1 text-muted small">Classes: ${spell.classes.join(', ')}</div>`
+                    : ''
+                  }
+                  <div class="spell-cast-feedback mt-1" data-spell-index="${index}"></div>
                 </div>
-                ${metaLine ? `<div class="text-muted">${metaLine}</div>` : ''}
-                <div class="small">
-                  <span class="text-muted">Cast:</span> ${spell.casting_time || '—'} |
-                  <span class="text-muted">Range:</span> ${spell.range || '—'} |
-                  <span class="text-muted">Components:</span> ${spell.components || '—'}
-                </div>
-                ${spell.duration
-                  ? `<div class="small"><span class="text-muted">Duration:</span> ${spell.duration}</div>`
-                  : ''
-                }
-                ${preview
-                  ? `<div class="small text-muted mt-1">${preview}</div>`
-                  : ''
-                }
-                ${(Array.isArray(spell.tags) && spell.tags.length)
-                  ? `<div class="mt-1">
-                      ${spell.tags.map(t => `<span class="badge bg-secondary bg-opacity-50 me-1">${t}</span>`).join('')}
-                     </div>`
-                  : ''
-                }
-                ${(Array.isArray(spell.classes) && spell.classes.length)
-                  ? `<div class="mt-1 text-muted small">Classes: ${spell.classes.join(', ')}</div>`
-                  : ''
-                }
-                <div class="spell-cast-feedback mt-1" data-spell-index="${index}"></div>
-              </div>
-              <div class="ms-2 d-flex flex-column align-items-end gap-1">
-                ${showCastButton ? `
+                <div class="ms-2 d-flex flex-column align-items-end gap-1">
+                  ${showCastButton ? `
+                    <button type="button"
+                            class="btn btn-sm btn-outline-warning spell-cast-btn"
+                            data-spell-index="${index}"
+                            data-spell-level="${spell.level ?? 0}"
+                            data-spell-name="${(spell.name || title).replace(/"/g, '&quot;')}"
+                            title="${isCantrip ? 'Cast cantrip' : 'Cast using spell slot'}">
+                      <i class="bi bi-magic"></i> Cast
+                    </button>
+                  ` : ''}
+                  ${isRitual && !isCantrip ? `
+                    <button type="button"
+                            class="btn btn-sm btn-outline-info spell-ritual-btn"
+                            data-spell-index="${index}"
+                            data-spell-name="${(spell.name || title).replace(/"/g, '&quot;')}"
+                            title="Cast as ritual — no spell slot used, casting time +10 minutes">
+                      <i class="bi bi-hourglass-split"></i> Ritual
+                    </button>
+                  ` : ''}
+                  ${hasRoll ? `
+                    <button type="button"
+                            class="btn btn-sm btn-outline-info spell-roll-btn"
+                            data-spell-index="${index}"
+                            title="${rollTitle}">
+                      <i class="bi bi-dice-6"></i> ${rollLabel}
+                    </button>
+                  ` : ''}
+                  <div class="form-check form-check-sm">
+                    <input class="form-check-input spell-prepared-toggle"
+                           type="checkbox"
+                           data-spell-name="${spell.name}"
+                           ${prepared ? 'checked' : ''} />
+                    <label class="form-check-label small">Prep</label>
+                  </div>
                   <button type="button"
-                          class="btn btn-sm btn-outline-warning spell-cast-btn"
-                          data-spell-index="${index}"
-                          data-spell-level="${spell.level ?? 0}"
-                          data-spell-name="${(spell.name || title).replace(/"/g, '&quot;')}"
-                          title="${isCantrip ? 'Cast cantrip' : 'Cast using spell slot'}">
-                    <i class="bi bi-magic"></i> Cast
+                          class="btn btn-sm btn-outline-light"
+                          data-spell-remove="${spell.name}">
+                    <i class="bi bi-x"></i>
                   </button>
-                ` : ''}
-                ${hasRoll ? `
-                  <button type="button"
-                          class="btn btn-sm btn-outline-info spell-roll-btn"
-                          data-spell-index="${index}"
-                          title="${rollTitle}">
-                    <i class="bi bi-dice-6"></i> ${rollLabel}
-                  </button>
-                ` : ''}
-                <div class="form-check form-check-sm">
-                  <input class="form-check-input spell-prepared-toggle"
-                         type="checkbox"
-                         data-spell-name="${spell.name}"
-                         ${prepared ? 'checked' : ''} />
-                  <label class="form-check-label small">Prep</label>
                 </div>
-                <button type="button"
-                        class="btn btn-sm btn-outline-light"
-                        data-spell-remove="${spell.name}">
-                  <i class="bi bi-x"></i>
-                </button>
               </div>
-            </div>
-          `;
+            `;
 
-          listEl.appendChild(li);
+            listEl.appendChild(li);
+          });
         });
       }
 
@@ -5092,6 +5142,7 @@ import { getSpellSlotsForClassLevel as _getSpellSlotsForClassLevel, getPactMagic
         const customSpellComponentsInput = $('customSpellComponentsInput');
         const customSpellDurationInput = $('customSpellDurationInput');
         const customSpellConcentrationInput = $('customSpellConcentrationInput');
+        const customSpellRitualInput = $('customSpellRitualInput');
         const customSpellClassesInput = $('customSpellClassesInput');
         const customSpellTagsInput = $('customSpellTagsInput');
         const customSpellBodyInput = $('customSpellBodyInput');
@@ -5117,6 +5168,29 @@ import { getSpellSlotsForClassLevel as _getSpellSlotsForClassLevel, getPactMagic
               const spellLevel = parseInt(castBtn.dataset.spellLevel, 10);
               const spellName = castBtn.dataset.spellName;
               castSpellFromSheet(spellIndex, spellLevel, spellName);
+              return;
+            }
+
+            // Ritual cast button — no slot consumed, +10 min casting time
+            const ritualBtn = e.target.closest('.spell-ritual-btn');
+            if (ritualBtn) {
+              e.preventDefault();
+              const spellIndex = parseInt(ritualBtn.dataset.spellIndex, 10);
+              const spellName = ritualBtn.dataset.spellName;
+              const spell = currentSpellList[spellIndex];
+              if (spell?.concentration && isConcentrating()) {
+                const current = window.currentConcentrationSpell || 'another spell';
+                if (!confirm(`You are concentrating on ${current}.\n\nCasting ${spellName} as a ritual will end your concentration.\n\nContinue?`)) return;
+              }
+              if (spell?.concentration && typeof window.setConcentration === 'function') {
+                window.setConcentration(true, spellName);
+              }
+              const feedbackEl = document.querySelector(`.spell-cast-feedback[data-spell-index="${spellIndex}"]`);
+              if (feedbackEl) {
+                feedbackEl.innerHTML = `<span class="badge bg-info bg-opacity-75"><i class="bi bi-hourglass-split me-1"></i>Ritual cast started (10 min) — no slot used</span>`;
+                setTimeout(() => { feedbackEl.innerHTML = ''; }, 4000);
+              }
+              showRollToast('Ritual Cast', spellName, 'No slot used · +10 min');
               return;
             }
 
@@ -5168,6 +5242,7 @@ import { getSpellSlotsForClassLevel as _getSpellSlotsForClassLevel, getPactMagic
             components: (customSpellComponentsInput?.value || '').trim(),
             duration: (customSpellDurationInput?.value || '').trim(),
             concentration: !!(customSpellConcentrationInput && customSpellConcentrationInput.checked),
+            ritual: !!(customSpellRitualInput && customSpellRitualInput.checked),
             classes: parseCommaList(customSpellClassesInput?.value || ''),
             body: (customSpellBodyInput?.value || '').trim(),
             tags: parseCommaList(customSpellTagsInput?.value || ''),
@@ -5184,6 +5259,7 @@ import { getSpellSlotsForClassLevel as _getSpellSlotsForClassLevel, getPactMagic
           if (customSpellComponentsInput) customSpellComponentsInput.value = '';
           if (customSpellDurationInput) customSpellDurationInput.value = '';
           if (customSpellConcentrationInput) customSpellConcentrationInput.checked = false;
+          if (customSpellRitualInput) customSpellRitualInput.checked = false;
           if (customSpellClassesInput) customSpellClassesInput.value = '';
           if (customSpellTagsInput) customSpellTagsInput.value = '';
           if (customSpellBodyInput) customSpellBodyInput.value = '';

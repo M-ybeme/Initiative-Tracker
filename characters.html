@@ -2752,20 +2752,43 @@
                           </div>
                         
                           <div class="row g-2 align-items-end small">
-                            <div class="col-4">
-                              <label for="pactLevel" class="form-label mb-1">Pact Slot Level</label>
+                            <div class="col-12">
+                              <label class="form-label mb-1 text-info">
+                                <i class="bi bi-moon-stars me-1"></i>Pact Magic (Warlock)
+                                <small class="text-muted ms-1">— recovers on short rest</small>
+                              </label>
+                            </div>
+                            <div class="col-3">
+                              <label for="pactLevel" class="form-label mb-1">Slot Level</label>
                               <input id="pactLevel" type="number" min="1" max="9"
                                      class="form-control form-control-sm text-center" />
                             </div>
-                            <div class="col-4">
-                              <label for="pactMax" class="form-label mb-1">Pact Slots</label>
+                            <div class="col-3">
+                              <label for="pactMax" class="form-label mb-1">Max</label>
                               <input id="pactMax" type="number" min="0"
                                      class="form-control form-control-sm text-center" />
                             </div>
-                            <div class="col-4">
+                            <div class="col-3">
                               <label for="pactUsed" class="form-label mb-1">Used</label>
                               <input id="pactUsed" type="number" min="0"
                                      class="form-control form-control-sm text-center" />
+                            </div>
+                            <div class="col-3">
+                              <label class="form-label mb-1">&nbsp;</label>
+                              <div class="btn-group btn-group-sm d-flex">
+                                <button class="btn btn-outline-success" data-action="use-pact-slot"
+                                        title="Use a pact slot">
+                                  <i class="bi bi-dash-circle"></i>
+                                </button>
+                                <button class="btn btn-outline-info" data-action="regain-pact-slot"
+                                        title="Regain a pact slot">
+                                  <i class="bi bi-plus-circle"></i>
+                                </button>
+                                <button class="btn btn-outline-secondary" data-action="reset-pact-slot"
+                                        title="Reset pact slots (short rest)">
+                                  <i class="bi bi-arrow-clockwise"></i>
+                                </button>
+                              </div>
                             </div>
                           </div>
                         </div>
@@ -2847,13 +2870,21 @@
                                            id="customSpellDurationInput"
                                            placeholder="Instantaneous, 1 minute, up to 1 hour..." />
                                   </div>
-                                  <div class="col-6 d-flex align-items-center">
+                                  <div class="col-6 d-flex align-items-center gap-3">
                                     <div class="form-check mt-3">
                                       <input class="form-check-input"
                                              type="checkbox"
                                              id="customSpellConcentrationInput" />
                                       <label class="form-check-label small" for="customSpellConcentrationInput">
                                         Concentration
+                                      </label>
+                                    </div>
+                                    <div class="form-check mt-3">
+                                      <input class="form-check-input"
+                                             type="checkbox"
+                                             id="customSpellRitualInput" />
+                                      <label class="form-check-label small" for="customSpellRitualInput">
+                                        Ritual
                                       </label>
                                     </div>
                                   </div>
@@ -4167,7 +4198,7 @@
                         <li><strong>+/- buttons:</strong> Quickly adjust used slots</li>
                         <li><strong>Reset:</strong> Set used slots back to 0 (after long rest)</li>
                       </ul>
-                      <p><strong>Pact Magic (Warlock):</strong> Shown separately with different recovery rules.</p>
+                      <p><strong>Pact Magic (Warlock):</strong> Shown separately below the main slot table. Uses the same −/+/↺ buttons; pact slots recover on a <em>short rest</em>, not a long rest.</p>
                       <p class="text-muted">Multiclass spell slots are calculated automatically using PHB rules!</p>
                     </div>
                   </div>
@@ -4181,11 +4212,13 @@
                   </h2>
                   <div id="known-spells" class="accordion-collapse collapse" data-bs-parent="#spellsAccordion">
                     <div class="accordion-body">
-                      <p>In the <strong>Spells tab</strong> at the bottom of the page:</p>
+                      <p>In the <strong>Spell List tab</strong>:</p>
                       <ul>
-                        <li>Spells are organized by level (Cantrips, 1st, 2nd, etc.)</li>
-                        <li><strong>Add Spell:</strong> Type name and press Enter</li>
-                        <li><strong>Remove:</strong> Click X next to spell name</li>
+                        <li>Spells are grouped by level — Cantrips, 1st, 2nd, etc.</li>
+                        <li><strong>Cast:</strong> Uses a spell slot; pops an upcast picker if multiple levels are available</li>
+                        <li><strong>Ritual:</strong> Casts without using a slot — casting time increases by 10 minutes</li>
+                        <li><strong>Prep toggle:</strong> Mark spells prepared for the day (prepared casters only)</li>
+                        <li><strong>Remove:</strong> Click X next to a spell to remove it</li>
                         <li>Spells learned during level-up are added automatically</li>
                       </ul>
                       <div class="alert alert-info">

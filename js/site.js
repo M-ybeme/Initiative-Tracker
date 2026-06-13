@@ -1,14 +1,12 @@
 const DM_TOOLBOX_BUILD = {
   name: "The DM's Toolbox",
-  version: "2.2.1",
+  version: "2.2.2",
   recentChanges: [
-    "Characters: Combat Snapshot Area 3 — inline HP input + progress bar, Move turn slot, condition tooltips, Surprised/Raging conditions",
-    "Characters: Dynamic resource rows — unlimited named rows with short/long/manual reset types; replaces fixed 3-slot layout",
-    "Characters: Concentrating — prompt for spell name on activate, checkbox ↔ button two-way sync, tooltip always visible",
-    "Characters: Combat View HP popup redesigned — visible number input, stacked layout, appears below HP card",
-    "Characters: Combat View Proficiency Bonus now reads live from the character (was always +2)",
-    "Characters: Warlock wizard populates pact slots as a short-rest resource row",
-    "Characters: Exhaustion fixed for 2024 PHB — dead at level 10 (was incorrectly level 6)"
+    "Characters: Spell list now grouped by level — Cantrips, 1st Level … 9th Level section headers",
+    "Characters: Ritual spells show a cyan Ritual badge; Ritual cast button casts without using a slot (+10 min casting time)",
+    "Characters: Ritual checkbox added to the custom/homebrew spell form",
+    "Characters: Pact Magic section now has Use / Regain / Reset buttons matching the regular spell slot table",
+    "Characters: Pact Magic section labeled with short-rest recovery note"
   ],
   buildTime: new Date().toISOString(),
   author: "Maybeme"

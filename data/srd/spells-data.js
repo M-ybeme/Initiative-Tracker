@@ -82,6 +82,7 @@
       classes: ["Ranger","Wizard","Artificer"],
       body: `Wards an area/object. You choose a mental ping or audible alarm when a Tiny+ creature enters (with exceptions you set).`,
       tags: ["ritual","utility","security","downtime"],
+      ritual: true,
     srd: true,
     },
     {
@@ -121,6 +122,7 @@
       classes: ["Bard","Druid","Ranger"],
       body: `A Tiny beast carries a short verbal message to a designated recipient within range/time you set.`,
       tags: ["ritual","utility","social"],
+      ritual: true,
     srd: true,
     },
     {
@@ -310,6 +312,7 @@
       classes: ["Cleric"],
       body: `Receive an omen on a specific course of action within ~30 minutes: good, bad, both, or unclear.`,
       tags: ["ritual","oracle","downtime"],
+      ritual: true,
     srd: true,
     },
     {
@@ -721,6 +724,7 @@
     classes: ["Cleric","Paladin"],
     body: `You perform a special religious ceremony. Choose one: Atonement (remove effect that changed alignment), Bless Water (create holy water), Coming of Age (+1 AC for 24 hours), Funeral Rite (corpse can't become undead), Wedding (AC and save bonus for 7 days), or Investiture (detect lies about loyalty).`,
     tags: ["ritual","utility","blessing","social"],
+    ritual: true,
     srd: false,
   },
   {
@@ -860,6 +864,7 @@
     duration: "1 minute",
     classes: ["Cleric"],
     tags: ["ritual","information","divine"],
+    ritual: true,
     srd: true,
     body: `Contact your deity or a divine proxy to ask up to three yes/no questions. Answers are brief truths as the deity understands them.`
   },
@@ -872,6 +877,7 @@
     duration: "Instant",
     classes: ["Druid","Ranger"],
     tags: ["exploration","terrain intel"],
+    ritual: true,
     srd: true,
     body: `Gain knowledge of the surrounding territory (terrain, bodies of water, prevalent creatures, powerful fey/fiends/celestials/undead, etc.) within a few miles, filtered by natural features.`
   },
@@ -884,6 +890,7 @@
     duration: "1 hour",
     classes: ["Bard","Sorcerer","Warlock","Wizard"],
     tags: ["utility","translation"],
+    ritual: true,
     srd: true,
     body: `Understand the literal meaning of any spoken language you hear and read text you touch (slower). Doesn’t decode ciphers or secret messages.`
   },
@@ -1038,6 +1045,7 @@
     duration: "1 minute",
     classes: ["Warlock","Wizard"],
     tags: ["knowledge","risk"],
+    ritual: true,
     srd: true,
     body: `Mentally contact an extraplanar entity. You ask several yes/no questions. On a failed Int save, you suffer temporary insanity; on a success, you receive reliable, terse answers.`
   },
@@ -1360,6 +1368,7 @@
     duration: "Up to 10 minutes (Concentration)",
     classes: ["Bard","Cleric","Druid","Paladin","Ranger","Sorcerer","Warlock","Wizard","Artificer"],
     tags: ["detection","investigation","ritual"],
+    ritual: true,
     srd: true,
     body: "Sense the presence of magic within a short range and see faint auras around visible magical objects or creatures."
   },
@@ -1370,6 +1379,7 @@
     duration: "10 minutes",
     classes: ["Cleric","Druid","Paladin","Ranger"],
     tags: ["detection","survival","ritual"],
+    ritual: true,
     srd: true,
     body: "Sense the presence and location of poisons, poisonous creatures, and diseases within a short range; learn the kind of poison/disease in play."
   },
@@ -1468,6 +1478,7 @@
     duration: "Instant",
     classes: ["Cleric"],
     tags: ["ritual","information","oracle"],
+    ritual: true,
     srd: true,
     body: "Ask a single question about a specific goal, event, or activity to occur within 7 days; you receive a truthful, cryptic reply."
   },
@@ -1873,6 +1884,7 @@
     duration: "1 hour",
     classes: ["Bard","Cleric","Druid","Wizard"],
     tags: ["ritual","utility"],
+    ritual: true,
     srd: true,
     body: "Put a willing creature into a deathlike state. It appears dead to all inspection but remains conscious and aware."
   },
@@ -1883,6 +1895,7 @@
     duration: "Instant (until dismissed)",
     classes: ["Wizard"],
     tags: ["summon","utility"],
+    ritual: true,
     srd: true,
     body: "Summon a familiar spirit in animal form. Acts independently but obeys commands, can deliver touch spells, and be temporarily dismissed into a pocket dimension."
   },
@@ -2055,6 +2068,7 @@
     duration: "1 hour",
     classes: ["Wizard"],
     tags: ["utility","carry"],
+    ritual: true,
     srd: true,
     body: "Conjure a 3-ft diameter disk of force that floats 3 ft above the ground and follows you, carrying up to 500 lb."
   },
@@ -2183,6 +2197,7 @@
     duration: "10 days",
     classes: ["Cleric","Wizard"],
     tags: ["ritual","corpse","preservation"],
+    ritual: true,
     srd: true,
     body: "Protect a corpse from decay and prevent it from becoming undead. Also pauses time limits for resurrection spells."
   },
@@ -2628,6 +2643,7 @@
     classes: ["Artificer","Bard","Wizard"],
     body: `You learn the properties of a magic item or spell affecting an object or creature. You learn its functions, how to use it, whether it requires attunement, how many charges it has (if any), and what spells are affecting it. If you touch a creature, you learn what spells are currently affecting it.`,
     tags: ["ritual","utility","detection","magic items"],
+    ritual: true,
     srd: true,
   },
   {
@@ -2873,11 +2889,12 @@
   },
   {
     title: "Locate Animals or Plants",
-    level: 2, school: "Divination",
+    level: 2, school: "Divination (Ritual)",
     casting_time: "1 action", range: "Self", components: "V, S, M (bit of fur from a bloodhound)",
     duration: "Instantaneous",
     classes: ["Bard","Druid","Ranger"],
-    tags: ["detection","nature"],
+    tags: ["detection","nature","ritual"],
+    ritual: true,
     srd: true,
     body: "Describe or name a specific kind of beast or plant. You sense the nearest of that type within 5 miles if any are present."
   },
@@ -2981,11 +2998,12 @@
   },
   {
     title: "Magic Mouth",
-    level: 2, school: "Illusion",
+    level: 2, school: "Illusion (Ritual)",
     casting_time: "1 minute", range: "30 feet", components: "V, S, M (bit of honeycomb and jade dust worth 10 gp)",
     duration: "Until dispelled",
     classes: ["Bard","Wizard"],
-    tags: ["utility","warding"],
+    tags: ["utility","warding","ritual"],
+    ritual: true,
     srd: true,
     body: "You enchant an object to speak a recorded message when specific conditions are met, such as a phrase being spoken or a creature entering an area."
   },
@@ -3387,6 +3405,7 @@
     duration: "1 hour",
     classes: ["Wizard"],
     tags: ["travel","utility"],
+    ritual: true,
     srd: true,
     body: "You summon a quasi-real, horse-like creature that serves as a mount. It has 19 AC, 13 HP, and a 100 ft. speed, disappearing when reduced to 0 HP or when the duration ends."
   },
@@ -3650,6 +3669,7 @@
     duration: "Instantaneous",
     classes: ["Cleric","Druid","Paladin"],
     tags: ["utility","ritual"],
+    ritual: true,
     srd: true,
     body: "All nonmagical food and drink within a 5-foot radius sphere centered on a point of your choice is purified and rendered free of poison and disease."
   },
@@ -4021,6 +4041,7 @@
     classes: ["Artificer","Bard","Druid","Wizard"],
     body: `You cause up to ten words to form in a part of the sky you can see. The words appear to be made of cloud and remain in place for the spell's duration. The words dissipate when the spell ends. A strong wind can disperse the clouds and end the spell early.`,
     tags: ["ritual","utility","communication","concentration"],
+    ritual: true,
     srd: false,
   },
   {
@@ -4116,11 +4137,12 @@
   },
   {
     title: "Silence",
-    level: 2, school: "Illusion", concentration: true,
+    level: 2, school: "Illusion (Ritual)", concentration: true,
     casting_time: "1 action", range: "120 feet", components: "V, S",
     duration: "Up to 10 minutes (Concentration)",
     classes: ["Bard","Cleric","Ranger"],
-    tags: ["control","area"],
+    tags: ["control","area","ritual"],
+    ritual: true,
     srd: true,
     body: "You create a 20-foot-radius sphere of silence. No sound passes through it, and creatures inside are immune to thunder damage and deafened."
   },
@@ -4191,6 +4213,7 @@
     duration: "10 minutes",
     classes: ["Bard","Druid","Ranger"],
     tags: ["communication","nature","ritual"],
+    ritual: true,
     srd: true,
     body: "You gain the ability to comprehend and verbally communicate with beasts. The knowledge and awareness of beasts are limited by their intelligence."
   },
@@ -4608,6 +4631,7 @@
     duration: "1 hour",
     classes: ["Wizard"],
     tags: ["communication","ritual"],
+    ritual: true,
     srd: true,
     body: "You forge a telepathic link between up to eight willing creatures within range. The link works regardless of language or distance, even across planes."
   },
@@ -4743,6 +4767,7 @@
     duration: "8 hours",
     classes: ["Bard","Wizard"],
     tags: ["utility","sanctuary"],
+    ritual: true,
     srd: true,
     body: "A dome of force shelters up to nine creatures. The temperature inside is comfortable and the dome is opaque from the outside but transparent from within."
   },
@@ -4865,6 +4890,7 @@
     duration: "1 hour",
     classes: ["Bard","Warlock","Wizard"],
     tags: ["utility","ritual"],
+    ritual: true,
     srd: true,
     body: "You create an invisible, mindless, shapeless force that performs simple tasks at your command—fetching, cleaning, opening doors, lighting fires, etc. It can move up to 15 feet per round and can’t attack."
   },
@@ -4994,6 +5020,7 @@
     duration: "24 hours",
     classes: ["Druid","Ranger","Sorcerer","Wizard"],
     tags: ["utility","ritual"],
+    ritual: true,
     srd: true,
     body: "Up to ten willing creatures gain the ability to breathe underwater for the duration."
   },
@@ -5004,6 +5031,7 @@
     duration: "1 hour",
     classes: ["Cleric","Druid","Ranger"],
     tags: ["utility","ritual"],
+    ritual: true,
     srd: true,
     body: "This spell allows creatures to move across liquid surfaces—such as water, acid, or even lava—as if they were solid ground."
   },

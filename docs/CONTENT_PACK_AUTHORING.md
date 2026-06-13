@@ -131,8 +131,37 @@ Tags control how the spell roll buttons behave. If you are adding a new spell or
 | `"cantrip"` | Marks the spell as a cantrip (level 0, unlimited use) |
 | `"concentration"` | Marks the spell as requiring concentration |
 | `"save"` + `save_dc_ability` | Rolls damage against a saving throw DC |
+| `"ritual"` | Marks the spell as ritual-castable (see below) |
 
 Missing or incorrect tags are the most common reason a spell does not produce a roll when cast. When adding a ranged/melee spell attack spell, always include `"attack"` in `tags`.
+
+### Ritual Spells
+
+Ritual spells show a cyan **Ritual** badge in the spell list and a **Ritual** button that casts the spell without spending a slot (casting time increases by 10 minutes). To make a homebrew spell ritual-castable, set **both** the tag and the boolean field:
+
+```json
+{
+  "tags": ["ritual", "utility"],
+  "ritual": true
+}
+```
+
+The runtime checks `ritual: true` first and falls back to the `"ritual"` tag, the school string `"(Ritual)"`, or `"(ritual)"` in the casting time — any one of these is sufficient to enable the Ritual button. However, using the explicit boolean is the recommended approach for new spells because it is unambiguous and independent of display string formatting.
+
+To patch an existing SRD spell and add ritual casting (for a homebrew campaign variant), you only need to supply that one field:
+
+```json
+{
+  "type": "spell",
+  "id": "Fireball",
+  "operation": "add",
+  "payload": {
+    "ritual": true
+  }
+}
+```
+
+To remove ritual casting from an SRD spell that normally allows it, set `"ritual": false` and omit `"ritual"` from `tags`.
 
 ### Dice Fields for Roll Support
 
