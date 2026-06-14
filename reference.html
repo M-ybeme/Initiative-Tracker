@@ -91,6 +91,36 @@
     .rule-accordion-item .accordion-button::after { filter: invert(1); }
     .rule-accordion-item .accordion-button:focus  { box-shadow: none; }
     .rule-accordion-item .accordion-body { background: transparent; }
+    /* Result count */
+    .result-count { font-size: .75rem; color: #6c757d; white-space: nowrap; }
+    /* Conditions tab */
+    .conditions-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+      gap: .75rem;
+    }
+    .condition-card {
+      background: rgba(0,0,0,.35);
+      border: 1px solid rgba(255,255,255,.12);
+      border-radius: .5rem;
+      overflow: hidden;
+    }
+    .condition-card.hidden { display: none; }
+    .condition-card-header {
+      padding: .4rem .75rem;
+      font-weight: 600;
+      font-size: .875rem;
+      background: rgba(255,255,255,.05);
+      border-bottom: 1px solid rgba(255,255,255,.1);
+      display: flex;
+      align-items: center;
+    }
+    .condition-card-body {
+      padding: .6rem .75rem;
+      font-size: .8rem;
+      color: #adb5bd;
+      line-height: 1.55;
+    }
   </style>
 </head>
 <body class="bgimage">
@@ -151,7 +181,7 @@
 
       <div class="d-flex align-items-center gap-3 mb-3 flex-wrap">
         <h2 class="mb-0"><i class="bi bi-book-half text-info me-2"></i>Compendium</h2>
-        <span class="text-muted small">Click a row to pin · Click again to dismiss</span>
+        <span class="text-muted small">Click a row to pin · Click again to dismiss &nbsp;&middot;&nbsp; <kbd style="font-size:.7rem;background:#343a40;border:1px solid #6c757d;color:#f8f9fa;border-radius:.25rem;padding:.1rem .35rem;font-family:monospace">/</kbd> to search &nbsp;&middot;&nbsp; <kbd style="font-size:.7rem;background:#343a40;border:1px solid #6c757d;color:#f8f9fa;border-radius:.25rem;padding:.1rem .35rem;font-family:monospace">Esc</kbd> to clear</span>
       </div>
 
       <!-- Tabs -->
@@ -174,6 +204,12 @@
             <i class="bi bi-journal-text me-1"></i>Rules
           </button>
         </li>
+        <li class="nav-item" role="presentation">
+          <button class="nav-link" id="conditions-tab" data-bs-toggle="pill" data-bs-target="#conditions-pane"
+            type="button" role="tab" aria-controls="conditions-pane" aria-selected="false">
+            <i class="bi bi-exclamation-triangle me-1"></i>Conditions
+          </button>
+        </li>
       </ul>
 
       <div class="tab-content">
@@ -184,8 +220,14 @@
           <!-- Spell Filters -->
           <div class="row g-2 mb-3">
             <div class="col-12 col-md-4">
-              <input type="text" class="form-control form-control-sm bg-dark text-light border-secondary"
-                id="spellSearch" placeholder="Search spells, classes, tags...">
+              <div class="input-group input-group-sm">
+                <input type="text" class="form-control bg-dark text-light border-secondary"
+                  id="spellSearch" placeholder="Search spells, classes, tags...">
+                <button class="btn btn-outline-secondary px-2" type="button" id="spellSearchClear"
+                  aria-label="Clear search" title="Clear search" style="display:none">
+                  <i class="bi bi-x-lg" style="font-size:.7rem"></i>
+                </button>
+              </div>
             </div>
             <div class="col-6 col-sm-4 col-md-2">
               <select class="form-select form-select-sm bg-dark text-light border-secondary" id="spellLevel">
@@ -230,7 +272,8 @@
             </div>
           </div>
 
-          <!-- Spell Results -->
+          <!-- Spell Count & Results -->
+          <div class="d-flex justify-content-end mb-1"><span class="result-count" id="spellCount"></span></div>
           <div class="ref-results-list border border-secondary rounded mb-3" id="spellResults">
             <div class="results-empty">Loading spells...</div>
           </div>
@@ -248,8 +291,14 @@
           <!-- Monster Filters -->
           <div class="row g-2 mb-3">
             <div class="col-12 col-md-4">
-              <input type="text" class="form-control form-control-sm bg-dark text-light border-secondary"
-                id="monsterSearch" placeholder="Search monsters...">
+              <div class="input-group input-group-sm">
+                <input type="text" class="form-control bg-dark text-light border-secondary"
+                  id="monsterSearch" placeholder="Search monsters...">
+                <button class="btn btn-outline-secondary px-2" type="button" id="monsterSearchClear"
+                  aria-label="Clear search" title="Clear search" style="display:none">
+                  <i class="bi bi-x-lg" style="font-size:.7rem"></i>
+                </button>
+              </div>
             </div>
             <div class="col-6 col-md-3">
               <select class="form-select form-select-sm bg-dark text-light border-secondary" id="monsterCR">
@@ -289,7 +338,8 @@
           <!-- Bestiary search status (shown during API look-ahead fetch) -->
           <div id="monsterSearchStatus" style="display:none; min-height:1.4rem;" class="small mb-1"></div>
 
-          <!-- Bestiary Results -->
+          <!-- Monster Count & Results -->
+          <div class="d-flex justify-content-end mb-1"><span class="result-count" id="monsterCount"></span></div>
           <div class="ref-results-list border border-secondary rounded mb-3" id="monsterResults">
             <div class="bestiary-loading">
               <i class="bi bi-hourglass-split me-2"></i>Switch to this tab to load monsters&hellip;
@@ -309,8 +359,14 @@
           <!-- Rules Filters -->
           <div class="row g-2 mb-3">
             <div class="col-12 col-md-5">
-              <input type="text" class="form-control form-control-sm bg-dark text-light border-secondary"
-                id="ruleSearch" placeholder="Search rules by title, category, or description...">
+              <div class="input-group input-group-sm">
+                <input type="text" class="form-control bg-dark text-light border-secondary"
+                  id="ruleSearch" placeholder="Search rules by title, category, or description...">
+                <button class="btn btn-outline-secondary px-2" type="button" id="ruleSearchClear"
+                  aria-label="Clear search" title="Clear search" style="display:none">
+                  <i class="bi bi-x-lg" style="font-size:.7rem"></i>
+                </button>
+              </div>
             </div>
             <div class="col-12 col-md-4">
               <select class="form-select form-select-sm bg-dark text-light border-secondary" id="ruleCategory">
@@ -319,7 +375,8 @@
             </div>
           </div>
 
-          <!-- Rules Results -->
+          <!-- Rule Count & Results -->
+          <div class="d-flex justify-content-end mb-1"><span class="result-count" id="ruleCount"></span></div>
           <div class="ref-results-list border border-secondary rounded mb-3" id="ruleResults">
             <div class="results-empty">Loading rules...</div>
           </div>
@@ -329,6 +386,28 @@
             <h6 class="text-info mb-2"><i class="bi bi-pin-fill me-1"></i>Pinned Rules</h6>
             <div class="accordion accordion-flush" id="ruleCards"></div>
           </div>
+        </div>
+
+        <!-- ═══════════════ CONDITIONS PANE ═══════════════ -->
+        <div class="tab-pane fade" id="conditions-pane" role="tabpanel" aria-labelledby="conditions-tab">
+
+          <div class="row g-2 mb-2">
+            <div class="col-12 col-md-5">
+              <div class="input-group input-group-sm">
+                <input type="text" class="form-control bg-dark text-light border-secondary"
+                  id="conditionSearch" placeholder="Filter conditions...">
+                <button class="btn btn-outline-secondary px-2" type="button" id="conditionSearchClear"
+                  aria-label="Clear search" title="Clear search" style="display:none">
+                  <i class="bi bi-x-lg" style="font-size:.7rem"></i>
+                </button>
+              </div>
+            </div>
+            <div class="col-auto d-flex align-items-center">
+              <span class="result-count" id="conditionCount"></span>
+            </div>
+          </div>
+
+          <div class="conditions-grid" id="conditionCards"></div>
         </div>
 
       </div><!-- /tab-content -->

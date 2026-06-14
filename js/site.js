@@ -1,8 +1,10 @@
 const DM_TOOLBOX_BUILD = {
   name: "The DM's Toolbox",
-  version: "2.2.7",
+  version: "2.2.8",
   recentChanges: [
-    "Tests: fixed 5 e2e spec failures caused by the v2.2.x toolbar reorganization — export/import/battle-map buttons moved to overflow dropdown, importCharacterBtn renamed importCharacterMenuBtn, dropdown click test now dismisses the auto-shown newCharacterChoiceModal first"
+    "Compendium: persistent pins survive page refresh (localStorage), Conditions tab with all 15 SRD conditions as always-visible severity-tagged cards, result counts on all tabs, / and Esc keyboard shortcuts, clear-search × button on all search fields, copy button on each condition card",
+    "Bestiary: fixed Open5e API URL (/v1/monsters/), switched initial load to SRD-only document__slug=wotc-srd for a fast one-shot fetch of 322 monsters; look-ahead search still queries the full 3,207-monster dataset",
+    "Docs: added docs/COMPENDIUM.md covering all Compendium features"
   ],
   buildTime: new Date().toISOString(),
   author: "Maybeme"

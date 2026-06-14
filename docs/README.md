@@ -14,7 +14,7 @@ Use this page as the launchpad for deeper dives:
 ## Product Guides
 - [Battle Map](BATTLEMAP.md) – Fog of war workflow, token management, and SRD-only map assets.
 - [Character Manager](CHARACTER_MANAGER.md) – Wizard, level-up rules, and export coverage, all scoped to the SRD allowlist.
-- [Compendium](../reference.html) – Mid-session spell, monster, and rules reference. Spells tab (437 entries, 6 filters), Bestiary tab (Open5e API, infinite scroll, debounced look-ahead search), Rules tab (88 SRD entries, full-text search, accordion pin cards).
+- [Compendium](COMPENDIUM.md) – Mid-session reference hub. **Spells** (437 entries, 6 filters), **Bestiary** (Open5e API, infinite scroll, look-ahead search, full stat blocks), **Rules** (88 SRD entries, full-text search, accordion pin cards), **Conditions** (all 15 SRD conditions as always-visible severity-tagged cards). Pins persist across refreshes via localStorage; `/` focuses search, `Esc` clears it.
 - [Encounter Builder](ENCOUNTER_BUILDER.md) – How CR budgets, stat blocks, and SRD monsters are handled.
 - [Generators](GENERATORS.md) – Shop, tavern, loot, NPC, and name generators with notes about trimmed datasets.
 - [Initiative Tracker](INITIATIVE_TRACKER.md) – Turn order automation plus how SRD stat data feeds damage calculators.

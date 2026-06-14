@@ -8,7 +8,7 @@ The format is based on Keep a Changelog, and this project adheres to Semantic Ve
 The DM's Toolbox has evolved through focused feature releases:
 
 
-- **2.2.x**: Journal full overhaul (TipTap 2, slash commands, wikilinks, backlinks, templates, tags, collapsible sections, drag handles), Characters page Areas 2–7 (languages, proficiencies, combat card view redesign, level up flow, initiative fixes)
+- **2.2.x**: Journal full overhaul (TipTap 2, slash commands, wikilinks, backlinks, templates, tags, collapsible sections, drag handles), Characters page Areas 2–7 (languages, proficiencies, combat card view redesign, level up flow, initiative fixes), Compendium overhaul (persistent pins, Conditions tab, result counts, keyboard shortcuts, Bestiary API fix)
 - **2.1.x**: Characters, Battle Map, and Encounter Builder UX overhauls; Initiative Tracker reaction/legendary-action tracking
 - **2.0.x**: Starting equipment selection, subclass cantrips, feat UI, ability check rolls, custom monster creator, and content pack integration
 - **1.11.x**: Journal system with rich text editor, import/export (Word/PDF/TXT/Markdown), and Battle Map → Initiative Tracker integration
@@ -16,7 +16,27 @@ The DM's Toolbox has evolved through focused feature releases:
 - **1.9.x**: Battle map measurement tools, persistent fog shapes, and generator integration across NPC/Tavern/Shop systems
 - **1.8.x**: Spell database expansion to 432+ spells, inventory management, loot generator overhaul, and character token generation
 
-**Current version: 2.2.7 (June 2026)**
+**Current version: 2.2.8 (June 2026)**
+
+---
+
+## [2.2.8] - 2026-06-14
+**Compendium Overhaul — Persistent Pins, Conditions Tab, Keyboard Shortcuts, Bestiary Fix**
+
+### Added
+- **Persistent pins** — pinned spells, monsters, and rules are now saved to `localStorage` (`dmtoolbox_refpins_v1`) after every toggle and restored on page load; pinned cards survive page refresh and tab close mid-session
+- **Conditions tab** — fourth Compendium tab shows all 15 SRD conditions as always-visible cards (no pin flow needed); each card carries a severity badge (Deadly / Severe / Moderate), a copy-to-clipboard button in the header, and is filterable via a live search field; conditions data is pulled from the existing `RULES_DATA` "Conditions" category
+- **Result counts** — all three original tabs (Spells, Bestiary, Rules) now display a live result count above the list (e.g., "23 of 437" when filters are active, "437 spells" when unfiltered)
+- **Keyboard shortcuts** — `/` focuses the active tab's search field when no input is focused; `Esc` clears and blurs it; both shortcuts are shown in the page subtitle
+- **Clear (×) button on all search fields** — all four search inputs (Spells, Bestiary, Rules, Conditions) now include an `×` button that appears when the field has content and clears it on tap; improves mobile usability
+
+### Fixed
+- **Open5e Bestiary API** — updated both URLs from the deprecated `/monsters/` path to the new `/v1/monsters/`; the old path returned 404, causing every load to fall back to the minimal `dnd5eapi.co` list
+- **Bestiary initial load** — switched from `limit=500` (which timed out, triggering the fallback) to `document__slug=wotc-srd&limit=400`; loads all 322 SRD monsters in a single request with full stat blocks; look-ahead search still queries the full 3,207-monster Open5e dataset for non-SRD creatures
+
+### Docs
+- **`docs/COMPENDIUM.md`** — new file documenting all four Compendium tabs, pin persistence, keyboard shortcuts, copy-to-clipboard behaviour, file map, and SRD compliance notes
+- **`docs/README.md`** — updated Compendium entry to reflect the new tabs and features
 
 ---
 

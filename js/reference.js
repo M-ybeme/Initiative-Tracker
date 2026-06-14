@@ -13,6 +13,29 @@ const monsterDetailCache = {};
 const queryFetchCache   = new Set();   // exact query strings already fetched via look-ahead
 let   searchDebounceTimer = null;      // debounce handle for look-ahead
 
+// ── PERSISTENCE ───────────────────────────────────────────────
+const PIN_STORAGE_KEY = 'dmtoolbox_refpins_v1';
+
+function savePins() {
+  try {
+    localStorage.setItem(PIN_STORAGE_KEY, JSON.stringify({
+      spells:   [...pinnedSpells.entries()],
+      monsters: [...pinnedMonsters.entries()],
+      rules:    [...pinnedRules.entries()],
+    }));
+  } catch {}
+}
+
+function loadPins() {
+  try {
+    const raw = JSON.parse(localStorage.getItem(PIN_STORAGE_KEY) || 'null');
+    if (!raw) return;
+    (raw.spells   || []).forEach(([k, v]) => pinnedSpells.set(k, v));
+    (raw.monsters || []).forEach(([k, v]) => pinnedMonsters.set(k, v));
+    (raw.rules    || []).forEach(([k, v]) => pinnedRules.set(k, v));
+  } catch {}
+}
+
 // ── HELPERS ───────────────────────────────────────────────────
 function levelLabel(n) {
   if (n === 0) return 'Cantrip';
@@ -97,6 +120,10 @@ function renderSpellResults() {
   if (!container) return;
 
   const spells = getFilteredSpells();
+  const total  = (window.SPELLS_DATA || []).length;
+  const countEl = document.getElementById('spellCount');
+  if (countEl) countEl.textContent = spells.length === total ? `${total} spells` : `${spells.length} of ${total}`;
+
   if (!spells.length) {
     container.innerHTML = '<div class="results-empty">No spells match the current filters.</div>';
     return;
@@ -132,6 +159,7 @@ function togglePinSpell(spell) {
   } else {
     pinnedSpells.set(spell.title, spell);
   }
+  savePins();
   renderSpellResults();
   renderPinnedSpellCards();
 }
@@ -287,7 +315,8 @@ async function loadMonsterList() {
   }
 
   try {
-    const open5eUrl = 'https://api.open5e.com/monsters/?limit=500&ordering=name&format=json';
+    // SRD-only initial load: 322 monsters, fits in one request (no pagination needed)
+    const open5eUrl = 'https://api.open5e.com/v1/monsters/?limit=400&ordering=name&format=json&document__slug=wotc-srd';
     console.log('[Bestiary] Trying Open5e:', open5eUrl);
     const t0  = performance.now();
     const res = await fetchWithTimeout(open5eUrl);
@@ -437,6 +466,9 @@ function renderMonsterResults() {
   }
 
   const monsters = getFilteredMonsters();
+  const countEl  = document.getElementById('monsterCount');
+  if (countEl) countEl.textContent = monsters.length === allMonsters.length ? `${allMonsters.length} creatures` : `${monsters.length} of ${allMonsters.length}`;
+
   if (!monsters.length) {
     container.innerHTML = '<div class="results-empty">No monsters match the current filters.</div>';
     return;
@@ -487,6 +519,7 @@ async function togglePinMonster(monster) {
   }
 
   pinnedMonsters.set(slug, detail);
+  savePins();
   renderMonsterResults();
   renderPinnedMonsterCards();
 }
@@ -768,7 +801,7 @@ async function fetchMonstersByQuery(query) {
   const q = query.toLowerCase().trim();
   queryFetchCache.add(q);   // claim the slot immediately so concurrent calls skip
   try {
-    const url = `https://api.open5e.com/monsters/?search=${encodeURIComponent(q)}&limit=500&ordering=name&format=json`;
+    const url = `https://api.open5e.com/v1/monsters/?search=${encodeURIComponent(q)}&limit=500&ordering=name&format=json`;
     console.log(`[Bestiary] Look-ahead fetch for "${q}":`, url);
     const res = await fetchWithTimeout(url, 10000);
     if (!res.ok) throw new Error('Look-ahead responded ' + res.status);
@@ -862,7 +895,11 @@ function renderRuleResults() {
   const container = document.getElementById('ruleResults');
   if (!container) return;
 
-  const rules = getFilteredRules();
+  const rules    = getFilteredRules();
+  const total    = (window.RULES_DATA || []).reduce((n, g) => n + (g.items?.length || 0), 0);
+  const countEl  = document.getElementById('ruleCount');
+  if (countEl) countEl.textContent = rules.length === total ? `${total} rules` : `${rules.length} of ${total}`;
+
   if (!rules.length) {
     container.innerHTML = '<div class="results-empty">No rules match the current search.</div>';
     return;
@@ -892,6 +929,7 @@ function togglePinRule(cat, item) {
   } else {
     pinnedRules.set(key, { cat, item });
   }
+  savePins();
   renderRuleResults();
   renderPinnedRuleCards();
 }
@@ -990,20 +1028,162 @@ function wireRuleFilters() {
   });
 }
 
+// ── CONDITIONS TAB ────────────────────────────────────────────
+
+const CONDITION_SEVERITY = {
+  Paralyzed: 'danger', Stunned: 'danger', Unconscious: 'danger', Petrified: 'danger',
+  Frightened: 'warning', Restrained: 'warning', Incapacitated: 'warning',
+  Charmed: 'info', Invisible: 'info', Grappled: 'info',
+};
+
+function getConditions() {
+  return (window.RULES_DATA || []).find(g => g.cat === 'Conditions')?.items || [];
+}
+
+function renderConditionCards() {
+  const q       = (document.getElementById('conditionSearch')?.value || '').toLowerCase();
+  const grid    = document.getElementById('conditionCards');
+  const countEl = document.getElementById('conditionCount');
+  if (!grid) return;
+
+  const conditions = getConditions();
+  grid.innerHTML   = '';
+  let visible      = 0;
+
+  conditions.forEach(item => {
+    const hay     = [item.title, item.body, ...(item.tags || [])].join(' ').toLowerCase();
+    const matches = !q || hay.includes(q);
+    if (matches) visible++;
+    grid.appendChild(buildConditionCard(item, !matches));
+  });
+
+  if (countEl) {
+    countEl.textContent = q
+      ? `${visible} of ${conditions.length} conditions`
+      : `${conditions.length} conditions`;
+  }
+}
+
+function buildConditionCard(item, hidden) {
+  const el = document.createElement('div');
+  el.className = 'condition-card' + (hidden ? ' hidden' : '');
+
+  const severity  = CONDITION_SEVERITY[item.title] || 'secondary';
+  const iconClass = severity === 'danger'  ? 'bi-exclamation-octagon-fill text-danger'
+                  : severity === 'warning' ? 'bi-exclamation-triangle-fill text-warning'
+                  : severity === 'info'    ? 'bi-info-circle-fill text-info'
+                  :                          'bi-circle text-secondary';
+  const label     = severity === 'danger'  ? 'Deadly'
+                  : severity === 'warning' ? 'Severe'
+                  : severity === 'info'    ? 'Moderate'
+                  :                          '';
+
+  const bodyHtml = (item.body || '')
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/^• /gm, '<span class="text-warning me-1">•</span>')
+    .replace(/\n/g, '<br>');
+
+  el.innerHTML = `
+    <div class="condition-card-header">
+      <i class="bi ${iconClass} me-2"></i>
+      <span class="flex-grow-1">${item.title}</span>
+      ${label ? `<span class="badge bg-${severity} bg-opacity-20 text-${severity} ms-1" style="font-size:.62rem">${label}</span>` : ''}
+      <button class="btn btn-sm btn-link text-secondary p-0 ms-2" title="Copy to clipboard" data-copy-condition>
+        <i class="bi bi-clipboard" style="font-size:.8rem"></i>
+      </button>
+    </div>
+    <div class="condition-card-body">${bodyHtml}</div>
+  `;
+
+  el.querySelector('[data-copy-condition]').addEventListener('click', e => {
+    e.stopPropagation();
+    const btn = e.currentTarget;
+    copyToClipboard(`${item.title.toUpperCase()}\n---\n${item.body || ''}`);
+    btn.innerHTML = '<i class="bi bi-check-lg text-success" style="font-size:.8rem"></i>';
+    setTimeout(() => { btn.innerHTML = '<i class="bi bi-clipboard" style="font-size:.8rem"></i>'; }, 2000);
+  });
+
+  return el;
+}
+
+function wireConditionSearch() {
+  const el = document.getElementById('conditionSearch');
+  if (!el) return;
+  el.addEventListener('input',  renderConditionCards);
+  el.addEventListener('change', renderConditionCards);
+}
+
+// ── SEARCH CLEAR BUTTONS ──────────────────────────────────────
+
+function wireSearchClear(inputId, clearBtnId, onClear) {
+  const input    = document.getElementById(inputId);
+  const clearBtn = document.getElementById(clearBtnId);
+  if (!input || !clearBtn) return;
+
+  const update = () => { clearBtn.style.display = input.value ? '' : 'none'; };
+  input.addEventListener('input', update);
+  update();
+
+  clearBtn.addEventListener('click', () => {
+    input.value = '';
+    input.dispatchEvent(new Event('input'));
+    if (onClear) onClear();
+    input.focus();
+  });
+}
+
+// ── KEYBOARD SHORTCUTS ────────────────────────────────────────
+
+document.addEventListener('keydown', e => {
+  const tag     = (e.target.tagName || '').toLowerCase();
+  const inInput = tag === 'input' || tag === 'textarea' || e.target.isContentEditable;
+
+  if (e.key === '/' && !inInput) {
+    e.preventDefault();
+    const activeSearch = document.querySelector('.tab-pane.show.active input[type="text"]');
+    if (activeSearch) activeSearch.focus();
+    return;
+  }
+
+  if (e.key === 'Escape' && inInput) {
+    const activeSearch = document.querySelector('.tab-pane.show.active input[type="text"]');
+    if (activeSearch && document.activeElement === activeSearch) {
+      activeSearch.value = '';
+      activeSearch.dispatchEvent(new Event('input'));
+      activeSearch.blur();
+    }
+  }
+});
+
 // ── INIT ──────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
   const spellCount = (window.SPELLS_DATA || []).length;
   const ruleCount  = (window.RULES_DATA  || []).reduce((n, g) => n + (g.items?.length || 0), 0);
   console.log(`[Reference] DOMContentLoaded — SPELLS_DATA: ${spellCount} spells, RULES_DATA: ${ruleCount} rules`);
 
+  // Restore persisted pins before first render so highlights are correct
+  loadPins();
+
   populateSpellFilters();
   wireSpellFilters();
   renderSpellResults();
+  renderPinnedSpellCards();
+
   wireMonsterFilters();
+  renderPinnedMonsterCards();   // render any monsters loaded from storage
 
   populateRuleCategories();
   wireRuleFilters();
   renderRuleResults();
+  renderPinnedRuleCards();
+
+  wireConditionSearch();
+  renderConditionCards();
+
+  wireSearchClear('spellSearch',     'spellSearchClear');
+  wireSearchClear('monsterSearch',   'monsterSearchClear');
+  wireSearchClear('ruleSearch',      'ruleSearchClear');
+  wireSearchClear('conditionSearch', 'conditionSearchClear');
 
   document.getElementById('bestiary-tab')?.addEventListener('shown.bs.tab', () => {
     console.log('[Reference] Bestiary tab opened');
