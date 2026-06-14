@@ -2,7 +2,7 @@
 
 **A comprehensive, browser-based suite of tools for tabletop RPG Game Masters**
 
-**Live Site:** [https://dnddmtoolbox.netlify.app/](https://dnddmtoolbox.netlify.app/) · **Version:** 2.2.5
+**Live Site:** [https://dnddmtoolbox.netlify.app/](https://dnddmtoolbox.netlify.app/) · **Version:** 2.2.6
 
 ---
 
@@ -17,7 +17,7 @@ Free D&D 5e toolkit using **2024 PHB rules (SRD 5.2)**. No login, no tracking, w
 * **[Character Manager](docs/CHARACTER_MANAGER.md)** – Full character sheets with guided creation wizard and level-up system
 * **[Encounter Builder](docs/ENCOUNTER_BUILDER.md)** – CR budgeting, monster stat blocks, save/load encounter slots, and one-click initiative export with optional pre-rolled initiative
 * **[Compendium](reference.html)** – Mid-session spell, monster, and rules reference with full-text search, filters, and pinnable stat-block cards
-* **[Journal](docs/JOURNAL.md)** – Rich text campaign notes with persistent storage
+* **[Journal](docs/JOURNAL.md)** – Notion-style campaign notes: TipTap 2 rich text editor with slash commands (`/`), `[[wikilinks]]` with a backlinks panel, collapsible sections, block drag-to-reorder, tags, templates, auto-save, focus mode, and multi-format export (TXT, MD, DOCX, PDF)
 * **[Generators](docs/GENERATORS.md)** – Random shops, taverns, loot tables, NPCs, and names
 
 ### Out of the Box
@@ -108,7 +108,7 @@ Press **Ctrl+Alt+D** or click the gear icon in the footer to open the diagnostic
   * **Spells** – Search 437 spells by name, school, class, level, concentration, and ritual; click any row to pin a full spell card
   * **Bestiary** – Browse the full D&D 5e monster list (Open5e API); infinite scroll + debounced look-ahead search; pin full stat-block cards
   * **Rules** – Search 88 SRD rules entries (title, body, category, tags); pin any rule as an expandable accordion card
-* **Journal** – Rich text campaign notes with persistent storage and export
+* **[Journal](docs/JOURNAL.md)** – Notion-style rich text notes with slash commands, `[[wikilinks]]`, backlinks, collapsible sections, drag-to-reorder, tags, templates, and multi-format export
 
 ### Improvisation Tools
 
@@ -233,7 +233,7 @@ Every guide under `/docs` reflects the SRD-only build. Start with the index for 
 * [Encounter Builder](docs/ENCOUNTER_BUILDER.md) – Encounter math, CR budgeting, and SRD stat sources.
 * [Generators](docs/GENERATORS.md) – Loot, tavern, shop, NPC, and name coverage after the data scrub.
 * [Initiative Tracker](docs/INITIATIVE_TRACKER.md) – Turn automation, HP tracking, reaction/legendary-action tracking, combat log, and SRD gating behavior.
-* [Journal](docs/JOURNAL.md) – Rich text tips plus how exports embed the license block.
+* [Journal](docs/JOURNAL.md) – Full feature reference: editor, slash commands, wikilinks, backlinks, collapsible sections, drag handles, tags, templates, export formats, keyboard shortcuts.
 * [Integration Guide](docs/INTEGRATION.md) – Embed or extend modules without breaking the SRD boundary.
 * [Private Build Workflow](docs/PRIVATE_BUILD.md) – Generate a local bundle plus your own packs without committing private data.
 * [Content Pack Authoring](docs/CONTENT_PACK_AUTHORING.md) – Create your own JSON content packs.

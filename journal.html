@@ -6,218 +6,240 @@
   <title>The DM's Toolbox: Journal</title>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" crossorigin="anonymous" />
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" />
-  <!-- Custom CSS -->
   <link href="/css/site.css" rel="stylesheet" />
-  <!-- Dev Icons -->
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/devicons/devicon@v2.15.1/devicon.min.css" />
-  <!-- Favicon -->
   <link rel="icon" type="image/png" href="/images/dndFavicon (2).png" />
-  <!-- Quill Rich Text Editor -->
-  <link href="https://cdn.quilljs.com/1.3.7/quill.snow.css" rel="stylesheet">
-  <script src="https://cdn.quilljs.com/1.3.7/quill.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" crossorigin="anonymous"></script>
   <script src="/js/site.js"></script>
-  <!-- Export Libraries -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <script src="https://unpkg.com/docx@8.5.0/build/index.js"></script>
-  <!-- Journal Export Script -->
   <script src="/js/journal-export.js"></script>
   <style>
-    .bgimage{
-        background: url('images/BGMap.png') no-repeat center center fixed;
-        background-size: cover;}
+    .bgimage {
+      background: url('images/BGMap.png') no-repeat center center fixed;
+      background-size: cover;
+    }
     .bg-orange { background-color: #fd7e14 !important; color: #212529 !important; }
     .drag-handle { cursor: move; }
-    .active-turn {
-      border-left: 5px solid #1d9e6d !important;
-      color: #f8f9fa !important;
-      font-weight: bold;
-    }
-    #saveHistorySelect { min-width: 200px; }
+    .active-turn { border-left: 5px solid #1d9e6d !important; color: #f8f9fa !important; font-weight: bold; }
 
-    /* Journal Styles */
-    #journalEditor {
-      height: calc(100vh - 300px);
-      min-height: 400px;
-      background-color: white;
-      color: #212529;
+    /* ── Toolbar ─────────────────────────────────────────────────────────── */
+    .editor-toolbar { background-color: #2b2f33; border-bottom: 2px solid #495057; padding: 6px 10px; }
+    .toolbar-btn {
+      color: #adb5bd !important; border-color: #495057 !important;
+      background: transparent; padding: 4px 9px; font-size: 13px; line-height: 1.4; transition: all 0.15s;
     }
-
-    /* Toolbar visual separation */
-    .ql-toolbar {
-      border-bottom: 2px solid #dee2e6 !important;
-      background-color: #f8f9fa;
+    .toolbar-btn:hover { background-color: #495057 !important; color: #f8f9fa !important; border-color: #6c757d !important; }
+    .toolbar-btn.active { background-color: #1d9e6d !important; border-color: #1d9e6d !important; color: #fff !important; }
+    .toolbar-select {
+      background-color: #343a40; color: #adb5bd; border-color: #495057;
+      font-size: 13px; padding: 3px 8px; height: 30px; min-width: 120px;
     }
-
-    .file-list {
-      max-height: calc(100vh - 300px);
-      overflow-y: auto;
-      min-height: 400px;
+    .toolbar-select:focus { outline: none; border-color: #1d9e6d; box-shadow: none; }
+    .color-pick-btn { position: relative; overflow: hidden; }
+    .color-pick-btn input[type="color"] {
+      position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%; padding: 0; border: none;
     }
 
-    .file-item {
-      cursor: pointer;
-      transition: all 0.2s;
+    /* ── Table context bar ───────────────────────────────────────────────── */
+    #tableContextBar {
+      background-color: #1e2124; border-bottom: 1px solid #495057;
+      padding: 4px 10px; gap: 6px; flex-wrap: wrap; align-items: center; display: none;
     }
 
-    .file-item:hover {
-      background-color: rgba(255, 255, 255, 0.15);
-      transform: translateX(2px);
+    /* ── ProseMirror ─────────────────────────────────────────────────────── */
+    .ProseMirror {
+      height: calc(100vh - 420px); min-height: 380px; padding: 18px 22px;
+      background-color: #fff; color: #212529; outline: none; overflow-y: auto;
+      font-size: 15px; line-height: 1.65;
+    }
+    .ProseMirror p.is-empty:first-child::before {
+      color: #adb5bd; content: attr(data-placeholder); float: left; height: 0; pointer-events: none;
+    }
+    .ProseMirror h1 { font-size: 2rem; font-weight: 700; margin: 1rem 0 0.4rem; border-bottom: 1px solid #dee2e6; padding-bottom: 0.3rem; }
+    .ProseMirror h2 { font-size: 1.5rem; font-weight: 600; margin: 0.9rem 0 0.35rem; }
+    .ProseMirror h3 { font-size: 1.2rem; font-weight: 600; margin: 0.75rem 0 0.3rem; }
+    .ProseMirror ul, .ProseMirror ol { padding-left: 1.5rem; margin: 0.4rem 0; }
+    .ProseMirror li { margin: 0.2rem 0; }
+    /* Task list */
+    .ProseMirror ul[data-type="taskList"] { list-style: none; padding-left: 0.25rem; }
+    .ProseMirror ul[data-type="taskList"] > li { display: flex; align-items: flex-start; gap: 0.5rem; margin: 0.3rem 0; }
+    .ProseMirror ul[data-type="taskList"] > li > label { flex-shrink: 0; margin-top: 0.2rem; cursor: pointer; }
+    .ProseMirror ul[data-type="taskList"] > li > label input { cursor: pointer; width: 15px; height: 15px; }
+    .ProseMirror ul[data-type="taskList"] > li > div { flex: 1; }
+    .ProseMirror ul[data-type="taskList"] > li[data-checked="true"] > div { text-decoration: line-through; color: #6c757d; }
+    /* Blockquote */
+    .ProseMirror blockquote {
+      border-left: 4px solid #1d9e6d; padding: 0.5rem 1rem; margin: 0.75rem 0;
+      color: #495057; font-style: italic; background-color: #f8f9fa; border-radius: 0 4px 4px 0;
+    }
+    .ProseMirror hr { border: none; border-top: 2px solid #dee2e6; margin: 1.5rem 0; }
+    .ProseMirror code { background-color: #f1f3f5; padding: 0.15em 0.35em; border-radius: 3px; font-family: monospace; font-size: 0.88em; }
+    .ProseMirror pre { background-color: #f1f3f5; padding: 1rem; border-radius: 6px; overflow-x: auto; margin: 0.75rem 0; }
+    .ProseMirror pre code { background: none; padding: 0; }
+    .ProseMirror a { color: #0d6efd; text-decoration: underline; cursor: pointer; }
+    .ProseMirror a:hover { color: #0a58ca; }
+    .ProseMirror img { max-width: 100%; height: auto; cursor: pointer; margin: 8px; }
+    .ProseMirror img.img-selected { outline: 2px solid #1d9e6d; box-shadow: 0 0 10px rgba(29,158,109,0.3); }
+    .ProseMirror img.img-float-left  { float: left;  margin-right: 15px; margin-left: 0; }
+    .ProseMirror img.img-float-right { float: right; margin-left: 15px;  margin-right: 0; }
+    /* Tables */
+    .ProseMirror table { border-collapse: collapse; width: 100%; margin: 1rem 0; table-layout: auto; }
+    .ProseMirror table td, .ProseMirror table th {
+      border: 1px solid #adb5bd; padding: 7px 12px; vertical-align: top; min-width: 50px; position: relative;
+    }
+    .ProseMirror table th { background-color: #e9ecef; font-weight: 600; }
+    .ProseMirror table .selectedCell::after {
+      content: ""; position: absolute; inset: 0; background: rgba(29,158,109,0.15); pointer-events: none;
+    }
+    .ProseMirror table .column-resize-handle {
+      position: absolute; right: -2px; top: 0; bottom: 0; width: 4px; background-color: #1d9e6d; cursor: col-resize; z-index: 20;
+    }
+    .ProseMirror.resize-cursor { cursor: col-resize; }
+    .ProseMirror ::selection { background: rgba(29,158,109,0.2); }
+    .ProseMirror .ProseMirror-gapcursor { display: none; pointer-events: none; position: absolute; }
+    .ProseMirror .ProseMirror-gapcursor::after {
+      content: ""; display: block; position: absolute; top: -2px; width: 20px; border-top: 1px solid black;
+      animation: ProseMirror-cursor-blink 1.1s steps(2, start) infinite;
+    }
+    @keyframes ProseMirror-cursor-blink { to { visibility: hidden; } }
+    .ProseMirror.ProseMirror-focused .ProseMirror-gapcursor { display: block; }
+
+    /* ── Suggestion menus (slash & wikilink) ────────────────────────────── */
+    .suggestion-menu {
+      position: fixed; z-index: 10002;
+      background: #212529; border: 1px solid #495057;
+      border-radius: 8px; box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+      min-width: 210px; max-width: 300px; max-height: 320px;
+      overflow-y: auto; padding: 4px;
+    }
+    .sg-item {
+      display: flex; align-items: center; gap: 8px; width: 100%;
+      background: none; border: none; border-radius: 5px;
+      color: #f8f9fa; padding: 7px 10px; font-size: 13px;
+      text-align: left; cursor: pointer;
+    }
+    .sg-item i { flex-shrink: 0; font-size: 15px; width: 18px; text-align: center; }
+    .sg-item span { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .sg-item small { font-size: 10px; opacity: 0.5; margin-left: auto; }
+    .sg-item:hover, .sg-item.active { background-color: rgba(29,158,109,0.25); color: #fff; }
+
+    /* ── Wikilinks ───────────────────────────────────────────────────────── */
+    .wikilink {
+      color: #1d9e6d !important; background: rgba(29,158,109,0.08);
+      border-radius: 3px; padding: 1px 4px;
+      cursor: pointer; font-weight: 500;
+      border-bottom: 1px solid rgba(29,158,109,0.4);
+      transition: background 0.15s;
+    }
+    .wikilink:hover { background: rgba(29,158,109,0.2) !important; }
+
+    /* ── Details / Summary (collapsible sections) ────────────────────────── */
+    .ProseMirror details {
+      border: 1px solid #dee2e6; border-radius: 6px;
+      margin: 0.75rem 0; overflow: hidden;
+    }
+    .ProseMirror details > summary {
+      background: #f1f3f5; padding: 8px 14px;
+      cursor: pointer; user-select: none;
+      font-weight: 500; list-style: none;
+      display: flex; align-items: center; gap: 8px; color: #495057;
+    }
+    .ProseMirror details > summary::-webkit-details-marker { display: none; }
+    .ProseMirror details > summary::before {
+      content: '▶'; font-size: 10px; transition: transform 0.2s; flex-shrink: 0; color: #6c757d;
+    }
+    .ProseMirror details[open] > summary::before { transform: rotate(90deg); }
+    .ProseMirror details > :not(summary) { padding: 12px 14px; }
+    .ProseMirror details:not([open]) > :not(summary) { display: none; }
+
+    /* ── Block drag handle ───────────────────────────────────────────────── */
+    #blockGrip {
+      position: fixed; z-index: 9500; display: none;
+      width: 26px; height: 30px; align-items: center; justify-content: center;
+      color: #6c757d; cursor: grab; border-radius: 4px;
+      transition: color 0.15s, background 0.15s;
+      padding: 2px;
+    }
+    #blockGrip:hover { color: #adb5bd; background: rgba(255,255,255,0.1); }
+    #blockGrip.dragging { cursor: grabbing; opacity: 0.7; }
+
+    /* ── Drop indicator line ─────────────────────────────────────────────── */
+    #dropLine {
+      position: fixed; height: 2px; background: #1d9e6d;
+      z-index: 9499; pointer-events: none; display: none;
+      border-radius: 1px; box-shadow: 0 0 6px rgba(29,158,109,0.6);
     }
 
-    .file-item.active {
-      background-color: rgba(29, 158, 109, 0.2);
-      border-left: 4px solid #1d9e6d;
-      font-weight: 500;
+    /* ── Backlinks panel ─────────────────────────────────────────────────── */
+    #backlinksPanel {
+      background: rgba(29,158,109,0.04); border-top: 1px solid #495057;
+      padding: 8px 16px 12px;
     }
 
-    .file-name-edit {
-      background-color: transparent;
-      border: 1px solid #495057;
-      color: #f8f9fa;
-      padding: 2px 6px;
-      border-radius: 4px;
-      width: 100%;
-    }
+    /* ── Help offcanvas ──────────────────────────────────────────────────── */
+    #helpAccordion .accordion-button { font-size: 0.875rem; font-weight: 500; }
+    #helpAccordion .accordion-button::after { filter: invert(0.7); }
+    #helpAccordion .accordion-button:not(.collapsed) { background-color: #1d9e6d !important; color: #fff !important; box-shadow: none; }
+    #helpAccordion .accordion-button:not(.collapsed)::after { filter: invert(1); }
+    #helpAccordion .accordion-button:focus { box-shadow: none; }
+    #helpAccordion kbd { font-size: 0.72rem; background: #495057; color: #f8f9fa; border: 1px solid #6c757d; border-radius: 3px; padding: 1px 5px; }
 
-    .file-name-edit:focus {
-      outline: none;
-      border-color: #1d9e6d;
-    }
+    /* ── Sidebar ─────────────────────────────────────────────────────────── */
+    .file-list { max-height: calc(100vh - 300px); overflow-y: auto; min-height: 380px; }
+    .file-item { cursor: pointer; transition: all 0.2s; }
+    .file-item:hover { background-color: rgba(255,255,255,0.12); }
+    .file-item:focus { outline: none; background-color: rgba(29,158,109,0.12); border-left: 4px solid #1d9e6d !important; }
+    .file-item.active { background-color: rgba(29,158,109,0.2); border-left: 4px solid #1d9e6d; font-weight: 500; }
+    .file-item.pinned-item { border-left: 4px solid #ffc107 !important; }
+    .file-item.pinned-item.active { border-left: 4px solid #1d9e6d !important; }
+    .search-highlight { background-color: #ffc107; color: #212529; padding: 2px 4px; border-radius: 3px; font-weight: bold; }
+    .pin-btn { background: none; border: none; padding: 2px 5px; line-height: 1; opacity: 0.4; transition: opacity 0.15s; }
+    .pin-btn:hover, .pin-btn.pinned { opacity: 1; }
 
-    /* Highlight for search matches */
-    .search-highlight {
-      background-color: #ffc107;
-      color: #212529;
-      padding: 2px 4px;
-      border-radius: 3px;
-      font-weight: bold;
+    /* ── Tags ────────────────────────────────────────────────────────────── */
+    .tag-pill {
+      display: inline-flex; align-items: center; gap: 4px;
+      background-color: #495057; color: #f8f9fa; border-radius: 20px;
+      padding: 2px 8px; font-size: 0.72rem; white-space: nowrap;
     }
-
-    /* Image resizing in editor */
-    #journalEditor img {
-      max-width: 100%;
-      height: auto;
-      cursor: pointer;
-      margin: 10px;
+    .tag-pill .tag-remove {
+      background: none; border: none; color: #adb5bd; padding: 0; line-height: 1;
+      font-size: 0.7rem; cursor: pointer; display: flex; align-items: center;
     }
+    .tag-pill .tag-remove:hover { color: #f8f9fa; }
+    #tagInput { min-width: 0; flex: 1 1 120px; }
 
-    #journalEditor img.selected {
-      outline: 2px solid #1d9e6d;
-      box-shadow: 0 0 10px rgba(29, 158, 109, 0.3);
-    }
+    /* ── Templates modal cards ───────────────────────────────────────────── */
+    .template-card { cursor: pointer; transition: all 0.2s; border: 1px solid transparent !important; }
+    .template-card:hover { transform: translateY(-3px); box-shadow: 0 6px 16px rgba(0,0,0,0.4); border-color: #1d9e6d !important; }
 
-    /* Image float options for text wrapping */
-    #journalEditor img.float-left {
-      float: left !important;
-      margin-right: 15px;
-      margin-left: 0;
-      margin-top: 5px;
-      margin-bottom: 5px;
-    }
+    /* ── Focus mode ──────────────────────────────────────────────────────── */
+    #focusModeBtn.active { background-color: #1d9e6d !important; border-color: #1d9e6d !important; color: #fff !important; }
 
-    #journalEditor img.float-right {
-      float: right !important;
-      margin-left: 15px;
-      margin-right: 0;
-      margin-top: 5px;
-      margin-bottom: 5px;
-    }
-
-    #journalEditor img.float-center {
-      float: none !important;
-      display: block;
-      margin-left: auto !important;
-      margin-right: auto !important;
-      margin-top: 10px;
-      margin-bottom: 10px;
-    }
-
-    /* Ensure paragraphs don't wrap around centered images */
-    #journalEditor img.float-center + p,
-    #journalEditor img.float-center ~ p {
-      clear: both;
-    }
-
-    /* Image alignment controls */
+    /* ── Image resize handles ────────────────────────────────────────────── */
     .image-controls {
-      position: fixed;
-      background: #212529;
-      border: 2px solid #1d9e6d;
-      border-radius: 8px;
-      padding: 8px;
-      z-index: 10001;
-      display: flex;
-      gap: 5px;
-      box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+      position: fixed; background: #212529; border: 2px solid #1d9e6d; border-radius: 8px;
+      padding: 8px; z-index: 10001; display: flex; gap: 5px; box-shadow: 0 4px 8px rgba(0,0,0,0.3);
     }
-
     .image-controls button {
-      background: #343a40;
-      border: 1px solid #495057;
-      color: #f8f9fa;
-      padding: 6px 10px;
-      border-radius: 4px;
-      cursor: pointer;
-      font-size: 12px;
-      transition: all 0.2s;
+      background: #343a40; border: 1px solid #495057; color: #f8f9fa;
+      padding: 5px 9px; border-radius: 4px; cursor: pointer; font-size: 12px; transition: all 0.15s;
     }
-
-    .image-controls button:hover {
-      background: #495057;
-      border-color: #1d9e6d;
-    }
-
-    .image-controls button.active {
-      background: #1d9e6d;
-      border-color: #1d9e6d;
-    }
-
+    .image-controls button:hover { background: #495057; border-color: #1d9e6d; }
+    .image-controls button.active { background: #1d9e6d; border-color: #1d9e6d; }
     .resize-handle {
-      position: fixed;
-      width: 12px;
-      height: 12px;
-      background: #1d9e6d;
-      border: 2px solid white;
-      border-radius: 50%;
-      z-index: 10000;
-      box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+      position: fixed; width: 11px; height: 11px; background: #1d9e6d;
+      border: 2px solid white; border-radius: 50%; z-index: 10000; box-shadow: 0 2px 4px rgba(0,0,0,0.3);
     }
-
-    .resize-handle.nw { cursor: nw-resize; }
-    .resize-handle.ne { cursor: ne-resize; }
-    .resize-handle.sw { cursor: sw-resize; }
-    .resize-handle.se { cursor: se-resize; }
-    .resize-handle.n { cursor: n-resize; }
-    .resize-handle.s { cursor: s-resize; }
-    .resize-handle.e { cursor: e-resize; }
-    .resize-handle.w { cursor: w-resize; }
-
-    /* Clickable elements get pointer cursor */
-    .file-item,
-    #newFileBtn,
-    #importBtn,
-    #saveBtn,
-    #deleteBtn,
-    .ql-toolbar button,
-    #journalEditor a {
-      cursor: pointer;
-    }
-
-    /* Better link styling */
-    #journalEditor a {
-      color: #0d6efd;
-      text-decoration: underline;
-    }
-
-    #journalEditor a:hover {
-      color: #0a58ca;
-    }
+    .resize-handle.nw { cursor: nw-resize; } .resize-handle.ne { cursor: ne-resize; }
+    .resize-handle.sw { cursor: sw-resize; } .resize-handle.se { cursor: se-resize; }
+    .resize-handle.n  { cursor: n-resize;  } .resize-handle.s  { cursor: s-resize;  }
+    .resize-handle.e  { cursor: e-resize;  } .resize-handle.w  { cursor: w-resize;  }
   </style>
 </head>
 <body class="bgimage">
-   <nav class="navbar navbar-expand-lg navbar-dark fixed-top text-light" id="mainNav">
+  <nav class="navbar navbar-expand-lg navbar-dark fixed-top text-light" id="mainNav">
     <div class="container-fluid">
       <a class="navbar-brand" href="index.html">
         <img src="/images/DMsToolboxLogo.png" height="40" width="40" alt="App Logo" class="d-inline-block" />
@@ -230,9 +252,7 @@
       <div class="collapse navbar-collapse" id="navbarSupportedContent">
         <ul class="navbar-nav me-auto mb-2 mb-lg-0">
           <li class="nav-item dropdown">
-            <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-              Combat
-            </a>
+            <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">Combat</a>
             <ul class="dropdown-menu">
               <li><a class="dropdown-item" href="initiative.html">Initiative Tracker</a></li>
               <li><a class="dropdown-item" href="battlemap.html">Battle Map</a></li>
@@ -240,9 +260,7 @@
             </ul>
           </li>
           <li class="nav-item dropdown">
-            <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-              Generators
-            </a>
+            <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">Generators</a>
             <ul class="dropdown-menu">
               <li><a class="dropdown-item" href="name.html">Name Generator</a></li>
               <li><a class="dropdown-item" href="loot.html">Loot Generator</a></li>
@@ -252,80 +270,91 @@
             </ul>
           </li>
           <li class="nav-item dropdown">
-            <a class="nav-link dropdown-toggle active" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-              Campaign
-            </a>
+            <a class="nav-link dropdown-toggle active" href="#" role="button" data-bs-toggle="dropdown">Campaign</a>
             <ul class="dropdown-menu">
               <li><a class="dropdown-item" href="characters.html">Characters</a></li>
               <li><a class="dropdown-item active" aria-current="page" href="journal.html">Journal</a></li>
               <li><a class="dropdown-item" href="reference.html">Compendium</a></li>
             </ul>
+          </li>
         </ul>
       </div>
     </div>
-   </nav>
+  </nav>
+
   <main class="content pt-3">
     <div class="container-fluid backdrop">
       <div class="row">
-        <!-- Left Sidebar - File List -->
-        <div class="col-md-3">
+
+        <!-- ── Left Sidebar ───────────────────────────────────────────────── -->
+        <div class="col-md-3" id="sidebarCol">
           <div class="card bg-dark text-light">
             <div class="card-header d-flex justify-content-between align-items-center">
-              <h5 class="mb-0">Journal Entries</h5>
-              <div>
-                <button class="btn btn-info btn-sm me-1" id="bulkExportBtn" data-bs-toggle="modal" data-bs-target="#bulkExportModal" title="Bulk Export">
+              <h5 class="mb-0">
+                Journal
+                <span class="badge bg-secondary ms-1 fw-normal" id="entryCountBadge" style="font-size:0.7rem;"></span>
+              </h5>
+              <div class="d-flex gap-1">
+                <button class="btn btn-info btn-sm" id="bulkExportBtn"
+                  data-bs-toggle="modal" data-bs-target="#bulkExportModal" title="Bulk Export">
                   <i class="bi bi-box-arrow-down"></i>
                 </button>
-                <button class="btn btn-warning btn-sm me-1" id="importBtn" title="Import Entry">
+                <button class="btn btn-warning btn-sm" id="importBtn" title="Import Entry">
                   <i class="bi bi-upload"></i>
                 </button>
-                <button class="btn btn-success btn-sm" id="newFileBtn" title="New Entry">
+                <button class="btn btn-secondary btn-sm" id="templatesBtn"
+                  data-bs-toggle="modal" data-bs-target="#templatesModal" title="New from Template">
+                  <i class="bi bi-file-earmark-plus"></i>
+                </button>
+                <button class="btn btn-success btn-sm" id="newFileBtn" title="New Blank Entry">
                   <i class="bi bi-plus-lg"></i>
                 </button>
               </div>
-              <!-- Hidden file input for import -->
-              <input type="file" id="importFileInput" accept=".txt,.md,.markdown,.docx,.pdf" style="display: none;" />
+              <input type="file" id="importFileInput" accept=".txt,.md,.markdown" style="display:none;" />
             </div>
             <div class="card-body p-0">
-              <!-- Search Bar -->
+              <!-- Search -->
               <div class="p-2 border-bottom border-secondary">
                 <div class="input-group input-group-sm">
-                  <span class="input-group-text bg-secondary text-light border-secondary">
-                    <i class="bi bi-search"></i>
-                  </span>
+                  <span class="input-group-text bg-secondary text-light border-secondary"><i class="bi bi-search"></i></span>
                   <input type="text" class="form-control bg-dark text-light border-secondary"
-                         id="searchInput" placeholder="Search entries..." />
-                  <button class="btn btn-outline-secondary" type="button" id="clearSearchBtn" title="Clear search">
-                    <i class="bi bi-x-lg"></i>
-                  </button>
+                    id="searchInput" placeholder="Search entries…" />
+                  <button class="btn btn-outline-secondary" id="clearSearchBtn" title="Clear"><i class="bi bi-x-lg"></i></button>
                 </div>
               </div>
-              <!-- Sort Options -->
+              <!-- Sort -->
               <div class="p-2 border-bottom border-secondary">
                 <div class="input-group input-group-sm">
-                  <span class="input-group-text bg-secondary text-light border-secondary">
-                    <i class="bi bi-sort-down"></i>
-                  </span>
+                  <span class="input-group-text bg-secondary text-light border-secondary"><i class="bi bi-sort-down"></i></span>
                   <select class="form-select form-select-sm bg-dark text-light border-secondary" id="sortSelect">
                     <option value="modified-desc">Last Modified (Newest)</option>
                     <option value="modified-asc">Last Modified (Oldest)</option>
                     <option value="created-desc">Created (Newest)</option>
                     <option value="created-asc">Created (Oldest)</option>
-                    <option value="name-asc">Name (A-Z)</option>
-                    <option value="name-desc">Name (Z-A)</option>
+                    <option value="name-asc">Name (A–Z)</option>
+                    <option value="name-desc">Name (Z–A)</option>
                   </select>
                 </div>
               </div>
-              <div class="file-list" id="fileList">
-                <!-- Files will be loaded here -->
+              <!-- Tag filter -->
+              <div class="p-2 border-bottom border-secondary">
+                <div class="input-group input-group-sm">
+                  <span class="input-group-text bg-secondary text-light border-secondary"><i class="bi bi-tag"></i></span>
+                  <select class="form-select form-select-sm bg-dark text-light border-secondary" id="tagFilterSelect">
+                    <option value="">All entries</option>
+                  </select>
+                </div>
               </div>
+              <div class="file-list" id="fileList" role="listbox" aria-label="Journal entries"></div>
             </div>
           </div>
         </div>
 
-        <!-- Right Side - Editor -->
-        <div class="col-md-9">
+        <!-- ── Editor ─────────────────────────────────────────────────────── -->
+        <div class="col-md-9" id="editorCol">
           <div class="card bg-dark text-light">
+
+            <!-- Card header row 1: name + buttons -->
             <div class="card-header">
               <div class="row align-items-center">
                 <div class="col-md-6">
@@ -334,66 +363,233 @@
                       <i class="bi bi-journal-text"></i>
                     </span>
                     <input type="text" class="form-control bg-dark text-light border-secondary"
-                           id="fileName" placeholder="Entry name..." />
+                      id="fileName" placeholder="Entry name…" />
                   </div>
                 </div>
-                <div class="col-md-6 text-end mt-2 mt-md-0">
-                  <button class="btn btn-primary" id="saveBtn" title="Save (Ctrl+S)">
-                    <i class="bi bi-floppy"></i> Save
-                  </button>
-                  <button class="btn btn-success" id="exportBtn" data-bs-toggle="modal" data-bs-target="#exportModal" title="Export Entry">
-                    <i class="bi bi-download"></i> Export
-                  </button>
-                  <button class="btn btn-danger" id="deleteBtn" disabled>
-                    <i class="bi bi-trash"></i> Delete
-                  </button>
+                <div class="col-md-6 text-end mt-2 mt-md-0 d-flex justify-content-end gap-1 flex-wrap">
+                  <button class="btn btn-primary"          id="saveBtn"      title="Save (Ctrl+S)"><i class="bi bi-floppy"></i> Save</button>
+                  <button class="btn btn-success"          id="exportBtn"    data-bs-toggle="modal" data-bs-target="#exportModal" title="Export"><i class="bi bi-download"></i> Export</button>
+                  <button class="btn btn-secondary"        id="printBtn"     title="Print"><i class="bi bi-printer"></i></button>
+                  <button class="btn btn-outline-secondary" id="focusModeBtn" title="Focus Mode (hide sidebar)"><i class="bi bi-arrows-fullscreen"></i></button>
+                  <button class="btn btn-outline-info"     id="helpBtn"      title="Help — Journal Features" data-bs-toggle="offcanvas" data-bs-target="#journalHelpOffcanvas"><i class="bi bi-question-circle"></i></button>
+                  <button class="btn btn-danger"           id="deleteBtn"    disabled><i class="bi bi-trash"></i> Delete</button>
+                </div>
+              </div>
+              <!-- Card header row 2: tags -->
+              <div class="row mt-2">
+                <div class="col-12">
+                  <div class="d-flex align-items-center gap-2 flex-wrap">
+                    <small class="text-muted flex-shrink-0"><i class="bi bi-tags"></i></small>
+                    <div id="tagPillContainer" class="d-flex flex-wrap gap-1 align-items-center flex-grow-1">
+                      <!-- tag pills inserted here by JS -->
+                    </div>
+                    <input type="text" id="tagInput"
+                      class="form-control form-control-sm bg-dark text-light border-secondary"
+                      placeholder="Add tag, press Enter…"
+                      style="max-width:180px;font-size:0.75rem;" />
+                  </div>
                 </div>
               </div>
             </div>
-            <div class="card-body">
-              <!-- Quill Editor -->
+
+            <!-- Formatting Toolbar -->
+            <div class="editor-toolbar" id="editorToolbar">
+              <!-- Row 1 -->
+              <div class="d-flex flex-wrap gap-1 align-items-center mb-1">
+                <select id="headingSelect" class="form-select toolbar-select" title="Text style">
+                  <option value="0">Normal</option>
+                  <option value="1">Heading 1</option>
+                  <option value="2">Heading 2</option>
+                  <option value="3">Heading 3</option>
+                </select>
+                <div class="btn-group btn-group-sm">
+                  <button class="btn btn-sm toolbar-btn" id="boldBtn"      title="Bold (Ctrl+B)"><i class="bi bi-type-bold"></i></button>
+                  <button class="btn btn-sm toolbar-btn" id="italicBtn"    title="Italic (Ctrl+I)"><i class="bi bi-type-italic"></i></button>
+                  <button class="btn btn-sm toolbar-btn" id="underlineBtn" title="Underline (Ctrl+U)"><i class="bi bi-type-underline"></i></button>
+                  <button class="btn btn-sm toolbar-btn" id="strikeBtn"    title="Strikethrough"><i class="bi bi-type-strikethrough"></i></button>
+                </div>
+                <div class="btn-group btn-group-sm">
+                  <button class="btn btn-sm toolbar-btn color-pick-btn" id="textColorBtn" title="Text Color">
+                    <i class="bi bi-fonts"></i>
+                    <input type="color" id="textColorPicker" value="#000000">
+                  </button>
+                  <button class="btn btn-sm toolbar-btn color-pick-btn" id="highlightBtn" title="Highlight Color">
+                    <i class="bi bi-highlighter"></i>
+                    <input type="color" id="highlightColorPicker" value="#ffff00">
+                  </button>
+                </div>
+                <div class="btn-group btn-group-sm">
+                  <button class="btn btn-sm toolbar-btn" id="alignLeftBtn"   title="Align Left"><i class="bi bi-text-left"></i></button>
+                  <button class="btn btn-sm toolbar-btn" id="alignCenterBtn" title="Align Center"><i class="bi bi-text-center"></i></button>
+                  <button class="btn btn-sm toolbar-btn" id="alignRightBtn"  title="Align Right"><i class="bi bi-text-right"></i></button>
+                </div>
+                <button class="btn btn-sm toolbar-btn" id="clearFormatBtn" title="Clear Formatting"><i class="bi bi-eraser"></i></button>
+              </div>
+              <!-- Row 2 -->
+              <div class="d-flex flex-wrap gap-1 align-items-center">
+                <div class="btn-group btn-group-sm">
+                  <button class="btn btn-sm toolbar-btn" id="bulletListBtn"  title="Bullet List"><i class="bi bi-list-ul"></i></button>
+                  <button class="btn btn-sm toolbar-btn" id="orderedListBtn" title="Numbered List"><i class="bi bi-list-ol"></i></button>
+                  <button class="btn btn-sm toolbar-btn" id="taskListBtn"    title="Task / Checklist"><i class="bi bi-check2-square"></i></button>
+                </div>
+                <div class="btn-group btn-group-sm">
+                  <button class="btn btn-sm toolbar-btn" id="blockquoteBtn" title="Blockquote"><i class="bi bi-blockquote-left"></i></button>
+                  <button class="btn btn-sm toolbar-btn" id="codeBlockBtn"  title="Code Block"><i class="bi bi-code-slash"></i></button>
+                  <button class="btn btn-sm toolbar-btn" id="hrBtn"         title="Horizontal Rule"><i class="bi bi-dash-lg"></i></button>
+                  <button class="btn btn-sm toolbar-btn" id="detailsBtn"    title="Collapsible Section (hide/show content)"><i class="bi bi-arrows-collapse"></i></button>
+                </div>
+                <div class="dropdown">
+                  <button class="btn btn-sm toolbar-btn dropdown-toggle" id="tableDropdownBtn"
+                    data-bs-toggle="dropdown" aria-expanded="false" title="Insert Table">
+                    <i class="bi bi-table"></i>
+                  </button>
+                  <ul class="dropdown-menu dropdown-menu-dark">
+                    <li><h6 class="dropdown-header">Insert Table</h6></li>
+                    <li><a class="dropdown-item" href="#" data-table-rows="2" data-table-cols="2">2 × 2</a></li>
+                    <li><a class="dropdown-item" href="#" data-table-rows="3" data-table-cols="3">3 × 3</a></li>
+                    <li><a class="dropdown-item" href="#" data-table-rows="4" data-table-cols="4">4 × 4</a></li>
+                    <li><a class="dropdown-item" href="#" data-table-rows="5" data-table-cols="5">5 × 5</a></li>
+                    <li><a class="dropdown-item" href="#" data-table-rows="3" data-table-cols="5">3 × 5</a></li>
+                  </ul>
+                </div>
+                <div class="btn-group btn-group-sm">
+                  <button class="btn btn-sm toolbar-btn" id="linkBtn"  title="Insert / Edit Link"><i class="bi bi-link-45deg"></i></button>
+                  <button class="btn btn-sm toolbar-btn" id="imageBtn" title="Insert Image"><i class="bi bi-image"></i></button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Table Context Bar -->
+            <div id="tableContextBar">
+              <small class="text-muted me-1"><i class="bi bi-table"></i></small>
+              <div class="btn-group btn-group-sm">
+                <button class="btn btn-sm toolbar-btn" id="addRowBeforeBtn" title="Add Row Above"><i class="bi bi-arrow-up-square"></i> Row</button>
+                <button class="btn btn-sm toolbar-btn" id="addRowAfterBtn"  title="Add Row Below"><i class="bi bi-arrow-down-square"></i> Row</button>
+              </div>
+              <div class="btn-group btn-group-sm">
+                <button class="btn btn-sm toolbar-btn" id="addColBeforeBtn" title="Add Column Left"><i class="bi bi-arrow-left-square"></i> Col</button>
+                <button class="btn btn-sm toolbar-btn" id="addColAfterBtn"  title="Add Column Right"><i class="bi bi-arrow-right-square"></i> Col</button>
+              </div>
+              <div class="btn-group btn-group-sm">
+                <button class="btn btn-sm toolbar-btn" id="deleteRowBtn" title="Delete Row"><i class="bi bi-dash-square"></i> Row</button>
+                <button class="btn btn-sm toolbar-btn" id="deleteColBtn" title="Delete Column"><i class="bi bi-dash-square"></i> Col</button>
+              </div>
+              <div class="btn-group btn-group-sm">
+                <button class="btn btn-sm toolbar-btn" id="mergeCellsBtn"   title="Merge Cells"><i class="bi bi-union"></i></button>
+                <button class="btn btn-sm toolbar-btn" id="splitCellBtn"    title="Split Cell"><i class="bi bi-intersect"></i></button>
+                <button class="btn btn-sm toolbar-btn" id="toggleHeaderBtn" title="Toggle Header Row"><i class="bi bi-layout-three-columns"></i></button>
+              </div>
+              <button class="btn btn-sm btn-outline-danger" id="deleteTableBtn" title="Delete Table">
+                <i class="bi bi-trash"></i> Table
+              </button>
+            </div>
+
+            <!-- Editor mount -->
+            <div class="card-body p-0">
               <div id="journalEditor"></div>
-              <!-- Word/Character Count -->
-              <div class="mt-2 text-end">
+              <div class="px-3 py-1 border-top border-secondary text-end">
                 <small class="text-muted" id="wordCount">Words: 0 | Characters: 0</small>
+              </div>
+              <!-- Backlinks panel: entries that link to this one via [[wikilinks]] -->
+              <div id="backlinksPanel" style="display:none;">
+                <div class="d-flex align-items-center gap-2 mb-2">
+                  <small class="text-muted"><i class="bi bi-arrow-left-right"></i> <strong>Referenced by</strong></small>
+                  <span class="badge bg-secondary" id="backlinksCount" style="font-size:0.65rem;"></span>
+                </div>
+                <div id="backlinksList" class="d-flex flex-wrap gap-2"></div>
               </div>
             </div>
           </div>
         </div>
-      </div>
+
+      </div><!-- /row -->
     </div>
   </main>
 
-  <!-- Export Modal -->
+  <!-- ── Templates Modal ──────────────────────────────────────────────────── -->
+  <div class="modal fade" id="templatesModal" tabindex="-1" aria-labelledby="templatesModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+      <div class="modal-content bg-dark text-light">
+        <div class="modal-header border-secondary">
+          <h5 class="modal-title" id="templatesModalLabel"><i class="bi bi-file-earmark-plus"></i> New from Template</h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <p class="text-muted mb-3">Select a starting template — every field is fully editable after loading.</p>
+          <div class="row g-3">
+            <div class="col-6 col-md-3">
+              <div class="card bg-secondary h-100 template-card" data-template="session">
+                <div class="card-body text-center p-3">
+                  <i class="bi bi-calendar3-event" style="font-size:2.5rem;color:#1d9e6d;"></i>
+                  <div class="fw-bold mt-2">Session Log</div>
+                  <small class="text-muted">Events, NPCs, cliffhangers, prep tasks</small>
+                </div>
+              </div>
+            </div>
+            <div class="col-6 col-md-3">
+              <div class="card bg-secondary h-100 template-card" data-template="npc">
+                <div class="card-body text-center p-3">
+                  <i class="bi bi-person-badge" style="font-size:2.5rem;color:#6f42c1;"></i>
+                  <div class="fw-bold mt-2">NPC Profile</div>
+                  <small class="text-muted">Appearance, personality, backstory, hooks</small>
+                </div>
+              </div>
+            </div>
+            <div class="col-6 col-md-3">
+              <div class="card bg-secondary h-100 template-card" data-template="location">
+                <div class="card-body text-center p-3">
+                  <i class="bi bi-geo-alt" style="font-size:2.5rem;color:#fd7e14;"></i>
+                  <div class="fw-bold mt-2">Location</div>
+                  <small class="text-muted">Description, feature table, connections</small>
+                </div>
+              </div>
+            </div>
+            <div class="col-6 col-md-3">
+              <div class="card bg-secondary h-100 template-card" data-template="encounter">
+                <div class="card-body text-center p-3">
+                  <i class="bi bi-shield-exclamation" style="font-size:2.5rem;color:#dc3545;"></i>
+                  <div class="fw-bold mt-2">Encounter</div>
+                  <small class="text-muted">Monster table, tactics, rewards, outcome</small>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer border-secondary">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Export Modal ─────────────────────────────────────────────────────── -->
   <div class="modal fade" id="exportModal" tabindex="-1" aria-labelledby="exportModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
       <div class="modal-content bg-dark text-light">
         <div class="modal-header border-secondary">
-          <h5 class="modal-title" id="exportModalLabel">
-            <i class="bi bi-download"></i> Export Journal Entry
-          </h5>
-          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+          <h5 class="modal-title" id="exportModalLabel"><i class="bi bi-download"></i> Export Journal Entry</h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
         </div>
         <div class="modal-body">
           <p class="mb-3">Choose a format to export your journal entry:</p>
           <div class="d-grid gap-2">
-            <button class="btn btn-outline-light btn-lg text-start" onclick="handleExportClick('txt')">
+            <button class="btn btn-outline-light btn-lg text-start" data-export-format="txt">
               <i class="bi bi-file-earmark-text"></i> Plain Text (.txt)
-              <small class="d-block text-muted">Simple text format without formatting</small>
+              <small class="d-block text-muted">Simple text without formatting</small>
             </button>
-            <button class="btn btn-outline-light btn-lg text-start" onclick="handleExportClick('markdown')">
+            <button class="btn btn-outline-light btn-lg text-start" data-export-format="markdown">
               <i class="bi bi-markdown"></i> Markdown (.md)
               <small class="d-block text-muted">Markdown format for documentation</small>
             </button>
-            <button class="btn btn-outline-light btn-lg text-start" onclick="handleExportClick('word')">
+            <button class="btn btn-outline-light btn-lg text-start" data-export-format="word">
               <i class="bi bi-file-earmark-word"></i> Word Document (.docx)
               <small class="d-block text-muted">Microsoft Word format</small>
             </button>
-            <button class="btn btn-outline-light btn-lg text-start" onclick="handleExportClick('pdf')">
+            <button class="btn btn-outline-light btn-lg text-start" data-export-format="pdf">
               <i class="bi bi-file-earmark-pdf"></i> PDF Document (.pdf)
               <small class="d-block text-muted">Portable Document Format</small>
             </button>
-            <button class="btn btn-outline-light btn-lg text-start" onclick="handleExportClick('clipboard')">
+            <button class="btn btn-outline-light btn-lg text-start" data-export-format="clipboard">
               <i class="bi bi-clipboard"></i> Copy to Clipboard
               <small class="d-block text-muted">Copy content as plain text</small>
             </button>
@@ -406,115 +602,320 @@
     </div>
   </div>
 
-  <!-- Bulk Export Modal -->
+  <!-- ── Bulk Export Modal ─────────────────────────────────────────────────── -->
   <div class="modal fade" id="bulkExportModal" tabindex="-1" aria-labelledby="bulkExportModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-lg">
       <div class="modal-content bg-dark text-light">
         <div class="modal-header border-secondary">
-          <h5 class="modal-title" id="bulkExportModalLabel">
-            <i class="bi bi-box-arrow-down"></i> Bulk Export Journal Entries
-          </h5>
-          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+          <h5 class="modal-title" id="bulkExportModalLabel"><i class="bi bi-box-arrow-down"></i> Bulk Export</h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
         </div>
         <div class="modal-body">
-          <!-- Search Bar -->
           <div class="mb-3">
             <div class="input-group">
-              <span class="input-group-text bg-secondary text-light border-secondary">
-                <i class="bi bi-search"></i>
-              </span>
-              <input type="text" class="form-control bg-dark text-light border-secondary"
-                     id="bulkSearchInput" placeholder="Search entries..." />
-              <button class="btn btn-outline-secondary" type="button" id="clearBulkSearchBtn" title="Clear search">
-                <i class="bi bi-x-lg"></i>
-              </button>
+              <span class="input-group-text bg-secondary text-light border-secondary"><i class="bi bi-search"></i></span>
+              <input type="text" class="form-control bg-dark text-light border-secondary" id="bulkSearchInput" placeholder="Search entries…" />
+              <button class="btn btn-outline-secondary" id="clearBulkSearchBtn"><i class="bi bi-x-lg"></i></button>
             </div>
           </div>
-
-          <!-- Selection Controls -->
           <div class="mb-3 d-flex justify-content-between align-items-center">
-            <div>
-              <button class="btn btn-sm btn-outline-light" id="selectAllBtn">
-                <i class="bi bi-check-square"></i> Select All
-              </button>
-              <button class="btn btn-sm btn-outline-light" id="selectNoneBtn">
-                <i class="bi bi-square"></i> Deselect All
-              </button>
+            <div class="d-flex gap-1">
+              <button class="btn btn-sm btn-outline-light" id="selectAllBtn"><i class="bi bi-check-square"></i> Select All</button>
+              <button class="btn btn-sm btn-outline-light" id="selectNoneBtn"><i class="bi bi-square"></i> Deselect All</button>
             </div>
             <span class="text-muted" id="selectionCount">0 selected</span>
           </div>
-
-          <!-- Entry List with Checkboxes -->
-          <div class="border border-secondary rounded" style="max-height: 400px; overflow-y: auto;">
-            <div id="bulkEntryList" class="p-2">
-              <!-- Entries will be loaded here -->
-            </div>
+          <div class="border border-secondary rounded" style="max-height:400px;overflow-y:auto;">
+            <div id="bulkEntryList" class="p-2"></div>
           </div>
-
-          <!-- Format Selection -->
           <div class="mt-3">
             <label class="form-label">Export Format:</label>
             <div class="btn-group w-100" role="group">
-              <input type="radio" class="btn-check" name="bulkExportFormat" id="bulkFormatTxt" value="txt" autocomplete="off" checked>
-              <label class="btn btn-outline-light" for="bulkFormatTxt">
-                <i class="bi bi-file-earmark-text"></i> TXT
-              </label>
-
-              <input type="radio" class="btn-check" name="bulkExportFormat" id="bulkFormatMd" value="markdown" autocomplete="off">
-              <label class="btn btn-outline-light" for="bulkFormatMd">
-                <i class="bi bi-markdown"></i> Markdown
-              </label>
-
-              <input type="radio" class="btn-check" name="bulkExportFormat" id="bulkFormatDocx" value="word" autocomplete="off">
-              <label class="btn btn-outline-light" for="bulkFormatDocx">
-                <i class="bi bi-file-earmark-word"></i> Word
-              </label>
-
-              <input type="radio" class="btn-check" name="bulkExportFormat" id="bulkFormatPdf" value="pdf" autocomplete="off">
-              <label class="btn btn-outline-light" for="bulkFormatPdf">
-                <i class="bi bi-file-earmark-pdf"></i> PDF
-              </label>
+              <input type="radio" class="btn-check" name="bulkExportFormat" id="bulkFormatTxt"  value="txt"      autocomplete="off" checked>
+              <label class="btn btn-outline-light" for="bulkFormatTxt"><i class="bi bi-file-earmark-text"></i> TXT</label>
+              <input type="radio" class="btn-check" name="bulkExportFormat" id="bulkFormatMd"   value="markdown" autocomplete="off">
+              <label class="btn btn-outline-light" for="bulkFormatMd"><i class="bi bi-markdown"></i> Markdown</label>
+              <input type="radio" class="btn-check" name="bulkExportFormat" id="bulkFormatDocx" value="word"     autocomplete="off">
+              <label class="btn btn-outline-light" for="bulkFormatDocx"><i class="bi bi-file-earmark-word"></i> Word</label>
+              <input type="radio" class="btn-check" name="bulkExportFormat" id="bulkFormatPdf"  value="pdf"      autocomplete="off">
+              <label class="btn btn-outline-light" for="bulkFormatPdf"><i class="bi bi-file-earmark-pdf"></i> PDF</label>
             </div>
           </div>
         </div>
         <div class="modal-footer border-secondary">
           <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-          <button type="button" class="btn btn-success" id="executeBulkExportBtn">
-            <i class="bi bi-download"></i> Export Selected
-          </button>
+          <button type="button" class="btn btn-success" id="executeBulkExportBtn"><i class="bi bi-download"></i> Export Selected</button>
         </div>
       </div>
     </div>
   </div>
 
-  <!-- Footer -->
+  <!-- ── Help Offcanvas ───────────────────────────────────────────────────── -->
+  <div class="offcanvas offcanvas-end text-light" id="journalHelpOffcanvas"
+       tabindex="-1" data-bs-scroll="true" style="width:430px;background:#1e2124;">
+    <div class="offcanvas-header border-bottom border-secondary">
+      <h5 class="offcanvas-title fw-semibold">
+        <i class="bi bi-question-circle text-info me-2"></i>Journal Help
+      </h5>
+      <button type="button" class="btn-close btn-close-white" data-bs-dismiss="offcanvas"></button>
+    </div>
+    <div class="offcanvas-body p-0 overflow-y-auto">
+      <div class="accordion accordion-flush" id="helpAccordion">
+
+        <!-- Getting Started -->
+        <div class="accordion-item" style="background:#1e2124;border-color:#495057;">
+          <h2 class="accordion-header">
+            <button class="accordion-button collapsed" type="button"
+              data-bs-toggle="collapse" data-bs-target="#helpGettingStarted"
+              style="background:#2b2f33;color:#f8f9fa;">
+              <i class="bi bi-rocket-takeoff me-2 text-success"></i>Getting Started
+            </button>
+          </h2>
+          <div id="helpGettingStarted" class="accordion-collapse collapse" data-bs-parent="#helpAccordion">
+            <div class="accordion-body text-light" style="background:#1e2124;font-size:0.875rem;">
+              <p class="mb-2"><strong><i class="bi bi-plus-lg text-success"></i> New entry</strong> — green <strong>+</strong> button in the sidebar header. Opens a blank entry ready to name and fill.</p>
+              <p class="mb-2"><strong><i class="bi bi-file-earmark-plus"></i> Templates</strong> — 📄 button loads a structured starter: <em>Session Log, NPC Profile, Location,</em> or <em>Encounter</em>. Every field is editable after loading.</p>
+              <p class="mb-2"><strong><i class="bi bi-upload text-warning"></i> Import</strong> — yellow upload button accepts <code>.txt</code> and <code>.md</code> files. The filename becomes the entry name.</p>
+              <p class="mb-0"><strong><i class="bi bi-database"></i> Storage</strong> — all data lives in your browser's IndexedDB. No accounts, no cloud. Your last-opened entry is restored automatically on your next visit.</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Slash Commands -->
+        <div class="accordion-item" style="background:#1e2124;border-color:#495057;">
+          <h2 class="accordion-header">
+            <button class="accordion-button collapsed" type="button"
+              data-bs-toggle="collapse" data-bs-target="#helpSlash"
+              style="background:#2b2f33;color:#f8f9fa;">
+              <i class="bi bi-terminal me-2 text-info"></i>Slash Commands&nbsp;<kbd>/</kbd>
+            </button>
+          </h2>
+          <div id="helpSlash" class="accordion-collapse collapse" data-bs-parent="#helpAccordion">
+            <div class="accordion-body text-light" style="background:#1e2124;font-size:0.875rem;">
+              <p class="mb-2">Type <kbd>/</kbd> anywhere in the editor to open the command palette. Filter by typing, navigate with <kbd>↑</kbd><kbd>↓</kbd>, pick with <kbd>Enter</kbd> or click. <kbd>Escape</kbd> closes without inserting.</p>
+              <div class="row g-1 mb-0" style="font-size:0.82rem;">
+                <div class="col-6"><code>/heading</code> → H1 / H2 / H3</div>
+                <div class="col-6"><code>/bullet</code> → Bullet List</div>
+                <div class="col-6"><code>/number</code> → Numbered List</div>
+                <div class="col-6"><code>/task</code> → Task List</div>
+                <div class="col-6"><code>/table</code> → 3×3 Table</div>
+                <div class="col-6"><code>/collapse</code> → Collapsible</div>
+                <div class="col-6"><code>/quote</code> → Blockquote</div>
+                <div class="col-6"><code>/code</code> → Code Block</div>
+                <div class="col-6"><code>/divider</code> → Horizontal Rule</div>
+                <div class="col-6"><code>/image</code> → Insert Image</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Text Formatting -->
+        <div class="accordion-item" style="background:#1e2124;border-color:#495057;">
+          <h2 class="accordion-header">
+            <button class="accordion-button collapsed" type="button"
+              data-bs-toggle="collapse" data-bs-target="#helpFormatting"
+              style="background:#2b2f33;color:#f8f9fa;">
+              <i class="bi bi-type-bold me-2"></i>Text Formatting
+            </button>
+          </h2>
+          <div id="helpFormatting" class="accordion-collapse collapse" data-bs-parent="#helpAccordion">
+            <div class="accordion-body text-light" style="background:#1e2124;font-size:0.875rem;">
+              <p class="mb-1"><strong>Headings</strong> — <em>Normal</em> dropdown in toolbar row 1 → H1, H2, or H3.</p>
+              <p class="mb-1"><strong>Bold</strong> <kbd>Ctrl+B</kbd> · <strong>Italic</strong> <kbd>Ctrl+I</kbd> · <strong>Underline</strong> <kbd>Ctrl+U</kbd> · Strikethrough</p>
+              <p class="mb-1"><strong>Colors</strong> — text color and highlight color pickers in toolbar row 1.</p>
+              <p class="mb-1"><strong>Alignment</strong> — Left, Center, Right. <strong>Clear Formatting</strong> (eraser) strips all marks and block styles from the selection.</p>
+              <p class="mb-0"><strong>Auto-corrections</strong> — <code>--</code> → em dash · <code>"quotes"</code> → curly · <code>(c)</code> → © · <code>...</code> → ellipsis (type a space after to confirm)</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Lists, Blocks & Tables -->
+        <div class="accordion-item" style="background:#1e2124;border-color:#495057;">
+          <h2 class="accordion-header">
+            <button class="accordion-button collapsed" type="button"
+              data-bs-toggle="collapse" data-bs-target="#helpBlocks"
+              style="background:#2b2f33;color:#f8f9fa;">
+              <i class="bi bi-list-ul me-2"></i>Lists, Blocks &amp; Tables
+            </button>
+          </h2>
+          <div id="helpBlocks" class="accordion-collapse collapse" data-bs-parent="#helpAccordion">
+            <div class="accordion-body text-light" style="background:#1e2124;font-size:0.875rem;">
+              <p class="mb-1"><strong>Bullet / Numbered / Task Lists</strong> — toolbar row 2. Task items are interactive checkboxes. <kbd>Tab</kbd> nests, <kbd>Shift+Tab</kbd> un-nests.</p>
+              <p class="mb-1"><strong>Blockquote</strong> — great for NPC speech or flavor text.</p>
+              <p class="mb-1"><strong>Code Block</strong> — monospace preformatted block for stat blocks or scripts.</p>
+              <p class="mb-1"><strong>Horizontal Rule</strong> — visual section divider.</p>
+              <p class="mb-1"><strong>Collapsible Section</strong> — toolbar <i class="bi bi-arrows-collapse"></i> or <kbd>/collapse</kbd>. The title is auto-selected on insert — just start typing to rename it. Click the ▶ arrow to show/hide the body. Press <kbd>Enter</kbd> on an empty line inside to exit the section.</p>
+              <p class="mb-0"><strong>Tables</strong> — toolbar dropdown or <kbd>/table</kbd>. Click inside a table to reveal the <em>Table context bar</em> above the editor: add/delete rows and columns, merge/split cells, toggle header, delete table. Drag column borders to resize.</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Links & Images -->
+        <div class="accordion-item" style="background:#1e2124;border-color:#495057;">
+          <h2 class="accordion-header">
+            <button class="accordion-button collapsed" type="button"
+              data-bs-toggle="collapse" data-bs-target="#helpLinksImages"
+              style="background:#2b2f33;color:#f8f9fa;">
+              <i class="bi bi-image me-2"></i>Links &amp; Images
+            </button>
+          </h2>
+          <div id="helpLinksImages" class="accordion-collapse collapse" data-bs-parent="#helpAccordion">
+            <div class="accordion-body text-light" style="background:#1e2124;font-size:0.875rem;">
+              <p class="mb-1"><strong>Links</strong> — select text, then click <i class="bi bi-link-45deg"></i> to wrap it. Click with no selection to insert a new link (prompts for URL and label). Click the button while the cursor is on an existing link to edit or remove it. All links open in a new tab.</p>
+              <p class="mb-1"><strong>Insert Image</strong> — <i class="bi bi-image"></i> button or <kbd>/image</kbd>. Pick any local file; it stores as base64 (no external hosting needed).</p>
+              <p class="mb-1"><strong>Resize</strong> — click an image to show 8 resize handles. Drag any to resize.</p>
+              <p class="mb-0"><strong>Float Alignment</strong> — clicking an image shows a toolbar: <em>Left</em> (text wraps right), <em>None</em> (block), <em>Right</em> (text wraps left). Size and alignment persist through saves.</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Wikilinks & Backlinks -->
+        <div class="accordion-item" style="background:#1e2124;border-color:#495057;">
+          <h2 class="accordion-header">
+            <button class="accordion-button collapsed" type="button"
+              data-bs-toggle="collapse" data-bs-target="#helpWikilinks"
+              style="background:#2b2f33;color:#f8f9fa;">
+              <i class="bi bi-arrow-left-right me-2 text-success"></i>[[Wikilinks]] &amp; Backlinks
+            </button>
+          </h2>
+          <div id="helpWikilinks" class="accordion-collapse collapse" data-bs-parent="#helpAccordion">
+            <div class="accordion-body text-light" style="background:#1e2124;font-size:0.875rem;">
+              <p class="mb-1"><strong>Create a link</strong> — type <kbd>[[</kbd> to open an entry picker. Start typing to filter by name. Pick with <kbd>Enter</kbd> or click. A green <span class="wikilink">[[Entry Name]]</span> link inserts at the cursor.</p>
+              <p class="mb-1"><strong>Navigate</strong> — click any wikilink in the editor to jump to that entry instantly.</p>
+              <p class="mb-0"><strong>Backlinks panel</strong> — when an entry is referenced by others, a <em>Referenced by</em> bar appears below the word count. Click any entry name to jump to it. The panel refreshes automatically when you save.</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Drag Handles -->
+        <div class="accordion-item" style="background:#1e2124;border-color:#495057;">
+          <h2 class="accordion-header">
+            <button class="accordion-button collapsed" type="button"
+              data-bs-toggle="collapse" data-bs-target="#helpDrag"
+              style="background:#2b2f33;color:#f8f9fa;">
+              <i class="bi bi-grip-vertical me-2"></i>Drag to Reorder Blocks
+            </button>
+          </h2>
+          <div id="helpDrag" class="accordion-collapse collapse" data-bs-parent="#helpAccordion">
+            <div class="accordion-body text-light" style="background:#1e2124;font-size:0.875rem;">
+              <p class="mb-1">Hover over any top-level block (paragraph, heading, list, table…) to reveal a <i class="bi bi-grip-vertical"></i> grip icon to its left.</p>
+              <p class="mb-1">Drag the grip to move that block. A green line shows the drop target.</p>
+              <p class="mb-0">Release to drop. Press <kbd>Ctrl+Z</kbd> to undo.</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tags, Search & Sort -->
+        <div class="accordion-item" style="background:#1e2124;border-color:#495057;">
+          <h2 class="accordion-header">
+            <button class="accordion-button collapsed" type="button"
+              data-bs-toggle="collapse" data-bs-target="#helpTags"
+              style="background:#2b2f33;color:#f8f9fa;">
+              <i class="bi bi-tags me-2"></i>Tags, Search &amp; Sorting
+            </button>
+          </h2>
+          <div id="helpTags" class="accordion-collapse collapse" data-bs-parent="#helpAccordion">
+            <div class="accordion-body text-light" style="background:#1e2124;font-size:0.875rem;">
+              <p class="mb-1"><strong>Tags</strong> — type in the tag field below the entry title and press <kbd>Enter</kbd> or <kbd>,</kbd> to add. Tags appear as pills; click × to remove. Use the tag filter dropdown in the sidebar to show only entries with a specific tag.</p>
+              <p class="mb-1"><strong>Search</strong> — searches both entry names and full content. Matching text highlights in yellow. The entry count badge shows filtered vs. total.</p>
+              <p class="mb-1"><strong>Sort</strong> — 6 options: Last Modified (newest/oldest), Created (newest/oldest), Name (A–Z / Z–A). Your sort preference is remembered across sessions.</p>
+              <p class="mb-0"><strong>Pin</strong> — click <i class="bi bi-pin"></i> on any sidebar entry to pin it to the top of the list. Click again to unpin.</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Saving & Storage -->
+        <div class="accordion-item" style="background:#1e2124;border-color:#495057;">
+          <h2 class="accordion-header">
+            <button class="accordion-button collapsed" type="button"
+              data-bs-toggle="collapse" data-bs-target="#helpSaving"
+              style="background:#2b2f33;color:#f8f9fa;">
+              <i class="bi bi-floppy me-2"></i>Saving &amp; Storage
+            </button>
+          </h2>
+          <div id="helpSaving" class="accordion-collapse collapse" data-bs-parent="#helpAccordion">
+            <div class="accordion-body text-light" style="background:#1e2124;font-size:0.875rem;">
+              <p class="mb-1"><strong>Manual save</strong> — <kbd>Ctrl+S</kbd> or the Save button. The button turns yellow with an asterisk (*) when there are unsaved changes.</p>
+              <p class="mb-1"><strong>Auto-save</strong> — silently saves every 60 seconds when there are unsaved changes and an entry is open.</p>
+              <p class="mb-1"><strong>Switching entries</strong> — if you have unsaved changes and open or create another entry, a confirmation prompt appears before discarding.</p>
+              <p class="mb-0"><strong>Storage</strong> — all data is in your browser's IndexedDB. Nothing is sent to a server. Clearing browser data erases all entries — use bulk export to back up regularly.</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Export, Print & Focus Mode -->
+        <div class="accordion-item" style="background:#1e2124;border-color:#495057;">
+          <h2 class="accordion-header">
+            <button class="accordion-button collapsed" type="button"
+              data-bs-toggle="collapse" data-bs-target="#helpExport"
+              style="background:#2b2f33;color:#f8f9fa;">
+              <i class="bi bi-download me-2 text-success"></i>Export, Print &amp; Focus Mode
+            </button>
+          </h2>
+          <div id="helpExport" class="accordion-collapse collapse" data-bs-parent="#helpAccordion">
+            <div class="accordion-body text-light" style="background:#1e2124;font-size:0.875rem;">
+              <p class="mb-1"><strong>Export</strong> (green button) — single entry as Plain Text, Markdown, Word (.docx), PDF, or Copy to Clipboard.</p>
+              <p class="mb-1"><strong>Bulk Export</strong> (blue <i class="bi bi-box-arrow-down"></i> in the sidebar header) — select multiple entries and export as separate files or one combined document in any format.</p>
+              <p class="mb-1"><strong>Print</strong> — the <i class="bi bi-printer"></i> button opens the browser print dialog. The sidebar, toolbar, and all UI chrome are hidden; only the entry content prints.</p>
+              <p class="mb-0"><strong>Focus Mode</strong> — the <i class="bi bi-arrows-fullscreen"></i> button hides the sidebar for distraction-free writing. Press <kbd>Escape</kbd> to restore the sidebar.</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Keyboard Shortcuts -->
+        <div class="accordion-item" style="background:#1e2124;border-color:#495057;">
+          <h2 class="accordion-header">
+            <button class="accordion-button collapsed" type="button"
+              data-bs-toggle="collapse" data-bs-target="#helpShortcuts"
+              style="background:#2b2f33;color:#f8f9fa;">
+              <i class="bi bi-keyboard me-2"></i>Keyboard Shortcuts
+            </button>
+          </h2>
+          <div id="helpShortcuts" class="accordion-collapse collapse" data-bs-parent="#helpAccordion">
+            <div class="accordion-body p-2 text-light" style="background:#1e2124;font-size:0.82rem;">
+              <table class="table table-sm table-dark table-borderless mb-0">
+                <tbody>
+                  <tr><td><kbd>Ctrl+S</kbd></td><td>Save entry</td></tr>
+                  <tr><td><kbd>Ctrl+B</kbd></td><td>Bold</td></tr>
+                  <tr><td><kbd>Ctrl+I</kbd></td><td>Italic</td></tr>
+                  <tr><td><kbd>Ctrl+U</kbd></td><td>Underline</td></tr>
+                  <tr><td><kbd>Ctrl+Z</kbd></td><td>Undo</td></tr>
+                  <tr><td><kbd>Ctrl+Y</kbd></td><td>Redo</td></tr>
+                  <tr><td><kbd>/</kbd></td><td>Open slash command menu</td></tr>
+                  <tr><td><kbd>[[</kbd></td><td>Open wikilink entry picker</td></tr>
+                  <tr><td><kbd>Escape</kbd></td><td>Close menu · exit focus mode</td></tr>
+                  <tr><td><kbd>↑</kbd> <kbd>↓</kbd> <small class="text-muted">(sidebar)</small></td><td>Navigate entry list</td></tr>
+                  <tr><td><kbd>Enter</kbd> <small class="text-muted">(sidebar)</small></td><td>Open focused entry</td></tr>
+                  <tr><td><kbd>Tab</kbd> <small class="text-muted">(in table)</small></td><td>Move to next cell</td></tr>
+                  <tr><td><kbd>Shift+Tab</kbd> <small class="text-muted">(in table)</small></td><td>Move to previous cell</td></tr>
+                  <tr><td><kbd>Enter</kbd> <small class="text-muted">(empty block in collapsible)</small></td><td>Exit collapsible section</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+      </div><!-- /accordion -->
+    </div><!-- /offcanvas-body -->
+  </div><!-- /offcanvas -->
+
+  <!-- ── Footer ───────────────────────────────────────────────────────────── -->
   <footer class="container-fluid mt-5 site-footer" role="contentinfo">
     <div class="footer-main py-3">
       <div class="container">
         <div class="row align-items-center text-center text-md-start">
-          <!-- Left: Copyright -->
           <div class="col-12 col-md-4 mb-2 mb-md-0 text-md-start text-center">
-            <small class="text-muted">&copy; 2025 Maybeme | The DM’s Toolbox</small>
+            <small class="text-muted">&copy; 2025 Maybeme | The DM's Toolbox</small>
           </div>
-
-          <!-- Center: Logo -->
           <div class="col-12 col-md-4 text-center mb-2 mb-md-0">
             <img src="/images/White logo MM- no background.png" height="40" alt="Logo" class="footer-logo">
           </div>
-
-          <!-- Right: Social Links + Settings -->
           <div class="col-12 col-md-4 d-flex justify-content-center justify-content-md-end align-items-center gap-2">
-            <a href="https://www.linkedin.com/in/marlo-mayberry-930ab9b7/" class="socialicons" target="_blank" rel="noopener" aria-label="LinkedIn">
-              <i class="bi bi-linkedin"></i>
-            </a>
-            <a href="https://github.com/M-ybeme" class="socialicons" target="_blank" rel="noopener" aria-label="GitHub">
-              <i class="bi bi-github"></i>
-            </a>
-            <a href="https://ko-fi.com/maybemestoolbox" class="socialicons d-flex align-items-center" target="_blank" rel="noopener" title="Support The DM's Toolbox on Ko-fi">
-              <i class="bi bi-cup-hot"></i>
-            </a>
+            <a href="https://www.linkedin.com/in/marlo-mayberry-930ab9b7/" class="socialicons" target="_blank" rel="noopener" aria-label="LinkedIn"><i class="bi bi-linkedin"></i></a>
+            <a href="https://github.com/M-ybeme" class="socialicons" target="_blank" rel="noopener" aria-label="GitHub"><i class="bi bi-github"></i></a>
+            <a href="https://ko-fi.com/maybemestoolbox" class="socialicons d-flex align-items-center" target="_blank" rel="noopener" title="Support on Ko-fi"><i class="bi bi-cup-hot"></i></a>
             <button type="button" class="socialicons" onclick="window.toggleDiagnosticsPanel?.()"
-                    title="Open Settings &amp; Diagnostics" aria-label="Open Settings and Diagnostics panel">
+              title="Open Settings &amp; Diagnostics" aria-label="Open Settings and Diagnostics panel">
               <i class="bi bi-gear"></i>
             </button>
           </div>
@@ -523,1189 +924,1388 @@
     </div>
   </footer>
 
-  <script>
-    // IndexedDB Setup
-    const DB_NAME = 'JournalDB';
-    const DB_VERSION = 1;
-    const STORE_NAME = 'entries';
-    let db;
-    let quill;
-    let currentFileId = null;
-    let hasUnsavedChanges = false;
-    let lastSavedContent = '';
+  <!-- Print stylesheet -->
+  <style media="print">
+    .navbar, .editor-toolbar, #tableContextBar, .card-header,
+    .col-md-3, #wordCount, footer, .btn, #sidebarCol { display: none !important; }
+    #editorCol { width: 100% !important; max-width: 100% !important; flex: none !important; }
+    .card { border: none !important; box-shadow: none !important; }
+    .card-body { padding: 0 !important; }
+    .ProseMirror { height: auto !important; overflow: visible !important; color: #000 !important; background: #fff !important; }
+    body { background: white !important; }
+  </style>
 
-    // Initialize IndexedDB
+  <!-- ── TipTap module ─────────────────────────────────────────────────────── -->
+  <script type="module">
+    import { Editor, Extension, Node } from 'https://esm.sh/@tiptap/core@2'
+    import Suggestion from 'https://esm.sh/@tiptap/suggestion@2'
+    import Mention from 'https://esm.sh/@tiptap/extension-mention@2'
+    import Typography from 'https://esm.sh/@tiptap/extension-typography@2'
+    import StarterKit from 'https://esm.sh/@tiptap/starter-kit@2'
+    import Underline from 'https://esm.sh/@tiptap/extension-underline@2'
+    import Link from 'https://esm.sh/@tiptap/extension-link@2'
+    import TiptapImage from 'https://esm.sh/@tiptap/extension-image@2'
+    import TextAlign from 'https://esm.sh/@tiptap/extension-text-align@2'
+    import TextStyle from 'https://esm.sh/@tiptap/extension-text-style@2'
+    import Color from 'https://esm.sh/@tiptap/extension-color@2'
+    import Highlight from 'https://esm.sh/@tiptap/extension-highlight@2'
+    import Table from 'https://esm.sh/@tiptap/extension-table@2'
+    import TableRow from 'https://esm.sh/@tiptap/extension-table-row@2'
+    import TableHeader from 'https://esm.sh/@tiptap/extension-table-header@2'
+    import TableCell from 'https://esm.sh/@tiptap/extension-table-cell@2'
+    import TaskList from 'https://esm.sh/@tiptap/extension-task-list@2'
+    import TaskItem from 'https://esm.sh/@tiptap/extension-task-item@2'
+    import CharacterCount from 'https://esm.sh/@tiptap/extension-character-count@2'
+    import Placeholder from 'https://esm.sh/@tiptap/extension-placeholder@2'
+
+    // ── Custom Image (preserves style + float) ────────────────────────────
+    const CustomImage = TiptapImage.extend({
+      addAttributes() {
+        return {
+          ...this.parent?.(),
+          style: {
+            default: null,
+            parseHTML: el => el.getAttribute('style') || null,
+            renderHTML: attrs => attrs.style ? { style: attrs.style } : {},
+          },
+          'data-float': {
+            default: null,
+            parseHTML: el => {
+              if (el.classList.contains('img-float-left'))  return 'left'
+              if (el.classList.contains('img-float-right')) return 'right'
+              return null
+            },
+            renderHTML: attrs => {
+              if (!attrs['data-float']) return {}
+              return { class: `img-float-${attrs['data-float']}`, 'data-float': attrs['data-float'] }
+            },
+          },
+        }
+      },
+    })
+
+    // ── Templates ─────────────────────────────────────────────────────────
+    const TEMPLATES = {
+      session: {
+        name: 'Session # — Title',
+        tags: ['session'],
+        content: `<h1>Session # — Title</h1><h2>Summary</h2><p>A brief overview of what happened this session.</p><h2>Key Events</h2><ul><li>Event one</li><li>Event two</li><li>Event three</li></ul><h2>NPCs Encountered</h2><ul><li><strong>Name</strong> — Brief note</li></ul><h2>Cliffhanger</h2><p>Where did things end? What's the hook into next session?</p><h2>Next Session Prep</h2><ul data-type="taskList"><li data-type="taskItem" data-checked="false"><label><input type="checkbox"></label><div><p>Prep task one</p></div></li><li data-type="taskItem" data-checked="false"><label><input type="checkbox"></label><div><p>Prep task two</p></div></li></ul>`
+      },
+      npc: {
+        name: 'NPC — Name',
+        tags: ['npc'],
+        content: `<h1>NPC Name</h1><p><strong>Race / Class:</strong>  &nbsp; <strong>Location:</strong>  &nbsp; <strong>Alignment:</strong> </p><h2>Appearance</h2><p>Describe their look, distinctive features, clothing.</p><h2>Personality</h2><blockquote><p>"A signature quote or speech pattern."</p></blockquote><ul><li><strong>Trait:</strong> </li><li><strong>Ideal:</strong> </li><li><strong>Bond:</strong> </li><li><strong>Flaw:</strong> </li></ul><h2>Backstory</h2><p>Brief history relevant to the campaign.</p><h2>Plot Hooks</h2><ul><li>Hook one</li><li>Hook two</li></ul><h2>DM Notes</h2><p></p>`
+      },
+      location: {
+        name: 'Location — Name',
+        tags: ['location'],
+        content: `<h1>Location Name</h1><p><strong>Region:</strong>  &nbsp; <strong>Type:</strong>  &nbsp; <strong>Danger Level:</strong> </p><h2>Description</h2><p>What does it look, sound, and smell like? What's the atmosphere?</p><h2>Notable Features</h2><table><tbody><tr><th><p>Feature</p></th><th><p>Notes</p></th></tr><tr><td><p>Feature one</p></td><td><p></p></td></tr><tr><td><p>Feature two</p></td><td><p></p></td></tr></tbody></table><h2>Connections</h2><ul><li><strong>Connected to:</strong> </li><li><strong>Nearby:</strong> </li></ul><h2>History</h2><p>What happened here? What makes it significant?</p><h2>DM Notes</h2><p></p>`
+      },
+      encounter: {
+        name: 'Encounter — Title',
+        tags: ['encounter'],
+        content: `<h1>Encounter: Title</h1><p><strong>Location:</strong>  &nbsp; <strong>Session:</strong>  &nbsp; <strong>CR:</strong> </p><h2>Setup</h2><p>How does this encounter begin? What are the conditions, triggers, terrain?</p><h2>Monsters</h2><table><tbody><tr><th><p>Monster</p></th><th><p>HP</p></th><th><p>AC</p></th><th><p>Initiative</p></th><th><p>Notes</p></th></tr><tr><td><p></p></td><td><p></p></td><td><p></p></td><td><p></p></td><td><p></p></td></tr><tr><td><p></p></td><td><p></p></td><td><p></p></td><td><p></p></td><td><p></p></td></tr></tbody></table><h2>Tactics</h2><ul><li>Tactic one</li><li>Tactic two</li></ul><h2>Rewards</h2><ul><li><strong>XP:</strong> </li><li><strong>Loot:</strong> </li></ul><h2>Outcome</h2><p>What actually happened?</p>`
+      },
+    }
+
+    // ── IndexedDB ─────────────────────────────────────────────────────────
+    const DB_NAME    = 'JournalDB'
+    const DB_VERSION = 1
+    const STORE_NAME = 'entries'
+    let db
+
     function initDB() {
       return new Promise((resolve, reject) => {
-        const request = indexedDB.open(DB_NAME, DB_VERSION);
-
-        request.onerror = () => reject(request.error);
-        request.onsuccess = () => {
-          db = request.result;
-          resolve(db);
-        };
-
-        request.onupgradeneeded = (event) => {
-          const db = event.target.result;
-          if (!db.objectStoreNames.contains(STORE_NAME)) {
-            const objectStore = db.createObjectStore(STORE_NAME, { keyPath: 'id', autoIncrement: true });
-            objectStore.createIndex('timestamp', 'timestamp', { unique: false });
-            objectStore.createIndex('name', 'name', { unique: false });
-            objectStore.createIndex('lastModified', 'lastModified', { unique: false });
+        const req = indexedDB.open(DB_NAME, DB_VERSION)
+        req.onerror   = () => reject(req.error)
+        req.onsuccess = () => { db = req.result; resolve(db) }
+        req.onupgradeneeded = e => {
+          const d = e.target.result
+          if (!d.objectStoreNames.contains(STORE_NAME)) {
+            const store = d.createObjectStore(STORE_NAME, { keyPath: 'id', autoIncrement: true })
+            store.createIndex('timestamp',    'timestamp',    { unique: false })
+            store.createIndex('name',         'name',         { unique: false })
+            store.createIndex('lastModified', 'lastModified', { unique: false })
           }
-        };
-      });
+        }
+      })
     }
 
-    // Get all entries from IndexedDB
     function getAllEntries() {
       return new Promise((resolve, reject) => {
-        const transaction = db.transaction([STORE_NAME], 'readonly');
-        const objectStore = transaction.objectStore(STORE_NAME);
-        const request = objectStore.getAll();
-
-        request.onsuccess = () => resolve(request.result);
-        request.onerror = () => reject(request.error);
-      });
+        const req = db.transaction([STORE_NAME], 'readonly').objectStore(STORE_NAME).getAll()
+        req.onsuccess = () => resolve(req.result)
+        req.onerror   = () => reject(req.error)
+      })
     }
 
-    // Save entry to IndexedDB
     function saveEntry(entry) {
       return new Promise((resolve, reject) => {
-        const transaction = db.transaction([STORE_NAME], 'readwrite');
-        const objectStore = transaction.objectStore(STORE_NAME);
-        const request = entry.id ? objectStore.put(entry) : objectStore.add(entry);
-
-        request.onsuccess = () => resolve(request.result);
-        request.onerror = () => reject(request.error);
-      });
+        const store = db.transaction([STORE_NAME], 'readwrite').objectStore(STORE_NAME)
+        const req   = entry.id ? store.put(entry) : store.add(entry)
+        req.onsuccess = () => resolve(req.result)
+        req.onerror   = () => reject(req.error)
+      })
     }
 
-    // Delete entry from IndexedDB
     function deleteEntry(id) {
       return new Promise((resolve, reject) => {
-        const transaction = db.transaction([STORE_NAME], 'readwrite');
-        const objectStore = transaction.objectStore(STORE_NAME);
-        const request = objectStore.delete(id);
-
-        request.onsuccess = () => resolve();
-        request.onerror = () => reject(request.error);
-      });
+        const req = db.transaction([STORE_NAME], 'readwrite').objectStore(STORE_NAME).delete(id)
+        req.onsuccess = () => resolve()
+        req.onerror   = () => reject(req.error)
+      })
     }
 
-    // Get entry by ID
     function getEntry(id) {
       return new Promise((resolve, reject) => {
-        const transaction = db.transaction([STORE_NAME], 'readonly');
-        const objectStore = transaction.objectStore(STORE_NAME);
-        const request = objectStore.get(id);
-
-        request.onsuccess = () => resolve(request.result);
-        request.onerror = () => reject(request.error);
-      });
+        const req = db.transaction([STORE_NAME], 'readonly').objectStore(STORE_NAME).get(id)
+        req.onsuccess = () => resolve(req.result)
+        req.onerror   = () => reject(req.error)
+      })
     }
 
-    // Format date for display
-    function formatDate(timestamp) {
-      const date = new Date(timestamp);
-      return date.toLocaleString('en-US', {
-        month: 'short',
-        day: 'numeric',
-        year: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit'
-      });
+    // ── State ─────────────────────────────────────────────────────────────
+    let editor            = null
+    let currentFileId     = null
+    let hasUnsavedChanges = false
+    let lastSavedContent  = ''
+    let currentTags       = []
+
+    // ── Helpers ───────────────────────────────────────────────────────────
+    function formatDate(ts) {
+      return new Date(ts).toLocaleString('en-US', {
+        month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit'
+      })
     }
-
-    // Highlight search term in text
-    function highlightText(text, searchTerm) {
-      if (!searchTerm || !searchTerm.trim()) {
-        return text;
-      }
-
-      const escapedTerm = searchTerm.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-      const regex = new RegExp(`(${escapedTerm})`, 'gi');
-      return text.replace(regex, '<span class="search-highlight">$1</span>');
-    }
-
-    // Generate default name from timestamp
     function getDefaultName() {
-      const now = new Date();
-      return now.toLocaleString('en-US', {
-        month: '2-digit',
-        day: '2-digit',
-        year: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit',
-        hour12: true
-      }).replace(',', '');
+      return new Date().toLocaleString('en-US', {
+        month: '2-digit', day: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit', hour12: true
+      }).replace(',', '')
+    }
+    function highlightText(text, term) {
+      if (!term?.trim()) return text
+      const esc = term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+      return text.replace(new RegExp(`(${esc})`, 'gi'), '<span class="search-highlight">$1</span>')
+    }
+    function getEditorHTML() { return editor ? editor.getHTML() : '' }
+
+    function showToast(message, type = 'info') {
+      const el = document.createElement('div')
+      el.className = `alert alert-${type} position-fixed top-0 start-50 translate-middle-x mt-5`
+      el.style.zIndex = '9999'
+      el.textContent = message
+      document.body.appendChild(el)
+      setTimeout(() => el.remove(), 3000)
+    }
+    window.showToast = showToast
+
+    // ── Tags ──────────────────────────────────────────────────────────────
+    function renderTagPills() {
+      const container = document.getElementById('tagPillContainer')
+      if (!container) return
+      container.innerHTML = ''
+      currentTags.forEach((tag, i) => {
+        const pill = document.createElement('span')
+        pill.className = 'tag-pill'
+        pill.innerHTML = `${tag}<button class="tag-remove" data-index="${i}" title="Remove tag" aria-label="Remove tag ${tag}">✕</button>`
+        pill.querySelector('.tag-remove').addEventListener('click', () => {
+          currentTags.splice(i, 1)
+          renderTagPills()
+          hasUnsavedChanges = true
+          updateSaveButtonState()
+        })
+        container.appendChild(pill)
+      })
     }
 
-    // Load file list
-    async function loadFileList(searchTerm = '') {
-      const entries = await getAllEntries();
-      const fileList = document.getElementById('fileList');
-      fileList.innerHTML = '';
+    // ── Toolbar state ─────────────────────────────────────────────────────
+    function updateToolbarState() {
+      if (!editor) return
+      const set = (id, active) => document.getElementById(id)?.classList.toggle('active', active)
+      set('boldBtn',        editor.isActive('bold'))
+      set('italicBtn',      editor.isActive('italic'))
+      set('underlineBtn',   editor.isActive('underline'))
+      set('strikeBtn',      editor.isActive('strike'))
+      set('blockquoteBtn',  editor.isActive('blockquote'))
+      set('codeBlockBtn',   editor.isActive('codeBlock'))
+      set('bulletListBtn',  editor.isActive('bulletList'))
+      set('orderedListBtn', editor.isActive('orderedList'))
+      set('taskListBtn',    editor.isActive('taskList'))
+      set('alignLeftBtn',   editor.isActive({ textAlign: 'left' }))
+      set('alignCenterBtn', editor.isActive({ textAlign: 'center' }))
+      set('alignRightBtn',  editor.isActive({ textAlign: 'right' }))
+      const hs = document.getElementById('headingSelect')
+      if (hs) {
+        if      (editor.isActive('heading', { level: 1 })) hs.value = '1'
+        else if (editor.isActive('heading', { level: 2 })) hs.value = '2'
+        else if (editor.isActive('heading', { level: 3 })) hs.value = '3'
+        else hs.value = '0'
+      }
+      const bar = document.getElementById('tableContextBar')
+      if (bar) bar.style.display = editor.isActive('table') ? 'flex' : 'none'
+    }
 
-      // Get sort option
-      const sortSelect = document.getElementById('sortSelect');
-      const sortOption = sortSelect ? sortSelect.value : 'modified-desc';
+    function updateWordCount() {
+      if (!editor) return
+      const chars = editor.storage.characterCount?.characters() ?? 0
+      const words = editor.storage.characterCount?.words()      ?? 0
+      const el = document.getElementById('wordCount')
+      if (el) el.textContent = `Words: ${words} | Characters: ${chars}`
+    }
 
-      // Sort entries based on selected option
-      entries.sort((a, b) => {
-        switch (sortOption) {
-          case 'modified-desc':
-            return (b.lastModified || b.timestamp) - (a.lastModified || a.timestamp);
-          case 'modified-asc':
-            return (a.lastModified || a.timestamp) - (b.lastModified || b.timestamp);
-          case 'created-desc':
-            return b.timestamp - a.timestamp;
-          case 'created-asc':
-            return a.timestamp - b.timestamp;
-          case 'name-asc':
-            return a.name.localeCompare(b.name);
-          case 'name-desc':
-            return b.name.localeCompare(a.name);
-          default:
-            return (b.lastModified || b.timestamp) - (a.lastModified || a.timestamp);
+    // ── Save / load button state ──────────────────────────────────────────
+    function updateSaveButtonState() {
+      const btn = document.getElementById('saveBtn')
+      if (!btn) return
+      if (hasUnsavedChanges) {
+        btn.classList.replace('btn-primary', 'btn-warning')
+        btn.innerHTML = '<i class="bi bi-floppy"></i> Save *'
+      } else {
+        btn.classList.replace('btn-warning', 'btn-primary')
+        btn.innerHTML = '<i class="bi bi-floppy"></i> Save'
+      }
+    }
+
+    function checkUnsaved() {
+      return !hasUnsavedChanges || confirm('You have unsaved changes. Discard them?')
+    }
+
+    // ── Focus mode ────────────────────────────────────────────────────────
+    function toggleFocusMode() {
+      const sidebar = document.getElementById('sidebarCol')
+      const edCol   = document.getElementById('editorCol')
+      const btn     = document.getElementById('focusModeBtn')
+      const isHidden = sidebar.classList.contains('d-none')
+      if (isHidden) {
+        sidebar.classList.remove('d-none')
+        edCol.className = 'col-md-9'
+        btn.classList.remove('active')
+        btn.title = 'Focus Mode (hide sidebar)'
+        btn.innerHTML = '<i class="bi bi-arrows-fullscreen"></i>'
+      } else {
+        sidebar.classList.add('d-none')
+        edCol.className = 'col-12'
+        btn.classList.add('active')
+        btn.title = 'Exit Focus Mode (Esc)'
+        btn.innerHTML = '<i class="bi bi-fullscreen-exit"></i>'
+      }
+    }
+
+    // ── Image sync helpers ────────────────────────────────────────────────
+    function syncImageStyle(img) {
+      const src   = img.getAttribute('src')
+      const style = img.getAttribute('style') || null
+      const { state, view } = editor
+      state.doc.descendants((node, pos) => {
+        if (node.type.name === 'image' && node.attrs.src === src) {
+          view.dispatch(state.tr.setNodeMarkup(pos, null, { ...node.attrs, style }))
+          return false
         }
-      });
+        return true
+      })
+    }
+    function syncImageFloat(img, floatVal) {
+      const src = img.getAttribute('src')
+      const { state, view } = editor
+      state.doc.descendants((node, pos) => {
+        if (node.type.name === 'image' && node.attrs.src === src) {
+          view.dispatch(state.tr.setNodeMarkup(pos, null, { ...node.attrs, 'data-float': floatVal }))
+          return false
+        }
+        return true
+      })
+    }
 
-      // Filter entries based on search term
-      let filteredEntries = entries;
-      if (searchTerm && searchTerm.trim() !== '') {
-        const lowerSearchTerm = searchTerm.toLowerCase();
-        filteredEntries = entries.filter(entry => {
-          // Search in entry name
-          const nameMatch = entry.name && entry.name.toLowerCase().includes(lowerSearchTerm);
+    // ── Image resize ──────────────────────────────────────────────────────
+    function enableImageResize() {
+      const editorEl = document.querySelector('.ProseMirror')
+      if (!editorEl) return
+      let selectedImage = null, resizeDir = null, startX, startY, startW, startH
 
-          // Search in entry content (strip HTML tags for better searching)
-          let contentMatch = false;
-          if (entry.content) {
-            try {
-              const tempDiv = document.createElement('div');
-              tempDiv.innerHTML = entry.content;
-              const textContent = tempDiv.textContent || tempDiv.innerText || '';
-              contentMatch = textContent.toLowerCase().includes(lowerSearchTerm);
-            } catch (e) {
-              console.error('Error parsing content for search:', e);
-            }
-          }
+      editorEl.addEventListener('click', e => {
+        if (e.target.tagName === 'IMG') {
+          if (selectedImage) { selectedImage.classList.remove('img-selected'); removeHandles() }
+          selectedImage = e.target
+          selectedImage.classList.add('img-selected')
+          addHandles(selectedImage)
+        } else if (!e.target.classList.contains('resize-handle')) {
+          if (selectedImage) { selectedImage.classList.remove('img-selected'); removeHandles(); selectedImage = null }
+        }
+      })
+      document.addEventListener('click', e => {
+        if (!editorEl.contains(e.target) && !e.target.classList.contains('resize-handle') && selectedImage) {
+          selectedImage.classList.remove('img-selected'); removeHandles(); selectedImage = null
+        }
+      })
 
-          return nameMatch || contentMatch;
-        });
+      function addHandles(img) {
+        removeHandles()
+        ;['nw','n','ne','e','se','s','sw','w'].forEach(p => {
+          const h = document.createElement('div')
+          h.className = `resize-handle ${p}`; h.dataset.pos = p
+          h.addEventListener('mousedown', startResize)
+          document.body.appendChild(h); positionHandle(h, img, p)
+        })
+        addAlignControls(img)
+      }
+      function addAlignControls(img) {
+        const ctrl = document.createElement('div')
+        ctrl.className = 'image-controls'; ctrl.id = 'imageControls'
+        const cur = img.classList.contains('img-float-left') ? 'left'
+                  : img.classList.contains('img-float-right') ? 'right' : 'none'
+        ctrl.innerHTML = `
+          <button class="align-btn ${cur==='left' ?'active':''}" data-align="left"  title="Float left"><i class="bi bi-align-start"></i> Left</button>
+          <button class="align-btn ${cur==='none' ?'active':''}" data-align="none"  title="No float"><i class="bi bi-align-center"></i> None</button>
+          <button class="align-btn ${cur==='right'?'active':''}" data-align="right" title="Float right"><i class="bi bi-align-end"></i> Right</button>`
+        document.body.appendChild(ctrl)
+        const r = img.getBoundingClientRect()
+        ctrl.style.top  = (r.top - 44) + 'px'
+        ctrl.style.left = (r.left + r.width/2 - ctrl.offsetWidth/2) + 'px'
+        ctrl.querySelectorAll('.align-btn').forEach(btn => {
+          btn.addEventListener('click', e => {
+            e.stopPropagation()
+            const align = btn.dataset.align
+            img.classList.remove('img-float-left','img-float-right')
+            if (align === 'left')  img.classList.add('img-float-left')
+            if (align === 'right') img.classList.add('img-float-right')
+            syncImageFloat(img, align === 'none' ? null : align)
+            ctrl.querySelectorAll('.align-btn').forEach(b => b.classList.remove('active'))
+            btn.classList.add('active')
+            removeHandles(); addHandles(img)
+          })
+        })
+      }
+      function positionHandle(h, img, pos) {
+        const r = img.getBoundingClientRect(), off = 5
+        const m = {
+          nw:{top:r.top-off,       left:r.left-off},
+          n: {top:r.top-off,       left:r.left+r.width/2-off},
+          ne:{top:r.top-off,       left:r.right-off},
+          e: {top:r.top+r.height/2-off, left:r.right-off},
+          se:{top:r.bottom-off,    left:r.right-off},
+          s: {top:r.bottom-off,    left:r.left+r.width/2-off},
+          sw:{top:r.bottom-off,    left:r.left-off},
+          w: {top:r.top+r.height/2-off, left:r.left-off},
+        }
+        h.style.top = m[pos].top+'px'; h.style.left = m[pos].left+'px'
+      }
+      function removeHandles() {
+        document.querySelectorAll('.resize-handle').forEach(h => h.remove())
+        document.getElementById('imageControls')?.remove()
+      }
+      function updateHandlePositions() {
+        if (!selectedImage) return
+        document.querySelectorAll('.resize-handle').forEach((h, i) => positionHandle(h, selectedImage, ['nw','n','ne','e','se','s','sw','w'][i]))
+        const ctrl = document.getElementById('imageControls')
+        if (ctrl) {
+          const r = selectedImage.getBoundingClientRect()
+          ctrl.style.top  = (r.top - 44) + 'px'
+          ctrl.style.left = (r.left + r.width/2 - ctrl.offsetWidth/2) + 'px'
+        }
+      }
+      function startResize(e) {
+        e.preventDefault(); e.stopPropagation()
+        resizeDir = e.target.dataset.pos; startX = e.clientX; startY = e.clientY
+        startW = selectedImage.offsetWidth; startH = selectedImage.offsetHeight
+        document.addEventListener('mousemove', doResize)
+        document.addEventListener('mouseup',   stopResize)
+      }
+      function doResize(e) {
+        if (!selectedImage || !resizeDir) return
+        const dx = e.clientX - startX, dy = e.clientY - startY
+        let nw = startW
+        if (resizeDir.includes('e')) nw = startW + dx
+        if (resizeDir.includes('w')) nw = startW - dx
+        if (['nw','ne','sw','se'].includes(resizeDir)) {
+          /* corner: maintain aspect ratio */
+        }
+        if (nw > 30) { selectedImage.style.width = nw+'px'; selectedImage.style.height = 'auto'; updateHandlePositions() }
+      }
+      function stopResize() {
+        document.removeEventListener('mousemove', doResize)
+        document.removeEventListener('mouseup',   stopResize)
+        if (selectedImage) {
+          const img = selectedImage; removeHandles(); selectedImage = null; resizeDir = null
+          syncImageStyle(img)
+        }
+      }
+      window.addEventListener('scroll', updateHandlePositions)
+      window.addEventListener('resize', updateHandlePositions)
+      editorEl.addEventListener('scroll', updateHandlePositions)
+    }
+
+    // ── Pin entry ─────────────────────────────────────────────────────────
+    async function togglePin(id) {
+      const entry = await getEntry(id)
+      if (!entry) return
+      entry.pinned = !entry.pinned
+      await saveEntry(entry)
+      await loadFileList(document.getElementById('searchInput').value)
+    }
+
+    // ── Tag filter options ────────────────────────────────────────────────
+    function updateTagFilterOptions(allEntries) {
+      const sel = document.getElementById('tagFilterSelect')
+      if (!sel) return
+      const current = sel.value
+      const allTags = [...new Set(allEntries.flatMap(e => e.tags || []))].sort()
+      sel.innerHTML = '<option value="">All entries</option>' +
+        allTags.map(t => `<option value="${t}"${t===current?' selected':''}>${t}</option>`).join('')
+    }
+
+    // ── File list ─────────────────────────────────────────────────────────
+    function sortGroup(arr, sortOpt) {
+      return [...arr].sort((a, b) => {
+        switch (sortOpt) {
+          case 'modified-desc': return (b.lastModified||b.timestamp) - (a.lastModified||a.timestamp)
+          case 'modified-asc':  return (a.lastModified||a.timestamp) - (b.lastModified||b.timestamp)
+          case 'created-desc':  return b.timestamp - a.timestamp
+          case 'created-asc':   return a.timestamp - b.timestamp
+          case 'name-asc':      return a.name.localeCompare(b.name)
+          case 'name-desc':     return b.name.localeCompare(a.name)
+          default:              return (b.lastModified||b.timestamp) - (a.lastModified||a.timestamp)
+        }
+      })
+    }
+
+    async function loadFileList(searchTerm = '') {
+      const entries   = await getAllEntries()
+      const fileList  = document.getElementById('fileList')
+      fileList.innerHTML = ''
+
+      updateTagFilterOptions(entries)
+
+      const sortOpt   = document.getElementById('sortSelect')?.value ?? 'modified-desc'
+      const tagFilter = document.getElementById('tagFilterSelect')?.value ?? ''
+      const lower     = searchTerm.toLowerCase()
+
+      let filtered = entries
+      if (tagFilter)          filtered = filtered.filter(e => (e.tags||[]).includes(tagFilter))
+      if (searchTerm.trim())  filtered = filtered.filter(e => {
+        if (e.name?.toLowerCase().includes(lower)) return true
+        try { const d=document.createElement('div');d.innerHTML=e.content;return (d.textContent||'').toLowerCase().includes(lower) } catch { return false }
+      })
+
+      // Pinned first, then sort each group
+      const pinned   = sortGroup(filtered.filter(e =>  e.pinned), sortOpt)
+      const unpinned = sortGroup(filtered.filter(e => !e.pinned), sortOpt)
+      const sorted   = [...pinned, ...unpinned]
+
+      // Entry count badge
+      const badge = document.getElementById('entryCountBadge')
+      if (badge) badge.textContent = (searchTerm.trim() || tagFilter)
+        ? `${sorted.length}/${entries.length}`
+        : entries.length
+
+      if (entries.length === 0) {
+        fileList.innerHTML = `<div class="text-center text-muted p-4"><i class="bi bi-journal-x" style="font-size:3rem;opacity:0.3;"></i><p class="mt-2 mb-1">No entries yet</p><small>Click <i class="bi bi-plus-lg"></i> to create your first entry</small></div>`
+        return
+      }
+      if (sorted.length === 0) {
+        fileList.innerHTML = `<div class="text-center text-muted p-4"><i class="bi bi-search" style="font-size:3rem;opacity:0.3;"></i><p class="mt-2 mb-1">No entries match</p><small>Try a different search or filter</small></div>`
+        return
       }
 
-      filteredEntries.forEach(entry => {
-        const fileItem = document.createElement('div');
-        fileItem.className = 'file-item p-3 border-bottom border-secondary';
-        if (entry.id === currentFileId) {
-          fileItem.classList.add('active');
-        }
+      sorted.forEach(entry => {
+        const item = document.createElement('div')
+        item.className = 'file-item p-3 border-bottom border-secondary'
+        item.setAttribute('tabindex', '0')
+        item.setAttribute('role', 'option')
+        item.setAttribute('aria-selected', entry.id === currentFileId ? 'true' : 'false')
+        if (entry.id === currentFileId) item.classList.add('active')
+        if (entry.pinned) item.classList.add('pinned-item')
 
-        // Highlight search term in entry name
-        const highlightedName = highlightText(entry.name, searchTerm);
-
-        // Get content preview
-        let contentPreview = '';
-        if (entry.content) {
-          try {
-            const tempDiv = document.createElement('div');
-            tempDiv.innerHTML = entry.content;
-            const textContent = tempDiv.textContent || tempDiv.innerText || '';
-
-            if (searchTerm && searchTerm.trim() !== '') {
-              // Show context around search match if found
-              const lowerSearchTerm = searchTerm.toLowerCase();
-              const lowerContent = textContent.toLowerCase();
-              const matchIndex = lowerContent.indexOf(lowerSearchTerm);
-
-              if (matchIndex !== -1) {
-                // Extract context around the match (50 characters before and after)
-                const start = Math.max(0, matchIndex - 50);
-                const end = Math.min(textContent.length, matchIndex + searchTerm.length + 50);
-                let excerpt = textContent.substring(start, end).trim();
-
-                // Add ellipsis if we cut off text
-                if (start > 0) excerpt = '...' + excerpt;
-                if (end < textContent.length) excerpt = excerpt + '...';
-
-                // Highlight the search term in the excerpt
-                contentPreview = `<small class="text-muted d-block mt-1">${highlightText(excerpt, searchTerm)}</small>`;
+        // content preview
+        let preview = ''
+        try {
+          const d = document.createElement('div'); d.innerHTML = entry.content
+          const txt = (d.textContent || d.innerText || '').trim()
+          if (txt) {
+            let excerpt
+            if (searchTerm.trim()) {
+              const idx = txt.toLowerCase().indexOf(lower)
+              if (idx !== -1) {
+                const s = Math.max(0, idx-50), end = Math.min(txt.length, idx+lower.length+50)
+                excerpt = (s>0?'…':'')+txt.substring(s,end)+(end<txt.length?'…':'')
+                excerpt = highlightText(excerpt, searchTerm)
               } else {
-                // Show first 100 characters even if no match (in case name matched)
-                let excerpt = textContent.substring(0, 100).trim();
-                if (textContent.length > 100) excerpt += '...';
-                contentPreview = `<small class="text-muted d-block mt-1">${excerpt}</small>`;
+                excerpt = txt.substring(0,100)+(txt.length>100?'…':'')
               }
             } else {
-              // Always show first 100 characters when not searching
-              let excerpt = textContent.substring(0, 100).trim();
-              if (textContent.length > 100) excerpt += '...';
-              if (excerpt) {
-                contentPreview = `<small class="text-muted d-block mt-1">${excerpt}</small>`;
-              }
+              excerpt = txt.substring(0,100)+(txt.length>100?'…':'')
             }
-          } catch (e) {
-            console.error('Error parsing content for preview:', e);
+            preview = `<small class="text-muted d-block mt-1">${excerpt}</small>`
           }
-        }
+        } catch {/* ignore */}
 
-        // Format timestamps
-        const createdDate = formatDate(entry.timestamp);
-        const modifiedDate = entry.lastModified ? formatDate(entry.lastModified) : createdDate;
-        const timestampDisplay = entry.lastModified && entry.lastModified !== entry.timestamp
-          ? `Created: ${createdDate}<br>Last edited: ${modifiedDate}`
-          : `Created: ${createdDate}`;
+        const entryTags = entry.tags || []
+        const tagBadges = entryTags.length
+          ? `<div class="mt-1">${entryTags.map(t=>`<span class="badge bg-secondary me-1" style="font-size:0.65rem;">${t}</span>`).join('')}</div>`
+          : ''
 
-        fileItem.innerHTML = `
+        const created  = formatDate(entry.timestamp)
+        const modified = entry.lastModified ? formatDate(entry.lastModified) : created
+        const dateStr  = entry.lastModified && entry.lastModified !== entry.timestamp
+          ? `Created: ${created}<br>Edited: ${modified}` : `Created: ${created}`
+
+        item.innerHTML = `
           <div class="d-flex justify-content-between align-items-start">
-            <div class="flex-grow-1">
-              <div class="fw-bold">${highlightedName}</div>
-              <small class="text-muted">${timestampDisplay}</small>
-              ${contentPreview}
+            <div class="flex-grow-1 overflow-hidden">
+              <div class="fw-bold text-truncate">${highlightText(entry.name, searchTerm)}</div>
+              <small class="text-muted">${dateStr}</small>
+              ${tagBadges}
+              ${preview}
             </div>
-          </div>
-        `;
+            <button class="pin-btn flex-shrink-0 ${entry.pinned?'pinned':''}" data-pin-id="${entry.id}"
+              title="${entry.pinned?'Unpin':'Pin to top'}" aria-label="${entry.pinned?'Unpin entry':'Pin entry to top'}">
+              <i class="bi bi-pin${entry.pinned?'-fill':''}"></i>
+            </button>
+          </div>`
 
-        fileItem.addEventListener('click', () => loadEntry(entry.id));
-        fileList.appendChild(fileItem);
-      });
+        item.querySelector('.pin-btn').addEventListener('click', async e => {
+          e.stopPropagation(); await togglePin(entry.id)
+        })
+        item.addEventListener('click', () => loadEntry(entry.id))
+        fileList.appendChild(item)
+      })
 
-      // If no entries exist or no matches found, show a message
-      if (entries.length === 0) {
-        fileList.innerHTML = `
-          <div class="text-center text-muted p-4">
-            <i class="bi bi-journal-x" style="font-size: 3rem; opacity: 0.3;"></i>
-            <p class="mt-2 mb-1">No journal entries yet</p>
-            <small>Click the <i class="bi bi-plus-lg"></i> button above to create your first entry</small>
-          </div>
-        `;
-      } else if (filteredEntries.length === 0) {
-        fileList.innerHTML = `
-          <div class="text-center text-muted p-4">
-            <i class="bi bi-search" style="font-size: 3rem; opacity: 0.3;"></i>
-            <p class="mt-2 mb-1">No entries found</p>
-            <small>Try a different search term</small>
-          </div>
-        `;
-      }
+      // Keyboard navigation
+      setupKeyboardNav(fileList)
     }
 
-    // Check for unsaved changes before switching entries
-    function checkUnsavedChanges() {
-      if (hasUnsavedChanges) {
-        return confirm('You have unsaved changes. Do you want to discard them and continue?');
-      }
-      return true;
+    function setupKeyboardNav(fileList) {
+      fileList.addEventListener('keydown', e => {
+        const items = [...fileList.querySelectorAll('.file-item')]
+        if (!items.length) return
+        const focused = document.activeElement
+        const idx = items.indexOf(focused)
+
+        if (e.key === 'ArrowDown') {
+          e.preventDefault()
+          const next = idx < items.length - 1 ? idx + 1 : 0
+          items[next].focus()
+        } else if (e.key === 'ArrowUp') {
+          e.preventDefault()
+          const prev = idx > 0 ? idx - 1 : items.length - 1
+          items[prev].focus()
+        } else if (e.key === 'Enter' && focused?.classList.contains('file-item')) {
+          focused.click()
+        }
+      })
     }
 
-    // Load entry into editor
+    // ── Load / save / delete ──────────────────────────────────────────────
     async function loadEntry(id) {
-      // Check for unsaved changes first
-      if (!checkUnsavedChanges()) {
-        return;
-      }
-
-      const entry = await getEntry(id);
-      if (entry) {
-        currentFileId = entry.id;
-        document.getElementById('fileName').value = entry.name;
-        quill.root.innerHTML = entry.content;
-        lastSavedContent = entry.content;
-        hasUnsavedChanges = false;
-        updateSaveButtonState();
-        document.getElementById('deleteBtn').disabled = false;
-        loadFileList(); // Refresh to update active state
-      }
+      if (!checkUnsaved()) return
+      const entry = await getEntry(id)
+      if (!entry) return
+      currentFileId = entry.id
+      document.getElementById('fileName').value = entry.name
+      editor.commands.setContent(entry.content || '')
+      lastSavedContent  = entry.content || ''
+      hasUnsavedChanges = false
+      currentTags = entry.tags || []
+      renderTagPills()
+      updateSaveButtonState()
+      document.getElementById('deleteBtn').disabled = false
+      try { localStorage.setItem('journal_lastId', id) } catch {/* ignore */}
+      loadFileList()
+      updateBacklinksPanel()
     }
 
-    // Save current entry
-    async function saveCurrentEntry() {
-      const name = document.getElementById('fileName').value.trim() || getDefaultName();
-      const content = quill.root.innerHTML;
-
-      const entry = {
-        name: name,
-        content: content,
-        lastModified: Date.now()
-      };
+    async function saveCurrentEntry(silent = false) {
+      const name    = document.getElementById('fileName').value.trim() || getDefaultName()
+      const content = getEditorHTML()
+      const entry   = { name, content, tags: [...currentTags], lastModified: Date.now() }
 
       if (currentFileId) {
-        entry.id = currentFileId;
-        // Keep original timestamp if it exists
-        const existingEntry = await getEntry(currentFileId);
-        entry.timestamp = existingEntry.timestamp || Date.now();
+        entry.id = currentFileId
+        const existing = await getEntry(currentFileId)
+        entry.timestamp = existing?.timestamp ?? Date.now()
+        entry.pinned    = existing?.pinned    ?? false
       } else {
-        // New entry - set both timestamps
-        entry.timestamp = Date.now();
+        entry.timestamp = Date.now()
+        entry.pinned    = false
       }
 
       try {
-        const id = await saveEntry(entry);
-        currentFileId = id;
-        document.getElementById('fileName').value = name;
-        document.getElementById('deleteBtn').disabled = false;
-        lastSavedContent = content;
-        hasUnsavedChanges = false;
-        updateSaveButtonState();
-        await loadFileList();
-
-        // Show success message
-        showToast('Entry saved successfully!', 'success');
-      } catch (error) {
-        console.error('Error saving entry:', error);
-        showToast('Error saving entry', 'danger');
+        const id = await saveEntry(entry)
+        currentFileId = id
+        document.getElementById('fileName').value = name
+        document.getElementById('deleteBtn').disabled = false
+        lastSavedContent  = content
+        hasUnsavedChanges = false
+        updateSaveButtonState()
+        try { localStorage.setItem('journal_lastId', id) } catch {/* ignore */}
+        await loadFileList()
+        updateBacklinksPanel()
+        if (!silent) showToast('Entry saved!', 'success')
+      } catch (err) {
+        console.error('Save error', err)
+        showToast('Error saving entry', 'danger')
       }
     }
 
-    // Create new entry
     function createNewEntry() {
-      // Check for unsaved changes first
-      if (!checkUnsavedChanges()) {
-        return;
-      }
-
-      currentFileId = null;
-      document.getElementById('fileName').value = '';
-      quill.setText('');
-      lastSavedContent = '';
-      hasUnsavedChanges = false;
-      updateSaveButtonState();
-      document.getElementById('deleteBtn').disabled = true;
-      loadFileList(); // Refresh to clear active state
+      if (!checkUnsaved()) return
+      currentFileId     = null
+      document.getElementById('fileName').value = ''
+      editor.commands.setContent('')
+      lastSavedContent  = ''
+      hasUnsavedChanges = false
+      currentTags       = []
+      renderTagPills()
+      updateSaveButtonState()
+      document.getElementById('deleteBtn').disabled = true
+      loadFileList()
     }
 
-    // Update save button state based on unsaved changes
-    function updateSaveButtonState() {
-      const saveBtn = document.getElementById('saveBtn');
-      if (hasUnsavedChanges) {
-        saveBtn.classList.add('btn-warning');
-        saveBtn.classList.remove('btn-primary');
-        saveBtn.innerHTML = '<i class="bi bi-floppy"></i> Save *';
-      } else {
-        saveBtn.classList.remove('btn-warning');
-        saveBtn.classList.add('btn-primary');
-        saveBtn.innerHTML = '<i class="bi bi-floppy"></i> Save';
-      }
-    }
-
-    // Update word and character count
-    function updateWordCount() {
-      const text = quill.getText().trim();
-      const words = text ? text.split(/\s+/).length : 0;
-      const chars = text.length;
-
-      const wordCountElement = document.getElementById('wordCount');
-      if (wordCountElement) {
-        wordCountElement.textContent = `Words: ${words} | Characters: ${chars}`;
-      }
-    }
-
-    // Delete current entry
     async function deleteCurrentEntry() {
-      if (!currentFileId) return;
-
-      if (confirm('Are you sure you want to delete this entry?')) {
-        try {
-          await deleteEntry(currentFileId);
-          createNewEntry();
-          await loadFileList();
-          showToast('Entry deleted', 'info');
-        } catch (error) {
-          console.error('Error deleting entry:', error);
-          showToast('Error deleting entry', 'danger');
-        }
-      }
-    }
-
-    // Show toast notification
-    function showToast(message, type = 'info') {
-      // Create a simple toast notification
-      const toast = document.createElement('div');
-      toast.className = `alert alert-${type} position-fixed top-0 start-50 translate-middle-x mt-5`;
-      toast.style.zIndex = '9999';
-      toast.textContent = message;
-      document.body.appendChild(toast);
-
-      setTimeout(() => {
-        toast.remove();
-      }, 3000);
-    }
-
-    // Custom image handler with resize support
-    function imageHandler() {
-      const input = document.createElement('input');
-      input.setAttribute('type', 'file');
-      input.setAttribute('accept', 'image/*');
-      input.click();
-
-      input.onchange = async () => {
-        const file = input.files[0];
-        if (file) {
-          const reader = new FileReader();
-          reader.onload = (e) => {
-            const range = quill.getSelection(true);
-
-            // Insert the image
-            quill.insertEmbed(range.index, 'image', e.target.result);
-            quill.setSelection(range.index + 1);
-
-            // Wait a bit for the image to render, then auto-select it
-            setTimeout(() => {
-              const images = quill.root.querySelectorAll('img');
-              const newImage = images[images.length - 1]; // Get the last (newest) image
-              if (newImage) {
-                // Simulate a click on the image to show resize handles
-                const clickEvent = new MouseEvent('click', {
-                  view: window,
-                  bubbles: true,
-                  cancelable: true
-                });
-                newImage.dispatchEvent(clickEvent);
-              }
-            }, 100);
-          };
-          reader.readAsDataURL(file);
-        }
-      };
-    }
-
-    // Custom link handler
-    function linkHandler(value) {
-      if (value) {
-        const range = quill.getSelection();
-        if (range) {
-          const text = quill.getText(range.index, range.length);
-
-          // Prompt for link URL
-          const url = prompt('Enter the URL:');
-          if (url) {
-            // If there's selected text, use it as the link text
-            if (range.length > 0) {
-              quill.deleteText(range.index, range.length);
-              quill.insertText(range.index, text, 'link', url);
-            } else {
-              // Otherwise, prompt for link text
-              const linkText = prompt('Enter the link text:', url);
-              if (linkText) {
-                quill.insertText(range.index, linkText, 'link', url);
-              }
-            }
-          }
-        }
-      } else {
-        quill.format('link', false);
-      }
-    }
-
-    // Add drag-to-resize functionality for images
-    function enableImageResize() {
-      const editor = quill.root;
-      let selectedImage = null;
-      let resizeHandle = null;
-      let startX, startY, startWidth, startHeight;
-
-      // Click on image to select it
-      editor.addEventListener('click', (e) => {
-        if (e.target.tagName === 'IMG') {
-          // Remove previous selection
-          if (selectedImage) {
-            selectedImage.classList.remove('selected');
-            removeResizeHandles();
-          }
-
-          // Select new image
-          selectedImage = e.target;
-          selectedImage.classList.add('selected');
-          addResizeHandles(selectedImage);
-        } else if (!e.target.classList.contains('resize-handle')) {
-          // Clicked elsewhere, deselect
-          if (selectedImage) {
-            selectedImage.classList.remove('selected');
-            removeResizeHandles();
-            selectedImage = null;
-          }
-        }
-      });
-
-      // Add resize handles around selected image
-      function addResizeHandles(img) {
-        const handles = ['nw', 'n', 'ne', 'e', 'se', 's', 'sw', 'w'];
-        handles.forEach(position => {
-          const handle = document.createElement('div');
-          handle.className = `resize-handle ${position}`;
-          handle.dataset.position = position;
-          handle.addEventListener('mousedown', startResize);
-
-          // Append to body for fixed positioning
-          document.body.appendChild(handle);
-          positionHandle(handle, img, position);
-        });
-
-        // Add image alignment controls
-        addImageControls(img);
-      }
-
-      // Add control toolbar for image alignment
-      function addImageControls(img) {
-        const controls = document.createElement('div');
-        controls.className = 'image-controls';
-        controls.id = 'imageControls';
-
-        // Determine current alignment
-        let currentAlign = 'center';
-        if (img.classList.contains('float-left')) currentAlign = 'left';
-        else if (img.classList.contains('float-right')) currentAlign = 'right';
-
-        controls.innerHTML = `
-          <button class="align-btn ${currentAlign === 'left' ? 'active' : ''}" data-align="left" title="Align left with text wrap">
-            <i class="bi bi-text-left"></i> Left
-          </button>
-          <button class="align-btn ${currentAlign === 'right' ? 'active' : ''}" data-align="right" title="Align right with text wrap">
-            <i class="bi bi-text-right"></i> Right
-          </button>
-        `;
-
-        document.body.appendChild(controls);
-
-        // Position controls above the image
-        const rect = img.getBoundingClientRect();
-        controls.style.top = (rect.top - 50) + 'px';
-        controls.style.left = (rect.left + rect.width / 2 - controls.offsetWidth / 2) + 'px';
-
-        // Add click handlers for alignment buttons
-        controls.querySelectorAll('.align-btn').forEach(btn => {
-          btn.addEventListener('click', (e) => {
-            e.stopPropagation();
-            const align = btn.dataset.align;
-            setImageAlignment(img, align);
-
-            // Update active state
-            controls.querySelectorAll('.align-btn').forEach(b => b.classList.remove('active'));
-            btn.classList.add('active');
-          });
-        });
-      }
-
-      // Set image alignment
-      function setImageAlignment(img, align) {
-        // Remove all alignment classes
-        img.classList.remove('float-left', 'float-right');
-
-        // Add new alignment class
-        if (align === 'left') {
-          img.classList.add('float-left');
-        } else if (align === 'right') {
-          img.classList.add('float-right');
-        }
-
-        // Update handle positions after alignment change
-        removeResizeHandles();
-        addResizeHandles(img);
-      }
-
-      // Position handle based on image position (using fixed positioning)
-      function positionHandle(handle, img, position) {
-        const rect = img.getBoundingClientRect();
-        const handleSize = 12;
-        const offset = handleSize / 2;
-
-        const positions = {
-          nw: { top: rect.top - offset, left: rect.left - offset },
-          n: { top: rect.top - offset, left: rect.left + rect.width / 2 - offset },
-          ne: { top: rect.top - offset, left: rect.right - offset },
-          e: { top: rect.top + rect.height / 2 - offset, left: rect.right - offset },
-          se: { top: rect.bottom - offset, left: rect.right - offset },
-          s: { top: rect.bottom - offset, left: rect.left + rect.width / 2 - offset },
-          sw: { top: rect.bottom - offset, left: rect.left - offset },
-          w: { top: rect.top + rect.height / 2 - offset, left: rect.left - offset }
-        };
-
-        handle.style.top = positions[position].top + 'px';
-        handle.style.left = positions[position].left + 'px';
-      }
-
-      // Remove all resize handles
-      function removeResizeHandles() {
-        document.querySelectorAll('.resize-handle').forEach(handle => handle.remove());
-        const controls = document.getElementById('imageControls');
-        if (controls) controls.remove();
-      }
-
-      // Start resizing
-      function startResize(e) {
-        e.preventDefault();
-        e.stopPropagation();
-
-        resizeHandle = e.target.dataset.position;
-        startX = e.clientX;
-        startY = e.clientY;
-        startWidth = selectedImage.offsetWidth;
-        startHeight = selectedImage.offsetHeight;
-
-        document.addEventListener('mousemove', doResize);
-        document.addEventListener('mouseup', stopResize);
-      }
-
-      // Perform resize
-      function doResize(e) {
-        if (!selectedImage || !resizeHandle) return;
-
-        const deltaX = e.clientX - startX;
-        const deltaY = e.clientY - startY;
-
-        let newWidth = startWidth;
-        let newHeight = startHeight;
-
-        // Calculate new dimensions based on handle position
-        switch (resizeHandle) {
-          case 'se':
-          case 'e':
-            newWidth = startWidth + deltaX;
-            break;
-          case 'sw':
-          case 'w':
-            newWidth = startWidth - deltaX;
-            break;
-          case 'ne':
-            newWidth = startWidth + deltaX;
-            break;
-          case 'nw':
-            newWidth = startWidth - deltaX;
-            break;
-          case 's':
-            // Maintain aspect ratio
-            newHeight = startHeight + deltaY;
-            newWidth = (newHeight / startHeight) * startWidth;
-            break;
-          case 'n':
-            // Maintain aspect ratio
-            newHeight = startHeight - deltaY;
-            newWidth = (newHeight / startHeight) * startWidth;
-            break;
-        }
-
-        // Maintain aspect ratio for corner handles
-        if (['nw', 'ne', 'sw', 'se'].includes(resizeHandle)) {
-          const aspectRatio = startHeight / startWidth;
-          newHeight = newWidth * aspectRatio;
-        }
-
-        // Apply minimum size
-        if (newWidth > 50) {
-          selectedImage.style.width = newWidth + 'px';
-          selectedImage.style.height = 'auto';
-
-          // Update handle positions
-          removeResizeHandles();
-          addResizeHandles(selectedImage);
-        }
-      }
-
-      // Stop resizing
-      function stopResize() {
-        document.removeEventListener('mousemove', doResize);
-        document.removeEventListener('mouseup', stopResize);
-        resizeHandle = null;
-      }
-
-      // Clean up handles when clicking outside editor
-      document.addEventListener('click', (e) => {
-        if (!editor.contains(e.target) && !e.target.classList.contains('resize-handle') && selectedImage) {
-          selectedImage.classList.remove('selected');
-          removeResizeHandles();
-          selectedImage = null;
-        }
-      });
-
-      // Update handle positions on scroll
-      editor.addEventListener('scroll', () => {
-        if (selectedImage) {
-          updateHandlePositions();
-        }
-      });
-
-      // Update handle positions on window scroll or resize
-      window.addEventListener('scroll', () => {
-        if (selectedImage) {
-          updateHandlePositions();
-        }
-      });
-
-      window.addEventListener('resize', () => {
-        if (selectedImage) {
-          updateHandlePositions();
-        }
-      });
-
-      // Update all handle positions
-      function updateHandlePositions() {
-        const handles = document.querySelectorAll('.resize-handle');
-        handles.forEach((handle, index) => {
-          const positions = ['nw', 'n', 'ne', 'e', 'se', 's', 'sw', 'w'];
-          positionHandle(handle, selectedImage, positions[index]);
-        });
-
-        // Update controls position
-        const controls = document.getElementById('imageControls');
-        if (controls && selectedImage) {
-          const rect = selectedImage.getBoundingClientRect();
-          controls.style.top = (rect.top - 50) + 'px';
-          controls.style.left = (rect.left + rect.width / 2 - controls.offsetWidth / 2) + 'px';
-        }
-      }
-    }
-
-    // Add tooltips to toolbar buttons
-    function addToolbarTooltips() {
-      const tooltips = {
-        '.ql-header[value="1"]': 'Heading 1',
-        '.ql-header[value="2"]': 'Heading 2',
-        '.ql-header[value="3"]': 'Heading 3',
-        '.ql-header[value=""]': 'Normal text',
-        '.ql-bold': 'Bold',
-        '.ql-italic': 'Italic',
-        '.ql-underline': 'Underline',
-        '.ql-strike': 'Strikethrough',
-        '.ql-list[value="ordered"]': 'Numbered list',
-        '.ql-list[value="bullet"]': 'Bulleted list',
-        '.ql-color': 'Text color',
-        '.ql-background': 'Background color',
-        '.ql-align': 'Text alignment',
-        '.ql-link': 'Insert link',
-        '.ql-image': 'Insert image',
-        '.ql-clean': 'Clear formatting'
-      };
-
-      Object.entries(tooltips).forEach(([selector, title]) => {
-        const elements = document.querySelectorAll(selector);
-        elements.forEach(el => {
-          el.setAttribute('title', title);
-        });
-      });
-    }
-
-    // Initialize on page load
-    document.addEventListener('DOMContentLoaded', async () => {
-      // Initialize Quill editor
-      quill = new Quill('#journalEditor', {
-        theme: 'snow',
-        modules: {
-          toolbar: {
-            container: [
-              [{ 'header': [1, 2, 3, false] }],
-              ['bold', 'italic', 'underline', 'strike'],
-              [{ 'list': 'ordered'}, { 'list': 'bullet' }],
-              [{ 'color': [] }, { 'background': [] }],
-              [{ 'align': [] }],
-              ['link', 'image'],
-              ['clean']
-            ],
-            handlers: {
-              'image': imageHandler,
-              'link': linkHandler
-            }
-          }
-        },
-        placeholder: 'Write your journal entry here...'
-      });
-
-      // Enable image resize functionality
-      enableImageResize();
-
-      // Add tooltips to toolbar buttons
-      addToolbarTooltips();
-
-      // Track changes to editor content
-      quill.on('text-change', function(delta, oldDelta, source) {
-        if (source === 'user') {
-          const currentContent = quill.root.innerHTML;
-          hasUnsavedChanges = (currentContent !== lastSavedContent);
-          updateSaveButtonState();
-        }
-        // Update word count on any change
-        updateWordCount();
-      });
-
-      // Initial word count
-      updateWordCount();
-
-      // Initialize database
+      if (!currentFileId) return
+      if (!confirm('Delete this entry permanently?')) return
       try {
-        await initDB();
-        await loadFileList();
-      } catch (error) {
-        console.error('Error initializing database:', error);
-        showToast('Error initializing database', 'danger');
+        await deleteEntry(currentFileId)
+        createNewEntry()
+        await loadFileList()
+        showToast('Entry deleted', 'info')
+      } catch (err) {
+        console.error('Delete error', err)
+        showToast('Error deleting entry', 'danger')
       }
+    }
 
-      // Event listeners
-      document.getElementById('newFileBtn').addEventListener('click', createNewEntry);
-      document.getElementById('saveBtn').addEventListener('click', saveCurrentEntry);
-      document.getElementById('deleteBtn').addEventListener('click', deleteCurrentEntry);
-
-      // Import functionality
-      document.getElementById('importBtn').addEventListener('click', () => {
-        document.getElementById('importFileInput').click();
-      });
-
-      document.getElementById('importFileInput').addEventListener('change', handleFileImport);
-
-      // Search functionality
-      const searchInput = document.getElementById('searchInput');
-      const clearSearchBtn = document.getElementById('clearSearchBtn');
-
-      searchInput.addEventListener('input', (e) => {
-        loadFileList(e.target.value);
-      });
-
-      clearSearchBtn.addEventListener('click', () => {
-        searchInput.value = '';
-        loadFileList();
-      });
-
-      // Sort functionality
-      const sortSelect = document.getElementById('sortSelect');
-      sortSelect.addEventListener('change', () => {
-        loadFileList(searchInput.value);
-      });
-
-      // Auto-save on Ctrl+S
-      document.addEventListener('keydown', (e) => {
-        if ((e.ctrlKey || e.metaKey) && e.key === 's') {
-          e.preventDefault();
-          saveCurrentEntry();
-        }
-      });
-    });
-
-    // Import handler function
-    async function handleFileImport(event) {
-      const file = event.target.files[0];
-      if (!file) return;
-
-      const fileName = file.name;
-      const fileExtension = fileName.split('.').pop().toLowerCase();
-
+    // ── Import ────────────────────────────────────────────────────────────
+    async function handleFileImport(e) {
+      const file = e.target.files[0]; if (!file) return
+      const ext  = file.name.split('.').pop().toLowerCase()
+      const name = file.name.replace(/\.[^/.]+$/, '')
       try {
-        let content = '';
-        let entryName = fileName.replace(/\.[^/.]+$/, ''); // Remove extension
-
-        if (fileExtension === 'txt') {
-          // Handle plain text
-          content = await readTextFile(file);
-          content = `<p>${content.replace(/\n/g, '<br>')}</p>`;
-        } else if (fileExtension === 'md' || fileExtension === 'markdown') {
-          // Handle Markdown - convert to HTML
-          content = await readTextFile(file);
-          content = convertMarkdownToHtml(content);
-        } else if (fileExtension === 'docx') {
-          // Handle Word documents
-          showToast('Word document import is not yet supported. Please export as TXT or Markdown first.', 'warning');
-          event.target.value = ''; // Reset input
-          return;
-        } else if (fileExtension === 'pdf') {
-          // Handle PDF
-          showToast('PDF import is not yet supported. Please export as TXT or Markdown first.', 'warning');
-          event.target.value = ''; // Reset input
-          return;
+        let content = ''
+        if (ext === 'txt') {
+          const raw = await readText(file)
+          content   = `<p>${raw.replace(/\n\n/g,'</p><p>').replace(/\n/g,'<br>')}</p>`
+        } else if (ext === 'md' || ext === 'markdown') {
+          content = convertMarkdownToHtml(await readText(file))
         } else {
-          showToast('Unsupported file type. Please use .txt, .md, or .markdown files.', 'danger');
-          event.target.value = ''; // Reset input
-          return;
+          showToast('Unsupported format. Use .txt or .md', 'warning')
+          e.target.value = ''; return
         }
-
-        // Create a new entry with the imported content
-        const newEntry = {
-          name: entryName,
-          content: content,
-          lastModified: new Date().toISOString()
-        };
-
-        // Save to IndexedDB
-        await saveEntry(newEntry);
-
-        // Load the new entry
-        await loadFileList();
-
-        // Find and load the newly imported entry
-        const entries = await getAllEntries();
-        const importedEntry = entries.find(e => e.name === entryName);
-        if (importedEntry) {
-          loadEntry(importedEntry.id);
-        }
-
-        showToast(`Successfully imported "${entryName}"`, 'success');
-      } catch (error) {
-        console.error('Import error:', error);
-        showToast('Failed to import file: ' + error.message, 'danger');
-      }
-
-      // Reset the file input
-      event.target.value = '';
+        const id = await saveEntry({ name, content, tags: [], timestamp: Date.now(), lastModified: Date.now(), pinned: false })
+        await loadFileList()
+        await loadEntry(id)
+        showToast(`Imported "${name}"`, 'success')
+      } catch (err) { showToast('Import failed: ' + err.message, 'danger') }
+      e.target.value = ''
+    }
+    function readText(file) {
+      return new Promise((res, rej) => {
+        const r = new FileReader()
+        r.onload = e => res(e.target.result); r.onerror = () => rej(new Error('Failed to read'))
+        r.readAsText(file)
+      })
+    }
+    function convertMarkdownToHtml(md) {
+      let html = md
+      html = html.replace(/^### (.*$)/gim, '<h3>$1</h3>')
+      html = html.replace(/^## (.*$)/gim,  '<h2>$1</h2>')
+      html = html.replace(/^# (.*$)/gim,   '<h1>$1</h1>')
+      html = html.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+      html = html.replace(/__(.*?)__/g,     '<strong>$1</strong>')
+      html = html.replace(/\*(.*?)\*/g,     '<em>$1</em>')
+      html = html.replace(/_(.*?)_/g,       '<em>$1</em>')
+      html = html.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2">$1</a>')
+      html = html.replace(/```[\s\S]*?```/g, m => `<pre><code>${m.slice(3,-3)}</code></pre>`)
+      html = html.replace(/`([^`]+)`/g, '<code>$1</code>')
+      html = html.replace(/\n\n/g, '</p><p>').replace(/\n/g, '<br>')
+      return '<p>' + html + '</p>'
     }
 
-    // Helper function to read text files
-    function readTextFile(file) {
-      return new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = (e) => resolve(e.target.result);
-        reader.onerror = (e) => reject(new Error('Failed to read file'));
-        reader.readAsText(file);
-      });
-    }
-
-    // Simple Markdown to HTML converter
-    function convertMarkdownToHtml(markdown) {
-      let html = markdown;
-
-      // Headers
-      html = html.replace(/^### (.*$)/gim, '<h3>$1</h3>');
-      html = html.replace(/^## (.*$)/gim, '<h2>$1</h2>');
-      html = html.replace(/^# (.*$)/gim, '<h1>$1</h1>');
-
-      // Bold
-      html = html.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
-      html = html.replace(/__(.*?)__/g, '<strong>$1</strong>');
-
-      // Italic
-      html = html.replace(/\*(.*?)\*/g, '<em>$1</em>');
-      html = html.replace(/_(.*?)_/g, '<em>$1</em>');
-
-      // Links
-      html = html.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2">$1</a>');
-
-      // Line breaks and paragraphs
-      html = html.replace(/\n\n/g, '</p><p>');
-      html = html.replace(/\n/g, '<br>');
-      html = '<p>' + html + '</p>';
-
-      // Unordered lists
-      html = html.replace(/<p>([*-] .*?)<\/p>/g, (match, listItems) => {
-        const items = listItems.split('<br>').map(item => {
-          return item.replace(/^[*-] /, '<li>') + '</li>';
-        }).join('');
-        return '<ul>' + items + '</ul>';
-      });
-
-      // Ordered lists
-      html = html.replace(/<p>(\d+\. .*?)<\/p>/g, (match, listItems) => {
-        const items = listItems.split('<br>').map(item => {
-          return item.replace(/^\d+\. /, '<li>') + '</li>';
-        }).join('');
-        return '<ol>' + items + '</ol>';
-      });
-
-      // Code blocks
-      html = html.replace(/```(.*?)```/gs, '<pre><code>$1</code></pre>');
-
-      // Inline code
-      html = html.replace(/`([^`]+)`/g, '<code>$1</code>');
-
-      return html;
-    }
-
-    // Export handler function
+    // ── Export ────────────────────────────────────────────────────────────
     function handleExportClick(format) {
-      const entryName = document.getElementById('fileName').value.trim() || 'journal_entry';
-      const htmlContent = quill.root.innerHTML;
-
-      if (!htmlContent || htmlContent === '<p><br></p>') {
-        alert('Please create some content before exporting.');
-        return;
-      }
-
-      // Handle clipboard copy
+      const name    = document.getElementById('fileName').value.trim() || 'journal_entry'
+      const content = getEditorHTML()
+      if (!content || content === '<p></p>') { alert('Nothing to export.'); return }
       if (format === 'clipboard') {
-        const tempDiv = document.createElement('div');
-        tempDiv.innerHTML = htmlContent;
-        const textContent = tempDiv.textContent || tempDiv.innerText || '';
-
-        navigator.clipboard.writeText(textContent).then(() => {
-          showToast('Content copied to clipboard!', 'success');
-          // Close modal
-          const modal = bootstrap.Modal.getInstance(document.getElementById('exportModal'));
-          if (modal) modal.hide();
-        }).catch(err => {
-          console.error('Failed to copy:', err);
-          showToast('Failed to copy to clipboard', 'danger');
-        });
-        return;
+        const d = document.createElement('div'); d.innerHTML = content
+        navigator.clipboard.writeText(d.textContent || d.innerText || '')
+          .then(() => showToast('Copied to clipboard!', 'success'))
+          .catch(() => showToast('Copy failed', 'danger'))
+        bootstrap.Modal.getInstance(document.getElementById('exportModal'))?.hide()
+        return
       }
-
-      // Handle file exports
-      JournalExport.handleExport(format, entryName, htmlContent);
-
-      // Close modal after initiating export
-      const modal = bootstrap.Modal.getInstance(document.getElementById('exportModal'));
-      if (modal) modal.hide();
+      JournalExport.handleExport(format, name, content)
+      bootstrap.Modal.getInstance(document.getElementById('exportModal'))?.hide()
     }
 
-    // Bulk Export Functionality
-    let bulkEntries = [];
-    let selectedEntryIds = new Set();
+    // ── Bulk export ───────────────────────────────────────────────────────
+    let bulkEntries = [], selectedEntryIds = new Set()
 
-    // Load entries in bulk export modal
     async function loadBulkEntryList(searchTerm = '') {
-      bulkEntries = await getAllEntries();
-      const bulkEntryList = document.getElementById('bulkEntryList');
-      bulkEntryList.innerHTML = '';
-
-      // Sort by timestamp, newest first
-      bulkEntries.sort((a, b) => b.timestamp - a.timestamp);
-
-      // Filter entries based on search term
-      let filteredEntries = bulkEntries;
-      if (searchTerm && searchTerm.trim() !== '') {
-        const lowerSearchTerm = searchTerm.toLowerCase();
-        filteredEntries = bulkEntries.filter(entry => {
-          const nameMatch = entry.name && entry.name.toLowerCase().includes(lowerSearchTerm);
-          let contentMatch = false;
-          if (entry.content) {
-            try {
-              const tempDiv = document.createElement('div');
-              tempDiv.innerHTML = entry.content;
-              const textContent = tempDiv.textContent || tempDiv.innerText || '';
-              contentMatch = textContent.toLowerCase().includes(lowerSearchTerm);
-            } catch (e) {
-              console.error('Error parsing content for search:', e);
-            }
-          }
-          return nameMatch || contentMatch;
-        });
-      }
-
-      if (filteredEntries.length === 0) {
-        bulkEntryList.innerHTML = '<div class="text-center text-muted p-3">No entries found</div>';
-        updateSelectionCount();
-        return;
-      }
-
-      filteredEntries.forEach(entry => {
-        const entryDiv = document.createElement('div');
-        entryDiv.className = 'form-check py-2 ps-3 pe-2 border-bottom border-secondary d-flex align-items-start';
-
-        const isChecked = selectedEntryIds.has(entry.id);
-
-        entryDiv.innerHTML = `
-          <input class="form-check-input me-2 mt-1 flex-shrink-0" type="checkbox" value="${entry.id}" id="bulkEntry${entry.id}" ${isChecked ? 'checked' : ''}>
-          <label class="form-check-label flex-grow-1" for="bulkEntry${entry.id}" style="cursor: pointer;">
+      bulkEntries = await getAllEntries()
+      const list  = document.getElementById('bulkEntryList')
+      list.innerHTML = ''
+      bulkEntries.sort((a,b) => b.timestamp - a.timestamp)
+      const lower    = searchTerm.toLowerCase()
+      const filtered = searchTerm.trim()
+        ? bulkEntries.filter(e => {
+            if (e.name?.toLowerCase().includes(lower)) return true
+            try { const d=document.createElement('div');d.innerHTML=e.content;return (d.textContent||'').toLowerCase().includes(lower) } catch { return false }
+          })
+        : bulkEntries
+      if (!filtered.length) { list.innerHTML='<div class="text-center text-muted p-3">No entries found</div>'; updateSelectionCount(); return }
+      filtered.forEach(entry => {
+        const div = document.createElement('div')
+        div.className = 'form-check py-2 ps-3 pe-2 border-bottom border-secondary d-flex align-items-start'
+        const checked = selectedEntryIds.has(entry.id)
+        div.innerHTML = `
+          <input class="form-check-input me-2 mt-1 flex-shrink-0" type="checkbox" value="${entry.id}" id="be${entry.id}" ${checked?'checked':''}>
+          <label class="form-check-label flex-grow-1" for="be${entry.id}" style="cursor:pointer">
             <div class="fw-bold">${entry.name}</div>
             <small class="text-muted">${formatDate(entry.timestamp)}</small>
-          </label>
-        `;
-
-        const checkbox = entryDiv.querySelector('input[type="checkbox"]');
-        checkbox.addEventListener('change', (e) => {
-          if (e.target.checked) {
-            selectedEntryIds.add(entry.id);
-          } else {
-            selectedEntryIds.delete(entry.id);
-          }
-          updateSelectionCount();
-        });
-
-        bulkEntryList.appendChild(entryDiv);
-      });
-
-      updateSelectionCount();
+          </label>`
+        div.querySelector('input').addEventListener('change', ev => {
+          ev.target.checked ? selectedEntryIds.add(entry.id) : selectedEntryIds.delete(entry.id)
+          updateSelectionCount()
+        })
+        list.appendChild(div)
+      })
+      updateSelectionCount()
     }
-
-    // Update selection count display
     function updateSelectionCount() {
-      const count = selectedEntryIds.size;
-      document.getElementById('selectionCount').textContent = `${count} selected`;
+      document.getElementById('selectionCount').textContent = `${selectedEntryIds.size} selected`
     }
-
-    // Select all entries
-    function selectAllEntries() {
-      const checkboxes = document.querySelectorAll('#bulkEntryList input[type="checkbox"]');
-      checkboxes.forEach(checkbox => {
-        checkbox.checked = true;
-        selectedEntryIds.add(parseInt(checkbox.value));
-      });
-      updateSelectionCount();
-    }
-
-    // Deselect all entries
-    function deselectAllEntries() {
-      const checkboxes = document.querySelectorAll('#bulkEntryList input[type="checkbox"]');
-      checkboxes.forEach(checkbox => {
-        checkbox.checked = false;
-        selectedEntryIds.delete(parseInt(checkbox.value));
-      });
-      updateSelectionCount();
-    }
-
-    // Execute bulk export
     async function executeBulkExport() {
-      if (selectedEntryIds.size === 0) {
-        alert('Please select at least one entry to export.');
-        return;
-      }
+      if (!selectedEntryIds.size) { alert('Select at least one entry.'); return }
+      const format  = document.querySelector('input[name="bulkExportFormat"]:checked')?.value ?? 'txt'
+      const entries = bulkEntries.filter(e => selectedEntryIds.has(e.id))
+      bootstrap.Modal.getInstance(document.getElementById('bulkExportModal'))?.hide()
+      const combined = entries.length > 1 && confirm(`Export ${entries.length} entries as:\n\nOK = Single combined file\nCancel = Separate files`)
+      showToast(`Exporting ${entries.length} ${entries.length===1?'entry':'entries'}…`, 'info')
+      if (combined) await JournalExport.handleBulkExportCombined(format, entries, 'journal_export')
+      else          await JournalExport.handleBulkExport(format, entries)
+    }
 
-      // Get selected format
-      const formatRadio = document.querySelector('input[name="bulkExportFormat"]:checked');
-      const format = formatRadio ? formatRadio.value : 'txt';
+    // ── Slash command items ───────────────────────────────────────────────
+    const SLASH_ITEMS = [
+      { title: 'Heading 1',           icon: 'bi-type-h1',           cat: 'Text',   keywords: ['h1','heading','title'],          action: (e,r) => e.chain().focus().deleteRange(r).setHeading({level:1}).run() },
+      { title: 'Heading 2',           icon: 'bi-type-h2',           cat: 'Text',   keywords: ['h2','heading','subtitle'],        action: (e,r) => e.chain().focus().deleteRange(r).setHeading({level:2}).run() },
+      { title: 'Heading 3',           icon: 'bi-type-h3',           cat: 'Text',   keywords: ['h3','heading'],                  action: (e,r) => e.chain().focus().deleteRange(r).setHeading({level:3}).run() },
+      { title: 'Bullet List',         icon: 'bi-list-ul',           cat: 'Lists',  keywords: ['bullet','list','ul'],            action: (e,r) => e.chain().focus().deleteRange(r).toggleBulletList().run() },
+      { title: 'Numbered List',       icon: 'bi-list-ol',           cat: 'Lists',  keywords: ['number','ordered','ol','1.'],    action: (e,r) => e.chain().focus().deleteRange(r).toggleOrderedList().run() },
+      { title: 'Task List',           icon: 'bi-check2-square',     cat: 'Lists',  keywords: ['task','check','todo'],           action: (e,r) => e.chain().focus().deleteRange(r).toggleTaskList().run() },
+      { title: 'Table',               icon: 'bi-table',             cat: 'Insert', keywords: ['table','grid','row','col'],      action: (e,r) => e.chain().focus().deleteRange(r).insertTable({rows:3,cols:3,withHeaderRow:true}).run() },
+      { title: 'Collapsible Section', icon: 'bi-arrows-collapse',   cat: 'Insert', keywords: ['collapse','details','fold','toggle','secret'], action: (e,r) => { e.chain().focus().deleteRange(r).insertDetails().run(); selectDetailsSummary() } },
+      { title: 'Blockquote',          icon: 'bi-blockquote-left',   cat: 'Insert', keywords: ['quote','blockquote','npc'],      action: (e,r) => e.chain().focus().deleteRange(r).toggleBlockquote().run() },
+      { title: 'Code Block',          icon: 'bi-code-slash',        cat: 'Insert', keywords: ['code','pre','mono'],             action: (e,r) => e.chain().focus().deleteRange(r).toggleCodeBlock().run() },
+      { title: 'Divider',             icon: 'bi-dash-lg',           cat: 'Insert', keywords: ['hr','divider','rule','---','line'], action: (e,r) => e.chain().focus().deleteRange(r).setHorizontalRule().run() },
+      { title: 'Image',               icon: 'bi-image',             cat: 'Insert', keywords: ['image','photo','picture','map'], action: (e,r) => { e.chain().focus().deleteRange(r).run(); document.getElementById('imageBtn')?.click() } },
+    ]
 
-      // Get selected entries
-      const selectedEntries = bulkEntries.filter(entry => selectedEntryIds.has(entry.id));
+    // ── Suggestion popup factory ──────────────────────────────────────────
+    function makeSuggestionRender(buildItemHTML) {
+      return () => {
+        let el = null
+        let selectedIdx = 0
 
-      // Close modal
-      const modal = bootstrap.Modal.getInstance(document.getElementById('bulkExportModal'));
-      if (modal) modal.hide();
+        function update(props) {
+          if (!el) return
+          el.innerHTML = ''
+          if (!props.items?.length) { el.style.display = 'none'; return }
+          el.style.display = 'block'
+          selectedIdx = 0
+          const rect = props.clientRect?.()
+          if (rect) {
+            el.style.top  = Math.min(rect.bottom + 5, window.innerHeight - 280) + 'px'
+            el.style.left = Math.max(8, Math.min(rect.left, window.innerWidth - 240)) + 'px'
+          }
+          props.items.forEach((item, i) => {
+            const btn = document.createElement('button')
+            btn.className = `sg-item${i === 0 ? ' active' : ''}`
+            btn.innerHTML  = buildItemHTML(item)
+            btn.addEventListener('mousedown', e => { e.preventDefault(); props.command(item) })
+            el.appendChild(btn)
+          })
+        }
 
-      // Ask user if they want separate files or combined
-      const useCombined = selectedEntries.length > 1 && confirm(
-        `Export ${selectedEntries.length} entries as:\n\nOK = Single combined file\nCancel = Separate files`
-      );
-
-      // Show loading message
-      showToast(`Exporting ${selectedEntries.length} ${selectedEntries.length === 1 ? 'entry' : 'entries'}...`, 'info');
-
-      // Perform export
-      if (useCombined) {
-        await JournalExport.handleBulkExportCombined(format, selectedEntries, 'journal_export');
-      } else {
-        await JournalExport.handleBulkExport(format, selectedEntries);
+        return {
+          onStart(props) {
+            el = document.createElement('div')
+            el.className = 'suggestion-menu'
+            document.body.appendChild(el)
+            update(props)
+          },
+          onUpdate: update,
+          onKeyDown({ event }) {
+            if (!el || el.style.display === 'none') return false
+            const items = [...el.querySelectorAll('.sg-item')]
+            if (!items.length) return false
+            if (event.key === 'ArrowDown') {
+              items[selectedIdx]?.classList.remove('active')
+              selectedIdx = (selectedIdx + 1) % items.length
+              items[selectedIdx]?.classList.add('active')
+              items[selectedIdx]?.scrollIntoView({ block: 'nearest' })
+              return true
+            }
+            if (event.key === 'ArrowUp') {
+              items[selectedIdx]?.classList.remove('active')
+              selectedIdx = (selectedIdx - 1 + items.length) % items.length
+              items[selectedIdx]?.classList.add('active')
+              items[selectedIdx]?.scrollIntoView({ block: 'nearest' })
+              return true
+            }
+            if (event.key === 'Enter') {
+              items[selectedIdx]?.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }))
+              return true
+            }
+            if (event.key === 'Escape') { el.remove(); el = null; return true }
+            return false
+          },
+          onExit() { el?.remove(); el = null },
+        }
       }
     }
 
-    // Event listeners for bulk export modal
-    document.addEventListener('DOMContentLoaded', () => {
-      // Load entries when modal is opened
-      const bulkExportModal = document.getElementById('bulkExportModal');
-      bulkExportModal.addEventListener('show.bs.modal', () => {
-        loadBulkEntryList();
-      });
+    const slashRender = makeSuggestionRender(
+      item => `<i class="bi ${item.icon}"></i><span>${item.title}</span><small>${item.cat}</small>`
+    )
+    const wikiRender = makeSuggestionRender(
+      item => `<i class="bi bi-journal-text"></i><span>${item.label}</span>`
+    )
 
-      // Reset when modal is closed
-      bulkExportModal.addEventListener('hidden.bs.modal', () => {
-        document.getElementById('bulkSearchInput').value = '';
-        selectedEntryIds.clear();
-      });
+    // ── Slash command extension ───────────────────────────────────────────
+    const SlashCommand = Extension.create({
+      name: 'slashCommand',
+      addProseMirrorPlugins() {
+        return [
+          Suggestion({
+            editor: this.editor,
+            char: '/',
+            allowSpaces: false,
+            startOfLine: false,
+            items: ({ query }) => {
+              const q = query.toLowerCase()
+              return SLASH_ITEMS.filter(item =>
+                !q || item.title.toLowerCase().includes(q) ||
+                item.keywords.some(k => k.includes(q))
+              ).slice(0, 12)
+            },
+            render: slashRender,
+            command: ({ editor, range, props }) => props.action(editor, range),
+          })
+        ]
+      },
+    })
 
-      // Bulk search functionality
-      const bulkSearchInput = document.getElementById('bulkSearchInput');
-      bulkSearchInput.addEventListener('input', (e) => {
-        loadBulkEntryList(e.target.value);
-      });
+    // ── WikiLink extension (Mention with [[ trigger) ──────────────────────
+    const WikiLink = Mention.configure({
+      HTMLAttributes: { class: 'wikilink' },
+      renderLabel: ({ node }) => `[[${node.attrs.label ?? node.attrs.id}]]`,
+      suggestion: {
+        char: '[[',
+        allowSpaces: true,
+        items: async ({ query }) => {
+          if (!db) return []
+          const all = await getAllEntries()
+          const q   = query.toLowerCase()
+          return all
+            .filter(e => e.id !== currentFileId && (!q || e.name.toLowerCase().includes(q)))
+            .slice(0, 8)
+            .map(e => ({ id: String(e.id), label: e.name }))
+        },
+        render: wikiRender,
+        command: ({ editor, range, props }) => {
+          editor.chain().focus()
+            .deleteRange(range)
+            .insertContent([
+              { type: 'mention', attrs: { id: props.id, label: props.label } },
+              { type: 'text', text: ' ' },
+            ])
+            .run()
+        },
+      },
+    })
 
-      document.getElementById('clearBulkSearchBtn').addEventListener('click', () => {
-        bulkSearchInput.value = '';
-        loadBulkEntryList();
-      });
+    // ── Collapsible section nodes ─────────────────────────────────────────
+    const SummaryNode = Node.create({
+      name: 'summary',
+      content: 'inline*',
+      parseHTML() { return [{ tag: 'summary' }] },
+      renderHTML() { return ['summary', 0] },
+    })
 
-      // Select all/none buttons
-      document.getElementById('selectAllBtn').addEventListener('click', selectAllEntries);
-      document.getElementById('selectNoneBtn').addEventListener('click', deselectAllEntries);
+    const DetailsNode = Node.create({
+      name: 'details',
+      group: 'block',
+      content: 'summary block+',
+      defining: true,
+      addAttributes() {
+        return {
+          open: {
+            default: true,
+            parseHTML: el => el.hasAttribute('open'),
+            renderHTML: attrs => attrs.open ? { open: '' } : {},
+          },
+        }
+      },
+      parseHTML() { return [{ tag: 'details' }] },
+      renderHTML({ HTMLAttributes }) {
+        return ['details', HTMLAttributes, 0]
+      },
+      addCommands() {
+        return {
+          insertDetails: () => ({ commands }) =>
+            commands.insertContent({
+              type: 'details',
+              attrs: { open: true },
+              content: [
+                { type: 'summary', content: [{ type: 'text', text: 'Click to expand' }] },
+                { type: 'paragraph', content: [] },
+              ],
+            }),
+        }
+      },
+      addKeyboardShortcuts() {
+        return {
+          Enter: () => {
+            const { state, view } = this.editor
+            const { $from, empty } = state.selection
+            if (!empty || $from.parent.textContent !== '') return false
+            // Find details ancestor
+            let detailsDepth = -1
+            for (let d = $from.depth; d > 0; d--) {
+              if ($from.node(d).type.name === 'details') { detailsDepth = d; break }
+            }
+            if (detailsDepth < 0) return false
+            // Delete current empty block, insert paragraph after details
+            const afterDetails = $from.after(detailsDepth)
+            const blockStart   = $from.before($from.depth)
+            const blockEnd     = $from.after($from.depth)
+            const blockSize    = blockEnd - blockStart
+            const insertPos    = afterDetails - blockSize
+            const tr = state.tr
+              .delete(blockStart, blockEnd)
+              .insert(insertPos, state.schema.nodes.paragraph.create())
+              .scrollIntoView()
+            try {
+              view.dispatch(tr.setSelection(
+                state.selection.constructor.near(tr.doc.resolve(insertPos + 1))
+              ))
+            } catch {
+              view.dispatch(tr)
+            }
+            return true
+          },
+        }
+      },
+    })
 
-      // Execute bulk export button
-      document.getElementById('executeBulkExportBtn').addEventListener('click', executeBulkExport);
-    });
+    // ── Backlinks panel ───────────────────────────────────────────────────
+    async function updateBacklinksPanel() {
+      const panel = document.getElementById('backlinksPanel')
+      const list  = document.getElementById('backlinksList')
+      const count = document.getElementById('backlinksCount')
+      if (!panel || !list) return
+      if (!currentFileId || !db) { panel.style.display = 'none'; return }
+      try {
+        const all  = await getAllEntries()
+        const refs = all.filter(e => {
+          if (e.id === currentFileId || !e.content) return false
+          const d = document.createElement('div')
+          d.innerHTML = e.content
+          return !!d.querySelector(`[data-type="mention"][data-id="${currentFileId}"]`)
+        })
+        if (!refs.length) { panel.style.display = 'none'; return }
+        panel.style.display = 'block'
+        if (count) count.textContent = refs.length
+        list.innerHTML = ''
+        refs.forEach(e => {
+          const btn = document.createElement('button')
+          btn.className = 'btn btn-sm btn-outline-secondary'
+          btn.style.fontSize = '0.75rem'
+          btn.innerHTML = `<i class="bi bi-arrow-return-right"></i> ${e.name}`
+          btn.addEventListener('click', () => loadEntry(e.id))
+          list.appendChild(btn)
+        })
+      } catch { panel.style.display = 'none' }
+    }
+
+    // ── Auto-select summary text after inserting a collapsible section ───
+    function selectDetailsSummary() {
+      setTimeout(() => {
+        const { state } = editor
+        const { $from } = state.selection
+        for (let d = $from.depth; d > 0; d--) {
+          if ($from.node(d).type.name === 'details') {
+            const detailsPos = $from.before(d)
+            let found = false
+            $from.node(d).forEach((child, offset) => {
+              if (found || child.type.name !== 'summary') return
+              const from = detailsPos + 1 + offset + 1
+              const to   = from + child.content.size
+              editor.chain().setTextSelection({ from, to }).run()
+              found = true
+            })
+            break
+          }
+        }
+      }, 50)
+    }
+
+    // ── Block drag handles ────────────────────────────────────────────────
+    function setupDragHandles() {
+      const pm = document.querySelector('.ProseMirror')
+      if (!pm) return
+
+      const grip = document.createElement('div')
+      grip.id = 'blockGrip'
+      grip.innerHTML = '<i class="bi bi-grip-vertical"></i>'
+      grip.setAttribute('draggable', 'true')
+      grip.title = 'Drag to reorder block'
+      document.body.appendChild(grip)
+
+      const dropLine = document.createElement('div')
+      dropLine.id = 'dropLine'
+      document.body.appendChild(dropLine)
+
+      let hoveredBlock = null, dragFromPos = -1, dropToPos = -1, hideTimer = null
+
+      function showGrip(block) {
+        clearTimeout(hideTimer)
+        hoveredBlock = block
+        const rect = block.getBoundingClientRect()
+        grip.style.display = 'flex'
+        grip.style.top  = rect.top  + 'px'
+        grip.style.left = (rect.left - 28) + 'px'
+      }
+      function scheduleHide() {
+        hideTimer = setTimeout(() => {
+          if (!grip.matches(':hover')) { grip.style.display = 'none'; hoveredBlock = null }
+        }, 300)
+      }
+
+      pm.addEventListener('mousemove', e => {
+        let t = e.target
+        while (t && t !== pm) {
+          if (t.parentElement === pm) {
+            const tag = t.tagName.toLowerCase()
+            if (['p','h1','h2','h3','h4','h5','h6','ul','ol','blockquote','pre','table','details','div','hr'].includes(tag)) {
+              showGrip(t); return
+            }
+          }
+          t = t.parentElement
+        }
+        scheduleHide()
+      })
+      pm.addEventListener('mouseleave', scheduleHide)
+      grip.addEventListener('mouseenter', () => clearTimeout(hideTimer))
+      grip.addEventListener('mouseleave', scheduleHide)
+
+      grip.addEventListener('dragstart', e => {
+        if (!hoveredBlock) { e.preventDefault(); return }
+        try {
+          const domPos = editor.view.posAtDOM(hoveredBlock, 0)
+          const $pos   = editor.state.doc.resolve(domPos)
+          dragFromPos  = $pos.before($pos.depth > 0 ? $pos.depth : 1)
+          e.dataTransfer.setData('application/x-tiptap-drag', '1')
+          e.dataTransfer.effectAllowed = 'move'
+          grip.classList.add('dragging')
+        } catch { dragFromPos = -1; e.preventDefault() }
+      })
+      grip.addEventListener('dragend', () => {
+        grip.classList.remove('dragging')
+        dragFromPos = dropToPos = -1
+        dropLine.style.display = 'none'
+      })
+
+      pm.addEventListener('dragover', e => {
+        if (dragFromPos < 0) return
+        e.preventDefault()
+        e.stopPropagation()  // prevent ProseMirror from handling our block drag
+        e.dataTransfer.dropEffect = 'move'
+        try {
+          const pos = editor.view.posAtCoords({ left: e.clientX, top: e.clientY })
+          if (!pos) { dropLine.style.display = 'none'; return }
+          const $pos    = editor.state.doc.resolve(pos.pos)
+          const blockPos = $pos.before(Math.max(1, $pos.depth))
+          const node    = editor.state.doc.nodeAt(blockPos)
+          const domNode = editor.view.nodeDOM(blockPos)
+          if (!node || !domNode) { dropLine.style.display = 'none'; return }
+          const rect = domNode.getBoundingClientRect()
+          const before = e.clientY < rect.top + rect.height / 2
+          dropToPos = before ? blockPos : blockPos + node.nodeSize
+          dropLine.style.display = 'block'
+          dropLine.style.top   = (before ? rect.top : rect.bottom) + 'px'
+          dropLine.style.left  = rect.left + 'px'
+          dropLine.style.width = rect.width + 'px'
+        } catch { dropLine.style.display = 'none' }
+      }, true)  // capture: stop ProseMirror from seeing our block drag
+      pm.addEventListener('dragleave', e => {
+        if (dragFromPos >= 0) e.stopPropagation()
+        dropLine.style.display = 'none'
+      }, true)
+      pm.addEventListener('drop', e => {
+        dropLine.style.display = 'none'
+        if (dragFromPos < 0 || dropToPos < 0) return
+        e.preventDefault()
+        e.stopPropagation()  // prevent ProseMirror from inserting drag data as text
+        try {
+          const { state } = editor
+          const fromNode  = state.doc.nodeAt(dragFromPos)
+          if (!fromNode) return
+          const tr       = state.tr.delete(dragFromPos, dragFromPos + fromNode.nodeSize)
+          tr.insert(tr.mapping.map(dropToPos), fromNode)
+          editor.view.dispatch(tr)
+        } catch (err) { console.warn('Block drag failed:', err) }
+        dragFromPos = dropToPos = -1
+      }, true)  // capture: prevent ProseMirror text insertion
+      window.addEventListener('scroll', () => { if (hoveredBlock) showGrip(hoveredBlock) }, { passive: true })
+    }
+
+    // ── DOMContentLoaded ──────────────────────────────────────────────────
+    document.addEventListener('DOMContentLoaded', async () => {
+      // Build editor
+      editor = new Editor({
+        element: document.getElementById('journalEditor'),
+        extensions: [
+          StarterKit.configure({ heading: { levels: [1,2,3] } }),
+          Underline,
+          Link.configure({ openOnClick: false, HTMLAttributes: { target: '_blank', rel: 'noopener noreferrer' } }),
+          CustomImage.configure({ allowBase64: true, inline: false }),
+          TextAlign.configure({ types: ['heading','paragraph'] }),
+          TextStyle, Color,
+          Highlight.configure({ multicolor: true }),
+          Table.configure({ resizable: true }),
+          TableRow, TableHeader, TableCell,
+          TaskList,
+          TaskItem.configure({ nested: true }),
+          CharacterCount,
+          Placeholder.configure({ placeholder: 'Write here… Type / for commands, [[ to link entries' }),
+          Typography,
+          SummaryNode,
+          DetailsNode,
+          WikiLink,
+          SlashCommand,
+        ],
+        content: '',
+        onUpdate:         () => { hasUnsavedChanges = getEditorHTML() !== lastSavedContent; updateSaveButtonState(); updateWordCount(); updateToolbarState() },
+        onSelectionUpdate: () => updateToolbarState(),
+        onFocus:           () => updateToolbarState(),
+      })
+
+      setTimeout(() => { enableImageResize(); setupDragHandles() }, 100)
+
+      // Wikilink click → navigate to linked entry (bubble phase)
+      editor.view.dom.addEventListener('click', e => {
+        const wl = e.target.closest('[data-type="mention"]')
+        if (wl) {
+          const id = parseInt(wl.getAttribute('data-id'))
+          if (!isNaN(id)) loadEntry(id)
+        }
+      })
+
+      // Details toggle — capture phase: prevent browser native double-toggle,
+      // update the open state in TipTap's model so re-renders respect it
+      editor.view.dom.addEventListener('click', e => {
+        const summary = e.target.closest('summary')
+        if (!summary) return
+        const details = summary.parentElement
+        if (details?.tagName !== 'DETAILS') return
+        e.preventDefault()  // stop browser native toggle
+        try {
+          const pos  = editor.view.posAtDOM(details, 0)
+          const $pos = editor.state.doc.resolve(pos)
+          const nodePos = $pos.before($pos.depth)
+          const node = editor.state.doc.nodeAt(nodePos)
+          if (node?.type.name === 'details') {
+            editor.view.dispatch(
+              editor.state.tr.setNodeMarkup(nodePos, null, { open: !node.attrs.open })
+            )
+          }
+        } catch { details.open = !details.open }  // DOM fallback
+      }, true)
+
+      // Prevent ProseMirror from repositioning cursor when summary is clicked
+      editor.view.dom.addEventListener('mousedown', e => {
+        if (e.target.closest('summary')) e.stopPropagation()
+      }, true)
+
+      // Auto-save every 60 seconds (silent, only existing entries)
+      setInterval(() => {
+        if (hasUnsavedChanges && currentFileId) saveCurrentEntry(true)
+      }, 60000)
+
+      // DB + restore last entry
+      try {
+        await initDB()
+        await loadFileList()
+        try {
+          const lastId = parseInt(localStorage.getItem('journal_lastId'))
+          if (lastId) { const e = await getEntry(lastId); if (e) await loadEntry(lastId) }
+        } catch {/* ignore */}
+      } catch (err) {
+        console.error('DB init error', err)
+        showToast('Error initializing database', 'danger')
+      }
+
+      // ── Toolbar ───────────────────────────────────────────────────────
+      document.getElementById('boldBtn')       .addEventListener('click', () => editor.chain().focus().toggleBold().run())
+      document.getElementById('italicBtn')     .addEventListener('click', () => editor.chain().focus().toggleItalic().run())
+      document.getElementById('underlineBtn')  .addEventListener('click', () => editor.chain().focus().toggleUnderline().run())
+      document.getElementById('strikeBtn')     .addEventListener('click', () => editor.chain().focus().toggleStrike().run())
+      document.getElementById('blockquoteBtn') .addEventListener('click', () => editor.chain().focus().toggleBlockquote().run())
+      document.getElementById('codeBlockBtn')  .addEventListener('click', () => editor.chain().focus().toggleCodeBlock().run())
+      document.getElementById('hrBtn')         .addEventListener('click', () => editor.chain().focus().setHorizontalRule().run())
+      document.getElementById('detailsBtn')    .addEventListener('click', () => { editor.chain().focus().insertDetails().run(); selectDetailsSummary() })
+      document.getElementById('bulletListBtn') .addEventListener('click', () => editor.chain().focus().toggleBulletList().run())
+      document.getElementById('orderedListBtn').addEventListener('click', () => editor.chain().focus().toggleOrderedList().run())
+      document.getElementById('taskListBtn')   .addEventListener('click', () => editor.chain().focus().toggleTaskList().run())
+      document.getElementById('alignLeftBtn')  .addEventListener('click', () => editor.chain().focus().setTextAlign('left').run())
+      document.getElementById('alignCenterBtn').addEventListener('click', () => editor.chain().focus().setTextAlign('center').run())
+      document.getElementById('alignRightBtn') .addEventListener('click', () => editor.chain().focus().setTextAlign('right').run())
+      document.getElementById('clearFormatBtn').addEventListener('click', () => editor.chain().focus().clearNodes().unsetAllMarks().run())
+
+      document.getElementById('headingSelect').addEventListener('change', e => {
+        const lvl = parseInt(e.target.value)
+        lvl === 0 ? editor.chain().focus().setParagraph().run()
+                  : editor.chain().focus().setHeading({ level: lvl }).run()
+      })
+      document.getElementById('textColorPicker')    .addEventListener('input', e => editor.chain().focus().setColor(e.target.value).run())
+      document.getElementById('highlightColorPicker').addEventListener('input', e => editor.chain().focus().setHighlight({ color: e.target.value }).run())
+
+      document.getElementById('linkBtn').addEventListener('click', () => {
+        if (editor.isActive('link')) {
+          const cur = editor.getAttributes('link').href
+          const url = prompt('Edit link URL (clear to remove):', cur)
+          if (url === null) return
+          url ? editor.chain().focus().setLink({ href: url }).run() : editor.chain().focus().unsetLink().run()
+        } else {
+          const { from, to } = editor.state.selection
+          const sel = editor.state.doc.textBetween(from, to)
+          const url = prompt('Enter URL:'); if (!url) return
+          if (sel) {
+            editor.chain().focus().setLink({ href: url }).run()
+          } else {
+            const txt = prompt('Enter link text:', url)
+            if (txt) editor.chain().focus().insertContent(`<a href="${url}">${txt}</a>`).run()
+          }
+        }
+      })
+
+      document.getElementById('imageBtn').addEventListener('click', () => {
+        const input = document.createElement('input')
+        input.type = 'file'; input.accept = 'image/*'
+        input.onchange = e => {
+          const file = e.target.files[0]; if (!file) return
+          const reader = new FileReader()
+          reader.onload = re => editor.chain().focus().setImage({ src: re.target.result }).run()
+          reader.readAsDataURL(file)
+        }
+        input.click()
+      })
+
+      document.querySelectorAll('[data-table-rows]').forEach(el => {
+        el.addEventListener('click', e => {
+          e.preventDefault()
+          editor.chain().focus().insertTable({ rows: parseInt(el.dataset.tableRows), cols: parseInt(el.dataset.tableCols), withHeaderRow: true }).run()
+        })
+      })
+
+      // Table context controls
+      document.getElementById('addRowBeforeBtn').addEventListener('click', () => editor.chain().focus().addRowBefore().run())
+      document.getElementById('addRowAfterBtn') .addEventListener('click', () => editor.chain().focus().addRowAfter().run())
+      document.getElementById('addColBeforeBtn').addEventListener('click', () => editor.chain().focus().addColumnBefore().run())
+      document.getElementById('addColAfterBtn') .addEventListener('click', () => editor.chain().focus().addColumnAfter().run())
+      document.getElementById('deleteRowBtn')   .addEventListener('click', () => editor.chain().focus().deleteRow().run())
+      document.getElementById('deleteColBtn')   .addEventListener('click', () => editor.chain().focus().deleteColumn().run())
+      document.getElementById('deleteTableBtn') .addEventListener('click', () => editor.chain().focus().deleteTable().run())
+      document.getElementById('mergeCellsBtn')  .addEventListener('click', () => editor.chain().focus().mergeCells().run())
+      document.getElementById('splitCellBtn')   .addEventListener('click', () => editor.chain().focus().splitCell().run())
+      document.getElementById('toggleHeaderBtn').addEventListener('click', () => editor.chain().focus().toggleHeaderRow().run())
+
+      // File management
+      document.getElementById('newFileBtn')        .addEventListener('click', createNewEntry)
+      document.getElementById('saveBtn')           .addEventListener('click', () => saveCurrentEntry())
+      document.getElementById('deleteBtn')         .addEventListener('click', deleteCurrentEntry)
+      document.getElementById('importBtn')         .addEventListener('click', () => document.getElementById('importFileInput').click())
+      document.getElementById('importFileInput')   .addEventListener('change', handleFileImport)
+      document.getElementById('printBtn')          .addEventListener('click', () => window.print())
+      document.getElementById('focusModeBtn')      .addEventListener('click', toggleFocusMode)
+
+      // Tags
+      document.getElementById('tagInput').addEventListener('keydown', e => {
+        if (e.key === 'Enter' || e.key === ',') {
+          e.preventDefault()
+          const val = e.target.value.trim().replace(/,+$/, '')
+          if (val && !currentTags.includes(val)) {
+            currentTags.push(val)
+            renderTagPills()
+            hasUnsavedChanges = true
+            updateSaveButtonState()
+          }
+          e.target.value = ''
+        }
+      })
+
+      // Templates
+      document.querySelectorAll('.template-card').forEach(card => {
+        card.addEventListener('click', () => {
+          const tmpl = TEMPLATES[card.dataset.template]
+          if (!tmpl || !checkUnsaved()) return
+          bootstrap.Modal.getInstance(document.getElementById('templatesModal'))?.hide()
+          currentFileId     = null
+          currentTags       = [...tmpl.tags]
+          renderTagPills()
+          document.getElementById('fileName').value = tmpl.name
+          document.getElementById('deleteBtn').disabled = true
+          editor.commands.setContent(tmpl.content)
+          lastSavedContent  = ''
+          hasUnsavedChanges = true
+          updateSaveButtonState()
+          loadFileList()
+        })
+      })
+
+      // Search + sort + tag filter
+      const searchInput = document.getElementById('searchInput')
+      searchInput.addEventListener('input', e => loadFileList(e.target.value))
+      document.getElementById('clearSearchBtn')  .addEventListener('click', () => { searchInput.value=''; loadFileList() })
+      document.getElementById('sortSelect')      .addEventListener('change', () => loadFileList(searchInput.value))
+      document.getElementById('tagFilterSelect') .addEventListener('change', () => loadFileList(searchInput.value))
+
+      // Keyboard shortcuts
+      document.addEventListener('keydown', e => {
+        if ((e.ctrlKey || e.metaKey) && e.key === 's') { e.preventDefault(); saveCurrentEntry() }
+        if (e.key === 'Escape') {
+          const sidebar = document.getElementById('sidebarCol')
+          if (sidebar.classList.contains('d-none')) toggleFocusMode()
+        }
+      })
+
+      // Export modal
+      document.querySelectorAll('[data-export-format]').forEach(btn => {
+        btn.addEventListener('click', () => handleExportClick(btn.dataset.exportFormat))
+      })
+
+      // Bulk export modal
+      const bulkModal = document.getElementById('bulkExportModal')
+      bulkModal.addEventListener('show.bs.modal',   () => loadBulkEntryList())
+      bulkModal.addEventListener('hidden.bs.modal', () => { document.getElementById('bulkSearchInput').value=''; selectedEntryIds.clear() })
+      const bulkSearch = document.getElementById('bulkSearchInput')
+      bulkSearch.addEventListener('input', e => loadBulkEntryList(e.target.value))
+      document.getElementById('clearBulkSearchBtn')  .addEventListener('click', () => { bulkSearch.value=''; loadBulkEntryList() })
+      document.getElementById('selectAllBtn')        .addEventListener('click', () => {
+        document.querySelectorAll('#bulkEntryList input[type="checkbox"]').forEach(cb => { cb.checked=true; selectedEntryIds.add(parseInt(cb.value)) })
+        updateSelectionCount()
+      })
+      document.getElementById('selectNoneBtn')       .addEventListener('click', () => {
+        document.querySelectorAll('#bulkEntryList input[type="checkbox"]').forEach(cb => { cb.checked=false; selectedEntryIds.delete(parseInt(cb.value)) })
+        updateSelectionCount()
+      })
+      document.getElementById('executeBulkExportBtn').addEventListener('click', executeBulkExport)
+    })
   </script>
+
   <script data-goatcounter="https://maybeme1990.goatcounter.com/count"
-        async src="//gc.zgo.at/count.js"></script>
+    async src="//gc.zgo.at/count.js"></script>
 </body>
 </html>

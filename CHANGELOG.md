@@ -8,7 +8,7 @@ The format is based on Keep a Changelog, and this project adheres to Semantic Ve
 The DM's Toolbox has evolved through focused feature releases:
 
 
-- **2.2.x**: Characters page Areas 2–6 completeness — Languages & Proficiencies, Jack of All Trades, passive scores, inline HP controls, HP progress bar, dynamic resource rows, condition tooltips, spell list grouped by level, ritual casting, pact slot action buttons, magical item badges, coin weight toggle, TWF off-hand attacks, categorized notes, Combat Card View redesign (responsive grid, skills panel, interactive conditions, adv/disadv rolls, exhaustion controls, rest buttons)
+- **2.2.x**: Journal overhaul (TipTap 2 editor, slash commands, [[wikilinks]], backlinks panel, collapsible sections, block drag handles, typography, tags, templates, help offcanvas); Characters page Areas 2–7 completeness — Languages & Proficiencies, Jack of All Trades, passive scores, inline HP controls, HP progress bar, dynamic resource rows, condition tooltips, spell list grouped by level, ritual casting, pact slot action buttons, magical item badges, coin weight toggle, TWF off-hand attacks, categorized notes, Combat Card View redesign (responsive grid, skills panel, interactive conditions, adv/disadv rolls, exhaustion controls, rest buttons), Level Up button, initiative modifier fixes, initiative advantage reminders, Power User Tips help modal
 - **2.1.x**: Characters page UX overhaul (modals, toasts, first-run flow), Battle Map UX overhaul (mode tabs, fog brush cursor, Bootstrap modals), Initiative Tracker reaction/legendary-action tracking, Encounter Builder power-user overhaul (two-col tooltips, save/load slots, edit-in-editor, roll initiative, encounter naming, CR 0–30 filter)
 - **2.0.x**: Starting equipment selection, subclass bonus cantrips, enhanced feat selection UI, interactive class feature selection, ability check rolls, full custom monster creator, and content pack integration
 - **1.11.x**: Journal system with rich text editor, import/export (Word/PDF/TXT/Markdown), and Battle Map → Initiative Tracker integration
@@ -16,7 +16,43 @@ The DM's Toolbox has evolved through focused feature releases:
 - **1.9.x**: Battle map measurement tools, persistent fog shapes, and generator integration across NPC/Tavern/Shop systems
 - **1.8.x**: Spell database expansion to 432+ spells, inventory management, loot generator overhaul, and character token generation
 
-**Current version: 2.2.5 (June 2026)**
+**Current version: 2.2.6 (June 2026)**
+
+---
+
+## [2.2.6] - 2026-06-14
+**Journal — Phase 2 & 3 Overhaul (TipTap Editor, Power Features & Help)**
+
+### Changed
+- **Editor engine** — migrated the Journal from the previous rich text implementation to **TipTap 2** (ProseMirror-based), delivering a faster, more reliable editing experience with full HTML persistence in IndexedDB and a richer extension model
+
+### Added
+**Phase 2 — Organization & UX**
+- **Tags** — add comma-separated tags to any entry; sidebar tag-filter dropdown shows only matching entries; tags persist through saves
+- **Templates** — four one-click starters (Session Log, NPC Profile, Location, Encounter) pre-fill the editor with structured headings and placeholder text; every field is fully editable
+- **Auto-save** — silently saves every 60 seconds when unsaved changes exist and an entry is open; Save button shows an asterisk (`Save *`) as the unsaved-change indicator
+- **Pinned entries** — click the pin icon on any sidebar entry to float it to the top of the list regardless of sort order; click again to unpin
+- **Keyboard sidebar navigation** — ↑/↓ arrow keys move focus through the entry list; Enter opens the focused entry
+- **Focus mode** — hides the sidebar for distraction-free writing; click the fullscreen icon or press Escape to restore
+
+**Phase 3 — Notion/Obsidian-Style Power Features**
+- **Slash commands** — type `/` anywhere in the editor to open a command palette; filter by typing, navigate with ↑/↓, confirm with Enter or click; covers Heading 1/2/3, Bullet List, Numbered List, Task List, Table, Collapsible Section, Blockquote, Code Block, Horizontal Rule, and Image
+- **`[[Wikilinks]]`** — type `[[` to open a fuzzy-search picker of all journal entries; inserts a green `[[Entry Name]]` inline link; clicking any wikilink in the editor navigates to that entry
+- **Backlinks panel** — automatically appears below the word count when other entries reference the current one; lists all back-referencing entries as clickable buttons; refreshes on every save
+- **Collapsible sections** — `<details>/<summary>` blocks insertable via toolbar ⤢ button or `/collapse`; title text is automatically selected on insert so you can immediately type a custom name; click ▶ to toggle open/closed; toggle state persists through saves and editor re-renders; pressing Enter on an empty last paragraph inside exits the section and inserts a paragraph below
+- **Block drag handles** — hover over any top-level block (paragraph, heading, list, table, image, etc.) to reveal a ⠿ grip icon; drag to reorder anywhere in the entry; a green drop-indicator line shows the target position; implemented with capture-phase `dragover`/`drop` handlers and `application/x-tiptap-drag` MIME type so ProseMirror does not intercept the reorder as a text insertion
+- **Typography auto-corrections** — `--` → em dash, `"text"` → curly double quotes, `'text'` → curly single quotes, `(c)` → ©, `(r)` → ®, `(tm)` → ™, `...` → ellipsis (confirmed by a trailing space or character)
+- **Help offcanvas** — **?** button in the entry header opens a slide-in panel with 11 accordion sections covering every live feature: Getting Started, Slash Commands, Text Formatting, Lists/Blocks/Tables, Links & Images, Wikilinks & Backlinks, Drag to Reorder Blocks, Tags/Search/Sorting, Saving & Storage, Export/Print/Focus Mode, and a Keyboard Shortcuts cheat sheet
+
+### Fixed
+- **Block drag text insertion** — changed drag dataTransfer MIME type from `text/plain` to `application/x-tiptap-drag` and added `{ capture: true }` + `stopPropagation()` to `dragover`, `dragleave`, and `drop` handlers; ProseMirror now never receives block-drag events and cannot insert the block tag string as editor text
+- **Collapsible toggle state reset on re-render** — added `open` to `DetailsNode.addAttributes()` with `parseHTML: el => el.hasAttribute('open')` and `renderHTML: attrs => attrs.open ? { open: '' } : {}`; TipTap now stores the toggle state in the document model so editor re-renders (triggered by any subsequent edit) no longer silently reset closed sections to open
+- **Collapsible exit shortcut** — added `addKeyboardShortcuts` to `DetailsNode`; pressing Enter on an empty paragraph that is the last block inside a `details` node deletes that paragraph and inserts a new paragraph immediately after the `details` node, placing the cursor there
+- **Drag handle grip disappearing** — increased `scheduleHide` debounce from 150ms to 300ms and enlarged the grip hit area to 26×30px with 2px padding so the handle stays visible long enough to click and drag reliably
+- **Live Server re-evaluation console error** — changed three top-level `const` declarations in `journal-export.js` (`JOURNAL_LICENSE_PHRASE`, `SRD_PDF_URL`, `JOURNAL_LICENSE_DEFAULTS`) to `var`; `const` at global script scope throws `SyntaxError: already declared` when VS Code Live Server re-evaluates the script tag on a hot-reload without a full page refresh
+
+### Docs
+- **`docs/JOURNAL.md`** — updated to document all Phase 2 & 3 features: collapsible section auto-select rename, block drag handles (Ctrl+Z undo note), new help offcanvas section; keyboard shortcuts table now includes Enter-to-exit-collapsible row
 
 ---
 

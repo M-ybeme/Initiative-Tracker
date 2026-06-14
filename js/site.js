@@ -1,13 +1,15 @@
 const DM_TOOLBOX_BUILD = {
   name: "The DM's Toolbox",
-  version: "2.2.5",
+  version: "2.2.6",
   recentChanges: [
-    "Characters: Level Up button added next to Level field — opens wizard for milestone campaigns without XP tracking",
-    "Characters: Initiative modifier now pre-filled from DEX on character creation; roll button falls back to DEX when field is blank",
-    "Characters: Alert feat now correctly applies +5 to initMod when taken via level-up wizard",
-    "Characters: Initiative roll shows advantage reminder toast for Feral Instinct, Assassinate, and Rakish Audacity",
-    "Characters: Help modal — Power User Tips accordion with 12 hidden-gem features",
-    "Characters: Help modal accuracy fixes (exhaustion range, notes categories, inventory badges)"
+    "Journal: Migrated to TipTap 2 (ProseMirror) — faster, more reliable rich text editing with full HTML persistence in IndexedDB",
+    "Journal: Tags, four templates (Session Log/NPC/Location/Encounter), auto-save every 60s, pinned entries, keyboard sidebar navigation, focus mode",
+    "Journal: Slash commands — type / anywhere for command palette (headings, lists, table, collapsible, image, and more)",
+    "Journal: [[Wikilinks]] — type [[ to link entries by name; click any wikilink to navigate; backlinks panel shows reverse references",
+    "Journal: Collapsible sections — details/summary blocks; title auto-selected on insert; toggle persists through saves; Enter on empty line exits",
+    "Journal: Block drag handles — hover for grip icon, drag to reorder any top-level block with a green drop indicator",
+    "Journal: Typography auto-corrections — em dashes, curly quotes, © ® ™ ellipsis as you type",
+    "Journal: Help offcanvas — ? button opens 11-section feature guide covering all live journal features"
   ],
   buildTime: new Date().toISOString(),
   author: "Maybeme"
