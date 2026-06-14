@@ -8,15 +8,23 @@ The format is based on Keep a Changelog, and this project adheres to Semantic Ve
 The DM's Toolbox has evolved through focused feature releases:
 
 
-- **2.2.x**: Journal overhaul in three phases — Phase 1: TipTap 2 engine migration; Phase 2: tags, templates, auto-save, auto-restore, pinning, entry count badge, print, blockquote/HR toolbar buttons, focus mode, keyboard sidebar nav; Phase 3: slash commands, [[wikilinks]], backlinks panel, collapsible sections, block drag handles, typography auto-corrections, help offcanvas; Characters page Areas 2–7 completeness — Languages & Proficiencies, Jack of All Trades, passive scores, inline HP controls, HP progress bar, dynamic resource rows, condition tooltips, spell list grouped by level, ritual casting, pact slot action buttons, magical item badges, coin weight toggle, TWF off-hand attacks, categorized notes, Combat Card View redesign (responsive grid, skills panel, interactive conditions, adv/disadv rolls, exhaustion controls, rest buttons), Level Up button, initiative modifier fixes, initiative advantage reminders, Power User Tips help modal
-- **2.1.x**: Characters page UX overhaul (modals, toasts, first-run flow), Battle Map UX overhaul (mode tabs, fog brush cursor, Bootstrap modals), Initiative Tracker reaction/legendary-action tracking, Encounter Builder power-user overhaul (two-col tooltips, save/load slots, edit-in-editor, roll initiative, encounter naming, CR 0–30 filter)
-- **2.0.x**: Starting equipment selection, subclass bonus cantrips, enhanced feat selection UI, interactive class feature selection, ability check rolls, full custom monster creator, and content pack integration
+- **2.2.x**: Journal full overhaul (TipTap 2, slash commands, wikilinks, backlinks, templates, tags, collapsible sections, drag handles), Characters page Areas 2–7 (languages, proficiencies, combat card view redesign, level up flow, initiative fixes)
+- **2.1.x**: Characters, Battle Map, and Encounter Builder UX overhauls; Initiative Tracker reaction/legendary-action tracking
+- **2.0.x**: Starting equipment selection, subclass cantrips, feat UI, ability check rolls, custom monster creator, and content pack integration
 - **1.11.x**: Journal system with rich text editor, import/export (Word/PDF/TXT/Markdown), and Battle Map → Initiative Tracker integration
 - **1.10.x**: Full character manager with multiclass support, spell learning, subclass selection, and character sheet export
 - **1.9.x**: Battle map measurement tools, persistent fog shapes, and generator integration across NPC/Tavern/Shop systems
 - **1.8.x**: Spell database expansion to 432+ spells, inventory management, loot generator overhaul, and character token generation
 
-**Current version: 2.2.6 (June 2026)**
+**Current version: 2.2.7 (June 2026)**
+
+---
+
+## [2.2.7] - 2026-06-14
+**Test Suite Maintenance — E2E spec fixes for v2.2.x toolbar reorganization**
+
+### Fixed
+- Five Playwright e2e specs that drifted from the v2.2.x toolbar overhaul: `#exportCharacterBtn`, `#exportAllCharactersBtn`, and `#sendToBattleMapBtn` moved into the "More Actions" overflow dropdown (changed assertions to `toBeAttached`); `#importCharacterBtn` renamed to `#importCharacterMenuBtn`; dropdown-click test now dismisses the auto-shown `newCharacterChoiceModal` (appears when no characters exist) before interacting with the toolbar
 
 ---
 

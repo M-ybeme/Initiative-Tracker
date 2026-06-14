@@ -30,7 +30,8 @@ test.describe('Character Creation Wizard', () => {
     });
 
     test('import button allows importing character JSON', async ({ page }) => {
-      await expect(page.locator('#importCharacterBtn')).toBeVisible();
+      // Import moved into the "More Actions" overflow dropdown and renamed
+      await expect(page.locator('#importCharacterMenuBtn')).toBeAttached();
     });
 
     test('hidden file input exists for import', async ({ page }) => {

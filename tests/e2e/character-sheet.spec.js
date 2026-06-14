@@ -34,12 +34,14 @@ test.describe('Character Sheet', () => {
     });
 
     test('shows export buttons', async ({ page }) => {
-      await expect(page.locator('#exportCharacterBtn')).toBeVisible();
-      await expect(page.locator('#exportAllCharactersBtn')).toBeVisible();
+      // These live inside the "More Actions" overflow dropdown — check they exist in the DOM
+      await expect(page.locator('#exportCharacterBtn')).toBeAttached();
+      await expect(page.locator('#exportAllCharactersBtn')).toBeAttached();
     });
 
     test('shows import button', async ({ page }) => {
-      await expect(page.locator('#importCharacterBtn')).toBeVisible();
+      // Import moved into the "More Actions" overflow dropdown and renamed
+      await expect(page.locator('#importCharacterMenuBtn')).toBeAttached();
     });
 
     test('shows help button', async ({ page }) => {
@@ -67,7 +69,8 @@ test.describe('Character Sheet', () => {
     });
 
     test('send to battle map button exists', async ({ page }) => {
-      await expect(page.locator('#sendToBattleMapBtn')).toBeVisible();
+      // Lives inside the "More Actions" overflow dropdown — check it exists in the DOM
+      await expect(page.locator('#sendToBattleMapBtn')).toBeAttached();
     });
 
     test('combat view toggle exists', async ({ page }) => {
@@ -85,6 +88,13 @@ test.describe('Character Sheet', () => {
 
   test.describe('Dropdown Interactions', () => {
     test('clicking print/export dropdown shows options', async ({ page }) => {
+      // When no characters exist the app auto-shows newCharacterChoiceModal — dismiss it first
+      const modal = page.locator('#newCharacterChoiceModal');
+      const closeBtn = modal.locator('button[data-bs-dismiss="modal"]');
+      if (await modal.isVisible()) {
+        await closeBtn.click();
+        await expect(modal).not.toBeVisible();
+      }
       await page.locator('#printExportDropdown').click();
       await expect(page.locator('#printSheetBtn')).toBeVisible();
       await expect(page.locator('#exportPdfBtn')).toBeVisible();

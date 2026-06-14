@@ -1,15 +1,8 @@
 const DM_TOOLBOX_BUILD = {
   name: "The DM's Toolbox",
-  version: "2.2.6",
+  version: "2.2.7",
   recentChanges: [
-    "Journal: Migrated to TipTap 2 (ProseMirror) — faster, more reliable rich text editing with full HTML persistence in IndexedDB",
-    "Journal: Tags, four templates (Session Log/NPC/Location/Encounter), auto-save every 60s, pinned entries, keyboard sidebar navigation, focus mode",
-    "Journal: Slash commands — type / anywhere for command palette (headings, lists, table, collapsible, image, and more)",
-    "Journal: [[Wikilinks]] — type [[ to link entries by name; click any wikilink to navigate; backlinks panel shows reverse references",
-    "Journal: Collapsible sections — details/summary blocks; title auto-selected on insert; toggle persists through saves; Enter on empty line exits",
-    "Journal: Block drag handles — hover for grip icon, drag to reorder any top-level block with a green drop indicator",
-    "Journal: Typography auto-corrections — em dashes, curly quotes, © ® ™ ellipsis as you type",
-    "Journal: Help offcanvas — ? button opens 11-section feature guide covering all live journal features"
+    "Tests: fixed 5 e2e spec failures caused by the v2.2.x toolbar reorganization — export/import/battle-map buttons moved to overflow dropdown, importCharacterBtn renamed importCharacterMenuBtn, dropdown click test now dismisses the auto-shown newCharacterChoiceModal first"
   ],
   buildTime: new Date().toISOString(),
   author: "Maybeme"
