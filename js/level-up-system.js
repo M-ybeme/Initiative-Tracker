@@ -2361,6 +2361,12 @@ const LevelUpSystem = (function() {
             character.stats[ability] = Math.min(20, current + amount);
           }
         }
+
+        // Handle initiative bonus (e.g., Alert feat: benefits.initiative = 5)
+        if (featData.benefits?.initiative) {
+          const current = Number(character.initMod) || 0;
+          character.initMod = current + featData.benefits.initiative;
+        }
       }
     }
 

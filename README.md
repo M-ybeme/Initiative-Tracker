@@ -2,7 +2,7 @@
 
 **A comprehensive, browser-based suite of tools for tabletop RPG Game Masters**
 
-**Live Site:** [https://dnddmtoolbox.netlify.app/](https://dnddmtoolbox.netlify.app/) · **Version:** 2.2.4
+**Live Site:** [https://dnddmtoolbox.netlify.app/](https://dnddmtoolbox.netlify.app/) · **Version:** 2.2.5
 
 ---
 
@@ -73,7 +73,7 @@ Press **Ctrl+Alt+D** or click the gear icon in the footer to open the diagnostic
 * **Background bonuses** – 2024 PHB system with flexible +2/+1 ability increases
 * **Origin feats** – Automatic feat from background (Magic Initiate, Alert, etc.)
 * **Level-up system** – HP rolls, ASI/feat choices, interactive class feature selection (Fighting Style, Pact Boon, Eldritch Invocations, Metamagic), spell slot progression
-* **XP tracking** – Optional XP system in Basic Information with a color-coded progress bar, next-level threshold display, and a level-up wizard trigger when the threshold is crossed; milestone players can ignore it entirely
+* **XP tracking** – Optional XP system in Basic Information with a color-coded progress bar, next-level threshold display, and a level-up wizard trigger when the threshold is crossed; milestone players can use the persistent **Level Up** button next to the Level field instead
 * **Class resources (2024 PHB)** – All 12 classes populate the Resources tab with correct 2024 rules on creation and level-up (Discipline Points, Proficiency-Bonus Bardic Inspiration, Channel Divinity for Paladin/Cleric, Wild Shape for Druid, etc.)
 * **Wild Shape notes for Druids** – At-the-Table Reminders auto-populated with 2024 PHB rules and a formatted beast-form list; forms expand automatically on each level-up
 * **Polymorph/True Polymorph notes** – Adding either spell auto-populates the Spells tab Notes with 2024 PHB rules, CR limits, and the full available beast-form list

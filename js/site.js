@@ -1,15 +1,13 @@
 const DM_TOOLBOX_BUILD = {
   name: "The DM's Toolbox",
-  version: "2.2.4",
+  version: "2.2.5",
   recentChanges: [
-    "Characters: Combat View — responsive 4-column grid with header, vitals, abilities, saves, skills, actions, spells, resources",
-    "Characters: Combat View — skills panel (all 18, proficiency/expertise badges, adv/disadv on click)",
-    "Characters: Combat View — interactive conditions (add via dropdown, × to remove, syncs to full sheet)",
-    "Characters: Combat View — Shift/Ctrl/right-click popup for advantage and disadvantage on any roll",
-    "Characters: Combat View — exhaustion +/− buttons, Short Rest and Long Rest buttons",
-    "Characters: Combat View — HP last-change log synced from full sheet",
-    "Characters: Combat View — initiative display now reads charInitMod (respects Alert feat and custom bonuses)",
-    "Characters: Action economy — Bootstrap modal replaces browser confirm() when action slot already used"
+    "Characters: Level Up button added next to Level field — opens wizard for milestone campaigns without XP tracking",
+    "Characters: Initiative modifier now pre-filled from DEX on character creation; roll button falls back to DEX when field is blank",
+    "Characters: Alert feat now correctly applies +5 to initMod when taken via level-up wizard",
+    "Characters: Initiative roll shows advantage reminder toast for Feral Instinct, Assassinate, and Rakish Audacity",
+    "Characters: Help modal — Power User Tips accordion with 12 hidden-gem features",
+    "Characters: Help modal accuracy fixes (exhaustion range, notes categories, inventory badges)"
   ],
   buildTime: new Date().toISOString(),
   author: "Maybeme"

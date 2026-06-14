@@ -793,12 +793,41 @@ import { getSpellSlotsForClassLevel as _getSpellSlotsForClassLevel, getPactMagic
         })).filter(r => r.name || r.max > 0);
       }
 
+      const INITIATIVE_ADVANTAGE_FEATURES = [
+        { name: 'Feral Instinct',  tip: 'roll with advantage (Feral Instinct)' },
+        { name: 'Assassinate',     tip: 'roll with advantage against surprised creatures (Assassinate)' },
+        { name: 'Rakish Audacity', tip: 'add your CHA modifier to this roll (Rakish Audacity)' },
+      ];
+
+      function getInitiativeAdvantageReason(char) {
+        if (!char) return null;
+        const featuresText = (char.features || '').toLowerCase();
+        const featsArr = (char.feats || []).map(f => f.toLowerCase());
+        const matches = INITIATIVE_ADVANTAGE_FEATURES.filter(f => {
+          const n = f.name.toLowerCase();
+          return featuresText.includes(n) || featsArr.includes(n);
+        });
+        return matches.length > 0 ? matches : null;
+      }
+
       function rollInitiative() {
         const char = getCurrentCharacter();
         const charName = char?.name || 'Character';
 
         const initModEl = $('charInitMod');
-        const initMod = initModEl ? (Number(initModEl.value) || 0) : 0;
+        let initMod;
+        if (initModEl && initModEl.value !== '' && initModEl.value !== null) {
+          initMod = Number(initModEl.value) || 0;
+        } else {
+          // Field blank — fall back to DEX modifier (same logic as Combat View display)
+          initMod = Number($('modDex')?.value || '') || 0;
+        }
+
+        const advantages = getInitiativeAdvantageReason(char);
+        if (advantages) {
+          const tips = advantages.map(a => a.tip).join(' · ');
+          showAppToast(`Initiative reminder: ${tips}`, 'info', 5000);
+        }
 
         const result = rollDice(`1d20${initMod >= 0 ? '+' : ''}${initMod}`, `${charName} - Initiative`);
         return result;
@@ -2788,6 +2817,14 @@ import { getSpellSlotsForClassLevel as _getSpellSlotsForClassLevel, getPactMagic
 
         // Trigger recalculation of derived values
         recalcDerivedFromForm();
+
+        // Pre-fill initiative modifier from DEX if not already set (new character path).
+        // We set this AFTER recalcDerivedFromForm so modDex is already populated.
+        const initModField = $('charInitMod');
+        if (initModField && initModField.value === '') {
+          const dexMod = Number($('modDex')?.value || '') || 0;
+          initModField.value = dexMod;
+        }
 
         // Set saving throw proficiencies
         if (wizardData.savingThrows && wizardData.savingThrows.length > 0) {
@@ -5730,6 +5767,16 @@ import { getSpellSlotsForClassLevel as _getSpellSlotsForClassLevel, getPactMagic
           });
         }
 
+        const manualLevelUpBtn = $('manualLevelUpBtn');
+        if (manualLevelUpBtn) {
+          manualLevelUpBtn.addEventListener('click', () => {
+            const character = getCurrentCharacter();
+            if (character && window.LevelUpSystem && window.LevelUpSystem.startLevelUp) {
+              window.LevelUpSystem.startLevelUp(character);
+            }
+          });
+        }
+
         // Re-render XP bar when level is manually changed
         const charLevelEl = $('charLevel');
         if (charLevelEl) {
@@ -5890,6 +5937,7 @@ import { getSpellSlotsForClassLevel as _getSpellSlotsForClassLevel, getPactMagic
       window.getCurrentCharacter = getCurrentCharacter;
       window.saveCurrentCharacter = saveCurrentCharacter;
       window.loadCharacterIntoForm = fillFormFromCharacter;
+      window.getInitiativeAdvantageReason = getInitiativeAdvantageReason;
       window.updateSpellSlotsDisplay = updateSpellSlotsDisplay;
       window.getAttackFeatureBonuses    = getAttackFeatureBonuses;
       window.addFlatBonusToNotation     = addFlatBonusToNotation;

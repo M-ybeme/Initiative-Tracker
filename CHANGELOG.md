@@ -16,7 +16,30 @@ The DM's Toolbox has evolved through focused feature releases:
 - **1.9.x**: Battle map measurement tools, persistent fog shapes, and generator integration across NPC/Tavern/Shop systems
 - **1.8.x**: Spell database expansion to 432+ spells, inventory management, loot generator overhaul, and character token generation
 
-**Current version: 2.2.4 (June 2026)**
+**Current version: 2.2.5 (June 2026)**
+
+---
+
+## [2.2.5] - 2026-06-13
+**Characters — Area 7: Export, Level-Up & Help Docs**
+
+### Added
+- **Level Up button** — a persistent "Level Up" button now sits next to the Level field in Basic Information. Clicking it opens the level-up wizard directly, without requiring XP tracking. This makes the wizard accessible for milestone campaigns and eliminates the need to know about manually incrementing the Level input.
+- **Help modal — Power User Tips** — a new "Power User Tips — Hidden Gems" accordion in the Features tab surfaces 12 non-obvious features: milestone level-up, right-click advantage popup, Shift/Ctrl+click rolls, TWF auto-detection, magical item badge, coin weight toggle, categorized notes, Jack of All Trades, action economy modal, Send to Battle Map token crop, ritual cast path, and pact slot short rest recovery.
+
+### Fixed
+- **Initiative modifier — new characters** — `fillFormFromWizardData` now pre-fills the Initiative Mod field with the DEX modifier after wizard completion; previously the field was left blank and roll initiative used +0.
+- **Initiative modifier — roll button fallback** — `rollInitiative()` now falls back to DEX mod when the Initiative Mod field is blank, matching the existing Combat View display logic.
+- **Alert feat — initiative not applied** — the level-up wizard's feat application block now reads `featData.benefits.initiative` and adds it to `character.initMod`; previously picking Alert had no mechanical effect on the stored initiative modifier.
+- **Initiative advantage reminder** — rolling initiative (both the Combat Snapshot dice button and the Combat View initiative box) now checks the character's Features & Traits text and feats list for Feral Instinct, Assassinate, and Rakish Audacity and shows a 5-second toast reminder before the roll (e.g. "roll with advantage (Feral Instinct)").
+- **Help modal — Combat View exhaustion range** — the Combat View section incorrectly stated exhaustion goes from 0–6; corrected to 0–10 (2024 PHB, dead at level 10). The Stats & Combat tab was already correct.
+- **Help modal — Notes tab description** — updated from "general-purpose scratchpad" to accurately describe the four category buckets (General, Session Notes, Loot Leads, Quest Hooks) and the category dropdown.
+- **Help modal — Inventory section** — now documents the ★ magical item badge, the coin weight toggle (50 coins = 1 lb), and TWF auto-generated off-hand attack row; these were added in 2.2.3 but omitted from the help text.
+
+### Docs
+- **CHARACTER_MANAGER.md — Categorized Notes** — the section body incorrectly listed "General Notes / Character Background / Backstory / Personality, Bonds & Flaws / DM Notes"; corrected to match the actual UI: General / Session Notes / Loot Leads / Quest Hooks.
+- **CHARACTER_MANAGER.md — Exhaustion** — Combat View section said "0–6"; corrected to "0–10".
+- **CHARACTER_MANAGER.md — Export & Sharing** — added Send to Battle Map entry (token preview modal, zoom/pan, portrait crop, localStorage staging to battlemap.html).
 
 ---
 

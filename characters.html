@@ -1163,7 +1163,12 @@
                     <input type="text" id="charBackground" class="form-control form-control-sm" placeholder="Acolyte, Criminal, Sage..." />
                   </div>
                   <div class="col-md-2">
-                    <label for="charLevel" class="form-label">Level</label>
+                    <label for="charLevel" class="form-label">
+                      Level
+                      <button type="button" class="btn btn-sm btn-outline-success ms-2" id="manualLevelUpBtn" style="padding: 0 6px; font-size: 0.7rem;" title="Open Level Up wizard">
+                        <i class="bi bi-arrow-up-circle"></i> Level Up
+                      </button>
+                    </label>
                     <input type="number" min="1" max="20" id="charLevel" class="form-control form-control-sm" />
                   </div>
                   <div class="col-md-1">
@@ -4208,7 +4213,7 @@
                       <p>Active conditions appear as colored badges. Click <strong>×</strong> on any badge to remove it. Click the <strong>+</strong> button to add any of the 19 standard conditions from a dropdown. Changes sync automatically to the full sheet.</p>
 
                       <h6>Exhaustion</h6>
-                      <p>The Exhaustion row shows your current level (0–6). Use the <strong>−</strong> and <strong>+</strong> buttons to adjust. Level is shown as a badge and saves automatically.</p>
+                      <p>The Exhaustion row shows your current level (0–10). Use the <strong>−</strong> and <strong>+</strong> buttons to adjust. Level is shown as a badge and saves automatically. At level 10, the character is dead (2024 PHB rules).</p>
 
                       <h6>Action Economy</h6>
                       <p>Each attack or ability that consumes an action marks the Action, Bonus Action, or Reaction slot. If a slot is already used, a modal asks whether to start a new turn. Use the <strong>New Turn</strong> button to reset all slots at the top of your next turn.</p>
@@ -4656,7 +4661,11 @@
                         <li><strong>Currency:</strong> CP, SP, EP, GP, PP</li>
                       </ul>
                       <p>Click <strong>"Add Item"</strong> to open the item modal with name, quantity, weight, and description fields. Items can also be marked as <strong>Equipped</strong> or <strong>Attuned</strong>.</p>
-                      <p><strong>Encumbrance:</strong> Total carried weight and carrying capacity are shown at the top of the tab. The status indicator changes color as you approach your limit.</p>
+                      <ul>
+                        <li><strong>★ Magical badge:</strong> Check "Magical item" in the edit form to mark an item with a star icon for at-a-glance identification during play.</li>
+                        <li><strong>Off-hand attack:</strong> Equip two light melee weapons and an auto-generated off-hand attack row appears in your Attacks list (Two-Weapon Fighting rules, no ability mod to damage unless you have the Fighting Style).</li>
+                      </ul>
+                      <p><strong>Encumbrance:</strong> Total carried weight and carrying capacity are shown at the top of the tab. The status indicator changes color as you approach your limit. Check <strong>"Include coin weight"</strong> to add coin piles to the total (50 coins = 1 lb).</p>
                     </div>
                   </div>
                 </div>
@@ -4708,7 +4717,7 @@
                     <div class="accordion-body">
                       <ul>
                         <li><strong>Background tab:</strong> A dedicated text area for story hooks, secrets, faction ties, relationships, and long-form narrative notes.</li>
-                        <li><strong>Notes tab:</strong> A general-purpose scratchpad for anything that doesn't fit elsewhere — session summaries, treasure leads, NPC names, etc.</li>
+                        <li><strong>Notes tab:</strong> A categorized scratchpad. Use the <strong>Category</strong> dropdown to switch between four buckets: <em>General</em>, <em>Session Notes</em>, <em>Loot Leads</em>, and <em>Quest Hooks</em> — each stores its own text independently.</li>
                       </ul>
                     </div>
                   </div>
@@ -4754,6 +4763,33 @@
                         <li><strong>Hit Dice:</strong> Track what you've used and recover half on long rest</li>
                         <li><strong>Portrait Zoom:</strong> Adjust your portrait position in the modal for perfect framing</li>
                         <li><strong>Dice History:</strong> Use the Dice History button in combat view to review recent rolls</li>
+                      </ul>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="accordion-item bg-dark">
+                  <h2 class="accordion-header">
+                    <button class="accordion-button bg-dark text-light collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#power-user-tips">
+                      <i class="bi bi-stars me-2 text-warning"></i>Power User Tips — Hidden Gems
+                    </button>
+                  </h2>
+                  <div id="power-user-tips" class="accordion-collapse collapse" data-bs-parent="#featuresAccordion">
+                    <div class="accordion-body">
+                      <p class="text-muted small mb-3">Features that aren't obvious at first glance — things veteran users discover over time.</p>
+                      <ul>
+                        <li><strong>Milestone leveling:</strong> Ignore XP entirely. Use the <strong>Level Up</strong> button next to the Level field to open the wizard any time — no XP required.</li>
+                        <li><strong>Advantage without a keyboard:</strong> Right-click any saving throw or ability check button in Combat View for a quick advantage/disadvantage popup.</li>
+                        <li><strong>Shift / Ctrl + click rolls:</strong> Hold <kbd>Shift</kbd> for advantage or <kbd>Ctrl</kbd>/<kbd>Cmd</kbd> for disadvantage on any roll in Combat View — works on skills, saves, and ability checks.</li>
+                        <li><strong>TWF auto-detection:</strong> Equip two light melee weapons and an off-hand attack row generates automatically in Attacks — no manual entry needed.</li>
+                        <li><strong>Magical item star:</strong> In the item edit form, check "Magical item" to mark it with a ★ badge for at-a-glance identification.</li>
+                        <li><strong>Coin weight:</strong> Check "Include coin weight" on the Inventory tab's encumbrance row — 50 coins count as 1 lb under RAW rules.</li>
+                        <li><strong>Categorized notes:</strong> The Notes tab has four independent buckets (General, Session Notes, Loot Leads, Quest Hooks) — switch categories with the dropdown.</li>
+                        <li><strong>Jack of All Trades:</strong> Check the JoAT box on the Skills card (Bard class feature) to auto-add ½ proficiency bonus to all non-proficient skills.</li>
+                        <li><strong>Action economy modal:</strong> In Combat View, clicking an already-used action slot opens a modal to start a new turn instead of a browser popup.</li>
+                        <li><strong>Send to Battle Map:</strong> The ⋯ menu has a "Send to Battle Map" option that opens a token preview — zoom and pan your portrait to get the perfect circular crop before sending.</li>
+                        <li><strong>Ritual casting:</strong> Ritual spells in your spell list get a separate <em>Ritual</em> cast button that consumes no slot (at the cost of +10 min casting time).</li>
+                        <li><strong>Pact Magic short rest:</strong> Warlock pact slots restore on Short Rest — just use the Short Rest button in the Resources panel and they reset automatically.</li>
                       </ul>
                     </div>
                   </div>
@@ -6379,6 +6415,16 @@
           } else if (dexModEl) {
             bonus = parseInt(dexModEl.value, 10) || 0;
           }
+
+          // Check for initiative advantage features and notify before rolling
+          try {
+            const _char = window.getCurrentCharacter?.();
+            const _advantages = window.getInitiativeAdvantageReason?.(_char);
+            if (_advantages) {
+              const _tips = _advantages.map(a => a.tip).join(' · ');
+              window.showAppToast?.(`Initiative reminder: ${_tips}`, 'info', 5000);
+            }
+          } catch (e) { /* non-fatal */ }
 
           const roll = rollDie(20);
           const total = roll + bonus;

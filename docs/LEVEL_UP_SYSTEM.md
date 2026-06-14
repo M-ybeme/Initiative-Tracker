@@ -59,22 +59,30 @@ Over 40 official feats from the Player's Handbook:
 
 ### For Players
 
-1. **Load your character** in the Character Manager
-2. Click the **"Level Up"** button (appears next to Save/Delete)
-3. Follow the step-by-step wizard:
-   - **Step 1: Hit Points** - Choose roll or average
-   - **Step 2: ASI/Feat** - Increase ability scores or take a feat (if applicable)
-   - **Step 3: Spell Slots** - Auto-updated (review only)
-   - **Step 4: Class Features** - Review new features
-   - **Step 5: Summary** - Confirm your choices
-4. Click **"Complete Level Up"**
+There are two ways to open the level-up wizard:
+
+**XP campaigns:** Earn enough XP and the **"⬆ Level Up!"** badge appears next to the XP bar. Click it to start the wizard.
+
+**Milestone campaigns:** Click the persistent **"Level Up"** button next to the Level field in Basic Information at any time — no XP required.
+
+Once in the wizard, follow the steps:
+- **Step 1: Multiclass / Continue** — stay in your current class or multiclass
+- **Step 2: Subclass** — if your class unlocks a subclass at this level
+- **Step 3: Hit Points** — roll your hit die + CON, or take the average
+- **Step 4: Racial Feature** — auto-shown if your race has a level-gated feature
+- **Step 5: Spell Learning** — pick new spells (spellcasters only)
+- **Step 6: ASI / Feat** — at levels 4, 8, 12, 16, 19 (and class variants)
+- **Step 7: Spell Slots** — recalculated automatically (review only for multiclass)
+- **Step 8: Summary** — confirm all changes
+
+Click **"Complete Level Up"** to apply.
 
 ### For DMs
 
-- The button appears for all characters
+- Both entry points (XP badge and Level Up button) work on any loaded character
 - You can level up player characters or NPCs
 - All changes are saved automatically
-- Full undo is available (just reload the character's save)
+- Full undo is available (just reload the character's save without saving)
 
 ## File Structure
 

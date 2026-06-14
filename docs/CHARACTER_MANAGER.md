@@ -214,7 +214,7 @@ All ability check, saving throw, and skill roll buttons support three modes:
 - Add/remove syncs immediately to the full sheet's condition buttons
 
 **Exhaustion:**
-`−` / `+` buttons adjust level 0–6; saves automatically.
+`−` / `+` buttons adjust level 0–10; saves automatically.
 
 **Action Economy Modal:**
 When a slot (Action, Bonus Action, or Reaction) has already been used and is clicked again, a Bootstrap modal offers to start a new turn rather than using a browser `confirm()` dialog.
@@ -293,13 +293,13 @@ When a character has two light melee weapons equipped and the Two-Weapon Fightin
 
 ### Categorized Notes (v2.2.3)
 
-The Notes tab now supports multiple named sections instead of a single free-form field:
-- **General Notes** – freeform text for anything session-relevant
-- **Character Background / Backstory** – narrative history separate from the Background field
-- **Personality, Bonds & Flaws** – quick-reference for roleplay traits
-- **DM Notes** – GM-facing section (hidden in player-facing exports if desired)
+The Notes tab now supports a category selector instead of a single free-form field:
+- **General** – freeform scratch space for anything session-relevant
+- **Session Notes** – recap of what happened this session
+- **Loot Leads** – treasure locations, item wishlist, pending sales
+- **Quest Hooks** – active and potential quest threads
 
-Each section collapses independently. All sections are saved with the character and included in exports.
+Switch between categories using the dropdown; each stores its own text. All categories are saved with the character and included in exports.
 
 ---
 
@@ -384,6 +384,14 @@ Exported character sheets render each set sense as a labeled stat box (e.g., "Da
 - Uses `mode: "append"` to preserve existing combat
 - Stages `dmtools.pendingImport` payload
 - Seamless integration with Initiative Tracker
+
+### Send to Battle Map (v2.0.x)
+
+**Token Export:**
+- Found in the **⋯ More Actions** dropdown at the top of the page
+- If a portrait is set, opens a **Token Preview modal** with zoom slider and drag-to-pan controls so you can frame the circular token before sending
+- If no portrait is set, sends immediately with an initials-based token
+- Stages `dmtools.pendingBattleMapImport` payload and navigates to `battlemap.html`
 
 ---
 
@@ -489,7 +497,8 @@ Exported character sheets render each set sense as a labeled stat box (e.g., "Da
 18. **v2.2.1** - Area 3 completeness: inline HP input (replaces browser prompt); HP progress bar + last-change log; Move button on turn tracker; condition tooltips; Surprised and Raging conditions; dynamic resource rows with per-row reset type (SR/LR/manual); exhaustion description fixed for 2024 PHB (dead at level 10)
 19. **v2.2.2** - Area 4 completeness: spell list grouped by level (Cantrips → 9th); Ritual badge and Cast-as-Ritual button (no slot, +10 min); Ritual checkbox on custom spell form; pact slot Use/Regain/Reset action buttons matching regular slot table; pact section labeled with short-rest recovery note
 20. **v2.2.3** - Area 5 completeness: magical item badge in inventory; coin weight toggle in encumbrance (50 coins = 1 lb); TWF off-hand attack switch on attack modal; categorized notes (General / Session Notes / Loot Leads / Quest Hooks)
-21. **v2.2.4** (current) - Area 6 completeness: Combat Card View redesign — responsive 4-breakpoint grid with named areas, skills panel (all 18 with prof/expertise indicators), interactive conditions (add via dropdown, × to remove, syncs to full sheet), adv/disadv for all rolls (Shift-click, Ctrl-click, right-click popup), exhaustion +/− controls, Short Rest / Long Rest buttons, HP last-change log synced from full sheet, action economy Bootstrap modal (replaces browser confirm()), initiative display fix (reads charInitMod, respects Alert feat)
+21. **v2.2.4** - Area 6 completeness: Combat Card View redesign — responsive 4-breakpoint grid with named areas, skills panel (all 18 with prof/expertise indicators), interactive conditions (add via dropdown, × to remove, syncs to full sheet), adv/disadv for all rolls (Shift-click, Ctrl-click, right-click popup), exhaustion +/− controls, Short Rest / Long Rest buttons, HP last-change log synced from full sheet, action economy Bootstrap modal (replaces browser confirm()), initiative display fix (reads charInitMod, respects Alert feat)
+22. **v2.2.5** (current) - Area 7 completeness: Level Up button next to Level field (milestone discoverability); Help modal Power User Tips accordion; Help modal accuracy fixes (exhaustion range, notes categories, inventory badges); CHARACTER_MANAGER.md accuracy fixes (categorized notes names, exhaustion range, Send to Battle Map added to Export section)
 
 ## Use Cases
 
