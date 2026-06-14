@@ -8,7 +8,7 @@ The format is based on Keep a Changelog, and this project adheres to Semantic Ve
 The DM's Toolbox has evolved through focused feature releases:
 
 
-- **2.2.x**: Journal overhaul (TipTap 2 editor, slash commands, [[wikilinks]], backlinks panel, collapsible sections, block drag handles, typography, tags, templates, help offcanvas); Characters page Areas 2–7 completeness — Languages & Proficiencies, Jack of All Trades, passive scores, inline HP controls, HP progress bar, dynamic resource rows, condition tooltips, spell list grouped by level, ritual casting, pact slot action buttons, magical item badges, coin weight toggle, TWF off-hand attacks, categorized notes, Combat Card View redesign (responsive grid, skills panel, interactive conditions, adv/disadv rolls, exhaustion controls, rest buttons), Level Up button, initiative modifier fixes, initiative advantage reminders, Power User Tips help modal
+- **2.2.x**: Journal overhaul in three phases — Phase 1: TipTap 2 engine migration; Phase 2: tags, templates, auto-save, auto-restore, pinning, entry count badge, print, blockquote/HR toolbar buttons, focus mode, keyboard sidebar nav; Phase 3: slash commands, [[wikilinks]], backlinks panel, collapsible sections, block drag handles, typography auto-corrections, help offcanvas; Characters page Areas 2–7 completeness — Languages & Proficiencies, Jack of All Trades, passive scores, inline HP controls, HP progress bar, dynamic resource rows, condition tooltips, spell list grouped by level, ritual casting, pact slot action buttons, magical item badges, coin weight toggle, TWF off-hand attacks, categorized notes, Combat Card View redesign (responsive grid, skills panel, interactive conditions, adv/disadv rolls, exhaustion controls, rest buttons), Level Up button, initiative modifier fixes, initiative advantage reminders, Power User Tips help modal
 - **2.1.x**: Characters page UX overhaul (modals, toasts, first-run flow), Battle Map UX overhaul (mode tabs, fog brush cursor, Bootstrap modals), Initiative Tracker reaction/legendary-action tracking, Encounter Builder power-user overhaul (two-col tooltips, save/load slots, edit-in-editor, roll initiative, encounter naming, CR 0–30 filter)
 - **2.0.x**: Starting equipment selection, subclass bonus cantrips, enhanced feat selection UI, interactive class feature selection, ability check rolls, full custom monster creator, and content pack integration
 - **1.11.x**: Journal system with rich text editor, import/export (Word/PDF/TXT/Markdown), and Battle Map → Initiative Tracker integration
@@ -21,19 +21,24 @@ The DM's Toolbox has evolved through focused feature releases:
 ---
 
 ## [2.2.6] - 2026-06-14
-**Journal — Phase 2 & 3 Overhaul (TipTap Editor, Power Features & Help)**
+**Journal — Phase 1, 2 & 3 Overhaul (TipTap Editor, Organization, Power Features & Help)**
 
 ### Changed
-- **Editor engine** — migrated the Journal from the previous rich text implementation to **TipTap 2** (ProseMirror-based), delivering a faster, more reliable editing experience with full HTML persistence in IndexedDB and a richer extension model
+- **Editor engine (Phase 1)** — migrated the Journal from the previous rich text implementation(Quilljs) to **TipTap 2** (ProseMirror-based), delivering a faster, more reliable editing experience with full HTML persistence in IndexedDB and a richer extension model
 
 ### Added
 **Phase 2 — Organization & UX**
-- **Tags** — add comma-separated tags to any entry; sidebar tag-filter dropdown shows only matching entries; tags persist through saves
-- **Templates** — four one-click starters (Session Log, NPC Profile, Location, Encounter) pre-fill the editor with structured headings and placeholder text; every field is fully editable
+- **Tags** — add comma-separated tags to any entry via the field below the title; sidebar tag-filter dropdown shows only entries with a specific tag; tags persist through saves
+- **Templates** — four one-click starters (Session Log, NPC Profile, Location, Encounter) pre-fill the editor with structured headings and placeholder text; every field is fully editable after loading
 - **Auto-save** — silently saves every 60 seconds when unsaved changes exist and an entry is open; Save button shows an asterisk (`Save *`) as the unsaved-change indicator
-- **Pinned entries** — click the pin icon on any sidebar entry to float it to the top of the list regardless of sort order; click again to unpin
-- **Keyboard sidebar navigation** — ↑/↓ arrow keys move focus through the entry list; Enter opens the focused entry
-- **Focus mode** — hides the sidebar for distraction-free writing; click the fullscreen icon or press Escape to restore
+- **Auto-restore last opened entry** — the last active entry ID is written to `localStorage` on every load; the journal reopens it automatically on the next visit so no manual navigation is required
+- **Pinned entries** — click the pin icon on any sidebar entry to float it to the top of the list regardless of sort order; click again to unpin; pin state persists across sessions
+- **Keyboard sidebar navigation** — ↑/↓ arrow keys move focus through the entry list; Enter opens the focused entry; active item highlighted with a visible focus ring
+- **Focus mode** — click the fullscreen icon to hide the sidebar for distraction-free writing; press Escape to restore the sidebar
+- **Blockquote toolbar button** — one-click blockquote insert in the editor toolbar; also accessible via `/quote`; great for NPC speech or flavor text
+- **Horizontal rule toolbar button** — one-click divider insert; also accessible via `/divider`
+- **Print button** — printer icon in the entry header triggers `window.print()` with a print stylesheet that hides the sidebar, toolbar, and all UI chrome; only entry content and title print
+- **Entry count badge** — the sidebar header shows "N entries" at all times; while search or tag filter is active it switches to "N of M" to show filtered vs. total count
 
 **Phase 3 — Notion/Obsidian-Style Power Features**
 - **Slash commands** — type `/` anywhere in the editor to open a command palette; filter by typing, navigate with ↑/↓, confirm with Enter or click; covers Heading 1/2/3, Bullet List, Numbered List, Task List, Table, Collapsible Section, Blockquote, Code Block, Horizontal Rule, and Image
