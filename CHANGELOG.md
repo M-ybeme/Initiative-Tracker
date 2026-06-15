@@ -8,7 +8,6 @@ The format is based on Keep a Changelog, and this project adheres to Semantic Ve
 The DM's Toolbox has evolved through focused feature releases:
 
 
-- **2.2.x**: Journal full overhaul (TipTap 2, slash commands, wikilinks, backlinks, templates, tags, collapsible sections, drag handles), Characters page Areas 2–7 (languages, proficiencies, combat card view redesign, level up flow, initiative fixes), Compendium overhaul (persistent pins, Conditions tab, result counts, keyboard shortcuts, Bestiary API fix)
 - **2.1.x**: Characters, Battle Map, and Encounter Builder UX overhauls; Initiative Tracker reaction/legendary-action tracking
 - **2.0.x**: Starting equipment selection, subclass cantrips, feat UI, ability check rolls, custom monster creator, and content pack integration
 - **1.11.x**: Journal system with rich text editor, import/export (Word/PDF/TXT/Markdown), and Battle Map → Initiative Tracker integration
@@ -16,7 +15,32 @@ The DM's Toolbox has evolved through focused feature releases:
 - **1.9.x**: Battle map measurement tools, persistent fog shapes, and generator integration across NPC/Tavern/Shop systems
 - **1.8.x**: Spell database expansion to 432+ spells, inventory management, loot generator overhaul, and character token generation
 
-**Current version: 2.2.8 (June 2026)**
+**Current version: 2.2.9 (June 2026)**
+
+---
+
+## [2.2.9] - 2026-06-14
+**Loot Generator — Weapons & Armor, Per-Item Reroll, New Templates, Markdown Export**
+
+### Added
+- **Weapons & Armor category** — 28 weapon types (dagger, shortsword, longsword, handaxe, battleaxe, greataxe, greatsword, rapier, scimitar, glaive, halberd, longbow, shortbow, hand crossbow, light crossbow, and more) and 14 armor types (leather, studded leather, chain shirt, chain mail, scale mail, ring mail, breastplate, half plate, shield, buckler, gambeson, hide, and more); each type has 10 condition variants (battered, rusty, dented, battle-worn, field-repaired, well-maintained, polished, quality, notched, scarred); names are material-aware ("Battle-worn iron longsword", "Polished yew longbow", "Quality bronze shield"); 340 total entries
+- **Template integration for Weapons & Armor** — bandit (1.3×), goblin (1.2×), tomb/ship (1.1–1.2×), barracks (2.2×), wizard (0.7×); monster templates giant (1.3×) and undead (1.1×); noble/cult slightly suppressed
+- **Per-item reroll** — every loot tile now has a small 🎲 dice icon button in its top-right corner; click it to swap only that item from the same category using current settings, leaving all other results unchanged
+- **Tomb / burial chamber hoard template** — biases toward gems (1.4×), clothing (1.3×), curios (1.5×), writing, grave goods, old weapons; aged flavor text ("dust-covered", "etched with funerary marks", "centuries-preserved", "stone-cold"); food nearly absent
+- **Barracks / guard post hoard template** — weapons heavily weighted (2.2×), mundane gear (1.5×), rations; gems and curios suppressed; flavor text ("standard-issue", "military-stamped", "campaign-worn", "battle-ready")
+- **Markdown export** — new "Download .md" button exports the loot list as structured Markdown grouped by category with bold item names and gp values; ideal for Obsidian, Notion, Homebrewery, or any Markdown-based session notes tool
+
+### Fixed (Docs)
+- **GENERATORS.md** — quick bundle count corrected from "6" to "8"; Potion Bundle category fixed ("Adventuring Gear of Note" → "Potions & Elixirs"); Scroll Bundle category fixed ("Toolkits & Supplies" → "Arcane Scrolls"); added Weapons & Armor category documentation; added new hoard templates section; added per-item reroll and Markdown export entries; updated version history
+
+### Refactored
+- **Loot Generator modularized** — extracted the 2641-line single-file script into five organized modules under `js/loot/`:
+  - `loot-engine.js` — seeded RNG, utility functions, full generation algorithm (generateCount, generateToBudget, makeOne, categoryWeights, etc.)
+  - `loot-tables.js` — flavor pools (COLORS, MATERIALS, MARKS, etc.) and all 12 `build*Entries()` item-array builder functions
+  - `loot-catalogs.js` — CATS catalog object (18 categories), TEMPLATE hoard biases, MONSTER_TEMPLATES
+  - `loot-bundles.js` — PRESETS (tier presets) and QUICK_BUNDLES (8 one-click bundles)
+  - `loot-ui.js` — state vars, renderList, doGenerate, reroll, save/load presets, DOMContentLoaded wiring
+  - `loot.html` reduced from 2641 lines to 431 lines; all behavior and output are identical
 
 ---
 

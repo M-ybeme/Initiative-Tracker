@@ -1,10 +1,12 @@
 const DM_TOOLBOX_BUILD = {
   name: "The DM's Toolbox",
-  version: "2.2.8",
+  version: "2.2.9",
   recentChanges: [
-    "Compendium: persistent pins survive page refresh (localStorage), Conditions tab with all 15 SRD conditions as always-visible severity-tagged cards, result counts on all tabs, / and Esc keyboard shortcuts, clear-search × button on all search fields, copy button on each condition card",
-    "Bestiary: fixed Open5e API URL (/v1/monsters/), switched initial load to SRD-only document__slug=wotc-srd for a fast one-shot fetch of 322 monsters; look-ahead search still queries the full 3,207-monster dataset",
-    "Docs: added docs/COMPENDIUM.md covering all Compendium features"
+    "Loot Generator: Weapons & Armor category (28 weapons + 14 armor, 340 entries) with material-aware naming (Battle-worn iron longsword, Polished yew longbow); integrated into all hoard/monster templates",
+    "Loot Generator: per-item reroll button (🎲) on every result tile — swap one item without regenerating the whole list",
+    "Loot Generator: Tomb and Barracks hoard templates; Markdown (.md) export grouped by category",
+    "Docs: updated GENERATORS.md (bundle count, Potion/Scroll categories, Weapons & Armor, new templates, per-item reroll, Markdown export)",
+    "Loot Generator: script modularized from one 2641-line file into js/loot/ (loot-engine.js, loot-tables.js, loot-catalogs.js, loot-bundles.js, loot-ui.js) — loot.html reduced to 431 lines"
   ],
   buildTime: new Date().toISOString(),
   author: "Maybeme"

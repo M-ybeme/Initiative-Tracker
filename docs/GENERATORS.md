@@ -65,7 +65,7 @@ The preset tables, magic item blurbs, and scroll payloads all come from SRD 5.2 
 
 ### Quick Bundle Presets (v1.9.2)
 
-**6 One-Click Bundles:**
+**8 One-Click Bundles:**
 
 1. **Pocket Loot** (~50 gp)
    - Individual loot: coins + mundane items
@@ -80,12 +80,12 @@ The preset tables, magic item blurbs, and scroll payloads all come from SRD 5.2 
    - 5 items, 50-200 gp each
 
 4. **Potion Bundle**
-   - 3 potions (minor magic consumables)
-   - Category: Adventuring Gear of Note
+   - 3 potions
+   - Category: Potions & Elixirs
 
 5. **Scroll Bundle**
-   - 3 scrolls (minor magic)
-   - Category: Toolkits & Supplies
+   - 3 scrolls
+   - Category: Arcane Scrolls
 
 6. **Boss Hoard** (~2000 gp)
    - Full treasure pile
@@ -106,9 +106,22 @@ The preset tables, magic item blurbs, and scroll payloads all come from SRD 5.2 
 - Auto-configuration (mode, type, count, budget, categories)
 - One-click generation without manual settings
 - Settings remain visible for customization
-- Visual bundle grid (2x3 layout)
+- Visual bundle grid (2×4 layout)
 - Color-coded buttons with icons
 - Value estimates displayed
+
+### Hoard Templates (v2.2.9)
+
+**8 Hoard Templates** (Advanced mode → Hoard Template dropdown):
+
+- **Bandit cache** — Coins heavy, weapons boosted (1.3×), trade goods
+- **Cult sanctum** — Writing/books, gems, ritual tools; weapons slightly depressed
+- **Noble vault** — Gems (1.4×), fine clothing, coins; weapons rare
+- **Goblin den** — Food, crude tools, weapons (1.2×); gems rare
+- **Ship cargo** — Trade goods (1.3×), toolkits, weapons (cutlasses, boarding axes)
+- **Wizard's study** — Books, toolkits, adventuring gear; weapons minimal
+- **Tomb / burial chamber** *(v2.2.9)* — Grave goods: gems, clothing, curios, weapons (1.2×); food almost absent; aged flavor text
+- **Barracks / guard post** *(v2.2.9)* — Weapons heavily weighted (2.2×), mundane gear, rations; gems/curios suppressed
 
 ### Monster-Specific Loot Templates (v1.8.4)
 
@@ -156,9 +169,46 @@ The preset tables, magic item blurbs, and scroll payloads all come from SRD 5.2 
 - Category weighting multipliers
 - Custom flavor text
 
-### Loot Categories (v1.8.8, v1.8.4)
+### Per-Item Reroll (v2.2.9)
+
+Every generated loot tile has a small **🎲 dice icon** in its top-right corner. Clicking it rerolls only that item from the same category, using the current generation settings, while keeping the rest of the list intact. Useful for swapping out unwanted results without regenerating everything.
+
+### Markdown Export (v2.2.9)
+
+The **Download .md** button exports the current loot list as a structured Markdown file, grouped by category, with bold item names and gp values. Ideal for Obsidian, Notion, Homebrewery, or any Markdown-based session notes tool. Complements the existing plain-text .txt export.
+
+### Loot Categories (v1.8.8, v1.8.4, v2.2.9)
+
+**Full Category List (17 categories):**
+
+1. Coins & Purses
+2. Trade Goods
+3. Gems & Art
+4. Adventuring Gear of Note
+5. Toolkits & Supplies
+6. Clothing & Wearables
+7. Tools & Utensils
+8. Household & Table
+9. Writing & Games
+10. Food & Provisions
+11. Curios & Charms
+12. Potions & Elixirs
+13. Arcane Scrolls
+14. Bags & Containers
+15. Mundane Adventuring Items
+16. **Weapons & Armor** *(v2.2.9 — new)*
+17. Minor Magic *(toggle-gated)*
+18. Cursed Items *(toggle-gated)*
 
 **Expanded Categories:**
+
+**Weapons & Armor** *(v2.2.9 — 340 entries)*
+- **28 weapon types**: dagger, shortsword, longsword, handaxe, battleaxe, greataxe, greatsword, mace, warhammer, war pick, flail, rapier, scimitar, glaive, halberd, spear, javelin, trident, sickle, club, greatclub, shortbow, longbow, light crossbow, hand crossbow, whip, net, quarterstaff
+- **14 armor types**: leather, padded, studded leather, chain shirt, chain mail, ring mail, scale mail, hide, gambeson, breastplate, half plate, shield, buckler, wooden shield
+- **10 condition variants** each: battered, rusty, dented, battle-worn, field-repaired, well-maintained, polished, quality, notched, scarred
+- **Material-aware naming**: generates "Battle-worn iron longsword", "Polished yew longbow", "Quality bronze shield"
+- **Template integration**: bandit (1.3×), goblin/ship/tomb (1.1–1.2×), barracks (2.2×), wizard (0.7×)
+- **Monster integration**: giant (1.3×), undead (1.1×)
 
 **Trade Goods** (6 → 14 items)
 - Original: silk, spices, fine wine, furs, jewels, rare herbs
@@ -569,6 +619,7 @@ Shop inventories pull from SRD magic items, consumables, and adventuring gear pl
 5. **v1.10.5** - Tavern cultural immersion (56 patron types, 28 events, cultural systems)
 6. **v1.10.8** - Tavern menu expansion (4-5x more variety)
 7. **v1.10.9** - Cursed items system (50 items, 5 severity levels)
+8. **v2.2.9** - Weapons & Armor category (340 entries, 28 weapons + 14 armor), per-item reroll, tomb/barracks templates, Markdown export
 
 ## Use Cases
 
