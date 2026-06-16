@@ -1,13 +1,13 @@
 const DM_TOOLBOX_BUILD = {
   name: "The DM's Toolbox",
-  version: "2.3.1",
+  version: "2.3.2",
   recentChanges: [
-    "Name Generator: lock tiles — pin names you want to keep; re-generate refills only unlocked slots",
-    "Name Generator: quick-count chips (5 / 10 / 20 / 50) for instant count selection",
-    "Name Generator: press Enter anywhere outside a form field to generate instantly",
-    "Name Generator: in-results text filter — search and narrow the current list without regenerating",
-    "Name Generator: count ceiling raised from 200 to 500",
-    "Name Generator: modularized into js/name/ (name-data.js, name-engine.js, name-ui.js)"
+    "Tavern Generator: per-section reroll/copy/collapse on every results card (meals, drinks, rooms, staff, patrons, events, bartender rumors, patron whispers)",
+    "Tavern Generator: quick presets and a collapsible Advanced settings panel (seed, unique touch %, context influence)",
+    "Tavern Generator: press Enter anywhere outside a form field to generate instantly",
+    "Tavern Generator: patrons can now generate full NPC details, same as staff",
+    "Tavern Generator: fixed seeded RNG for cultural drink menus and a dead variable that broke the staff-toggle checkbox",
+    "Tavern Generator: patrons now included in Copy/Download export; download filename derived from the tavern name"
   ],
   buildTime: new Date().toISOString(),
   author: "Maybeme"

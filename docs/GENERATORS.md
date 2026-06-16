@@ -392,7 +392,7 @@ Even though each cultural profile has tons of detail, every menu item, rumor, an
 **UI Controls:**
 - Time-of-day selector
 - Tavern-type selector
-- Context Influence slider (0-100)
+- Context Influence slider (0-10, under Advanced settings) — lower values produce more generic output, higher values strongly flavor results toward the chosen settlement/quality/size/time/type
 
 **Boosted Pool System:**
 - Weight context-specific pools vs base pools
@@ -425,13 +425,13 @@ Even though each cultural profile has tons of detail, every menu item, rumor, an
 - "Patrons in the Common Room" section
 - Toggle: "Include patrons (3-5 NPCs)" checkbox
 
-**27 Patron Types:**
-- local regular, traveling merchant, off-duty guard, farmer, craftsperson, sellsword, pilgrim, gambler, scholar, miner, sailor, thief, hedge witch, bounty hunter, and more
+**47 Patron Types:**
+- local regular, traveling merchant, off-duty guard, farmer, craftsperson, sellsword, pilgrim, gambler, scholar, miner, sailor, peddler, tinker, hunter, herbalist, wandering bard, caravan guard, apprentice wizard, young noble, old soldier, thief, courier, scribe, acolyte, hedge witch, fortune teller, bounty hunter, shipwright, and more
 
-**22 Visual Quirks:**
+**30 Visual Quirks:**
 - missing finger, scar across cheek, nervous twitch, tattoo, eye patch, gold tooth, limping, polishing coin, chewing pipe, fidgeting with cards, etc.
 
-**27 Activity Hooks:**
+**36 Activity Hooks:**
 - looking for work, celebrating windfall, drowning sorrows, meeting someone secretly, seeking adventurers, playing dice, telling tall tales, eavesdropping, spreading news, etc.
 
 **Compact Card Layout:**
@@ -440,6 +440,31 @@ Even though each cultural profile has tons of detail, every menu item, rumor, an
 - Current activity
 - Grid display (3 columns desktop, 2 tablet, 1 mobile)
 - Visual activity icon
+- "Generate NPC Details" button — expands any patron into a full 8-field NPC (voice/mannerisms are generated fresh since patrons don't have staff-style voice data), same modal as the Staff NPC expansion (v2.3.2)
+
+### Settings Panel (v2.3.2)
+
+**Quick Presets:**
+Four one-click buttons configure settlement/quality/size/tavern-type and generate immediately: Rough Roadhouse, Noble Inn, Seedy Dive, Dwarven Hall. Remaining settings stay editable afterward.
+
+**Advanced Settings (collapsed by default):**
+- **Seed (optional)** — any string produces deterministic output; the same seed + same settings always regenerates the identical tavern (name, menu, rooms, staff, patrons, events, and rumors). Leave blank for a random tavern each time.
+- **Unique touch %** (0–100, default 35) — chance the tavern gets one extra quirky detail line under the ambience tags.
+- **Context Influence slider** (0–10, default 5) — see Context & Metrics System above.
+
+**Always-visible toggles:** Include staff snippets / Include patrons / Include room listings / Include events & rumors — unchecking a section hides its card and skips generating that data.
+
+**Keyboard shortcut:** Press **Enter** anywhere on the page (when focus isn't inside a form field, button, or link) to trigger Generate — same pattern as the Name Generator.
+
+### Per-Section Reroll, Copy & Collapse (v2.3.2)
+
+Every results card — Meals, Drinks, Rooms, Staff, Patrons, What's Happening (events), and each of the two Rumors & Whispers subsections (From the Bartender / Overheard from Patrons) — has its own header controls:
+
+- **↻ Reroll** — regenerates only that section with fresh random content. Everything else (tavern name, sign, ambience, unique touch, and all other sections) stays exactly as it was. Useful for swapping out a menu item or a rumor you don't like without losing the rest of the tavern.
+- **📋 Copy** — copies just that section's text to the clipboard.
+- **⌄/⌃ Collapse** — collapses or expands that section's body to declutter the screen during a long session; collapse state persists until you toggle it again or hit Clear.
+
+Note: rerolling a section uses a fresh random seed for that section only, even when the tavern itself was generated with a fixed seed — a reroll is intentionally non-deterministic so you always get something new to choose from. The base seed still reproduces the full original tavern if you regenerate from scratch.
 
 ---
 
@@ -808,16 +833,16 @@ The **Search** floating button (replaces the old "Shops" toggle) shows the navig
 - localStorage handoff (bidirectional)
 - Selected race auto-applied in Name Generator
 
-### Tavern → NPC Generator (v1.8.8)
+### Tavern → NPC Generator (v1.8.8, patrons added v2.3.2)
 
-**Staff Expansion System:**
-- "Generate Full NPC Details" button on staff
-- Converts basic staff into complete 8-field NPCs
-- Auto-generates: mannerisms, quirks, wants, avoids, secrets
+**Staff & Patron Expansion System:**
+- "Generate Full NPC Details" button on staff cards, "Generate NPC Details" on patron cards
+- Converts basic staff/patrons into complete 8-field NPCs
+- Auto-generates: mannerisms, quirks, wants, avoids, secrets (patrons also get a generated voice, since they don't have one from the base patron data)
 - Modal preview with copy and "Open in NPC Gen"
 
 **Data Flow:**
-- localStorage handoff for tavern staff → NPC
+- localStorage handoff for tavern staff/patrons → NPC
 - URL parameters preserve context (from=tavern)
 - NPC Generator recognizes tavern-sourced NPCs
 
@@ -837,6 +862,7 @@ The **Search** floating button (replaces the old "Shops" toggle) shows the navig
 10. **v2.2.9** - Weapons & Armor loot category (340 entries), per-item reroll, tomb/barracks templates, Markdown export; Shop: floating shop navigator
 11. **v2.3.0** - Shop: Shopkeeper DM Notes (want/rumor/hook, settlement-scaled); expanded RP content pool to 20 wants / 20 hooks / 20 rumors per settlement tier across all 30 shop types (2,000+ entries); restock timers; item search & rarity filter in navigator panel; stock depletion (Mark Sold, Restock, localStorage persistence by seed); Sell to Shop (keyword matching, condition modifier, settlement modifier, NPC response lines); updated Copy export to include DM notes and sold status
 12. **v2.3.1** - Name Generator: lock tiles (pin names across regenerate), quick-count chips (5/10/20/50), Enter-key shortcut to generate, in-results text filter
+13. **v2.3.2** - Tavern: per-section reroll/copy/collapse on every results card (meals, drinks, rooms, staff, patrons, events, bartender rumors, patron whispers); quick presets; Advanced settings panel (seed, unique touch %, context influence); Enter-key shortcut; patron "Generate NPC Details" button; fixed seeded RNG for cultural drink menus (was using `Math.random()`); fixed a dead variable that silently broke the staff-toggle checkbox; fixed patrons being omitted from Copy/Download export; download filename now derived from the generated tavern name; corrected patron pool counts in this doc (47 types / 30 quirks / 36 hooks)
 
 ## Use Cases
 
@@ -856,6 +882,20 @@ Generate an Adventurer's Hub preset in a capital. Press **Search**, type "healin
 
 **Seeded village with realistic context:**
 Set settlement to Village, seed to `havenford-mill-road`. The grocer restocks every 3–7 days (displayed in the header). The blacksmith restocks every 8–13 days (village base 5–10 + 3). The innkeeper's rumor is about local gossip; the blacksmith's hook involves an unclaimed sword. The scale of everything — prices, stock, rumors — fits a backwater village automatically.
+
+### Tavern Generator
+
+**First visit — improvising a tavern mid-session:**
+Click Generate. A full tavern appears: name, sign, ambience, menu, drinks, rooms, staff, patrons, an event, and rumors — everything needed to run the scene immediately.
+
+**Players linger and you need more rumors without redoing the whole tavern:**
+Click the ↻ reroll button in the "Overheard from Patrons" header. Only the patron whispers change; the tavern name, menu, staff, and bartender rumors stay exactly as already described to the players.
+
+**Running a themed one-shot location:**
+Click the **Dwarven Hall** quick preset. Settlement/quality/size/tavern-type are set and the tavern regenerates instantly with culturally-flavored food, drinks, staff, and ambience.
+
+**Returning to the same inn across sessions:**
+Open Advanced settings, set a seed like `port-hollow-the-drunken-anchor`, and generate. The same seed always reproduces the same tavern — name, menu, rooms, staff, patrons, events, and rumors — so you can reuse it session after session without writing anything down.
 
 ### Name Generator
 

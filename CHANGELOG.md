@@ -8,7 +8,7 @@ The format is based on Keep a Changelog, and this project adheres to Semantic Ve
 The DM's Toolbox has evolved through focused feature releases:
 
 
-- **2.3.x**: Shop Generator overhaul — Shopkeeper DM Notes with 20 wants / 20 hooks / 20 rumors per settlement tier across all 30 shop types, restock timers, stock depletion, Sell to Shop, item search/filter; Name Generator UX — lock tiles, quick-count chips, Enter shortcut, in-results filter
+- **2.3.x**: Shop Generator overhaul — Shopkeeper DM Notes with 20 wants / 20 hooks / 20 rumors per settlement tier across all 30 shop types, restock timers, stock depletion, Sell to Shop, item search/filter; Name Generator UX — lock tiles, quick-count chips, Enter shortcut, in-results filter; Tavern Generator UX — per-section reroll/copy/collapse, quick presets, Advanced settings panel, patron NPC expansion
 - **2.2.x**: Compendium overhaul (pins, Conditions tab, keyboard shortcuts); Journal TipTap editor with wikilinks/backlinks; Loot Generator weapons & armor, per-item reroll, new hoard templates, Markdown export, modularization
 - **2.1.x**: Characters, Battle Map, and Encounter Builder UX overhauls; Initiative Tracker reaction/legendary-action tracking
 - **2.0.x**: Starting equipment selection, subclass cantrips, feat UI, ability check rolls, custom monster creator, and content pack integration
@@ -17,7 +17,42 @@ The DM's Toolbox has evolved through focused feature releases:
 - **1.9.x**: Battle map measurement tools, persistent fog shapes, and generator integration across NPC/Tavern/Shop systems
 - **1.8.x**: Spell database expansion to 432+ spells, inventory management, loot generator overhaul, and character token generation
 
-**Current version: 2.3.1 (June 2026)**
+**Current version: 2.3.2 (June 2026)**
+
+---
+
+## [2.3.2] - 2026-06-16
+**Tavern Generator — Per-Section Reroll, Quick Presets, Advanced Settings, Patron NPC Expansion**
+
+### Added
+- **Per-section reroll** — every results card (Meals, Drinks, Rooms, Staff, Patrons, What's Happening, and the two Rumors & Whispers subsections — From the Bartender and Overheard from Patrons) has its own ↻ reroll button that regenerates only that section, leaving the tavern name, sign, ambience, and every other section untouched
+- **Per-section copy** — 📋 button on each card header copies just that section's text to the clipboard
+- **Per-section collapse** — ⌄/⌃ button on each card header collapses/expands that section's body to declutter the screen during a long session
+- **Quick presets** — Rough Roadhouse, Noble Inn, Seedy Dive, Dwarven Hall buttons set settlement/quality/size/tavern-type and generate in one click
+- **Advanced settings panel** — Context Influence slider, Seed field, and Unique touch % are now tucked behind a collapsible "Advanced settings" toggle, decluttering the default settings panel
+- **Enter key shortcut** — pressing Enter anywhere on the page (outside a form field, button, or link) triggers Generate, matching the Name Generator's existing pattern
+- **Patron NPC expansion** — patron cards now have a "Generate NPC Details" button that expands them into the same full 8-field NPC modal used for staff (voice/mannerisms are generated fresh since base patron data has none)
+
+### Fixed
+- **Cultural drink menus were non-deterministic** — `flattenDrinkList()` used `Math.random()` instead of the seeded RNG, so the 7 cultural tavern types (Dwarven, Elven, Halfling, Orcish, Coastal, Desert, Mountain) produced different drink lists every time even with the same seed; now fully seeded
+- **Dead variable silently broke nothing only by luck** — `generate()` read `tv-showRooms` into an unused `showStaff` variable while a second, correctly-named `showStaffReal` variable did the real work; removed the dead read and renamed the real one to `showStaff`
+- **Patrons were missing from Copy/Download export** — `serializeOut()` never included the generated patrons; they're now part of both exports
+- **Download filename was always `tavern_inn.txt`** — now derived from the generated tavern's name (e.g. `tavern-the-gilded-cock.txt`)
+- **Clear button left empty card shells visible** — clearing now also resets the show/hide wrappers for Rooms, Staff, Patrons, Events, and Rumors so optional sections fully disappear instead of showing an empty card
+- **Heading text mismatch** — page `<h1>` read "Tavern Inn Generator" while the nav and title said "Tavern/Inn Generator"; now consistent
+- **Documentation drift** — `docs/GENERATORS.md` claimed 27 patron types / 22 quirks / 27 hooks and a 0–100 Context Influence range; corrected to the actual 47 / 30 / 36 and 0–10
+
+### Technical
+- Generation is now driven by a per-section seeded RNG (`prandSection`) derived from a single numeric base seed XORed with a hash of the section name, so each section can be rerolled independently while the rest of the tavern stays reproducible from the original seed
+- `buildEventsAndRumors()` split into `buildEventsOnly()`, `buildBartenderRumors()`, and `buildPatronRumors()` so events, bartender rumors, and patron whispers can reroll independently
+- Render logic extracted from the monolithic `generate()` into per-section render functions (`renderMeta`, `renderMeals`, `renderDrinks`, `renderRooms`, `renderStaff`, `renderPatrons`, `renderEventsSection`, `renderBartenderRumors`, `renderPatronRumors`), each callable standalone for reroll or as part of a full generate
+
+### Refactored
+- **Tavern Generator modularized** — extracted the ~2040-line inline IIFE script into three modules under `js/tavern/`, following the same data/engine/ui pattern used for the Name Generator:
+  - `tavern-data.js` — every pure data pool (SETTLEMENT/QUALITY profiles, AMBIENCE, MEAL_BASE, DRINKS, the 7-culture CULTURAL_MENU, HOUSE_TWISTS, TAVERN_EVENTS and all time/type/settlement/quality/size context variants, BARTENDER_RUMORS/PATRON_RUMORS and their context variants, staff trait pools, STAFF_BY_TYPE, inn sign-name pools, PATRON_TYPES/QUIRKS/HOOKS and their context variants)
+  - `tavern-engine.js` — seeded RNG (`hashString`/`mulberry32`/`prand`/`prandSection`), generic helpers (`pick`, `pickN`, `within`, `boostedPool`, `money`, `priceScale`), `buildInnName`, and all `build*` functions (`buildAmbience`, `buildMeals`, `buildDrinks`, `buildRooms`, `buildStaff`, `buildPatrons`, `buildEventsOnly`, `buildBartenderRumors`, `buildPatronRumors`, `generateFullNPCFromStaff`)
+  - `tavern-ui.js` — DOM helper, `_tavState`, all `render*` functions, `generate()`, per-section reroll/copy, serialize/copy/download, the NPC detail modal, and `DOMContentLoaded` event wiring
+  - `tav.html` reduced from 2489 to 451 lines; loads the three modules via `<script src>` tags with no inline script remaining
 
 ---
 
