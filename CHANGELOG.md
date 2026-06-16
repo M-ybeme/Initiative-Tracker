@@ -8,7 +8,7 @@ The format is based on Keep a Changelog, and this project adheres to Semantic Ve
 The DM's Toolbox has evolved through focused feature releases:
 
 
-- **2.3.x**: Shop Generator overhaul — Shopkeeper DM Notes with 20 wants / 20 hooks / 20 rumors per settlement tier across all 30 shop types, restock timers, stock depletion, Sell to Shop, item search/filter
+- **2.3.x**: Shop Generator overhaul — Shopkeeper DM Notes with 20 wants / 20 hooks / 20 rumors per settlement tier across all 30 shop types, restock timers, stock depletion, Sell to Shop, item search/filter; Name Generator UX — lock tiles, quick-count chips, Enter shortcut, in-results filter
 - **2.2.x**: Compendium overhaul (pins, Conditions tab, keyboard shortcuts); Journal TipTap editor with wikilinks/backlinks; Loot Generator weapons & armor, per-item reroll, new hoard templates, Markdown export, modularization
 - **2.1.x**: Characters, Battle Map, and Encounter Builder UX overhauls; Initiative Tracker reaction/legendary-action tracking
 - **2.0.x**: Starting equipment selection, subclass cantrips, feat UI, ability check rolls, custom monster creator, and content pack integration
@@ -17,7 +17,29 @@ The DM's Toolbox has evolved through focused feature releases:
 - **1.9.x**: Battle map measurement tools, persistent fog shapes, and generator integration across NPC/Tavern/Shop systems
 - **1.8.x**: Spell database expansion to 432+ spells, inventory management, loot generator overhaul, and character token generation
 
-**Current version: 2.3.0 (June 2026)**
+**Current version: 2.3.1 (June 2026)**
+
+---
+
+## [2.3.1] - 2026-06-15
+**Name Generator — Lock Tiles, Quick-Count Chips, Enter Shortcut, In-Results Filter**
+
+### Added
+- **Lock tiles** — each name tile now has a 🔒 icon in its top-right corner (visible on hover, always visible when locked); clicking it pins that name with a gold border; re-generating the list fills only unlocked slots and leaves locked names exactly in place; locked names also block the per-tile re-roll button and double-click; click again to release
+- **Quick-count chips** — four buttons (5 / 10 / 20 / 50) sit below the Count input and set it instantly without typing or using the number spinner; synced between desktop and mobile settings panels
+- **Enter key shortcut** — pressing Enter anywhere on the Name Generator page (when focus is not inside a form field, textarea, button, or link) triggers Generate; makes rapid iteration hands-free
+- **In-results text filter** — a search bar appears above the results grid after the first generate; type to hide non-matching tiles in real time; clear to restore all; does not trigger a new generation; filter wrap is hidden when no names are present
+- **Count ceiling raised** — max names per generate increased from 200 to 500
+
+### Changed
+- Help text in the Quick Start banner updated to mention the lock feature and Enter shortcut
+
+### Refactored
+- **Name Generator modularized** — extracted the ~1000-line inline IIFE script into three focused modules under `js/name/`, following the same pattern used for the Shop and Loot generators:
+  - `name-data.js` — `TABLES` (race syllable tables), `RACE_PRESETS`, `HARSH_CLUSTERS`
+  - `name-engine.js` — seeded RNG (Mulberry32), core generators (`makeOne`, `makeFullName`), shared state (`CURRENT_CFG`, `CURRENT_SEED`)
+  - `name-ui.js` — all DOM/UI code: settings form, favorites, session/URL state, `renderList`, `generate`, tile delegation, Advanced mode toggle, Enter shortcut, in-results filter
+- `name.html` now loads only three `<script src>` tags; no inline script remains
 
 ---
 

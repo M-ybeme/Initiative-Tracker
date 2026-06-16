@@ -514,36 +514,105 @@ Ancestries, stat suggestions, and presets are limited to SRD options by default.
 
 The default race lists and syllable banks live entirely in SRD-friendly territory or bespoke wordlists. When distributing new race presets that cite closed content, do it through packs so the public repo stays SRD-only.
 
-### Expanded Race Support (v1.8.8)
+### Race Support
 
-**30+ Races:**
+**28 distinct race styles across 4 groups:**
 
-**Common Races:**
-- Human (Latin, Norse, Arabic, Asian), Elf, Dwarf, Halfling, Dragonborn, Gnome, Half-Elf, Half-Orc, Tiefling
+| Group | Races |
+|-------|-------|
+| **Common** | Human (Latin), Human (Norse), Human (Arabic), Human (Asian), Dwarf, Elf, Halfling, Gnome |
+| **Uncommon** | Dragonborn, Half-Orc, Tiefling, Drow, Goliath, Firbolg, Genasi, Triton, Aarakocra, Tabaxi, Kenku |
+| **Monstrous** | Orc, Goblin, Hobgoblin, Kobold, Lizardfolk, Bugbear, Yuan-ti |
+| **Special** | Fey, Changeling, Warforged |
 
-**Uncommon Races:**
-- Aarakocra, Tabaxi, Firbolg, Kenku, Triton, Goliath
+**Per-race preset system:**
+- Each race has a preset covering: min/max syllables, gender leaning, harshness, exoticness, apostrophe probability, diacritic probability, and a curated race-suffix list
+- Click **Apply Race Preset** after selecting a race to instantly configure all sliders and toggles to match that culture's naming conventions
+- Six **quick-select buttons** (Elf, Dwarf, Human, Orc, Dragonborn, Tiefling) apply the preset in one click — no dropdown needed for the most common races
 
-**Monstrous Races:**
-- Hobgoblin, Kobold, Bugbear, Yuan-ti
+**Special name handling:**
+- **Tabaxi**: compound noun-style names (e.g., "Cloud on Mountains")
+- **Warforged**: mechanical/alphanumeric names
+- **Drow**: high apostrophe and double-consonant frequency
 
-**Special Races:**
-- Changeling, Warforged
+### Generation Settings
 
-**Features:**
-- Culturally appropriate syllable patterns
-- Unique naming conventions per race
-- Human cultural variants (Latin, Norse, Arabic, Asian)
-- 16 new race preset configurations
-- Race-specific suffixes
-- Special handling:
-  - Tabaxi: compound names
-  - Warforged: mechanical names
+**Simple mode** (default — visible immediately):
+- Race / Culture selector with 4 optgroups
+- Apply Race Preset button
+- Count (1–500) with **quick-count chips**: tap 5 / 10 / 20 / 50 to set instantly
+- Gender leaning: Neutral / Feminine / Masculine
 
-**Organized Race Dropdown:**
-- 4 logical optgroups
-- Visual separation between race types
-- Consistent organization across generators
+**Advanced mode** (toggle in the panel header):
+- **Seed** — any string produces deterministic output; same seed + same settings = same list, shareable via the Share button
+- **Min / Max syllables** — override the race preset's syllable range
+- **Alliteration** — enter a letter to force all names to start with it
+- **Harshness slider** (0–100) — increases consonant clusters (kr, gr, zz)
+- **Exoticness slider** (0–100) — increases apostrophes and diacritics (á, ê, ü)
+- **Race suffix** toggle — appends race-specific endings ~35% of the time
+- **Apostrophes** toggle — allows mid-name apostrophes
+- **Diacritics** toggle — sprinkles accent marks over vowels
+- **Surname** toggle — generates two-part names; exposes surname-style dropdown and joiner string (space, hyphen, apostrophe, "of ", etc.)
+- **Custom Tables** — paste JSON to import custom syllable banks; validate before importing; export current tables as JSON
+
+### Per-Tile Actions
+
+Each generated name tile has four controls:
+
+| Control | How to trigger | What it does |
+|---------|----------------|--------------|
+| 🔒 **Lock** | Click the faint lock icon (top-right corner of tile) | Pins this name — it survives the next Generate and re-generate fills only unlocked slots. Gold border indicates locked. Click again to unlock. |
+| 📋 **Copy** | Click clipboard icon | Copies this name to clipboard |
+| ⭐ **Favorite** | Click star icon | Adds name to the Favorites drawer |
+| ↻ **Re-roll** | Click repeat icon, or double-click the tile | Generates a single new name in that slot using the current config. Locked tiles cannot be re-rolled. |
+
+### Lock & Regenerate Workflow
+
+Generate 20 names → lock 3 you like → click Generate again → the 3 locked names stay in place, 17 new names fill the remaining slots. Locked names are never overwritten by re-roll or regenerate. Click the lock icon again to release a name.
+
+### In-Results Filter
+
+A search bar appears above the results grid once names have been generated. Type to filter the current list in real time — tiles whose names don't match are hidden (not removed). Clear the filter to restore all tiles. The filter does not trigger a new generation.
+
+### Favorites
+
+- Click ⭐ on any tile to add its name to the **Favorites drawer** (top-right nav button)
+- Favorites persist in `localStorage` across sessions
+- Drawer actions: **Copy all** (newline-separated), **Copy individual**, **Remove individual**, **Clear all**
+
+### Keyboard Shortcut
+
+Press **Enter** anywhere on the page (when not focused inside a form field) to instantly trigger Generate. Useful for rapid iteration when you know your settings are right.
+
+### Session Persistence & Sharing
+
+- Settings and current results auto-save to `localStorage` on every generate
+- Reloading the page restores your last settings and result list
+- **Share** button (top nav) copies a URL with all current settings encoded as query parameters — anyone opening the link sees the same configuration (but not locked state)
+
+### NPC Integration
+
+When the NPC Generator's "Generate Name" button is used, it opens the Name Generator in a new tab with `?from=npc&race=<RaceName>` — the race preset is automatically applied and a success banner confirms which race was loaded.
+
+### Custom Table Import
+
+Advanced users can inject custom syllable tables:
+
+```json
+{
+  "Styles": {
+    "Wizard's Study": {
+      "start": ["ar","el","io","ka"],
+      "mid":   ["ca","el","ith","or"],
+      "end":   ["ion","iel","oth","ar"]
+    }
+  }
+}
+```
+
+- **Validate** — checks structure without importing
+- **Import** — merges into existing styles; new style appears in the dropdown immediately
+- **Export** — downloads the full current tables as `name-tables.json`
 
 ---
 
@@ -767,6 +836,7 @@ The **Search** floating button (replaces the old "Shops" toggle) shows the navig
 9. **v1.10.9** - Cursed items system (50 items, 5 severity levels)
 10. **v2.2.9** - Weapons & Armor loot category (340 entries), per-item reroll, tomb/barracks templates, Markdown export; Shop: floating shop navigator
 11. **v2.3.0** - Shop: Shopkeeper DM Notes (want/rumor/hook, settlement-scaled); expanded RP content pool to 20 wants / 20 hooks / 20 rumors per settlement tier across all 30 shop types (2,000+ entries); restock timers; item search & rarity filter in navigator panel; stock depletion (Mark Sold, Restock, localStorage persistence by seed); Sell to Shop (keyword matching, condition modifier, settlement modifier, NPC response lines); updated Copy export to include DM notes and sold status
+12. **v2.3.1** - Name Generator: lock tiles (pin names across regenerate), quick-count chips (5/10/20/50), Enter-key shortcut to generate, in-results text filter
 
 ## Use Cases
 
@@ -786,3 +856,17 @@ Generate an Adventurer's Hub preset in a capital. Press **Search**, type "healin
 
 **Seeded village with realistic context:**
 Set settlement to Village, seed to `havenford-mill-road`. The grocer restocks every 3–7 days (displayed in the header). The blacksmith restocks every 8–13 days (village base 5–10 + 3). The innkeeper's rumor is about local gossip; the blacksmith's hook involves an unclaimed sword. The scale of everything — prices, stock, rumors — fits a backwater village automatically.
+
+### Name Generator
+
+**First visit — naming an NPC on the spot:**
+Click the Elf quick-select button → preset applies instantly → press Enter (or Generate). Twenty elf names appear. Pick one, click the ⭐ to favorite it, done. The whole flow takes under 10 seconds.
+
+**Power use — finding the right name without re-rolling everything:**
+Generate 20 Tiefling names → lock the 4 you like (gold border) → press Enter again → those 4 stay, 16 new names fill the rest. Repeat until the whole list is keepers. Lock one with the perfect feel, unlock the others for more variety.
+
+**Narrowing a big list:**
+Set count to 50, generate. Type in the filter bar — e.g., "zar" — to instantly see only names containing that string. Great for finding names with a specific sound without scrolling through 50 tiles.
+
+**Consistent naming across a session:**
+Enable Advanced mode, enter seed `thornwall-town-nobles`. Every generate with that seed produces the same names in the same order — useful for generating a pre-planned list before the session and sharing it with a co-DM via the Share link.

@@ -1,12 +1,13 @@
 const DM_TOOLBOX_BUILD = {
   name: "The DM's Toolbox",
-  version: "2.3.0",
+  version: "2.3.1",
   recentChanges: [
-    "Shop Generator: expanded SHOPKEEPER_RP content pool to 20 wants, 20 hooks, and 20 rumors per settlement tier (village/town/capital) for all 30 shop types — up from 5/4/3",
-    "Shop Generator: Shopkeeper DM Notes (want/rumor/hook) now settlement-scaled with deep, non-repeating content across hundreds of sessions",
-    "Shop Generator: restock timers, stock depletion (Mark Sold / Restock), and localStorage persistence by seed",
-    "Shop Generator: item search and rarity filter in the floating navigator panel",
-    "Shop Generator: Sell to Shop modal with keyword matching, condition modifier, settlement modifier, and in-character NPC response lines"
+    "Name Generator: lock tiles — pin names you want to keep; re-generate refills only unlocked slots",
+    "Name Generator: quick-count chips (5 / 10 / 20 / 50) for instant count selection",
+    "Name Generator: press Enter anywhere outside a form field to generate instantly",
+    "Name Generator: in-results text filter — search and narrow the current list without regenerating",
+    "Name Generator: count ceiling raised from 200 to 500",
+    "Name Generator: modularized into js/name/ (name-data.js, name-engine.js, name-ui.js)"
   ],
   buildTime: new Date().toISOString(),
   author: "Maybeme"
