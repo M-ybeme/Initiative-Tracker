@@ -553,28 +553,172 @@ The default race lists and syllable banks live entirely in SRD-friendly territor
 
 Shop inventories pull from SRD magic items, consumables, and adventuring gear plus original descriptions. Leave any non-SRD goods in downstream packs and keep this documentation focused on the SRD subset.
 
+### Settlement Types
+
+Three settlement tiers drive pricing, stock depth, and rarity availability:
+
+| Settlement | Price Range | Stock Range | Rare Chance | Unique Item % |
+|------------|-------------|-------------|-------------|---------------|
+| Village    | ×1.10–1.35  | 5–8/shop    | Low (2%)    | 15%           |
+| Town       | ×0.95–1.15  | 7–12/shop   | Mid (8%)    | 25%           |
+| Capital    | ×0.85–1.20  | 10–16/shop  | High (15%)  | 40%           |
+
+Settlement also affects shopkeeper rumors (local gossip in villages vs. guild politics in capitals) and restock timers.
+
+### Presets
+
+Three built-in presets configure which shop types are enabled and set rarity/unique defaults:
+
+- **Core (common town)** — 12 everyday shops: General Goods, Grocer, Inn/Tavern, Tailor, Cobbler, Blacksmith, Stables, Carpenter, Farrier, Fabric Shop, Messenger, Bookshop
+- **Adventurer's Hub** — 11 shops with magic focus; forces rare items allowed, 30% unique chance
+- **Shady Bazaar** — 7 shops: Black Market, Pawn Shop, Oddities, Fortune Teller, Clockwork Repair, Pet Shop, Adventuring Gear; forces rare items, 35% unique chance
+
+Selecting a preset auto-checks the right shop types and tweaks knobs; everything remains adjustable after.
+
+### Shop Types (35+)
+
+All shop types, their inventory categories, and their keyword buy-affinities (used by Sell to Shop):
+
+General Goods · Bakery · Butcher · Grocer · Inn/Tavern · Tailor · Cobbler · Tanner · Fabric Shop · Blacksmith (Arms/Armor) · Farrier · Carpenter · Wheelwright · Stables · Messenger · Adventuring Gear · Magic Items · Potions & Elixirs · Arcane Scrolls · Divine Scrolls · Bookshop/Library · Cartographer · Alchemist/Apothecary · Jeweler · Painter/Sculptor · Fortune Teller · Black Market · Pawn Shop · Clockwork Repair · Pet Shop · Oddities · Mercenary/Bounty
+
+### Advanced Mode
+
+Toggle the **Advanced** switch to expose:
+
+- **Items per shop** (5–20, default 9)
+- **Unique chance %** (0–100, settlement default)
+- **Seed** — any string for deterministic/reproducible generation; required for persistent stock depletion across sessions
+- **Allow rare items** — Auto (settlement-driven) / Yes / No
+- **Shop type checkboxes** — All/None toggles plus individual selection for all 35+ types
+
+Advanced mode state is remembered in localStorage between visits.
+
+### Seeded RNG & Deterministic Shops
+
+When a seed is entered, the same seed + same settings always produces the same shops, same shopkeeper, same prices. Use this to:
+
+- Return to "the same town market" across multiple sessions
+- Share a seed with co-DMs for consistent world-state
+- Combine with Stock Depletion (below) for persistent sold-out items
+
+### Shopkeeper Generation (v1.8.7)
+
+Each shop gets a procedurally generated shopkeeper with:
+
+- **Name** drawn from generic, exotic, humble, or scholarly pools
+- **Personality** — 70% fitting (suits the trade), 20% ironic (contradicts it), 10% wrong field (unexpected backstory)
+- Personality traits are shop-type-specific (a fitting blacksmith is "gruff and practical with soot-stained hands"; an ironic one is "delicate and refined, speaks of beauty in brutality")
+
+### Shopkeeper DM Notes (v2.3.0)
+
+Every shopkeeper now includes three DM-facing RP prompts, hidden behind a collapsible **DM Notes** button to keep the screen clean. All three are tailored to both the shop type and the settlement size:
+
+- **Wants** — A personal goal, desire, or problem the shopkeeper is dealing with (e.g., a village blacksmith wants "a decent apprentice who doesn't flinch at the heat"; a capital jeweler wants "to know who keeps sending her anonymous appraisal requests")
+- **Rumor** — Something they've heard that scales to settlement scope. Village rumors are local and personal; town rumors involve guilds and commerce; capital rumors touch on politics, noble houses, and city-wide intrigue
+- **Hook** — A one-line situation that could become a sidequest, a moral dilemma, or just interesting texture if the players ask the right question
+
+**Content pool sizes (v2.3.0):** All 30 shop types carry **20 wants, 20 hooks, and 20 rumors per settlement tier** (village / town / capital) — 60 unique rumor lines per shop type, 2,000+ total RP entries. The generator draws randomly from these pools, ensuring non-repetitive content across hundreds of sessions even when returning to the same shop type.
+
+These notes are never shown to players. Click **DM Notes** on any shop card to expand or collapse them. They are included in the Copy and Download exports.
+
+### Restock Timer (v2.3.0)
+
+Each shop header shows how often it realistically restocks, calculated from shop type × settlement size:
+
+- **Daily**: Inn/Tavern, Bakery, Messenger
+- **1–3 days**: Pawn Shop (walk-in stock), Stables (feed)
+- **3–7 days**: Alchemist, Grocer, Cobbler, Farrier
+- **5–10 days**: Blacksmith, General Goods, Adventuring Gear
+- **1–2 weeks**: Tailor, Fabric Shop, Books, Carpenter, Potions
+- **2–3 weeks**: Arcane Scrolls, Jeweler, Clockwork Repair
+- **2–4 weeks**: Magic Items, Cartographer, Oddities (unpredictable)
+
+Village adds ~3 days to all timers; Capital subtracts ~1 day. Use this as a narrative guide — there is no real-time clock, just the DM's session calendar.
+
+### Stock Depletion & Restock (v2.3.0)
+
+Persistent sold-out tracking per seeded shop, stored in `localStorage`:
+
+- Each item row has a **bag-x icon** (Mark Sold) button
+- Clicking it marks the item as sold: the row dims, the stock badge reads **SOLD**, and the state is saved to `localStorage` keyed to the current seed
+- Clicking the same button again (which becomes a ↩ icon) unmarks it
+- The **Restock** button in each shop header clears all sold items for that shop only
+- On the next session, regenerating with the same seed automatically restores the sold state — sold items appear immediately as SOLD without any player input
+- If no seed is set, sold state is session-only (in-memory); a small notice prompts the DM to set a seed in Advanced mode for persistence
+
+**Workflow example**: Set seed `millhaven-market-spring` → generate → players buy a Longsword and two Healing Potions → DM marks those sold → next session, same seed shows exactly what's left in stock.
+
+### Item Search & Filter (v2.3.0)
+
+The floating **Search** button (bottom-right corner) opens the navigator panel, which now includes:
+
+- **Text search** — Filters all item rows across all shops in real time, matching against item name, description, and use case. Shops with no matching items are dimmed rather than hidden, so the DM can still see shop context.
+- **Rarity filter** — Four buttons (All / Common / Uncommon / Rare) narrow results by rarity badge. Combines with the text search.
+- **Quick jump** — When 2 or more shops are generated, the existing shop-anchor list appears below the search tools so the DM can still scroll directly to a specific shop.
+
+The panel is dismissible and remembers its state for the current session.
+
 ### Negotiate Price Mechanic (v1.8.8)
 
-**Haggling System:**
-- "Negotiate" button on each shop item
-- Modal displays Persuasion DC
+Haggling system per item:
 
 **DC by Rarity:**
-- Common: DC 12
-- Uncommon: DC 15
-- Rare: DC 18
+- Common: DC 12 (Easy)
+- Uncommon: DC 15 (Standard)
+- Rare: DC 18 (Hard)
 
 **Price Outcomes:**
 - **Critical Success** (Nat 20 or DC+10): 30% discount
-- **Success by 5+** (DC+5): 20% discount
-- **Success** (DC): 10% discount
-- **Failure** (< DC): No discount
-- **Critical Failure** (Nat 1 or DC-10): +10% price increase
+- **Success by 5+**: 20% discount
+- **Success** (DC met): 10% discount
+- **Failure**: No discount
+- **Critical Failure** (Nat 1 or DC−10): +10% surcharge (shopkeeper offended)
 
-**Visual Features:**
-- Color coding for success/failure tiers
-- Price outcomes table in modal
-- Shopkeeper reaction descriptions
+The same Persuasion DCs apply when a player tries to push a sell offer higher (see below).
+
+### Sell to Shop (v2.3.0)
+
+Each shop card has a **Sell to Shop** button that opens a modal for the inverse transaction — players selling items to the merchant.
+
+**How it works:**
+1. DM types the item name and a rough description (the more categorical detail, the better the keyword match)
+2. DM enters the player's estimated value in GP
+3. DM selects item condition: **Good** (100%), **Worn** (75%), **Damaged** (50%)
+4. Click **Calculate Offer**
+
+**Offer calculation:**
+- Base affinity by shop type (e.g., Blacksmith = 50% for weapons/armor, Pawn Shop = 25% for anything)
+- × Settlement multiplier (Village 70%, Town 85%, Capital 100%)
+- × Condition multiplier
+- = Final offer as % of stated value
+
+**Keyword matching**: The system checks the item description against each shop's buy-keyword list. A Blacksmith buys anything containing words like "weapon", "sword", "blade", "armor", "shield", "mail", "helm", etc. — broad enough that describing a crossbow as "a ranged weapon" will match. A Pawn Shop has no keyword restrictions and will buy anything at a lower rate. If nothing matches, the shop will still make a lowball offer with an appropriate NPC line explaining their hesitation.
+
+The modal generates a short **in-character NPC response** that fits the offer outcome ("I can move this. 12 gp — that's my offer." vs. "Not really my trade. 3 gp if you need to move it quickly.").
+
+Players can then attempt Persuasion (same DCs as buying) to push the offer higher.
+
+### Shop-to-Character Inventory (v1.9.0)
+
+Each item row has an **Add to Character** button that:
+- Selects from characters stored in IndexedDB/localStorage
+- Lets the DM set quantity, weight, equipped/attuned status, and notes
+- Appends the item (with description and use case) directly to the chosen character's inventory
+- Works across sessions without any manual copy-paste
+
+### Copy & Download Export
+
+**Copy (Markdown)**: Copies all generated shop data to clipboard as structured Markdown, including:
+- Shop name, settlement, markup, and restock timer
+- Shopkeeper name, personality, and all three DM Notes (Want / Rumor / Hook)
+- Each item: name, description, use, stock quantity, price, and sold status
+- Unique item line if present
+
+**Download .txt**: Exports all shop text as a plain-text file suitable for any VTT notes field, OneNote, or session folder.
+
+### Shop Navigation (v2.2.9)
+
+The **Search** floating button (replaces the old "Shops" toggle) shows the navigator panel. When two or more shops are generated, the panel includes anchor links to jump directly to any shop — useful when running 8+ shops in a single city market session.
 
 ---
 
@@ -612,16 +756,33 @@ Shop inventories pull from SRD magic items, consumables, and adventuring gear pl
 
 ## Version History Summary
 
-1. **v1.8.4** - Loot Generator overhaul (monster templates, hoard/individual modes, mundane items)
-2. **v1.8.8** - Generator integration (Name/NPC/Tavern/Shop), loot expansion (47 magic items)
-3. **v1.9.2** - NPC combat stats, tavern patrons, loot quick bundles
-4. **v1.10.2** - Tavern context & metrics system
-5. **v1.10.5** - Tavern cultural immersion (56 patron types, 28 events, cultural systems)
-6. **v1.10.8** - Tavern menu expansion (4-5x more variety)
-7. **v1.10.9** - Cursed items system (50 items, 5 severity levels)
-8. **v2.2.9** - Weapons & Armor category (340 entries, 28 weapons + 14 armor), per-item reroll, tomb/barracks templates, Markdown export
+1. **v1.8.4** - Loot Generator overhaul (monster templates, hoard/individual modes, mundane items); Shop Generator launched
+2. **v1.8.7** - Shop: Shopkeeper NPC generation (names, personality, 70/20/10 archetype split); limited stock quantities
+3. **v1.8.8** - Shop: Negotiate Price mechanic (Persuasion DC 12/15/18, 5-tier outcomes); generator integration (Name/NPC/Tavern/Shop); loot expansion (47 magic items)
+4. **v1.9.0** - Shop: Add to Character Inventory button; modern card layout
+5. **v1.9.2** - NPC combat stats, tavern patrons, loot quick bundles
+6. **v1.10.2** - Tavern context & metrics system
+7. **v1.10.5** - Tavern cultural immersion (56 patron types, 28 events, cultural systems)
+8. **v1.10.8** - Tavern menu expansion (4-5x more variety)
+9. **v1.10.9** - Cursed items system (50 items, 5 severity levels)
+10. **v2.2.9** - Weapons & Armor loot category (340 entries), per-item reroll, tomb/barracks templates, Markdown export; Shop: floating shop navigator
+11. **v2.3.0** - Shop: Shopkeeper DM Notes (want/rumor/hook, settlement-scaled); expanded RP content pool to 20 wants / 20 hooks / 20 rumors per settlement tier across all 30 shop types (2,000+ entries); restock timers; item search & rarity filter in navigator panel; stock depletion (Mark Sold, Restock, localStorage persistence by seed); Sell to Shop (keyword matching, condition modifier, settlement modifier, NPC response lines); updated Copy export to include DM notes and sold status
 
 ## Use Cases
 
 ### Shop Generator
-Players walk into a village blacksmith. Generate inventory (Village, Standard quality, seed: "ironforge-blacksmith"). Shopkeeper is "gruff and practical with burn scars on his forearms." Shop has mundane weapons (15 gp Longsword, 10 gp Spear), no magic items, village pricing with limited stock. Player wants to haggle - roll Persuasion vs DC 12 for common item. Success = 10% off. Click "Add to Character" to transfer Longsword to player's inventory. Return next session—same shop, same inventory.
+
+**First visit — quick session start:**
+Hit Generate with the Core preset on Town. Eight shops appear instantly. Each shopkeeper has a name, personality, and a collapsible DM Notes panel with a personal want, a rumor, and a hook — enough to run them for a full session without any prep. Press "Shops" to open the navigator and jump to any shop by name.
+
+**Returning to the same market:**
+Turn on Advanced mode, type a seed like `millhaven-spring-market`, generate. Same shops, same prices, same shopkeeper names. Mark items sold as players buy them. Next session, same seed — sold items show as SOLD immediately. When enough in-game time has passed, click Restock on each shop to clear the sold list.
+
+**Players want to sell loot:**
+Click **Sell to Shop** on any card. Type "a well-worn iron shortsword" and set its value to 15 gp. The Blacksmith (Blacksmith keywords match "iron" and "sword") offers 50% base × 85% town rate = 6 gp, with a line from the NPC. Pawn Shop offers 25% of anything with no keyword requirement. The player rolls Persuasion (DC 12) to push it higher.
+
+**Finding a specific item across many shops:**
+Generate an Adventurer's Hub preset in a capital. Press **Search**, type "healing" — all non-healing rows dim instantly. Switch to Rare filter to see only the rare potions. The shop nav list still lets you jump between shops without closing the filter.
+
+**Seeded village with realistic context:**
+Set settlement to Village, seed to `havenford-mill-road`. The grocer restocks every 3–7 days (displayed in the header). The blacksmith restocks every 8–13 days (village base 5–10 + 3). The innkeeper's rumor is about local gossip; the blacksmith's hook involves an unclaimed sword. The scale of everything — prices, stock, rumors — fits a backwater village automatically.

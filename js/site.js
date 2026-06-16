@@ -1,12 +1,12 @@
 const DM_TOOLBOX_BUILD = {
   name: "The DM's Toolbox",
-  version: "2.2.9",
+  version: "2.3.0",
   recentChanges: [
-    "Loot Generator: Weapons & Armor category (28 weapons + 14 armor, 340 entries) with material-aware naming (Battle-worn iron longsword, Polished yew longbow); integrated into all hoard/monster templates",
-    "Loot Generator: per-item reroll button (🎲) on every result tile — swap one item without regenerating the whole list",
-    "Loot Generator: Tomb and Barracks hoard templates; Markdown (.md) export grouped by category",
-    "Docs: updated GENERATORS.md (bundle count, Potion/Scroll categories, Weapons & Armor, new templates, per-item reroll, Markdown export)",
-    "Loot Generator: script modularized from one 2641-line file into js/loot/ (loot-engine.js, loot-tables.js, loot-catalogs.js, loot-bundles.js, loot-ui.js) — loot.html reduced to 431 lines"
+    "Shop Generator: expanded SHOPKEEPER_RP content pool to 20 wants, 20 hooks, and 20 rumors per settlement tier (village/town/capital) for all 30 shop types — up from 5/4/3",
+    "Shop Generator: Shopkeeper DM Notes (want/rumor/hook) now settlement-scaled with deep, non-repeating content across hundreds of sessions",
+    "Shop Generator: restock timers, stock depletion (Mark Sold / Restock), and localStorage persistence by seed",
+    "Shop Generator: item search and rarity filter in the floating navigator panel",
+    "Shop Generator: Sell to Shop modal with keyword matching, condition modifier, settlement modifier, and in-character NPC response lines"
   ],
   buildTime: new Date().toISOString(),
   author: "Maybeme"

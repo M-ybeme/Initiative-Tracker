@@ -8,6 +8,8 @@ The format is based on Keep a Changelog, and this project adheres to Semantic Ve
 The DM's Toolbox has evolved through focused feature releases:
 
 
+- **2.3.x**: Shop Generator overhaul — Shopkeeper DM Notes with 20 wants / 20 hooks / 20 rumors per settlement tier across all 30 shop types, restock timers, stock depletion, Sell to Shop, item search/filter
+- **2.2.x**: Compendium overhaul (pins, Conditions tab, keyboard shortcuts); Journal TipTap editor with wikilinks/backlinks; Loot Generator weapons & armor, per-item reroll, new hoard templates, Markdown export, modularization
 - **2.1.x**: Characters, Battle Map, and Encounter Builder UX overhauls; Initiative Tracker reaction/legendary-action tracking
 - **2.0.x**: Starting equipment selection, subclass cantrips, feat UI, ability check rolls, custom monster creator, and content pack integration
 - **1.11.x**: Journal system with rich text editor, import/export (Word/PDF/TXT/Markdown), and Battle Map → Initiative Tracker integration
@@ -15,7 +17,37 @@ The DM's Toolbox has evolved through focused feature releases:
 - **1.9.x**: Battle map measurement tools, persistent fog shapes, and generator integration across NPC/Tavern/Shop systems
 - **1.8.x**: Spell database expansion to 432+ spells, inventory management, loot generator overhaul, and character token generation
 
-**Current version: 2.2.9 (June 2026)**
+**Current version: 2.3.0 (June 2026)**
+
+---
+
+## [2.3.0] - 2026-06-15
+**Shop Generator — Shopkeeper DM Notes Overhaul, Sell to Shop, Stock Depletion, Item Search**
+
+### Added
+- **Shopkeeper DM Notes** — every shop card includes a collapsible DM Notes panel with a personal **Want**, a **Rumor**, and a **Hook**, all tailored to shop type and settlement size; hidden from players, included in Copy/Download exports
+- **Expanded RP content pool** — all 30 shop types now have **20 wants, 20 hooks, and 20 rumors per settlement tier** (village / town / capital), totaling 60 unique rumor lines per shop type; up from the previous 5 wants / 4 hooks / 3 rumors per tier; deep variety ensures non-repetitive content across hundreds of sessions
+- **Restock Timers** — each shop header displays a realistic restock window derived from shop type × settlement size (e.g., Bakery: daily; Blacksmith: 5–10 days; Oddities: 2–4 weeks); Village adds ~3 days, Capital subtracts ~1 day
+- **Stock Depletion** — each item row has a Mark Sold (bag-x) button; sold rows dim and badge reads SOLD; state saves to `localStorage` keyed by seed and restores automatically on next visit with the same seed; Restock button on each shop header clears all sold items for that shop
+- **Sell to Shop** — each shop card has a Sell to Shop button opening a modal for inverse transactions; DM enters item name, description, value (gp), and condition (Good 100% / Worn 75% / Damaged 50%); system calculates offer via shop-type base affinity × settlement multiplier × condition × keyword match; modal generates an in-character NPC response line; players can then attempt Persuasion to push the offer higher
+- **Item Search & Rarity Filter** — the floating navigator panel now includes a live text search (matches name, description, use) and four rarity filter buttons (All / Common / Uncommon / Rare); shops with no matching items dim rather than hide; combines with the existing shop-anchor jump list
+- **Shop Navigator** — replaced the old Shops toggle with a floating Search button (bottom-right); when 2+ shops are generated, anchor links appear for direct shop-to-shop scrolling
+
+### Changed
+- **Copy & Download exports** — now include DM Notes (want, rumor, hook) and sold status per item
+- **`// @ts-nocheck`** added to the inline `<script>` block in `shop.html` to suppress VS Code false-positive JSX/TypeScript errors on inline script content
+
+### Refactored
+- **Shop Generator modularized** — extracted the 2622-line single-file inline script into five organized modules under `js/shop/`, following the same pattern used for the Loot Generator in 2.2.9:
+  - `shop-data.js` — SETTLEMENT profiles, PRESETS, RESTOCK_BASE timers, SHOP_BUYS keyword affinities, SHOPS inventory (~600 items across 32 shop types)
+  - `shop-rp.js` — SHOPKEEPER_NAMES, SHOPKEEPER_PERSONALITY archetypes, flavor pools (FLAV_ADJ/MAT/DEC/UNIQUE), SHOPKEEPER_RP (all 30 types × 20 wants / 20 hooks / 60 rumors)
+  - `shop-engine.js` — seeded RNG, restock label logic, stock depletion persistence, pure helpers (pick, formatPrice, decorateDesc, slugifyShop), makeShopkeeper
+  - `shop-sell.js` — sell offer calculation, keyword matching, NPC response lines, Sell to Shop modal, Negotiate Price modal
+  - `shop-ui.js` — DOM helpers, type checkbox builder, shop nav, generate(), copy/download, character inventory integration, DOMContentLoaded wiring
+  - `shop.html` reduced from 2622 to 421 lines; IIFE wrapper dropped; all declarations promoted to global scope consistent with the loot module pattern
+
+### Fixed
+- **Smart quotes in JS string literals** — replaced all 377 instances of Unicode curly quotes (U+2018/U+2019) that had been written into JS code as string delimiters, causing `SyntaxError: Invalid or unexpected token` at runtime; all strings now use straight ASCII apostrophes (U+0027)
 
 ---
 
