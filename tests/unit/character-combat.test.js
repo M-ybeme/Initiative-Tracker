@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+﻿import { describe, it, expect } from 'vitest';
 import {
   applyDamageToHP,
   applyHealingToHP,
@@ -7,7 +7,7 @@ import {
   getDeathSaveState,
   getCriticalHitNotation,
   parseAttackBonus,
-} from '../../js/modules/character-combat.js';
+} from '../../js/character/character-combat.js';
 
 describe('applyDamageToHP', () => {
   it('reduces current HP by damage when no temp HP', () => {

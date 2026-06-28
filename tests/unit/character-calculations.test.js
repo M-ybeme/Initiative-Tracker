@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+﻿import { describe, it, expect } from 'vitest';
 import {
   getAbilityModifier,
   getProficiencyBonus,
@@ -18,7 +18,7 @@ import {
   calculateConcentrationCheckDC,
   calculateSpellDC,
   calculateSpellAttackBonus
-} from '../../js/modules/character-calculations.js';
+} from '../../js/character/character-calculations.js';
 
 describe('getAbilityModifier', () => {
   it('returns -5 for score of 1', () => {

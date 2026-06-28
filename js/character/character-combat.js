@@ -5,7 +5,7 @@
  * dice notation. No DOM access, no side effects, no global state.
  */
 
-import { parseDiceNotation } from './dice.js';
+import { parseDiceNotation } from '../modules/dice.js';
 
 /**
  * Apply damage to a character, absorbing through temporary HP first.

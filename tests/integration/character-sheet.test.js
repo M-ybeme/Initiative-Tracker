@@ -1,12 +1,12 @@
-/**
+﻿/**
  * Integration Tests: Character Sheet Data Round-Trips
  * Verifies data survives serialization, deserialization,
  * and recalculation across modules.
  */
 import { describe, it, expect } from 'vitest';
 import { serializeCharacter, deserializeCharacter } from '../../js/modules/storage.js';
-import { recalcDerivedStats } from '../../js/modules/character-calculations.js';
-import { normalizeSpellEntry } from '../../js/modules/character-spell-data.js';
+import { recalcDerivedStats } from '../../js/character/character-calculations.js';
+import { normalizeSpellEntry } from '../../js/character/character-spell-data.js';
 
 const SKILL_CONFIGS = [
   { key: 'acrobatics',     ability: 'dex' },

@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+﻿import { describe, it, expect } from 'vitest';
 import {
   calcSpellSaveDC,
   calcSpellAttackBonus,
@@ -7,7 +7,7 @@ import {
   rollHitDiceForHealing,
   applyShortRest,
   applyLongRest,
-} from '../../js/modules/character-rest.js';
+} from '../../js/character/character-rest.js';
 import { createSeededRandom } from '../../js/modules/dice.js';
 
 describe('calcSpellSaveDC', () => {

@@ -1,132 +1,276 @@
 # Content Packs
 
-This guide captures the Phase 2 plan for private content packs: how they are structured, how the browser loads them, and what guarantees we provide to keep the SRD-only baseline intact. The goal is **boring-simple authoring for us** plus **fully featured runtime behavior for outside users who own the material they are reloading**.
+Content packs are private JSON files that extend the SRD-only toolbox with licensed material you own — additional classes, spells, feats, races, generator tables, and more. Packs are stored entirely in your browser and never leave your device.
+
+For step-by-step instructions on building a pack, see the [Content Pack Authoring Guide](CONTENT_PACK_AUTHORING.md). This document covers the system's architecture, validation rules, event model, and public API for developers or advanced users who want to understand how the runtime works or extend it.
 
 ---
 
-## Goals & Guardrails
+## Design Guarantees
 
-- **Keep the SRD build pristine.** Packs never ship with the public bundle and stay in the user’s browser storage.
-- **Make authoring approachable.** One JSON file with a documented schema, copy/paste friendly examples, and optional metadata helpers.
-- **Stay data-only.** No executable code, no macros, no scripts. Packs describe data that our runtime already understands.
-- **Fail fast.** Invalid packs should be rejected immediately with actionable validation errors.
-- **Be reversible.** Clearing packs (or using a private browsing session) must snap the app back to the SRD baseline.
-
----
-
-## Lifecycle Overview
-
-1. **Authoring** – A DM duplicates the sample JSON, fills out metadata, and lists the records they personally own (classes, spells, feats, items, etc.).
-2. **Import** – The user drags the file onto the “Manage Content Packs” dialog or pastes JSON into the text field.
-3. **Validation** – We validate against [schemas/content-pack.schema.json](schemas/content-pack.schema.json), check record types, scan for restricted prose, and compute a SHA-256 fingerprint for diagnostics.
-4. **Storage** – Valid packs are persisted in IndexedDB (fallback to localStorage) with their metadata, enabled flag, and fingerprint.
-5. **Activation (Phase 3.5)** – Enabling a pack should merge its allowlist, inject data into the relevant registries (`LevelUpData`, `SPELLS_DATA`, generators, etc.), and trigger SRD DOM re-evaluation so hidden buttons reappear. This wiring was missed in Phase 3 and is now being implemented as a hotfix.
-6. **Diagnostics** – The diagnostics panel (Ctrl+Alt+D or footer gear icon) lists loaded packs with record counts and hashes to make remote debugging possible without the data itself.
-7. **Removal** – Disabling or deleting a pack reverses the merges and re-applies the SRD filters. Clearing browser storage removes every pack.
+- **SRD build stays pristine.** Packs are never bundled with the public repository. They live in your browser's IndexedDB or localStorage.
+- **Data-only.** Packs contain structured JSON. No executable code, no scripts, no macros are evaluated.
+- **Reversible.** Toggling a pack off or clearing browser storage snaps the app back to the SRD baseline immediately — no page reload required.
+- **Fail fast.** Invalid packs are rejected at import time with specific, actionable error messages before any data is written.
 
 ---
 
-## JSON Schema (Step 1 Deliverable)
+## Lifecycle
 
-The canonical schema lives at [schemas/content-pack.schema.json](schemas/content-pack.schema.json). High-level structure:
+```
+Author → Import → Validate → Store → Activate → Toggle On/Off → Remove
+```
+
+1. **Author** — Create a JSON file using the starter template (`docs/examples/content-pack-template.json`). Fill in metadata, an allowlist of IDs to unlock in the UI, and one record per piece of content you want to add.
+
+2. **Import** — Open the Content Pack Manager (`Ctrl+Alt+D` or footer gear icon → "Open Content Pack Manager"). Drag a file onto the dialog or paste JSON into the text area.
+
+3. **Validate** — The manager validates metadata fields, checks every record type against the allowed set, verifies payload shapes, flags duplicate IDs, and rejects anything that fails. A SHA-256 fingerprint of the pack is computed for diagnostics.
+
+4. **Store** — Valid packs are written to IndexedDB (falling back to localStorage, then in-memory). The pack's enabled state, metadata, and fingerprint are all persisted.
+
+5. **Activate** — On enable, the runtime merges the pack's allowlist into `SRDContentFilter` and injects each record into the relevant registry (`LevelUpData`, `SPELLS_DATA`, generator tables, etc.). The `dmtoolbox:packs-applied` event fires, prompting UI surfaces to refresh.
+
+6. **Toggle On/Off** — Packs can be enabled or disabled at any time without removal. Disabling reverses the record merges and re-applies SRD content filtering. The `dmtoolbox:packs-ready` event fires after every state change.
+
+7. **Remove** — Deleting a pack removes it from storage and fully restores the SRD baseline. "Remove All" clears every pack at once.
+
+---
+
+## JSON Structure
+
+A content pack is a single JSON object with six top-level sections:
 
 | Section | Required | Purpose |
 |---------|----------|---------|
-| `metadata` | ✅ | Identifies the pack (id, name, version, authorship, license statement, created/updated timestamps, tool version used to export, optional homepage). |
-| `dependencies` | ⛔ | Optional references to other pack IDs plus minimum versions to enforce load order. |
-| `allowlist` | ⛔ | Type→ID arrays that merge into `SRDContentFilter.allowlist` before DOM gating runs. |
-| `records` | ⛔ | Array of content entries. Each record has a `type` (spell, class, subclass, feat, background, item, generator-table, etc.), a unique `id`, an `operation` (`add`, `replace`, `remove`), and a `payload` whose shape matches the in-app registry. |
-| `assets` | ⛔ | Optional embedded images/files encoded as data URLs with explicit usage (token, portrait, map overlay). |
-| `notes` | ⛔ | Freeform text to remind the table where the pack came from (e.g., “Converted from my Eberron bookmarks”). |
+| `metadata` | ✅ | Identifies the pack — id, name, version, authorship, license |
+| `dependencies` | optional | Other pack IDs that must be loaded and enabled first |
+| `allowlist` | optional | Type → ID arrays that unlock SRD-gated UI elements |
+| `records` | optional | Content entries (classes, spells, feats, etc.) to inject at runtime |
+| `assets` | optional | Embedded images (tokens, portraits, maps) encoded as data URLs |
+| `notes` | optional | Freeform strings for the author's own reference |
 
-### Record Payload Expectations
+A `_doc` key at the top level is silently ignored by the runtime and can hold inline documentation for the pack file itself.
 
-- **Class / Subclass:** Must match the structures in `data/srd/level-up-data.js`. We enforce required keys (`hitDice`, `proficiencies`, `featuresByLevel`, etc.) and warn if feature text exceeds the SRD summary length guidelines.
-- **Spell:** Mirrors the objects in `data/srd/spells-data.js` (`title`, `level`, `school`, `casting`, `range`, `components`, `duration`, `description`).
-- **Generator Tables:** Provide `table`, `entries`, and `weight` fields so we can merge them into loot/shop/tavern pools.
-- **Background / Feat / Resource:** Aligns with corresponding `LevelUpData` tables; the schema references these shapes via shared definitions.
-- **Custom Buckets:** The schema’s `records[].type` enum is intentionally broad. For any new type, we only need to update the definitions and the pack manager merge table.
+### `metadata`
 
-### Operations
+All five marked fields must be present or the pack is rejected at import:
 
-`operation` controls how we apply the payload:
+| Field | Required | Format | Description |
+|-------|----------|--------|-------------|
+| `id` | ✅ | reverse-domain slug | Unique across all packs. Lowercase letters, digits, dots, hyphens, underscores. No leading/trailing special chars. Example: `com.yourname.eberron` |
+| `name` | ✅ | string | Friendly display name shown in the pack manager |
+| `version` | ✅ | X.Y.Z semver | Track revisions. Example: `1.0.0` |
+| `license` | ✅ | string | Terms reminder. Usually `"Private use only"` |
+| `toolVersion` | ✅ | X.Y.Z semver | App version this pack was authored against |
+| `authors` | optional | string[] | Names of pack authors |
+| `source` | optional | string | Book, PDF, or campaign the data comes from |
+| `createdAt` / `updatedAt` | optional | ISO 8601 | Timestamps for your audit trail |
+| `homepage` | optional | https:// URL | Link to documentation or campaign wiki |
 
-- `add` – Inserts a new entity; errors if the target ID already exists in the SRD baseline or another enabled pack.
-- `replace` – Overwrites an existing ID after the user confirms the conflict (UI will highlight this).
-- `remove` – Allows a pack to explicitly remove SRD entries (useful for variant tables); these changes revert once the pack is disabled.
+### `dependencies`
 
----
+Array of objects that declare prerequisite packs. The manager checks that all listed packs are installed and enabled before activating a pack with dependencies:
 
-## Runtime Responsibilities (Upcoming Steps)
+```json
+"dependencies": [
+  { "id": "com.yourname.base", "minVersion": "1.2.0" }
+]
+```
 
-| Roadmap Task | Implementation Notes |
-|--------------|----------------------|
-| Loader Service | `ContentPackManager` module handles imports, schema validation, hash calculation, and persistence. It exposes `loadPacks()`, `importPack()`, `togglePack(id, enabled)`, and `getMergedContext()` so existing screens can subscribe. |
-| UI Surface | Modal reachable from the navbar. Includes drag-and-drop area, JSON textarea, list of installed packs with enable/disable switches, conflict badges, and export/delete buttons. |
-| Offline Storage | IndexedDB store `packs` with `id` as key and fields `{ metadata, recordsHash, enabled, lastUpdated, blob }`. LocalStorage fallback uses a single JSON array. |
-| Diagnostics | Diagnostics panel gets a “Content Packs” section with count, enabled IDs, and each pack’s fingerprint + total records. |
+### `allowlist`
 
----
+Controls which IDs become visible through the SRD content gate. Without a matching allowlist entry, a record that targets an SRD-gated slot remains hidden even after the record is injected. Each key is a content type and each value is an array of IDs:
 
-## Authoring Checklist
+| Key | Example ID | What it unlocks |
+|-----|------------|-----------------|
+| `class` | `"Artificer"` | Class in character creation |
+| `subclass` | `"Wizard:Arcane Geometer"` | `ClassName:SubclassName` format |
+| `race` | `"Warforged"` | Species/race option |
+| `subrace` | `"Elf:Dark Elf (Drow)"` | `RaceName:SubraceName` format |
+| `spell` | `"Tasha's Caustic Brew"` | Spell in all class spell lists |
+| `feat` | `"Telekinetic"` | Feat in level-up and creation wizard |
+| `background` | `"Haunted One"` | Background option |
+| `fighting-style` | `"Blind Fighting"` | Fighter/Paladin/Ranger option |
+| `pact-boon` | `"Pact of the Talisman"` | Warlock pact choice |
+| `eldritch-invocation` | `"Eldritch Mind"` | Warlock invocation |
+| `metamagic` | `"Seeking Spell"` | Sorcerer metamagic |
+| `generator-table` | `"loot:custom-artifacts"` | Inclusion in a generator pool |
 
-1. Duplicate the starter template in [data/packs/experimental/README.md](data/packs/experimental/README.md) (to be replaced by a generator once the loader module ships).
-2. Fill out metadata. Use reverse-domain IDs to avoid collisions (`com.example.mars-colony`).
-3. For each entity you own, create a record with the matching payload shape. Keep descriptions to personal summaries—never paste copyrighted prose.
-4. Validate locally: `npm run validate-pack path/to/file.json` (script will land with the loader service) or drop it into the upcoming UI.
-5. Import via the “Manage Content Packs” dialog and confirm the SRD notices disappear where expected.
+### `records`
 
----
-
-## Example Snippet
+Array of content entries. Each record has four fields:
 
 ```json
 {
-  "metadata": {
-    "id": "com.example.eberron",
-    "name": "Wayfinder Archive",
-    "version": "1.0.0",
-    "authors": ["Marlo"],
-    "license": "Private use only",
-    "source": "Eberron: Rising from the Last War",
-    "toolVersion": "2.0.5"
-  },
-  "allowlist": {
-    "class": ["Artificer"],
-    "spell": ["Tasha's Caustic Brew"],
-    "class-resource": ["class-resource:Artificer:Infused Items"]
-  },
-  "records": [
-    {
-      "type": "class",
-      "id": "Artificer",
-      "operation": "add",
-      "payload": {
-        "hitDice": "d8",
-        "primaryAbility": "int",
-        "spellcastingProgression": "half",
-        "featuresByLevel": {
-          "1": ["Magical Tinkering", "Spellcasting"],
-          "2": ["Infuse Item"],
-          "3": ["Specialist"],
-          "4": ["Ability Score Improvement"]
-        }
-      }
-    }
-  ]
+  "type": "spell",
+  "id": "Prismatic Pulse",
+  "operation": "add",
+  "payload": { ... }
 }
 ```
 
-The schema enforces field presence, but your payload can include any additional properties our registries understand (e.g., resource arrays, equipment choices, subclass hooks). The pack manager will skip unknown record types with a warning so advanced users can stage future-facing data without breaking import.
+See [Record Types](#record-types) for type-specific payload shapes.
+
+### `assets`
+
+Embedded binary files. Each asset needs `id`, `usage`, and `data` (base64 or data URL). Supported `usage` values: `token`, `portrait`, `map`, `handout`.
+
+```json
+"assets": [
+  {
+    "id": "token-ranger",
+    "usage": "token",
+    "data": "data:image/png;base64,iVBORw0KGg..."
+  }
+]
+```
+
+Assets are kept in storage alongside the pack record; there is no external hosting. Size limits follow the browser's IndexedDB quota.
+
+### `notes`
+
+Array of freeform strings for human-readable reminders. Not parsed by the runtime.
 
 ---
 
-## Next Steps
+## Record Types
 
-- Wire the schema into a runtime validator (Ajv or a slim custom validator) inside `js/modules/content-pack-manager.js`.
-- Build the pack manager storage layer with IndexedDB + localStorage fallback.
-- Create the “Manage Content Packs” modal and route conflicts/errors through the diagnostics panel.
-- Extend pruning helpers (`pruneLevelUpData`, generators, etc.) to support reversible merges so disabling a pack restores the SRD baseline without reloads.
-- **Runtime integration (Phase 3.5):** add `initContentPackRuntime()` to subscribe to `ContentPackManager`, merge allowlists, apply record operations into `LevelUpData`/`SPELLS_DATA`, and fire a `dmtoolbox:packs-applied` event so UI surfaces can refresh when packs change.
+The `type` field on each record must match one of the following:
 
-Once those pieces ship, outside users can keep a single JSON file per book, import it in a few clicks, and enjoy the same UI the SRD build uses—no forks, no secret branches, just private local data.
+| Type | What it adds | ID format |
+|------|-------------|-----------|
+| `class` | A full playable class with progression tables | `ClassName` (e.g., `Artificer`) |
+| `subclass` | A subclass nested under a parent class | `ClassName:SubclassName` |
+| `race` | A playable species | `RaceName` |
+| `subrace` | A subrace nested under a parent race | `RaceName:SubraceName` |
+| `spell` | A spell entry | Spell title (e.g., `Tasha's Caustic Brew`) |
+| `feat` | A feat available at level-up | Feat name |
+| `background` | A background option in character creation | Background name |
+| `fighting-style` | A fighting style for Fighter/Paladin/Ranger | Style name |
+| `pact-boon` | A Warlock pact boon | Boon name |
+| `eldritch-invocation` | A Warlock eldritch invocation | Invocation name |
+| `metamagic` | A Sorcerer metamagic option | Option name |
+| `generator-table` | A table merged into a generator pool | `generator:table-name` |
+| `class-resource` | A named resource tracked in the Resources panel | `class-resource:ClassName:ResourceName` |
+| `equipment-choice` | Starting equipment choices for a class | `ClassName` |
+| `starting-gold` | Starting gold alternative for a class | `ClassName` |
+| `beast` | A beast form for Wild Shape or Polymorph | Creature name |
+| `artifact` | A named magic item | Item name |
+| `item` | A shop or loot inventory item | Item name |
+| `note` | Freeform note attached to a record | Any unique string |
+
+### Payload shapes
+
+Payloads must mirror the corresponding in-app data structures. Key shapes:
+
+- **`class`** — mirrors `LevelUpData.CLASS_DATA` entries: `hitDice`, `primaryAbility`, `proficiencies`, `features` (object keyed by level), `spellcastingProgression`, `spellSlots` (object keyed by level, arrays [1st..9th slot counts])
+- **`subclass`** — mirrors `LevelUpData.CLASS_DATA[class].subclasses` entries: `name`, `description`, `features` keyed by level
+- **`spell`** — mirrors `SPELLS_DATA` objects: `title`, `level`, `school`, `casting_time`, `range`, `components`, `duration`, `body`, `classes` array, `tags` array, and optional dice fields (`damage_dice`, `heal_dice`, `save_dc_ability`)
+- **`feat`** — mirrors `LevelUpData.FEATS`: `name`, `description`, `prerequisites`
+- **`background`** — mirrors `LevelUpData.BACKGROUND_DATA`: `name`, `description`, `proficiencies`, `feature`, `equipment`
+- **`fighting-style`** — mirrors `LevelUpData.FIGHTING_STYLE_DATA`: `name`, `description`, `classes`
+- **`pact-boon`** — mirrors `LevelUpData.PACT_BOON_DATA`: `name`, `description`
+- **`eldritch-invocation`** — mirrors `LevelUpData.ELDRITCH_INVOCATION_DATA`: `name`, `description`, `prerequisites`
+- **`metamagic`** — mirrors `LevelUpData.METAMAGIC_DATA`: `name`, `description`, `cost`
+- **`race`** — mirrors `LevelUpData.RACE_DATA`: `name`, `description`, `traits`, `languages`, `abilityScoreIncrease`
+- **`subrace`** — mirrors `LevelUpData.SUBRACE_DATA`: `name`, `race`, `description`, `traits`
+- **`generator-table`** — `table` (string name), `entries` (string[]), optional `weight` (number[])
+
+The [JSON Schema](../schemas/content-pack.schema.json) is the authoritative field reference. Most editors (VS Code, JetBrains, etc.) can validate JSON files against a schema automatically — point them at `schemas/content-pack.schema.json`.
+
+---
+
+## Operations
+
+Each record's `operation` controls how the runtime applies it:
+
+| Operation | Behavior |
+|-----------|----------|
+| `add` | Merges payload into the existing entry if the ID already exists, or inserts a new entry. Fields you omit are preserved from the base data. |
+| `replace` | Overwrites the existing entry entirely. Use when you want to explicitly clear fields that exist in the base SRD record. |
+| `remove` | Hides the entry from all UI surfaces. Reverses when the pack is toggled off or removed. |
+
+**Merge behavior for `add`:** When your record ID matches an existing SRD entry, only the fields you supply are overridden — fields absent from your payload are preserved from the base data. This lets a pack author patch a single field (e.g., make Fireball a ritual) without copying the entire record. Homebrew records with no base entry must supply all required fields themselves.
+
+---
+
+## Validation
+
+The following is checked at import time. Invalid packs are rejected — nothing is written to storage — and each error includes the field path and reason:
+
+- **Pack ID format**: lowercase letters, digits, dots, hyphens, underscores; no leading/trailing special characters
+- **Version fields** (`version`, `toolVersion`): must be `X.Y.Z` semver format
+- **URLs** (`homepage`): must start with `http://` or `https://`
+- **Required metadata**: all five required fields must be present and non-empty strings
+- **Record types**: `type` must appear in the supported set
+- **Record IDs**: `id` is required on every record
+- **Operations**: must be `add`, `replace`, or `remove`
+- **No duplicate type:id pairs**: the same combination cannot appear more than once (except `remove` records, which are always allowed)
+- **Payload shape**: required fields are verified per record type
+- **Asset structure**: each asset needs `id`, `usage`, and `data`
+- **Description length**: `body` or `description` over 4,000 characters triggers a warning (not a rejection)
+
+A SHA-256 fingerprint of the normalized pack contents is computed on import and displayed in the diagnostics panel (`Ctrl+Alt+D`) for remote debugging without exposing the data itself.
+
+---
+
+## Event System
+
+Three custom DOM events coordinate pack state with the rest of the app:
+
+| Event | When it fires | Who listens |
+|-------|--------------|-------------|
+| `dmtoolbox:packs-applied` | After pack records are injected into `LevelUpData` / `SPELLS_DATA` | Character creation wizard, level-up wizard, spell lists, combat card |
+| `dmtoolbox:srd-filtered` | After the SRD content filter runs on page load or reset | `ContentPackRuntime` — triggers re-application of pack data on top of the freshly filtered baseline |
+| `dmtoolbox:packs-ready` | After all pack content is fully applied and caches are invalidated | Any surface that needs to re-render after a pack state change |
+
+**Dispatch order on toggle-on:**
+`dmtoolbox:packs-applied` → `dmtoolbox:packs-ready`
+
+**Dispatch order on page load with SRD gating active:**
+`dmtoolbox:srd-filtered` → *(runtime re-applies all enabled packs)* → `dmtoolbox:packs-applied` → `dmtoolbox:packs-ready`
+
+---
+
+## Storage
+
+Packs are persisted using the first available backend:
+
+1. **IndexedDB** — `packs` object store, keyed by pack ID. Stores the full pack blob, metadata, enabled flag, and last-updated timestamp.
+2. **localStorage fallback** — Single JSON array under a fixed key. Used when IndexedDB is unavailable (some private-browsing contexts, storage quota exceeded).
+3. **Memory fallback** — Non-persistent in-memory store. Used when both above fail. Data is lost on page refresh.
+
+The active storage driver is reported in the diagnostics panel.
+
+---
+
+## Public API
+
+`ContentPackManager` in `js/modules/content-pack-manager.js` exposes the following methods for use by other modules:
+
+| Method | Returns | Description |
+|--------|---------|-------------|
+| `importPack(json)` | `{ ok, errors, pack }` | Validates and stores a pack from a JSON string or object |
+| `togglePack(id, enabled)` | `Promise<void>` | Enables or disables a pack; fires pack-ready events |
+| `removePack(id)` | `Promise<void>` | Removes a pack from storage entirely |
+| `exportPack(id)` | `string` | Returns the stored pack as a formatted JSON string |
+| `getPacks()` | `Pack[]` | Returns all stored pack metadata objects |
+| `getMergedContext()` | `{ allowlist, records }` | Returns the merged allowlist and record summary for all enabled packs |
+| `getSummary()` | `object` | Returns diagnostic info: total packs, enabled count, record type counts, storage driver |
+
+---
+
+## Extending the System
+
+To add a new record type:
+
+1. Add the type string to `ALLOWED_RECORD_TYPES` in `js/modules/content-pack-manager.js`
+2. Add payload validation logic to `validateRecordPayload()` in the same file
+3. Add normalization and injection logic in `js/modules/content-pack-runtime.js`
+4. Update the schema at `schemas/content-pack.schema.json`
+5. Add an example record to `docs/examples/content-pack-template.json`
+
+To add a new asset usage type, add the string to `ASSET_USAGES` in `content-pack-manager.js`.
+
+To swap the storage backend, implement `{ kind: string, loadAll(): Promise<Pack[]>, saveAll(packs: Pack[]): Promise<void> }` and pass it to the manager constructor.

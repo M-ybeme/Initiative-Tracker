@@ -1,10 +1,10 @@
-import { describe, it, expect } from 'vitest';
+﻿import { describe, it, expect } from 'vitest';
 import {
   XP_THRESHOLDS,
   getXPForLevel,
   getLevelFromXP,
   getXPProgressInfo,
-} from '../../js/modules/character-xp.js';
+} from '../../js/character/character-xp.js';
 
 describe('XP_THRESHOLDS', () => {
   it('has exactly 20 entries', () => {

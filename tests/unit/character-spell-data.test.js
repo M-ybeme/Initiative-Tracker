@@ -1,11 +1,11 @@
-import { describe, it, expect } from 'vitest';
+﻿import { describe, it, expect } from 'vitest';
 import {
   SPELL_SLOT_TABLES,
   getSpellSlotsForClassLevel,
   getPactMagicSlots,
   normalizeSpellEntry,
   searchSpells,
-} from '../../js/modules/character-spell-data.js';
+} from '../../js/character/character-spell-data.js';
 
 describe('SPELL_SLOT_TABLES', () => {
   it('contains all expected caster classes', () => {

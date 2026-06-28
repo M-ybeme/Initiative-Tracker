@@ -9,7 +9,7 @@
  * Phase 5 will wire character.js to consume this module directly.
  */
 
-import { parseDiceNotation, rollDie } from './dice.js';
+import { parseDiceNotation, rollDie } from '../modules/dice.js';
 
 export const CONCENTRATION_ATTACK_BONUSES = {
   'hex': { notation: '1d6', label: 'Necrotic (Hex)', prompt: 'Concentrating on Hex — add +1d6 Necrotic to this attack?' },

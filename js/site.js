@@ -1,13 +1,12 @@
 const DM_TOOLBOX_BUILD = {
   name: "The DM's Toolbox",
-  version: "2.3.2",
+  version: "2.3.3",
   recentChanges: [
-    "Tavern Generator: per-section reroll/copy/collapse on every results card (meals, drinks, rooms, staff, patrons, events, bartender rumors, patron whispers)",
-    "Tavern Generator: quick presets and a collapsible Advanced settings panel (seed, unique touch %, context influence)",
-    "Tavern Generator: press Enter anywhere outside a form field to generate instantly",
-    "Tavern Generator: patrons can now generate full NPC details, same as staff",
-    "Tavern Generator: fixed seeded RNG for cultural drink menus and a dead variable that broke the staff-toggle checkbox",
-    "Tavern Generator: patrons now included in Copy/Download export; download filename derived from the tavern name"
+    "Docs: Content Packs reference rewritten as a present-tense technical guide (lifecycle, record types, validation, events, API)",
+    "Docs: docs/README.md reorganized by audience with a Where to Start block; stale Phase 2 planning language removed",
+    "Docs: README.md content pack section now leads with a plain-language DM prompt before technical detail",
+    "Docs: Authoring guide — optional metadata fields labeled correctly, minimal spell example added, What Packs Can't Do section added",
+    "Refactor: Character Manager modularized into js/character/ — character.js, character-creation-wizard.js, character-sheet-export.js, level-up-system.js, multiclass-ui.js, and all character-* modules consolidated from js/modules/"
   ],
   buildTime: new Date().toISOString(),
   author: "Maybeme"

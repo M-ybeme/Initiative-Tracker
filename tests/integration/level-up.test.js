@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Integration Tests: Level-Up Flow
  * Tests the complete leveling process from level 1 to 20
  */
@@ -10,7 +10,7 @@ import {
   getProficiencyBonus,
   getLevel1HP,
   getLevelUpHP
-} from '../../js/modules/character-calculations.js';
+} from '../../js/character/character-calculations.js';
 
 import {
   canMulticlass,
@@ -20,7 +20,7 @@ import {
   getTotalLevel,
   getProficiencyBonusFromLevel,
   MULTICLASS_SPELL_SLOTS
-} from '../../js/modules/level-up-calculations.js';
+} from '../../js/character/level-up-calculations.js';
 
 import {
   FULL_CASTER_SLOTS,

@@ -1,7 +1,7 @@
-import { rollDie, parseDiceNotation } from './modules/dice.js';
-import { getAbilityModifier, getProficiencyBonus, recalcDerivedStats } from './modules/character-calculations.js';
-import { getAttackFeatureBonuses as _getAttackFeatureBonuses, addFlatBonusToNotation as _addFlatBonusToNotation, getConcentrationAttackBonus as _getConcentrationAttackBonus } from '../Attack-rolls.js';
-import { getSpellSlotsForClassLevel as _getSpellSlotsForClassLevel, getPactMagicSlots as _getPactMagicSlots, normalizeSpellEntry as _normalizeSpellEntry, searchSpells as _searchSpells } from './modules/character-spell-data.js';
+import { rollDie, parseDiceNotation } from '../modules/dice.js';
+import { getAbilityModifier, getProficiencyBonus, recalcDerivedStats } from './character-calculations.js';
+import { getAttackFeatureBonuses as _getAttackFeatureBonuses, addFlatBonusToNotation as _addFlatBonusToNotation, getConcentrationAttackBonus as _getConcentrationAttackBonus } from '../../Attack-rolls.js';
+import { getSpellSlotsForClassLevel as _getSpellSlotsForClassLevel, getPactMagicSlots as _getPactMagicSlots, normalizeSpellEntry as _normalizeSpellEntry, searchSpells as _searchSpells } from './character-spell-data.js';
 
 (function () {
       const STORAGE_KEY = 'dmtoolboxCharactersV1';

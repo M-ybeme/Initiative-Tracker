@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Integration Tests: Storage System
  * Tests localStorage and IndexedDB storage patterns
  */
@@ -17,7 +17,7 @@ import {
 } from '../../js/modules/storage.js';
 
 import { validateCharacter } from '../../js/modules/validation.js';
-import { getAbilityModifier } from '../../js/modules/character-calculations.js';
+import { getAbilityModifier } from '../../js/character/character-calculations.js';
 
 // ============================================================
 // Test Data Fixtures

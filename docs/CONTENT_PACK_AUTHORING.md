@@ -49,9 +49,9 @@ Populate the `metadata` object so diagnostics can identify the pack:
 | `authors` | ✅ | Array of names or initials of the people who prepared the pack. |
 | `source` | ✅ | Cite your source ("My Campaign Homebrew" or the book/PDF you own). |
 | `license` | ✅ | Reminder that this is for personal use only. |
-| `toolVersion` | ⛔ | Optional reference to the app version that exported/imported the pack. |
-| `createdAt` / `updatedAt` | ⛔ | ISO-8601 timestamps for your own audit trail. |
-| `homepage` | ⛔ | Personal URL or campaign wiki entry if you want to point collaborators to context. |
+| `toolVersion` | optional | Reference to the app version that exported/imported the pack. |
+| `createdAt` / `updatedAt` | optional | ISO-8601 timestamps for your own audit trail. |
+| `homepage` | optional | Personal URL or campaign wiki entry if you want to point collaborators to context. |
 
 Keep this section short—no rules text belongs here.
 
@@ -81,7 +81,34 @@ Only list the IDs you actually include in `records`. The UI will warn you if an 
 
 ## Step 4 — Add Records
 
-Each entry inside `records` represents data the runtime merges into its registries. Required fields:
+Each entry inside `records` represents data the runtime merges into its registries.
+
+> **Just want to add one spell?** Here's the minimal shape. Fill in the fields and you're done:
+>
+> ```json
+> {
+>   "type": "spell",
+>   "id": "My Spell Name",
+>   "operation": "add",
+>   "payload": {
+>     "title": "My Spell Name",
+>     "level": 1,
+>     "school": "Evocation",
+>     "casting_time": "1 action",
+>     "range": "60 feet",
+>     "components": "V, S",
+>     "duration": "Instantaneous",
+>     "body": "Your description here.",
+>     "classes": ["Wizard"],
+>     "tags": ["damage"],
+>     "damage_dice": "2d6"
+>   }
+> }
+> ```
+>
+> Remember to add the spell's name to `allowlist.spell` as well, or it will be injected but remain hidden in the UI.
+
+For a complete example with all optional fields, see below:
 
 ```json
 {
@@ -207,6 +234,18 @@ Use the [schemas/content-pack.schema.json](../schemas/content-pack.schema.json) 
 6. When you are done with a campaign, use **Remove All** to snap back to the SRD-only baseline.
 
 > Need an offline bundle with your pack pre-copied? Run `npm run build:pack -- --packs path/to/your-pack.json` and follow [docs/PRIVATE_BUILD.md](PRIVATE_BUILD.md) for hosting instructions.
+
+---
+
+## What Packs Can't Do
+
+Content packs are data-only. A few things fall outside what they support:
+
+- **No executable code.** Packs cannot contain scripts, macros, or functions. Everything is static JSON that the runtime already knows how to interpret.
+- **No new UI pages or tabs.** A pack can add content to existing UI surfaces (spell lists, class dropdowns, generator pools, etc.) but cannot create new pages or navigation items.
+- **No SRD prose overrides.** Packs can add and patch structured data fields, but they can't replace the app's rules UI text or tooltips — those are part of the app itself.
+- **No external image hosting.** Images in the `assets` section must be embedded directly as base64 data URLs. There is no CDN or remote URL support, and large embedded assets count against your browser's storage quota.
+- **No cross-device sync.** Packs are stored in your browser only. To use a pack on another device, export it and import it there manually — or use the [Private Build Workflow](PRIVATE_BUILD.md) to pre-bundle it.
 
 ---
 

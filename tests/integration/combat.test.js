@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Integration Tests: Combat Flow
  * Tests the complete combat/initiative tracking process
  */
@@ -15,7 +15,7 @@ import {
   getInitiativeBonus
 } from '../../js/modules/initiative-calculations.js';
 
-import { getAbilityModifier } from '../../js/modules/character-calculations.js';
+import { getAbilityModifier } from '../../js/character/character-calculations.js';
 import { createSeededRandom, rollDie } from '../../js/modules/dice.js';
 
 // ============================================================

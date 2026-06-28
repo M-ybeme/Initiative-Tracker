@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Integration Tests: Character Creation Flow
  * Tests the complete character creation process from start to finish
  */
@@ -12,7 +12,7 @@ import {
   getLevel1HP,
   getLevelUpHP,
   getTotalHP
-} from '../../js/modules/character-calculations.js';
+} from '../../js/character/character-calculations.js';
 
 import {
   validateCharacter,

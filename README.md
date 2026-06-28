@@ -2,7 +2,7 @@
 
 **A comprehensive, browser-based suite of tools for tabletop RPG Game Masters**
 
-**Live Site:** [https://dnddmtoolbox.netlify.app/](https://dnddmtoolbox.netlify.app/) · **Version:** 2.3.2
+**Live Site:** [https://dnddmtoolbox.netlify.app/](https://dnddmtoolbox.netlify.app/) · **Version:** 2.3.3
 
 ---
 
@@ -129,11 +129,14 @@ Press **Ctrl+Alt+D** or click the gear icon in the footer to open the diagnostic
 
 ## 📘 SRD Scope & Content Packs
 
-The public site and repository only bundle rules text released in the System Reference Document 5.2 (2024 PHB) under CC-BY 4.0. Historical data for other WotC books stays gated behind the SRD allowlist in `js/site.js`, so anything outside the SRD (Xanathar's, Tasha's, Eberron, etc.) never renders unless you opt in locally.
+The public site only bundles rules text released in the System Reference Document 5.2 (2024 PHB) under CC-BY 4.0. Content from other books (Xanathar's, Tasha's, Eberron, etc.) never renders unless you opt in locally — it stays gated behind the SRD allowlist in `js/site.js`. UI elements marked with `data-srd-block` are where those options would appear.
 
-Private content packs load through IndexedDB/localStorage so you can re-enable your licensed material without redistributing it. Import JSON packs via the Content Pack Manager (Ctrl+Alt+D or footer gear icon → "Open Content Pack Manager") to unlock non-SRD species, subclasses, spells, and more. UI elements marked with `data-srd-block` indicate options that require a content pack.
+**Own other books and want to use that content?** You can import it as a private content pack without redistributing it. Packs are JSON files that live entirely in your browser — they're never uploaded or shared. Open the Content Pack Manager (`Ctrl+Alt+D` or footer gear icon → "Open Content Pack Manager"), paste or upload a pack, and the gated options will unlock automatically.
 
-Want the doc-by-doc status of that scrub? Start with [docs/README.md](docs/README.md) for a compliance summary, links to every guide, and references to the SRD licensing notes. Ready to build your own data? Use the user-facing [Content Pack Authoring Guide](docs/CONTENT_PACK_AUTHORING.md) and dive deeper into schemas/lifecycle details in [docs/CONTENT_PACKS.md](docs/CONTENT_PACKS.md). Need a private bundle with your own packs? Follow [docs/PRIVATE_BUILD.md](docs/PRIVATE_BUILD.md).
+- **New to content packs?** → [Content Pack Authoring Guide](docs/CONTENT_PACK_AUTHORING.md) — step-by-step walkthrough with a starter template
+- **Want the technical details?** → [Content Packs reference](docs/CONTENT_PACKS.md) — lifecycle, schema, validation, event system, and API
+- **Need a private hosted copy?** → [Private Build Workflow](docs/PRIVATE_BUILD.md) — bundle the site with your packs pre-loaded
+- **SRD licensing notes** → [docs/licensing/](docs/licensing/)
 
 ---
 
@@ -224,25 +227,27 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for test patterns and requirements.
 
 ## 📚 Documentation
 
-Every guide under `/docs` reflects the SRD-only build. Start with the index for scope notes and quick summaries, then hop straight to the system you need:
+Every guide under `/docs` covers the SRD-only build. The [Documentation Index](docs/README.md) has the full list organized by audience. Quick jumps:
 
-* [Documentation Index](docs/README.md) – SRD scope overview plus pointers to every guide.
-* [Battle Map](docs/BATTLEMAP.md) – Lightweight VTT usage with SRD-safe assets.
-* [Character Manager](docs/CHARACTER_MANAGER.md) – Wizard flows, level-up rules, and export coverage.
-* [Compendium](reference.html) – Spell, monster, and rules reference with search and pinnable cards.
-* [Encounter Builder](docs/ENCOUNTER_BUILDER.md) – Encounter math, CR budgeting, and SRD stat sources.
-* [Generators](docs/GENERATORS.md) – Loot, tavern, shop, NPC, and name coverage after the data scrub.
-* [Initiative Tracker](docs/INITIATIVE_TRACKER.md) – Turn automation, HP tracking, reaction/legendary-action tracking, combat log, and SRD gating behavior.
-* [Journal](docs/JOURNAL.md) – Full feature reference: editor, slash commands, wikilinks, backlinks, collapsible sections, drag handles, tags, templates, export formats, keyboard shortcuts.
-* [Integration Guide](docs/INTEGRATION.md) – Embed or extend modules without breaking the SRD boundary.
-* [Private Build Workflow](docs/PRIVATE_BUILD.md) – Generate a local bundle plus your own packs without committing private data.
-* [Content Pack Authoring](docs/CONTENT_PACK_AUTHORING.md) – Create your own JSON content packs.
-* [Content Pack Testing](docs/CONTENT_PACK_TESTING.md) – Verify pack toggle/removal behavior.
-* [Architecture Overview](docs/ARCHITECTURE.md)
-* [Codebase Overview](docs/CODEBASE_OVERVIEW.md)
-* [Coding Standards](docs/CODING_STANDARDS.md)
-* [Data Schemas](docs/DATA_SCHEMAS.md)
-* [Level-Up System](docs/LEVEL_UP_SYSTEM.md) – Character progression mechanics.
+**Using the app:**
+* [Content Pack Authoring](docs/CONTENT_PACK_AUTHORING.md) – Add classes, spells, feats, and more from books you own
+* [Character Manager](docs/CHARACTER_MANAGER.md) – Creation wizard, level-up rules, export
+* [Initiative Tracker](docs/INITIATIVE_TRACKER.md) – Turn automation, HP, reactions, legendary actions, combat log
+* [Battle Map](docs/BATTLEMAP.md) – Tokens, fog of war, measurements
+* [Encounter Builder](docs/ENCOUNTER_BUILDER.md) – CR budgeting, stat blocks, save/load
+* [Journal](docs/JOURNAL.md) – Rich text notes, slash commands, wikilinks, export formats
+* [Generators](docs/GENERATORS.md) – Loot, tavern, shop, NPC, and name generators
+* [Compendium](docs/COMPENDIUM.md) – Spell, monster, rules, and conditions reference
+
+**For developers:**
+* [Architecture Overview](docs/ARCHITECTURE.md) – Module layout and storage layers
+* [Content Packs (technical)](docs/CONTENT_PACKS.md) – Full system reference: lifecycle, schema, validation, events, API
+* [Codebase Overview](docs/CODEBASE_OVERVIEW.md) – File structure
+* [Coding Standards](docs/CODING_STANDARDS.md) – Lint rules and test requirements
+* [Data Schemas](docs/DATA_SCHEMAS.md) – Character and encounter JSON shapes
+* [Integration Guide](docs/INTEGRATION.md) – Embed modules without breaking SRD scope
+* [Level-Up System](docs/LEVEL_UP_SYSTEM.md) – Progression mechanics
+* [Private Build Workflow](docs/PRIVATE_BUILD.md) – Bundle the site with private packs
 * [Release Checklist](docs/RELEASE_CHECKLIST.md)
 
 ---

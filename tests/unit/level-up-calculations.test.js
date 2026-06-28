@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+﻿import { describe, it, expect } from 'vitest';
 import {
   MULTICLASS_PREREQUISITES,
   MULTICLASS_SPELL_SLOTS,
@@ -8,7 +8,7 @@ import {
   getASICount,
   getTotalLevel,
   getProficiencyBonusFromLevel
-} from '../../js/modules/level-up-calculations.js';
+} from '../../js/character/level-up-calculations.js';
 
 describe('canMulticlass', () => {
   describe('single class prerequisites', () => {

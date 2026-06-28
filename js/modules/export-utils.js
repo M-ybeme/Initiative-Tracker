@@ -4,7 +4,7 @@
  * Does not handle actual file I/O (that's browser-specific)
  */
 
-import { getAbilityModifier, getProficiencyBonus } from './character-calculations.js';
+import { getAbilityModifier, getProficiencyBonus } from '../character/character-calculations.js';
 
 const EXPORT_LICENSE_PHRASE = 'Creative Commons Attribution 4.0 International License';
 const SRD_PDF_URL = 'https://www.dndbeyond.com/attachments/39j2li89/SRD5.2-CreativeCommons.pdf';

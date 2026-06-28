@@ -1,9 +1,9 @@
-/**
+﻿/**
  * Integration Tests: Character Rest Mechanics
  */
 import { describe, it, expect } from 'vitest';
-import { applyShortRest, applyLongRest, rollHitDiceForHealing } from '../../js/modules/character-rest.js';
-import { getSpellSlots } from '../../js/modules/level-up-calculations.js';
+import { applyShortRest, applyLongRest, rollHitDiceForHealing } from '../../js/character/character-rest.js';
+import { getSpellSlots } from '../../js/character/level-up-calculations.js';
 import { createSeededRandom } from '../../js/modules/dice.js';
 
 function makeWizard(ov = {}) {

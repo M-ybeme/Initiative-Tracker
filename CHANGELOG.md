@@ -5,8 +5,7 @@ The format is based on Keep a Changelog, and this project adheres to Semantic Ve
 
 ## Version Series Overview
 
-The DM's Toolbox has evolved through focused feature releases:
-
+The DM's Toolbox has evolved through focused feature releases. Minor versions (2.x.0) introduce major new systems; patch versions (2.3.x) add features and fixes to the current focus area.
 
 - **2.3.x**: Shop Generator overhaul — Shopkeeper DM Notes with 20 wants / 20 hooks / 20 rumors per settlement tier across all 30 shop types, restock timers, stock depletion, Sell to Shop, item search/filter; Name Generator UX — lock tiles, quick-count chips, Enter shortcut, in-results filter; Tavern Generator UX — per-section reroll/copy/collapse, quick presets, Advanced settings panel, patron NPC expansion
 - **2.2.x**: Compendium overhaul (pins, Conditions tab, keyboard shortcuts); Journal TipTap editor with wikilinks/backlinks; Loot Generator weapons & armor, per-item reroll, new hoard templates, Markdown export, modularization
@@ -17,7 +16,25 @@ The DM's Toolbox has evolved through focused feature releases:
 - **1.9.x**: Battle map measurement tools, persistent fog shapes, and generator integration across NPC/Tavern/Shop systems
 - **1.8.x**: Spell database expansion to 432+ spells, inventory management, loot generator overhaul, and character token generation
 
-**Current version: 2.3.2 (June 2026)**
+**Current version: 2.3.3 (June 2026)**
+
+---
+
+## [2.3.3] - 2026-06-28
+**Documentation — Content Pack Reference Rewrite, Audience-Organized Guides; Character JS Modularization**
+
+### Changed
+- **`docs/CONTENT_PACKS.md` rewritten** — replaced the stale Phase 2/3 planning document with a present-tense technical reference covering the full content pack lifecycle, all record types with payload shapes, operations (add/replace/remove) and merge behavior, validation rules, the event system (`dmtoolbox:packs-applied`, `dmtoolbox:srd-filtered`, `dmtoolbox:packs-ready`), storage driver fallback chain (IndexedDB → localStorage → memory), public API surface, and how to add new record types or storage backends
+- **`docs/README.md` reorganized by audience** — removed all "Phase 2 of the roadmap will let you…" language (content packs are live); replaced the flat link list with labeled sections for DMs, developers, and process docs; added a "Where to Start" block so different readers know which doc to open first
+- **`README.md` SRD & Content Packs section** — leads with a plain-language DM question ("Own other books and want to use that content?") before the technical detail; added four direct bullet links for the most common DM journeys; Documentation section now has audience headers (Using the app / For developers) for faster scanning
+- **`docs/CONTENT_PACK_AUTHORING.md`** — fixed metadata table (⛔ on optional fields replaced with the word "optional" — ⛔ visually reads as forbidden rather than merely optional); added a "Just want to add one spell?" callout with a minimal 15-line example before the full reference example; added a "What Packs Can't Do" section listing five clear limitations (no executable code, no new UI pages, no SRD prose overrides, no remote image hosting, no cross-device sync)
+- **`CHANGELOG.md` Version Series Overview** — added one sentence explaining what minor vs. patch versions mean for non-developer readers
+
+### Refactored
+- **Character Manager modularized** — moved all 12 character-related files into `js/character/`, following the same data/engine/ui folder pattern used for the Shop, Loot, Name, and Tavern generators:
+  - From `js/` root: `character.js`, `character-creation-wizard.js`, `character-sheet-export.js`, `level-up-system.js`, `multiclass-ui.js`
+  - From `js/modules/`: `character-attacks.js`, `character-calculations.js`, `character-combat.js`, `character-rest.js`, `character-spell-data.js`, `character-xp.js`, `level-up-calculations.js`
+  - Updated all import paths in the moved files, `js/modules/export-utils.js`, `characters.html`, and 13 test files; 930 tests pass
 
 ---
 

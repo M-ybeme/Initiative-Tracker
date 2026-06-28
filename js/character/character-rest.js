@@ -6,7 +6,7 @@
  * No DOM access, no side effects, no global state.
  */
 
-import { rollDie } from './dice.js';
+import { rollDie } from '../modules/dice.js';
 
 /**
  * Calculate spell save DC.

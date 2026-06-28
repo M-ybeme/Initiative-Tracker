@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Integration Tests: Cross-Tool Communication
  * Tests data passing between different tools in the application
  */
@@ -8,7 +8,7 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import {
   getAbilityModifier,
   getProficiencyBonus
-} from '../../js/modules/character-calculations.js';
+} from '../../js/character/character-calculations.js';
 
 import {
   serializeCharacter,
@@ -452,13 +452,13 @@ describe('Cross-Tool Edge Cases', () => {
 
   it('handles character with unicode in notes', () => {
     const character = createExportableCharacter({
-      notes: 'Found treasure 💰 in the dungeon 🏰'
+      notes: 'Found treasure ðŸ’° in the dungeon ðŸ°'
     });
 
     const serialized = serializeCharacter(character);
     const restored = deserializeCharacter(serialized);
 
-    expect(restored.notes).toBe('Found treasure 💰 in the dungeon 🏰');
+    expect(restored.notes).toBe('Found treasure ðŸ’° in the dungeon ðŸ°');
   });
 
   it('handles empty character fields gracefully', () => {
@@ -492,7 +492,7 @@ describe('Complete Workflow Simulations', () => {
     mockStorage = {};
   });
 
-  it('simulates: Create Character → Save → Export to Initiative', () => {
+  it('simulates: Create Character â†’ Save â†’ Export to Initiative', () => {
     // Step 1: Create character
     const character = createExportableCharacter();
 
@@ -528,7 +528,7 @@ describe('Complete Workflow Simulations', () => {
     expect(pending.maxHp).toBe(44);
   });
 
-  it('simulates: Generate NPC → Add to Initiative', () => {
+  it('simulates: Generate NPC â†’ Add to Initiative', () => {
     const seededRandom = createSeededRandom(77777);
 
     // Step 1: Generate NPC
