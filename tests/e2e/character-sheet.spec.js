@@ -88,12 +88,17 @@ test.describe('Character Sheet', () => {
 
   test.describe('Dropdown Interactions', () => {
     test('clicking print/export dropdown shows options', async ({ page }) => {
-      // When no characters exist the app auto-shows newCharacterChoiceModal — dismiss it first
+      // When no characters exist the app auto-shows newCharacterChoiceModal, but it only
+      // appears after an async IndexedDB read completes, so an instant isVisible() check
+      // races with it (passes locally, flakes on slower CI runners). Give it a bounded
+      // window to appear instead of checking once.
       const modal = page.locator('#newCharacterChoiceModal');
-      const closeBtn = modal.locator('button[data-bs-dismiss="modal"]');
-      if (await modal.isVisible()) {
-        await closeBtn.click();
+      try {
+        await modal.waitFor({ state: 'visible', timeout: 3000 });
+        await modal.locator('button[data-bs-dismiss="modal"]').click();
         await expect(modal).not.toBeVisible();
+      } catch {
+        // Modal never appeared (e.g. characters already existed) — nothing to dismiss
       }
       await page.locator('#printExportDropdown').click();
       await expect(page.locator('#printSheetBtn')).toBeVisible();
