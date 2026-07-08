@@ -2,7 +2,7 @@
 
 **A comprehensive, browser-based suite of tools for tabletop RPG Game Masters**
 
-**Live Site:** [https://dnddmtoolbox.netlify.app/](https://dnddmtoolbox.netlify.app/) · **Version:** 2.3.3
+**Live Site:** [https://dnddmtoolbox.netlify.app/](https://dnddmtoolbox.netlify.app/) · **Version:** 2.3.4
 
 ---
 
@@ -165,11 +165,11 @@ All characters, maps, journals, encounter data, and preferences remain stored en
 * HTML + Bootstrap UI
 * LocalStorage + IndexedDB persistence
 * Modularized logic under `js/modules/`
-* **630+ automated tests** (unit + integration via Vitest, Playwright suites for E2E)
+* **1,000+ automated tests** (unit + integration via Vitest, Playwright suites for E2E)
 * Vitest + happy-dom for unit & integration tests
 * Playwright for end-to-end tests
 * ESLint + Prettier enforce the documented coding standards
-* GitHub Actions CI/CD with coverage enforcement
+* GitHub Actions CI runs lint + unit/integration + E2E on every push/PR (see `.github/workflows/test.yml`)
 * Fully static deployment via Netlify
 
 ---
@@ -219,8 +219,8 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for test patterns and requirements.
 
 ## 🚀 SRD Deployments
 
-- `.github/workflows/srd-build.yml` runs lint/tests on every push to `main` and, on success, deploys the SRD-only bundle to Netlify using `NETLIFY_AUTH_TOKEN` and `NETLIFY_SITE_ID` secrets.
-- The existing `test.yml` workflow continues to guard pull requests with the full suite (unit, integration, E2E).
+- `.github/workflows/test.yml` runs lint, unit/integration (Vitest), and E2E (Playwright) on every push and pull request to `main`.
+- Netlify auto-deploy on `main` (`srd-build.yml`) is planned but not yet wired up — it needs `NETLIFY_AUTH_TOKEN` and `NETLIFY_SITE_ID` added as GitHub repo secrets first. Until then, deploys are manual via the Netlify dashboard/CLI.
 - For private/local bundles with your own packs, run `npm run build:pack -- --packs path/to/file.json` and follow [docs/PRIVATE_BUILD.md](docs/PRIVATE_BUILD.md).
 
 ---

@@ -1,12 +1,13 @@
 const DM_TOOLBOX_BUILD = {
   name: "The DM's Toolbox",
-  version: "2.3.3",
+  version: "2.3.4",
   recentChanges: [
-    "Docs: Content Packs reference rewritten as a present-tense technical guide (lifecycle, record types, validation, events, API)",
-    "Docs: docs/README.md reorganized by audience with a Where to Start block; stale Phase 2 planning language removed",
-    "Docs: README.md content pack section now leads with a plain-language DM prompt before technical detail",
-    "Docs: Authoring guide — optional metadata fields labeled correctly, minimal spell example added, What Packs Can't Do section added",
-    "Refactor: Character Manager modularized into js/character/ — character.js, character-creation-wizard.js, character-sheet-export.js, level-up-system.js, multiclass-ui.js, and all character-* modules consolidated from js/modules/"
+    "CI: added .github/workflows/test.yml — lint, unit/integration (Vitest), and E2E (Playwright) now run on every push/PR",
+    "Fix: restored missing .husky/pre-commit hook so lint-staged actually runs on commit",
+    "Fix: eslint.config.mjs was missing cross-file globals for the Shop/Loot/Tavern/Name generator modules (data/engine/ui split), causing 402 no-undef lint errors with no functional impact; added scoped globals overrides per module",
+    "Fix: duplicate \"Tanner\" key in shop-data.js restock table; var to const in journal-export.js",
+    "Fix: package.json version/license synced to match the actual release (was 1.0.0/ISC)",
+    "Docs: README test count corrected to reflect the actual ~1,000+ automated tests"
   ],
   buildTime: new Date().toISOString(),
   author: "Maybeme"

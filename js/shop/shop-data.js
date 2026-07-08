@@ -73,8 +73,7 @@ const RESTOCK_BASE = {
   "Clockwork Repair":        { days:[7,21], note:"parts sourced regionally" },
   "Pet Shop":                { days:[7,14], note:"animals sourced from breeders/traders" },
   "Oddities":                { days:[14,30],note:"by definition unpredictable" },
-  "Mercenary/Bounty":        { days:[1,7],  note:"as contracts come in" },
-  "Tanner":                  { days:[5,10], note:"depends on hide availability" }
+  "Mercenary/Bounty":        { days:[1,7],  note:"as contracts come in" }
 };
 
 

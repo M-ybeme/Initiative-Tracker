@@ -16,7 +16,23 @@ The DM's Toolbox has evolved through focused feature releases. Minor versions (2
 - **1.9.x**: Battle map measurement tools, persistent fog shapes, and generator integration across NPC/Tavern/Shop systems
 - **1.8.x**: Spell database expansion to 432+ spells, inventory management, loot generator overhaul, and character token generation
 
-**Current version: 2.3.3 (June 2026)**
+**Current version: 2.3.4 (July 2026)**
+
+---
+
+## [2.3.4] - 2026-07-07
+**Engineering — CI Pipeline, Pre-Commit Hook Restored, ESLint Config Drift Fixed**
+
+### Added
+- **`.github/workflows/test.yml`** — GitHub Actions workflow running lint, unit/integration tests (Vitest), and E2E tests (Playwright) on every push and pull request to `main`; README and CHANGELOG had described this kind of CI for several releases but the workflow file itself didn't exist yet
+
+### Fixed
+- **`.husky/pre-commit` was missing entirely** — only the internal Husky helper script existed, not the project's own hook, so the `lint-staged` config in `package.json` had never actually run on a commit despite `CONTRIBUTING.md` describing it as automatic; restored with `npx lint-staged`
+- **402 ESLint `no-undef` errors from config drift** — `eslint.config.mjs`'s manually maintained globals list was never updated as the Shop, Loot, Tavern, and Name generators were split into `data/engine/ui` modules (2.2.9–2.3.2); each directory's files share globals at runtime via `<script src>` load order (e.g. `pick`, `prand`, `SETTLEMENT`, `buildStaff`), which ESLint had no record of. Added four scoped `globals` overrides (one per generator directory) so lint reflects the actual, working runtime behavior instead of flagging it — zero functional change, confirmed by an identical 930/930 unit+integration and 77/80 (3 skipped) E2E pass rate before and after
+- **Duplicate `"Tanner"` key** in `shop-data.js`'s `RESTOCK_BASE` table (harmless — both entries held the same value — but flagged by `no-dupe-keys` once lint could actually run clean)
+- **Three `var` declarations** in `journal-export.js` converted to `const` per the project's own `no-var` rule
+- **`package.json` version/license drift** — was still `1.0.0` / `ISC` despite the project being at v2.3.3 under an MIT `LICENSE.md`; synced to match
+- **README overclaims corrected** — "630+ automated tests" updated to the actual ~1,000+ (930 unit/integration + 77 E2E); "GitHub Actions CI/CD with coverage enforcement" and the `srd-build.yml` deploy-workflow description corrected to describe what actually exists today (`test.yml` only; Netlify auto-deploy is planned, not yet wired up pending repo secrets)
 
 ---
 

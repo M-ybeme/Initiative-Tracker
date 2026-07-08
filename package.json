@@ -1,6 +1,6 @@
 {
   "name": "initiative-tracker",
-  "version": "1.0.0",
+  "version": "2.3.4",
   "description": "**A comprehensive, browser-based suite of tools for tabletop RPG Game Masters**",
   "main": "index.js",
   "directories": {
@@ -37,7 +37,7 @@
   },
   "keywords": [],
   "author": "",
-  "license": "ISC",
+  "license": "MIT",
   "type": "commonjs",
   "bugs": {
     "url": "https://github.com/M-ybeme/Initiative-Tracker/issues"
