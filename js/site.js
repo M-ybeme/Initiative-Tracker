@@ -1,13 +1,11 @@
 const DM_TOOLBOX_BUILD = {
   name: "The DM's Toolbox",
-  version: "2.3.4",
+  version: "2.3.5",
   recentChanges: [
-    "CI: added .github/workflows/test.yml — lint, unit/integration (Vitest), and E2E (Playwright) now run on every push/PR",
-    "Fix: restored missing .husky/pre-commit hook so lint-staged actually runs on commit",
-    "Fix: eslint.config.mjs was missing cross-file globals for the Shop/Loot/Tavern/Name generator modules (data/engine/ui split), causing 402 no-undef lint errors with no functional impact; added scoped globals overrides per module",
-    "Fix: duplicate \"Tanner\" key in shop-data.js restock table; var to const in journal-export.js",
-    "Fix: package.json version/license synced to match the actual release (was 1.0.0/ISC)",
-    "Docs: README test count corrected to reflect the actual ~1,000+ automated tests"
+    "Fix: Initiative Tracker concentration checks no longer trigger on damage taken before concentration was started (or after a previous spell's concentration had already ended)",
+    "Fix: Compendium Bestiary fallback (dnd5eapi.co) updated to its new versioned API path, removing a 301 redirect on every fallback load",
+    "Fix: Compendium Bestiary fallback now backfills CR/type/size in the background so the CR and Type filters work correctly when Open5e is unreachable",
+    "Improved: Initiative Tracker current-turn row highlight redesigned to a clean frame instead of a striped gradient; defeated combatants (0 HP, 3 failed death saves) now get a dedicated skull badge and dimmed row"
   ],
   buildTime: new Date().toISOString(),
   author: "Maybeme"

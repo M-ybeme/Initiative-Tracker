@@ -45,16 +45,15 @@ Open **Bulk HP** to affect multiple creatures at once — useful for AoE spells,
 ### Concentration
 
 - Click the ⭐ button on any combatant to toggle concentration on/off.
-- While concentration is active, the tracker accumulates all real HP damage dealt to that creature **during the current turn**. At the end of their turn, a prompt appears with the pre-calculated DC (`max(10, ⌊damage / 2⌋)`).
+- While concentration is active, the tracker accumulates real HP damage taken **from that point on**. A prompt appears at the next turn transition (anyone's, not just theirs) with the pre-calculated DC (`max(10, ⌊damage / 2⌋)`). Damage taken before concentration was turned on — or after a previous spell's concentration ended — never counts toward the check.
 - **Pass** keeps concentration; **Fail** removes it automatically.
-- Concentration is also cleared if the creature drops to 0 HP.
 
 ### Death Saves
 
 - Shown automatically when a creature's HP reaches 0.
 - **+S** adds a success, **+F** adds a failure (capped at 3 each).
 - **3 successes** → Stable (saves hidden, "Stable" badge shown).
-- **↺** resets both counters.
+- **3 failures** → a "💀 Dead" badge replaces the save pills and the whole row is desaturated/dimmed so a defeated combatant is unmistakable at a glance; nothing else is auto-applied (no removal, no HP change) and **↺** still resets both counters if needed.
 - Any healing above 0 HP clears death saves and removes Stable.
 - Massive-damage instant death is not auto-applied — handle that as DM.
 

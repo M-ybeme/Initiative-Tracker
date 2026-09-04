@@ -13,7 +13,8 @@ The Compendium is the mid-session reference hub for Dungeon Masters. It provides
 - **Content packs**: The filter dropdowns re-populate when a content pack fires `dmtoolbox:packs-ready`, so homebrew spells appear automatically.
 
 ### Bestiary
-- **Initial load**: Fetches all 322 SRD monsters in a single request from `https://api.open5e.com/v1/monsters/?document__slug=wotc-srd&limit=400`. One-shot, no pagination. Falls back to `dnd5eapi.co` if Open5e is unreachable (fallback list has names only; full stat blocks are fetched on pin).
+- **Initial load**: Fetches all 322 SRD monsters in a single request from `https://api.open5e.com/v1/monsters/?document__slug=wotc-srd&limit=400`. One-shot, no pagination. Falls back to `dnd5eapi.co`'s versioned `/api/2014/monsters` endpoint if Open5e is unreachable (the old unversioned `/api/monsters` URL now 301-redirects there).
+- **Fallback CR/type backfill**: `dnd5eapi.co`'s list endpoint only returns `{index, name}` — no CR, type, or size — so a background pass (`enrichFallbackMonsters`) fetches each monster's detail record a few at a time (respecting the API's rate limit) and patches CR/type/size into the list as it arrives, so the CR/Type filters and badges work correctly instead of showing "CR —" for everything. Full stat block data is also cached from this pass, so pinning afterward doesn't refetch it.
 - **Look-ahead search**: When a user types 2+ characters and pauses 300 ms, a debounced fetch hits the full Open5e dataset (3,207 monsters across all licensed sources) and merges results in — so non-SRD creatures like those from Tome of Beasts appear when searched by name.
 - **Filters**: Text search (with look-ahead), CR bucket, creature type.
 - **Pin flow**: Click a row to pin. Full stat block data is already in memory from the initial fetch (or the look-ahead merge). Clicking again or the × on the card dismisses it. Pins persist via localStorage.

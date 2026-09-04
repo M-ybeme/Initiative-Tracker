@@ -793,7 +793,7 @@ $('clear-dice-history').addEventListener('click', ()=>{
           const prev = c.currentHP;
           c.currentHP = Math.max(0, Math.min(c.maxHP, c.currentHP - dmg));
           const taken = Math.max(0, prev - c.currentHP);
-          if (taken > 0) c.concDamagePending = (c.concDamagePending || 0) + taken;
+          if (taken > 0 && c.concentration) c.concDamagePending = (c.concDamagePending || 0) + taken;
         }
       } else {
         c.currentHP = Math.max(0, c.currentHP + delta);
@@ -956,6 +956,7 @@ $('clear-dice-history').addEventListener('click', ()=>{
       // const pct = Math.max(0, Math.round((c.currentHP / c.maxHP) * 100));
       const pct = safeHpPercent(c);
       const isDowned = (c.maxHP > 0 && c.currentHP <= 0);
+      const isDead = isDowned && (c.deathSaves?.f || 0) >= 3;
       const isOnDeck = characters.length > 1 && i === (currentTurn + 1) % characters.length;
       const laMax = c.legendaryActions?.max ?? 0;
       const laRem = c.legendaryActions?.remaining ?? 0;
@@ -964,6 +965,7 @@ $('clear-dice-history').addEventListener('click', ()=>{
       tr.dataset.type = c.type;
       if (i === currentTurn) tr.classList.add('active-turn');
       if (isOnDeck) tr.classList.add('on-deck');
+      if (isDead) tr.classList.add('defeated-row');
       tr.innerHTML = `
         <td class="drag-handle col-drag"><i class="bi bi-grip-vertical"></i></td>
         <td class="col-turn">
@@ -1008,7 +1010,10 @@ $('clear-dice-history').addEventListener('click', ()=>{
               </div>
               ${isDowned ? `
               <div class="death-saves" title="Death Saves">
-                ${c.deathSaves.stable ? `<span class="ds-stable">Stable</span>` : `
+                ${isDead ? `
+                  <span class="ds-dead" title="Failed 3 death saves">&#x1F480; Dead</span>
+                  <button class="btn btn-outline-secondary ds-reset" data-index="${i}" title="Reset Death Saves">↺</button>
+                ` : c.deathSaves.stable ? `<span class="ds-stable">Stable</span>` : `
                   <span class="ds-pill success">S: ${c.deathSaves.s}</span>
                   <span class="ds-pill fail">F: ${c.deathSaves.f}</span>
                   <div class="btn-group btn-group-sm ds-btns" role="group">
@@ -1052,7 +1057,7 @@ $('clear-dice-history').addEventListener('click', ()=>{
       tableBody.appendChild(tr);
       // Mobile card
       const card = document.createElement('div');
-      card.className = 'card mb-2 text-start '+(i===currentTurn?'border-success':'');
+      card.className = 'card mb-2 text-start '+(i===currentTurn?'border-success':'')+(isDead?' defeated-row':'');
       card.innerHTML = `
         <div class="card-body">
           <h5 class="card-title mb-1 d-flex align-items-center gap-2 flex-wrap">
@@ -1063,6 +1068,7 @@ $('clear-dice-history').addEventListener('click', ()=>{
                <span class="meta-ac"> • AC ${c.ac ?? '-'}</span>)
             </small>
             ${c.concentration ? '<span class="ms-1 text-warning" title="Concentration"><i class="bi bi-star-fill"></i></span>' : ''}
+            ${isDead ? '<span class="ds-dead ms-1" title="Failed 3 death saves">&#x1F480; Dead</span>' : ''}
           </h5>
           <div class="mb-1">HP:
             <input type="number" class="form-control form-control-sm health-input ${hpClass(pct)} d-inline-block" style="max-width:6rem" value="${c.currentHP}" data-index="${i}">
@@ -1280,7 +1286,9 @@ $('clear-dice-history').addEventListener('click', ()=>{
         const beforeTHP = characters[idx].tempHP || 0;
         if (!pushed && newHP !== oldHP) pushHistory(`HP set for ${characters[idx].name}`);
         if (newHP < oldHP) {
-          characters[idx].concDamagePending = (characters[idx].concDamagePending || 0) + (oldHP - newHP);
+          if (characters[idx].concentration) {
+            characters[idx].concDamagePending = (characters[idx].concDamagePending || 0) + (oldHP - newHP);
+          }
         } else if (newHP > 0) {
           // Healing resets DS
           characters[idx].deathSaves = { s:0, f:0, stable:false };
@@ -1372,6 +1380,9 @@ $('clear-dice-history').addEventListener('click', ()=>{
         const idx = +this.dataset.index;
         pushHistory(`Toggle Concentration for ${characters[idx].name}`);
         characters[idx].concentration = !characters[idx].concentration;
+        // Damage taken before this concentration started (or after it ended) should never
+        // carry over into a check for a different spell.
+        characters[idx].concDamagePending = 0;
         logEvent({
           type: 'concentration',
           summary: characters[idx].concentration ? 'Concentration On' : 'Concentration Off',
@@ -1917,7 +1928,7 @@ $('clear-dice-history').addEventListener('click', ()=>{
           const oldHP = c.currentHP;
           c.currentHP = Math.max(0, c.currentHP - dmg);
           const taken = oldHP - c.currentHP;
-          c.concDamagePending = (c.concDamagePending || 0) + taken;
+          if (c.concentration) c.concDamagePending = (c.concDamagePending || 0) + taken;
         }
       }
 

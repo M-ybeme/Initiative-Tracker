@@ -13,6 +13,10 @@ const monsterDetailCache = {};
 const queryFetchCache   = new Set();   // exact query strings already fetched via look-ahead
 let   searchDebounceTimer = null;      // debounce handle for look-ahead
 
+// dnd5eapi.co moved everything under a ruleset-versioned path; the old
+// unversioned /api/monsters URL now 301s here, costing an extra round trip.
+const DND5EAPI_BASE = 'https://www.dnd5eapi.co/api/2014';
+
 // ── PERSISTENCE ───────────────────────────────────────────────
 const PIN_STORAGE_KEY = 'dmtoolbox_refpins_v1';
 
@@ -331,7 +335,7 @@ async function loadMonsterList() {
   } catch (err) {
     console.warn('[Bestiary] Open5e failed:', err.message, '— trying fallback dnd5eapi.co');
     try {
-      const fallbackUrl = 'https://www.dnd5eapi.co/api/monsters';
+      const fallbackUrl = `${DND5EAPI_BASE}/monsters`;
       console.log('[Bestiary] Trying fallback:', fallbackUrl);
       const t0  = performance.now();
       const res = await fetchWithTimeout(fallbackUrl);
@@ -344,7 +348,7 @@ async function loadMonsterList() {
       }));
       open5eNextUrl  = null;
       usingFallbackApi = true;
-      console.log(`[Bestiary] Fallback OK — ${allMonsters.length} monsters in ${Math.round(performance.now() - t0)}ms (CR fetched on pin)`);
+      console.log(`[Bestiary] Fallback OK — ${allMonsters.length} monsters in ${Math.round(performance.now() - t0)}ms (CR/type backfilling in background)`);
     } catch (err2) {
       console.error('[Bestiary] Both APIs failed.', err2.message);
       if (resultEl) {
@@ -358,6 +362,75 @@ async function loadMonsterList() {
   renderMonsterResults();
   setupMonsterScroll();
   console.log(`[Bestiary] Rendered ${allMonsters.length} monsters (usingFallbackApi=${usingFallbackApi})`);
+
+  // The fallback's list endpoint only returns {index, name} — no CR/type/size —
+  // so filters and badges are blind until we backfill detail per monster.
+  if (usingFallbackApi) enrichFallbackMonsters();
+}
+
+// Backfills CR/type/size for fallback-loaded monsters by fetching each one's
+// detail record, a few at a time, in the background. dnd5eapi.co rate-limits
+// to ~100 requests/window, so this paces itself and bails cleanly on a 429
+// rather than trying to force all ~330 monsters through at once.
+async function enrichFallbackMonsters() {
+  const pending = allMonsters.filter(m => m._fallback && m.challenge_rating === undefined);
+  if (!pending.length) return;
+
+  const total = pending.length;
+  let done = 0;
+  let rateLimited = false;
+  setMonsterSearchStatus(
+    `<span class="text-info"><div class="spinner-border spinner-border-sm me-1 align-middle" role="status"></div>` +
+    `Loading CR/type data for ${total} monsters&hellip;</span>`
+  );
+
+  function patchRow(monster) {
+    const row = document.querySelector(`#monsterResults .ref-result-row[data-slug="${monster.slug}"]`);
+    if (!row) return;
+    const cr = monster.challenge_rating ?? monster.cr;
+    const crBadge = row.querySelector('.cr-badge');
+    if (crBadge && cr != null) {
+      crBadge.textContent = `CR ${cr}`;
+      crBadge.classList.remove('bg-secondary', 'bg-opacity-50');
+      crBadge.classList.add('bg-danger', 'bg-opacity-75');
+    }
+    const metaEl = row.querySelector('.meta-info');
+    if (metaEl) metaEl.textContent = `${monster.size || ''} ${monster.type || ''}`.trim();
+  }
+
+  const CONCURRENCY = 4;
+  let cursor = 0;
+  async function worker() {
+    while (cursor < pending.length && !rateLimited) {
+      const monster = pending[cursor++];
+      try {
+        const res = await fetch(`${DND5EAPI_BASE}/monsters/${monster.slug}`);
+        if (res.status === 429) { rateLimited = true; break; }
+        if (res.ok) {
+          const detail = await res.json();
+          monsterDetailCache[monster.slug] = detail;
+          monster.challenge_rating = detail.challenge_rating;
+          monster.type = detail.type;
+          monster.size = detail.size;
+          patchRow(monster);
+        }
+      } catch { /* leave this one as "CR —"; not fatal */ }
+      done++;
+    }
+  }
+
+  await Promise.all(Array.from({ length: CONCURRENCY }, worker));
+
+  setMonsterSearchStatus(
+    rateLimited
+      ? `<span class="text-warning">Loaded CR/type for ${done} of ${total} monsters — API rate limit reached, the rest will show as "CR —".</span>`
+      : ''
+  );
+  if (rateLimited) setTimeout(() => setMonsterSearchStatus(''), 4000);
+
+  // A CR/type filter applied while data was still missing may have hidden
+  // monsters that now qualify — refresh so the current filter picks them up.
+  renderMonsterResults();
 }
 
 function showMonsterLoadingFooter() {
@@ -417,7 +490,7 @@ async function getMonsterDetail(monster) {
   if (monsterDetailCache[slug]) return monsterDetailCache[slug];
 
   if (usingFallbackApi) {
-    const res = await fetch(`https://www.dnd5eapi.co/api/monsters/${slug}`);
+    const res = await fetch(`${DND5EAPI_BASE}/monsters/${slug}`);
     monsterDetailCache[slug] = await res.json();
   } else {
     monsterDetailCache[slug] = monster;
@@ -480,18 +553,19 @@ function renderMonsterResults() {
     const isPinned = pinnedMonsters.has(slug);
     const row      = document.createElement('div');
     row.className  = 'ref-result-row' + (isPinned ? ' is-pinned' : '');
+    row.dataset.slug = slug;
 
     const cr   = monster.challenge_rating ?? monster.cr;
     const size = monster.size              || '';
     const mType = monster.type || monster.creature_type || '';
     const crBadge = cr != null
-      ? `<span class="badge bg-danger bg-opacity-75 me-1">CR ${cr}</span>`
-      : `<span class="badge bg-secondary bg-opacity-50 me-1">CR —</span>`;
+      ? `<span class="badge bg-danger bg-opacity-75 me-1 cr-badge">CR ${cr}</span>`
+      : `<span class="badge bg-secondary bg-opacity-50 me-1 cr-badge">CR —</span>`;
 
     row.innerHTML = `
       <span class="flex-grow-1 fw-medium">${monster.name}</span>
       ${crBadge}
-      <span class="text-muted small d-none d-sm-inline">${size} ${mType}</span>
+      <span class="text-muted small d-none d-sm-inline meta-info">${size} ${mType}</span>
       <i class="bi bi-pin-fill pin-icon" title="Pin / Unpin"></i>
     `;
     row.addEventListener('click', () => togglePinMonster(monster));

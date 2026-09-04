@@ -16,7 +16,24 @@ The DM's Toolbox has evolved through focused feature releases. Minor versions (2
 - **1.9.x**: Battle map measurement tools, persistent fog shapes, and generator integration across NPC/Tavern/Shop systems
 - **1.8.x**: Spell database expansion to 432+ spells, inventory management, loot generator overhaul, and character token generation
 
-**Current version: 2.3.4 (July 2026)**
+**Current version: 2.3.5 (September 2026)**
+
+---
+
+## [2.3.5] - 2026-09-04
+**Fixes — Concentration False Positives, Turn/Defeated Row Visuals, Bestiary Fallback CR Data**
+
+### Fixed
+- **Initiative Tracker: false concentration-check prompts** — `concDamagePending` accumulated on every HP loss regardless of whether the combatant was actually concentrating at the time, so damage taken before a spell was cast (or after a previous spell's concentration had already ended) could sit unresolved and trigger a bogus concentration prompt the moment concentration was next turned on. Damage is now only tallied while `concentration` is actually `true` at the moment it lands, and toggling concentration (on or off) clears any stale pending damage so it can't leak into the next spell
+- **Compendium Bestiary: `dnd5eapi.co` fallback 301 + missing CR/type data** — `dnd5eapi.co` moved its endpoints under a versioned `/api/2014/` path, so the old `/api/monsters` URL now 301-redirects there; separately (and the bigger issue) the fallback's list endpoint only ever returns `{index, name}` — no CR, type, or size — so every monster shown via the fallback displayed "CR —" and the CR/Type filters silently returned zero matches. Fallback calls now hit `/api/2014/...` directly, and a new rate-limit-aware background pass backfills CR/type/size a few monsters at a time so badges and filters work correctly once Open5e is unreachable
+
+### Changed
+- **Initiative Tracker: current-turn row highlight** — replaced the per-cell fading background gradient (which reset at every column boundary and read as stripes) with a flat tint plus a continuous border frame around the whole active row
+- **Initiative Tracker: defeated combatants** — a combatant at 0 HP with all 3 death saves failed now shows a "💀 Dead" badge in place of the save pills, and the row is desaturated/dimmed, so a defeated combatant reads clearly at a glance instead of just a strikethrough name
+
+### Docs
+- **`docs/INITIATIVE_TRACKER.md`** — corrected the Concentration section (damage accumulation is tied to being actively concentrated, not "the current turn") and documented the new Dead badge
+- **`docs/COMPENDIUM.md`** — updated the Bestiary section for the versioned `dnd5eapi.co` fallback URL and the new background CR/type backfill
 
 ---
 
