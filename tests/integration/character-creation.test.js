@@ -25,14 +25,6 @@ import {
   VALID_RACES
 } from '../../js/modules/validation.js';
 
-import {
-  serializeCharacter,
-  deserializeCharacter,
-  createLocalStorageAdapter,
-  generateCharacterId,
-  migrateCharacterData
-} from '../../js/modules/storage.js';
-
 import { rollAbilityScoreSet, createSeededRandom } from '../../js/modules/dice.js';
 import { FULL_CASTER_SLOTS, getMaxSpellLevel } from '../../js/modules/spell-utils.js';
 
@@ -45,7 +37,7 @@ import { FULL_CASTER_SLOTS, getMaxSpellLevel } from '../../js/modules/spell-util
  */
 function createTestCharacter(overrides = {}) {
   const baseChar = {
-    id: generateCharacterId(() => 0.5),
+    id: 'test-hero-fixture-id',
     name: 'Test Hero',
     playerName: 'Test Player',
     race: 'Human',
@@ -155,25 +147,6 @@ function createSpellcasterCharacter(className = 'Wizard', level = 1) {
 // ============================================================
 
 describe('Character Creation Flow', () => {
-  let mockStorage;
-  let storageAdapter;
-
-  beforeEach(() => {
-    // Create mock localStorage
-    mockStorage = {};
-    const mockLocalStorage = {
-      getItem: (key) => mockStorage[key] || null,
-      setItem: (key, value) => { mockStorage[key] = String(value); },
-      removeItem: (key) => { delete mockStorage[key]; },
-      clear: () => { mockStorage = {}; }
-    };
-    storageAdapter = createLocalStorageAdapter(mockLocalStorage, 'testCharacters');
-  });
-
-  afterEach(() => {
-    mockStorage = {};
-  });
-
   describe('Step 1: Basic Info Validation', () => {
     it('validates character name requirements', () => {
       expect(validateCharacterName('Gandalf').valid).toBe(true);
@@ -344,81 +317,6 @@ describe('Character Creation Flow', () => {
     });
   });
 
-  describe('Step 7: Storage Persistence', () => {
-    it('saves character to storage', () => {
-      const char = createTestCharacter();
-
-      storageAdapter.save([char]);
-      const loaded = storageAdapter.load();
-
-      expect(loaded).toHaveLength(1);
-      expect(loaded[0].name).toBe('Test Hero');
-    });
-
-    it('saves and retrieves multiple characters', () => {
-      const char1 = createTestCharacter({ name: 'Hero One' });
-      const char2 = createTestCharacter({ name: 'Hero Two' });
-
-      storageAdapter.save([char1, char2]);
-      const loaded = storageAdapter.load();
-
-      expect(loaded).toHaveLength(2);
-      expect(loaded.map(c => c.name)).toContain('Hero One');
-      expect(loaded.map(c => c.name)).toContain('Hero Two');
-    });
-
-    it('retrieves single character by ID', () => {
-      const char = createTestCharacter({ name: 'Specific Hero' });
-      storageAdapter.save([char]);
-
-      const retrieved = storageAdapter.getOne(char.id);
-      expect(retrieved).not.toBeNull();
-      expect(retrieved.name).toBe('Specific Hero');
-    });
-
-    it('deletes character from storage', () => {
-      const char1 = createTestCharacter({ name: 'Keep Me' });
-      const char2 = createTestCharacter({ name: 'Delete Me' });
-      char2.id = 'delete-me-id';
-
-      storageAdapter.save([char1, char2]);
-      storageAdapter.deleteOne('delete-me-id');
-
-      const loaded = storageAdapter.load();
-      expect(loaded).toHaveLength(1);
-      expect(loaded[0].name).toBe('Keep Me');
-    });
-
-    it('serializes and deserializes character data correctly', () => {
-      const char = createTestCharacter();
-      const serialized = serializeCharacter(char);
-      const deserialized = deserializeCharacter(serialized);
-
-      expect(deserialized.name).toBe(char.name);
-      expect(deserialized.stats.str).toBe(char.stats.str);
-      expect(deserialized.skills.athletics.prof).toBe(char.skills.athletics.prof);
-    });
-  });
-
-  describe('Step 8: Character ID Generation', () => {
-    it('generates unique character IDs', () => {
-      const id1 = generateCharacterId(() => 0.1);
-      const id2 = generateCharacterId(() => 0.9);
-
-      expect(id1).not.toBe(id2);
-      // ID format uses underscores: char_timestamp_random
-      expect(id1).toMatch(/^char_[a-z0-9]+_[a-z0-9]+$/);
-    });
-
-    it('ID format follows expected pattern', () => {
-      const id = generateCharacterId(() => 0.5);
-      const parts = id.split('_');
-
-      expect(parts[0]).toBe('char');
-      expect(parts[1]).toMatch(/^[a-z0-9]+$/); // timestamp in base36
-      expect(parts[2]).toMatch(/^[a-z0-9]+$/); // random suffix
-    });
-  });
 });
 
 // ============================================================
@@ -515,80 +413,3 @@ describe('Background Selection Integration', () => {
   });
 });
 
-// ============================================================
-// Starting Equipment Integration Tests
-// ============================================================
-
-describe('Starting Equipment Integration', () => {
-  it('saves character with inventory items', () => {
-    const char = createTestCharacter({
-      inventoryItems: [
-        { name: 'Longsword', quantity: 1, weight: 3 },
-        { name: 'Shield', quantity: 1, weight: 6 },
-        { name: 'Chain Mail', quantity: 1, weight: 55 }
-      ]
-    });
-
-    const serialized = serializeCharacter(char);
-    const deserialized = deserializeCharacter(serialized);
-
-    expect(deserialized.inventoryItems).toHaveLength(3);
-    expect(deserialized.inventoryItems[0].name).toBe('Longsword');
-  });
-
-  it('saves character with currency', () => {
-    const char = createTestCharacter({
-      currency: { cp: 0, sp: 0, ep: 0, gp: 15, pp: 0 }
-    });
-
-    const serialized = serializeCharacter(char);
-    const deserialized = deserializeCharacter(serialized);
-
-    expect(deserialized.currency.gp).toBe(15);
-  });
-});
-
-// ============================================================
-// Data Migration Tests
-// ============================================================
-
-describe('Character Data Migration', () => {
-  it('adds missing ID to character', () => {
-    const oldCharacter = {
-      name: 'Old Character',
-      level: 5,
-      stats: { str: 16, dex: 14, con: 15, int: 10, wis: 12, cha: 8 }
-    };
-
-    const migrated = migrateCharacterData(oldCharacter);
-
-    expect(migrated.id).toBeDefined();
-    expect(migrated.level).toBe(5);
-  });
-
-  it('migrates old stat format (str/dex/etc at root) to stats object', () => {
-    const oldCharacter = {
-      name: 'Old Stats Format',
-      level: 3,
-      str: 16,
-      dex: 14,
-      con: 15,
-      int: 10,
-      wis: 12,
-      cha: 8
-    };
-
-    const migrated = migrateCharacterData(oldCharacter);
-
-    expect(migrated.stats).toBeDefined();
-    expect(migrated.stats.str).toBe(16);
-  });
-
-  it('preserves already-migrated data', () => {
-    const newCharacter = createTestCharacter();
-    const migrated = migrateCharacterData(newCharacter);
-
-    expect(migrated.charClass).toBe(newCharacter.charClass);
-    expect(migrated.name).toBe(newCharacter.name);
-  });
-});

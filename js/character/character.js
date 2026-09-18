@@ -2,6 +2,10 @@ import { rollDie, parseDiceNotation } from '../modules/dice.js';
 import { getAbilityModifier, getProficiencyBonus, recalcDerivedStats } from './character-calculations.js';
 import { getAttackFeatureBonuses as _getAttackFeatureBonuses, addFlatBonusToNotation as _addFlatBonusToNotation, getConcentrationAttackBonus as _getConcentrationAttackBonus } from '../../Attack-rolls.js';
 import { getSpellSlotsForClassLevel as _getSpellSlotsForClassLevel, getPactMagicSlots as _getPactMagicSlots, normalizeSpellEntry as _normalizeSpellEntry, searchSpells as _searchSpells } from './character-spell-data.js';
+import { applyDamageToHP, applyHealingToHP, setTempHP, getDeathSaveOutcome, parseAttackBonus, getCriticalHitNotation } from './character-combat.js';
+import { calcSpellSaveDC, calcSpellAttackBonus, getConcentrationCheckDC, calcLongRestHitDiceRestored, rollHitDiceForHealing } from './character-rest.js';
+import { getXPForLevel, getXPProgressInfo } from './character-xp.js';
+import { validateCharacter } from '../modules/validation.js';
 
 (function () {
       const STORAGE_KEY = 'dmtoolboxCharactersV1';
@@ -460,8 +464,7 @@ import { getSpellSlotsForClassLevel as _getSpellSlotsForClassLevel, getPactMagic
         }
 
         // Roll to hit
-        const bonusMatch = (attack.bonus || '').match(/([+-]?\d+)/);
-        const toHitBonus = bonusMatch ? parseInt(bonusMatch[1], 10) : 0;
+        const toHitBonus = parseAttackBonus(attack.bonus);
 
         let hitResult;
         if (rollType === 'advantage') {
@@ -495,15 +498,12 @@ import { getSpellSlotsForClassLevel as _getSpellSlotsForClassLevel, getPactMagic
         const applyConc = concBonus ? confirm(concBonus.prompt) : false;
 
         if (rollType === 'critical') {
-          const parsed = parseDiceNotation(notation);
-          if (!parsed) { console.error('Invalid dice notation:', notation); return null; }
-          const { count, sides, modifier } = parsed;
-          const critNotation = `${count * 2}d${sides}${modifier >= 0 ? '+' : ''}${modifier}`;
+          const critNotation = getCriticalHitNotation(notation);
+          if (!critNotation) { console.error('Invalid dice notation:', notation); return null; }
           // GWF and SA apply to doubled crit dice too
           const result = rollDiceWithFeatures(critNotation, `${description} (CRIT!)`, features);
           extraRolls.forEach(({ notation: en, label }) => {
-            const p = parseDiceNotation(en);
-            const critEn = p ? `${p.count * 2}d${p.sides}${p.modifier >= 0 ? '+' : ''}${p.modifier}` : en;
+            const critEn = getCriticalHitNotation(en) || en;
             rollDice(critEn, `${attack.name} - ${label} (CRIT!)`);
           });
           if (applyConc) rollDice(concBonus.notation, `${attack.name} - ${concBonus.label}`);
@@ -545,15 +545,11 @@ import { getSpellSlotsForClassLevel as _getSpellSlotsForClassLevel, getPactMagic
 
         if (rollType === 'critical') {
           // Critical hit: double the dice (not the modifier)
-          const parsed = parseDiceNotation(attack.damage2);
-          if (!parsed) {
+          const critNotation = getCriticalHitNotation(attack.damage2);
+          if (!critNotation) {
             console.error('Invalid dice notation:', attack.damage2);
             return null;
           }
-
-          const { count, sides, modifier } = parsed;
-          const critCount = count * 2;
-          const critNotation = `${critCount}d${sides}${modifier >= 0 ? '+' : ''}${modifier}`;
           return rollDice(critNotation, `${description} (CRIT!)`);
         } else if (rollType === 'half') {
           // Half damage (resistance)
@@ -581,8 +577,9 @@ import { getSpellSlotsForClassLevel as _getSpellSlotsForClassLevel, getPactMagic
 
         // Automatically update death saves based on roll
         const roll = result.rolls[0];
+        const outcome = getDeathSaveOutcome(roll);
 
-        if (roll === 20) {
+        if (outcome === 'critical_success') {
           // Natural 20: regain 1 HP and stabilize
           const currentHPEl = $('charCurrentHP');
           if (currentHPEl) currentHPEl.value = 1;
@@ -603,11 +600,10 @@ import { getSpellSlotsForClassLevel as _getSpellSlotsForClassLevel, getPactMagic
             total: 0,
             timestamp: new Date().toISOString()
           });
-        } else if (roll === 1) {
+        } else if (outcome === 'double_failure') {
           // Natural 1: two failures
           addDeathSaveFailures(2);
-        } else if (roll >= 10) {
-          // Success
+        } else if (outcome === 'success') {
           addDeathSaveSuccess();
         } else {
           // Failure
@@ -667,28 +663,21 @@ import { getSpellSlotsForClassLevel as _getSpellSlotsForClassLevel, getPactMagic
           }
 
           if (type === 'heal') {
-            currentHPEl.value = Math.min(currentHP + raw, maxHP);
+            currentHPEl.value = applyHealingToHP(currentHP, maxHP, raw);
             const gained = Number(currentHPEl.value) - prevHP;
             setHPLastChange(`Healed ${raw}${gained < raw ? ' (capped)' : ''}: ${prevHP} → ${currentHPEl.value}`);
           } else if (type === 'damage') {
-            let dmg = raw;
-            if (tempHP > 0) {
-              if (dmg <= tempHP) {
-                if (tempHPEl) tempHPEl.value = tempHP - dmg;
-                dmg = 0;
-              } else {
-                dmg -= tempHP;
-                if (tempHPEl) tempHPEl.value = 0;
-              }
-            }
-            if (dmg > 0) currentHPEl.value = Math.max(0, currentHP - dmg);
-            const lost = prevHP - Number(currentHPEl.value);
+            const { newCurrentHP, newTempHP, damageToHP } = applyDamageToHP(currentHP, tempHP, maxHP, raw);
+            if (tempHPEl) tempHPEl.value = newTempHP;
+            currentHPEl.value = newCurrentHP;
+            const lost = damageToHP;
             const tempNote = raw > lost ? ` (${raw - lost} absorbed by temp HP)` : '';
             setHPLastChange(`Took ${raw} dmg${tempNote}: ${prevHP} → ${currentHPEl.value}`);
             if (raw > 0 && isConcentrating()) handleConcentrationCheck(raw);
           } else if (type === 'temp') {
-            if (tempHPEl) tempHPEl.value = Math.max(raw, tempHP);
-            setHPLastChange(`Temp HP: ${Math.max(raw, tempHP)}`);
+            const newTemp = setTempHP(tempHP, raw);
+            if (tempHPEl) tempHPEl.value = newTemp;
+            setHPLastChange(`Temp HP: ${newTemp}`);
           }
 
           // Clear the amount input and keep focus for quick re-entry
@@ -2346,7 +2335,7 @@ import { getSpellSlotsForClassLevel as _getSpellSlotsForClassLevel, getPactMagic
       function handleConcentrationCheck(damage) {
         if (!isConcentrating()) return true; // Not concentrating, no check needed
 
-        const dc = Math.max(10, Math.floor(damage / 2));
+        const dc = getConcentrationCheckDC(damage);
         const conSaveBonus = parseInt($('saveConBonus')?.value, 10) || 0;
 
         const spellName = window.currentConcentrationSpell || 'a spell';
@@ -2405,8 +2394,8 @@ import { getSpellSlotsForClassLevel as _getSpellSlotsForClassLevel, getPactMagic
         };
 
         const abilMod = getAbilityModFromScore(scores[ability] || 0);
-        const dc = 8 + pb + abilMod;
-        const attack = pb + abilMod;
+        const dc = calcSpellSaveDC(pb, abilMod);
+        const attack = calcSpellAttackBonus(pb, abilMod);
 
         dcEl.textContent = `DC ${dc}`;
         attackEl.textContent = attack >= 0 ? `+${attack}` : `${attack}`;
@@ -2782,10 +2771,7 @@ import { getSpellSlotsForClassLevel as _getSpellSlotsForClassLevel, getPactMagic
         // Set starting XP to the floor for the character's starting level
         // (level 1 = 0 XP, level 3 = 900, level 5 = 6,500, etc.)
         const startingLevel = parseInt(wizardData.level) || 1;
-        const xpThresholds = (window.LevelUpData && window.LevelUpData.XP_THRESHOLDS) ||
-          [0, 300, 900, 2700, 6500, 14000, 23000, 34000, 48000, 64000,
-           85000, 100000, 120000, 140000, 165000, 195000, 225000, 265000, 305000, 355000];
-        const startingXP = xpThresholds[startingLevel - 1] || 0;
+        const startingXP = getXPForLevel(startingLevel) || 0;
         const wizardChar = getCurrentCharacter();
         if (wizardChar) wizardChar.xp = startingXP;
         updateXPDisplay(startingXP, startingLevel);
@@ -3007,8 +2993,8 @@ import { getSpellSlotsForClassLevel as _getSpellSlotsForClassLevel, getPactMagic
             const abilityMod = Math.floor((abilityScore - 10) / 2);
             const profBonus = wizardData.proficiencyBonus || 2;
 
-            const spellSaveDC = 8 + profBonus + abilityMod;
-            const spellAttackBonus = profBonus + abilityMod;
+            const spellSaveDC = calcSpellSaveDC(profBonus, abilityMod);
+            const spellAttackBonus = calcSpellAttackBonus(profBonus, abilityMod);
 
             if ($('spellSaveDC')) {
               $('spellSaveDC').textContent = spellSaveDC;
@@ -3759,6 +3745,7 @@ import { getSpellSlotsForClassLevel as _getSpellSlotsForClassLevel, getPactMagic
             if (!imported.length) return;
 
             const tempCharacters = [];
+            const importWarnings = [];
 
             imported.forEach(cRaw => {
               if (!cRaw) return;
@@ -3786,6 +3773,19 @@ import { getSpellSlotsForClassLevel as _getSpellSlotsForClassLevel, getPactMagic
               // This fixes statMods, proficiencyBonus, save/skill bonuses, passivePerception,
               // and spell slot maxes based on authoritative source fields (stats, level, class).
               recalcDerivedOnCharacter(c);
+
+              // Malformed imports were previously merged in silently (Object.assign
+              // doesn't throw on bad shapes). Warn without blocking, so a slightly
+              // off import still succeeds like it always has, but it's no longer silent.
+              // Pass the live class list so homebrew classes from content packs validate too.
+              const knownClasses = (window.LevelUpData && window.LevelUpData.CLASS_DATA)
+                ? Object.keys(window.LevelUpData.CLASS_DATA)
+                : undefined;
+              const validation = validateCharacter(c, { knownClasses });
+              if (!validation.valid) {
+                console.warn(`[Character Import] "${c.name || 'Unnamed'}" has invalid data:`, validation.errors);
+                importWarnings.push(c.name || 'Unnamed');
+              }
 
               tempCharacters.push(c);
             });
@@ -3822,6 +3822,12 @@ import { getSpellSlotsForClassLevel as _getSpellSlotsForClassLevel, getPactMagic
               renderCharacterSelect();
               fillFormFromCharacter(getCurrentCharacter());
               showAppToast(`Imported ${tempCharacters.length} character(s)`, 'success');
+              if (importWarnings.length > 0) {
+                showAppToast(
+                  `${importWarnings.length} imported character(s) had data issues (see console): ${importWarnings.join(', ')}`,
+                  'warning'
+                );
+              }
             } catch (error) {
               // Check if it's a quota error
               if (error.name === 'QuotaExceededError' || error.message.includes('quota')) {
@@ -4349,19 +4355,11 @@ import { getSpellSlotsForClassLevel as _getSpellSlotsForClassLevel, getPactMagic
         }
 
         const { dieSize, conMod } = hitDiceModalData;
-        const rolls = [];
-        let total = 0;
-
-        // Roll each hit die
-        for (let i = 0; i < count; i++) {
-          const roll = Math.floor(Math.random() * dieSize) + 1;
-          rolls.push(roll);
-          total += roll + conMod; // Add CON mod to each roll
-        }
+        const { rolls, healing } = rollHitDiceForHealing(dieSize, count, conMod);
 
         // Store results
         hitDiceModalData.spentCount = count;
-        hitDiceModalData.rolledHealing = Math.max(total, count); // Minimum 1 HP per hit die spent
+        hitDiceModalData.rolledHealing = healing;
 
         // Display results
         const rollDetails = rolls.map((r, _i) => `${r}+${conMod >= 0 ? conMod : `(${conMod})`}`).join(', ');
@@ -4378,7 +4376,7 @@ import { getSpellSlotsForClassLevel as _getSpellSlotsForClassLevel, getPactMagic
         const { curHP, maxHP, spentCount, dieSize, rolledHealing, availableCount } = hitDiceModalData;
 
         // Apply healing (can't exceed max HP)
-        const newHP = Math.min(maxHP, curHP + rolledHealing);
+        const newHP = applyHealingToHP(curHP, maxHP, rolledHealing);
         $('charCurrentHP').value = newHP;
 
         // Reduce remaining hit dice
@@ -4450,8 +4448,7 @@ import { getSpellSlotsForClassLevel as _getSpellSlotsForClassLevel, getPactMagic
               const currentNum = currentRemaining.match(/^(\d+)d/) ? parseInt(currentRemaining.match(/^(\d+)d/)[1], 10) : 0;
 
               // Restore at least half, minimum 1
-              const restored = Math.max(1, Math.floor(total / 2));
-              const newRemaining = Math.min(total, currentNum + restored);
+              const newRemaining = calcLongRestHitDiceRestored(total, currentNum);
               hdRemainEl.value = totalHD.replace(/^\d+/, newRemaining);
             } else {
               // If format is unclear, just restore to full
@@ -4485,14 +4482,12 @@ import { getSpellSlotsForClassLevel as _getSpellSlotsForClassLevel, getPactMagic
 
       // ---------- Events ----------
       // ---- XP Tracking ----
-      const XP_THRESHOLDS = (window.LevelUpData && window.LevelUpData.XP_THRESHOLDS) ||
-        [0, 300, 900, 2700, 6500, 14000, 23000, 34000, 48000, 64000,
-         85000, 100000, 120000, 140000, 165000, 195000, 225000, 265000, 305000, 355000];
+      // Threshold table lives in character-xp.js (verified 2026-09-18 identical to the
+      // canonical window.LevelUpData.XP_THRESHOLDS — standard, essentially-immutable 5e table).
 
       function updateXPDisplay(xp, currentLevel) {
         const lvl = Math.min(Math.max(parseInt(currentLevel) || 1, 1), 20);
-        const currentLvlXP = XP_THRESHOLDS[lvl - 1];
-        const nextLvlXP    = lvl < 20 ? XP_THRESHOLDS[lvl] : null;
+        const { nextLvlXP, xpToNext, pct, canLevelUp, atMax } = getXPProgressInfo(xp, lvl);
 
         const xpValueEl = $('xpValue');
         const xpNextEl  = $('xpNextDisplay');
@@ -4503,19 +4498,15 @@ import { getSpellSlotsForClassLevel as _getSpellSlotsForClassLevel, getPactMagic
         const label        = $('xpProgressLabel');
         const levelUpBadge = $('xpLevelUpBadge');
 
-        if (lvl >= 20 || !nextLvlXP) {
+        if (atMax) {
           if (bar)   { bar.style.width = '100%'; bar.className = 'progress-bar bg-warning'; }
           if (label) label.textContent = 'Max level reached';
           if (levelUpBadge) levelUpBadge.classList.add('d-none');
           return;
         }
 
-        const range    = nextLvlXP - currentLvlXP;
-        const progress = Math.max(0, xp - currentLvlXP);
-        const pct      = Math.min(100, Math.round((progress / range) * 100));
-
         let barClass = 'progress-bar ';
-        if (xp >= nextLvlXP) barClass += 'bg-info';
+        if (canLevelUp)      barClass += 'bg-info';
         else if (pct >= 67)  barClass += 'bg-success';
         else if (pct >= 34)  barClass += 'bg-warning';
         else if (pct > 0)    barClass += 'bg-danger';
@@ -4527,12 +4518,12 @@ import { getSpellSlotsForClassLevel as _getSpellSlotsForClassLevel, getPactMagic
           bar.setAttribute('aria-valuenow', pct);
         }
         if (label) {
-          label.textContent = xp >= nextLvlXP
+          label.textContent = canLevelUp
             ? `Ready for level ${lvl + 1}!`
-            : `${(nextLvlXP - xp).toLocaleString()} XP to level ${lvl + 1}`;
+            : `${xpToNext.toLocaleString()} XP to level ${lvl + 1}`;
         }
         if (levelUpBadge) {
-          levelUpBadge.classList.toggle('d-none', xp < nextLvlXP);
+          levelUpBadge.classList.toggle('d-none', !canLevelUp);
         }
       }
       window.updateXPDisplay = updateXPDisplay;
@@ -4546,7 +4537,7 @@ import { getSpellSlotsForClassLevel as _getSpellSlotsForClassLevel, getPactMagic
         character.xp = newXP;
 
         const currentLevel = parseInt($('charLevel')?.value) || 1;
-        const nextLvlXP    = currentLevel < 20 ? XP_THRESHOLDS[currentLevel] : null;
+        const nextLvlXP    = currentLevel < 20 ? getXPForLevel(currentLevel + 1) : null;
 
         updateXPDisplay(newXP, currentLevel);
         saveCurrentCharacter();
@@ -5715,7 +5706,7 @@ import { getSpellSlotsForClassLevel as _getSpellSlotsForClassLevel, getPactMagic
             const character = getCurrentCharacter();
             const lvl = parseInt($('charLevel')?.value) || 1;
             const xp  = character?.xp || 0;
-            const next = lvl < 20 ? XP_THRESHOLDS[lvl] : null;
+            const next = lvl < 20 ? getXPForLevel(lvl + 1) : null;
 
             const cur      = $('xpModalCurrent');
             const nextLbl  = $('xpModalNextLabel');

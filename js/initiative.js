@@ -546,6 +546,9 @@ $('clear-dice-history').addEventListener('click', ()=>{
     return 'bg-success text-light';
   }
   function maybeSortByInitiative() {
+    // Same comparator as sortByInitiative() in js/modules/initiative-calculations.js
+    // (that one returns a new array; this sorts in place). See queueConcentrationCheck()
+    // above for why that module isn't imported directly into this classic script.
     if ($('lockOrderToggle')?.checked) return;
     const active = characters[currentTurn] || null;  // remember who is active
     characters.sort((a, b) => b.initiative - a.initiative);
@@ -1744,6 +1747,10 @@ $('clear-dice-history').addEventListener('click', ()=>{
     if (!c) return;
     const dmg = c.concDamagePending || 0;
     if (!c.concentration || dmg <= 0) return;
+    // Kept manually in sync with getConcentrationDC() in js/modules/initiative-calculations.js.
+    // Not imported directly: this file is a classic <script> (non-module) so it keeps working
+    // when opened via file://, and initiative-calculations.js uses ES `export` syntax that
+    // can't be parsed outside a module context. If this formula ever changes, update both.
     const dc = Math.max(10, Math.floor(dmg / 2));
     enqueueConcentrationPrompt(idx, dmg, dc);
     c.concDamagePending = 0;

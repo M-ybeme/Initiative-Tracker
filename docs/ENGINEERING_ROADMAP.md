@@ -144,7 +144,10 @@ Every phase assumes the shipped build only contains SRD-allowed data and copy. W
 
   * [x] **Core logic modules** (pure-ish):
 
-    * `dice.js`, `character-calculations.js`, `initiative-calculations.js`, `spell-utils.js`, `level-up-calculations.js`, `storage.js`, `validation.js`, `generators.js`, `export-utils.js`
+    * `dice.js`, `character-calculations.js`, `initiative-calculations.js`, `spell-utils.js`, `validation.js`, `export-utils.js`
+    * (`level-up-calculations.js`, `storage.js`, `migrations.js`, and `generators.js` were
+      later removed — 2026-09-18 — as dead code that was never wired into the running app;
+      see Phase 2.3/2.4/3.2/7 notes below for what replaced or superseded each)
   * [x] **Integration modules** (glue):
 
     * Cross-page data transfer via localStorage (documented in CODEBASE_OVERVIEW)
@@ -168,14 +171,34 @@ Every phase assumes the shipped build only contains SRD-allowed data and copy. W
 * [x] Identify "fat" page scripts with logic that should be modular:
 
   * [x] `character.js` – fully modularized in v2.1.5 (see below)
-  * [x] `initiative.js` – death saves, concentration DC, HP in `initiative-calculations.js`
+  * [ ] ~~`initiative.js` – death saves, concentration DC, HP in `initiative-calculations.js`~~
+        — **not actually true, corrected 2026-09-18**: the module was created and tested but
+        never imported into `initiative.js` (a classic `<script>`, not `type="module"`, kept
+        that way so `initiative.html` still works via `file://`). Only `getConcentrationDC`
+        and `sortByInitiative` are verified byte-identical to `initiative.js`'s own inline
+        logic and are now cross-referenced in comments on both sides; they are not imported.
+        The module's death-save/instant-death/initiative-bonus functions model 5e rules
+        `initiative.js` doesn't implement at all — see the module's header comment.
   * [ ] `battlemap.js` – geometry/math still embedded (future candidate)
 * [x] `character.js` modularization complete (v2.1.5):
 
   * [x] Attack roll logic → `Attack-rolls.js` (CONCENTRATION_ATTACK_BONUSES, addFlatBonusToNotation, getAttackFeatureBonuses, rollDiceWithFeatures)
   * [x] Spell data logic → `character-spell-data.js` (normalizeSpellEntry, getSpellSlotsForClassLevel, getPactMagicSlots, searchSpells, spell slot tables)
   * [x] Derived-stat recalculation → `character-calculations.js` (recalcDerivedStats, calculateConcentrationCheckDC, calculateEncumbrance, calculateSpellDC, calculateSpellAttackBonus)
-  * [x] Rest mechanics → `character-rest.js` (applyShortRest, applyLongRest, rollHitDiceForHealing)
+  * [x] Rest mechanics → `character-rest.js` — corrected 2026-09-18: `character.js` now
+        calls `calcSpellSaveDC`, `calcSpellAttackBonus`, `getConcentrationCheckDC`,
+        `calcLongRestHitDiceRestored`, and `rollHitDiceForHealing` from this module (verified
+        byte-identical swaps, live behavior unchanged). `applyShortRest`/`applyLongRest`
+        themselves are still NOT called — they take a plain character object, while
+        `character.js`'s rest handlers read/write DOM inputs directly; not a drop-in fit.
+  * [x] Combat/HP mechanics → `character-combat.js` — added 2026-09-18: `character.js` now
+        calls `applyDamageToHP`, `applyHealingToHP`, `setTempHP`, `getDeathSaveOutcome`, and
+        `parseAttackBonus` from this module. `getDeathSaveState`/`getCriticalHitNotation`/
+        `parseAttackBonus`'s sibling formatter had no confirmed live duplicate or a minor
+        formatting divergence (see module) and were left as-is.
+  * [x] XP tracking → `character-xp.js` — added 2026-09-18: `character.js` now calls
+        `getXPForLevel`/`getXPProgressInfo` instead of three separate inline copies of the
+        XP threshold table/percentage math (one of which was undiscovered until this pass).
   * [x] `character.js` converted to `type="module"` with static imports; IIFE reduced by ~270 lines
   * [x] Integration tests added: `character-rest-integration.test.js` (25 tests), `character-sheet.test.js` (21 tests)
 * [x] Existing extractions verified:
@@ -210,9 +233,12 @@ Every phase assumes the shipped build only contains SRD-allowed data and copy. W
 * [x] Annotate exported functions in core modules:
 
   * [x] `character-calculations.js` - Already had JSDoc, verified
-  * [x] `level-up-calculations.js` - Already had JSDoc, verified
+  * [x] ~~`level-up-calculations.js` - Already had JSDoc, verified~~ — module removed
+        2026-09-18 (was never wired into the app; see Phase 2.3 note above)
   * [x] `initiative-calculations.js` - Updated with typed annotations
-  * [x] `storage.js` - Updated with Character, ValidationResult types
+  * [x] ~~`storage.js` - Updated with Character, ValidationResult types~~ — module removed
+        2026-09-18 (was never wired into the app; the real storage layer is
+        `js/indexed-db-storage.js`)
   * [x] `dice.js` - Updated with ParsedDice, DiceRollResult types
 
 ### 3.3 Editor & Tooling Support
@@ -223,7 +249,7 @@ Every phase assumes the shipped build only contains SRD-allowed data and copy. W
   * [x] Type checking enabled for all modules
 * [x] Adopted `@ts-check` on key modules:
 
-  * [x] `js/modules/storage.js`
+  * [x] ~~`js/modules/storage.js`~~ — removed 2026-09-18, never wired in
   * [x] `js/modules/dice.js`
   * [x] `js/modules/initiative-calculations.js`
   * [ ] Future: Add to remaining modules and high-value page scripts
@@ -394,7 +420,16 @@ Every phase assumes the shipped build only contains SRD-allowed data and copy. W
 
 ### 7.2 Migration Helpers
 
-* [x] Create `js/modules/migrations.js`:
+> **Corrected 2026-09-18:** `js/modules/migrations.js` was built exactly as described below
+> and unit-tested in isolation, but was **never actually called from any live code path** —
+> zero imports anywhere in `js/**/*.js` or any `.html` page, ever. `js/character/character.js`
+> does the real, live migration work as scattered inline defaulting (e.g. `deathSaves`,
+> `pactSlots`, `resources`, `classes` normalization on load/import/creation) — that's what has
+> actually been protecting user data this whole time, not this module. The module has been
+> deleted; the checklist below is kept as a record of the design that was built but not wired,
+> in case a future consolidated migration layer is worth building for real.
+
+* [x] ~~Create `js/modules/migrations.js`~~ (removed 2026-09-18, never wired in):
 
   * [x] `migrateCharacter(character)` - migrates v0/v1 → v2
   * [x] `migrateBattlemap(state)` - migrates v0 → v1
@@ -415,12 +450,14 @@ Every phase assumes the shipped build only contains SRD-allowed data and copy. W
 * [x] Decided and documented in `docs/DATA_SCHEMAS.md`:
 
   * [x] Minimum supported versions defined (Character: 1, Battlemap: 1, Journal: 1)
-  * [x] Automatic migration on load/import
+  * [x] Automatic migration on load/import — true in practice, but via `character.js`'s
+        inline normalization, not the (removed) `migrations.js` module — see note above
   * [x] Non-destructive (original data not modified until saved)
 * [x] Warning system:
 
-  * [x] Warnings returned if data is older than minimum supported
-  * [x] Warnings returned if migration fails (continues with partial data)
+  * [ ] ~~Warnings returned if data is older than minimum supported~~ — not implemented in
+        the live inline path (this was `migrations.js`-only behavior)
+  * [ ] ~~Warnings returned if migration fails (continues with partial data)~~ — same
 
 ---
 

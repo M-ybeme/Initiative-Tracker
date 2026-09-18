@@ -1,10 +1,9 @@
 ﻿/**
  * Integration Tests: Character Sheet Data Round-Trips
- * Verifies data survives serialization, deserialization,
- * and recalculation across modules.
+ * Verifies derived-stat recalculation and spell-entry normalization
+ * survive a JSON round-trip (simulating save/load) across modules.
  */
 import { describe, it, expect } from 'vitest';
-import { serializeCharacter, deserializeCharacter } from '../../js/modules/storage.js';
 import { recalcDerivedStats } from '../../js/character/character-calculations.js';
 import { normalizeSpellEntry } from '../../js/character/character-spell-data.js';
 
@@ -61,47 +60,6 @@ function makeWizardChar(ov = {}) {
     ...ov,
   };
 }
-
-describe('character data round-trip', () => {
-  it('serialize then deserialize produces identical data', () => {
-    const char = makeWizardChar();
-    const json = serializeCharacter(char);
-    const loaded = deserializeCharacter(json);
-    expect(loaded).toEqual(char);
-  });
-
-  it('attack array survives JSON round-trip intact', () => {
-    const char = makeWizardChar({
-      attacks: [
-        { name: 'Dagger', type: 'melee-weapon', toHit: '+4', damage: '1d4+2', damageType: 'Piercing' },
-        { name: 'Quarterstaff', type: 'melee-weapon', toHit: '+2', damage: '1d6-1', damageType: 'Bludgeoning' },
-      ],
-    });
-    const loaded = deserializeCharacter(serializeCharacter(char));
-    expect(loaded.attacks).toHaveLength(2);
-    expect(loaded.attacks[0].name).toBe('Dagger');
-    expect(loaded.attacks[0].damage).toBe('1d4+2');
-    expect(loaded.attacks[1].name).toBe('Quarterstaff');
-  });
-
-  it('spell slots survive JSON round-trip with used counts', () => {
-    const char = makeWizardChar();
-    const loaded = deserializeCharacter(serializeCharacter(char));
-    expect(loaded.spellSlots[1].max).toBe(4);
-    expect(loaded.spellSlots[1].used).toBe(3);
-    expect(loaded.spellSlots[2].used).toBe(2);
-  });
-
-  it('null character serializes to null', () => {
-    expect(serializeCharacter(null)).toBeNull();
-  });
-
-  it('invalid JSON deserializes to null', () => {
-    expect(deserializeCharacter('not-json')).toBeNull();
-    expect(deserializeCharacter('')).toBeNull();
-    expect(deserializeCharacter(null)).toBeNull();
-  });
-})
 
 describe('recalcDerivedStats integration', () => {
   it('recomputes proficiency bonus from level', () => {
@@ -165,7 +123,7 @@ describe('recalcDerivedStats integration', () => {
 
   it('serialize, deserialize, recalc produces correct derived values', () => {
     const char = makeWizardChar({ level: 7, proficiencyBonus: 0 });
-    const loaded = deserializeCharacter(serializeCharacter(char));
+    const loaded = JSON.parse(JSON.stringify(char));
     recalcDerivedStats(loaded, SKILL_CONFIGS);
     expect(loaded.proficiencyBonus).toBe(3);
     expect(loaded.statMods.int).toBe(4);
@@ -245,7 +203,7 @@ describe('normalizeSpellEntry integration', () => {
   it('spell list in character survives full serialize/deserialize', () => {
     const spells = ['Fireball', 'Bless'].map(n => normalizeSpellEntry(n, lookup));
     const char = makeWizardChar({ spellList: spells });
-    const loaded = deserializeCharacter(serializeCharacter(char));
+    const loaded = JSON.parse(JSON.stringify(char));
     expect(loaded.spellList).toHaveLength(2);
     expect(loaded.spellList[0].name).toBe('Fireball');
     expect(loaded.spellList[1].concentration).toBe(true);

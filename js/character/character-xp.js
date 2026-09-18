@@ -3,6 +3,12 @@
  *
  * Pure functions for XP tracking, level-from-XP lookup, and XP progress
  * calculation. No DOM access, no side effects, no global state.
+ *
+ * The table below is a separate copy of window.LevelUpData.XP_THRESHOLDS
+ * (data/srd/level-up-data.js, a classic script global, not ESM-importable into
+ * this module) — verified byte-identical 2026-09-18. It's the standard 5e XP
+ * table and effectively immutable, so the duplication risk is low, but if it
+ * ever needs to change, update both.
  */
 
 /** Standard 5e XP thresholds for levels 1-20. Index 0 = level 1. */

@@ -387,7 +387,6 @@ const result = rollDie(20, seededRandom);
 
 ```
 js/modules/dice.js           -> tests/unit/dice.test.js
-js/modules/storage.js        -> tests/unit/storage.test.js
 js/character.js              -> tests/integration/character.test.js
 ```
 

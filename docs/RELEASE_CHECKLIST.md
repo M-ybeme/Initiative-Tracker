@@ -86,19 +86,14 @@ Use this checklist when making structural changes to the codebase.
 
 If changing the shape of stored data (Character, Battlemap, Journal):
 
-- [ ] **Increment schema version** in `js/modules/migrations.js`
-  ```javascript
-  CURRENT_SCHEMA_VERSIONS.character = X  // increment
-  ```
+> Note: `js/modules/migrations.js` (a dedicated migration module) was removed 2026-09-18 —
+> it was never wired into the app. Live migration is inline defaulting/normalization in
+> `js/character/character.js`, applied on load, on import, and on character creation.
 
-- [ ] **Add migration function** for the new version
+- [ ] **Add defaulting/normalization for the new field** inline in `js/character/character.js`
+  (see existing patterns near `deathSaves`, `pactSlots`, `resources` handling), e.g.:
   ```javascript
-  X: (data) => {
-    const migrated = { ...data };
-    // Apply changes
-    migrated.schemaVersion = X;
-    return migrated;
-  }
+  c.newField = c.newField ?? defaultValue;
   ```
 
 - [ ] **Update DATA_SCHEMAS.md** - Document new fields/changes
@@ -150,21 +145,11 @@ const DM_TOOLBOX_BUILD = {
 ```
 
 ### Add Migration
+There's no dedicated migration module (see Data Changes note above) — add inline defaulting
+in `js/character/character.js` wherever a character is loaded/imported/created:
 ```javascript
-// js/modules/migrations.js
-const CHARACTER_MIGRATIONS = {
-  // ... existing migrations
-
-  3: (char) => {  // ← new version number
-    const migrated = { ...char };
-    migrated.newField = migrated.oldField || defaultValue;
-    migrated.schemaVersion = 3;
-    return migrated;
-  }
-};
-
-// Also update:
-CURRENT_SCHEMA_VERSIONS.character = 3;
+// js/character/character.js
+c.newField = c.newField ?? defaultValue;
 ```
 
 ### Add New Module

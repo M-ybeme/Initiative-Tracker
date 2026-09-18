@@ -190,6 +190,16 @@ describe('validateClass', () => {
     expect(validateClass('Wizard (Evocation)').valid).toBe(true);
   });
 
+  it('accepts a level-suffixed class (the app\'s normal charClass format, e.g. "Fighter 5")', () => {
+    expect(validateClass('Fighter 5').valid).toBe(true);
+    expect(validateClass('Paladin 15').valid).toBe(true);
+    expect(validateClass('Wizard 20').valid).toBe(true);
+  });
+
+  it('accepts class with both subclass notation and a level suffix', () => {
+    expect(validateClass('Fighter (Champion) 5').valid).toBe(true);
+  });
+
   it('rejects invalid classes', () => {
     expect(validateClass('Jedi').valid).toBe(false);
     expect(validateClass('Mage').valid).toBe(false);
@@ -198,6 +208,11 @@ describe('validateClass', () => {
   it('rejects empty/null', () => {
     expect(validateClass('').valid).toBe(false);
     expect(validateClass(null).valid).toBe(false);
+  });
+
+  it('accepts an injected class list (e.g. homebrew classes from content packs)', () => {
+    expect(validateClass('Resonant', ['Resonant', 'Wizard']).valid).toBe(true);
+    expect(validateClass('Wizard', ['Resonant']).valid).toBe(false);
   });
 });
 
@@ -259,6 +274,36 @@ describe('validateCharacter', () => {
     expect(result.errors.level).toBeDefined();
     expect(result.errors.class).toBeDefined();
     expect(result.errors.stats).toBeDefined();
+  });
+
+  it('does not flag a normal saved/imported character with a level-suffixed charClass (e.g. "Fighter 5") as invalid', () => {
+    // This is the app's normal single-class charClass format (js/character/character.js
+    // stores it this way on save) — must not produce a false invalid-class warning on import.
+    const character = {
+      name: 'Test Hero',
+      level: 5,
+      charClass: 'Fighter 5',
+      race: 'Human',
+      stats: { str: 16, dex: 14, con: 15, int: 10, wis: 12, cha: 8 },
+      maxHP: 44,
+      currentHP: 44
+    };
+    const result = validateCharacter(character);
+    expect(result.valid).toBe(true);
+    expect(result.errors.class).toBeUndefined();
+  });
+
+  it('accepts a homebrew class when options.knownClasses includes it', () => {
+    const character = {
+      name: 'Test Hero',
+      level: 5,
+      charClass: 'Resonant',
+      stats: { str: 16, dex: 14, con: 15, int: 10, wis: 12, cha: 8 },
+      maxHP: 44,
+      currentHP: 44
+    };
+    const result = validateCharacter(character, { knownClasses: ['Resonant'] });
+    expect(result.valid).toBe(true);
   });
 
   it('handles null input', () => {

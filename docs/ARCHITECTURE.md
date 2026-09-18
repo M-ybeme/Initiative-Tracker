@@ -45,40 +45,47 @@ This document provides a high-level view of **The DM's Toolbox** architecture, s
 ├─────────────────────────────────────────────────────────────────────────────┤
 │                                                                             │
 │  ┌─────────────────────┐  ┌─────────────────────┐  ┌─────────────────────┐ │
-│  │   CALCULATIONS      │  │      STORAGE        │  │     UTILITIES       │ │
+│  │   CALCULATIONS      │  │     VALIDATION      │  │     UTILITIES       │ │
 │  ├─────────────────────┤  ├─────────────────────┤  ├─────────────────────┤ │
-│  │ character-          │  │ storage.js          │  │ dice.js             │ │
-│  │   calculations.js   │  │ - serialize/        │  │ - roll parsing      │ │
-│  │ - AC, HP, saves     │  │   deserialize       │  │ - dice rolling      │ │
-│  │ - skill bonuses     │  │ - validation        │  │                     │ │
-│  │ - recalcDerived-    │  │                     │  │ generators.js       │ │
-│  │   Stats (pure)      │  │ migrations.js       │  │ - random tables     │ │
-│  │ - spell DC/attack   │  │ - schema versions   │  │ - name generation   │ │
-│  │ - concentration DC  │  │ - data migration    │  │                     │ │
-│  │                     │  │                     │  │ export-utils.js     │ │
-│  │ character-attack-   │  │ validation.js       │  │ - PDF/Word export   │ │
-│  │   rolls.js          │  │ - D&D 5e rules      │  │                     │ │
-│  │ - feature bonuses   │  │                     │  │ spell-utils.js      │ │
-│  │ - notation helpers  │  │                     │  │ - slot calculation  │ │
-│  │                     │  │                     │  │                     │ │
-│  │ character-spell-    │  │                     │  │ character-rest.js   │ │
-│  │   data.js           │  │                     │  │ - short rest        │ │
-│  │ - slot tables       │  │                     │  │ - long rest         │ │
-│  │ - normalization     │  │                     │  │ - hit dice rolling  │ │
+│  │ character-          │  │ validation.js       │  │ dice.js             │ │
+│  │   calculations.js   │  │ - D&D 5e rules       │  │ - roll parsing      │ │
+│  │ - AC, HP, saves     │  │ - wired into         │  │ - dice rolling      │ │
+│  │ - skill bonuses     │  │   character.js's     │  │                     │ │
+│  │ - recalcDerived-    │  │   import path only   │  │ export-utils.js     │ │
+│  │   Stats (pure)      │  │   (warns, no block)  │  │ - PDF/Word export   │ │
+│  │ - spell DC/attack   │  │                     │  │                     │ │
+│  │ - concentration DC  │  │                     │  │ spell-utils.js      │ │
+│  │                     │  │                     │  │ - slot calculation  │ │
+│  │ character-attack-   │  │                     │  │                     │ │
+│  │   rolls.js          │  │                     │  │ character-rest.js   │ │
+│  │ - feature bonuses   │  │                     │  │ - short/long rest   │ │
+│  │ - notation helpers  │  │                     │  │   math (wired)      │ │
+│  │                     │  │                     │  │ - hit dice rolling  │ │
+│  │ character-spell-    │  │                     │  │                     │ │
+│  │   data.js           │  │                     │  │ character-combat.js│ │
+│  │ - slot tables       │  │                     │  │ - HP/death-save     │ │
+│  │ - normalization     │  │                     │  │   helpers (wired)   │ │
 │  │ - search/filter     │  │                     │  │                     │ │
-│  │                     │  │                     │  │                     │ │
-│  │ initiative-         │  │                     │  │                     │ │
-│  │   calculations.js   │  │                     │  │                     │ │
-│  │ - death saves       │  │                     │  │                     │ │
-│  │                     │  │                     │  │                     │ │
-│  │ level-up-           │  │                     │  │                     │ │
-│  │   calculations.js   │  │                     │  │                     │ │
-│  │ - multiclass rules  │  │                     │  │                     │ │
-│  │ - spell slots       │  │                     │  │                     │ │
+│  │                     │  │                     │  │ character-xp.js    │ │
+│  │ initiative-         │  │                     │  │ - XP thresholds/    │ │
+│  │   calculations.js   │  │                     │  │   progress (wired)  │ │
+│  │ - death saves, HP,  │  │                     │  │                     │ │
+│  │   concentration DC  │  │                     │  │                     │ │
+│  │ - MOSTLY NOT WIRED  │  │                     │  │                     │ │
+│  │   into initiative.js│  │                     │  │                     │ │
+│  │   (classic script,  │  │                     │  │                     │ │
+│  │   see module docs)  │  │                     │  │                     │ │
 │  └─────────────────────┘  └─────────────────────┘  └─────────────────────┘ │
 │                                                                             │
 │  RULE: Modules are PURE - no DOM access, no window/document references      │
 │        Enforced by ESLint no-restricted-globals rule                        │
+│                                                                             │
+│  REMOVED 2026-09-18 (created and unit-tested, never wired into live code):   │
+│    storage.js, migrations.js, generators.js, character/level-up-            │
+│    calculations.js — see docs/CODEBASE_OVERVIEW.md for what replaced each.   │
+│    Live multiclass math (caster level/spell slots/prerequisites) actually   │
+│    lives in data/srd/level-up-data.js (window.LevelUpData). Live storage is  │
+│    js/indexed-db-storage.js + direct localStorage access in character.js.   │
 │                                                                             │
 └─────────────────────────────────────────────────────────────────────────────┘
                                      │

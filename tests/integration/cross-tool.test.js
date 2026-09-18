@@ -11,26 +11,10 @@ import {
 } from '../../js/character/character-calculations.js';
 
 import {
-  serializeCharacter,
-  deserializeCharacter,
-  createLocalStorageAdapter,
-  generateCharacterId
-} from '../../js/modules/storage.js';
-
-import {
   generateInitiativeExport,
   generateCharacterJSON,
   parseCharacterImport
 } from '../../js/modules/export-utils.js';
-
-import {
-  generateNPC,
-  generateName,
-  generateShopInventory,
-  createSeededRandom
-} from '../../js/modules/generators.js';
-
-import { validateCharacter } from '../../js/modules/validation.js';
 
 // ============================================================
 // Test Data Fixtures
@@ -41,7 +25,7 @@ import { validateCharacter } from '../../js/modules/validation.js';
  */
 function createExportableCharacter(overrides = {}) {
   return {
-    id: generateCharacterId(() => 0.5),
+    id: 'export-hero-test-id',
     name: 'Export Hero',
     playerName: 'Test Player',
     race: 'Human',
@@ -222,199 +206,10 @@ describe('Character JSON Export and Import', () => {
 });
 
 // ============================================================
-// NPC Generator to Name Generator Integration
-// ============================================================
-
-describe('NPC Generator Integration', () => {
-  it('generates NPC with consistent traits', () => {
-    const seededRandom = createSeededRandom(12345);
-    const npc = generateNPC({}, seededRandom);
-
-    expect(npc.personality).toBeDefined();
-    expect(npc.quirk).toBeDefined();
-    expect(npc.motivation).toBeDefined();
-    expect(npc.occupation).toBeDefined();
-  });
-
-  it('respects occupation override', () => {
-    const npc = generateNPC({ occupation: 'Blacksmith' });
-
-    expect(npc.occupation).toBe('Blacksmith');
-  });
-
-  it('generates names by race', () => {
-    const seededRandom = createSeededRandom(54321);
-
-    const humanName = generateName('human', 'male', seededRandom);
-    const elfName = generateName('elf', 'female', createSeededRandom(54321));
-    const dwarfName = generateName('dwarf', 'male', createSeededRandom(54321));
-
-    expect(humanName).toBeDefined();
-    expect(elfName).toBeDefined();
-    expect(dwarfName).toBeDefined();
-    expect(humanName.length).toBeGreaterThan(2);
-  });
-
-  it('produces deterministic results with same seed', () => {
-    const r1 = createSeededRandom(99999);
-    const r2 = createSeededRandom(99999);
-
-    const npc1 = generateNPC({}, r1);
-    const npc2 = generateNPC({}, r2);
-
-    expect(npc1.personality).toBe(npc2.personality);
-    expect(npc1.quirk).toBe(npc2.quirk);
-  });
-});
-
-// ============================================================
-// Shop Generator to Character Inventory
-// ============================================================
-
-describe('Shop to Character Inventory Integration', () => {
-  it('generates shop inventory items', () => {
-    const seededRandom = createSeededRandom(11111);
-    const inventory = generateShopInventory('weapons', 5, seededRandom);
-
-    expect(inventory.length).toBeGreaterThan(0);
-    expect(inventory.length).toBeLessThanOrEqual(5);
-
-    inventory.forEach(item => {
-      expect(item.name).toBeDefined();
-      expect(item.price).toBeDefined();
-      expect(item.quantity).toBeGreaterThan(0);
-    });
-  });
-
-  it('can add shop item to character inventory', () => {
-    const character = createExportableCharacter();
-    const seededRandom = createSeededRandom(22222);
-    const shopInventory = generateShopInventory('weapons', 3, seededRandom);
-
-    // Simulate purchasing first item
-    const purchasedItem = shopInventory[0];
-    character.inventoryItems.push({
-      name: purchasedItem.name,
-      quantity: 1,
-      weight: purchasedItem.weight || 0
-    });
-
-    expect(character.inventoryItems.some(i => i.name === purchasedItem.name)).toBe(true);
-  });
-
-  it('character with added items passes validation', () => {
-    const character = createExportableCharacter();
-    const seededRandom = createSeededRandom(33333);
-    const shopItems = generateShopInventory('armor', 2, seededRandom);
-
-    // Add items to character
-    shopItems.forEach(item => {
-      character.inventoryItems.push({
-        name: item.name,
-        quantity: 1
-      });
-    });
-
-    const result = validateCharacter(character);
-    expect(result.valid).toBe(true);
-  });
-});
-
-// ============================================================
-// Storage Adapter Cross-Tool Tests
-// ============================================================
-
-describe('Storage Adapter Cross-Tool Integration', () => {
-  let mockStorage;
-  let characterAdapter;
-
-  beforeEach(() => {
-    mockStorage = {};
-    const mockLocalStorage = {
-      getItem: (key) => mockStorage[key] || null,
-      setItem: (key, value) => { mockStorage[key] = String(value); },
-      removeItem: (key) => { delete mockStorage[key]; },
-      clear: () => { mockStorage = {}; }
-    };
-    characterAdapter = createLocalStorageAdapter(mockLocalStorage, 'dmtoolboxCharactersV1');
-  });
-
-  it('saves character accessible by other tools', () => {
-    const character = createExportableCharacter();
-    characterAdapter.save([character]);
-
-    // Simulate another tool reading from storage
-    const rawData = mockStorage['dmtoolboxCharactersV1'];
-    const parsed = JSON.parse(rawData);
-
-    expect(parsed).toHaveLength(1);
-    expect(parsed[0].name).toBe('Export Hero');
-  });
-
-  it('multiple characters accessible by ID', () => {
-    const char1 = createExportableCharacter({ name: 'Character One' });
-    const char2 = createExportableCharacter({ name: 'Character Two' });
-    char2.id = 'different-id';
-
-    characterAdapter.save([char1, char2]);
-
-    const retrieved1 = characterAdapter.getOne(char1.id);
-    const retrieved2 = characterAdapter.getOne(char2.id);
-
-    expect(retrieved1.name).toBe('Character One');
-    expect(retrieved2.name).toBe('Character Two');
-  });
-
-  it('character survives round-trip through storage', () => {
-    const original = createExportableCharacter({
-      spellSlots: {
-        1: { max: 4, used: 1 },
-        2: { max: 3, used: 0 }
-      }
-    });
-
-    characterAdapter.save([original]);
-    const retrieved = characterAdapter.getOne(original.id);
-
-    expect(retrieved.name).toBe(original.name);
-    expect(retrieved.stats.str).toBe(original.stats.str);
-    expect(retrieved.spellSlots[1].used).toBe(1);
-  });
-});
-
-// ============================================================
 // Cross-Tool Data Format Compatibility
 // ============================================================
 
 describe('Data Format Compatibility', () => {
-  it('character data serializes correctly for localStorage', () => {
-    const character = createExportableCharacter();
-    const serialized = serializeCharacter(character);
-
-    // Verify it's valid JSON
-    expect(() => JSON.parse(serialized)).not.toThrow();
-
-    // Verify complex nested data preserved
-    const parsed = JSON.parse(serialized);
-    expect(parsed.stats.str).toBe(16);
-    expect(parsed.inventoryItems).toHaveLength(2);
-  });
-
-  it('deserializes character with all properties intact', () => {
-    const original = createExportableCharacter({
-      features: 'Test Feature',
-      notes: 'Some notes',
-      conditions: 'Poisoned'
-    });
-
-    const serialized = serializeCharacter(original);
-    const restored = deserializeCharacter(serialized);
-
-    expect(restored.features).toBe('Test Feature');
-    expect(restored.notes).toBe('Some notes');
-    expect(restored.conditions).toBe('Poisoned');
-  });
-
   it('initiative export contains all required fields', () => {
     const character = createExportableCharacter();
     const exported = generateInitiativeExport(character);
@@ -450,17 +245,6 @@ describe('Cross-Tool Edge Cases', () => {
     expect(result.character.name).toBe("Sir Reginald O'Brien III");
   });
 
-  it('handles character with unicode in notes', () => {
-    const character = createExportableCharacter({
-      notes: 'Found treasure ðŸ’° in the dungeon ðŸ°'
-    });
-
-    const serialized = serializeCharacter(character);
-    const restored = deserializeCharacter(serialized);
-
-    expect(restored.notes).toBe('Found treasure ðŸ’° in the dungeon ðŸ°');
-  });
-
   it('handles empty character fields gracefully', () => {
     const minimalCharacter = {
       id: 'min-char',
@@ -478,81 +262,6 @@ describe('Cross-Tool Edge Cases', () => {
     expect(generateInitiativeExport(null)).toBeNull();
     expect(generateCharacterJSON(null)).toBe('{}');
     expect(parseCharacterImport(null).success).toBe(false);
-  });
-});
-
-// ============================================================
-// Workflow Simulation Tests
-// ============================================================
-
-describe('Complete Workflow Simulations', () => {
-  let mockStorage;
-
-  beforeEach(() => {
-    mockStorage = {};
-  });
-
-  it('simulates: Create Character â†’ Save â†’ Export to Initiative', () => {
-    // Step 1: Create character
-    const character = createExportableCharacter();
-
-    // Step 2: Validate
-    const validation = validateCharacter(character);
-    expect(validation.valid).toBe(true);
-
-    // Step 3: Save to storage
-    const adapter = createLocalStorageAdapter(
-      {
-        getItem: (key) => mockStorage[key] || null,
-        setItem: (key, value) => { mockStorage[key] = String(value); }
-      },
-      'characters'
-    );
-    adapter.save([character]);
-
-    // Step 4: Load and export to initiative
-    const loaded = adapter.getOne(character.id);
-    const initiativeData = generateInitiativeExport(loaded);
-
-    // Step 5: Set pending import
-    mockStorage['dmtools.pendingInitiativeImport'] = JSON.stringify({
-      name: initiativeData.name,
-      maxHp: initiativeData.maxHp,
-      ac: initiativeData.ac,
-      initiative: initiativeData.initiativeBonus
-    });
-
-    // Step 6: Verify initiative can read data
-    const pending = JSON.parse(mockStorage['dmtools.pendingInitiativeImport']);
-    expect(pending.name).toBe('Export Hero');
-    expect(pending.maxHp).toBe(44);
-  });
-
-  it('simulates: Generate NPC â†’ Add to Initiative', () => {
-    const seededRandom = createSeededRandom(77777);
-
-    // Step 1: Generate NPC
-    const npc = generateNPC({ occupation: 'Guard' }, seededRandom);
-    const npcName = generateName('human', 'male', createSeededRandom(77777));
-
-    // Step 2: Create combatant data
-    const combatant = {
-      name: `${npcName} (${npc.occupation})`,
-      type: 'NPC',
-      ac: 16,
-      maxHp: 11,
-      hp: 11,
-      initiativeBonus: 1,
-      notes: `${npc.personality}, ${npc.quirk}`
-    };
-
-    // Step 3: Set pending import
-    mockStorage['dmtools.pendingInitiativeImport'] = JSON.stringify(combatant);
-
-    // Step 4: Verify data
-    const pending = JSON.parse(mockStorage['dmtools.pendingInitiativeImport']);
-    expect(pending.type).toBe('NPC');
-    expect(pending.notes).toContain(npc.personality);
   });
 });
 

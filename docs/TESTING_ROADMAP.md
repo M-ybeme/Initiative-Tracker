@@ -116,16 +116,33 @@ This document provides a step-by-step roadmap for implementing a comprehensive t
 - [x] Extract concentration check DC: `getConcentrationDC(damage)`
 - [x] Extract HP adjustment logic: `adjustHP(current, max, temp, amount)`
 - [x] Add ES module exports
-- [x] Import into `initiative.js` and verify functionality
+- [ ] ~~Import into `initiative.js` and verify functionality~~ — **not done** (verified
+      2026-09-18). `initiative.js` is a classic `<script>` (not `type="module"`) so
+      `initiative.html` keeps working when opened via `file://`; this module's ES `export`
+      syntax can't be parsed there. `getConcentrationDC`/`sortByInitiative` are verified
+      byte-identical to `initiative.js`'s own inline logic and cross-referenced in comments
+      on both sides, but not imported. `processDeathSave`/`adjustHP`'s heal-cap/`checkInstantDeath`/
+      `getInitiativeBonus` model 5e rules (rolled death saves, overheal cap, instant death)
+      the live app doesn't implement — see module's own header comment for details.
 
 ### 2.4 Extract Level-Up Logic
-- [x] Create `js/modules/level-up-calculations.js`
+- [x] Create `js/modules/level-up-calculations.js` — **removed 2026-09-18**, see below.
 - [x] Extract multiclass validation: `canMulticlass(currentClasses, newClass, abilities)`
 - [x] Extract spell slot calculation: `getSpellSlots(classes)`
 - [x] Extract caster level calculation: `getCasterLevel(classes)`
 - [x] Extract ASI availability: `getASICount(classes)`
 - [x] Add ES module exports
-- [x] Import into `level-up-system.js` and verify functionality
+- [ ] ~~Import into `level-up-system.js` and verify functionality~~ — **never true**. This
+      module was never imported anywhere. The live multiclass math (caster level, spell
+      slots, prerequisites) was independently reimplemented in `data/srd/level-up-data.js`
+      (`window.LevelUpData` — a classic script, genuinely wired into `level-up-system.js`
+      and `multiclass-ui.js`). As of 2026-09-18: the dead module's one correctness advantage
+      (Fighter's STR-13-OR-DEX-13 multiclass prerequisite) was ported into
+      `LevelUpData.checkMulticlassPrerequisites`, its test coverage was retargeted to the
+      live `LevelUpData` functions (`tests/unit/level-up-data-multiclass.test.js`), and the
+      dead module + its old test file were deleted. `getASICount`/`getTotalLevel` had no
+      live equivalent and were dropped entirely (multiclass ASI counting still isn't
+      implemented anywhere live — a minor, pre-existing, unaddressed gap).
 
 ### 2.5 Extract Dice Logic
 - [x] Create `js/modules/dice.js`
@@ -143,7 +160,10 @@ This document provides a step-by-step roadmap for implementing a comprehensive t
 - [x] Add ES module exports
 
 ### 2.7 Extract Storage Logic
-- [x] Create `js/modules/storage.js`
+- [x] Create `js/modules/storage.js` — **removed 2026-09-18**, never wired in (verified: zero
+      imports anywhere in `js/**/*.js` or any `.html` page). The real, live storage layer is
+      `js/indexed-db-storage.js`, an unrelated, separate implementation. Deleted along with
+      its dedicated tests; no live behavior changed.
 - [x] Extract character save/load with dependency injection
 - [x] Extract initiative save/load with dependency injection
 - [x] Allow injecting mock localStorage/IndexedDB for testing

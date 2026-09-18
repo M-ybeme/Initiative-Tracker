@@ -188,17 +188,25 @@ export const VALID_RACES = [
  * @param {string} className - Class name
  * @returns {Object} - {valid: boolean, error: string|null}
  */
-export function validateClass(className) {
+/**
+ * @param {string} className
+ * @param {string[]} [knownClasses] - injectable allowlist; defaults to the static
+ *   SRD list (VALID_CLASSES). Callers with access to homebrew content-pack data
+ *   should pass the live class list instead, e.g. Object.keys(window.LevelUpData.CLASS_DATA).
+ */
+export function validateClass(className, knownClasses = VALID_CLASSES) {
   if (!className || typeof className !== 'string') {
     return { valid: false, error: 'Class is required' };
   }
 
   const trimmed = className.trim();
 
-  // Allow subclass notation like "Fighter (Champion)"
-  const baseClass = trimmed.split('(')[0].trim();
+  // Allow subclass notation like "Fighter (Champion)", and strip the trailing level
+  // number the app's own charClass format commonly carries (e.g. "Fighter 5") — same
+  // convention as Attack-rolls.js, character-attacks.js, and character-calculations.js.
+  const baseClass = trimmed.split('(')[0].trim().replace(/\s+\d+$/, '').trim();
 
-  if (!VALID_CLASSES.includes(baseClass)) {
+  if (!knownClasses.includes(baseClass)) {
     return { valid: false, error: `'${baseClass}' is not a valid class` };
   }
 
@@ -231,9 +239,11 @@ export function validateRace(raceName) {
 /**
  * Validate complete character object
  * @param {Object} character - Character data
+ * @param {Object} [options]
+ * @param {string[]} [options.knownClasses] - injectable class allowlist, see validateClass()
  * @returns {Object} - {valid: boolean, errors: Object}
  */
-export function validateCharacter(character) {
+export function validateCharacter(character, options = {}) {
   const errors = {};
   let valid = true;
 
@@ -257,7 +267,7 @@ export function validateCharacter(character) {
 
   // Class validation (if provided)
   if (character.charClass || character.class) {
-    const classResult = validateClass(character.charClass || character.class);
+    const classResult = validateClass(character.charClass || character.class, options.knownClasses);
     if (!classResult.valid) {
       errors.class = classResult.error;
       valid = false;

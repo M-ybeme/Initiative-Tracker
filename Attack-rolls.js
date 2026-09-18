@@ -4,9 +4,11 @@
  * Pure functions for weapon attack feature bonuses and feature-aware damage rolling.
  * No DOM access, no side effects, no global state.
  *
- * character.js contains a browser-side copy of this logic inside its IIFE.
- * This module exists so the logic can be unit-tested with Vitest.
- * Phase 5 will wire character.js to consume this module directly.
+ * character.js (js/character/character.js) imports getAttackFeatureBonuses,
+ * addFlatBonusToNotation, and getConcentrationAttackBonus from here directly — verified
+ * 2026-09-18. rollDiceSimple/rollDiceWithFeatures below are NOT imported by character.js;
+ * it has its own local rollDiceWithFeatures with the same behavior. That's the one
+ * remaining unwired duplicate in this file, not a bug — out of scope for this note.
  */
 
 import { parseDiceNotation, rollDie } from './js/modules/dice.js';

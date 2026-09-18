@@ -311,6 +311,16 @@ When data is loaded from storage, the migrations module checks the `schemaVersio
 
 ## Migration Policy
 
+> **Status (2026-09-18):** `js/modules/migrations.js` (the dedicated migration module this
+> section originally documented) was never actually wired into the app and has been removed
+> as dead code. The behavior below still happens in practice — new fields get defaulted,
+> old shapes get normalized — but as scattered inline logic in `js/character/character.js`
+> (on load, on import, on character creation), not through a single `migrateCharacter()`
+> entry point. The "Adding New Migrations" steps and code examples below describe the
+> module's intended design, not the current implementation; treat them as a reference for
+> what a future consolidated migration layer should look like, not as documentation of
+> live code.
+
 ### Backwards Compatibility
 
 - **Minimum Supported Version**: Data older than the minimum supported version will still be migrated, but with warnings about potential data loss.
@@ -377,6 +387,9 @@ const CHARACTER_MIGRATIONS = {
 
 ### Migrating Character Data
 
+> Illustrative only — `js/modules/migrations.js` was removed as dead code (see Migration
+> Policy above). Real migration is the inline normalization in `js/character/character.js`.
+
 ```javascript
 import { migrateCharacter } from './js/modules/migrations.js';
 
@@ -399,6 +412,8 @@ displayCharacter(data);
 ```
 
 ### Checking If Migration Is Needed
+
+> Illustrative only — see note above; `js/modules/migrations.js` no longer exists.
 
 ```javascript
 import { needsMigration, getMigrationInfo } from './js/modules/migrations.js';

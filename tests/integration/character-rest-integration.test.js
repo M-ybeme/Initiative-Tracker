@@ -3,8 +3,11 @@
  */
 import { describe, it, expect } from 'vitest';
 import { applyShortRest, applyLongRest, rollHitDiceForHealing } from '../../js/character/character-rest.js';
-import { getSpellSlots } from '../../js/character/level-up-calculations.js';
 import { createSeededRandom } from '../../js/modules/dice.js';
+
+// data/srd/level-up-data.js is a classic script (window.LevelUpData), not an ES module.
+await import('../../data/srd/level-up-data.js');
+const getSpellSlots = (classes) => window.LevelUpData.getMulticlassSpellSlots(classes);
 
 function makeWizard(ov = {}) {
   return {

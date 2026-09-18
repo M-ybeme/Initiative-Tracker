@@ -5,6 +5,22 @@
  * Initiative Calculations Module
  * Pure functions for combat/initiative calculations
  * Extracted for testability
+ *
+ * Status (verified 2026-09-18): NOT imported into js/initiative.js at runtime.
+ * js/initiative.js is a classic (non-module) <script> so initiative.html keeps working
+ * when opened via file://; this file's `export` syntax can't be parsed outside a module
+ * context, so wiring it in would require converting js/initiative.js to type="module"
+ * (breaking file:// support) or an async dynamic-import (disproportionate complexity for
+ * these functions). Two exports are still verified byte-identical to their live inline
+ * counterparts and must be kept manually in sync — see comments at each:
+ *   - getConcentrationDC()  <-> js/initiative.js queueConcentrationCheck()
+ *   - sortByInitiative()    <-> js/initiative.js maybeSortByInitiative()
+ * The remaining exports (processDeathSave, adjustHP's heal-cap behavior, checkInstantDeath,
+ * getInitiativeBonus, sortByInitiativeWithTieBreaker) do NOT have a live equivalent — they
+ * model additional/different 5e rules (rolled death saves, massive-damage instant death,
+ * DEX-mod initiative, tie-breaking) that js/initiative.js has not implemented. They are not
+ * dead duplicates of a bug; wiring them in would be a product decision to change combat
+ * behavior, not a refactor.
  */
 
 /**
@@ -91,6 +107,11 @@ export function getConcentrationDC(damage) {
  * @param {number} tempHP - Temporary hit points
  * @param {number} amount - Positive for healing, negative for damage
  * @returns {Object} - {currentHP, tempHP, overkillDamage}
+ *
+ * NOTE: caps healing at maxHP. js/initiative.js's live healing path intentionally does NOT
+ * cap at maxHP — it lets currentHP exceed maxHP and calls elevateMaxHp() to raise maxHP to
+ * match (an "overheal raises max" house rule). This function is not a drop-in replacement
+ * for that behavior.
  */
 export function adjustHP(currentHP, maxHP, tempHP, amount) {
   let newHP = currentHP;

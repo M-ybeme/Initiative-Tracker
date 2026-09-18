@@ -46,23 +46,29 @@ This document provides a comprehensive inventory of **The DM's Toolbox** codebas
 │   ├── rules-data.js                  # Rules reference data
 │   └── modules/
 │       ├── dice.js                    # Dice rolling engine
-│       ├── storage.js                 # Character serialization
-│       ├── validation.js              # D&D 5e data validation
+│       ├── validation.js              # D&D 5e data validation (wired into character.js
+│       │                              #   import path as of 2026-09-18)
 │       ├── character-calculations.js  # Character mechanics + derived-stat recalc
 │       ├── Attack-rolls.js  # Attack feature bonuses, notation helpers
 │       ├── character-spell-data.js    # Spell slot tables, normalization, search
-│       ├── character-rest.js          # Short/long rest mechanics
-│       ├── character-combat.js        # Combat card helpers
-│       ├── character-xp.js            # XP tracking and thresholds
-│       ├── initiative-calculations.js # Combat calculations
-│       ├── level-up-calculations.js   # Multiclass/leveling math
+│       ├── character-rest.js          # Short/long rest mechanics (wired into character.js)
+│       ├── character-combat.js        # HP/death-save helpers (wired into character.js)
+│       ├── character-xp.js            # XP tracking and thresholds (wired into character.js)
+│       ├── initiative-calculations.js # Combat calculations — mostly NOT wired into
+│       │                              #   initiative.js (classic script, can't import ES
+│       │                              #   modules without breaking file:// support); see
+│       │                              #   the module's own header comment for what is/isn't
 │       ├── spell-utils.js             # Spell slot management
-│       ├── generators.js              # Random generation utilities
-│       ├── migrations.js              # Schema versioning and migration
 │       ├── content-pack-manager.js    # Content pack loading/merging
 │       ├── content-pack-runtime.js    # Applies pack records to window data
 │       ├── srd-content-filter.js      # SRD allowlist enforcement
 │       └── export-utils.js            # Export formatting
+│   # `storage.js`, `migrations.js`, `generators.js`, and `character/level-up-calculations.js`
+│   # (below) were removed 2026-09-18 as dead code — created and unit-tested, but never
+│   # imported by any live page or script. See ENGINEERING_ROADMAP.md Phase 2.3/2.4/3.2/7
+│   # for what each was superseded by (indexed-db-storage.js, inline character.js
+│   # normalization, the js/shop|loot|name|tavern subsystems, and data/srd/level-up-data.js
+│   # respectively).
 ├── data/
 │   ├── README.md                      # Data bundle conventions
 │   ├── srd/
@@ -121,11 +127,15 @@ These scripts are loaded directly by HTML pages and contain UI logic.
 - Uses localStorage keys: `dmtools.pendingInitiativeImport`
 
 **Dependencies:**
-- `js/modules/initiative-calculations.js` - Combat math
-- `js/modules/dice.js` - Dice rolling
-- `js/modules/validation.js` - Input validation
 - `js/rules-data.js` - Rules reference data
 - `data/srd/spells-data.js` - Spell database
+- **Not actually imported** (verified 2026-09-18): `initiative.js` is a classic `<script>`,
+  not `type="module"` — kept that way so `initiative.html` still works when opened via
+  `file://`. It can't import `js/modules/initiative-calculations.js` (ES `export` syntax) or
+  `js/modules/validation.js` without converting to a module and losing that. It has its own
+  inline dice-rolling and death-save/concentration-DC logic instead; see
+  `js/modules/initiative-calculations.js`'s header comment for exactly what is/isn't
+  verified-identical between the two.
 
 ---
 
@@ -153,13 +163,19 @@ These scripts are loaded directly by HTML pages and contain UI logic.
 - `js/modules/character-calculations.js` - D&D mechanics, `recalcDerivedStats`
 - `js/modules/Attack-rolls.js` - Attack feature bonuses, notation helpers
 - `js/modules/character-spell-data.js` - Spell slot tables, normalization, search
-- `js/modules/character-rest.js` - Short/long rest mechanics
-- `js/modules/storage.js` - Serialization
-- `js/modules/validation.js` - Data validation
+- `js/modules/character-rest.js` - Rest math (`calcSpellSaveDC`, `calcSpellAttackBonus`,
+  `getConcentrationCheckDC`, `calcLongRestHitDiceRestored`, `rollHitDiceForHealing`)
+- `js/modules/character-combat.js` - HP/death-save helpers (`applyDamageToHP`,
+  `applyHealingToHP`, `setTempHP`, `getDeathSaveOutcome`, `parseAttackBonus`)
+- `js/modules/character-xp.js` - XP threshold/progress math (`getXPForLevel`,
+  `getXPProgressInfo`)
+- `js/modules/validation.js` - `validateCharacter` on import (warns, doesn't block)
 - `js/modules/export-utils.js` - Export formatting
 - `js/indexed-db-storage.js` - Portrait storage
 - `data/srd/spells-data.js` - Spell database
 - `data/srd/level-up-data.js` - Class/feat data
+- **Not a dependency** (removed 2026-09-18): `js/modules/storage.js` was listed here but was
+  never actually imported — `character.js` reads/writes `localStorage`/IndexedDB directly.
 
 **Note:** `character.js` is loaded as `type="module"` and imports from the modules above directly. `multiclass-ui.js` and `character-sheet-export.js` use `defer` to ensure correct load order.
 
@@ -182,8 +198,10 @@ These scripts are loaded directly by HTML pages and contain UI logic.
 
 **Dependencies:**
 - `data/srd/level-up-data.js` - Class and race data
-- `js/modules/validation.js` - Input validation
 - `js/modules/character-calculations.js` - Modifier calculations
+- **Not a dependency** (corrected 2026-09-18): `js/modules/validation.js` was listed here but
+  isn't imported — this file validates each creation step with its own inline `validate()`
+  closures instead. `validation.js` is only actually used by `character.js`'s import path.
 
 ---
 
@@ -204,8 +222,12 @@ These scripts are loaded directly by HTML pages and contain UI logic.
 
 **Dependencies:**
 - `js/modules/character-calculations.js` - Mechanics
-- `js/modules/level-up-calculations.js` - Leveling math
-- `data/srd/level-up-data.js` - Feat/class data
+- `data/srd/level-up-data.js` - Feat/class data, and (`window.LevelUpData`) the live
+  `calculateEffectiveCasterLevel`/`getMulticlassSpellSlots`/`checkMulticlassPrerequisites`
+  multiclass math
+- **Not a dependency**: `js/modules/level-up-calculations.js` was listed here but was never
+  actually imported (it duplicated the `LevelUpData` math above with no live caller) — the
+  module was removed 2026-09-18.
 
 ---
 
@@ -223,7 +245,10 @@ These scripts are loaded directly by HTML pages and contain UI logic.
 **Globals:** None
 
 **Dependencies:**
-- `js/modules/level-up-calculations.js` - Multiclass math
+- `data/srd/level-up-data.js` (`window.LevelUpData`) - `checkMulticlassPrerequisites`,
+  `getMulticlassSpellSlots`, `getWarlockPactSlots` (the genuinely-live multiclass math)
+- **Not a dependency**: `js/modules/level-up-calculations.js`, removed 2026-09-18 — see
+  `level-up-system.js` note above.
 
 ---
 
@@ -310,23 +335,13 @@ Pure logic modules under `js/modules/`. These do not touch the DOM.
 
 ---
 
-### storage.js
+### storage.js — REMOVED 2026-09-18
 
-**Location:** `/js/modules/storage.js`
-
-**Responsibilities:**
-- Character data serialization for storage
-- Character data deserialization from storage
-- Unique ID generation for characters
-- Data validation before storage
-
-**Exports:**
-- `serializeCharacter(character)` - Prepare for storage
-- `deserializeCharacter(data)` - Restore from storage
-- `generateCharacterId()` - Create unique ID
-- `validateCharacterForStorage(character)` - Validate structure
-
-**Dependencies:** None
+`/js/modules/storage.js` was created and unit-tested but never imported by any live page or
+script — verified via exhaustive grep across `js/**/*.js` and every `.html` page's `<script>`
+tags. The real, live storage layer for characters is `js/indexed-db-storage.js` (a separate,
+unrelated implementation) plus direct `localStorage` reads/writes in `js/character/character.js`.
+Deleted along with its dedicated unit and integration tests; no live behavior changed.
 
 ---
 
@@ -344,11 +359,26 @@ Pure logic modules under `js/modules/`. These do not touch the DOM.
 **Exports:**
 - `validateCharacterName(name)` - Name rules
 - `validateAbilityScore(score)` - Score bounds (1-30)
-- `validateAllAbilities(abilities)` - All six scores
+- `validateAllAbilityScores(abilities)` - All six scores
 - `validateLevel(level)` - Level bounds (1-20)
-- `sanitizeString(str)` - XSS prevention
+- `validateClass(className, knownClasses?)` - Class allowlist check; `knownClasses` is
+  injectable (see Dependencies) so homebrew classes from content packs validate too
+- `validateRace(raceName)` - Permissive; just checks non-empty (custom races allowed)
+- `validateHitPoints(currentHP, maxHP)`, `validateArmorClass(ac)`
+- `validateCharacter(character, options?)` - Runs all of the above over a full character
+- `sanitizeFilename(name)` - Filesystem-safe export filenames
 
-**Dependencies:** None
+**Dependencies:** None directly (this module must not touch `window`/`document` — enforced by
+ESLint `no-restricted-globals` on `js/modules/**`). `validateClass`'s live-class-list check is
+dependency-injected by its caller instead: `character.js` passes
+`Object.keys(window.LevelUpData.CLASS_DATA)` when calling `validateCharacter` on import, so a
+hardcoded fallback list doesn't reject homebrew content-pack classes.
+
+**Wired in (as of 2026-09-18):** `character.js`'s `importCharactersFromFile` calls
+`validateCharacter` on each imported character and warns (console + toast) on invalid data
+without blocking the import — previously, malformed imports merged in completely silently.
+`character-creation-wizard.js` does NOT use this module; it validates each step with its own
+inline `validate()` closures, which already covers creation-time choices adequately.
 
 ---
 
@@ -438,8 +468,17 @@ Pure logic modules under `js/modules/`. These do not touch the DOM.
 - `applyShortRest(char, healAmount, diceSpent)` - Applies healing (capped at maxHP) and decrements hit dice remaining
 - `applyLongRest(char)` - Restores HP to max, clears temp HP, resets all spell slot `used` to 0, resets pact slot `used` to 0, restores `floor(total/2)` hit dice (minimum 1)
 - `rollHitDiceForHealing(sides, count, conMod, randomFn)` - Rolls hit dice with CON modifier; minimum 1 per die; injectable random function for tests
+- `calcSpellSaveDC(profBonus, abilMod)`, `calcSpellAttackBonus(profBonus, abilMod)`,
+  `getConcentrationCheckDC(damage)`, `calcLongRestHitDiceRestored(total, current)` - small
+  pure math helpers
 
 **Dependencies:** None
+
+**Wired in (as of 2026-09-18):** `character.js` calls `rollHitDiceForHealing`,
+`calcSpellSaveDC`, `calcSpellAttackBonus`, `getConcentrationCheckDC`, and
+`calcLongRestHitDiceRestored` (see below) directly. `applyShortRest`/`applyLongRest`
+themselves are NOT called — they take a plain character object, while `character.js`'s rest
+handlers read/write DOM inputs directly, so they're not a drop-in fit for that call site.
 
 ---
 
@@ -456,36 +495,51 @@ Pure logic modules under `js/modules/`. These do not touch the DOM.
 - Instant death detection
 
 **Exports:**
-- `sortByInitiative(combatants)` - Sort by initiative, DEX tiebreaker
-- `processDeathSave(combatant, roll)` - Handle death save result
-- `getConcentrationDC(damage)` - DC = max(10, damage/2)
-- `adjustHP(combatant, amount)` - HP change with temp HP
-- `checkInstantDeath(combatant, damage)` - Massive damage check
+- `sortByInitiative(combatants)`, `sortByInitiativeWithTieBreaker(combatants)` - Sort by initiative, optional DEX tiebreaker
+- `processDeathSave(roll, currentSaves)` - Handle a rolled death save (nat 20/1 rules) — no live equivalent, see below
+- `getConcentrationDC(damage)` - DC = max(10, floor(damage/2))
+- `adjustHP(currentHP, maxHP, tempHP, amount)` - HP change with temp HP (heal capped at maxHP)
+- `checkInstantDeath(overkillDamage, maxHP)` - Massive damage check — no live equivalent, see below
 
 **Dependencies:** None
+
+**Mostly NOT wired into `js/initiative.js`** (verified 2026-09-18, see the module's own header
+comment): `initiative.js` is a classic `<script>` (not `type="module"`) so `initiative.html`
+still works when opened via `file://`; this module's `export` syntax can't be parsed there.
+- `getConcentrationDC` and `sortByInitiative` ARE verified byte-identical to `initiative.js`'s
+  own inline logic (cross-referenced in comments on both sides), but manually kept in sync
+  rather than imported.
+- `processDeathSave` models a rolled d20 death save; the live UI uses manual +success/+failure
+  pip buttons with no roll — not equivalent, not wired.
+- `adjustHP`'s healing branch caps at maxHP; the live app intentionally lets healing exceed
+  maxHP and raises maxHP to match (an "overheal raises max" house rule) — not equivalent.
+- `checkInstantDeath`, `getInitiativeBonus`, and `sortByInitiativeWithTieBreaker` have no live
+  counterpart at all — they model 5e rules (massive-damage instant death, DEX-mod initiative,
+  tie-breaking) the app doesn't currently implement, not bugs to fix.
 
 ---
 
-### level-up-calculations.js
+### level-up-calculations.js — REMOVED 2026-09-18
 
-**Location:** `/js/modules/level-up-calculations.js`
+`/js/character/level-up-calculations.js` was created and unit-tested but never imported by any
+live page or script — verified via exhaustive grep. The live multiclass math
+(`canMulticlass`/`getCasterLevel`/`getSpellSlots` here) was independently reimplemented as
+`checkMulticlassPrerequisites`/`calculateEffectiveCasterLevel`/`getMulticlassSpellSlots` in
+`data/srd/level-up-data.js` (`window.LevelUpData`), which IS genuinely wired into
+`level-up-system.js` and `multiclass-ui.js`. Before deletion: this module's one correctness
+advantage — Fighter's OR-prerequisite (STR 13 **or** DEX 13) — was ported into
+`LevelUpData.checkMulticlassPrerequisites` (the live version previously had no Fighter
+prerequisite check at all), and test coverage was retargeted to the live `LevelUpData`
+functions (`tests/unit/level-up-data-multiclass.test.js`). `getASICount`/`getTotalLevel` had
+no live equivalent and were dropped entirely — multiclass ASI counting still isn't
+implemented anywhere live, a minor pre-existing gap this change doesn't address.
 
-**Responsibilities:**
-- Multiclass mechanics calculations
-- Caster level for multiclass spell slots
-- Spell slot calculation (multiclass rules)
-- ASI count across classes
-- Total level calculation
-- Multiclass prerequisite checking
-
-**Exports:**
-- `canMulticlass(character, newClass)` - Check prerequisites
-- `getCasterLevel(classes)` - Combined caster level
-- `getSpellSlots(classes)` - Slot array by level
-- `getASICount(classes)` - Total ASIs earned
-- `getTotalLevel(classes)` - Sum of all class levels
-
-**Dependencies:** None
+Also found during retargeting: `LevelUpData.calculateEffectiveCasterLevel` has a live bug —
+it skips any class whose `CLASS_DATA` entry has `spellcaster: false` (e.g. Fighter, Rogue)
+*before* checking the Eldritch Knight/Arcane Trickster third-caster subclass condition, so
+third-caster multiclass spell slots currently always compute as 0 instead of `floor(level/3)`.
+Documented in `tests/integration/level-up.test.js`; not fixed as part of this change (out of
+scope — a bug fix, not a duplicate-source-of-truth issue).
 
 ---
 
@@ -510,24 +564,17 @@ Pure logic modules under `js/modules/`. These do not touch the DOM.
 
 ---
 
-### generators.js
+### generators.js — REMOVED 2026-09-18
 
-**Location:** `/js/modules/generators.js`
-
-**Responsibilities:**
-- Seeded random number generation
-- Random selection from arrays
-- Weighted table rolling
-- Multiple unique random selections
-
-**Exports:**
-- `createSeededRandom(seed)` - Deterministic RNG
-- `pickRandom(array, randomFn)` - Pick one item
-- `pickMultipleRandom(array, count, randomFn)` - Pick N unique
-- `randomInt(min, max, randomFn)` - Random integer in range
-- `rollOnWeightedTable(table, randomFn)` - Weighted selection
-
-**Dependencies:** None
+`/js/modules/generators.js` was a small prototype (seeded RNG + pick/weighted-table helpers +
+tiny hardcoded NPC/shop/loot/name/tavern tables) that predates the real per-domain generator
+subsystems (`js/shop/`, `js/loot/`, `js/name/`, `js/tavern/`, and `npc.html`'s inline logic),
+which are 10-1000x larger and were never actually superseded by it — verified via exhaustive
+grep, it was never imported by any live page or script, and no content/algorithm in it was
+missing from the live subsystems. Deleted along with its dedicated unit test; the fabricated
+"cross-tool pipeline" test in `tests/integration/cross-tool.test.js` that chained this module
+with the also-removed `storage.js`/`validation.js` was removed too (it tested a pipeline the
+real app never wires together, not real cross-tool behavior).
 
 ---
 
@@ -670,24 +717,28 @@ Pages (UI Layer)
 │   ├── site.js
 │   ├── indexed-db-storage.js
 │   ├── data/srd/spells-data.js
-│   ├── data/srd/level-up-data.js
+│   ├── data/srd/level-up-data.js  (window.LevelUpData: also the live multiclass math —
+│   │                                calculateEffectiveCasterLevel/getMulticlassSpellSlots/
+│   │                                checkMulticlassPrerequisites/getWarlockPactSlots)
 │   ├── character-creation-wizard.js
-│   │   └── modules/validation.js
 │   │   └── modules/character-calculations.js
+│   │   (does NOT import modules/validation.js — has its own inline per-step validation)
 │   ├── level-up-system.js
 │   │   └── modules/character-calculations.js
-│   │   └── modules/level-up-calculations.js
+│   │   └── data/srd/level-up-data.js (window.LevelUpData multiclass math, see above)
 │   ├── multiclass-ui.js
-│   │   └── modules/level-up-calculations.js
+│   │   └── data/srd/level-up-data.js (window.LevelUpData multiclass math, see above)
 │   ├── character.js  [type="module"]
 │   │   └── modules/dice.js
 │   │   └── modules/character-calculations.js
 │   │   └── modules/Attack-rolls.js
 │   │   └── modules/character-spell-data.js
-│   │   └── modules/character-rest.js
-│   │   └── modules/storage.js
-│   │   └── modules/validation.js
+│   │   └── modules/character-rest.js       (rest/spell-DC math only, see module doc)
+│   │   └── modules/character-combat.js     (HP/death-save helpers)
+│   │   └── modules/character-xp.js         (XP threshold/progress math)
+│   │   └── modules/validation.js           (import-time validation only)
 │   │   └── modules/export-utils.js
+│   │   (does NOT import modules/storage.js — reads/writes localStorage/IndexedDB directly)
 │   └── character-sheet-export.js  [defer]
 │       └── modules/export-utils.js
 │
@@ -695,10 +746,13 @@ Pages (UI Layer)
 │   ├── site.js
 │   ├── rules-data.js
 │   ├── data/srd/spells-data.js
-│   └── initiative.js
-│       └── modules/initiative-calculations.js
-│       └── modules/dice.js
-│       └── modules/validation.js
+│   └── initiative.js  (classic <script>, NOT type="module" — kept that way so this page
+│       │                still works via file://; can't import ES modules below without
+│       │                losing that)
+│       └── modules/dice.js  (inline reimplementation; NOT actually imported)
+│       └── modules/initiative-calculations.js  (mostly NOT imported — see module doc;
+│                                                  getConcentrationDC/sortByInitiative are
+│                                                  manually kept in sync, not imported)
 │
 ├── journal.html
 │   ├── site.js
@@ -711,11 +765,12 @@ Pages (UI Layer)
 │
 └── generators (loot, tav, npc, name, shop)
     ├── site.js
-    └── [embedded logic using modules/generators.js]
+    └── js/shop/, js/loot/, js/name/, js/tavern/ (each split data/engine/ui), npc.html's
+        own inline logic — NOT modules/generators.js, which was removed 2026-09-18 as an
+        unused prototype that predated these and was never wired to any of them
 
 Core Modules (Logic Layer) - No DOM access
 ├── dice.js
-├── storage.js
 ├── validation.js
 ├── character-calculations.js
 ├── Attack-rolls.js
@@ -724,17 +779,18 @@ Core Modules (Logic Layer) - No DOM access
 ├── character-rest.js
 ├── character-combat.js
 ├── character-xp.js
-├── initiative-calculations.js
-├── level-up-calculations.js
+├── initiative-calculations.js  (see note above: mostly unwired)
 ├── spell-utils.js
-├── generators.js
-├── migrations.js
 └── export-utils.js
     └── character-calculations.js
 
+# Removed 2026-09-18 as dead code (created and unit-tested, never imported by live code):
+#   storage.js, migrations.js, generators.js, character/level-up-calculations.js
+
 Storage Layer
-├── indexed-db-storage.js (IndexedDB)
-└── localStorage (via modules/storage.js)
+├── indexed-db-storage.js (IndexedDB — the real live storage layer)
+└── localStorage (read/written directly by character.js; NOT via modules/storage.js,
+    which never existed as a live dependency)
 ```
 
 ---

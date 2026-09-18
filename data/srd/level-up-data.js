@@ -7037,7 +7037,7 @@ window.LevelUpData = (function() {
       'Bard': { cha: 13 },
       'Cleric': { wis: 13 },
       'Druid': { wis: 13 },
-      'Fighter': null, // No prerequisite
+      'Fighter': null, // Special OR-rule (STR 13 OR DEX 13) - handled in checkMulticlassPrerequisites()
       'Monk': { dex: 13, wis: 13 },
       'Paladin': { str: 13, cha: 13 },
       'Ranger': { dex: 13, wis: 13 },
@@ -7134,7 +7134,19 @@ window.LevelUpData = (function() {
      * @returns {Object} - {meetsRequirements: boolean, missing: Array}
      */
     checkMulticlassPrerequisites(className, abilityScores) {
-      const prereqs = this.MULTICLASS_PREREQUISITES[className];
+      // Strip subclass notation and a trailing level suffix (e.g. "Fighter (Champion) 5")
+      // before comparing, so a differently-formatted class string can't silently bypass a
+      // prerequisite check — same convention as validateClass() in js/modules/validation.js.
+      const normalizedClassName = (className || '').split('(')[0].trim().replace(/\s+\d+$/, '').trim();
+
+      // Fighter is the one 5e class with an OR requirement (STR 13 OR DEX 13)
+      // rather than the AND-of-all-entries semantics below.
+      if (normalizedClassName === 'Fighter') {
+        const meets = (abilityScores.str || 0) >= 13 || (abilityScores.dex || 0) >= 13;
+        return { meetsRequirements: meets, missing: meets ? [] : ['STR 13 or DEX 13'] };
+      }
+
+      const prereqs = this.MULTICLASS_PREREQUISITES[normalizedClassName];
 
       if (!prereqs) {
         return { meetsRequirements: true, missing: [] };
