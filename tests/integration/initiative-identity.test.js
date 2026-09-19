@@ -76,7 +76,43 @@ function makeChar(id, name, initiative, extra = {}) {
   };
 }
 
+// Each test re-imports the tracker script, and the script attaches listeners to `window` and
+// `document` (storage sync, keyboard shortcuts, beforeunload). Record them so the previous
+// instance can be detached; otherwise every earlier instance keeps reacting to later tests'
+// storage events and writes to the shared DOM and localStorage.
+let trackerListeners = [];
+function detachPreviousTracker() {
+  trackerListeners.forEach(([target, type, fn, opts]) => target.removeEventListener(type, fn, opts));
+  trackerListeners = [];
+}
+async function importTracker() {
+  const targets = [window, document];
+  // happy-dom defines addEventListener as an own property on some of these, so put back exactly
+  // what was there (its own descriptor, or nothing so the prototype's shows through again)
+  const ownDescriptors = targets.map(t => Object.getOwnPropertyDescriptor(t, 'addEventListener'));
+  const originals = targets.map(t => t.addEventListener);
+  targets.forEach((t, i) => {
+    Object.defineProperty(t, 'addEventListener', {
+      configurable: true,
+      writable: true,
+      value: function (type, fn, opts) {
+        trackerListeners.push([t, type, fn, opts]);
+        return originals[i].call(this, type, fn, opts);
+      }
+    });
+  });
+  try {
+    await import('../../js/initiative.js');
+  } finally {
+    targets.forEach((t, i) => {
+      if (ownDescriptors[i]) Object.defineProperty(t, 'addEventListener', ownDescriptors[i]);
+      else delete t.addEventListener;
+    });
+  }
+}
+
 async function loadTracker(characters, currentTurn = 0) {
+  detachPreviousTracker();
   localStorage.clear();
   localStorage.setItem('initiativeHelpSeen', '1');
   localStorage.setItem(
@@ -86,7 +122,36 @@ async function loadTracker(characters, currentTurn = 0) {
   document.body.innerHTML = bodyHtml;
   installGlobals();
   vi.resetModules();
-  await import('../../js/initiative.js');
+  await importTracker();
+  emulateRemovalFocusOut();
+}
+
+// Chromium fires focusout on a focused input while a re-render is removing it, with the target
+// still attached (measured in Chromium 143); happy-dom fires nothing on removal. Reproduce the
+// browser behavior on the two list containers so removal-triggered commits can be tested.
+function findDescriptor(obj, prop) {
+  for (let o = obj; o; o = Object.getPrototypeOf(o)) {
+    const d = Object.getOwnPropertyDescriptor(o, prop);
+    if (d) return d;
+  }
+  return null;
+}
+function emulateRemovalFocusOut() {
+  for (const id of ['initiative-order', 'mobile-initiative-order']) {
+    const root = document.getElementById(id);
+    const desc = findDescriptor(root, 'innerHTML');
+    Object.defineProperty(root, 'innerHTML', {
+      configurable: true,
+      get() { return desc.get.call(this); },
+      set(value) {
+        const active = document.activeElement;
+        if (active && active !== document.body && this.contains(active)) {
+          active.dispatchEvent(new window.FocusEvent('focusout', { bubbles: true }));
+        }
+        desc.set.call(this, value);
+      }
+    });
+  }
 }
 
 const row = id => document.querySelector(`#initiative-order tr[data-character-id="${id}"]`);
@@ -111,7 +176,8 @@ function replaceStateFromAnotherTab(characters, currentTurn = 0) {
   window.dispatchEvent(ev);
 }
 // Focus into an inline editor, change its value, and leave it, as a browser reports it
-// (focusin / focusout bubble; the tracker listens for them on the list containers).
+// (focusin / focusout bubble; the tracker listens for them on the list containers). These are
+// synthetic events: they do not move document.activeElement. Use real focus()/blur() when that matters.
 function focusIn(el) {
   el.dispatchEvent(new window.FocusEvent('focusin', { bubbles: true }));
 }
@@ -653,7 +719,9 @@ describe('Initiative Tracker: combatants are addressed by stable id', () => {
       expect(modalCalls.filter(c => c === 'hide')).toHaveLength(1);
     });
 
-    describe('inline editors (focus / keyboard)', () => {
+    // Synthetic focusin/focusout events (see the helpers above): they exercise the handlers but do
+    // not move document.activeElement. The real-focus group below covers focus-dependent behavior.
+    describe('inline editors (synthetic focus events)', () => {
       const key = (el, k) =>
         el.dispatchEvent(new window.KeyboardEvent('keydown', { key: k, bubbles: true, cancelable: true }));
 
@@ -671,23 +739,6 @@ describe('Initiative Tracker: combatants are addressed by stable id', () => {
         expect(savedById('id-B').name).toBe('Bravo');
       });
 
-      it('Escape puts the original value back without committing', async () => {
-        await loadTracker([A, B, C]);
-        const name = row('id-B').querySelector('.name-input');
-        focusIn(name);
-        name.value = 'Nope';
-        key(name, 'Escape');
-        expect(name.value).toBe('Bravo');
-        expect(savedById('id-B').name).toBe('Bravo');
-
-        const init = row('id-B').querySelector('.init-input');
-        focusIn(init);
-        init.value = '99';
-        key(init, 'Escape');
-        expect(init.value).toBe('20');
-        expect(savedById('id-B').initiative).toBe(20);
-      });
-
       it('leaving the HP field commits that combatant\'s HP once and logs it once', async () => {
         await loadTracker([A, B, C]);
         rerender(3);
@@ -700,14 +751,455 @@ describe('Initiative Tracker: combatants are addressed by stable id', () => {
         expect(damageLogFor('id-C')).toHaveLength(1);
       });
 
-      it('an editor whose combatant id is unknown commits nothing', async () => {
+      it.each([
+        ['hp', '.health-input', 3],
+        ['name', '.name-input', 'Zed'],
+        ['initiative', '.init-input', 77]
+      ])('a %s editor whose combatant id is unknown commits nothing', async (_field, sel, value) => {
         await loadTracker([A, B, C]);
-        const hp = row('id-B').querySelector('.health-input');
-        hp.dataset.characterId = 'id-not-here';
+        const input = row('id-B').querySelector(sel);
+        input.dataset.characterId = 'id-not-here';
 
-        editField(hp, 3);
+        editField(input, value);
 
-        expect(saved().characters.map(c => c.currentHP)).toEqual([20, 20, 20]);
+        expect(saved().characters.map(c => [c.name, c.currentHP, c.initiative])).toEqual([
+          ['Alpha', 20, 5], ['Bravo', 20, 20], ['Charlie', 20, 10]
+        ]);
+      });
+    });
+  });
+
+  // These use real focus (focus()/blur() fire focus+focusin / blur+focusout and set
+  // document.activeElement) and the harness's Chromium-style focusout-on-removal, so they follow
+  // what a browser does, unlike the synthetic focusIn/focusOut helpers above.
+  describe('inline editors: stale commits, Escape and Enter (real focus)', () => {
+    const ROOTS = { desktop: '#initiative-order tr', mobile: '#mobile-initiative-order .card' };
+    const find = (view, sel, id = 'id-B') =>
+      document.querySelector(`${ROOTS[view]}[data-character-id="${id}"] ${sel}`);
+    const key = (el, k) =>
+      el.dispatchEvent(new window.KeyboardEvent('keydown', { key: k, bubbles: true, cancelable: true }));
+    const hpOf = id => savedById(id).currentHP;
+    // A re-render must leave the list exactly as it found it: no duplicated or missing rows in
+    // either view, distinct ids, and every combatant still saved. (Nested renders during a
+    // removal-time focusout could in principle stack rows; Chromium currently wipes them, and this
+    // pins that so a future browser or runtime change fails a test instead of production.)
+    const expectListIntact = count => {
+      const ids = sel => [...document.querySelectorAll(sel)].map(el => el.dataset.characterId);
+      expect(ids(ROOTS.desktop)).toHaveLength(count);
+      expect(ids(ROOTS.mobile)).toHaveLength(count);
+      expect(new Set(ids(ROOTS.desktop)).size).toBe(count);
+      expect(new Set(ids(ROOTS.mobile)).size).toBe(count);
+      expect(saved().characters).toHaveLength(count);
+    };
+
+    // field: what the editor is / view: where it renders / typed: a deliberate edit
+    // external: another tab's change to Bravo / read: the model value the editor controls
+    const EDITORS = [
+      { field: 'name', view: 'desktop', sel: '.name-input', typed: 'Brutus',
+        external: { name: 'Bruno' }, read: () => savedById('id-B').name, committed: 'Brutus', newer: 'Bruno' },
+      { field: 'name', view: 'mobile', sel: '.name-input', typed: 'Brutus',
+        external: { name: 'Bruno' }, read: () => savedById('id-B').name, committed: 'Brutus', newer: 'Bruno' },
+      { field: 'hp', view: 'desktop', sel: '.health-input', typed: '7',
+        external: { currentHP: 15 }, read: () => hpOf('id-B'), committed: 7, newer: 15 },
+      { field: 'hp', view: 'mobile', sel: '.health-input', typed: '7',
+        external: { currentHP: 15 }, read: () => hpOf('id-B'), committed: 7, newer: 15 },
+      { field: 'initiative', view: 'desktop', sel: '.init-input', typed: '99',
+        external: { initiative: 30 }, read: () => savedById('id-B').initiative, committed: 99, newer: 30 }
+    ];
+
+    describe.each(EDITORS)('$field editor ($view)', e => {
+      it('an untouched editor never overwrites newer state when the list is re-rendered under it', async () => {
+        await loadTracker([A, B, C]);
+        find(e.view, e.sel).focus(); // focused, not edited
+        replaceStateFromAnotherTab([A, { ...B, ...e.external }, C]); // another tab changed Bravo
+
+        expect(e.read()).toBe(e.newer);
+        expect(find(e.view, e.sel).value).toBe(String(e.newer)); // the re-rendered field shows it too
+        expect(saved().combatLog).toHaveLength(0); // no phantom history/log from a stale write
+      });
+
+      it('a deliberate edit commits when the field is left', async () => {
+        await loadTracker([A, B, C]);
+        const input = find(e.view, e.sel);
+        input.focus();
+        input.value = e.typed;
+        input.blur();
+
+        expect(e.read()).toBe(e.committed);
+      });
+
+      it('refocusing before the edit is committed keeps the original baseline, so the edit still commits', async () => {
+        await loadTracker([A, B, C]);
+        const input = find(e.view, e.sel);
+        input.focus();
+        const baseline = input.dataset.original; // what the field showed when it gained focus
+        input.value = e.typed; // a deliberate, uncommitted edit
+
+        focusIn(input); // focus comes back to the field with no commit in between
+
+        expect(input.dataset.original).toBe(baseline); // still the pre-edit value, not the partial edit
+        input.blur();
+        expect(e.read()).toBe(e.committed);
+      });
+
+      it('a deliberate edit is not thrown away when the list is re-rendered under it', async () => {
+        await loadTracker([A, B, C]);
+        const input = find(e.view, e.sel);
+        input.focus();
+        input.value = e.typed;
+        replaceStateFromAnotherTab([A, { ...B, ...e.external }, C]);
+
+        expect(e.read()).toBe(e.committed);
+        expect(saved().characters).toHaveLength(3);
+      });
+
+      if (e.view === 'desktop') {
+        it('the list stays intact (no duplicated rows or cards) after that re-render', async () => {
+          await loadTracker([A, B, C]);
+          const input = find(e.view, e.sel);
+          input.focus();
+          input.value = e.typed;
+          replaceStateFromAnotherTab([A, { ...B, ...e.external }, C]);
+
+          expectListIntact(3);
+        });
+      } else {
+        // KNOWN BUG (predates this change; same result at 5c72cf9): the commit that an uncommitted
+        // mobile-card edit makes when another tab's update re-renders runs its own buildTable()
+        // inside the removal-time focusout of the outer render, and the outer render then appends
+        // its desktop rows on top: 6 (hidden) desktop rows, 3 cards, 3 saved. Measured in real
+        // Chromium. Fixing it needs a render guard in buildTable; that is a separate change.
+        //
+        // This is deliberately not `it.fails`, which would also accept selector drift, a broken
+        // fixture or any thrown error as "the known bug". Setup and preconditions are asserted
+        // normally, so those failures surface as themselves. Only the list-integrity check is
+        // caught, and the test then requires the exact known shape. Once buildTable is fixed the
+        // check stops throwing, this test fails on `expect(mismatch).toBeDefined()`, and this whole
+        // branch should be deleted so mobile shares the desktop test above.
+        // Tracking: no issue tracker or backlog entry exists for it yet (docs/*ROADMAP.md have none).
+        it('KNOWN BUG: the list ends up with duplicated desktop rows (6 rows, 3 cards, 3 saved)', async () => {
+          await loadTracker([A, B, C]);
+          const input = find(e.view, e.sel);
+          expect(input, 'mobile editor exists').not.toBeNull();
+          input.focus();
+          expect(document.activeElement).toBe(input);
+          input.value = e.typed;
+          expect(input.value).toBe(e.typed);
+          expect(document.querySelectorAll('#initiative-order tr')).toHaveLength(3); // healthy before
+
+          replaceStateFromAnotherTab([A, { ...B, ...e.external }, C]);
+
+          expect(e.read()).toBe(e.committed); // the scenario itself ran: the edit was not lost
+          let mismatch;
+          try { expectListIntact(3); } catch (err) { mismatch = err; }
+          expect(mismatch, 'the duplicate-row bug no longer reproduces: remove this KNOWN BUG branch').toBeDefined();
+          const ids = sel => [...document.querySelectorAll(sel)].map(el => el.dataset.characterId);
+          expect(ids('#initiative-order tr')).toHaveLength(6);
+          expect(new Set(ids('#initiative-order tr')).size).toBe(3); // each combatant twice
+          expect(ids('#mobile-initiative-order .card')).toHaveLength(3);
+          expect(new Set(ids('#mobile-initiative-order .card')).size).toBe(3);
+          expect(saved().characters).toHaveLength(3);
+        });
+      }
+    });
+
+    it('focusing and leaving the HP field without editing does not re-render, so the next click is not lost', async () => {
+      await loadTracker([A, B, C]);
+      const hp = find('desktop', '.health-input');
+      const minusFive = find('desktop', '.hit-btn[data-delta="-5"]');
+      hp.focus();
+      hp.blur(); // what pressing the mouse on another control does first
+
+      click(minusFive);
+
+      expect(hpOf('id-B')).toBe(15);
+    });
+
+    // After a commit attempt that leaves the input in the page (rejected, normalized, or a no-op),
+    // the baseline must be what the field now shows, so the next focus/blur is judged against it.
+    describe('the baseline after a commit attempt is what the field shows', () => {
+      it('a rejected empty name is put back and becomes the baseline', async () => {
+        await loadTracker([A, B, C]);
+        const input = find('desktop', '.name-input');
+        input.focus();
+        input.value = '';
+        input.blur();
+
+        expect(input.isConnected).toBe(true); // rejected: nothing re-rendered
+        expect(input.value).toBe('Bravo');
+        expect(input.dataset.original).toBe('Bravo');
+        expect(savedById('id-B').name).toBe('Bravo');
+      });
+
+      it('an HP entry that normalizes to the current value shows that value and becomes the baseline', async () => {
+        await loadTracker([A, B, C]);
+        const input = find('desktop', '.health-input');
+        input.focus();
+        input.value = '020'; // parses to the 20 the model already has
+        input.blur();
+
+        expect(input.isConnected).toBe(true);
+        expect(input.value).toBe('20');
+        expect(input.dataset.original).toBe('20');
+        expect(hpOf('id-B')).toBe(20);
+        click(document.getElementById('undo-btn')); // no history entry was made
+        expect(input.isConnected).toBe(true);
+      });
+
+      it('a no-op initiative entry keeps what was typed as the baseline', async () => {
+        await loadTracker([A, B, C]);
+        const input = find('desktop', '.init-input');
+        input.focus();
+        input.value = '020'; // parses to the 20 the model already has: nothing to commit
+        input.blur();
+
+        expect(input.isConnected).toBe(true);
+        expect(input.value).toBe('020');
+        expect(input.dataset.original).toBe('020');
+        expect(savedById('id-B').initiative).toBe(20);
+      });
+
+      it('leaving and returning to a field after a rejected commit stays quiet', async () => {
+        await loadTracker([A, B, C]);
+        const input = find('desktop', '.name-input');
+        input.focus();
+        input.value = '';
+        input.blur();
+
+        input.focus();
+        input.blur();
+
+        expect(input.isConnected).toBe(true); // no rebuild, no history
+        click(document.getElementById('undo-btn'));
+        expect(input.isConnected).toBe(true);
+      });
+    });
+
+    describe.each([
+      { field: 'name', sel: '.name-input', typed: 'Nope', original: 'Bravo', read: () => savedById('id-B').name },
+      { field: 'initiative', sel: '.init-input', typed: '99', original: '20', read: () => String(savedById('id-B').initiative) }
+    ])('Escape in the $field editor', e => {
+      it('cancels the edit, is not committed by the focusout that follows, and nothing re-renders', async () => {
+        await loadTracker([A, B, C]);
+        const rowEl = row('id-B');
+        const input = rowEl.querySelector(e.sel);
+        input.focus();
+        expect(document.activeElement).toBe(input); // really focused, not just an event
+        input.value = e.typed;
+        expect(input.value).toBe(e.typed); // the user changed it
+
+        key(input, 'Escape'); // restores the value and blurs, so a real focusout follows
+
+        expect(document.activeElement).not.toBe(input); // it really lost focus: the focusout path ran
+        expect(input.value).toBe(e.original);
+        expect(input.dataset.original).toBe(e.original);
+        expect(e.read()).toBe(e.original);
+        expect(rowEl.isConnected).toBe(true); // no rebuild, so the cancelled value was not re-committed
+        click(document.getElementById('undo-btn')); // nothing was pushed, so there is nothing to undo
+        expect(rowEl.isConnected).toBe(true);
+      });
+
+      it('still restores the original after the field was refocused mid-edit', async () => {
+        await loadTracker([A, B, C]);
+        const input = row('id-B').querySelector(e.sel);
+        input.focus();
+        input.value = e.typed;
+        focusIn(input); // focus comes back with no commit in between
+
+        key(input, 'Escape');
+
+        expect(input.value).toBe(e.original); // the baseline survived the refocus
+        expect(e.read()).toBe(e.original);
+      });
+    });
+
+    it('Enter commits a deliberate edit exactly once, and an untouched Enter commits nothing', async () => {
+      await loadTracker([A, B, C]);
+      const untouched = find('desktop', '.name-input');
+      untouched.focus();
+      key(untouched, 'Enter');
+      click(document.getElementById('undo-btn'));
+      expect(untouched.isConnected).toBe(true); // no history entry, nothing to undo
+
+      const input = find('desktop', '.name-input');
+      input.focus();
+      input.value = 'Brutus';
+      key(input, 'Enter'); // commit, re-render, and the removal-time focusout that follows
+      expect(savedById('id-B').name).toBe('Brutus');
+
+      click(document.getElementById('undo-btn'));
+      expect(savedById('id-B').name).toBe('Bravo'); // one entry: a double commit would need two undos
+    });
+  });
+
+  // Combatant data reaches the templates from saved sessions, imports, and other pages, so any
+  // value can contain quotes or markup. These check the rendered DOM: the value shows up literally,
+  // no extra element or attribute is created, and nothing hostile can route an action.
+  //
+  // Known harness gap: happy-dom decodes only &amp; and &quot; inside attribute values (text nodes
+  // decode everything); real browsers decode every character reference there. So a value containing
+  // < > or ' is escaped correctly but cannot be read back literally from an attribute in happy-dom.
+  // Exact literals for those characters are asserted in tests/e2e/initiative-attribute-safety.spec.js
+  // (real Chromium); here they are covered structurally (nothing injected, nothing routable).
+  describe('hostile values in combatant data', () => {
+    const ROOTS = { desktop: '#initiative-order tr', mobile: '#mobile-initiative-order .card' };
+    const view = (v, id) =>
+      [...document.querySelectorAll(ROOTS[v])].find(el => el.dataset.characterId === id);
+    const key = (el, k) =>
+      el.dispatchEvent(new window.KeyboardEvent('keydown', { key: k, bubbles: true, cancelable: true }));
+    const HOSTILE = [
+      ['double quotes', 'He said "hi"'],
+      ['single quotes', "It's 'quoted'"],
+      ['angle brackets and ampersand', '<b>bold</b> & <i>it</i>'],
+      ['entity look-alikes (must not be decoded)', 'Tom &amp; Jerry &lt;3 &quot;'],
+      ['attribute breakout', '" data-action="delete" x="'],
+      ['single-quote breakout', "' data-action='delete' onfocus='window.__pwned=1' x='"],
+      ['tag breakout', '"><img src=x onerror="window.__pwned=1">'],
+      ['script and textarea close', '</textarea><script>window.__pwned=1</script>']
+    ];
+    const cases = HOSTILE.flatMap(([label, name]) =>
+      ['desktop', 'mobile'].map(v => ({ label, name, v }))
+    );
+    const attrNames = el => el.getAttributeNames().sort();
+
+    afterEach(() => { delete window.__pwned; });
+
+    it.each(cases)('a name with $label renders literally and inert ($v)', async ({ name, v }) => {
+      const plain = makeChar('id-P', 'Plain', 15);
+      const hostile = makeChar('id-X', name, 10);
+      await loadTracker([plain, hostile, C]);
+
+      const plainRow = view(v, 'id-P');
+      const hostileRow = view(v, 'id-X');
+      const input = hostileRow.querySelector('.name-input');
+
+      // the value is exactly what was stored (where happy-dom can show it), and the input has
+      // exactly the attributes a benign one has
+      if (!/[<>']/.test(name)) expect(input.value).toBe(name);
+      expect(attrNames(input)).toEqual(attrNames(plainRow.querySelector('.name-input')));
+
+      // nothing was injected: same actionable controls as a benign row, all buttons, all this combatant's
+      const actions = row => [...row.querySelectorAll('[data-action]')];
+      expect(actions(hostileRow).map(el => el.dataset.action).sort())
+        .toEqual(actions(plainRow).map(el => el.dataset.action).sort());
+      actions(hostileRow).forEach(el => {
+        expect(el.tagName).toBe('BUTTON');
+        expect(el.dataset.characterId).toBe('id-X');
+      });
+      expect(hostileRow.querySelectorAll('input[data-action]')).toHaveLength(0);
+      expect(hostileRow.querySelector('img, script, iframe')).toBeNull();
+      [hostileRow, ...hostileRow.querySelectorAll('*')].forEach(el =>
+        el.getAttributeNames().forEach(a => expect(a.startsWith('on'), `${a} on <${el.tagName}>`).toBe(false))
+      );
+      expect(window.__pwned).toBeUndefined();
+
+      // touching the field cannot run an action
+      const before = JSON.stringify(saved().characters);
+      input.focus();
+      click(input);
+      key(input, 'Tab');
+      input.blur();
+      expect(JSON.stringify(saved().characters)).toBe(before);
+      expect(savedOrder()).toEqual(['id-P', 'id-X', 'id-C']);
+    });
+
+    it.each(cases)('editing still works and the value survives re-renders without being re-escaped ($label, $v)', async ({ name, v }) => {
+      await loadTracker([makeChar('id-X', name, 10), A]);
+      const input = () => view(v, 'id-X').querySelector('.name-input');
+      const typed = 'Renamed "ok" & &amp; done'; // (< > ' round-trips are asserted in the real-browser spec)
+
+      input().focus();
+      input().value = typed;
+      input().blur();
+      expect(savedById('id-X').name).toBe(typed);
+      expect(input().value).toBe(typed);
+
+      for (let i = 0; i < 3; i++) click(view(v, 'id-A').querySelector('.react-btn')); // re-render
+      expect(input().value).toBe(typed); // still the literal text, not entity-mangled
+      expect(savedById('id-X').name).toBe(typed);
+    });
+
+    it.each(['desktop', 'mobile'])('a type, AC, status name and status icon with markup are shown as text, not parsed (%s)', async v => {
+      const evil = makeChar('id-X', 'Evil', 10, {
+        type: '<img src=x onerror="window.__pwned=1">',
+        ac: '<b id="injected">9</b>',
+        status: [
+          { name: '" onmouseover="window.__pwned=1" x="', icon: '<script>window.__pwned=1</script>' },
+          { name: '"><img src=x onerror="window.__pwned=1">', icon: '<b>hot</b>' }
+        ]
+      });
+      await loadTracker([evil, A]);
+
+      const rowEl = view(v, 'id-X');
+      expect(rowEl.querySelector('img, script, b')).toBeNull();
+      expect(document.getElementById('injected')).toBeNull();
+      expect(rowEl.textContent).toContain('<img src=x onerror="window.__pwned=1">'); // type, shown as text
+      const [first, second] = rowEl.querySelectorAll('.status-chip');
+      expect(first.getAttribute('title')).toBe('" onmouseover="window.__pwned=1" x="');
+      expect(first.getAttributeNames().sort()).toEqual(['class', 'title']);
+      expect(second.getAttributeNames().sort()).toEqual(['class', 'title']);
+      expect(first.textContent).toBe('<script>window.__pwned=1</script>'); // icon, shown as text
+      expect(second.textContent).toBe('<b>hot</b>');
+      const tipRow = rowEl.querySelector('.status-icon-row');
+      expect(tipRow.getAttribute('title')).toContain('" onmouseover="window.__pwned=1" x="');
+      expect(tipRow.getAttributeNames()).not.toContain('onmouseover');
+      expect(window.__pwned).toBeUndefined();
+    });
+
+    it('an id with quotes and markup renders as one attribute value and its controls still route', async () => {
+      const id = 'x" data-action="delete" y="'; // (a < > id is asserted in the real-browser spec)
+      await loadTracker([makeChar(id, 'Odd id', 10), A]);
+
+      const rowEl = view('desktop', id);
+      expect(rowEl).toBeDefined();
+      rowEl.querySelectorAll('[data-character-id]').forEach(el => expect(el.dataset.characterId).toBe(id));
+      expect(rowEl.querySelectorAll('input[data-action]')).toHaveLength(0);
+
+      click(rowEl.querySelector('.hit-btn[data-delta="-5"]'));
+      expect(saved().characters.find(c => c.id === id).currentHP).toBe(15);
+      expect(savedOrder()).toHaveLength(2);
+    });
+
+    // Defense in depth: even if a hostile attribute did reach the DOM, the router ignores it.
+    describe('the delegated router only acts on the controls it expects', () => {
+      it('ignores data-action on an input, and on a non-button element', async () => {
+        await loadTracker([A, B, C]);
+        const rowEl = row('id-A');
+        const asInput = document.createElement('input');
+        asInput.dataset.action = 'delete';
+        asInput.dataset.characterId = 'id-A';
+        const asSpan = document.createElement('span');
+        asSpan.dataset.action = 'delete';
+        asSpan.dataset.characterId = 'id-A';
+        rowEl.append(asInput, asSpan);
+
+        click(asInput);
+        click(asSpan);
+
+        expect(savedOrder()).toEqual(['id-A', 'id-B', 'id-C']);
+        click(rowEl.querySelector('.hit-btn[data-delta="-5"]')); // real buttons still work
+        expect(savedById('id-A').currentHP).toBe(15);
+      });
+
+      it('still resolves a click on an icon inside a button', async () => {
+        await loadTracker([A, B, C]);
+        click(row('id-A').querySelector('.duplicate-btn i'));
+        expect(saved().characters).toHaveLength(4);
+      });
+
+      it('ignores data-field on anything that is not an input', async () => {
+        await loadTracker([A, B, C]);
+        const fake = document.createElement('div');
+        fake.tabIndex = 0;
+        fake.dataset.field = 'hp'; // an hp "editor" that is not an input would read as 0 and zero the HP
+        fake.dataset.characterId = 'id-A';
+        row('id-A').append(fake);
+
+        fake.focus();
+        fake.blur();
+
+        expect(savedById('id-A').currentHP).toBe(20);
+        expect(saved().combatLog).toHaveLength(0);
       });
     });
   });

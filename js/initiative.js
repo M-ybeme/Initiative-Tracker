@@ -153,8 +153,17 @@ const statusEffects = [
     if (!id) return -1;
     return characters.findIndex(c => c.id === id);
   }
-  function escAttr(v) {
-    return String(v).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  // Escapes a data-derived value for a template literal. Correct in element text and in a quoted
+  // attribute value (the templates use double quotes; `'` is escaped too so a single-quoted or
+  // future template stays safe). `&` goes first so an entity-looking name like "&amp;" is kept
+  // literally, and values are escaped once, at render, from the raw model value.
+  function escHtml(v) {
+    return String(v)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
   }
   const undoStack = [];             
   const UNDO_LIMIT = 50;          
@@ -713,9 +722,9 @@ $('clear-dice-history').addEventListener('click', ()=>{
        
     const effectChips = c.status.map(s => {
       const rem = (typeof s.remaining === 'number')
-        ? ` data-remaining="${s.remaining}"`
+        ? ` data-remaining="${escHtml(s.remaining)}"`
         : '';
-      return `<span class="status-chip"${rem} title="${s.name}">${s.icon}</span>`;
+      return `<span class="status-chip"${rem} title="${escHtml(s.name)}">${escHtml(s.icon)}</span>`;
     }).join('');
   
     if (!concChip && !effectChips) {
@@ -1267,7 +1276,9 @@ $('clear-dice-history').addEventListener('click', ()=>{
   };
 
   function handleCombatantClick(e) {
-    const el = e.target.closest?.('[data-action]'); // nested icons/spans resolve to their button
+    // Every combatant action is a <button>; a data-action on anything else (an input, a span) is
+    // never routed. Nested icons/spans inside a button still resolve to it through closest().
+    const el = e.target.closest?.('button[data-action]');
     if (!el || !e.currentTarget.contains(el) || el.disabled) return;
     if (!Object.prototype.hasOwnProperty.call(combatantActions, el.dataset.action)) return;
     const c = getCharacterById(el.dataset.characterId);
@@ -1276,8 +1287,14 @@ $('clear-dice-history').addEventListener('click', ()=>{
   }
 
   // Inline editors commit when they lose focus; name and initiative also commit on Enter and
-  // revert on Escape. The value at focus time is kept on the input (data-original) because a
-  // delegated handler has no per-input closure to hold it.
+  // revert on Escape. The value shown when a field gained focus is kept on the input
+  // (data-original) because a delegated handler has no per-input closure to hold it, and a field
+  // only commits if its value differs from that. Leaving a field you did not change must never
+  // write its rendered text back over newer state: another tab can save and re-render this list
+  // while a field is focused, and Chromium then fires focusout on the input being removed.
+  function isEdited(inp) {
+    return inp.value !== (inp.dataset.original ?? inp.defaultValue);
+  }
   function commitName(inp) {
     const c = getCharacterById(inp.dataset.characterId);
     if (!c) return;
@@ -1295,8 +1312,9 @@ $('clear-dice-history').addEventListener('click', ()=>{
     if (!c) return;
     const newHP = Math.max(0, parseInt(inp.value, 10) || 0);
     const oldHP = c.currentHP;
+    if (newHP === oldHP) { inp.value = String(oldHP); return; } // nothing to write or re-render
     const beforeTHP = c.tempHP || 0;
-    if (newHP !== oldHP) pushHistory(`HP set for ${c.name}`);
+    pushHistory(`HP set for ${c.name}`);
     if (newHP < oldHP) {
       if (c.concentration) {
         c.concDamagePending = (c.concDamagePending || 0) + (oldHP - newHP);
@@ -1307,31 +1325,26 @@ $('clear-dice-history').addEventListener('click', ()=>{
     }
     c.currentHP = newHP;
     elevateMaxHp(c);
-    if (newHP !== oldHP) {
-      const details = [];
-      if (oldHP > 0 && newHP <= 0) details.push('Dropped to 0 HP');
-      if (oldHP <= 0 && newHP > 0) details.push('Back above 0 HP (death saves reset)');
-      logHpChange(c, {
-        type: newHP < oldHP ? 'damage' : 'heal',
-        summary: newHP < oldHP ? `Damage ${oldHP - newHP}` : `Heal ${newHP - oldHP}`,
-        hpBefore: oldHP,
-        hpAfter: newHP,
-        thpBefore: beforeTHP,
-        thpAfter: beforeTHP,
-        source: 'manual-input',
-        details: details.join(' • ') || undefined,
-        deathSaves: (oldHP <= 0 && newHP > 0) ? { ...c.deathSaves } : undefined
-      });
-    }
+    const details = [];
+    if (oldHP > 0 && newHP <= 0) details.push('Dropped to 0 HP');
+    if (oldHP <= 0 && newHP > 0) details.push('Back above 0 HP (death saves reset)');
+    logHpChange(c, {
+      type: newHP < oldHP ? 'damage' : 'heal',
+      summary: newHP < oldHP ? `Damage ${oldHP - newHP}` : `Heal ${newHP - oldHP}`,
+      hpBefore: oldHP,
+      hpAfter: newHP,
+      thpBefore: beforeTHP,
+      thpAfter: beforeTHP,
+      source: 'manual-input',
+      details: details.join(' • ') || undefined,
+      deathSaves: (oldHP <= 0 && newHP > 0) ? { ...c.deathSaves } : undefined
+    });
     buildTable();
   }
   function commitInitiative(inp) {
     const newVal = parseInt(inp.value, 10) || 0;
     const char = getCharacterById(inp.dataset.characterId);
-    if (!char) {
-      inp.value = inp.dataset.original ?? inp.defaultValue;
-      return;
-    }
+    if (!char) return;
     if (char.initiative !== newVal) {
       pushHistory(`Set initiative for ${char.name}`);
       char.initiative = newVal;
@@ -1340,24 +1353,37 @@ $('clear-dice-history').addEventListener('click', ()=>{
     }
   }
   const inlineFieldCommits = { name: commitName, hp: commitHp, initiative: commitInitiative };
-  const enterEscapeFields = ['name', 'initiative'];
+  // Fields that also handle Enter/Escape. HP has no key handling on purpose: leaving it commits.
+  const keyboardFields = ['name', 'initiative'];
 
   function inlineFieldOf(target) {
-    const field = target?.dataset?.field;
+    if (target?.tagName !== 'INPUT') return null; // only real inputs are editors, whatever attributes another element carries
+    const field = target.dataset.field;
     return field && Object.prototype.hasOwnProperty.call(inlineFieldCommits, field) ? field : null;
   }
+  function commitInlineField(inp) {
+    const field = inlineFieldOf(inp);
+    if (!field || !isEdited(inp)) return;
+    // Pre-set the baseline: a commit that re-renders removes this input, and the focusout that
+    // removal fires would otherwise see it as still edited and commit the same edit twice.
+    inp.dataset.original = inp.value;
+    inlineFieldCommits[field](inp);
+    // If the input survived (rejected, normalized or no-op commit), the baseline is what it now shows.
+    if (inp.isConnected) inp.dataset.original = inp.value;
+  }
   function handleCombatantFocusIn(e) {
-    const field = inlineFieldOf(e.target);
-    if (field && enterEscapeFields.includes(field)) e.target.dataset.original = e.target.value;
+    // Captured once: focus can return to a field before its edit was committed, and re-reading the
+    // value then would make the edit look like the original. Every commit path rewrites it after.
+    if (inlineFieldOf(e.target)) e.target.dataset.original ??= e.target.value;
   }
   function handleCombatantFocusOut(e) {
-    const field = inlineFieldOf(e.target);
-    if (field) inlineFieldCommits[field](e.target);
+    commitInlineField(e.target);
   }
   function handleCombatantKeydown(e) {
     const field = inlineFieldOf(e.target);
-    if (!field || !enterEscapeFields.includes(field)) return;
-    if (e.key === 'Enter') { e.preventDefault(); inlineFieldCommits[field](e.target); }
+    if (!field || !keyboardFields.includes(field)) return;
+    if (e.key === 'Enter') { e.preventDefault(); commitInlineField(e.target); }
+    // Escape restores what the field showed when it gained focus; the blur that follows then finds it unedited.
     if (e.key === 'Escape') { e.target.value = e.target.dataset.original ?? e.target.defaultValue; e.target.blur(); }
   }
 
@@ -1404,7 +1430,7 @@ $('clear-dice-history').addEventListener('click', ()=>{
       const laMax = c.legendaryActions?.max ?? 0;
       const laRem = c.legendaryActions?.remaining ?? 0;
       // `i` below is display position only (active turn / on-deck); handlers target `cid`.
-      const cid = escAttr(c.id);
+      const cid = escHtml(c.id);
       // Desktop row
       const tr = document.createElement('tr');
       tr.dataset.characterId = c.id;
@@ -1420,14 +1446,14 @@ $('clear-dice-history').addEventListener('click', ()=>{
         </td>
         <td class="${isDowned ? 'text-decoration-line-through' : ''}">
           <input type="text" class="form-control form-control-sm name-input" data-field="name"
-                 value="${c.name}" data-character-id="${cid}" />
+                 value="${escHtml(c.name)}" data-character-id="${cid}" />
         </td>
-        <td>${c.type}</td>
-        <td><input type="number"class="form-control form-control-sm init-input" data-field="initiative"value="${c.initiative}"data-character-id="${cid}"></td>
-        <td class="col-ac">${c.ac ?? '-'}</td>
+        <td>${escHtml(c.type)}</td>
+        <td><input type="number"class="form-control form-control-sm init-input" data-field="initiative"value="${escHtml(c.initiative)}"data-character-id="${cid}"></td>
+        <td class="col-ac">${escHtml(c.ac ?? '-')}</td>
         <td class="col-health">
           <div class="d-flex align-items-center">
-            <input type="number" class="form-control form-control-sm health-input ${hpClass(pct)}" data-field="hp" value="${c.currentHP}" data-character-id="${cid}" style="max-width:6rem">
+            <input type="number" class="form-control form-control-sm health-input ${hpClass(pct)}" data-field="hp" value="${escHtml(c.currentHP)}" data-character-id="${cid}" style="max-width:6rem">
             <div class="btn-group btn-group-sm ms-1 hp-controls" role="group">
               <button class="btn btn-outline-light hit-btn" data-action="hit" data-delta="-5" data-character-id="${cid}">-5</button>
               <button class="btn btn-outline-light hit-btn" data-action="hit" data-delta="-1" data-character-id="${cid}">-1</button>
@@ -1451,7 +1477,7 @@ $('clear-dice-history').addEventListener('click', ()=>{
         <td>
           <div class="d-flex align-items-center justify-content-between w-100">
             <div class="d-flex align-items-center gap-2">
-              <div class="status-icon-row" data-bs-toggle="tooltip" data-bs-placement="top" title="${statusTooltipText(c)}">
+              <div class="status-icon-row" data-bs-toggle="tooltip" data-bs-placement="top" title="${escHtml(statusTooltipText(c))}">
                 ${renderStatusHtml(c)}
               </div>
               ${isDowned ? `
@@ -1509,16 +1535,16 @@ $('clear-dice-history').addEventListener('click', ()=>{
         <div class="card-body">
           <h5 class="card-title mb-1 d-flex align-items-center gap-2 flex-wrap">
             <input type="text" class="form-control form-control-sm name-input" data-field="name"
-                   style="max-width: 240px" value="${c.name}" data-character-id="${cid}">
+                   style="max-width: 240px" value="${escHtml(c.name)}" data-character-id="${cid}">
             <small class="text-muted">
-              (<span class="meta-type-init">${c.type} • Init ${c.initiative}</span>
-               <span class="meta-ac"> • AC ${c.ac ?? '-'}</span>)
+              (<span class="meta-type-init">${escHtml(c.type)} • Init ${escHtml(c.initiative)}</span>
+               <span class="meta-ac"> • AC ${escHtml(c.ac ?? '-')}</span>)
             </small>
             ${c.concentration ? '<span class="ms-1 text-warning" title="Concentration"><i class="bi bi-star-fill"></i></span>' : ''}
             ${isDead ? '<span class="ds-dead ms-1" title="Failed 3 death saves">&#x1F480; Dead</span>' : ''}
           </h5>
           <div class="mb-1">HP:
-            <input type="number" class="form-control form-control-sm health-input ${hpClass(pct)} d-inline-block" data-field="hp" style="max-width:6rem" value="${c.currentHP}" data-character-id="${cid}">
+            <input type="number" class="form-control form-control-sm health-input ${hpClass(pct)} d-inline-block" data-field="hp" style="max-width:6rem" value="${escHtml(c.currentHP)}" data-character-id="${cid}">
             <div class="btn-group btn-group-sm ms-1 hp-controls">
               <button class="btn btn-outline-light hit-btn" data-action="hit" data-delta="-5" data-character-id="${cid}">-5</button>
               <button class="btn btn-outline-light hit-btn" data-action="hit" data-delta="-1" data-character-id="${cid}">-1</button>
@@ -1532,10 +1558,10 @@ $('clear-dice-history').addEventListener('click', ()=>{
             </div>
           </div>
           <div class="d-flex align-items-center justify-content-between">
-            <div class="status-icon-row" data-bs-toggle="tooltip" title="${statusTooltipText(c)}">
+            <div class="status-icon-row" data-bs-toggle="tooltip" title="${escHtml(statusTooltipText(c))}">
               ${c.status.map(s=>{
-                const rem = (typeof s.remaining==='number') ? ` data-remaining="${s.remaining}"` : '';
-                return `<span class="status-chip"${rem} title="${s.name}">${s.icon}</span>`;
+                const rem = (typeof s.remaining==='number') ? ` data-remaining="${escHtml(s.remaining)}"` : '';
+                return `<span class="status-chip"${rem} title="${escHtml(s.name)}">${escHtml(s.icon)}</span>`;
               }).join('') || '<span class="text-secondary" style="opacity:.6;">—</span>'}
             </div>
             <div class="notes-actions">
