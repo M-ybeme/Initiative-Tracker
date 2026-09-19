@@ -43,6 +43,8 @@ This document provides a comprehensive inventory of **The DM's Toolbox** codebas
 │   ├── character-sheet-export.js      # Export to PDF/PNG/Word
 │   ├── combat-mode.js                 # Combat Mode card view (classic script)
 │   ├── polymorph-notes.js             # Polymorph / True Polymorph note text (pure, ES module)
+│   ├── character-portrait.js          # Portrait picture + edit dialog (ES module)
+│   ├── character-send-to.js           # Send to Initiative Tracker / Battle Map + token preview (ES module)
 │   ├── journal-export.js              # Journal export utilities
 │   ├── indexed-db-storage.js          # IndexedDB storage layer
 │   ├── rules-data.js                  # Rules reference data
@@ -175,6 +177,11 @@ These scripts are loaded directly by HTML pages and contain UI logic.
   `getXPProgressInfo`)
 - `js/character/polymorph-notes.js` - Polymorph / True Polymorph note text (pure). `character.js` keeps the
   textarea and character handling and the `window.appendPolymorphNotesToSpellNotes` bridge for classic scripts
+- `js/character/character-portrait.js` - the portrait on the sheet and its edit dialog (file/URL, zoom, drag); owns the
+  dialog's working copy, the portrait itself stays on the character
+- `js/character/character-send-to.js` - Send to the Initiative Tracker / Battle Map (stages
+  `dmtools.pendingImport` / `dmtools.pendingBattleMapImport` in localStorage, then navigates) and the token preview
+  dialog; `character.js` passes each module the few sheet functions it needs and calls their `wire*Events`
 - `js/modules/validation.js` - `validateCharacter` on import (warns, doesn't block)
 - `js/modules/export-utils.js` - Export formatting
 - `js/indexed-db-storage.js` - Portrait storage
@@ -780,6 +787,8 @@ Pages (UI Layer)
 │   │   └── modules/character-combat.js     (HP/death-save helpers)
 │   │   └── modules/character-xp.js         (XP threshold/progress math)
 │   │   └── character/polymorph-notes.js    (Polymorph note text; pure)
+│   │   └── character/character-portrait.js (portrait picture + edit dialog)
+│   │   └── character/character-send-to.js  (send to tracker / battle map, token preview)
 │   │   └── modules/validation.js           (import-time validation only)
 │   │   └── modules/export-utils.js
 │   │   (does NOT import modules/storage.js — reads/writes localStorage/IndexedDB directly)

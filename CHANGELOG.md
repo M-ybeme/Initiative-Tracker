@@ -22,6 +22,12 @@ The DM's Toolbox has evolved through focused feature releases. Minor versions (2
 
 ## [Unreleased]
 
+### Changed
+- **Character sheet: portrait, token preview, and Send to code moved out of `character.js`** into `js/character/character-portrait.js` (the portrait and its edit dialog) and `js/character/character-send-to.js` (Send to the Initiative Tracker / Battle Map and the token preview). Same behavior: the tracker and Battle Map hand-off payloads, the generated token images, and the saved portrait data are unchanged
+
+### Tests / Internal
+- End-to-end and unit tests for portrait editing, the token preview, and both Send to payloads
+
 ### Known issues
 - **Flaky end-to-end test: "a blank count is invalid, not too many, and nothing is rolled"** (`tests/e2e/dice-callers.spec.js`, Character Sheet hit-dice count) — this test fails intermittently. It has failed once in a full-suite run, once in a run of three solo runs, and once in a comparison run, and passes on most other runs (eight consecutive repeat runs, and two later full-suite runs, all passed). The cause has not been identified; the likely area is timing around the hit-dice modal and the toast it asserts on, and the failure has not been captured with a message. It has not been observed as a product bug: the behavior it checks (a blank hit-dice count shows "Invalid number of hit dice to spend." instead of the over-limit message, and nothing is rolled) works when exercised by hand and in every passing run. Re-run before treating a red result on this test as a regression, and harden the test's waits when it is next touched.
 
