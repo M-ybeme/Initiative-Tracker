@@ -1,11 +1,11 @@
 const DM_TOOLBOX_BUILD = {
   name: "The DM's Toolbox",
-  version: "2.3.5",
+  version: "2.3.6",
   recentChanges: [
-    "Fix: Initiative Tracker concentration checks no longer trigger on damage taken before concentration was started (or after a previous spell's concentration had already ended)",
-    "Fix: Compendium Bestiary fallback (dnd5eapi.co) updated to its new versioned API path, removing a 301 redirect on every fallback load",
-    "Fix: Compendium Bestiary fallback now backfills CR/type/size in the background so the CR and Type filters work correctly when Open5e is unreachable",
-    "Improved: Initiative Tracker current-turn row highlight redesigned to a clean frame instead of a striped gradient; defeated combatants (0 HP, 3 failed death saves) now get a dedicated skull badge and dimmed row"
+    "Fix: Initiative Tracker actions now find their combatant by stable id, so re-sorting, deleting, dragging, undo, or another tab's update can no longer send an action to the wrong combatant; duplicating ahead of the active combatant no longer shifts the turn",
+    "Fix: Initiative Tracker inline editors no longer write stale values over newer state, an empty HP or initiative field is rejected instead of becoming 0, and re-entrant renders no longer duplicate desktop rows",
+    "Fix: Character Manager Fighter multiclass prerequisite now accepts STR 13 or DEX 13",
+    "Improved: one shared dice engine for the Initiative Tracker, character sheet, Combat Mode, wizard, level-up, and Encounter Builder; character import now validates and warns about malformed data"
   ],
   buildTime: new Date().toISOString(),
   author: "Maybeme"

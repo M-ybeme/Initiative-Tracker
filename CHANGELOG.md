@@ -16,7 +16,7 @@ The DM's Toolbox has evolved through focused feature releases. Minor versions (2
 - **1.9.x**: Battle map measurement tools, persistent fog shapes, and generator integration across NPC/Tavern/Shop systems
 - **1.8.x**: Spell database expansion to 432+ spells, inventory management, loot generator overhaul, and character token generation
 
-**Current version: 2.3.5 (September 2026)**
+**Current version: 2.3.6 (September 2026)**
 
 ---
 
@@ -24,6 +24,30 @@ The DM's Toolbox has evolved through focused feature releases. Minor versions (2
 
 ### Known issues
 - **Flaky end-to-end test: "a blank count is invalid, not too many, and nothing is rolled"** (`tests/e2e/dice-callers.spec.js`, Character Sheet hit-dice count) — this test fails intermittently. It has failed once in a full-suite run, once in a run of three solo runs, and once in a comparison run, and passes on most other runs (eight consecutive repeat runs, and two later full-suite runs, all passed). The cause has not been identified; the likely area is timing around the hit-dice modal and the toast it asserts on, and the failure has not been captured with a message. It has not been observed as a product bug: the behavior it checks (a blank hit-dice count shows "Invalid number of hit dice to spend." instead of the over-limit message, and nothing is rolled) works when exercised by hand and in every passing run. Re-run before treating a red result on this test as a regression, and harden the test's waits when it is next touched.
+
+---
+
+## [2.3.6] - 2026-09-19
+**Fixes — Initiative Tracker Targeting & Editing Reliability, Shared Dice Engine, Combat Mode Module**
+
+### Fixed
+- **Initiative Tracker: actions could hit the wrong combatant after the order changed** — every control now finds its combatant by its stable id instead of its row position, so re-sorting, deleting, dragging, undo, or another tab reloading the list can no longer send an action to a different creature. This covers HP, precision damage/heal, temp HP, death saves, rename, notes, concentration, reaction, legendary actions, the status modal, duplicate, delete, and move/drag reorder. Queued concentration-check prompts now hold ids too, and the status modal re-resolves its combatant when another tab replaces the list while it is open. Ids are made unique (and strings) on load, undo, session import, and Encounter Builder import
+- **Initiative Tracker: duplicating a combatant ahead of the active one shifted the turn to a different creature** — the current turn now stays on the same combatant through every operation that moves combatants
+- **Initiative Tracker: inline name/HP/initiative editors could write stale text over newer state** — after another tab updated the list, a re-render removed the focused editor and its blur committed the old value back (and logged a phantom Heal). An editor now commits only when its value differs from what it showed on focus, and never commits the same edit twice. Entering the HP a combatant already has is now a no-op (no history entry, no death-save reset)
+- **Initiative Tracker: duplicated desktop rows** — a re-render triggered while another render was running (an edit in a mobile card plus an update from another tab) appended rows twice, leaving twice as many desktop rows as combatants. Renders that arrive mid-render are now queued and run once afterward
+- **Initiative Tracker: an empty HP or initiative field counted as 0** — clearing HP downed a healthy combatant. Empty or non-numeric entries are now rejected and the previous value is restored, with no log entry or reorder. A value that normalizes (`020` → `20`) now updates the field to the stored value
+- **Initiative Tracker: combatant names, ids, types, AC, and status names are now escaped** wherever they are written into the page, including inside quoted attributes
+- **Character Manager: Fighter multiclass prerequisite** — the live check now accepts STR 13 *or* DEX 13, as the rules state, instead of missing the OR rule. Class names carrying a level or subclass (e.g. `Fighter (Champion) 5`) are also read correctly
+
+### Changed
+- **One shared dice engine** (`js/modules/dice-engine.js`) now rolls and parses dice for the Initiative Tracker, the character sheet, Combat Mode, the character wizard, level-up, and the Encounter Builder. Visible differences: the Initiative Tracker's custom roll box rejects trailing operators, zero-sized dice, and keep counts of 0 or more than the dice rolled; the character sheet honors keep-highest/lowest; Combat Mode rolls `d8+2` and `2d6+1d4` correctly and a normal attack uses one d20; a blank hit-dice count now says it is invalid rather than "too many". Notation over 200 characters, more than 1000 dice, or more than 1,000,000 sides is rejected
+- **Character import now validates each character** and warns about malformed data instead of merging it in silently
+- **Character sheet uses the shared character helper modules** for damage/healing, death saves, critical-hit dice, spell save DC / attack bonus, concentration DC, hit-dice healing, and XP thresholds, replacing several inline copies. Four unused modules (`storage.js`, `migrations.js`, `generators.js`, `level-up-calculations.js`) were removed
+- **Combat Mode moved out of `characters.html`** into `js/character/combat-mode.js` (same behavior; it is now linted and covered by tests)
+- **Character sheet event wiring split into named `wireXxxEvents()` helpers** that run in the original order (same behavior)
+
+### Tests / Internal
+- Character save/load persistence now has an end-to-end round-trip test (sheet → IndexedDB → reload → sheet, plus switching characters and legacy-data handling)
 
 ---
 
