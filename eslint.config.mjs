@@ -66,6 +66,7 @@ export default [
         // App globals (defined in site.js or data files)
         DM_TOOLBOX_BUILD: 'readonly',
         LevelUpData: 'readonly',
+        DiceEngine: 'readonly',        // js/modules/dice-engine.js (classic script)
         SPELLS_DATA: 'readonly',
         RULES_DATA: 'readonly',
 

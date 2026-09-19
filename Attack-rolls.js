@@ -1,17 +1,12 @@
 /**
  * Character Attack Rolls Module
  *
- * Pure functions for weapon attack feature bonuses and feature-aware damage rolling.
+ * Pure functions for weapon attack feature bonuses (Dueling, GWF, Savage Attacker, smite dice).
  * No DOM access, no side effects, no global state.
  *
- * character.js (js/character/character.js) imports getAttackFeatureBonuses,
- * addFlatBonusToNotation, and getConcentrationAttackBonus from here directly — verified
- * 2026-09-18. rollDiceSimple/rollDiceWithFeatures below are NOT imported by character.js;
- * it has its own local rollDiceWithFeatures with the same behavior. That's the one
- * remaining unwired duplicate in this file, not a bug — out of scope for this note.
+ * character.js imports these directly. Rolling the dice is not done here: it lives in the shared
+ * dice engine (js/modules/dice-engine.js), which character.js reaches through js/modules/dice.js.
  */
-
-import { parseDiceNotation, rollDie } from './js/modules/dice.js';
 
 export const CONCENTRATION_ATTACK_BONUSES = {
   'hex': { notation: '1d6', label: 'Necrotic (Hex)', prompt: 'Concentrating on Hex — add +1d6 Necrotic to this attack?' },
@@ -49,42 +44,4 @@ export function addFlatBonusToNotation(notation, bonus) {
   if (newMod > 0) return m[1] + "+" + newMod;
   if (newMod < 0) return m[1] + String(newMod);
   return m[1];
-}
-
-export function rollDiceSimple(notation, description = '', randomFn = Math.random) {
-  const parsed = parseDiceNotation(notation);
-  if (!parsed) return null;
-  const { count, sides, modifier } = parsed;
-  const rolls = [];
-  for (let i = 0; i < count; i++) rolls.push(rollDie(sides, randomFn));
-  const total = rolls.reduce((a, b) => a + b, 0) + modifier;
-  return { notation, description, rolls, modifier, total,
-    isCritical: sides === 20 && rolls.includes(20),
-    isFumble: sides === 20 && rolls.includes(1) };
-}
-
-export function rollDiceWithFeatures(notation, description = '', features = {}, randomFn = Math.random) {
-  const { rerollLowDice = false, rollTwiceTakeBest = false } = features;
-  if (!rerollLowDice && !rollTwiceTakeBest) return rollDiceSimple(notation, description, randomFn);
-  const parsed = parseDiceNotation(notation);
-  if (!parsed) return rollDiceSimple(notation, description, randomFn);
-  const { count, sides, modifier } = parsed;
-  function rollOnce() {
-    return Array.from({ length: count }, () => {
-      const r = rollDie(sides, randomFn);
-      return (rerollLowDice && r <= 2) ? rollDie(sides, randomFn) : r;
-    });
-  }
-  const rolls1 = rollOnce();
-  let finalRolls, descSuffix = '';
-  if (rollTwiceTakeBest) {
-    const rolls2 = rollOnce();
-    const t1 = rolls1.reduce((a, b) => a + b, 0);
-    const t2 = rolls2.reduce((a, b) => a + b, 0);
-    if (t1 >= t2) { finalRolls = rolls1; descSuffix = " [SA: " + t1 + " vs " + t2 + "]"; }
-    else { finalRolls = rolls2; descSuffix = " [SA: " + t2 + " vs " + t1 + "]"; }
-  } else { finalRolls = rolls1; }
-  if (rerollLowDice) descSuffix += ' [GWF]';
-  const total = finalRolls.reduce((a, b) => a + b, 0) + modifier;
-  return { notation, description: description + descSuffix, rolls: finalRolls, modifier, total };
 }

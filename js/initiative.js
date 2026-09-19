@@ -70,7 +70,7 @@ const statusEffects = [
           if (data.useActualInitiative) {
             $('initiative-roll').value = data.initiative || 0;
           } else {
-            const d20Roll = Math.floor(Math.random() * 20) + 1;
+            const d20Roll = DiceEngine.rollDie(20);
             const initBonus = data.initiative || 0;
             $('initiative-roll').value = d20Roll + initBonus;
           }
@@ -471,51 +471,14 @@ function buildDiceHistory(){
     wrap.appendChild(div);
   });
 }
-// Parser: supports +/- terms, multi-terms, and keep-high/low
-//  - "2d6+1d4+3", "4d6kh3" (keep highest 3), "2d20kl1" (disadv), "2d20kh1" (adv)
-//  - Flat modifiers like +3 or -1
-const termRe = /([+-]?)\s*(?:(\d*)d(\d+)(?:k(h|l)(\d+))?)|([+-]?\d+)/ig;
-function rollDiceExpr(exprRaw) {
-  const expr = exprRaw.replace(/\s+/g,'').toLowerCase();
-  let total = 0; const parts = []; let match;
-  let any = false;
-  // Basic validation – only digits, d, k, h/l, +/-, and letters a/d/v/i/s for "adv/dis" passthrough handling
-  if (!/^[0-9dkhl+\-\sadvini]*$/i.test(expr)) {
-    throw new Error('Invalid characters.');
-  }
-  while((match = termRe.exec(expr)) !== null){
-    any = true;
-    if (match[6]) { // flat mod
-      const n = parseInt(match[6],10);
-      if (Number.isNaN(n)) continue;
-      total += n;
-      parts.push({type:'mod', n});
-      continue;
-    }
-    const sign = match[1] === '-' ? -1 : 1;
-    const count = parseInt(match[2]||'1',10);
-    const sides = parseInt(match[3],10);
-    const keepDir = match[4]; // 'h' or 'l'
-    const keepN = match[5] ? parseInt(match[5],10) : null;
-    if (!sides || count<=0) continue;
-    const rolls = Array.from({length:count}, ()=> 1 + Math.floor(Math.random()*sides));
-    let used = rolls.slice();
-    if (keepN && keepN > 0 && keepN < rolls.length) {
-      used = rolls.slice().sort((a,b)=>a-b);
-      used = (keepDir === 'h') ? used.slice(-keepN) : used.slice(0, keepN);
-    }
-    const subtotal = sign * used.reduce((a,b)=>a+b,0);
-    total += subtotal;
-    parts.push({type:'dice', sign, count, sides, rolls, used, keepDir, keepN, subtotal});
-  }
-  if (!any) throw new Error('Nothing to roll.');
-  return { total, parts };
-}
+// Dice rules (parsing, keep-high/low, multi-term expressions) live in the shared engine,
+// js/modules/dice-engine.js, which initiative.html loads before this script. This file only turns
+// the engine's plain results into the text and history entries shown here.
 function formatParts(parts){
   return parts.map(p=>{
     if (p.type==='mod') return `${p.n>=0?'+':''}${p.n}`;
     const head = `${p.sign<0?'-':''}${p.count}d${p.sides}${p.keepN?`k${p.keepDir}${p.keepN}`:''}`;
-    return `${head} [${p.rolls.join(', ')}]${p.keepN?` → kept [${p.used.join(', ')}]`:''}`;
+    return `${head} [${p.rolls.join(', ')}]${p.keepN?` → kept [${p.kept.join(', ')}]`:''}`;
   }).join(' ');
 }
 function showRoll(total, detailText){
@@ -530,7 +493,7 @@ function showRoll(total, detailText){
 document.querySelectorAll('.dice-btn').forEach(btn=>{
   btn.addEventListener('click', function(){
     const sides = parseInt(this.dataset.dice,10);
-    const r = rollDiceExpr(`1d${sides}`);
+    const r = DiceEngine.rollDiceExpression(`1d${sides}`);
     const line = `Rolled 1d${sides}: [${r.parts[0].rolls.join(', ')}] = ${r.total}`;
     $('dice-result').textContent = `🎲 ${line}`;
     showRoll(r.total, `1d${sides}`);
@@ -539,17 +502,17 @@ document.querySelectorAll('.dice-btn').forEach(btn=>{
 });
 // Advantage / Disadvantage (assume plain d20)
 $('roll-adv').addEventListener('click', ()=>{
-  const r = rollDiceExpr('2d20kh1');
+  const r = DiceEngine.rollDiceExpression('2d20kh1');
   const p = r.parts[0];
-  const line = `Advantage (2d20kh1): [${p.rolls.join(', ')}] → kept [${p.used.join(', ')}] = ${r.total}`;
+  const line = `Advantage (2d20kh1): [${p.rolls.join(', ')}] → kept [${p.kept.join(', ')}] = ${r.total}`;
   $('dice-result').textContent = `🎲 ${line}`;
   showRoll(r.total, 'Advantage');
   addToHistory(line);
 });
 $('roll-dis').addEventListener('click', ()=>{
-  const r = rollDiceExpr('2d20kl1');
+  const r = DiceEngine.rollDiceExpression('2d20kl1');
   const p = r.parts[0];
-  const line = `Disadvantage (2d20kl1): [${p.rolls.join(', ')}] → kept [${p.used.join(', ')}] = ${r.total}`;
+  const line = `Disadvantage (2d20kl1): [${p.rolls.join(', ')}] → kept [${p.kept.join(', ')}] = ${r.total}`;
   $('dice-result').textContent = `🎲 ${line}`;
   showRoll(r.total, 'Disadvantage');
   addToHistory(line);
@@ -563,7 +526,8 @@ $('roll-custom-dice').addEventListener('click', function(){
   if (expr === 'adv') expr = '2d20kh1';
   if (expr === 'dis') expr = '2d20kl1';
   try{
-    const r = rollDiceExpr(expr);
+    const r = DiceEngine.rollDiceExpression(expr);
+    if (!r) throw new Error("Invalid dice expression."); // shown as the format help below
     const details = formatParts(r.parts);
     const line = `Rolled ${expr}: ${details} = ${r.total}`;
     $('dice-result').textContent = `🎲 ${line}`;

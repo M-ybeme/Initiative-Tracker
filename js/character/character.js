@@ -1,4 +1,4 @@
-import { rollDie, parseDiceNotation } from '../modules/dice.js';
+import { rollDiceNotation, rollD20, describeFeatureRoll } from '../modules/dice.js';
 import { getAbilityModifier, getProficiencyBonus, recalcDerivedStats } from './character-calculations.js';
 import { getAttackFeatureBonuses as _getAttackFeatureBonuses, addFlatBonusToNotation as _addFlatBonusToNotation, getConcentrationAttackBonus as _getConcentrationAttackBonus } from '../../Attack-rolls.js';
 import { getSpellSlotsForClassLevel as _getSpellSlotsForClassLevel, getPactMagicSlots as _getPactMagicSlots, normalizeSpellEntry as _normalizeSpellEntry, searchSpells as _searchSpells } from './character-spell-data.js';
@@ -88,81 +88,46 @@ import { validateCharacter } from '../modules/validation.js';
        */
       const getAttackFeatureBonuses = _getAttackFeatureBonuses;
 
-      /**
-       * Like rollDice() but supports:
-       *   rerollLowDice     – GWF: reroll each die that shows 1 or 2 (must use new roll)
-       *   rollTwiceTakeBest – SA: roll all dice twice, take the higher total
-       * Both flags can be active at the same time (GWF applied on each individual roll).
-       */
-      function rollDiceWithFeatures(notation, description, { rerollLowDice = false, rollTwiceTakeBest = false } = {}) {
-        if (!rerollLowDice && !rollTwiceTakeBest) return rollDice(notation, description);
-
-        const parsed = parseDiceNotation(notation);
-        if (!parsed) return rollDice(notation, description);
-        const { count, sides, modifier } = parsed;
-
-        function rollOnce() {
-          return Array.from({ length: count }, () => {
-            const r = rollDie(sides);
-            return (rerollLowDice && r <= 2) ? rollDie(sides) : r;
-          });
-        }
-
-        const rolls1 = rollOnce();
-        let finalRolls, descSuffix = '';
-
-        if (rollTwiceTakeBest) {
-          const rolls2 = rollOnce();
-          const t1 = rolls1.reduce((a, b) => a + b, 0);
-          const t2 = rolls2.reduce((a, b) => a + b, 0);
-          if (t1 >= t2) { finalRolls = rolls1; descSuffix = ` [SA: ${t1} vs ${t2}]`; }
-          else          { finalRolls = rolls2; descSuffix = ` [SA: ${t2} vs ${t1}]`; }
-        } else {
-          finalRolls = rolls1;
-        }
-        if (rerollLowDice) descSuffix += ' [GWF]';
-
-        const total = finalRolls.reduce((a, b) => a + b, 0) + modifier;
-        const result = {
-          notation,
-          description: description + descSuffix,
-          rolls: finalRolls,
-          modifier,
-          total,
-          timestamp: new Date().toISOString(),
-        };
-        addToRollHistory(result);
-        return result;
-      }
-
-      function rollDice(notation, description = '') {
-        const parsed = parseDiceNotation(notation);
-        if (!parsed) {
+      // The dice rules (parsing, keep-high/low, Great Weapon Fighting rerolls, Savage Attacker,
+      // advantage) live in the shared engine (js/modules/dice.js, backed by dice-engine.js). These
+      // wrappers add only what belongs to the sheet: the description, a timestamp and the roll history.
+      //   features.rerollLowDice     - GWF: reroll each die showing 1 or 2 (must use the new roll)
+      //   features.rollTwiceTakeBest - SA: roll all dice twice, take the higher total
+      function rollDice(notation, description = '', features = {}) {
+        const rolled = rollDiceNotation(notation, undefined, features);
+        if (!rolled) {
           console.error('Invalid dice notation:', notation);
           return null;
         }
 
-        const { count, sides, modifier } = parsed;
-        const rolls = [];
-        let total = 0;
-
-        for (let i = 0; i < count; i++) {
-          const roll = rollDie(sides);
-          rolls.push(roll);
-          total += roll;
-        }
-
-        total += modifier;
-
         const result = {
           notation,
-          description,
-          rolls,
-          modifier,
-          total,
+          description: description + describeFeatureRoll(rolled),
+          rolls: rolled.rolls,
+          modifier: rolled.modifier,
+          total: rolled.total,
           timestamp: new Date().toISOString(),
-          isCritical: sides === 20 && rolls.includes(20),
-          isFumble: sides === 20 && rolls.includes(1)
+          isCritical: rolled.isCritical,
+          isFumble: rolled.isFumble
+        };
+
+        addToRollHistory(result);
+        return result;
+      }
+
+      function rollD20WithHistory(mode, bonus, description) {
+        const rolled = rollD20(mode, bonus);
+        const result = {
+          notation: `2d20 (${mode})`,
+          description,
+          rolls: rolled.rolls,
+          chosen: rolled.chosen,
+          modifier: bonus,
+          total: rolled.total,
+          timestamp: new Date().toISOString(),
+          isCritical: rolled.isCritical,
+          isFumble: rolled.isFumble,
+          [mode === 'advantage' ? 'isAdvantage' : 'isDisadvantage']: true
         };
 
         addToRollHistory(result);
@@ -170,49 +135,11 @@ import { validateCharacter } from '../modules/validation.js';
       }
 
       function rollWithAdvantage(bonus = 0, description = '') {
-        const roll1 = rollDie(20);
-        const roll2 = rollDie(20);
-        const chosen = Math.max(roll1, roll2);
-        const total = chosen + bonus;
-
-        const result = {
-          notation: '2d20 (advantage)',
-          description,
-          rolls: [roll1, roll2],
-          chosen,
-          modifier: bonus,
-          total,
-          timestamp: new Date().toISOString(),
-          isCritical: chosen === 20,
-          isFumble: chosen === 1,
-          isAdvantage: true
-        };
-
-        addToRollHistory(result);
-        return result;
+        return rollD20WithHistory('advantage', bonus, description);
       }
 
       function rollWithDisadvantage(bonus = 0, description = '') {
-        const roll1 = rollDie(20);
-        const roll2 = rollDie(20);
-        const chosen = Math.min(roll1, roll2);
-        const total = chosen + bonus;
-
-        const result = {
-          notation: '2d20 (disadvantage)',
-          description,
-          rolls: [roll1, roll2],
-          chosen,
-          modifier: bonus,
-          total,
-          timestamp: new Date().toISOString(),
-          isCritical: chosen === 20,
-          isFumble: chosen === 1,
-          isDisadvantage: true
-        };
-
-        addToRollHistory(result);
-        return result;
+        return rollD20WithHistory('disadvantage', bonus, description);
       }
 
       function addToRollHistory(result) {
@@ -501,15 +428,18 @@ import { validateCharacter } from '../modules/validation.js';
           const critNotation = getCriticalHitNotation(notation);
           if (!critNotation) { console.error('Invalid dice notation:', notation); return null; }
           // GWF and SA apply to doubled crit dice too
-          const result = rollDiceWithFeatures(critNotation, `${description} (CRIT!)`, features);
+          const result = rollDice(critNotation, `${description} (CRIT!)`, features);
           extraRolls.forEach(({ notation: en, label }) => {
+            // extraRolls are fixed small dice (e.g. 1d8), so doubling them cannot pass the engine's dice
+            // limit and the `|| en` fallback is unreachable today. If extra rolls ever get large, a null
+            // here would roll them undoubled: handle it like the main crit above instead.
             const critEn = getCriticalHitNotation(en) || en;
             rollDice(critEn, `${attack.name} - ${label} (CRIT!)`);
           });
           if (applyConc) rollDice(concBonus.notation, `${attack.name} - ${concBonus.label}`);
           return result;
         } else if (rollType === 'half') {
-          const result = rollDiceWithFeatures(notation, description, features);
+          const result = rollDice(notation, description, features);
           if (result) {
             addToRollHistory({
               notation: 'Resistance', description: `${description} (Halved)`,
@@ -528,7 +458,7 @@ import { validateCharacter } from '../modules/validation.js';
           if (applyConc) rollDice(concBonus.notation, `${attack.name} - ${concBonus.label}`);
           return result;
         } else {
-          const result = rollDiceWithFeatures(notation, description, features);
+          const result = rollDice(notation, description, features);
           extraRolls.forEach(({ notation: en, label }) => rollDice(en, `${attack.name} - ${label}`));
           if (applyConc) rollDice(concBonus.notation, `${attack.name} - ${concBonus.label}`);
           return result;
@@ -4349,13 +4279,19 @@ import { validateCharacter } from '../modules/validation.js';
         if (!hitDiceModalData) return;
 
         const count = parseInt($('hdSpendCount').value, 10);
-        if (count <= 0 || count > hitDiceModalData.availableCount) {
+        if (Number.isNaN(count) || count <= 0 || count > hitDiceModalData.availableCount) { // blank/non-numeric parses to NaN
           showAppToast('Invalid number of hit dice to spend.', 'warning');
           return;
         }
 
         const { dieSize, conMod } = hitDiceModalData;
-        const { rolls, healing } = rollHitDiceForHealing(dieSize, count, conMod);
+        // Null when the count or die size (from the saved hit-dice text) is beyond the engine's limits.
+        const healed = rollHitDiceForHealing(dieSize, count, conMod);
+        if (!healed) {
+          showAppToast('Too many hit dice, or too large a die, to roll.', 'warning');
+          return;
+        }
+        const { rolls, healing } = healed;
 
         // Store results
         hitDiceModalData.spentCount = count;

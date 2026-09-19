@@ -148,7 +148,7 @@ This document provides a step-by-step roadmap for implementing a comprehensive t
 - [x] Create `js/modules/dice.js`
 - [x] Extract dice parsing: `parseDiceNotation(notation)` (e.g., "2d6+3")
 - [x] Extract dice rolling: `rollDice(count, sides)`
-- [x] Extract advantage/disadvantage: `rollWithAdvantage(sides, mode)`
+- [x] Extract advantage/disadvantage: now `rollD20(mode, bonus)` (the earlier `rollWithAdvantage`/`rollWithDisadvantage` helpers were removed from the engine)
 - [x] Extract 4d6-drop-lowest: `rollAbilityScore()`
 - [x] Add ES module exports
 
@@ -630,7 +630,7 @@ export const sampleCombatant = {
 | **Total** | **24** | **930** | ✅ All Passing |
 
 **Added in v2.1.5:**
-- `tests/unit/Attack-rolls.test.js` (53 tests) — addFlatBonusToNotation, getAttackFeatureBonuses, rollDiceWithFeatures
+- `tests/unit/Attack-rolls.test.js` (53 tests) — addFlatBonusToNotation, getAttackFeatureBonuses (feature-aware rolling is tested in `tests/unit/dice.test.js`)
 - `tests/unit/character-rest.test.js` (50 tests) — applyShortRest, applyLongRest, rollHitDiceForHealing, edge cases
 - `tests/integration/character-rest-integration.test.js` (25 tests) — short/long rest end-to-end, multiclass slots, combat sequence
 - `tests/integration/character-sheet.test.js` (21 tests) — serialize/deserialize round-trips, recalcDerivedStats, normalizeSpellEntry

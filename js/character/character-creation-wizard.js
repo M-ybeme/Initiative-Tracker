@@ -1114,15 +1114,9 @@ const CharacterCreationWizard = window.CharacterCreationWizard = (function() {
           const newHandler = () => {
             const rolls = [];
             for (let i = 0; i < 6; i++) {
-              const dice = [
-                Math.floor(Math.random() * 6) + 1,
-                Math.floor(Math.random() * 6) + 1,
-                Math.floor(Math.random() * 6) + 1,
-                Math.floor(Math.random() * 6) + 1
-              ];
-              dice.sort((a, b) => b - a);
-              const total = dice[0] + dice[1] + dice[2];
-              rolls.push({ dice: [...dice], total, dropped: dice[3] });
+              const score = DiceEngine.rollAbilityScore(); // 4d6, drop the lowest
+              const dice = [...score.rolls].sort((a, b) => b - a);
+              rolls.push({ dice, total: score.total, dropped: score.dropped });
             }
 
             rolls.sort((a, b) => b.total - a.total);
@@ -1807,7 +1801,7 @@ const CharacterCreationWizard = window.CharacterCreationWizard = (function() {
               let resultsHTML = '<div class="alert alert-info text-light mb-0"><strong>HP Rolls:</strong><ul class="mb-0 mt-2">';
 
               for (let i = 2; i <= level; i++) {
-                const roll = Math.floor(Math.random() * hitDie) + 1;
+                const roll = DiceEngine.rollDie(hitDie);
                 const total = roll + conMod;
                 wizardData.hpRolls.push({ level: i, roll, conMod, total });
                 resultsHTML += `<li>Level ${i}: ${roll} + ${conMod} = <strong>${total} HP</strong></li>`;
@@ -3334,16 +3328,9 @@ const CharacterCreationWizard = window.CharacterCreationWizard = (function() {
 
     // Set up roll button
     document.getElementById('rollGoldBtn')?.addEventListener('click', () => {
-      const diceMatch = goldData.dice.match(/(\d+)d(\d+)/);
-      if (!diceMatch) return;
-
-      const numDice = parseInt(diceMatch[1]);
-      const dieSize = parseInt(diceMatch[2]);
-
-      const rolls = [];
-      for (let i = 0; i < numDice; i++) {
-        rolls.push(Math.floor(Math.random() * dieSize) + 1);
-      }
+      const goldRoll = DiceEngine.rollDiceNotation(goldData.dice);
+      if (!goldRoll) return;
+      const rolls = goldRoll.rolls;
 
       const total = rolls.reduce((a, b) => a + b, 0) * goldData.multiplier;
 

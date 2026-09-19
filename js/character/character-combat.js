@@ -5,7 +5,6 @@
  * dice notation. No DOM access, no side effects, no global state.
  */
 
-import { parseDiceNotation } from '../modules/dice.js';
 
 /**
  * Apply damage to a character, absorbing through temporary HP first.
@@ -101,20 +100,10 @@ export function getDeathSaveState(successes, failures) {
 }
 
 /**
- * Build the critical hit dice notation by doubling the die count.
- * Modifier is preserved unchanged (only dice are doubled, per 5e RAW).
- * Returns null if the notation is invalid.
- * @param {string} notation - e.g. '2d6+3'
- * @returns {string|null}
+ * The critical-hit notation: the die count doubles and the modifier is unchanged ("2d6+3" ->
+ * "4d6+3"); null for invalid notation. The rule lives in the dice engine.
  */
-export function getCriticalHitNotation(notation) {
-  const parsed = parseDiceNotation(notation);
-  if (!parsed) return null;
-  const { count, sides, modifier } = parsed;
-  const critCount = count * 2;
-  const modStr = modifier > 0 ? '+' + modifier : modifier < 0 ? String(modifier) : '';
-  return critCount + 'd' + sides + modStr;
-}
+export { getCriticalHitNotation } from '../modules/dice.js';
 
 /**
  * Parse a to-hit bonus string (e.g. '+5', '-2', '3') into a number.

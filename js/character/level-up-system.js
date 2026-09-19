@@ -1422,7 +1422,7 @@ const LevelUpSystem = (function() {
     });
 
     rollHPBtn.addEventListener('click', () => {
-      const roll = Math.floor(Math.random() * classData.hitDie) + 1;
+      const roll = DiceEngine.rollDie(classData.hitDie);
       const total = roll + conMod;
       hpRollValue.textContent = roll;
       hpRollTotal.textContent = total;

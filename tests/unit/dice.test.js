@@ -4,8 +4,6 @@ import {
   parseDiceNotation,
   rollMultipleDice,
   rollDiceNotation,
-  rollWithAdvantage,
-  rollWithDisadvantage,
   rollAbilityScore,
   rollAbilityScoreSet,
   createSeededRandom
@@ -203,52 +201,6 @@ describe('rollDiceNotation', () => {
   });
 });
 
-describe('rollWithAdvantage', () => {
-  it('returns two rolls and keeps highest', () => {
-    const seededRandom = createSeededRandom(222);
-    const result = rollWithAdvantage(0, seededRandom);
-
-    expect(result.rolls).toHaveLength(2);
-    expect(result.chosen).toBe(Math.max(...result.rolls));
-  });
-
-  it('adds bonus to total', () => {
-    const mockRandom = () => 9 / 20; // Returns 10
-    const result = rollWithAdvantage(5, mockRandom);
-
-    expect(result.total).toBe(15); // 10 + 5
-  });
-
-  it('detects critical when chosen is 20', () => {
-    const mockRandom = () => 19 / 20; // Returns 20
-    const result = rollWithAdvantage(0, mockRandom);
-    expect(result.isCritical).toBe(true);
-  });
-});
-
-describe('rollWithDisadvantage', () => {
-  it('returns two rolls and keeps lowest', () => {
-    const seededRandom = createSeededRandom(333);
-    const result = rollWithDisadvantage(0, seededRandom);
-
-    expect(result.rolls).toHaveLength(2);
-    expect(result.chosen).toBe(Math.min(...result.rolls));
-  });
-
-  it('adds bonus to total', () => {
-    const mockRandom = () => 9 / 20; // Returns 10
-    const result = rollWithDisadvantage(3, mockRandom);
-
-    expect(result.total).toBe(13); // 10 + 3
-  });
-
-  it('detects fumble when chosen is 1', () => {
-    const mockRandom = () => 0; // Returns 1
-    const result = rollWithDisadvantage(0, mockRandom);
-    expect(result.isFumble).toBe(true);
-  });
-});
-
 describe('rollAbilityScore', () => {
   it('rolls 4d6 and drops lowest', () => {
     const seededRandom = createSeededRandom(444);
@@ -321,5 +273,556 @@ describe('createSeededRandom', () => {
       expect(val).toBeGreaterThanOrEqual(0);
       expect(val).toBeLessThan(1);
     }
+  });
+});
+
+// ---------------------------------------------------------------------------------------------
+// The dice engine (js/modules/dice-engine.js) as the app's single implementation of dice rules.
+// Everything below scripts the dice: dice(sides, ...faces) makes a randomFn that produces exactly
+// those faces in order, and mixed([sides, face], ...) does the same for dice of different sizes.
+// ---------------------------------------------------------------------------------------------
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
+import { runInNewContext } from 'node:vm';
+import { vi } from 'vitest';
+import {
+  parseDiceExpression,
+  rollDiceExpression,
+  rollD20,
+  describeFeatureRoll,
+  getCriticalHitNotation,
+  rollHitDice,
+  rollDie as engineRollDie
+} from '../../js/modules/dice.js';
+
+const scripted = (faceCenters) => {
+  const queue = faceCenters.slice();
+  return () => {
+    if (!queue.length) throw new Error('more dice were rolled than scripted');
+    return queue.shift();
+  };
+};
+const dice = (sides, ...faces) => scripted(faces.map(f => (f - 0.5) / sides));
+const mixed = (...pairs) => scripted(pairs.map(([sides, face]) => (face - 0.5) / sides));
+
+describe('the engine is one implementation reachable two ways', () => {
+  const source = readFileSync(resolve(process.cwd(), 'js/modules/dice-engine.js'), 'utf8');
+
+  it('runs as a plain classic script (no import/export) and publishes DiceEngine', () => {
+    const context = {};
+    runInNewContext(source, context);
+    expect(Object.keys(context.DiceEngine).sort()).toEqual(
+      ['MAX_DICE_COUNT', 'MAX_DICE_NOTATION_LENGTH', 'MAX_DIE_SIDES', 'createSeededRandom', 'describeFeatureRoll',
+        'getCriticalHitNotation', 'parseDiceExpression', 'parseDiceNotation', 'rollAbilityScore',
+        'rollAbilityScoreSet', 'rollD20', 'rollDiceExpression', 'rollDiceNotation', 'rollDie',
+        'rollHitDice', 'rollMultipleDice'].sort());
+    expect(context.DiceEngine.rollDie(6, () => 0.5)).toBe(4);
+  });
+
+  it('loading it a second time keeps the first instance', () => {
+    const context = {};
+    runInNewContext(source, context);
+    const first = context.DiceEngine;
+    runInNewContext(source, context);
+    expect(context.DiceEngine).toBe(first);
+  });
+
+  it('the ES facade exports exactly the functions of the global', async () => {
+    const facade = await import('../../js/modules/dice.js');
+    expect(Object.keys(facade).sort()).toEqual(Object.keys(globalThis.DiceEngine).sort());
+    for (const [name, fn] of Object.entries(globalThis.DiceEngine)) {
+      expect(facade[name], name).toBe(fn);
+    }
+  });
+
+  it('reads Math.random when no randomFn is passed', () => {
+    const spy = vi.spyOn(Math, 'random').mockReturnValue(0.99);
+    try {
+      expect(engineRollDie(20)).toBe(20);
+    } finally { spy.mockRestore(); }
+  });
+});
+
+describe('rollDie boundaries', () => {
+  it('a random value of 0 is 1 and just under 1 is the top face', () => {
+    expect(rollDie(20, () => 0)).toBe(1);
+    expect(rollDie(20, () => 0.9999999999)).toBe(20);
+    expect(rollDie(1, () => 0.7)).toBe(1);
+  });
+});
+
+describe('rollDiceNotation: kept dice and result shape', () => {
+  it('keep highest keeps the highest dice, in ascending order', () => {
+    const r = rollDiceNotation('4d6kh3', dice(6, 3, 5, 2, 6));
+    expect(r.rolls).toEqual([3, 5, 2, 6]);
+    expect(r.kept).toEqual([3, 5, 6]);
+    expect(r.total).toBe(14);
+  });
+
+  it('keep lowest keeps the lowest dice, in ascending order', () => {
+    const r = rollDiceNotation('3d20kl2+1', dice(20, 9, 4, 15));
+    expect(r.kept).toEqual([4, 9]);
+    expect(r.total).toBe(14);
+  });
+
+  it('keeping every die leaves the rolled order alone', () => {
+    expect(rollDiceNotation('3d6kh3', dice(6, 5, 1, 4)).kept).toEqual([5, 1, 4]);
+  });
+
+  it('reports the dice count and sides it rolled', () => {
+    const r = rollDiceNotation('3d8-2', dice(8, 1, 1, 1));
+    expect(r).toMatchObject({ count: 3, sides: 8, modifier: -2, total: 1, twiceRoll: null });
+  });
+
+  it('a natural 20 counts only if the 20 was kept', () => {
+    expect(rollDiceNotation('2d20kl1', dice(20, 20, 7)).isCritical).toBe(false);
+    expect(rollDiceNotation('2d20kh1', dice(20, 20, 7)).isCritical).toBe(true);
+  });
+});
+
+describe('rollDiceNotation: Great Weapon Fighting', () => {
+  it('rerolls a 1 and uses the new roll even if it is lower', () => {
+    const r = rollDiceNotation('1d6', dice(6, 1, 1), { rerollLowDice: true });
+    expect(r.rolls).toEqual([1]);
+  });
+
+  it('rerolls a 2 but not a 3', () => {
+    const r = rollDiceNotation('2d6', dice(6, 2, 5, 3), { rerollLowDice: true });
+    expect(r.rolls).toEqual([5, 3]);
+    expect(r.total).toBe(8);
+  });
+
+  it('rerolls each die once, in order (dice used: die 1, its reroll, die 2)', () => {
+    const script = vi.fn(dice(6, 1, 6, 4));
+    const r = rollDiceNotation('2d6', script, { rerollLowDice: true });
+    expect(script).toHaveBeenCalledTimes(3);
+    expect(r.rolls).toEqual([6, 4]);
+  });
+});
+
+describe('rollDiceNotation: Savage Attacker', () => {
+  it('keeps the set with the higher total and reports both totals', () => {
+    const r = rollDiceNotation('2d6+1', dice(6, 1, 2, 6, 5), { rollTwiceTakeBest: true });
+    expect(r.rolls).toEqual([6, 5]);
+    expect(r.total).toBe(12);
+    expect(r.twiceRoll).toEqual({ taken: 11, discarded: 3 });
+  });
+
+  it('keeps the first set when the totals tie', () => {
+    const r = rollDiceNotation('2d6', dice(6, 3, 4, 2, 5), { rollTwiceTakeBest: true });
+    expect(r.rolls).toEqual([3, 4]);
+    expect(r.twiceRoll).toEqual({ taken: 7, discarded: 7 });
+  });
+
+  it('with Great Weapon Fighting, rerolls happen inside each set before they are compared', () => {
+    // set 1: die 1 -> rerolled to 6; set 2: die 5  => 6 vs 5
+    const r = rollDiceNotation('1d6', dice(6, 1, 6, 5), { rerollLowDice: true, rollTwiceTakeBest: true });
+    expect(r.rolls).toEqual([6]);
+    expect(r.twiceRoll).toEqual({ taken: 6, discarded: 5 });
+  });
+
+  it('rolls once and reports no comparison when the feature is off', () => {
+    const script = vi.fn(dice(6, 3, 4));
+    const r = rollDiceNotation('2d6', script);
+    expect(script).toHaveBeenCalledTimes(2);
+    expect(r.twiceRoll).toBeNull();
+  });
+});
+
+describe('describeFeatureRoll', () => {
+  it('is empty with no feature', () => {
+    expect(describeFeatureRoll(rollDiceNotation('1d6', dice(6, 3)))).toBe('');
+  });
+  it('notes Great Weapon Fighting', () => {
+    expect(describeFeatureRoll(rollDiceNotation('1d6', dice(6, 4), { rerollLowDice: true }))).toBe(' [GWF]');
+  });
+  it('notes Savage Attacker with the two totals', () => {
+    expect(describeFeatureRoll(rollDiceNotation('1d6', dice(6, 2, 5), { rollTwiceTakeBest: true }))).toBe(' [SA: 5 vs 2]');
+  });
+  it('lists Savage Attacker before Great Weapon Fighting', () => {
+    const r = rollDiceNotation('1d6', dice(6, 4, 3), { rerollLowDice: true, rollTwiceTakeBest: true });
+    expect(describeFeatureRoll(r)).toBe(' [SA: 4 vs 3] [GWF]');
+  });
+});
+
+describe('parseDiceExpression', () => {
+  const group = (count, sides, sign = 1, keepDir = null, keepN = null) => ({ type: 'dice', sign, count, sides, keepDir, keepN });
+  it.each([
+    ['2d6+3', [group(2, 6), { type: 'mod', n: 3 }]],
+    ['d20', [group(1, 20)]],
+    ['1d8-2', [group(1, 8), { type: 'mod', n: -2 }]],
+    ['-1d4+3', [group(1, 4, -1), { type: 'mod', n: 3 }]],
+    ['4d6kh3', [group(4, 6, 1, 'h', 3)]],
+    ['2d20KL1', [group(2, 20, 1, 'l', 1)]],
+    [' 2D6 + 1d4 +3 ', [group(2, 6), group(1, 4), { type: 'mod', n: 3 }]],
+    ['7', [{ type: 'mod', n: 7 }]],
+    ['-7', [{ type: 'mod', n: -7 }]]
+  ])('reads %j', (text, terms) => {
+    expect(parseDiceExpression(text)).toEqual(terms);
+  });
+
+  it.each([
+    [''], ['   '], [null], [undefined], [42], ['hello'], ['2d6+'], ['+'], ['++3'],
+    ['2d6 2d4'], ['1d0'], ['0d6'], ['4d6kh0'], ['4d6kh5'], ['2d'], ['d'], ['2d6+x'], ['2d6kx1']
+  ])('rejects %j', (text) => {
+    expect(parseDiceExpression(text)).toBeNull();
+  });
+});
+
+describe('rollDiceExpression', () => {
+  it('adds every group and the flat modifier', () => {
+    const r = rollDiceExpression('2d6+1d4+3', mixed([6, 3], [6, 5], [4, 2]));
+    expect(r.total).toBe(13);
+    expect(r.parts.map(p => p.type)).toEqual(['dice', 'dice', 'mod']);
+    expect(r.parts[0]).toMatchObject({ rolls: [3, 5], kept: [3, 5], subtotal: 8 });
+  });
+
+  it('subtracts a negative dice group', () => {
+    const r = rollDiceExpression('1d6-1d4', mixed([6, 6], [4, 4]));
+    expect(r.total).toBe(2);
+    expect(r.parts[1]).toMatchObject({ sign: -1, rolls: [4], subtotal: -4 });
+  });
+
+  it('honors keep highest and keep lowest', () => {
+    const kh = rollDiceExpression('4d6kh3', dice(6, 3, 5, 2, 6));
+    expect(kh.total).toBe(14);
+    expect(kh.parts[0]).toMatchObject({ rolls: [3, 5, 2, 6], kept: [3, 5, 6] });
+    const kl = rollDiceExpression('2d20kl1+1', dice(20, 12, 4));
+    expect(kl.total).toBe(5);
+  });
+
+  it('a flat number rolls no dice', () => {
+    const script = vi.fn();
+    expect(rollDiceExpression('7', script)).toEqual({ total: 7, parts: [{ type: 'mod', n: 7 }] });
+    expect(script).not.toHaveBeenCalled();
+  });
+
+  it('returns null for invalid input without rolling anything', () => {
+    const script = vi.fn(() => 0.5);
+    expect(rollDiceExpression('2d6+', script)).toBeNull();
+    expect(rollDiceExpression('nonsense', script)).toBeNull();
+    expect(script).not.toHaveBeenCalled();
+  });
+
+  it('agrees with rollDiceNotation for one group', () => {
+    const a = rollDiceExpression('3d8+2', createSeededRandom(31));
+    const b = rollDiceNotation('3d8+2', createSeededRandom(31));
+    expect(a.total).toBe(b.total);
+    expect(a.parts[0].rolls).toEqual(b.rolls);
+  });
+});
+
+describe('rollD20', () => {
+  it('a normal roll is one die plus the bonus', () => {
+    const script = vi.fn(dice(20, 14));
+    const r = rollD20('normal', 3, script);
+    expect(script).toHaveBeenCalledTimes(1);
+    expect(r).toMatchObject({ rolls: [14], chosen: 14, bonus: 3, total: 17, isAdvantage: false, isDisadvantage: false });
+  });
+
+  it('defaults to a normal roll with no bonus', () => {
+    expect(rollD20(undefined, undefined, dice(20, 9)).total).toBe(9);
+  });
+
+  it('advantage rolls two and keeps the higher, in roll order', () => {
+    const r = rollD20('advantage', 2, dice(20, 7, 15));
+    expect(r).toMatchObject({ rolls: [7, 15], chosen: 15, total: 17, isAdvantage: true, isDisadvantage: false });
+  });
+
+  it('disadvantage rolls two and keeps the lower', () => {
+    const r = rollD20('disadvantage', -1, dice(20, 7, 15));
+    expect(r).toMatchObject({ rolls: [7, 15], chosen: 7, total: 6, isDisadvantage: true });
+  });
+
+  it('flags a natural 20 and a natural 1 on the chosen die', () => {
+    expect(rollD20('normal', 0, dice(20, 20))).toMatchObject({ isCritical: true, isFumble: false });
+    expect(rollD20('normal', 0, dice(20, 1))).toMatchObject({ isCritical: false, isFumble: true });
+    expect(rollD20('disadvantage', 0, dice(20, 20, 3)).isCritical).toBe(false);
+  });
+
+  it('advantage and disadvantage add the bonus to the chosen die', () => {
+    expect(rollD20('advantage', 1, dice(20, 5, 9))).toMatchObject({ chosen: 9, total: 10 });
+    expect(rollD20('disadvantage', 1, dice(20, 5, 9))).toMatchObject({ chosen: 5, total: 6 });
+  });
+
+  it('a natural 20 shows through advantage and a natural 1 through disadvantage', () => {
+    expect(rollD20('advantage', 0, dice(20, 3, 20)).isCritical).toBe(true);
+    expect(rollD20('disadvantage', 0, dice(20, 1, 12)).isFumble).toBe(true);
+  });
+
+  it('the engine no longer exports separate advantage/disadvantage helpers', () => {
+    expect(globalThis.DiceEngine.rollWithAdvantage).toBeUndefined();
+    expect(globalThis.DiceEngine.rollWithDisadvantage).toBeUndefined();
+  });
+});
+
+describe('getCriticalHitNotation', () => {
+  it('doubles the dice and leaves the modifier', () => {
+    expect(getCriticalHitNotation('1d8+3')).toBe('2d8+3');
+    expect(getCriticalHitNotation('2d6-1')).toBe('4d6-1');
+    expect(getCriticalHitNotation('d10')).toBe('2d10');
+  });
+  it('is null for anything that is not one dice group', () => {
+    expect(getCriticalHitNotation('2d6+1d4')).toBeNull();
+    expect(getCriticalHitNotation('nope')).toBeNull();
+    expect(getCriticalHitNotation('')).toBeNull();
+  });
+});
+
+describe('rollHitDice', () => {
+  it('adds the CON modifier to each die', () => {
+    const r = rollHitDice(8, 2, 3, dice(8, 4, 6));
+    expect(r).toEqual({ rolls: [4, 6], rawTotal: 16, healing: 16 });
+  });
+
+  it('heals at least 1 HP per die spent', () => {
+    const r = rollHitDice(6, 3, -3, dice(6, 1, 1, 2));
+    expect(r.rawTotal).toBe(-5);
+    expect(r.healing).toBe(3);
+  });
+
+  it('rolls exactly the dice it is told to spend', () => {
+    const script = vi.fn(dice(10, 5, 5, 5, 5));
+    expect(rollHitDice(10, 4, 0, script).rolls).toHaveLength(4);
+    expect(script).toHaveBeenCalledTimes(4);
+  });
+});
+
+describe('parser safety limits', () => {
+  const { MAX_DICE_COUNT, MAX_DIE_SIDES } = globalThis.DiceEngine;
+
+  it('are 1000 dice and 1,000,000 sides', () => {
+    expect(MAX_DICE_COUNT).toBe(1000);
+    expect(MAX_DIE_SIDES).toBe(1000000);
+  });
+
+  it('accept the maximum count and the maximum sides in one notation', () => {
+    expect(parseDiceNotation('1000d6')).toMatchObject({ count: 1000, sides: 6 });
+    expect(parseDiceNotation('1d1000000')).toMatchObject({ count: 1, sides: 1000000 });
+    expect(parseDiceNotation('1000d1000000+5')).toMatchObject({ count: 1000, sides: 1000000, modifier: 5 });
+  });
+
+  it('reject a count above the maximum (never clamped to it)', () => {
+    expect(parseDiceNotation('1001d6')).toBeNull();
+    expect(rollDiceNotation('1001d6', () => 0.5)).toBeNull();
+  });
+
+  it('reject sides above the maximum (never clamped to it)', () => {
+    expect(parseDiceNotation('1d1000001')).toBeNull();
+    expect(rollDiceNotation('1d1000001', () => 0.5)).toBeNull();
+  });
+
+  it('accept and reject the same values in a multi-term expression, in any term', () => {
+    expect(parseDiceExpression('1000d6+1d1000000+3')).not.toBeNull();
+    expect(parseDiceExpression('1001d6')).toBeNull();
+    expect(parseDiceExpression('1d6+1001d6')).toBeNull();
+    expect(parseDiceExpression('1d6-1d1000001')).toBeNull();
+    expect(rollDiceExpression('2d6+1001d6', () => 0.5)).toBeNull();
+  });
+
+  it('reject absurd sizes and keep counts against them', () => {
+    expect(parseDiceNotation('99999999d6')).toBeNull();
+    expect(parseDiceNotation('999999999999999999999d6')).toBeNull();
+    expect(parseDiceExpression('1d99999999999999999999')).toBeNull();
+    expect(parseDiceNotation('1001d6kh3')).toBeNull();
+  });
+
+  it('a huge expression is rejected before any die is rolled, and quickly', () => {
+    const script = vi.fn(() => 0.5);
+    const started = performance.now();
+    expect(rollDiceExpression('99999999d6', script)).toBeNull();
+    expect(rollDiceNotation('999999999d6', script)).toBeNull();
+    expect(script).not.toHaveBeenCalled();
+    expect(performance.now() - started).toBeLessThan(200);
+  });
+
+  it('the helpers that take counts directly refuse too', () => {
+    expect(() => rollMultipleDice(1001, 6)).toThrow(RangeError);
+    expect(() => rollMultipleDice(6, 1000001)).toThrow(RangeError);
+    expect(rollMultipleDice(1000, 6, () => 0.5)).toHaveLength(1000);
+    expect(rollHitDice(8, 1001, 2, () => 0.5)).toBeNull();
+    expect(rollHitDice(1000001, 2, 2, () => 0.5)).toBeNull();
+    expect(rollHitDice(NaN, 2, 0, () => 0.5)).toBeNull();
+    expect(rollHitDice(8, 1000, 0, () => 0.5)).toMatchObject({ rolls: expect.any(Array) });
+  });
+
+  it('a critical hit is refused when doubling would pass the maximum (see the crit boundary tests)', () => {
+    expect(getCriticalHitNotation('600d6')).toBeNull();
+    expect(rollDiceNotation(getCriticalHitNotation('500d6'), () => 0.5)).not.toBeNull();
+  });
+});
+
+describe('the engine stays strict about text around the dice', () => {
+  // Legacy damage strings with a trailing damage type are cleaned up by their caller (Combat Mode),
+  // never accepted here.
+  it.each([
+    ['1d8+3 slashing'], ['2d6 fire'], ['1d8+3slashing'], ['slashing 1d8'], ['1d8 +3 piercing damage']
+  ])('rejects %j in both parsers', (text) => {
+    expect(parseDiceNotation(text)).toBeNull();
+    expect(parseDiceExpression(text)).toBeNull();
+    expect(rollDiceNotation(text, () => 0.5)).toBeNull();
+    expect(rollDiceExpression(text, () => 0.5)).toBeNull();
+  });
+
+  it('still accepts the same dice without the extra text', () => {
+    expect(parseDiceNotation('1d8+3')).toMatchObject({ count: 1, sides: 8, modifier: 3 });
+  });
+});
+
+describe('maximum notation length', () => {
+  const { MAX_DICE_NOTATION_LENGTH } = globalThis.DiceEngine;
+  // "1d6" followed by "+1" pairs and one final digit: a valid expression of exactly the given length
+  const expressionOfLength = (n) => '1d6' + '+1'.repeat(Math.floor((n - 3) / 2)) + ((n - 3) % 2 ? '1' : '');
+
+  it('is 200 characters', () => {
+    expect(MAX_DICE_NOTATION_LENGTH).toBe(200);
+  });
+
+  it('accepts an expression of exactly the maximum length', () => {
+    const text = expressionOfLength(200);
+    expect(text).toHaveLength(200);
+    expect(parseDiceExpression(text)).not.toBeNull();
+    expect(rollDiceExpression(text, () => 0.5)).not.toBeNull();
+  });
+
+  it('rejects one character more (never truncated)', () => {
+    const text = expressionOfLength(201);
+    expect(text).toHaveLength(201);
+    expect(parseDiceExpression(text)).toBeNull();
+    expect(rollDiceExpression(text, () => 0.5)).toBeNull();
+  });
+
+  it('counts the raw text, padding included, for the single-group parser too', () => {
+    expect(parseDiceNotation('1d6' + ' '.repeat(197))).toMatchObject({ count: 1, sides: 6 }); // 200
+    expect(parseDiceNotation('1d6' + ' '.repeat(198))).toBeNull(); // 201
+    expect(rollDiceNotation('1d6' + ' '.repeat(198), () => 0.5)).toBeNull();
+  });
+
+  it('rejects an extremely long multi-group expression before rolling a single die', () => {
+    const script = vi.fn(() => 0.5);
+    const many = Array(20000).fill('1000d6').join('+'); // 139,999 characters, ~20 million dice
+    expect(rollDiceExpression(many, script)).toBeNull();
+    expect(rollDiceNotation('1d6' + ' '.repeat(100000), script)).toBeNull();
+    expect(script).not.toHaveBeenCalled();
+  });
+
+  it('total work is bounded: the longest accepted expression is at most ~30 full groups', () => {
+    // "1000d6+" is 7 characters, so 200 characters hold at most 29 of them
+    const text = Array(29).fill('1000d6').join('+'); // 202 characters: too long
+    expect(text.length).toBeGreaterThan(200);
+    expect(parseDiceExpression(text)).toBeNull();
+    const within = Array(28).fill('1000d6').join('+'); // 195 characters
+    const terms = parseDiceExpression(within);
+    expect(terms).toHaveLength(28);
+    expect(terms.reduce((n, t) => n + t.count, 0)).toBeLessThanOrEqual(28000);
+  });
+
+  it('is checked before any parsing: an overlong string is never scanned', () => {
+    const replace = vi.spyOn(String.prototype, 'replace');
+    const match = vi.spyOn(String.prototype, 'match');
+    try {
+      parseDiceNotation('1d6' + ' '.repeat(500));
+      parseDiceExpression('1d6+' + '1+'.repeat(500));
+      expect(replace).not.toHaveBeenCalled();
+      expect(match).not.toHaveBeenCalled();
+      // control: the same spies do see a normal parse
+      parseDiceNotation('1d6+1');
+      expect(replace.mock.calls.length + match.mock.calls.length).toBeGreaterThan(0);
+    } finally {
+      replace.mockRestore();
+      match.mockRestore();
+    }
+  });
+});
+
+describe('one shared validity rule for dice counts and sides', () => {
+  const { MAX_DICE_COUNT, MAX_DIE_SIDES } = globalThis.DiceEngine;
+  const good = () => 0.5;
+
+  describe('rollMultipleDice (low level: throws on invalid arguments)', () => {
+    it.each([
+      ['zero count', 0, 6], ['negative count', -1, 6], ['fractional count', 2.5, 6],
+      ['zero sides', 2, 0], ['negative sides', 2, -6], ['fractional sides', 2, 6.5],
+      ['NaN count', NaN, 6], ['NaN sides', 2, NaN], ['Infinity count', Infinity, 6],
+      ['string count', '3', 6],
+      ['count above the maximum', MAX_DICE_COUNT + 1, 6], ['sides above the maximum', 2, MAX_DIE_SIDES + 1]
+    ])('%s throws RangeError', (_label, count, sides) => {
+      const script = vi.fn(good);
+      expect(() => rollMultipleDice(count, sides, script)).toThrow(RangeError);
+      expect(script).not.toHaveBeenCalled();
+    });
+
+    it('rolls the first valid values and the maximum valid values', () => {
+      expect(rollMultipleDice(1, 1, good)).toEqual([1]);
+      expect(rollMultipleDice(MAX_DICE_COUNT, 6, good)).toHaveLength(MAX_DICE_COUNT);
+      expect(rollMultipleDice(1, MAX_DIE_SIDES, good)).toHaveLength(1);
+    });
+  });
+
+  describe('rollHitDice (returns null on invalid dimensions)', () => {
+    it.each([
+      ['zero count', 8, 0], ['negative count', 8, -3], ['fractional count', 8, 2.5],
+      ['zero die', 0, 2], ['negative die', -8, 2], ['fractional die', 8.5, 2],
+      ['NaN count', 8, NaN], ['NaN die', NaN, 2], ['string count', 8, '3'],
+      ['count above the maximum', 8, MAX_DICE_COUNT + 1], ['die above the maximum', MAX_DIE_SIDES + 1, 2]
+    ])('%s is refused without rolling', (_label, dieSize, count) => {
+      const script = vi.fn(good);
+      expect(rollHitDice(dieSize, count, 2, script)).toBeNull();
+      expect(script).not.toHaveBeenCalled();
+    });
+
+    it('never reports negative healing for a bad count', () => {
+      expect(rollHitDice(8, -3, 2, good)).toBeNull();
+    });
+
+    it('rolls the first valid values and the maximum valid values', () => {
+      expect(rollHitDice(1, 1, 0, good)).toMatchObject({ rolls: [1], healing: 1 });
+      expect(rollHitDice(8, MAX_DICE_COUNT, 0, good).rolls).toHaveLength(MAX_DICE_COUNT);
+      expect(rollHitDice(MAX_DIE_SIDES, 1, 0, good).rolls).toHaveLength(1);
+    });
+  });
+
+  describe('the notation parsers use the same rule', () => {
+    it.each([['0d6'], ['1d0'], ['1.5d6'], ['1d6.5']])('reject %j', (text) => {
+      expect(parseDiceNotation(text)).toBeNull();
+      expect(parseDiceExpression(text)).toBeNull();
+    });
+
+    it('a leading minus is a negative group in an expression, but not a valid single group', () => {
+      expect(parseDiceNotation('-1d6')).toBeNull();
+      expect(parseDiceExpression('-1d6')).toEqual([{ type: 'dice', sign: -1, count: 1, sides: 6, keepDir: null, keepN: null }]);
+    });
+
+    it('accept the first valid and the maximum valid dimensions', () => {
+      expect(parseDiceNotation('1d1')).toMatchObject({ count: 1, sides: 1 });
+      expect(parseDiceNotation('1000d1000000')).toMatchObject({ count: 1000, sides: 1000000 });
+      expect(parseDiceExpression('1d1+1000d1000000')).toHaveLength(2);
+    });
+
+    it('reject one past the maximum on either dimension', () => {
+      expect(parseDiceNotation('1001d1')).toBeNull();
+      expect(parseDiceNotation('1d1000001')).toBeNull();
+      expect(parseDiceExpression('1d1+1001d1')).toBeNull();
+      expect(parseDiceExpression('1d1+1d1000001')).toBeNull();
+    });
+  });
+});
+
+describe('getCriticalHitNotation at the dice limit', () => {
+  const { MAX_DICE_COUNT } = globalThis.DiceEngine;
+  const largestSafe = MAX_DICE_COUNT / 2;
+
+  it('doubles the largest count whose double is still allowed', () => {
+    expect(getCriticalHitNotation(largestSafe + 'd6+3')).toBe(MAX_DICE_COUNT + 'd6+3');
+    expect(rollDiceNotation(getCriticalHitNotation(largestSafe + 'd6+3'), () => 0.5)).not.toBeNull();
+  });
+
+  it('returns null for the first count whose double passes the limit', () => {
+    expect(getCriticalHitNotation(largestSafe + 1 + 'd6+3')).toBeNull();
+    expect(getCriticalHitNotation(MAX_DICE_COUNT + 'd6')).toBeNull();
+  });
+
+  it('a normal roll of that count is still fine, so only the crit is refused', () => {
+    expect(rollDiceNotation(largestSafe + 1 + 'd6', () => 0.5)).not.toBeNull();
   });
 });

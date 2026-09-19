@@ -17,6 +17,7 @@
   <script src="/js/site.js"></script>
   <script src="/js/generated/srd-allowlist.js"></script>
   <script src="/js/modules/srd-content-filter.js"></script>
+  <script src="/js/modules/dice-engine.js"></script>
   <style>
     .bgimage{
       background: url('images/BGMap.png') no-repeat center center fixed;
@@ -2674,7 +2675,7 @@
 
   function rollInitiativeFor(c) {
     const dexMod = c.dex != null ? Math.floor((c.dex - 10) / 2) : 0;
-    return Math.floor(Math.random() * 20) + 1 + dexMod;
+    return DiceEngine.rollDie(20) + dexMod;
   }
 
   function normalizeForTracker(c) {

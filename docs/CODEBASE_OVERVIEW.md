@@ -45,7 +45,8 @@ This document provides a comprehensive inventory of **The DM's Toolbox** codebas
 │   ├── indexed-db-storage.js          # IndexedDB storage layer
 │   ├── rules-data.js                  # Rules reference data
 │   └── modules/
-│       ├── dice.js                    # Dice rolling engine
+│       ├── dice-engine.js             # THE dice implementation (classic script -> window.DiceEngine)
+│       ├── dice.js                    # ES-module facade over dice-engine.js (named exports)
 │       ├── validation.js              # D&D 5e data validation (wired into character.js
 │       │                              #   import path as of 2026-09-18)
 │       ├── character-calculations.js  # Character mechanics + derived-stat recalc
@@ -133,7 +134,8 @@ These scripts are loaded directly by HTML pages and contain UI logic.
   not `type="module"` — kept that way so `initiative.html` still works when opened via
   `file://`. It can't import `js/modules/initiative-calculations.js` (ES `export` syntax) or
   `js/modules/validation.js` without converting to a module and losing that. It has its own
-  inline dice-rolling and death-save/concentration-DC logic instead; see
+  inline death-save/concentration-DC logic instead (its dice rolling is no longer inline: it uses
+  the shared dice engine, `js/modules/dice-engine.js`, loaded by a plain <script> tag); see
   `js/modules/initiative-calculations.js`'s header comment for exactly what is/isn't
   verified-identical between the two.
 
@@ -159,7 +161,7 @@ These scripts are loaded directly by HTML pages and contain UI logic.
 - Uses IndexedDB for portrait storage
 
 **Dependencies:**
-- `js/modules/dice.js` - Dice rolling (imported directly via ES module)
+- `js/modules/dice.js` - Dice rolling (ES-module facade over `dice-engine.js`)
 - `js/modules/character-calculations.js` - D&D mechanics, `recalcDerivedStats`
 - `js/modules/Attack-rolls.js` - Attack feature bonuses, notation helpers
 - `js/modules/character-spell-data.js` - Spell slot tables, normalization, search
@@ -315,21 +317,43 @@ These scripts are loaded directly by HTML pages and contain UI logic.
 
 Pure logic modules under `js/modules/`. These do not touch the DOM.
 
-### dice.js
+### dice-engine.js and dice.js
 
-**Location:** `/js/modules/dice.js`
+**Location:** `/js/modules/dice-engine.js` (the implementation) and `/js/modules/dice.js` (facade)
 
-**Responsibilities:**
-- Dice rolling with cryptographic randomness
-- Dice notation parsing (e.g., "2d6+3")
-- Multiple dice roll aggregation
-- Advantage/disadvantage support
+The one implementation of the app's dice rules. It owns dice semantics only (parsing, rolling,
+modifiers, keep-highest/lowest, multi-term expressions, d20 advantage, Great Weapon Fighting
+rerolls, Savage Attacker, critical-hit doubling, hit-dice healing). It knows nothing about the DOM,
+logs, labels or characters; callers format the plain results.
 
-**Exports:**
-- `rollDie(sides, randomFn)` - Roll a single die
-- `parseDiceNotation(notation)` - Parse "XdY+Z" strings
-- `rollMultipleDice(count, sides, randomFn)` - Roll multiple dice
-- `rollDiceNotation(notation, randomFn)` - Parse and roll
+**How each kind of caller reaches it:**
+- Classic pages and scripts (`initiative.js`, the inline Combat Mode script and the wizard /
+  level-up scripts on `characters.html`, `encounterbuilder.html`) load
+  `<script src="/js/modules/dice-engine.js">` before their own scripts and use `window.DiceEngine`.
+  `dice-engine.js` is itself a classic script (an IIFE, no `export`), which is why `initiative.js`
+  can stay a classic script.
+- ES modules and tests (`character.js`, `character-rest.js`, `character-combat.js`) import the named
+  exports of `dice.js`, which only re-exports `globalThis.DiceEngine`. It has no logic of its own.
+
+**Exports (both routes):**
+- `rollDie(sides, randomFn)`, `rollMultipleDice(count, sides, randomFn)`
+- `parseDiceNotation(notation)` - one group: "2d6+3", "d8", "4d6kh3", "2d20kl1-1"
+- `rollDiceNotation(notation, randomFn, { rerollLowDice, rollTwiceTakeBest })` - roll one group; returns `rolls`, `kept`, `total`, `twiceRoll`, crit/fumble flags
+- `describeFeatureRoll(result)` - the " [SA: 11 vs 5] [GWF]" note for a feature roll
+- `parseDiceExpression(expr)` / `rollDiceExpression(expr, randomFn)` - several terms: "2d6+1d4+3", "1d6-1d4", "4d6kh3", "5"
+- `rollD20(mode, bonus, randomFn)` - the one entry point for normal / advantage / disadvantage d20 rolls
+- Limits: `MAX_DICE_COUNT` (1000), `MAX_DIE_SIDES` (1,000,000) and `MAX_DICE_NOTATION_LENGTH` (200 characters of raw text, checked before any parsing so a long string is never scanned and many groups cannot add up to the same problem). Anything beyond a limit is invalid (rejected, never truncated or clamped).
+- One validity rule for dice dimensions (whole numbers from 1 up to the limits) is shared by both parsers, `rollHitDice` and `rollMultipleDice`. The parsers and `rollHitDice` return null; `rollMultipleDice` is the low-level call and throws `RangeError`. `getCriticalHitNotation` returns null when doubling the dice would pass `MAX_DICE_COUNT`.
+- `getCriticalHitNotation(notation)` - doubles the dice, keeps the modifier
+- `rollHitDice(dieSize, count, conMod, randomFn)` - CON per die, minimum 1 HP per die
+- `rollAbilityScore`, `rollAbilityScoreSet`, `createSeededRandom`
+
+**Strict on purpose:** the engine accepts no text around the dice (`"1d8+3 slashing"` is invalid). Combat Mode alone drops recognized trailing damage words from older saved attacks before rolling and `console.warn`s when it does.
+
+**Stays with the callers:** result text and history entries (`formatParts` in `initiative.js`, the
+Combat Mode breakdown, the sheet's roll history), attack labels, prompts, feature lookup
+(`Attack-rolls.js`). Not in the engine: `encounterbuilder.html`'s `avgDice()`, an average-damage
+estimate rather than a roll.
 
 **Dependencies:** None
 
@@ -428,10 +452,10 @@ inline `validate()` closures, which already covers creation-time choices adequat
 - `getConcentrationAttackBonus(spellName)` - Returns bonus entry for a concentration spell
 - `getAttackFeatureBonuses(char, attack)` - Dueling (+2 melee), GWF (reroll 1s/2s), Savage Attacker (roll twice), Improved Divine Smite (Paladin 11+)
 - `addFlatBonusToNotation(notation, bonus)` - Bakes a flat bonus into a dice notation string
-- `rollDiceSimple(notation, description, randomFn)` - Pure dice roll, no side effects
-- `rollDiceWithFeatures(notation, description, features, randomFn)` - Feature-aware roll (pure)
 
-**Dependencies:** `dice.js`
+Rolling is not done here: `character.js` rolls through `dice.js` (the dice engine).
+
+**Dependencies:** None
 
 ---
 
@@ -467,7 +491,7 @@ inline `validate()` closures, which already covers creation-time choices adequat
 **Exports:**
 - `applyShortRest(char, healAmount, diceSpent)` - Applies healing (capped at maxHP) and decrements hit dice remaining
 - `applyLongRest(char)` - Restores HP to max, clears temp HP, resets all spell slot `used` to 0, resets pact slot `used` to 0, restores `floor(total/2)` hit dice (minimum 1)
-- `rollHitDiceForHealing(sides, count, conMod, randomFn)` - Rolls hit dice with CON modifier; minimum 1 per die; injectable random function for tests
+- `rollHitDiceForHealing(sides, count, conMod, randomFn)` - The dice engine's `rollHitDice`, re-exported. Rolls hit dice with CON modifier; minimum 1 per die; injectable random function for tests
 - `calcSpellSaveDC(profBonus, abilMod)`, `calcSpellAttackBonus(profBonus, abilMod)`,
   `getConcentrationCheckDC(damage)`, `calcLongRestHitDiceRestored(total, current)` - small
   pure math helpers
@@ -729,7 +753,7 @@ Pages (UI Layer)
 │   ├── multiclass-ui.js
 │   │   └── data/srd/level-up-data.js (window.LevelUpData multiclass math, see above)
 │   ├── character.js  [type="module"]
-│   │   └── modules/dice.js
+│   │   └── modules/dice.js  (facade over modules/dice-engine.js)
 │   │   └── modules/character-calculations.js
 │   │   └── modules/Attack-rolls.js
 │   │   └── modules/character-spell-data.js
@@ -749,7 +773,8 @@ Pages (UI Layer)
 │   └── initiative.js  (classic <script>, NOT type="module" — kept that way so this page
 │       │                still works via file://; can't import ES modules below without
 │       │                losing that)
-│       └── modules/dice.js  (inline reimplementation; NOT actually imported)
+│       └── modules/dice-engine.js  (classic script, loaded by <script src> before initiative.js;
+│                                    initiative.js uses window.DiceEngine, no inline dice logic)
 │       └── modules/initiative-calculations.js  (mostly NOT imported — see module doc;
 │                                                  getConcentrationDC/sortByInitiative are
 │                                                  manually kept in sync, not imported)

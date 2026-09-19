@@ -182,7 +182,7 @@ Every phase assumes the shipped build only contains SRD-allowed data and copy. W
   * [ ] `battlemap.js` – geometry/math still embedded (future candidate)
 * [x] `character.js` modularization complete (v2.1.5):
 
-  * [x] Attack roll logic → `Attack-rolls.js` (CONCENTRATION_ATTACK_BONUSES, addFlatBonusToNotation, getAttackFeatureBonuses, rollDiceWithFeatures)
+  * [x] Attack roll logic → `Attack-rolls.js` (CONCENTRATION_ATTACK_BONUSES, addFlatBonusToNotation, getAttackFeatureBonuses; dice rolling itself now lives in the shared dice engine, `js/modules/dice-engine.js`)
   * [x] Spell data logic → `character-spell-data.js` (normalizeSpellEntry, getSpellSlotsForClassLevel, getPactMagicSlots, searchSpells, spell slot tables)
   * [x] Derived-stat recalculation → `character-calculations.js` (recalcDerivedStats, calculateConcentrationCheckDC, calculateEncumbrance, calculateSpellDC, calculateSpellAttackBonus)
   * [x] Rest mechanics → `character-rest.js` — corrected 2026-09-18: `character.js` now

@@ -19,6 +19,7 @@
   <script src="/js/site.js"></script>
   <script src="/js/generated/srd-allowlist.js"></script>
   <script src="/js/modules/srd-content-filter.js"></script>
+  <script src="/js/modules/dice-engine.js"></script>
 
   <style>
     .bgimage{
@@ -5201,16 +5202,9 @@
         const bonusVal = parseInt(document.getElementById(skill.bonusId)?.value, 10) || 0;
         const bonusStr = bonusVal >= 0 ? `+${bonusVal}` : String(bonusVal);
 
-        let roll1, roll2, chosen, isAdv = false, isDisadv = false;
-        if (rollType === 'advantage') {
-          roll1 = Math.ceil(Math.random() * 20); roll2 = Math.ceil(Math.random() * 20);
-          chosen = Math.max(roll1, roll2); isAdv = true;
-        } else if (rollType === 'disadvantage') {
-          roll1 = Math.ceil(Math.random() * 20); roll2 = Math.ceil(Math.random() * 20);
-          chosen = Math.min(roll1, roll2); isDisadv = true;
-        } else {
-          chosen = Math.ceil(Math.random() * 20);
-        }
+        const d20 = DiceEngine.rollD20(rollType);
+        const [roll1, roll2] = d20.rolls;
+        const chosen = d20.chosen, isAdv = d20.isAdvantage, isDisadv = d20.isDisadvantage;
         const total = chosen + bonusVal;
         const isCrit = chosen === 20, isFumble = chosen === 1;
 
@@ -6063,89 +6057,68 @@
       // Combat Dice Rolling Functions
       // ========================================
 
-      // Roll a single die
-      function rollDie(sides) {
-        return Math.floor(Math.random() * sides) + 1;
+      // The dice rules (parsing, critical doubling, Great Weapon Fighting rerolls, Savage Attacker,
+      // d20 advantage) live in the shared engine, js/modules/dice-engine.js, loaded in <head> as
+      // window.DiceEngine. This section only turns its results into the breakdown text shown here.
+
+      // Older saved attacks sometimes carry the damage type inside the notation ("1d8+3 slashing").
+      // The engine is deliberately strict, so this wrapper first drops a trailing run of recognized
+      // damage-type / descriptive words that are separated from the dice by whitespace, and warns so
+      // the saved data can be found and fixed. Nothing else is repaired: the dice part is passed on
+      // exactly, and whatever the engine still rejects ("2d6+ fire", "4d6kh", "hello world") rolls 0.
+      const LEGACY_DAMAGE_WORDS = 'acid|bludgeoning|cold|fire|force|lightning|necrotic|piercing|poison|psychic|radiant|slashing|thunder|damage|magical|nonmagical|weapon|bonus|extra|and';
+      const LEGACY_TRAILING_TEXT = new RegExp(`\\s+(?:${LEGACY_DAMAGE_WORDS})(?:[ ,/-]+(?:${LEGACY_DAMAGE_WORDS}))*\\s*$`, 'i');
+      // Diagnostics name the saved string, but never echo a huge one.
+      function describeSavedText(text) {
+        const s = String(text);
+        return s.length > 80 ? `${s.slice(0, 80)}... (${s.length} characters)` : s;
+      }
+      function normalizeLegacyDamageNotation(notation) {
+        const text = String(notation);
+        // Past the engine's length limit the engine rejects the text anyway, so the regex never runs on it.
+        if (text.length > DiceEngine.MAX_DICE_NOTATION_LENGTH) return text;
+        const cleaned = text.replace(LEGACY_TRAILING_TEXT, '');
+        if (cleaned.trimEnd() !== text.trimEnd()) { // trailing spaces alone are not "dropped text"
+          console.warn(`Combat Mode: dropped trailing text from saved dice notation "${describeSavedText(text)}"; rolling "${cleaned}"`);
+        }
+        return cleaned;
       }
 
-      /**
-       * Like parseDiceAndRoll() but supports GWF (reroll 1s & 2s) and
-       * Savage Attacker (roll twice, take higher total).
-       */
-      function parseDiceAndRollWithFeatures(notation, doubleDice, { rerollLowDice = false, rollTwiceTakeBest = false } = {}) {
-        if (!rerollLowDice && !rollTwiceTakeBest) return parseDiceAndRoll(notation, doubleDice);
-
-        const parts = notation.match(/(\d+)d(\d+)([+-]\d+)?/i);
-        if (!parts) return parseDiceAndRoll(notation, doubleDice);
-
-        let numDice  = parseInt(parts[1], 10);
-        const sides   = parseInt(parts[2], 10);
-        const modifier = parts[3] ? parseInt(parts[3], 10) : 0;
-        if (doubleDice) numDice *= 2;
-
-        function rollOnce() {
-          return Array.from({ length: numDice }, () => {
-            const r = rollDie(sides);
-            return (rerollLowDice && r <= 2) ? rollDie(sides) : r;
-          });
-        }
-
-        const rolls1 = rollOnce();
-        let finalRolls, featNote = '';
-
-        if (rollTwiceTakeBest) {
-          const rolls2 = rollOnce();
-          const t1 = rolls1.reduce((a, b) => a + b, 0);
-          const t2 = rolls2.reduce((a, b) => a + b, 0);
-          if (t1 >= t2) { finalRolls = rolls1; featNote = ` [SA: ${t1} vs ${t2}]`; }
-          else          { finalRolls = rolls2; featNote = ` [SA: ${t2} vs ${t1}]`; }
-        } else {
-          finalRolls = rolls1;
-        }
-        if (rerollLowDice) featNote += ' [GWF]';
-
-        const total   = finalRolls.reduce((a, b) => a + b, 0) + modifier;
-        const modStr  = modifier >= 0 ? `+${modifier}` : String(modifier);
-        const breakdown = `${numDice}d${sides}${modStr} = [${finalRolls.join(', ')}]${modStr} = ${total}${featNote}`;
-        return { total, breakdown, rolls: finalRolls, sides, modifier };
-      }
-
-      // Parse dice notation (e.g., "2d6+3") and roll
-      function parseDiceAndRoll(notation, doubleDice = false) {
+      // Roll dice notation such as "2d6+3". `doubleDice` doubles the dice for a critical hit;
+      // `features` is { rerollLowDice, rollTwiceTakeBest }. A bare number ("5") or a multi-group
+      // expression ("2d6+1d4") is rolled by the engine's expression roller; anything unreadable is 0.
+      // `savedText` is the string as it was saved (for diagnostics), when `notation` was already
+      // cleaned or adjusted by the caller.
+      function parseDiceAndRoll(notation, doubleDice = false, features = {}, savedText = notation) {
         if (!notation) return { total: 0, breakdown: '0', rolls: [] };
+        notation = normalizeLegacyDamageNotation(notation);
 
-        const parts = notation.match(/(\d+)d(\d+)([+-]\d+)?/i);
-        if (!parts) {
-          // Try to parse as just a modifier
-          const mod = parseInt(notation, 10);
-          if (!isNaN(mod)) {
-            return { total: mod, breakdown: String(mod), rolls: [] };
+        // A critical hit on a single dice group doubles it. If doubling would pass the engine's dice
+        // limit the crit is refused; it must not quietly roll normal damage instead.
+        let critNotation = null;
+        if (doubleDice && DiceEngine.parseDiceNotation(notation)) {
+          critNotation = DiceEngine.getCriticalHitNotation(notation);
+          if (!critNotation) {
+            console.warn(`Combat Mode: a critical hit on "${describeSavedText(savedText)}" would pass the ${DiceEngine.MAX_DICE_COUNT}-dice limit; rolling 0`);
+            return { total: 0, breakdown: '0', rolls: [] };
           }
+        } // (a bare number or several groups have no single group to double and are rolled as written)
+        const rolled = DiceEngine.rollDiceNotation(critNotation || notation, undefined, features);
+        if (rolled) {
+          const modStr = rolled.modifier >= 0 ? `+${rolled.modifier}` : String(rolled.modifier);
+          const breakdown = `${rolled.count}d${rolled.sides}${modStr} = [${rolled.rolls.join(', ')}]${modStr} = ${rolled.total}${DiceEngine.describeFeatureRoll(rolled)}`;
+          return { total: rolled.total, breakdown, rolls: rolled.rolls, sides: rolled.sides, modifier: rolled.modifier };
+        }
+
+        const expr = DiceEngine.rollDiceExpression(notation);
+        if (!expr) {
+          const cleanedNote = notation !== savedText ? ` (as rolled: "${describeSavedText(notation)}")` : '';
+          console.warn(`Combat Mode: could not read dice notation "${describeSavedText(savedText)}"${cleanedNote}; rolling 0`);
           return { total: 0, breakdown: '0', rolls: [] };
         }
-
-        let numDice = parseInt(parts[1], 10);
-        const sides = parseInt(parts[2], 10);
-        const modifier = parts[3] ? parseInt(parts[3], 10) : 0;
-
-        // Double dice for critical hits
-        if (doubleDice) {
-          numDice *= 2;
-        }
-
-        const rolls = [];
-        let sum = 0;
-        for (let i = 0; i < numDice; i++) {
-          const roll = rollDie(sides);
-          rolls.push(roll);
-          sum += roll;
-        }
-
-        const total = sum + modifier;
-        const modStr = modifier >= 0 ? `+${modifier}` : String(modifier);
-        const breakdown = `${numDice}d${sides}${modStr} = [${rolls.join(', ')}]${modStr} = ${total}`;
-
-        return { total, breakdown, rolls, sides, modifier };
+        const rolls = expr.parts.flatMap(part => part.rolls || []);
+        const breakdown = rolls.length ? `${notation} = [${rolls.join(', ')}] = ${expr.total}` : String(expr.total);
+        return { total: expr.total, breakdown, rolls };
       }
 
       // Roll attack (d20 + bonus)
@@ -6161,21 +6134,11 @@
           }
 
           const bonus = parseInt(attack.bonus, 10) || 0;
-          let roll1 = rollDie(20);
-          let roll2 = rollDie(20);
-          let finalRoll, advantage;
-
-          if (rollType === 'advantage') {
-            finalRoll = Math.max(roll1, roll2);
-            advantage = 'Advantage';
-          } else if (rollType === 'disadvantage') {
-            finalRoll = Math.min(roll1, roll2);
-            advantage = 'Disadvantage';
-          } else {
-            finalRoll = roll1;
-            roll2 = null;
-            advantage = null;
-          }
+          const d20 = DiceEngine.rollD20(rollType);
+          const roll1 = d20.rolls[0];
+          const roll2 = d20.rolls[1] ?? null;
+          const finalRoll = d20.chosen;
+          const advantage = d20.isAdvantage ? 'Advantage' : d20.isDisadvantage ? 'Disadvantage' : null;
 
           const total = finalRoll + bonus;
           const isCrit = finalRoll === 20;
@@ -6242,9 +6205,12 @@
           const char = window.getCurrentCharacter?.();
           const { flatBonus, extraRolls, rerollLowDice, rollTwiceTakeBest } =
             window.getAttackFeatureBonuses?.(char, attack) || { flatBonus: 0, extraRolls: [], rerollLowDice: false, rollTwiceTakeBest: false };
+          // Clean legacy trailing text first, so a flat bonus (Dueling, ...) is applied to real dice
+          // notation. The engine still validates the result when it rolls.
+          const damageNotation = normalizeLegacyDamageNotation(attack.damage);
           const mainNotation = (flatBonus && window.addFlatBonusToNotation)
-            ? window.addFlatBonusToNotation(attack.damage, flatBonus)
-            : attack.damage;
+            ? window.addFlatBonusToNotation(damageNotation, flatBonus)
+            : damageNotation;
           const diceFeatures = { rerollLowDice, rollTwiceTakeBest };
 
           // Ask about concentration bonus before any dice are rolled so the answer
@@ -6252,7 +6218,7 @@
           const concBonus = window.getConcentrationAttackBonus?.();
           const applyConc = concBonus ? confirm(concBonus.prompt) : false;
 
-          const result1 = parseDiceAndRollWithFeatures(mainNotation, isCrit, diceFeatures);
+          const result1 = parseDiceAndRoll(mainNotation, isCrit, diceFeatures, attack.damage);
           let total = result1.total;
           let breakdown = result1.breakdown;
           if (flatBonus) breakdown += ` <span class="text-info-emphasis">(+${flatBonus})</span>`;
@@ -6348,10 +6314,8 @@
 
       // Roll saving throw from combat view
       function _combatD20Roll(rollType) {
-        const r1 = Math.ceil(Math.random() * 20);
-        if (rollType === 'advantage')    { const r2 = Math.ceil(Math.random() * 20); return { chosen: Math.max(r1,r2), rolls:[r1,r2], isAdv:true }; }
-        if (rollType === 'disadvantage') { const r2 = Math.ceil(Math.random() * 20); return { chosen: Math.min(r1,r2), rolls:[r1,r2], isDisadv:true }; }
-        return { chosen: r1, rolls:[r1], isAdv:false, isDisadv:false };
+        const d20 = DiceEngine.rollD20(rollType);
+        return { chosen: d20.chosen, rolls: d20.rolls, isAdv: d20.isAdvantage, isDisadv: d20.isDisadvantage };
       }
 
       function _combatRollAndShow(label, bonusVal, rollType, flashSelector, flashValueSelector) {
@@ -6426,7 +6390,7 @@
             }
           } catch (e) { /* non-fatal */ }
 
-          const roll = rollDie(20);
+          const roll = DiceEngine.rollDie(20);
           const total = roll + bonus;
           const isCrit = roll === 20;
           const isFumble = roll === 1;
@@ -7145,7 +7109,7 @@
       // Roll death save from combat view
       function rollCombatDeathSave() {
         try {
-          const roll = Math.floor(Math.random() * 20) + 1;
+          const roll = DiceEngine.rollDie(20);
           let resultType = '';
           let resultMsg = '';
 
@@ -7254,7 +7218,7 @@
           }
         } catch (err) {
           console.error('Error rolling death save:', err);
-          const roll = Math.floor(Math.random() * 20) + 1;
+          const roll = DiceEngine.rollDie(20);
           alert(`Death Save: ${roll}\n${roll >= 10 ? 'Success!' : 'Failure!'}`);
         }
       }
@@ -7292,17 +7256,14 @@
           const conScore = parseInt(document.getElementById('statCon')?.value, 10) || 10;
           const conMod = Math.floor((conScore - 10) / 2);
 
-          // Roll the dice
-          let total = 0;
-          const rolls = [];
-          for (let i = 0; i < count; i++) {
-            const roll = Math.floor(Math.random() * dieSize) + 1;
-            rolls.push(roll);
-            total += roll + conMod;
+          // Roll the dice (CON modifier per die, at least 1 HP per die spent: the engine's rule)
+          // (null when the count or die size, read from the saved hit-dice text, is beyond the limits)
+          const healed = DiceEngine.rollHitDice(dieSize, count, conMod);
+          if (!healed) {
+            alert('Too many hit dice, or too large a die, to roll.');
+            return;
           }
-
-          // Minimum 1 HP per hit die spent
-          total = Math.max(total, count);
+          const { rolls, healing: total } = healed;
 
           // Apply healing
           const currentHPEl = document.getElementById('charCurrentHP');

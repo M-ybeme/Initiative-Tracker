@@ -6,7 +6,6 @@
  * No DOM access, no side effects, no global state.
  */
 
-import { rollDie } from '../modules/dice.js';
 
 /**
  * Calculate spell save DC.
@@ -56,26 +55,11 @@ export function calcLongRestHitDiceRestored(totalCount, currentCount) {
 }
 
 /**
- * Roll hit dice for healing during a short rest.
- * Each die roll has CON modifier added; total healing is at least 1 HP per die spent.
- * @param {number} dieSize  - size of each hit die (e.g. 10 for d10)
- * @param {number} count    - number of hit dice to spend
- * @param {number} conMod   - Constitution modifier
- * @param {Function} randomFn - injectable random function (default Math.random)
- * @returns {{ rolls: number[], rawTotal: number, healing: number }}
+ * Roll hit dice for healing during a short rest: each die adds the CON modifier and the total heals
+ * at least 1 HP per die spent. The rule itself lives in the dice engine (rollHitDice); this is its
+ * name in the rest module. Returns { rolls, rawTotal, healing }.
  */
-export function rollHitDiceForHealing(dieSize, count, conMod = 0, randomFn = Math.random) {
-  const rolls = [];
-  let rawTotal = 0;
-  for (let i = 0; i < count; i++) {
-    const roll = rollDie(dieSize, randomFn);
-    rolls.push(roll);
-    rawTotal += roll + conMod;
-  }
-  // Minimum 1 HP per die spent (from 2024 PHB / widely-used interpretation)
-  const healing = Math.max(rawTotal, count);
-  return { rolls, rawTotal, healing };
-}
+export { rollHitDice as rollHitDiceForHealing } from '../modules/dice.js';
 
 function parseHitDiceStr(hdStr) {
   const bs = String.fromCharCode(92);

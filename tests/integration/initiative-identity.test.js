@@ -122,6 +122,7 @@ async function loadTracker(characters, currentTurn = 0) {
   document.body.innerHTML = bodyHtml;
   installGlobals();
   vi.resetModules();
+  await import('../../js/modules/dice-engine.js'); // initiative.html loads the engine before initiative.js
   await importTracker();
   emulateRemovalFocusOut();
 }
