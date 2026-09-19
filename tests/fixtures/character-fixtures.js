@@ -107,11 +107,12 @@ export const DERIVED = {
   savingThrows: { str: -1, dex: 2, con: 1, int: 7, wis: 3, cha: -2 },
   skills: {
     arcana: 10, history: 7, insight: 3, perception: 3, stealth: 5, // proficient (arcana has expertise)
-    acrobatics: 2, animalHandling: 0, athletics: -1, deception: -2, intimidation: -2, investigation: 4,
-    medicine: 0, nature: 4, performance: -2, persuasion: -2, religion: 4, sleightOfHand: 2, survival: 0,
+    // Not proficient: ability modifier + 1, because Jack of All Trades adds half of the +3 proficiency bonus.
+    acrobatics: 3, animalHandling: 1, athletics: 0, deception: -1, intimidation: -1, investigation: 5,
+    medicine: 1, nature: 5, performance: -1, persuasion: -1, religion: 5, sleightOfHand: 3, survival: 1,
   },
   passivePerception: 13,
-  passiveInvestigation: 15, // 10 + investigation bonus 4 + 1 (Jack of All Trades: half of +3, rounded down)
+  passiveInvestigation: 15, // 10 + investigation bonus 5 (Int mod 4 + Jack of All Trades 1)
   passiveInsight: 13, // 10 + insight bonus 3
   // Wizard 5 slot maxes from the class table, replacing whatever was typed into the max boxes.
   spellSlotMax: { 1: 4, 2: 3, 3: 2, 4: 0, 5: 0, 6: 0, 7: 0, 8: 0, 9: 0 },

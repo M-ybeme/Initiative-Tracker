@@ -2412,6 +2412,17 @@ import { addPolymorphNotes } from './polymorph-notes.js';
       }
 
       // ---------- Fill form ----------
+      // classes[] is the record of a multiclass character (names, subclasses, levels). The class field is a
+      // presentation and edit surface derived from it: "Class (Subclass) / Class (Subclass)", with no levels.
+      // saveCurrentCharacter keeps classes[] as it is while the field still shows this text.
+      function formatClassField(char) {
+        const withSubclass = (name, subclass) => (subclass ? `${name} (${subclass})` : name);
+        if (char.multiclass && Array.isArray(char.classes) && char.classes.length > 1) {
+          return char.classes.map(c => withSubclass(c.className, c.subclass)).join(' / ');
+        }
+        return withSubclass(char.charClass || '', char.subclass);
+      }
+
       function fillFormFromCharacter(char) {
           if (!char) return;
 
@@ -2424,12 +2435,7 @@ import { addPolymorphNotes } from './polymorph-notes.js';
           $('charName').value = char.name || '';
           $('playerName').value = char.playerName || '';
           $('charRace').value = char.race || '';
-          // Display class with subclass if available
-          if (char.subclass) {
-            $('charClass').value = `${char.charClass} (${char.subclass})`;
-          } else {
-            $('charClass').value = char.charClass || '';
-          }
+          $('charClass').value = formatClassField(char);
           $('charBackground').value = char.background || '';
           $('charLevel').value = char.level ?? '';
           $('charAlignment').value = char.alignment || '';
@@ -2493,7 +2499,6 @@ import { addPolymorphNotes } from './polymorph-notes.js';
 
           // Spellcasting ability
           $('spellcastingAbility').value = char.spellcastingAbility || '';
-          updateSpellDCAndAttack();
 
           const stats = char.stats || {};
           $('statStr').value = stats.str ?? '';
@@ -2502,6 +2507,7 @@ import { addPolymorphNotes } from './polymorph-notes.js';
           $('statInt').value = stats.int ?? '';
           $('statWis').value = stats.wis ?? '';
           $('statCha').value = stats.cha ?? '';
+          updateSpellDCAndAttack(); // reads the ability, level and scores filled above
             
           const statMods = char.statMods || {};
           $('modStr').value = statMods.str ?? '';
@@ -3338,27 +3344,34 @@ import { addPolymorphNotes } from './polymorph-notes.js';
 
           if (classes.length > 1) {
             // Multiclass character
+            const fieldUnchanged = char.multiclass && classes.join(' / ') === formatClassField(char);
             char.multiclass = true;
-            char.classes = [];
 
-            let totalLevel = 0;
-            for (const classStr of classes) {
-              const match = classStr.match(/^([^(]+)(?:\(([^)]+)\))?\s*(\d+)?/);
-              if (match) {
-                const className = match[1].trim();
-                const subclass = match[2] ? match[2].trim() : '';
-                const classLevel = match[3] ? parseInt(match[3], 10) : 1; // Default to 1 if not specified
+            // An unchanged field keeps classes[] as it is (the text has no levels). An edited field is re-read, and a
+            // class that is still there keeps its previous level and subclass level.
+            if (!fieldUnchanged) {
+              const previousClasses = Array.isArray(char.classes) ? char.classes : [];
+              char.classes = [];
 
-                char.classes.push({
-                  className,
-                  subclass,
-                  level: classLevel,
-                  subclassLevel: subclass ? classLevel : 0
-                });
+              for (const classStr of classes) {
+                const match = classStr.match(/^([^(]+)(?:\(([^)]+)\))?\s*(\d+)?/);
+                if (match) {
+                  const className = match[1].trim();
+                  const subclass = match[2] ? match[2].trim() : '';
+                  const previous = previousClasses.find(c => (c.className || '').toLowerCase() === className.toLowerCase());
+                  const classLevel = match[3] ? parseInt(match[3], 10) : (previous ? previous.level : 1);
+                  const previousSubclassLevel = previous && previous.subclass === subclass ? (Number(previous.subclassLevel) || 0) : 0;
 
-                totalLevel += classLevel;
+                  char.classes.push({
+                    className,
+                    subclass,
+                    level: classLevel,
+                    subclassLevel: subclass ? (previousSubclassLevel || classLevel) : 0
+                  });
+                }
               }
             }
+            const totalLevel = char.classes.reduce((sum, c) => sum + (Number(c.level) || 0), 0);
 
             // For backward compatibility, set primary class as first class
             if (char.classes.length > 0) {
@@ -3367,7 +3380,7 @@ import { addPolymorphNotes } from './polymorph-notes.js';
               char.subclassLevel = char.classes[0].subclassLevel;
             }
 
-            // Update total level if it differs
+            // Class levels are not reconciled with the character level; this only reports a mismatch
             if (totalLevel > 0 && totalLevel !== getNum('charLevel')) {
               console.warn(`Total multiclass levels (${totalLevel}) differs from character level (${getNum('charLevel')}). Using character level.`);
             }

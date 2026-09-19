@@ -409,6 +409,28 @@ describe('recalcDerivedStats', () => {
     expect(char.proficiencyBonus).toBe(3);
   });
 
+  describe('Jack of All Trades', () => {
+    it('adds half proficiency (rounded down) to skills the character is not proficient in', () => {
+      const char = makeChar({ level: 5, skillJoAT: true }); // pb=3, half=1, dex +2
+      recalcDerivedStats(char, SKILLS);
+      expect(char.skills.stealth.bonus).toBe(3); // 2 + 1
+    });
+
+    it('does not change proficient skills, and expertise still doubles proficiency only', () => {
+      const char = makeChar({ level: 5, skillJoAT: true });
+      char.skills.athletics.exp = true;
+      recalcDerivedStats(char, SKILLS);
+      expect(char.skills.perception.bonus).toBe(5); // wis +2, proficient +3
+      expect(char.skills.athletics.bonus).toBe(9); // str +3, expertise +6
+    });
+
+    it('is off unless the character has it', () => {
+      const char = makeChar({ level: 5 });
+      recalcDerivedStats(char, SKILLS);
+      expect(char.skills.stealth.bonus).toBe(2);
+    });
+  });
+
   it('save bonus = mod + pb for proficient saves', () => {
     const char = makeChar({ level: 5 }); // pb=3, str=+3, wis=+2
     recalcDerivedStats(char, SKILLS);

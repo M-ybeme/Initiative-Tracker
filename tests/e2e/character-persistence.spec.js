@@ -80,16 +80,17 @@ async function assertHydratedSheet(page) {
   for (const [ab, b] of Object.entries(G.DERIVED.savingThrows)) derived[`save${cap(ab)}Bonus`] = String(b);
   for (const [k, b] of Object.entries(G.DERIVED.skills)) derived[`skill${cap(k)}Bonus`] = String(b);
   for (const [lvl, max] of Object.entries(G.DERIVED.spellSlotMax)) derived[`slots${lvl}Max`] = String(max);
-  // Passive Investigation is left out here on purpose: with Jack of All Trades on, the saved record holds 15 but the
-  // sheet shows 14 after a load (a known load-time discrepancy, not characterized here). The saved value is asserted above.
   Object.assign(derived, {
     charPassivePerception: String(G.DERIVED.passivePerception),
+    charPassiveInvestigation: String(G.DERIVED.passiveInvestigation),
     charPassiveInsight: String(G.DERIVED.passiveInsight),
   });
   const shownDerived = {};
   for (const id of Object.keys(derived)) shownDerived[id] = await readShown(page, id);
   expect(shownDerived, 'hydrated derived values (recalculated, not typed)').toEqual(derived);
   expect(await readShown(page, 'charProficiencyBonusDisplay'), 'proficiency bonus display').toBe('+' + G.DERIVED.proficiencyBonus);
+  expect(await readShown(page, 'spellSaveDC'), 'spell save DC right after load').toBe('DC ' + G.DERIVED.spellSaveDC);
+  expect(await readShown(page, 'spellAttackBonus'), 'spell attack bonus right after load').toBe('+' + G.DERIVED.spellAttackBonus);
 
   // XP is set through the XP dialog and shown as a progress readout
   expect(await readShown(page, 'xpValue'), 'xp value').toBe(G.XP_TO_ADD.toLocaleString('en-US'));
@@ -213,15 +214,7 @@ test.describe('Character sheet save / load persistence', () => {
 
     // a second save from the hydrated sheet is a fixed point: nothing lost or drifted through the round trip
     const resaved = await saveViaButton(page, id);
-    // Everything except passive Investigation: with Jack of All Trades on, a load shows 14 and the re-save then stores 14
-    // over the saved 15. That is a known discrepancy in the app, so it is left out of this comparison, not pinned.
-    const withoutPassiveInvestigation = rec => {
-      const out = withProjectedSpells(rec);
-      out.senses = { ...out.senses };
-      delete out.senses.passiveInvestigation;
-      return out;
-    };
-    expect(withoutPassiveInvestigation(resaved), 'record after load + re-save').toStrictEqual(withoutPassiveInvestigation(saved));
+    expect(withProjectedSpells(resaved), 'record after load + re-save').toStrictEqual(G.buildExpectedPersisted());
     expect(errors, errors.join('\n')).toEqual([]);
   });
 
@@ -270,7 +263,7 @@ test.describe('Character sheet save / load persistence', () => {
     expect(saved.proficiencyBonus, 'proficiency bonus at level 9').toBe(4);
     expect(saved.savingThrows.int, 'int save (proficient)').toEqual({ prof: true, bonus: 1 + 4 });
     expect(saved.skills.arcana.bonus, 'arcana (expertise)').toBe(1 + 4 * 2);
-    expect(saved.skills.athletics.bonus, 'athletics (not proficient)').toBe(-1);
+    expect(saved.skills.athletics.bonus, 'athletics (not proficient, Jack of All Trades: half of +4)').toBe(-1 + 2);
     expect(saved.spellSlots['5'].max, 'level 5 slot max at wizard 9').toBe(1);
     expect(await readShown(page, 'spellSaveDC'), 'spell save DC after the stat edit').toBe('DC ' + (8 + 4 + 1));
     expect(errors, errors.join('\n')).toEqual([]);
@@ -332,5 +325,176 @@ test.describe('Character sheet save / load persistence', () => {
       expect(saved.resources, 'resources saved as a list').toEqual([{ name: 'Old One', current: 1, max: 2, resetOn: 'long' }]);
       expect(errors, errors.join('\n')).toEqual([]);
     });
+  });
+});
+
+// ---- regressions for load-time derived values and multiclass round trips ----
+
+const reload = async page => { await page.reload(); await loadSheet(page, { blank: false }); };
+
+// Opens the multiclass dialog and waits until its fade-in has finished (Bootstrap ignores hide() before that).
+const openMulticlassDialog = page => page.evaluate(() => new Promise(resolve => {
+  document.getElementById('multiclassModal').addEventListener('shown.bs.modal', () => resolve(), { once: true });
+  document.getElementById('manageMulticlassBtn').click();
+}));
+
+test.describe('Derived values right after a load', () => {
+  test.beforeEach(async ({ page }) => { await installHydrationCounter(page); });
+
+  const caster = { charName: 'Caster', charClass: 'Wizard', charLevel: '5', spellcastingAbility: 'int', statStr: '10', statDex: '10', statCon: '10', statInt: '19', statWis: '8', statCha: '10' };
+
+  test('spell save DC and attack bonus are right as soon as a saved character loads, and stay right on the next save', async ({ page }) => {
+    const errors = watchErrors(page);
+    await loadSheet(page, { blank: true });
+    await setSheetFields(page, caster);
+    const id = await currentId(page);
+    const saved = await saveViaButton(page, id);
+
+    await reload(page); // no stat is edited from here on
+    expect(await readShown(page, 'spellSaveDC'), 'spell save DC right after load').toBe('DC 15'); // 8 + 3 + Int mod 4
+    expect(await readShown(page, 'spellAttackBonus'), 'spell attack right after load').toBe('+7'); // 3 + 4
+
+    const resaved = await saveViaButton(page, id);
+    expect(pick(resaved, ['statMods', 'proficiencyBonus', 'spellcastingAbility', 'stats']), 'derived and source values persisted by the save after the load').toEqual({
+      statMods: { str: 0, dex: 0, con: 0, int: 4, wis: -1, cha: 0 }, proficiencyBonus: 3, spellcastingAbility: 'int',
+      stats: saved.stats,
+    });
+    await reload(page);
+    expect(await readShown(page, 'spellSaveDC'), 'spell save DC after a second load').toBe('DC 15');
+    expect(normalizePersisted(await saveViaButton(page, id)), 'a further load + save changes nothing').toStrictEqual(normalizePersisted(resaved));
+    expect(errors, errors.join('\n')).toEqual([]);
+  });
+
+  test('with Jack of All Trades on, passive Investigation is the same after a load and after the next save', async ({ page }) => {
+    const errors = watchErrors(page);
+    await loadSheet(page, { blank: true });
+    await setSheetFields(page, { ...caster, skillJoAT: true }); // Int 19 (+4), proficiency +3, not proficient in Investigation
+    const id = await currentId(page);
+    const saved = await saveViaButton(page, id);
+    expect(saved.senses.passiveInvestigation, 'passive Investigation saved as 10 + 4 + 1').toBe(15);
+
+    await reload(page);
+    expect(await readShown(page, 'charPassiveInvestigation'), 'passive Investigation right after load').toBe('15');
+
+    const resaved = await saveViaButton(page, id);
+    expect(resaved.senses.passiveInvestigation, 'passive Investigation did not drift on the next save').toBe(15);
+    expect(errors, errors.join('\n')).toEqual([]);
+  });
+});
+
+test.describe('Class and multiclass round trips', () => {
+  test.beforeEach(async ({ page }) => { await installHydrationCounter(page); });
+
+  const stats = { str: 10, dex: 10, con: 10, int: 10, wis: 10, cha: 10 };
+  // Two classes with different levels and subclasses; the field text can not carry the levels.
+  const MULTI_CLASSES = [
+    { className: 'Cleric', subclass: 'Life Domain', level: 2, subclassLevel: 1 },
+    { className: 'Wizard', subclass: 'Evocation', level: 3, subclassLevel: 2 },
+  ];
+  const multiRecord = () => ({
+    id: 'multi-1', name: 'Two Classes', charClass: 'Cleric', subclass: 'Life Domain', subclassLevel: 1, level: 5,
+    multiclass: true, classes: MULTI_CLASSES.map(c => ({ ...c })), stats,
+  });
+  const singleRecord = () => ({
+    id: 'single-1', name: 'One Class', charClass: 'Paladin', subclass: 'Oath of Devotion', subclassLevel: 3, level: 5,
+    multiclass: false, classes: [], stats,
+  });
+  const classShape = rec => ({ multiclass: rec.multiclass, charClass: rec.charClass, subclass: rec.subclass, subclassLevel: rec.subclassLevel, level: rec.level, classes: rec.classes });
+
+  async function seedAndLoad(page, record) {
+    await loadSheet(page, { blank: true });
+    await seedPersisted(page, [record]);
+    await reload(page);
+  }
+
+  test('a multiclass character survives repeated load -> save -> reload cycles with nothing lost', async ({ page }) => {
+    const errors = watchErrors(page);
+    await seedAndLoad(page, multiRecord());
+    const expected = { multiclass: true, charClass: 'Cleric', subclass: 'Life Domain', subclassLevel: 1, level: 5, classes: MULTI_CLASSES };
+
+    for (let cycle = 1; cycle <= 2; cycle++) {
+      const at = `cycle ${cycle}`;
+      expect(await readShown(page, 'charClass'), `${at}: class field shows every class`).toBe('Cleric (Life Domain) / Wizard (Evocation)');
+      expect(await readShown(page, 'charLevel'), `${at}: total level on the sheet`).toBe('5');
+      const saved = await saveViaButton(page, 'multi-1'); // no edits at all
+      expect(classShape(saved), `${at}: persisted class data`).toStrictEqual(expected);
+      expect(saved.classes.reduce((sum, c) => sum + c.level, 0), `${at}: class levels add up to the total level`).toBe(saved.level);
+      await reload(page);
+    }
+    expect(errors, errors.join('\n')).toEqual([]);
+  });
+
+  test('a saved multiclass record whose class levels do not add up to the total level is kept as it is', async ({ page }) => {
+    // Shape left behind by older versions: every class at level 1 under a level 5 character. There is no way to tell
+    // which class the missing levels belong to, so a load and save must not guess; this pins that, it does not endorse it.
+    const record = multiRecord();
+    record.classes = record.classes.map(c => ({ ...c, level: 1 }));
+    await seedAndLoad(page, record);
+    expect(await readShown(page, 'charClass'), 'class field').toBe('Cleric (Life Domain) / Wizard (Evocation)');
+    for (let cycle = 1; cycle <= 2; cycle++) {
+      const saved = await saveViaButton(page, 'multi-1');
+      expect(saved.classes.map(c => [c.className, c.subclass, c.level, c.subclassLevel]), `cycle ${cycle}: class data as stored`).toEqual([
+        ['Cleric', 'Life Domain', 1, 1], ['Wizard', 'Evocation', 1, 2],
+      ]);
+      expect([saved.multiclass, saved.level], `cycle ${cycle}: multiclass flag and total level`).toEqual([true, 5]);
+      await reload(page);
+    }
+  });
+
+  test('a single-class character stays single-class through the same cycles', async ({ page }) => {
+    await seedAndLoad(page, singleRecord());
+    for (let cycle = 1; cycle <= 2; cycle++) {
+      const at = `cycle ${cycle}`;
+      expect(await readShown(page, 'charClass'), `${at}: class field`).toBe('Paladin (Oath of Devotion)');
+      const saved = await saveViaButton(page, 'single-1');
+      expect(classShape(saved), `${at}: persisted class data`).toStrictEqual({
+        multiclass: false, charClass: 'Paladin', subclass: 'Oath of Devotion', subclassLevel: 3, level: 5, classes: [],
+      });
+      await reload(page);
+    }
+  });
+
+  test('editing the class field of a multiclass character keeps the levels of classes that remain', async ({ page }) => {
+    await seedAndLoad(page, multiRecord());
+    await setSheetFields(page, { charClass: 'Cleric (Life Domain) / Wizard (Abjuration)' }); // change one subclass
+    const saved = await saveViaButton(page, 'multi-1');
+    expect(saved.classes.map(c => [c.className, c.subclass, c.level]), 'levels carried over by class name').toEqual([
+      ['Cleric', 'Life Domain', 2], ['Wizard', 'Abjuration', 3],
+    ]);
+    expect(saved.classes[0].subclassLevel, 'unchanged subclass keeps its level').toBe(1);
+  });
+
+  test('the multiclass dialog writes the levels it shows, and reopening it shows them again', async ({ page }) => {
+    const errors = watchErrors(page);
+    const record = singleRecord();
+    record.subclass = ''; // the dialog does not carry a single class's subclass into its list
+    record.subclassLevel = 0;
+    await seedAndLoad(page, record);
+    await openMulticlassDialog(page);
+    const setEntry = (index, field, value) => page.evaluate(([i, f, v]) => {
+      const el = document.querySelector(`#multiclassClassList [data-index="${i}"][data-field="${f}"]`);
+      el.value = v; el.dispatchEvent(new Event('change', { bubbles: true }));
+    }, [index, field, value]);
+    await setEntry(0, 'level', '3');
+    await page.evaluate(() => document.getElementById('addMulticlassBtn').click());
+    await setEntry(1, 'className', 'Wizard');
+    await setEntry(1, 'subclass', 'Evocation');
+    await setEntry(1, 'level', '2');
+    await page.evaluate(() => document.getElementById('applyMulticlassBtn').click());
+    await expect(page.locator('.modal-backdrop')).toHaveCount(0);
+    await expect.poll(async () => (await readPersisted(page))[0].multiclass, { message: 'dialog saved the multiclass character' }).toBe(true);
+
+    const stored = (await readPersisted(page))[0];
+    expect(stored.classes.map(c => [c.className, c.subclass, c.level]), 'levels chosen in the dialog').toEqual([['Paladin', '', 3], ['Wizard', 'Evocation', 2]]);
+    expect(stored.classes[1].subclassLevel, 'a new subclass starts at its class level').toBe(2);
+
+    await reload(page);
+    expect(await readShown(page, 'charClass')).toBe('Paladin / Wizard (Evocation)');
+    const again = await saveViaButton(page, 'single-1');
+    expect(again.classes, 'a save after the reload keeps the dialog levels').toEqual(stored.classes);
+
+    await openMulticlassDialog(page);
+    expect(await page.evaluate(() => [...document.querySelectorAll('#multiclassClassList [data-field="level"]')].map(e => e.value)), 'dialog reopens with both classes and their levels').toEqual(['3', '2']);
+    expect(errors, errors.join('\n')).toEqual([]);
   });
 });

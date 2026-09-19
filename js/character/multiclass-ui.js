@@ -64,10 +64,9 @@ const MulticlassUI = (function() {
     if (!currentCharacter) return;
 
     const fullClass = currentCharacter.charClass || '';
-    const classes = fullClass.split('/').map(c => c.trim());
 
-    if (classes.length > 1 && currentCharacter.classes && currentCharacter.classes.length > 0) {
-      // Already multiclassed - use existing data
+    if (currentCharacter.multiclass && Array.isArray(currentCharacter.classes) && currentCharacter.classes.length > 1) {
+      // Already multiclassed - classes[] is the record (charClass holds only the primary class name)
       multiclassData = currentCharacter.classes.map(c => ({...c}));
     } else {
       // Single class - create initial entry
@@ -360,7 +359,16 @@ const MulticlassUI = (function() {
       classString = c.subclass ? `${c.className} (${c.subclass})` : c.className;
     }
 
-    // Update character
+    // Update character: classes[] is the record of names, subclasses and levels; the field below is its text
+    currentCharacter.multiclass = multiclassData.length > 1;
+    currentCharacter.classes = multiclassData.length > 1
+      ? multiclassData.map(c => ({
+        className: c.className,
+        subclass: c.subclass || '',
+        level: c.level,
+        subclassLevel: c.subclassLevel || (c.subclass ? c.level : 0)
+      }))
+      : [];
     const classField = document.getElementById('charClass');
     if (classField) {
       classField.value = classString;

@@ -1,11 +1,10 @@
 const DM_TOOLBOX_BUILD = {
   name: "The DM's Toolbox",
-  version: "2.3.6",
+  version: "2.3.7",
   recentChanges: [
-    "Fix: Initiative Tracker actions now find their combatant by stable id, so re-sorting, deleting, dragging, undo, or another tab's update can no longer send an action to the wrong combatant; duplicating ahead of the active combatant no longer shifts the turn",
-    "Fix: Initiative Tracker inline editors no longer write stale values over newer state, an empty HP or initiative field is rejected instead of becoming 0, and re-entrant renders no longer duplicate desktop rows",
-    "Fix: Character Manager Fighter multiclass prerequisite now accepts STR 13 or DEX 13",
-    "Improved: one shared dice engine for the Initiative Tracker, character sheet, Combat Mode, wizard, level-up, and Encounter Builder; character import now validates and warns about malformed data"
+    "Fix: Character Sheet spell save DC and spell attack bonus are now right as soon as a character loads (they briefly showed wrong values until a score was edited)",
+    "Fix: Character Sheet passive Investigation no longer drifts after a reload when Jack of All Trades is on",
+    "Fix: multiclass characters keep their per-class levels when saved, and stay multiclass after a reload and save; the multiclass dialog saves the levels it shows"
   ],
   buildTime: new Date().toISOString(),
   author: "Maybeme"

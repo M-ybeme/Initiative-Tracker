@@ -236,6 +236,8 @@ export function recalcDerivedStats(char, skillConfigs = [], spellSlotsFn = null)
   char.statMods = mods;
   const pb = getProficiencyBonus(level);
   char.proficiencyBonus = pb;
+  const halfPb = Math.floor(pb / 2);
+  const jackOfAllTrades = !!char.skillJoAT;
   if (char.savingThrows) {
     ["str","dex","con","int","wis","cha"].forEach(ab => {
       if (char.savingThrows[ab]) {
@@ -248,7 +250,8 @@ export function recalcDerivedStats(char, skillConfigs = [], spellSlotsFn = null)
       const sk = char.skills[cfg.key];
       if (sk) {
         const abilMod = mods[cfg.ability] || 0;
-        const profBonus = sk.prof ? pb : 0;
+        // Jack of All Trades adds half proficiency to skills the character is not proficient in
+        const profBonus = sk.prof ? pb : (jackOfAllTrades ? halfPb : 0);
         const expBonus = (sk.exp && sk.prof) ? pb : 0;
         sk.bonus = abilMod + profBonus + expBonus;
       }

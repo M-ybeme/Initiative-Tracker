@@ -16,7 +16,7 @@ The DM's Toolbox has evolved through focused feature releases. Minor versions (2
 - **1.9.x**: Battle map measurement tools, persistent fog shapes, and generator integration across NPC/Tavern/Shop systems
 - **1.8.x**: Spell database expansion to 432+ spells, inventory management, loot generator overhaul, and character token generation
 
-**Current version: 2.3.6 (September 2026)**
+**Current version: 2.3.7 (September 2026)**
 
 ---
 
@@ -24,6 +24,20 @@ The DM's Toolbox has evolved through focused feature releases. Minor versions (2
 
 ### Known issues
 - **Flaky end-to-end test: "a blank count is invalid, not too many, and nothing is rolled"** (`tests/e2e/dice-callers.spec.js`, Character Sheet hit-dice count) — this test fails intermittently. It has failed once in a full-suite run, once in a run of three solo runs, and once in a comparison run, and passes on most other runs (eight consecutive repeat runs, and two later full-suite runs, all passed). The cause has not been identified; the likely area is timing around the hit-dice modal and the toast it asserts on, and the failure has not been captured with a message. It has not been observed as a product bug: the behavior it checks (a blank hit-dice count shows "Invalid number of hit dice to spend." instead of the over-limit message, and nothing is rolled) works when exercised by hand and in every passing run. Re-run before treating a red result on this test as a regression, and harden the test's waits when it is next touched.
+
+---
+
+## [2.3.7] - 2026-09-19
+**Fixes — Character Sheet Load-Time Values, Multiclass Levels Preserved on Save**
+
+### Fixed
+- **Character Sheet: spell save DC and spell attack bonus were wrong right after a character loaded** — the sheet worked them out before the ability scores had been filled in, so a saved Wizard with Int 19 showed "DC 6" and "-2" until a score was edited. They are now calculated after the scores are loaded
+- **Character Sheet: passive Investigation drifted after a reload with Jack of All Trades on** — the saved value (10 + Int modifier + half proficiency) was recalculated without Jack of All Trades on load, so the sheet showed one point less and the next save stored that lower value. Saved skill bonuses now include Jack of All Trades for skills the character is not proficient in, matching what the sheet shows while editing
+- **Character Sheet: multiclass characters lost their per-class levels on save** — the class field shows only class and subclass names, and every save re-read it as if each class were level 1. The class list (`classes[]`) is now the record: a save keeps it as it is while the field is unchanged, and when the field is edited, classes that remain keep their level and subclass level. The multiclass dialog now saves the levels it shows
+- **Character Sheet: a multiclass character was turned into a single-class one after a reload and save** — the class field showed only the first class, so the next save took the single-class path (`multiclass` false, no class list). The field now shows every class (`Cleric (Life Domain) / Wizard (Evocation)`), and the multiclass dialog reopens with all classes and their levels
+
+### Tests / Internal
+- Regression tests for the four fixes above: spell DC/attack after load, Jack of All Trades across a reload and re-save, repeated load/save cycles for multiclass and single-class characters, the multiclass dialog, and a record whose class levels do not add up to the character level (kept as stored)
 
 ---
 
