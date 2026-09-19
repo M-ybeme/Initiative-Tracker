@@ -1307,11 +1307,21 @@ $('clear-dice-history').addEventListener('click', ()=>{
       inp.value = c.name;
     }
   }
+  // Integer value of a numeric editor, or null when the text has no leading integer (empty,
+  // whitespace, letters first). Null means a rejected edit, not 0: the caller restores the model
+  // value. This is parseInt semantics, not strict validation: "20abc" and "20.7" give 20, and
+  // exponent forms are cut at the "e" ("1e3" gives 1).
+  function parseWholeNumber(text) {
+    const n = parseInt(text, 10);
+    return Number.isNaN(n) ? null : n;
+  }
   function commitHp(inp) {
     const c = getCharacterById(inp.dataset.characterId);
     if (!c) return;
-    const newHP = Math.max(0, parseInt(inp.value, 10) || 0);
     const oldHP = c.currentHP;
+    const typed = parseWholeNumber(inp.value);
+    if (typed === null) { inp.value = String(oldHP); return; } // rejected: keep the model value
+    const newHP = Math.max(0, typed);
     if (newHP === oldHP) { inp.value = String(oldHP); return; } // nothing to write or re-render
     const beforeTHP = c.tempHP || 0;
     pushHistory(`HP set for ${c.name}`);
@@ -1342,15 +1352,17 @@ $('clear-dice-history').addEventListener('click', ()=>{
     buildTable();
   }
   function commitInitiative(inp) {
-    const newVal = parseInt(inp.value, 10) || 0;
     const char = getCharacterById(inp.dataset.characterId);
     if (!char) return;
-    if (char.initiative !== newVal) {
-      pushHistory(`Set initiative for ${char.name}`);
-      char.initiative = newVal;
-      maybeSortByInitiative();
-      buildTable();
+    const newVal = parseWholeNumber(inp.value);
+    if (newVal === null || newVal === char.initiative) {
+      inp.value = String(char.initiative); // rejected or normalized ("020", "20.7"): show what is stored
+      return;
     }
+    pushHistory(`Set initiative for ${char.name}`);
+    char.initiative = newVal;
+    maybeSortByInitiative();
+    buildTable();
   }
   const inlineFieldCommits = { name: commitName, hp: commitHp, initiative: commitInitiative };
   // Fields that also handle Enter/Escape. HP has no key handling on purpose: leaving it commits.
@@ -1415,7 +1427,26 @@ $('clear-dice-history').addEventListener('click', ()=>{
     });
   }
   // ---------- Build UI ----------
+  // A render can be requested while one is already running: removing a focused editor fires focusout,
+  // whose commit calls buildTable() again mid-render. Two interleaved renders both append their rows
+  // (6 rows for 3 combatants), so a request that arrives mid-render only records that another is
+  // needed; the running render finishes, then one fresh render runs from the current model.
+  let rendering = false;
+  let rerenderRequested = false;
   function buildTable(){
+    if (rendering) { rerenderRequested = true; return; }
+    rendering = true;
+    try {
+      do {
+        rerenderRequested = false;
+        renderCombatantList();
+      } while (rerenderRequested);
+    } finally {
+      rendering = false; // a throwing render must not block every later one
+      rerenderRequested = false;
+    }
+  }
+  function renderCombatantList(){
     $('combat-round').textContent = combatRound;
     const tableBody = $('initiative-order');
     const mobileBody = $('mobile-initiative-order');

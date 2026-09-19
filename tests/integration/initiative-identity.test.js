@@ -853,54 +853,104 @@ describe('Initiative Tracker: combatants are addressed by stable id', () => {
         expect(saved().characters).toHaveLength(3);
       });
 
-      if (e.view === 'desktop') {
-        it('the list stays intact (no duplicated rows or cards) after that re-render', async () => {
-          await loadTracker([A, B, C]);
-          const input = find(e.view, e.sel);
-          input.focus();
-          input.value = e.typed;
-          replaceStateFromAnotherTab([A, { ...B, ...e.external }, C]);
+      // The render-integrity invariant, for both views. It used to fail for mobile cards: the commit
+      // an uncommitted mobile edit makes during the re-render ran its own buildTable() inside the
+      // outer render (via the removal-time focusout), and the outer render then appended its rows
+      // on top: 6 desktop rows, 3 cards.
+      it('the list stays intact and the edit lands exactly once after that re-render', async () => {
+        await loadTracker([A, B, C]);
+        const input = find(e.view, e.sel);
+        expect(input, 'the editor exists').not.toBeNull();
+        input.focus();
+        expect(document.activeElement).toBe(input);
+        input.value = e.typed;
+        expect(document.querySelectorAll('#initiative-order tr')).toHaveLength(3); // healthy before
 
-          expectListIntact(3);
+        replaceStateFromAnotherTab([A, { ...B, ...e.external }, C]);
+
+        expectListIntact(3);
+        expect(e.read()).toBe(e.committed); // last writer wins: the deliberate edit survives
+        expect(saved().combatLog).toHaveLength(e.field === 'hp' ? 1 : 0); // one log entry, only for HP
+        click(document.getElementById('undo-btn')); // one history entry: a single undo goes back to the other tab's value
+        expect(e.read()).toBe(e.newer);
+      });
+    });
+
+    // The invariant itself, independent of which browser event causes the nesting: render requests
+    // that arrive while a render is running must coalesce into a correct final render, never append
+    // a second copy of the list. Here the requests are forced from inside the render (each clear of
+    // the mobile list "clicks" Next Turn), which is what a removal-time focusout commit does.
+    describe('re-entrant render requests', () => {
+      const nested = requests => {
+        const mobile = document.getElementById('mobile-initiative-order');
+        const desc = findDescriptor(mobile, 'innerHTML');
+        let fired = 0;
+        Object.defineProperty(mobile, 'innerHTML', {
+          configurable: true,
+          get() { return desc.get.call(this); },
+          set(value) {
+            if (value === '' && fired < requests) { fired++; click(document.getElementById('next-turn')); }
+            desc.set.call(this, value);
+          }
         });
-      } else {
-        // KNOWN BUG (predates this change; same result at 5c72cf9): the commit that an uncommitted
-        // mobile-card edit makes when another tab's update re-renders runs its own buildTable()
-        // inside the removal-time focusout of the outer render, and the outer render then appends
-        // its desktop rows on top: 6 (hidden) desktop rows, 3 cards, 3 saved. Measured in real
-        // Chromium. Fixing it needs a render guard in buildTable; that is a separate change.
-        //
-        // This is deliberately not `it.fails`, which would also accept selector drift, a broken
-        // fixture or any thrown error as "the known bug". Setup and preconditions are asserted
-        // normally, so those failures surface as themselves. Only the list-integrity check is
-        // caught, and the test then requires the exact known shape. Once buildTable is fixed the
-        // check stops throwing, this test fails on `expect(mismatch).toBeDefined()`, and this whole
-        // branch should be deleted so mobile shares the desktop test above.
-        // Tracking: no issue tracker or backlog entry exists for it yet (docs/*ROADMAP.md have none).
-        it('KNOWN BUG: the list ends up with duplicated desktop rows (6 rows, 3 cards, 3 saved)', async () => {
-          await loadTracker([A, B, C]);
-          const input = find(e.view, e.sel);
-          expect(input, 'mobile editor exists').not.toBeNull();
-          input.focus();
-          expect(document.activeElement).toBe(input);
-          input.value = e.typed;
-          expect(input.value).toBe(e.typed);
-          expect(document.querySelectorAll('#initiative-order tr')).toHaveLength(3); // healthy before
+        return () => fired;
+      };
+      const listMatchesModel = () => {
+        const ids = sel => [...document.querySelectorAll(sel)].map(el => el.dataset.characterId);
+        expect(ids('#initiative-order tr')).toEqual(['id-A', 'id-B', 'id-C']);
+        expect(ids('#mobile-initiative-order .card')).toEqual(['id-A', 'id-B', 'id-C']);
+        const turn = saved().currentTurn;
+        expect(ids('#initiative-order tr.active-turn')).toEqual([saved().characters[turn].id]);
+        expect(ids('#mobile-initiative-order .card.border-success')).toEqual([saved().characters[turn].id]);
+      };
 
-          replaceStateFromAnotherTab([A, { ...B, ...e.external }, C]);
+      it.each([1, 2])('%i nested render request(s) during a render end in exactly one correct list', async requests => {
+        await loadTracker([A, B, C]);
+        const fired = nested(requests);
 
-          expect(e.read()).toBe(e.committed); // the scenario itself ran: the edit was not lost
-          let mismatch;
-          try { expectListIntact(3); } catch (err) { mismatch = err; }
-          expect(mismatch, 'the duplicate-row bug no longer reproduces: remove this KNOWN BUG branch').toBeDefined();
-          const ids = sel => [...document.querySelectorAll(sel)].map(el => el.dataset.characterId);
-          expect(ids('#initiative-order tr')).toHaveLength(6);
-          expect(new Set(ids('#initiative-order tr')).size).toBe(3); // each combatant twice
-          expect(ids('#mobile-initiative-order .card')).toHaveLength(3);
-          expect(new Set(ids('#mobile-initiative-order .card')).size).toBe(3);
-          expect(saved().characters).toHaveLength(3);
-        });
-      }
+        click(document.getElementById('next-turn'));
+
+        expect(fired()).toBe(requests); // the nesting really happened
+        listMatchesModel();
+        expect(saved().characters).toHaveLength(3);
+      });
+
+      it('the final render reflects the model changed by the nested request', async () => {
+        await loadTracker([A, B, C]);
+        const before = saved().currentTurn;
+        nested(1);
+
+        click(document.getElementById('next-turn')); // outer advance, plus one nested advance
+
+        expect(saved().currentTurn).toBe((before + 2) % 3);
+        listMatchesModel();
+      });
+
+      // If a render throws, the guard must reset, or every later buildTable() returns early and the
+      // list silently stops updating. The fault is the first statement of every render (the round
+      // counter), so it always fires and always escapes the render.
+      it('a render that throws does not leave later renders blocked', async () => {
+        await loadTracker([A, B, C]);
+        const round = document.getElementById('combat-round');
+        const failures = [];
+        const onError = ev => { failures.push(String(ev.error?.message ?? ev.message)); ev.preventDefault?.(); };
+        window.addEventListener('error', onError);
+        Object.defineProperty(round, 'textContent', { configurable: true, set() { throw new Error('render boom'); } });
+        try {
+          try { click(document.getElementById('next-turn')); } catch (err) { failures.push(String(err.message)); }
+        } finally {
+          delete round.textContent; // remove the fault: the prototype's setter shows through again
+          window.removeEventListener('error', onError);
+        }
+        expect(failures.join('|')).toContain('render boom'); // the first render really failed, for this reason
+
+        click(document.getElementById('next-turn')); // an independent, later render must run
+
+        // Two Next Turns happened (the failed render's model change was not rolled back), and the
+        // rendered list and the save both reflect the current model, not the state before the failure.
+        expect(saved().currentTurn).toBe(2);
+        listMatchesModel(); // rows, cards and the active-turn marker all match the model
+      });
     });
 
     it('focusing and leaving the HP field without editing does not re-render, so the next click is not lost', async () => {
@@ -946,17 +996,60 @@ describe('Initiative Tracker: combatants are addressed by stable id', () => {
         expect(input.isConnected).toBe(true);
       });
 
-      it('a no-op initiative entry keeps what was typed as the baseline', async () => {
-        await loadTracker([A, B, C]);
-        const input = find('desktop', '.init-input');
-        input.focus();
-        input.value = '020'; // parses to the 20 the model already has: nothing to commit
-        input.blur();
+      it.each([['020', '20'], ['20.7', '20'], ['20abc', '20'], [' 20 ', '20']])(
+        'an initiative entry %j that normalizes to the current value shows the canonical %j and it becomes the baseline',
+        async (typed, canonical) => {
+          await loadTracker([A, B, C]);
+          const input = find('desktop', '.init-input');
+          input.focus();
+          input.value = typed; // parses to the 20 the model already has: nothing to write
+          input.blur();
 
-        expect(input.isConnected).toBe(true);
-        expect(input.value).toBe('020');
-        expect(input.dataset.original).toBe('020');
-        expect(savedById('id-B').initiative).toBe(20);
+          expect(input.isConnected).toBe(true); // no re-render, so the field itself must be corrected
+          expect(input.value).toBe(canonical);
+          expect(input.dataset.original).toBe(canonical);
+          expect(savedById('id-B').initiative).toBe(20);
+          click(document.getElementById('undo-btn')); // no history entry was made
+          expect(input.isConnected).toBe(true);
+        });
+
+      // An empty number field is a rejected edit, not "0": it must put the model value back and
+      // leave no trace (no write, no log, no history, no re-render, no reorder). '' is the only
+      // value these inputs can hand the commit as "nothing usable": a type=number input reports
+      // junk such as 'abc', '-' or whitespace as '' (happy-dom and browsers alike), so testing those
+      // would rerun this same case. The parser's NaN branch for non-empty text is not reachable
+      // through these editors.
+      describe.each([
+        { field: 'hp', sel: '.health-input', model: '20', read: () => savedById('id-B').currentHP },
+        { field: 'initiative', sel: '.init-input', model: '20', read: () => savedById('id-B').initiative }
+      ])('a rejected $field entry', f => {
+        it('an empty field restores the model value and changes nothing', async () => {
+          await loadTracker([A, B, C]);
+          const input = find('desktop', f.sel);
+          input.focus();
+          input.value = '';
+          input.blur();
+
+          expect(input.isConnected).toBe(true); // rejected: nothing re-rendered
+          expect(input.value).toBe(f.model);
+          expect(input.dataset.original).toBe(f.model);
+          expect(f.read()).toBe(20);
+          expect(saved().combatLog).toHaveLength(0);
+          expect(savedOrder()).toEqual(['id-A', 'id-B', 'id-C']);
+          expect(savedById('id-B').deathSaves).toEqual({ s: 0, f: 0, stable: false });
+          click(document.getElementById('undo-btn')); // nothing was pushed, so there is nothing to undo
+          expect(input.isConnected).toBe(true);
+        });
+
+        it('a real 0 is still a valid entry (it is not confused with "empty")', async () => {
+          await loadTracker([A, B, C]);
+          const input = find('desktop', f.sel);
+          input.focus();
+          input.value = '0';
+          input.blur();
+
+          expect(f.read()).toBe(0);
+        });
       });
 
       it('leaving and returning to a field after a rejected commit stays quiet', async () => {

@@ -262,3 +262,107 @@ test.describe('inline editors and another tab (real storage events)', () => {
     expect(errors, errors.join('\n')).toEqual([]);
   });
 });
+
+test.describe('re-render while a mobile editor holds an uncommitted edit (real storage events)', () => {
+  test.use({ viewport: { width: 390, height: 844 } });
+  // The commit that removing the focused input triggers used to render inside the running render,
+  // and the outer render then appended its rows again: 6 desktop rows for 3 combatants.
+  const cases = [
+    { field: 'name', sel: '.name-input', typed: 'Brutus', logEntries: 1, // only the other tab's Damage 5
+      check: b => expect(b.name).toBe('Brutus') },
+    { field: 'HP', sel: '.health-input', typed: '7', logEntries: 2, // the other tab's Damage 5, and this edit
+      check: b => expect(b.currentHP).toBe(7) }
+  ];
+  for (const c of cases) {
+    test(`an uncommitted ${c.field} edit survives another tab's update without duplicating the list`, async ({ context, page }) => {
+      const errors = watchErrors(page);
+      await page.addInitScript(() => { window.__storageEvents = 0; addEventListener('storage', () => { window.__storageEvents++; }); });
+      await seed(page, [char('id-A', 'Alpha', 5), char('id-B', 'Bravo', 20), char('id-C', 'Charlie', 10)]);
+      const other = await context.newPage();
+      await other.setViewportSize({ width: 390, height: 844 });
+      await other.goto('/initiative.html');
+      await expect(other.locator('#mobile-initiative-order .card[data-character-id="id-A"]')).toBeVisible();
+      await nextFrames(page);
+
+      const input = page.locator(`#mobile-initiative-order .card[data-character-id="id-B"] ${c.sel}`);
+      await input.click();
+      await input.fill(c.typed); // typed, not committed
+      await expect(input).toBeFocused();
+      const before = await page.evaluate(() => window.__storageEvents);
+
+      await other.locator('#mobile-initiative-order .card[data-character-id="id-A"] .hit-btn[data-delta="-5"]').click();
+
+      await expect.poll(() => page.evaluate(() => window.__storageEvents)).toBeGreaterThan(before);
+      await expect.poll(async () => (await savedState(page)).characters.find(x => x.id === 'id-B')[c.field === 'name' ? 'name' : 'currentHP'])
+        .toBe(c.field === 'name' ? c.typed : 7); // the deliberate edit was committed by the re-render
+      const counts = () => page.evaluate(() => ({
+        rows: [...document.querySelectorAll('#initiative-order tr')].map(r => r.dataset.characterId),
+        cards: [...document.querySelectorAll('#mobile-initiative-order .card')].map(r => r.dataset.characterId)
+      }));
+      await expect.poll(async () => (await counts()).rows.length).toBe(3);
+      const { rows, cards } = await counts();
+      expect(new Set(rows).size).toBe(3);
+      expect(cards).toHaveLength(3);
+      expect(new Set(cards).size).toBe(3);
+      const state = await savedState(page);
+      expect(state.characters).toHaveLength(3);
+      c.check(state.characters.find(x => x.id === 'id-B'));
+      expect(state.characters.find(x => x.id === 'id-A').currentHP).toBe(15); // the other tab's change kept
+      expect(state.combatLog ?? []).toHaveLength(c.logEntries);
+      expect(errors, errors.join('\n')).toEqual([]);
+    });
+  }
+});
+
+test.describe('numeric inline editors: empty entries and normalization', () => {
+  const bravo = async page => (await savedState(page)).characters.find(c => c.id === 'id-B');
+  const start = async page => {
+    const errors = watchErrors(page);
+    await seed(page, [char('id-A', 'Alpha', 5), char('id-B', 'Bravo', 20), char('id-C', 'Charlie', 10)]);
+    return errors;
+  };
+
+  for (const f of [
+    { name: 'HP', sel: '.health-input', prop: 'currentHP' },
+    { name: 'initiative', sel: '.init-input', prop: 'initiative' }
+  ]) {
+    test(`emptying the ${f.name} field and leaving it restores the value and changes nothing`, async ({ page }) => {
+      const errors = await start(page);
+      const input = page.locator(`tr[data-character-id="id-B"] ${f.sel}`);
+      const rowHandle = await page.locator('tr[data-character-id="id-B"]').elementHandle();
+      const orderBefore = (await savedState(page)).characters.map(c => c.id);
+      await input.click();
+      await input.fill('');
+      await expect(input).toHaveValue('');
+      await input.press('Tab');
+
+      await expect(input).toHaveValue('20');
+      expect((await bravo(page))[f.prop]).toBe(20);
+      const state = await savedState(page);
+      expect(state.combatLog ?? []).toHaveLength(0);
+      expect(state.characters.map(c => c.id)).toEqual(orderBefore); // list order stable
+      expect(await rowHandle.evaluate(el => el.isConnected)).toBe(true); // no re-render
+      await page.click('#undo-btn'); // nothing was pushed
+      expect((await bravo(page))[f.prop]).toBe(20);
+      expect(errors, errors.join('\n')).toEqual([]);
+    });
+  }
+
+  test('initiative typed as 020 shows and stores 20, and 0030 commits as 30', async ({ page }) => {
+    const errors = await start(page);
+    const init = page.locator('tr[data-character-id="id-B"] .init-input');
+    await init.click();
+    await init.fill('020');
+    await init.press('Tab');
+    await expect(init).toHaveValue('20');
+    expect((await bravo(page)).initiative).toBe(20);
+    expect((await savedState(page)).combatLog ?? []).toHaveLength(0);
+
+    const again = page.locator('tr[data-character-id="id-B"] .init-input');
+    await again.fill('0030');
+    await again.press('Enter');
+    await expect(page.locator('tr[data-character-id="id-B"] .init-input')).toHaveValue('30');
+    expect((await bravo(page)).initiative).toBe(30);
+    expect(errors, errors.join('\n')).toEqual([]);
+  });
+});
