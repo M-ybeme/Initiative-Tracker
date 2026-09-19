@@ -41,6 +41,7 @@ This document provides a comprehensive inventory of **The DM's Toolbox** codebas
 │   ├── level-up-system.js             # Level-up UI and logic
 │   ├── multiclass-ui.js               # Multiclass management modal
 │   ├── character-sheet-export.js      # Export to PDF/PNG/Word
+│   ├── combat-mode.js                 # Combat Mode card view (classic script)
 │   ├── journal-export.js              # Journal export utilities
 │   ├── indexed-db-storage.js          # IndexedDB storage layer
 │   ├── rules-data.js                  # Rules reference data
@@ -274,6 +275,21 @@ These scripts are loaded directly by HTML pages and contain UI logic.
 
 ---
 
+### combat-mode.js
+
+**Location:** `/js/character/combat-mode.js`
+**Loaded by:** `characters.html`
+
+**Responsibilities:** the Combat Mode card view of the character sheet: the mode toggle (remembered in localStorage `dmCombatMode`), the live card, interactive HP, rolls from the card (dice rules come from `DiceEngine`), conditions, action economy, spell casting and the dice-history modal.
+
+**Why it is a classic script:** its startup binds listeners and restores the saved mode while the page is still parsing, so it is included by a plain parser-blocking `<script src>` after the sheet markup and runs before `character.js` (a module) and the deferred scripts. Anything owned by `character.js` is used later, at event time, through guarded `window.*` lookups.
+
+**Load order, dependencies and the globals it publishes:** see the header comment of `js/character/combat-mode.js`, which is the single reference for them. Do not duplicate that list here.
+
+**Tests:** `tests/e2e/combat-mode.spec.js` (flows) and the Combat Mode block of `tests/e2e/dice-callers.spec.js` (dice results)
+
+---
+
 ### journal-export.js
 
 **Location:** `/js/journal-export.js`
@@ -327,7 +343,7 @@ rerolls, Savage Attacker, critical-hit doubling, hit-dice healing). It knows not
 logs, labels or characters; callers format the plain results.
 
 **How each kind of caller reaches it:**
-- Classic pages and scripts (`initiative.js`, the inline Combat Mode script and the wizard /
+- Classic pages and scripts (`initiative.js`, `combat-mode.js` and the wizard /
   level-up scripts on `characters.html`, `encounterbuilder.html`) load
   `<script src="/js/modules/dice-engine.js">` before their own scripts and use `window.DiceEngine`.
   `dice-engine.js` is itself a classic script (an IIFE, no `export`), which is why `initiative.js`
