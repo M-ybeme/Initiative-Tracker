@@ -978,6 +978,416 @@ $('clear-dice-history').addEventListener('click', ()=>{
         accordion.appendChild(wrapper);
       });
     }
+  // ---------- Combatant list interactions (delegated) ----------
+  // buildTable() replaces the desktop table body and the mobile card list wholesale, so their
+  // controls are not wired one by one. Each of the two stable containers gets one listener per
+  // event type, attached once at boot (wireCombatantListEvents): buttons route by data-action,
+  // inline editors by data-field, and the combatant is always resolved at event time from
+  // data-character-id via getCharacterById(), never from position or a render-time closure.
+  function updateDeathState(c) {
+    // cap and derive "stable" at 3 successes, no auto-death to keep it GM-controlled
+    c.deathSaves.s = Math.min(3, Math.max(0, c.deathSaves.s|0));
+    c.deathSaves.f = Math.min(3, Math.max(0, c.deathSaves.f|0));
+    if (c.deathSaves.s >= 3) { c.deathSaves.stable = true; }
+  }
+  function readPrecisionAmount(triggerEl) {
+    const wrap = triggerEl.closest('.precision-control');
+    const input = wrap ? wrap.querySelector('.precision-amount') : null;
+    if (!input) return { amount: 0, input: null };
+    const raw = parseInt(input.value, 10);
+    return { amount: Math.max(0, Math.abs(raw || 0)), input };
+  }
+  function applyPrecisionAdjust(c, el, sign) {
+    const { amount, input } = readPrecisionAmount(el);
+    if (!amount) { alert('Enter a positive amount to apply.'); return; }
+    const name = c.name || 'Target';
+    if (input) input.value = '';
+    applyHpDelta(c.id, sign * amount, {
+      source: 'precision-adjust',
+      history: `${sign < 0 ? 'Damage' : 'Heal'} ${amount} for ${name}`,
+      extraDetails: sign < 0 ? 'Precision damage' : 'Precision heal'
+    });
+  }
+
+  // Each action receives the combatant resolved from the clicked control's data-character-id
+  // (already known to exist) and the control itself.
+  const combatantActions = {
+    hit(c, el) {
+      applyHpDelta(c.id, +el.dataset.delta, { source: 'quick-adjust' });
+    },
+    'precision-damage'(c, el) { applyPrecisionAdjust(c, el, -1); },
+    'precision-heal'(c, el) { applyPrecisionAdjust(c, el, 1); },
+    'temp-hp'(c, el) {
+      const d = +el.dataset.delta;
+      const beforeTHP = c.tempHP || 0;
+      pushHistory(`TempHP ${d>=0?'+':''}${d} for ${c.name}`);
+      c.tempHP = Math.max(0, (c.tempHP||0) + d);
+      const afterTHP = c.tempHP || 0;
+      if (beforeTHP !== afterTHP) {
+        logHpChange(c, {
+          type: 'temp',
+          summary: `Temp HP ${afterTHP - beforeTHP >= 0 ? '+' : ''}${afterTHP - beforeTHP}`,
+          hpBefore: c.currentHP,
+          hpAfter: c.currentHP,
+          thpBefore: beforeTHP,
+          thpAfter: afterTHP,
+          source: 'temp-hp'
+        });
+      }
+      buildTable();
+    },
+    'death-save'(c, el) {
+      const kind = el.dataset.kind; // 's' or 'f'
+      const isDowned = (c.maxHP > 0 && c.currentHP <= 0);
+      if (!isDowned) return; // only when actually downed
+      const prevDS = { ...c.deathSaves };
+      pushHistory(`Death Save +${kind.toUpperCase()} for ${c.name}`);
+      if (kind === 's') c.deathSaves.s = Math.min(3, (c.deathSaves.s||0) + 1);
+      else c.deathSaves.f = Math.min(3, (c.deathSaves.f||0) + 1);
+      updateDeathState(c);
+      logEvent({
+        type: 'death-save',
+        summary: kind === 's' ? '+ Success' : '+ Failure',
+        targetId: c.id,
+        targetName: c.name,
+        source: 'death-save',
+        details: `S:${c.deathSaves.s} • F:${c.deathSaves.f}${c.deathSaves.stable ? ' • Stable' : ''}`,
+        deathSaves: { ...c.deathSaves }
+      });
+      if (!prevDS.stable && c.deathSaves.stable) {
+        logEvent({
+          type: 'death-save',
+          summary: 'Stabilized',
+          targetId: c.id,
+          targetName: c.name,
+          source: 'death-save',
+          details: 'Reached 3 successes (Stable)',
+          deathSaves: { ...c.deathSaves }
+        });
+      }
+      buildTable();
+    },
+    'death-save-reset'(c) {
+      pushHistory(`Death Saves reset for ${c.name}`);
+      c.deathSaves = { s:0, f:0, stable:false };
+      logEvent({
+        type: 'death-save',
+        summary: 'Death Saves Reset',
+        targetId: c.id,
+        targetName: c.name,
+        source: 'death-save',
+        details: 'Cleared successes and failures',
+        deathSaves: { ...c.deathSaves }
+      });
+      buildTable();
+    },
+    notes(c) {
+      modalCharacterId = c.id;
+      $('notesModalLabel').textContent = `Notes — ${c.name}`;
+      $('notes-text').value = c.notes || '';
+      if (notesModal) {
+        notesModal.show();
+      } else {
+        const modalEl = document.getElementById('notesModal');
+        const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
+        modal.show();
+      }
+    },
+    concentration(c) {
+      pushHistory(`Toggle Concentration for ${c.name}`);
+      c.concentration = !c.concentration;
+      // Damage taken before this concentration started (or after it ended) should never
+      // carry over into a check for a different spell.
+      c.concDamagePending = 0;
+      logEvent({
+        type: 'concentration',
+        summary: c.concentration ? 'Concentration On' : 'Concentration Off',
+        targetId: c.id,
+        targetName: c.name,
+        source: 'concentration',
+        concentration: c.concentration ? 'Maintaining concentration' : 'Concentration dropped'
+      });
+      buildTable();
+    },
+    reaction(c) {
+      pushHistory(`Toggle Reaction for ${c.name}`);
+      c.reactionUsed = !c.reactionUsed;
+      logEvent({
+        type: 'action',
+        summary: c.reactionUsed ? 'Reaction Used' : 'Reaction Restored',
+        targetId: c.id,
+        targetName: c.name,
+        source: 'reaction',
+        details: c.reactionUsed ? 'Reaction marked as used' : 'Reaction manually restored'
+      });
+      buildTable();
+    },
+    'legendary-use'(c) {
+      if (c.legendaryActions.remaining <= 0) return;
+      pushHistory(`Use Legendary Action for ${c.name}`);
+      c.legendaryActions.remaining = Math.max(0, c.legendaryActions.remaining - 1);
+      logEvent({
+        type: 'action',
+        summary: `Legendary Action Used`,
+        targetId: c.id,
+        targetName: c.name,
+        source: 'legendary-action',
+        details: `${c.legendaryActions.remaining}/${c.legendaryActions.max} remaining`
+      });
+      buildTable();
+    },
+    'legendary-reset'(c) {
+      pushHistory(`Reset Legendary Actions for ${c.name}`);
+      c.legendaryActions.remaining = c.legendaryActions.max;
+      logEvent({
+        type: 'action',
+        summary: `Legendary Actions Reset`,
+        targetId: c.id,
+        targetName: c.name,
+        source: 'legendary-action',
+        details: `Restored to ${c.legendaryActions.max}/${c.legendaryActions.max}`
+      });
+      buildTable();
+    },
+    'legendary-disable'(c) {
+      pushHistory(`Disable Legendary Actions for ${c.name}`);
+      c.legendaryActions = { max: 0, remaining: 0 };
+      logEvent({
+        type: 'action',
+        summary: `Legendary Actions Disabled`,
+        targetId: c.id,
+        targetName: c.name,
+        source: 'legendary-action'
+      });
+      buildTable();
+    },
+    'legendary-enable'(c) {
+      const raw = prompt(`Legendary Actions for ${c.name}\nEnter max (default: 3):`, '3');
+      if (raw === null) return; // cancelled
+      const val = Math.max(1, parseInt(raw, 10) || 3);
+      pushHistory(`Enable Legendary Actions for ${c.name}`);
+      c.legendaryActions = { max: val, remaining: val };
+      logEvent({
+        type: 'action',
+        summary: `Legendary Actions Enabled`,
+        targetId: c.id,
+        targetName: c.name,
+        source: 'legendary-action',
+        details: `Set to ${val} legendary actions`
+      });
+      buildTable();
+    },
+    status(c) {
+      openStatusModal(c.id);
+    },
+    duplicate(src) {
+      const idx = getCharacterIndexById(src.id);
+
+      pushHistory(`Duplicate ${src.name}`);
+      const activeBefore = characters[currentTurn] || null;
+
+      // Deep clone to avoid shared nested objects
+      const copy = JSON.parse(JSON.stringify(src));
+
+      // NEW: give the duplicate a *new* ID so it is never confused with the original
+      copy.id = createCharId();
+
+      // NEW: give it a clean name like "Goblin 2", "Goblin 3", etc.
+      const base = baseNameOf(src.name || 'Unnamed');
+      copy.name = nextNumberedName(base);
+
+      // Optional but sensible: reset per-creature transient stuff
+      copy.concDamagePending = 0;
+      copy.deathSaves = { s: 0, f: 0, stable: false };
+      copy.reactionUsed = false;
+      if (copy.legendaryActions?.max > 0) {
+        copy.legendaryActions = { max: copy.legendaryActions.max, remaining: copy.legendaryActions.max };
+      }
+
+      characters.splice(idx + 1, 0, normalizeChar(copy));
+      // The insert can shift the active combatant's position; keep the turn on the same creature.
+      if (activeBefore) currentTurn = Math.max(0, characters.indexOf(activeBefore));
+      buildTable();
+    },
+    delete(target) {
+      const idx = getCharacterIndexById(target.id);
+      pushHistory(`Delete ${target.name}`);
+
+      const deletingActive = (idx === currentTurn);
+
+      characters.splice(idx, 1);
+
+      if (!characters.length) {
+        currentTurn = 0;
+        combatRound = 1;
+      } else if (deletingActive) {
+        // keep pointer on "next" creature, or wrap
+        if (currentTurn >= characters.length) currentTurn = 0;
+      } else if (idx < currentTurn) {
+        // list shrank before the active index
+        currentTurn = Math.max(0, currentTurn - 1);
+      }
+
+      buildTable();
+    },
+    'move-up'(c) {
+      const i = getCharacterIndexById(c.id);
+      if (i <= 0) return;
+
+      pushHistory('Reorder (up)');
+
+      [characters[i - 1], characters[i]] = [characters[i], characters[i - 1]];
+
+      // Adjust active index
+      if (currentTurn === i) {
+        currentTurn = i - 1;
+      } else if (currentTurn === i - 1) {
+        currentTurn = i;
+      }
+
+      buildTable();
+    },
+    'move-down'(c) {
+      const i = getCharacterIndexById(c.id);
+      if (i < 0 || i >= characters.length - 1) return;
+
+      pushHistory('Reorder (down)');
+
+      [characters[i + 1], characters[i]] = [characters[i], characters[i + 1]];
+
+      // Adjust active index
+      if (currentTurn === i) {
+        currentTurn = i + 1;
+      } else if (currentTurn === i + 1) {
+        currentTurn = i;
+      }
+
+      buildTable();
+    }
+  };
+
+  function handleCombatantClick(e) {
+    const el = e.target.closest?.('[data-action]'); // nested icons/spans resolve to their button
+    if (!el || !e.currentTarget.contains(el) || el.disabled) return;
+    if (!Object.prototype.hasOwnProperty.call(combatantActions, el.dataset.action)) return;
+    const c = getCharacterById(el.dataset.characterId);
+    if (!c) return; // unknown/removed id: do nothing, never fall back to a position
+    combatantActions[el.dataset.action](c, el);
+  }
+
+  // Inline editors commit when they lose focus; name and initiative also commit on Enter and
+  // revert on Escape. The value at focus time is kept on the input (data-original) because a
+  // delegated handler has no per-input closure to hold it.
+  function commitName(inp) {
+    const c = getCharacterById(inp.dataset.characterId);
+    if (!c) return;
+    const v = (inp.value || '').trim();
+    if (v && v !== c.name) {
+      pushHistory(`Rename ${c.name} → ${v}`);
+      c.name = v;
+      buildTable();
+    } else {
+      inp.value = c.name;
+    }
+  }
+  function commitHp(inp) {
+    const c = getCharacterById(inp.dataset.characterId);
+    if (!c) return;
+    const newHP = Math.max(0, parseInt(inp.value, 10) || 0);
+    const oldHP = c.currentHP;
+    const beforeTHP = c.tempHP || 0;
+    if (newHP !== oldHP) pushHistory(`HP set for ${c.name}`);
+    if (newHP < oldHP) {
+      if (c.concentration) {
+        c.concDamagePending = (c.concDamagePending || 0) + (oldHP - newHP);
+      }
+    } else if (newHP > 0) {
+      // Healing resets DS
+      c.deathSaves = { s:0, f:0, stable:false };
+    }
+    c.currentHP = newHP;
+    elevateMaxHp(c);
+    if (newHP !== oldHP) {
+      const details = [];
+      if (oldHP > 0 && newHP <= 0) details.push('Dropped to 0 HP');
+      if (oldHP <= 0 && newHP > 0) details.push('Back above 0 HP (death saves reset)');
+      logHpChange(c, {
+        type: newHP < oldHP ? 'damage' : 'heal',
+        summary: newHP < oldHP ? `Damage ${oldHP - newHP}` : `Heal ${newHP - oldHP}`,
+        hpBefore: oldHP,
+        hpAfter: newHP,
+        thpBefore: beforeTHP,
+        thpAfter: beforeTHP,
+        source: 'manual-input',
+        details: details.join(' • ') || undefined,
+        deathSaves: (oldHP <= 0 && newHP > 0) ? { ...c.deathSaves } : undefined
+      });
+    }
+    buildTable();
+  }
+  function commitInitiative(inp) {
+    const newVal = parseInt(inp.value, 10) || 0;
+    const char = getCharacterById(inp.dataset.characterId);
+    if (!char) {
+      inp.value = inp.dataset.original ?? inp.defaultValue;
+      return;
+    }
+    if (char.initiative !== newVal) {
+      pushHistory(`Set initiative for ${char.name}`);
+      char.initiative = newVal;
+      maybeSortByInitiative();
+      buildTable();
+    }
+  }
+  const inlineFieldCommits = { name: commitName, hp: commitHp, initiative: commitInitiative };
+  const enterEscapeFields = ['name', 'initiative'];
+
+  function inlineFieldOf(target) {
+    const field = target?.dataset?.field;
+    return field && Object.prototype.hasOwnProperty.call(inlineFieldCommits, field) ? field : null;
+  }
+  function handleCombatantFocusIn(e) {
+    const field = inlineFieldOf(e.target);
+    if (field && enterEscapeFields.includes(field)) e.target.dataset.original = e.target.value;
+  }
+  function handleCombatantFocusOut(e) {
+    const field = inlineFieldOf(e.target);
+    if (field) inlineFieldCommits[field](e.target);
+  }
+  function handleCombatantKeydown(e) {
+    const field = inlineFieldOf(e.target);
+    if (!field || !enterEscapeFields.includes(field)) return;
+    if (e.key === 'Enter') { e.preventDefault(); inlineFieldCommits[field](e.target); }
+    if (e.key === 'Escape') { e.target.value = e.target.dataset.original ?? e.target.defaultValue; e.target.blur(); }
+  }
+
+  // Attached once at boot to the two containers that survive every re-render (never from
+  // buildTable), so repeated renders cannot stack handlers.
+  function wireCombatantListEvents() {
+    ['initiative-order', 'mobile-initiative-order'].forEach(id => {
+      const root = $(id);
+      if (!root) return;
+      root.addEventListener('click', handleCombatantClick);
+      root.addEventListener('keydown', handleCombatantKeydown);
+      root.addEventListener('focusin', handleCombatantFocusIn);
+      root.addEventListener('focusout', handleCombatantFocusOut);
+    });
+    // The notes modal's Save button is static too; bind it once instead of on every render.
+    $('notes-save-btn')?.addEventListener('click', () => {
+      const noteTarget = getCharacterById(modalCharacterId);
+      modalCharacterId = null;
+      if (!noteTarget) return;
+      noteTarget.notes = $('notes-text').value;
+      if (notesModal) {
+        notesModal.hide();
+      } else {
+        const modalEl = document.getElementById('notesModal');
+        const modal = bootstrap.Modal.getInstance(modalEl);
+        modal?.hide();
+      }
+      if (autoSaveEnabled) saveState();
+    });
+  }
   // ---------- Build UI ----------
   function buildTable(){
     $('combat-round').textContent = combatRound;
@@ -1009,31 +1419,31 @@ $('clear-dice-history').addEventListener('click', ()=>{
           ${isOnDeck ? '<i class="bi bi-caret-right text-secondary on-deck-caret" title="On Deck"></i>' : ''}
         </td>
         <td class="${isDowned ? 'text-decoration-line-through' : ''}">
-          <input type="text" class="form-control form-control-sm name-input"
+          <input type="text" class="form-control form-control-sm name-input" data-field="name"
                  value="${c.name}" data-character-id="${cid}" />
         </td>
         <td>${c.type}</td>
-        <td><input type="number"class="form-control form-control-sm init-input"value="${c.initiative}"data-character-id="${cid}"data-commit="init"></td>
+        <td><input type="number"class="form-control form-control-sm init-input" data-field="initiative"value="${c.initiative}"data-character-id="${cid}"></td>
         <td class="col-ac">${c.ac ?? '-'}</td>
         <td class="col-health">
           <div class="d-flex align-items-center">
-            <input type="number" class="form-control form-control-sm health-input ${hpClass(pct)}" value="${c.currentHP}" data-character-id="${cid}" style="max-width:6rem">
+            <input type="number" class="form-control form-control-sm health-input ${hpClass(pct)}" data-field="hp" value="${c.currentHP}" data-character-id="${cid}" style="max-width:6rem">
             <div class="btn-group btn-group-sm ms-1 hp-controls" role="group">
-              <button class="btn btn-outline-light hit-btn" data-delta="-5" data-character-id="${cid}">-5</button>
-              <button class="btn btn-outline-light hit-btn" data-delta="-1" data-character-id="${cid}">-1</button>
-              <button class="btn btn-outline-light hit-btn" data-delta="1" data-character-id="${cid}">+1</button>
-              <button class="btn btn-outline-light hit-btn" data-delta="5" data-character-id="${cid}">+5</button>
+              <button class="btn btn-outline-light hit-btn" data-action="hit" data-delta="-5" data-character-id="${cid}">-5</button>
+              <button class="btn btn-outline-light hit-btn" data-action="hit" data-delta="-1" data-character-id="${cid}">-1</button>
+              <button class="btn btn-outline-light hit-btn" data-action="hit" data-delta="1" data-character-id="${cid}">+1</button>
+              <button class="btn btn-outline-light hit-btn" data-action="hit" data-delta="5" data-character-id="${cid}">+5</button>
             </div>
             <div class="input-group input-group-sm ms-2 precision-control" style="max-width:11rem;">
               <input type="number" min="1" class="form-control precision-amount" data-character-id="${cid}" placeholder="Amount">
-              <button class="btn btn-outline-danger precision-damage" data-character-id="${cid}" title="Apply damage"><i class="bi bi-dash-circle"></i></button>
-              <button class="btn btn-outline-success precision-heal" data-character-id="${cid}" title="Apply healing"><i class="bi bi-plus-circle"></i></button>
+              <button class="btn btn-outline-danger precision-damage" data-action="precision-damage" data-character-id="${cid}" title="Apply damage"><i class="bi bi-dash-circle"></i></button>
+              <button class="btn btn-outline-success precision-heal" data-action="precision-heal" data-character-id="${cid}" title="Apply healing"><i class="bi bi-plus-circle"></i></button>
             </div>
             <div class="tempHP ms-2 temphp-wrap">
               <span class="temphp-badge">THP: <span class="temphp-val">${c.tempHP||0}</span></span>
               <div class="btn-group btn-group-sm temp-btns" role="group">
-                <button class="btn btn-outline-info temphp-btn" data-character-id="${cid}" data-delta="-1">-1</button>
-                <button class="btn btn-outline-info temphp-btn" data-character-id="${cid}" data-delta="1">+1</button>
+                <button class="btn btn-outline-info temphp-btn" data-action="temp-hp" data-character-id="${cid}" data-delta="-1">-1</button>
+                <button class="btn btn-outline-info temphp-btn" data-action="temp-hp" data-character-id="${cid}" data-delta="1">+1</button>
               </div>
             </div>
           </div>
@@ -1048,26 +1458,26 @@ $('clear-dice-history').addEventListener('click', ()=>{
               <div class="death-saves" title="Death Saves">
                 ${isDead ? `
                   <span class="ds-dead" title="Failed 3 death saves">&#x1F480; Dead</span>
-                  <button class="btn btn-outline-secondary ds-reset" data-character-id="${cid}" title="Reset Death Saves">↺</button>
+                  <button class="btn btn-outline-secondary ds-reset" data-action="death-save-reset" data-character-id="${cid}" title="Reset Death Saves">↺</button>
                 ` : c.deathSaves.stable ? `<span class="ds-stable">Stable</span>` : `
                   <span class="ds-pill success">S: ${c.deathSaves.s}</span>
                   <span class="ds-pill fail">F: ${c.deathSaves.f}</span>
                   <div class="btn-group btn-group-sm ds-btns" role="group">
-                    <button class="btn btn-outline-success ds-add" data-character-id="${cid}" data-kind="s">+S</button>
-                    <button class="btn btn-outline-danger ds-add" data-character-id="${cid}" data-kind="f">+F</button>
-                    <button class="btn btn-outline-secondary ds-reset" data-character-id="${cid}" title="Reset">↺</button>
+                    <button class="btn btn-outline-success ds-add" data-action="death-save" data-character-id="${cid}" data-kind="s">+S</button>
+                    <button class="btn btn-outline-danger ds-add" data-action="death-save" data-character-id="${cid}" data-kind="f">+F</button>
+                    <button class="btn btn-outline-secondary ds-reset" data-action="death-save-reset" data-character-id="${cid}" title="Reset">↺</button>
                   </div>
                 `}
               </div>` : ``}
             </div>
             <div class="notes-actions">
               <div class="action-row">
-                <button class="btn btn-sm btn-outline-light notes-btn" data-character-id="${cid}" title="Notes"><i class="bi bi-journal-text"></i></button>
-                <button class="btn btn-sm conc-btn ${c.concentration?'conc-on':''}" title="Toggle Concentration" data-character-id="${cid}">
+                <button class="btn btn-sm btn-outline-light notes-btn" data-action="notes" data-character-id="${cid}" title="Notes"><i class="bi bi-journal-text"></i></button>
+                <button class="btn btn-sm conc-btn ${c.concentration?'conc-on':''}" data-action="concentration" title="Toggle Concentration" data-character-id="${cid}">
                   <i class="bi ${c.concentration?'bi-star-fill':'bi-star'}"></i>
                 </button>
-                <button class="btn btn-sm btn-outline-info status-btn" data-character-id="${cid}" title="Edit Status"><i class="bi bi-emoji-smile"></i></button>
-                <button class="btn btn-sm react-btn ${c.reactionUsed?'react-used':''}" data-character-id="${cid}"
+                <button class="btn btn-sm btn-outline-info status-btn" data-action="status" data-character-id="${cid}" title="Edit Status"><i class="bi bi-emoji-smile"></i></button>
+                <button class="btn btn-sm react-btn ${c.reactionUsed?'react-used':''}" data-action="reaction" data-character-id="${cid}"
                         title="${c.reactionUsed?'Reaction Used — click to restore':'Reaction Available — click to mark used'}">
                   <i class="bi bi-lightning${c.reactionUsed?'-fill':''}"></i>
                 </button>
@@ -1075,18 +1485,18 @@ $('clear-dice-history').addEventListener('click', ()=>{
               ${laMax > 0 ? `
               <div class="la-row">
                 <span class="badge ${laRem>0?'bg-warning text-dark':'bg-secondary'}" title="Legendary Actions remaining">&#x1F451; ${laRem}/${laMax}</span>
-                <button class="btn btn-sm btn-outline-warning la-use-btn" data-character-id="${cid}" title="Use 1 Legendary Action"${laRem<=0?' disabled':''}>&#x2212;</button>
-                <button class="btn btn-sm btn-outline-secondary la-reset-btn" data-character-id="${cid}" title="Reset Legendary Actions">&#x21BA;</button>
-                <button class="btn btn-sm btn-outline-danger la-disable-btn" data-character-id="${cid}" title="Disable Legendary Actions">&#x2715;</button>
+                <button class="btn btn-sm btn-outline-warning la-use-btn" data-action="legendary-use" data-character-id="${cid}" title="Use 1 Legendary Action"${laRem<=0?' disabled':''}>&#x2212;</button>
+                <button class="btn btn-sm btn-outline-secondary la-reset-btn" data-action="legendary-reset" data-character-id="${cid}" title="Reset Legendary Actions">&#x21BA;</button>
+                <button class="btn btn-sm btn-outline-danger la-disable-btn" data-action="legendary-disable" data-character-id="${cid}" title="Disable Legendary Actions">&#x2715;</button>
               </div>` : ''}
             </div>
           </div>
         </td>
         <td class="col-actions">
           <div class="d-flex gap-1 flex-wrap align-items-start">
-            <button class="btn btn-sm btn-outline-success duplicate-btn" data-character-id="${cid}" title="Duplicate"><i class="bi bi-files"></i></button>
-            <button class="btn btn-sm btn-outline-danger delete-btn" data-character-id="${cid}" title="Delete"><i class="bi bi-trash"></i></button>
-            ${laMax === 0 ? `<button class="btn btn-sm la-enable-btn" data-character-id="${cid}" title="Enable Legendary Actions">&#x1F451;</button>` : ''}
+            <button class="btn btn-sm btn-outline-success duplicate-btn" data-action="duplicate" data-character-id="${cid}" title="Duplicate"><i class="bi bi-files"></i></button>
+            <button class="btn btn-sm btn-outline-danger delete-btn" data-action="delete" data-character-id="${cid}" title="Delete"><i class="bi bi-trash"></i></button>
+            ${laMax === 0 ? `<button class="btn btn-sm la-enable-btn" data-action="legendary-enable" data-character-id="${cid}" title="Enable Legendary Actions">&#x1F451;</button>` : ''}
           </div>
         </td>
       `;
@@ -1098,7 +1508,7 @@ $('clear-dice-history').addEventListener('click', ()=>{
       card.innerHTML = `
         <div class="card-body">
           <h5 class="card-title mb-1 d-flex align-items-center gap-2 flex-wrap">
-            <input type="text" class="form-control form-control-sm name-input"
+            <input type="text" class="form-control form-control-sm name-input" data-field="name"
                    style="max-width: 240px" value="${c.name}" data-character-id="${cid}">
             <small class="text-muted">
               (<span class="meta-type-init">${c.type} • Init ${c.initiative}</span>
@@ -1108,17 +1518,17 @@ $('clear-dice-history').addEventListener('click', ()=>{
             ${isDead ? '<span class="ds-dead ms-1" title="Failed 3 death saves">&#x1F480; Dead</span>' : ''}
           </h5>
           <div class="mb-1">HP:
-            <input type="number" class="form-control form-control-sm health-input ${hpClass(pct)} d-inline-block" style="max-width:6rem" value="${c.currentHP}" data-character-id="${cid}">
+            <input type="number" class="form-control form-control-sm health-input ${hpClass(pct)} d-inline-block" data-field="hp" style="max-width:6rem" value="${c.currentHP}" data-character-id="${cid}">
             <div class="btn-group btn-group-sm ms-1 hp-controls">
-              <button class="btn btn-outline-light hit-btn" data-delta="-5" data-character-id="${cid}">-5</button>
-              <button class="btn btn-outline-light hit-btn" data-delta="-1" data-character-id="${cid}">-1</button>
-              <button class="btn btn-outline-light hit-btn" data-delta="1" data-character-id="${cid}">+1</button>
-              <button class="btn btn-outline-light hit-btn" data-delta="5" data-character-id="${cid}">+5</button>
+              <button class="btn btn-outline-light hit-btn" data-action="hit" data-delta="-5" data-character-id="${cid}">-5</button>
+              <button class="btn btn-outline-light hit-btn" data-action="hit" data-delta="-1" data-character-id="${cid}">-1</button>
+              <button class="btn btn-outline-light hit-btn" data-action="hit" data-delta="1" data-character-id="${cid}">+1</button>
+              <button class="btn btn-outline-light hit-btn" data-action="hit" data-delta="5" data-character-id="${cid}">+5</button>
             </div>
             <div class="input-group input-group-sm mt-1 precision-control">
               <input type="number" min="1" class="form-control precision-amount" data-character-id="${cid}" placeholder="Amount">
-              <button class="btn btn-outline-danger precision-damage" data-character-id="${cid}" title="Apply damage"><i class="bi bi-dash-circle"></i></button>
-              <button class="btn btn-outline-success precision-heal" data-character-id="${cid}" title="Apply healing"><i class="bi bi-plus-circle"></i></button>
+              <button class="btn btn-outline-danger precision-damage" data-action="precision-damage" data-character-id="${cid}" title="Apply damage"><i class="bi bi-dash-circle"></i></button>
+              <button class="btn btn-outline-success precision-heal" data-action="precision-heal" data-character-id="${cid}" title="Apply healing"><i class="bi bi-plus-circle"></i></button>
             </div>
           </div>
           <div class="d-flex align-items-center justify-content-between">
@@ -1130,12 +1540,12 @@ $('clear-dice-history').addEventListener('click', ()=>{
             </div>
             <div class="notes-actions">
               <div class="action-row">
-                <button class="btn btn-sm btn-outline-light notes-btn" data-character-id="${cid}" title="Notes"><i class="bi bi-journal-text"></i></button>
-                <button class="btn btn-sm conc-btn ${c.concentration?'conc-on':''}" title="Toggle Concentration" data-character-id="${cid}">
+                <button class="btn btn-sm btn-outline-light notes-btn" data-action="notes" data-character-id="${cid}" title="Notes"><i class="bi bi-journal-text"></i></button>
+                <button class="btn btn-sm conc-btn ${c.concentration?'conc-on':''}" data-action="concentration" title="Toggle Concentration" data-character-id="${cid}">
                   <i class="bi ${c.concentration?'bi-star-fill':'bi-star'}"></i>
                 </button>
-                <button class="btn btn-sm btn-outline-info status-btn" data-character-id="${cid}" title="Edit Status"><i class="bi bi-emoji-smile"></i></button>
-                <button class="btn btn-sm react-btn ${c.reactionUsed?'react-used':''}" data-character-id="${cid}"
+                <button class="btn btn-sm btn-outline-info status-btn" data-action="status" data-character-id="${cid}" title="Edit Status"><i class="bi bi-emoji-smile"></i></button>
+                <button class="btn btn-sm react-btn ${c.reactionUsed?'react-used':''}" data-action="reaction" data-character-id="${cid}"
                         title="${c.reactionUsed?'Reaction Used — click to restore':'Reaction Available — click to mark used'}">
                   <i class="bi bi-lightning${c.reactionUsed?'-fill':''}"></i>
                 </button>
@@ -1143,18 +1553,18 @@ $('clear-dice-history').addEventListener('click', ()=>{
               ${laMax > 0 ? `
               <div class="la-row mt-1">
                 <span class="badge ${laRem>0?'bg-warning text-dark':'bg-secondary'}" title="Legendary Actions remaining">&#x1F451; ${laRem}/${laMax}</span>
-                <button class="btn btn-sm btn-outline-warning la-use-btn" data-character-id="${cid}" title="Use 1 Legendary Action"${laRem<=0?' disabled':''}>&#x2212;</button>
-                <button class="btn btn-sm btn-outline-secondary la-reset-btn" data-character-id="${cid}" title="Reset Legendary Actions">&#x21BA;</button>
-                <button class="btn btn-sm btn-outline-danger la-disable-btn" data-character-id="${cid}" title="Disable Legendary Actions">&#x2715;</button>
+                <button class="btn btn-sm btn-outline-warning la-use-btn" data-action="legendary-use" data-character-id="${cid}" title="Use 1 Legendary Action"${laRem<=0?' disabled':''}>&#x2212;</button>
+                <button class="btn btn-sm btn-outline-secondary la-reset-btn" data-action="legendary-reset" data-character-id="${cid}" title="Reset Legendary Actions">&#x21BA;</button>
+                <button class="btn btn-sm btn-outline-danger la-disable-btn" data-action="legendary-disable" data-character-id="${cid}" title="Disable Legendary Actions">&#x2715;</button>
               </div>` : ''}
             </div>
           </div>
           <div class="d-flex justify-content-end mt-2 gap-1">
-            <button class="btn btn-sm btn-outline-light move-up" data-character-id="${cid}"><i class="bi bi-arrow-up"></i></button>
-            <button class="btn btn-sm btn-outline-light move-down" data-character-id="${cid}"><i class="bi bi-arrow-down"></i></button>
-            <button class="btn btn-sm btn-outline-success duplicate-btn" data-character-id="${cid}"><i class="bi bi-files"></i></button>
-            <button class="btn btn-sm btn-outline-danger delete-btn" data-character-id="${cid}"><i class="bi bi-trash"></i></button>
-            ${laMax === 0 ? `<button class="btn btn-sm la-enable-btn" data-character-id="${cid}" title="Enable Legendary Actions">&#x1F451;</button>` : ''}
+            <button class="btn btn-sm btn-outline-light move-up" data-action="move-up" data-character-id="${cid}"><i class="bi bi-arrow-up"></i></button>
+            <button class="btn btn-sm btn-outline-light move-down" data-action="move-down" data-character-id="${cid}"><i class="bi bi-arrow-down"></i></button>
+            <button class="btn btn-sm btn-outline-success duplicate-btn" data-action="duplicate" data-character-id="${cid}"><i class="bi bi-files"></i></button>
+            <button class="btn btn-sm btn-outline-danger delete-btn" data-action="delete" data-character-id="${cid}"><i class="bi bi-trash"></i></button>
+            ${laMax === 0 ? `<button class="btn btn-sm la-enable-btn" data-action="legendary-enable" data-character-id="${cid}" title="Enable Legendary Actions">&#x1F451;</button>` : ''}
           </div>
         </div>
       `;
@@ -1164,475 +1574,6 @@ $('clear-dice-history').addEventListener('click', ()=>{
     document.querySelectorAll('[data-bs-toggle="tooltip"]').forEach(el => {
     bootstrap.Tooltip.getOrCreateInstance(el, { trigger: 'hover', html: false });
     });
-    // HP adjust
-    document.querySelectorAll('.hit-btn').forEach(b => {
-      b.addEventListener('click', function() {
-        const delta = +this.dataset.delta;
-        applyHpDelta(this.dataset.characterId, delta, { source: 'quick-adjust' });
-      });
-    });
-    const readPrecisionAmount = (triggerEl) => {
-      const wrap = triggerEl.closest('.precision-control');
-      const input = wrap ? wrap.querySelector('.precision-amount') : null;
-      if (!input) return { amount: 0, input: null };
-      const raw = parseInt(input.value, 10);
-      return { amount: Math.max(0, Math.abs(raw || 0)), input };
-    };
-    document.querySelectorAll('.precision-damage').forEach(btn => {
-      btn.addEventListener('click', function() {
-        const id = this.dataset.characterId;
-        const { amount, input } = readPrecisionAmount(this);
-        if (!amount) { alert('Enter a positive amount to apply.'); return; }
-        const name = getCharacterById(id)?.name || 'Target';
-        if (input) input.value = '';
-        applyHpDelta(id, -amount, {
-          source: 'precision-adjust',
-          history: `Damage ${amount} for ${name}`,
-          extraDetails: 'Precision damage'
-        });
-      });
-    });
-    document.querySelectorAll('.precision-heal').forEach(btn => {
-      btn.addEventListener('click', function() {
-        const id = this.dataset.characterId;
-        const { amount, input } = readPrecisionAmount(this);
-        if (!amount) { alert('Enter a positive amount to apply.'); return; }
-        const name = getCharacterById(id)?.name || 'Target';
-        if (input) input.value = '';
-        applyHpDelta(id, amount, {
-          source: 'precision-adjust',
-          history: `Heal ${amount} for ${name}`,
-          extraDetails: 'Precision heal'
-        });
-      });
-    });
-    document.querySelectorAll('.temphp-btn').forEach(btn=>{
-      btn.addEventListener('click', function(){
-        const d  = +this.dataset.delta;
-        const c  = getCharacterById(this.dataset.characterId);
-        if (!c) return;
-        const beforeTHP = c.tempHP || 0;
-        pushHistory(`TempHP ${d>=0?'+':''}${d} for ${c.name}`);
-        c.tempHP = Math.max(0, (c.tempHP||0) + d);
-        const afterTHP = c.tempHP || 0;
-        if (beforeTHP !== afterTHP) {
-          logHpChange(c, {
-            type: 'temp',
-            summary: `Temp HP ${afterTHP - beforeTHP >= 0 ? '+' : ''}${afterTHP - beforeTHP}`,
-            hpBefore: c.currentHP,
-            hpAfter: c.currentHP,
-            thpBefore: beforeTHP,
-            thpAfter: afterTHP,
-            source: 'temp-hp'
-          });
-        }
-        buildTable();
-      });
-    });
-    function updateDeathState(c) {
-      // cap and derive "stable" at 3 successes, no auto-death to keep it GM-controlled
-      c.deathSaves.s = Math.min(3, Math.max(0, c.deathSaves.s|0));
-      c.deathSaves.f = Math.min(3, Math.max(0, c.deathSaves.f|0));
-      if (c.deathSaves.s >= 3) { c.deathSaves.stable = true; }
-    }
-    document.querySelectorAll('.ds-add').forEach(btn=>{
-    btn.addEventListener('click', function(){
-    const kind = this.dataset.kind; // 's' or 'f'
-    const c = getCharacterById(this.dataset.characterId);
-    if (!c) return;
-    const isDowned = (c.maxHP > 0 && c.currentHP <= 0);
-      if (!isDowned) return; // only when actually downed
-        const prevDS = { ...c.deathSaves };
-        pushHistory(`Death Save +${kind.toUpperCase()} for ${c.name}`);
-        if (kind === 's') c.deathSaves.s = Math.min(3, (c.deathSaves.s||0) + 1);
-        else c.deathSaves.f = Math.min(3, (c.deathSaves.f||0) + 1);
-        updateDeathState(c);
-        logEvent({
-          type: 'death-save',
-          summary: kind === 's' ? '+ Success' : '+ Failure',
-          targetId: c.id,
-          targetName: c.name,
-          source: 'death-save',
-          details: `S:${c.deathSaves.s} • F:${c.deathSaves.f}${c.deathSaves.stable ? ' • Stable' : ''}`,
-          deathSaves: { ...c.deathSaves }
-        });
-        if (!prevDS.stable && c.deathSaves.stable) {
-          logEvent({
-            type: 'death-save',
-            summary: 'Stabilized',
-            targetId: c.id,
-            targetName: c.name,
-            source: 'death-save',
-            details: 'Reached 3 successes (Stable)',
-            deathSaves: { ...c.deathSaves }
-          });
-        }
-        buildTable();
-      });
-    });
-    document.querySelectorAll('.ds-reset').forEach(btn=>{
-      btn.addEventListener('click', function(){
-        const c = getCharacterById(this.dataset.characterId);
-        if (!c) return;
-        pushHistory(`Death Saves reset for ${c.name}`);
-        c.deathSaves = { s:0, f:0, stable:false };
-        logEvent({
-          type: 'death-save',
-          summary: 'Death Saves Reset',
-          targetId: c.id,
-          targetName: c.name,
-          source: 'death-save',
-          details: 'Cleared successes and failures',
-          deathSaves: { ...c.deathSaves }
-        });
-        buildTable();
-      });
-    });
-        // Name inline edit — now re-attached each render
-    document.querySelectorAll('.name-input').forEach(inp => {
-      const id = inp.dataset.characterId;
-      let original = inp.value;
-      const commit = () => {
-        const c = getCharacterById(id);
-        if (!c) return;
-        const v = (inp.value || '').trim();
-        if (v && v !== c.name) {
-          pushHistory(`Rename ${c.name} → ${v}`);
-          c.name = v;
-          buildTable();
-        } else {
-          inp.value = c.name;
-        }
-      };
-      inp.addEventListener('focus', () => original = inp.value);
-      inp.addEventListener('keydown', e => {
-        if (e.key === 'Enter') { e.preventDefault(); commit(); }
-        if (e.key === 'Escape') { inp.value = original; inp.blur(); }
-      });
-      inp.addEventListener('blur', commit);
-    });
-    document.querySelectorAll('.health-input').forEach(inp=>{
-      let pushed = false;
-      inp.addEventListener('focus', function(){
-        pushed = false;
-        this.dataset._orig = this.value;
-      });
-      inp.addEventListener('blur', function(){
-        const c = getCharacterById(this.dataset.characterId);
-        if (!c) return;
-        const newHP = Math.max(0, parseInt(this.value, 10) || 0);
-        const oldHP = c.currentHP;
-        const beforeTHP = c.tempHP || 0;
-        if (!pushed && newHP !== oldHP) pushHistory(`HP set for ${c.name}`);
-        if (newHP < oldHP) {
-          if (c.concentration) {
-            c.concDamagePending = (c.concDamagePending || 0) + (oldHP - newHP);
-          }
-        } else if (newHP > 0) {
-          // Healing resets DS
-          c.deathSaves = { s:0, f:0, stable:false };
-        }
-        c.currentHP = newHP;
-        elevateMaxHp(c);
-        if (newHP !== oldHP) {
-          const details = [];
-          if (oldHP > 0 && newHP <= 0) details.push('Dropped to 0 HP');
-          if (oldHP <= 0 && newHP > 0) details.push('Back above 0 HP (death saves reset)');
-          logHpChange(c, {
-            type: newHP < oldHP ? 'damage' : 'heal',
-            summary: newHP < oldHP ? `Damage ${oldHP - newHP}` : `Heal ${newHP - oldHP}`,
-            hpBefore: oldHP,
-            hpAfter: newHP,
-            thpBefore: beforeTHP,
-            thpAfter: beforeTHP,
-            source: 'manual-input',
-            details: details.join(' • ') || undefined,
-            deathSaves: (oldHP <= 0 && newHP > 0) ? { ...c.deathSaves } : undefined
-          });
-        }
-        buildTable();
-      });
-      inp.addEventListener('input', function(){
-        // live typing: do nothing heavy; final commit happens on blur
-      });
-    });
-    // Initiative commit (Enter / blur)
-        document.querySelectorAll('.init-input[data-commit="init"]').forEach(inp=>{
-      let original = inp.value;
-
-      const commit = ()=>{
-        const newVal = parseInt(inp.value, 10) || 0;
-
-        const char = getCharacterById(inp.dataset.characterId);
-        if (!char) {
-          inp.value = original;
-          return;
-        }
-
-        if (char.initiative !== newVal) {
-          pushHistory(`Set initiative for ${char.name}`);
-          char.initiative = newVal;
-          maybeSortByInitiative();
-          buildTable();
-        }
-      };
-      inp.addEventListener('keydown', e=>{
-        if (e.key === 'Enter'){ e.preventDefault(); commit(); }
-        if (e.key === 'Escape'){ inp.value = original; inp.blur(); }
-      });
-      inp.addEventListener('focus', ()=> original = inp.value);
-      inp.addEventListener('blur', commit);
-    });
-    // Notes modal open
-    document.querySelectorAll('.notes-btn').forEach(btn=>{
-      btn.addEventListener('click', function(){
-        const c = getCharacterById(this.dataset.characterId);
-        if (!c) return;
-        modalCharacterId = c.id;
-        $('notesModalLabel').textContent = `Notes — ${c.name}`;
-        $('notes-text').value = c.notes || '';
-        if (notesModal) {
-          notesModal.show();
-        } else {
-          const modalEl = document.getElementById('notesModal');
-          const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
-          modal.show();
-        }
-                });
-              });
-              $('notes-save-btn').onclick = ()=>{
-                const noteTarget = getCharacterById(modalCharacterId);
-                modalCharacterId = null;
-                if (!noteTarget) return;
-                noteTarget.notes = $('notes-text').value;
-                if (notesModal) {
-          notesModal.hide();
-        } else {
-          const modalEl = document.getElementById('notesModal');
-          const modal = bootstrap.Modal.getInstance(modalEl);
-          modal?.hide();
-        }
-      if (autoSaveEnabled) saveState();
-    };
-    // Concentration toggle
-    document.querySelectorAll('.conc-btn').forEach(btn=>{
-      btn.addEventListener('click', function(){
-        const c = getCharacterById(this.dataset.characterId);
-        if (!c) return;
-        pushHistory(`Toggle Concentration for ${c.name}`);
-        c.concentration = !c.concentration;
-        // Damage taken before this concentration started (or after it ended) should never
-        // carry over into a check for a different spell.
-        c.concDamagePending = 0;
-        logEvent({
-          type: 'concentration',
-          summary: c.concentration ? 'Concentration On' : 'Concentration Off',
-          targetId: c.id,
-          targetName: c.name,
-          source: 'concentration',
-          concentration: c.concentration ? 'Maintaining concentration' : 'Concentration dropped'
-        });
-        buildTable();
-      });
-    });
-    // Reaction toggle
-    document.querySelectorAll('.react-btn').forEach(btn => {
-      btn.addEventListener('click', function() {
-        const c = getCharacterById(this.dataset.characterId);
-        if (!c) return;
-        pushHistory(`Toggle Reaction for ${c.name}`);
-        c.reactionUsed = !c.reactionUsed;
-        logEvent({
-          type: 'action',
-          summary: c.reactionUsed ? 'Reaction Used' : 'Reaction Restored',
-          targetId: c.id,
-          targetName: c.name,
-          source: 'reaction',
-          details: c.reactionUsed ? 'Reaction marked as used' : 'Reaction manually restored'
-        });
-        buildTable();
-      });
-    });
-    // Legendary Actions — use one
-    document.querySelectorAll('.la-use-btn').forEach(btn => {
-      btn.addEventListener('click', function() {
-        const c = getCharacterById(this.dataset.characterId);
-        if (!c || c.legendaryActions.remaining <= 0) return;
-        pushHistory(`Use Legendary Action for ${c.name}`);
-        c.legendaryActions.remaining = Math.max(0, c.legendaryActions.remaining - 1);
-        logEvent({
-          type: 'action',
-          summary: `Legendary Action Used`,
-          targetId: c.id,
-          targetName: c.name,
-          source: 'legendary-action',
-          details: `${c.legendaryActions.remaining}/${c.legendaryActions.max} remaining`
-        });
-        buildTable();
-      });
-    });
-    // Legendary Actions — reset remaining
-    document.querySelectorAll('.la-reset-btn').forEach(btn => {
-      btn.addEventListener('click', function() {
-        const c = getCharacterById(this.dataset.characterId);
-        if (!c) return;
-        pushHistory(`Reset Legendary Actions for ${c.name}`);
-        c.legendaryActions.remaining = c.legendaryActions.max;
-        logEvent({
-          type: 'action',
-          summary: `Legendary Actions Reset`,
-          targetId: c.id,
-          targetName: c.name,
-          source: 'legendary-action',
-          details: `Restored to ${c.legendaryActions.max}/${c.legendaryActions.max}`
-        });
-        buildTable();
-      });
-    });
-    // Legendary Actions — disable
-    document.querySelectorAll('.la-disable-btn').forEach(btn => {
-      btn.addEventListener('click', function() {
-        const c = getCharacterById(this.dataset.characterId);
-        if (!c) return;
-        pushHistory(`Disable Legendary Actions for ${c.name}`);
-        c.legendaryActions = { max: 0, remaining: 0 };
-        logEvent({
-          type: 'action',
-          summary: `Legendary Actions Disabled`,
-          targetId: c.id,
-          targetName: c.name,
-          source: 'legendary-action'
-        });
-        buildTable();
-      });
-    });
-    // Legendary Actions — enable (prompt for max)
-    document.querySelectorAll('.la-enable-btn').forEach(btn => {
-      btn.addEventListener('click', function() {
-        const c = getCharacterById(this.dataset.characterId);
-        if (!c) return;
-        const raw = prompt(`Legendary Actions for ${c.name}\nEnter max (default: 3):`, '3');
-        if (raw === null) return; // cancelled
-        const val = Math.max(1, parseInt(raw, 10) || 3);
-        pushHistory(`Enable Legendary Actions for ${c.name}`);
-        c.legendaryActions = { max: val, remaining: val };
-        logEvent({
-          type: 'action',
-          summary: `Legendary Actions Enabled`,
-          targetId: c.id,
-          targetName: c.name,
-          source: 'legendary-action',
-          details: `Set to ${val} legendary actions`
-        });
-        buildTable();
-      });
-    });
-    // Status Modal open
-    document.querySelectorAll('.status-btn').forEach(btn=>{
-      btn.addEventListener('click', function(){
-        openStatusModal(this.dataset.characterId);
-      });
-    });
-        // Duplicate/Delete
-    document.querySelectorAll('.duplicate-btn').forEach(btn=>{
-      btn.addEventListener('click', function(){
-        const src = getCharacterById(this.dataset.characterId);
-        if (!src) return;
-        const idx = getCharacterIndexById(src.id);
-
-        pushHistory(`Duplicate ${src.name}`);
-        const activeBefore = characters[currentTurn] || null;
-
-        // Deep clone to avoid shared nested objects
-        const copy = JSON.parse(JSON.stringify(src));
-
-        // NEW: give the duplicate a *new* ID so it is never confused with the original
-        copy.id = createCharId();
-
-        // NEW: give it a clean name like "Goblin 2", "Goblin 3", etc.
-        const base = baseNameOf(src.name || 'Unnamed');
-        copy.name = nextNumberedName(base);
-
-        // Optional but sensible: reset per-creature transient stuff
-        copy.concDamagePending = 0;
-        copy.deathSaves = { s: 0, f: 0, stable: false };
-        copy.reactionUsed = false;
-        if (copy.legendaryActions?.max > 0) {
-          copy.legendaryActions = { max: copy.legendaryActions.max, remaining: copy.legendaryActions.max };
-        }
-
-        characters.splice(idx + 1, 0, normalizeChar(copy));
-        // The insert can shift the active combatant's position; keep the turn on the same creature.
-        if (activeBefore) currentTurn = Math.max(0, characters.indexOf(activeBefore));
-        buildTable();
-      });
-    });
-    document.querySelectorAll('.delete-btn').forEach(btn => {
-    btn.addEventListener('click', function () {
-      const target = getCharacterById(this.dataset.characterId);
-      if (!target) return;
-      const idx = getCharacterIndexById(target.id);
-      pushHistory(`Delete ${target.name}`);
-
-      const deletingActive = (idx === currentTurn);
-    
-      characters.splice(idx, 1);
-    
-      if (!characters.length) {
-        currentTurn = 0;
-        combatRound = 1;
-      } else if (deletingActive) {
-        // keep pointer on "next" creature, or wrap
-        if (currentTurn >= characters.length) currentTurn = 0;
-      } else if (idx < currentTurn) {
-        // list shrank before the active index
-        currentTurn = Math.max(0, currentTurn - 1);
-      }
-    
-      buildTable();
-    });
-  });
-    
-    // Mobile move
-    document.querySelectorAll('.move-up').forEach(btn => {
-      btn.addEventListener('click', function () {
-        const i = getCharacterIndexById(this.dataset.characterId);
-        if (i <= 0) return;
-
-        pushHistory('Reorder (up)');
-      
-        [characters[i - 1], characters[i]] = [characters[i], characters[i - 1]];
-      
-        // Adjust active index
-        if (currentTurn === i) {
-          currentTurn = i - 1;
-        } else if (currentTurn === i - 1) {
-          currentTurn = i;
-        }
-      
-        buildTable();
-      });
-    });
-    document.querySelectorAll('.move-down').forEach(btn => {
-      btn.addEventListener('click', function () {
-        const i = getCharacterIndexById(this.dataset.characterId);
-        if (i < 0 || i >= characters.length - 1) return;
-
-        pushHistory('Reorder (down)');
-      
-        [characters[i + 1], characters[i]] = [characters[i], characters[i + 1]];
-      
-        // Adjust active index
-        if (currentTurn === i) {
-          currentTurn = i + 1;
-        } else if (currentTurn === i + 1) {
-          currentTurn = i;
-        }
-      
-        buildTable();
-      });
-    });
-    
     // Sortable (desktop) — init once, reuse
     if (!sortableInstance) {
       const tbodyEl = $('initiative-order');
@@ -2137,6 +2078,7 @@ $('clear-dice-history').addEventListener('click', ()=>{
     else if (e.key==='l') $('lockOrderToggle').click();
   });
   // Boot
+  wireCombatantListEvents(); // once: the containers survive every re-render
   loadState();               // 1) restore whatever was there
   tryRehydrateFromBuilder(); // 2) append / replace from other pages as needed
   updateSaveHistory();

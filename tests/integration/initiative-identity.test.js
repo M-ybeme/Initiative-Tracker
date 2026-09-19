@@ -23,16 +23,27 @@ const bodyHtml = (() => {
 const stubInstance = () => ({ show() {}, hide() {}, dispose() {}, option() {} });
 let sortableOptions;
 let toastCalls;
+let modalCalls;
+let alertCalls;
 
 function installGlobals() {
   toastCalls = [];
+  modalCalls = [];
+  alertCalls = [];
   sortableOptions = null;
   const factory = () => ({
     getOrCreateInstance: () => stubInstance(),
     getInstance: () => stubInstance()
   });
+  const recordingModal = () => ({
+    show: () => modalCalls.push('show'),
+    hide: () => modalCalls.push('hide')
+  });
   globalThis.bootstrap = {
-    Modal: factory(),
+    Modal: {
+      getOrCreateInstance: () => recordingModal(),
+      getInstance: () => recordingModal()
+    },
     Offcanvas: factory(),
     Tooltip: factory(),
     Toast: {
@@ -50,7 +61,8 @@ function installGlobals() {
   };
   globalThis.RULES_DATA = [{ cat: 'Test', items: [] }];
   globalThis.SPELLS_DATA = [];
-  window.alert = () => {};
+  window.alert = globalThis.alert = msg => alertCalls.push(msg);
+  window.prompt = globalThis.prompt = () => '2'; // legendary-enable asks for the number of actions
   window.confirm = () => true;
 }
 
@@ -98,10 +110,21 @@ function replaceStateFromAnotherTab(characters, currentTurn = 0) {
   Object.defineProperty(ev, 'key', { value: 'initiativeTrackerData' });
   window.dispatchEvent(ev);
 }
+// Focus into an inline editor, change its value, and leave it, as a browser reports it
+// (focusin / focusout bubble; the tracker listens for them on the list containers).
+function focusIn(el) {
+  el.dispatchEvent(new window.FocusEvent('focusin', { bubbles: true }));
+}
+function focusOut(el) {
+  el.dispatchEvent(new window.FocusEvent('focusout', { bubbles: true }));
+}
+function editField(el, value) {
+  focusIn(el);
+  el.value = String(value);
+  focusOut(el);
+}
 function setInitiative(id, value) {
-  const input = row(id).querySelector('.init-input');
-  input.value = String(value);
-  input.dispatchEvent(new window.Event('blur'));
+  editField(row(id).querySelector('.init-input'), value);
 }
 
 describe('Initiative Tracker: combatants are addressed by stable id', () => {
@@ -136,17 +159,21 @@ describe('Initiative Tracker: combatants are addressed by stable id', () => {
     expect(savedById('id-C').currentHP).toBe(20);
   });
 
-  it('a handler bound before a reorder still hits its own combatant, not whoever now sits at that position', async () => {
+  it('a control left over from a superseded render is inert, and the live control for the same combatant acts on him alone', async () => {
     await loadTracker([A, B, C]);
-    // Hold on to Bravo's rendered "-5" button (was position 1), then reorder so that position
-    // belongs to somebody else. Positional handlers would damage the wrong combatant here.
+    // Hold on to Bravo's rendered "-5" button (position 1), then re-render twice with a reorder so
+    // that position belongs to somebody else and the held button is no longer in the page.
     const staleBravoBtn = row('id-B').querySelector('.hit-btn[data-delta="-5"]');
-    setInitiative('id-C', 25); // order becomes [C, B, A]; move Bravo out of position 1
+    setInitiative('id-C', 25); // order becomes [C, B, A]
     click(row('id-C').querySelector('.delete-btn'));
     expect(savedOrder()).toEqual(['id-B', 'id-A']);
+    expect(staleBravoBtn.isConnected).toBe(false);
 
-    click(staleBravoBtn);
+    click(staleBravoBtn); // nothing is bound to it any more
+    expect(savedById('id-B').currentHP).toBe(20);
+    expect(savedById('id-A').currentHP).toBe(20);
 
+    click(row('id-B').querySelector('.hit-btn[data-delta="-5"]'));
     expect(savedById('id-B').currentHP).toBe(15);
     expect(savedById('id-A').currentHP).toBe(20);
   });
@@ -343,5 +370,345 @@ describe('Initiative Tracker: combatants are addressed by stable id', () => {
     click(row(ids[1]).querySelector('.hit-btn[data-delta="-1"]'));
 
     expect(saved().characters.map(c => c.currentHP)).toEqual([20, 19]);
+  });
+
+  // The list controls are handled by listeners on the two stable containers, attached once at
+  // boot. These tests go through the rendered UI and check behavior: one click is one action no
+  // matter how many times the list has been re-rendered, and a control that cannot be tied to a
+  // combatant does nothing.
+  describe('delegated event handling', () => {
+    const mobileCard = id => document.querySelector(`#mobile-initiative-order .card[data-character-id="${id}"]`);
+    const hpOf = id => savedById(id).currentHP;
+    const damageLogFor = id =>
+      saved().combatLog.filter(e => e.targetId === id && e.type === 'damage');
+    // Each of these re-renders the whole list (and would stack listeners if wiring lived in it).
+    const rerender = (times = 5) => {
+      for (let i = 0; i < times; i++) click(row('id-A').querySelector('.react-btn'));
+    };
+
+    // The next two tests are behavior checks (right combatant, right amount, logged once). They do
+    // NOT detect stacked listeners: the action re-renders, which detaches the clicked button, so a
+    // second listener would ignore the same event. The tests that use actions which do not
+    // re-render (rejected precision amount, opening the status modal, opening the notes modal) are
+    // the ones that catch stacking.
+    it('a click after many re-renders applies exactly once, to the right combatant', async () => {
+      await loadTracker([A, B, C]);
+      rerender(6);
+
+      click(row('id-B').querySelector('.hit-btn[data-delta="-5"]'));
+
+      expect(hpOf('id-B')).toBe(15);
+      expect(damageLogFor('id-B')).toHaveLength(1);
+    });
+
+    // Most actions re-render as their last step, which detaches the clicked button, so a second
+    // listener seeing the same event would ignore it. These three do NOT re-render, so they are
+    // the ones that expose a handler attached more than once.
+    it('an action that does not re-render still runs exactly once after many re-renders: rejected precision amount', async () => {
+      await loadTracker([A, B, C]);
+      rerender(5);
+      alertCalls.length = 0;
+
+      click(row('id-B').querySelector('.precision-damage')); // empty amount -> one alert, no change
+
+      expect(alertCalls).toHaveLength(1);
+      expect(hpOf('id-B')).toBe(20);
+    });
+
+    it('opening the status modal after many re-renders opens it once', async () => {
+      await loadTracker([A, B, C]);
+      rerender(5);
+      modalCalls.length = 0;
+
+      click(row('id-B').querySelector('.status-btn'));
+
+      expect(modalCalls.filter(c => c === 'show')).toHaveLength(1);
+    });
+
+    it('opening the notes modal after many re-renders opens it once', async () => {
+      await loadTracker([A, B, C]);
+      rerender(5);
+      modalCalls.length = 0;
+
+      click(row('id-B').querySelector('.notes-btn'));
+
+      expect(modalCalls.filter(c => c === 'show')).toHaveLength(1);
+    });
+
+    it('three successive clicks on a control that re-renders each time apply three times, once each', async () => {
+      await loadTracker([A, B, C]);
+      for (let i = 0; i < 3; i++) {
+        click(row('id-B').querySelector('.hit-btn[data-delta="-1"]')); // re-queried: the list re-rendered
+      }
+      expect(hpOf('id-B')).toBe(17);
+      expect(damageLogFor('id-B')).toHaveLength(3);
+      expect(hpOf('id-A')).toBe(20);
+      expect(hpOf('id-C')).toBe(20);
+    });
+
+    it('a click on an icon or text inside a button acts through the button', async () => {
+      await loadTracker([A, B, C]);
+      const icon = row('id-A').querySelector('.duplicate-btn i');
+      expect(icon).not.toBeNull();
+
+      click(icon);
+      expect(saved().characters).toHaveLength(4); // exactly one copy
+
+      const precisionIcon = row('id-B').querySelector('.precision-damage i');
+      row('id-B').querySelector('.precision-amount').value = '4';
+      click(precisionIcon);
+      expect(hpOf('id-B')).toBe(16);
+      expect(damageLogFor('id-B')).toHaveLength(1);
+    });
+
+    it('precision controls act on their own combatant and clear the amount field', async () => {
+      await loadTracker([A, B, C]);
+      const amount = row('id-C').querySelector('.precision-amount');
+      amount.value = '7';
+      click(row('id-C').querySelector('.precision-heal'));
+      // healing at full HP raises max HP to match (existing behavior); nobody else is touched
+      expect(hpOf('id-C')).toBe(27);
+      expect(hpOf('id-A')).toBe(20);
+      expect(hpOf('id-B')).toBe(20);
+
+      click(row('id-C').querySelector('.precision-damage')); // empty amount: alert, no change
+      expect(hpOf('id-C')).toBe(27);
+    });
+
+    it('a mobile control acts once, on its own combatant, and does not also fire the desktop one', async () => {
+      await loadTracker([A, B, C]);
+      click(mobileCard('id-B').querySelector('.hit-btn[data-delta="-5"]'));
+
+      expect(hpOf('id-B')).toBe(15);
+      expect(damageLogFor('id-B')).toHaveLength(1);
+      expect(hpOf('id-A')).toBe(20);
+      expect(hpOf('id-C')).toBe(20);
+    });
+
+    it('mobile move up / move down reorder by id and keep the turn on the same creature', async () => {
+      await loadTracker([A, B, C], 1); // Bravo is active
+      click(mobileCard('id-A').querySelector('.move-down'));
+      expect(savedOrder()).toEqual(['id-B', 'id-A', 'id-C']);
+      expect(saved().characters[saved().currentTurn].id).toBe('id-B');
+
+      click(mobileCard('id-C').querySelector('.move-up'));
+      expect(savedOrder()).toEqual(['id-B', 'id-C', 'id-A']);
+      expect(saved().characters[saved().currentTurn].id).toBe('id-B');
+    });
+
+    it('a control whose combatant id is unknown or missing does nothing, and never targets anyone else', async () => {
+      await loadTracker([A, B, C]);
+      const unknown = row('id-B').querySelector('.hit-btn[data-delta="-5"]');
+      unknown.dataset.characterId = 'id-not-here';
+      const missing = row('id-C').querySelector('.hit-btn[data-delta="-5"]');
+      missing.removeAttribute('data-character-id');
+      const del = row('id-A').querySelector('.delete-btn');
+      del.dataset.characterId = 'id-not-here';
+
+      expect(() => { click(unknown); click(missing); click(del); }).not.toThrow();
+
+      expect(saved().characters.map(c => c.currentHP)).toEqual([20, 20, 20]);
+      expect(savedOrder()).toEqual(['id-A', 'id-B', 'id-C']);
+      expect(saved().combatLog).toHaveLength(0);
+    });
+
+    it('a disabled control stays inert', async () => {
+      const spent = makeChar('id-B', 'Bravo', 20, { legendaryActions: { max: 3, remaining: 0 } });
+      await loadTracker([A, spent, C]);
+      const btn = row('id-B').querySelector('.la-use-btn');
+      expect(btn.disabled).toBe(true);
+
+      click(btn);
+
+      expect(savedById('id-B').legendaryActions.remaining).toBe(0);
+      expect(saved().combatLog).toHaveLength(0);
+    });
+
+    it('legendary use spends exactly one action per click', async () => {
+      const boss = makeChar('id-B', 'Bravo', 20, { legendaryActions: { max: 3, remaining: 3 } });
+      await loadTracker([A, boss, C]);
+      rerender(4);
+
+      click(row('id-B').querySelector('.la-use-btn'));
+
+      expect(savedById('id-B').legendaryActions.remaining).toBe(2);
+    });
+
+    // Markup <-> router contract. The click router looks each control's `data-action` up in a map
+    // and silently ignores anything it doesn't know, so a typo on either side would otherwise just
+    // make a button do nothing. Every action the templates emit is clicked through the real
+    // delegated path and must produce its observable effect; a control the templates emit that is
+    // missing from this table (or a table row the templates no longer emit) fails loudly.
+    describe('markup and action routing contract', () => {
+      const ROOTS = { desktop: '#initiative-order', mobile: '#mobile-initiative-order' };
+      const BOTH = ['desktop', 'mobile'];
+
+      // Alpha: normal, no legendary actions.  Bravo: downed (not dead), death saves in progress.
+      // Charlie: has legendary actions.  Together they make every conditional control render.
+      const routingFixture = () => [
+        makeChar('id-A', 'Alpha', 30, { notes: 'note-Alpha', status: [{ name: 'Prone', icon: '🛌' }] }),
+        makeChar('id-B', 'Bravo', 20, { currentHP: 0, deathSaves: { s: 1, f: 1, stable: false } }),
+        makeChar('id-C', 'Charlie', 10, { legendaryActions: { max: 3, remaining: 2 } })
+      ];
+      const fillAmount = value => el => {
+        el.closest('.precision-control').querySelector('.precision-amount').value = value;
+      };
+      const hps = () => saved().characters.map(c => c.currentHP);
+
+      // action / who / control (companion-attribute selector) / views / before(el) / check()
+      const ROUTED_ACTIONS = [
+        { action: 'hit', who: 'id-A', control: '[data-delta="-5"]', views: BOTH,
+          check: () => expect(hps()).toEqual([15, 0, 20]) },
+        { action: 'precision-damage', who: 'id-A', views: BOTH, before: fillAmount('4'),
+          check: () => expect(hps()).toEqual([16, 0, 20]) },
+        { action: 'precision-heal', who: 'id-A', views: BOTH, before: fillAmount('3'),
+          check: () => expect(hps()).toEqual([23, 0, 20]) }, // healing above max raises max HP
+        { action: 'temp-hp', who: 'id-A', control: '[data-delta="1"]', views: ['desktop'],
+          check: () => expect(savedById('id-A').tempHP).toBe(1) },
+        { action: 'death-save', who: 'id-B', control: '[data-kind="f"]', views: ['desktop'],
+          check: () => expect(savedById('id-B').deathSaves).toEqual({ s: 1, f: 2, stable: false }) },
+        { action: 'death-save', who: 'id-B', control: '[data-kind="s"]', views: ['desktop'],
+          check: () => expect(savedById('id-B').deathSaves).toEqual({ s: 2, f: 1, stable: false }) },
+        { action: 'death-save-reset', who: 'id-B', views: ['desktop'],
+          check: () => expect(savedById('id-B').deathSaves).toEqual({ s: 0, f: 0, stable: false }) },
+        { action: 'notes', who: 'id-A', views: BOTH, check: () => {
+          expect(modalCalls).toContain('show');
+          expect(document.getElementById('notesModalLabel').textContent).toBe('Notes — Alpha');
+          expect(document.getElementById('notes-text').value).toBe('note-Alpha');
+        } },
+        { action: 'status', who: 'id-A', views: BOTH, check: () => {
+          expect(modalCalls).toContain('show');
+          expect(document.getElementById('status-badges').textContent).toContain('Prone');
+        } },
+        { action: 'concentration', who: 'id-A', views: BOTH,
+          check: () => expect(savedById('id-A').concentration).toBe(true) },
+        { action: 'reaction', who: 'id-A', views: BOTH,
+          check: () => expect(savedById('id-A').reactionUsed).toBe(true) },
+        { action: 'legendary-use', who: 'id-C', views: BOTH,
+          check: () => expect(savedById('id-C').legendaryActions).toEqual({ max: 3, remaining: 1 }) },
+        { action: 'legendary-reset', who: 'id-C', views: BOTH,
+          check: () => expect(savedById('id-C').legendaryActions).toEqual({ max: 3, remaining: 3 }) },
+        { action: 'legendary-disable', who: 'id-C', views: BOTH,
+          check: () => expect(savedById('id-C').legendaryActions).toEqual({ max: 0, remaining: 0 }) },
+        { action: 'legendary-enable', who: 'id-A', views: BOTH, // prompt is stubbed to answer "2"
+          check: () => expect(savedById('id-A').legendaryActions).toEqual({ max: 2, remaining: 2 }) },
+        { action: 'duplicate', who: 'id-A', views: BOTH, check: () => {
+          expect(saved().characters.map(c => c.name)).toEqual(['Alpha', 'Alpha 2', 'Bravo', 'Charlie']);
+        } },
+        { action: 'delete', who: 'id-A', views: BOTH,
+          check: () => expect(savedOrder()).toEqual(['id-B', 'id-C']) },
+        { action: 'move-up', who: 'id-C', views: ['mobile'],
+          check: () => expect(savedOrder()).toEqual(['id-A', 'id-C', 'id-B']) },
+        { action: 'move-down', who: 'id-A', views: ['mobile'],
+          check: () => expect(savedOrder()).toEqual(['id-B', 'id-A', 'id-C']) }
+      ];
+      const cases = ROUTED_ACTIONS.flatMap(r =>
+        r.views.map(view => ({ ...r, view, label: `${r.action}${r.control ?? ''} on ${r.who} (${view})` }))
+      );
+
+      it('every action the templates emit is covered by this table, and every companion attribute is well-formed', async () => {
+        await loadTracker(routingFixture());
+        const controls = [...document.querySelectorAll(
+          `${ROOTS.desktop} [data-action], ${ROOTS.mobile} [data-action]`
+        )];
+        const emitted = [...new Set(controls.map(el => el.dataset.action))].sort();
+        const covered = [...new Set(ROUTED_ACTIONS.map(r => r.action))].sort();
+        expect(emitted).toEqual(covered);
+
+        // every routed control names its combatant, and the attributes some actions read are valid
+        controls.forEach(el => expect(el.dataset.characterId, el.outerHTML).toBeTruthy());
+        controls
+          .filter(el => el.dataset.action === 'death-save')
+          .forEach(el => expect(['s', 'f']).toContain(el.dataset.kind));
+        controls
+          .filter(el => ['hit', 'temp-hp'].includes(el.dataset.action))
+          .forEach(el => expect(Number.isFinite(+el.dataset.delta), el.outerHTML).toBe(true));
+      });
+
+      it.each(cases)('routes $label', async c => {
+        await loadTracker(routingFixture());
+        const el = document.querySelector(
+          `${ROOTS[c.view]} [data-action="${c.action}"][data-character-id="${c.who}"]${c.control ?? ''}`
+        );
+        expect(el, `no ${c.view} control emitted for ${c.label}`).not.toBeNull();
+        c.before?.(el);
+        modalCalls.length = 0;
+
+        click(el);
+
+        c.check();
+      });
+    });
+
+    it('the notes Save button (a non-combatant control) acts once however often the list re-rendered', async () => {
+      await loadTracker([A, B, C]);
+      rerender(5);
+      click(row('id-B').querySelector('.notes-btn'));
+      document.getElementById('notes-text').value = 'seen at the docks';
+      modalCalls.length = 0;
+
+      click(document.getElementById('notes-save-btn'));
+
+      expect(savedById('id-B').notes).toBe('seen at the docks');
+      expect(modalCalls.filter(c => c === 'hide')).toHaveLength(1);
+    });
+
+    describe('inline editors (focus / keyboard)', () => {
+      const key = (el, k) =>
+        el.dispatchEvent(new window.KeyboardEvent('keydown', { key: k, bubbles: true, cancelable: true }));
+
+      it('typing a new name and pressing Enter renames once; one undo restores it', async () => {
+        await loadTracker([A, B, C]);
+        rerender(3);
+        const input = row('id-B').querySelector('.name-input');
+        focusIn(input);
+        input.value = 'Brutus';
+        key(input, 'Enter');
+        expect(savedById('id-B').name).toBe('Brutus');
+        expect(savedById('id-A').name).toBe('Alpha');
+
+        click(document.getElementById('undo-btn'));
+        expect(savedById('id-B').name).toBe('Bravo');
+      });
+
+      it('Escape puts the original value back without committing', async () => {
+        await loadTracker([A, B, C]);
+        const name = row('id-B').querySelector('.name-input');
+        focusIn(name);
+        name.value = 'Nope';
+        key(name, 'Escape');
+        expect(name.value).toBe('Bravo');
+        expect(savedById('id-B').name).toBe('Bravo');
+
+        const init = row('id-B').querySelector('.init-input');
+        focusIn(init);
+        init.value = '99';
+        key(init, 'Escape');
+        expect(init.value).toBe('20');
+        expect(savedById('id-B').initiative).toBe(20);
+      });
+
+      it('leaving the HP field commits that combatant\'s HP once and logs it once', async () => {
+        await loadTracker([A, B, C]);
+        rerender(3);
+        const hp = row('id-C').querySelector('.health-input');
+        editField(hp, 7);
+
+        expect(hpOf('id-C')).toBe(7);
+        expect(hpOf('id-A')).toBe(20);
+        expect(hpOf('id-B')).toBe(20);
+        expect(damageLogFor('id-C')).toHaveLength(1);
+      });
+
+      it('an editor whose combatant id is unknown commits nothing', async () => {
+        await loadTracker([A, B, C]);
+        const hp = row('id-B').querySelector('.health-input');
+        hp.dataset.characterId = 'id-not-here';
+
+        editField(hp, 3);
+
+        expect(saved().characters.map(c => c.currentHP)).toEqual([20, 20, 20]);
+      });
+    });
   });
 });
