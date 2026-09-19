@@ -42,6 +42,7 @@ This document provides a comprehensive inventory of **The DM's Toolbox** codebas
 │   ├── multiclass-ui.js               # Multiclass management modal
 │   ├── character-sheet-export.js      # Export to PDF/PNG/Word
 │   ├── combat-mode.js                 # Combat Mode card view (classic script)
+│   ├── polymorph-notes.js             # Polymorph / True Polymorph note text (pure, ES module)
 │   ├── journal-export.js              # Journal export utilities
 │   ├── indexed-db-storage.js          # IndexedDB storage layer
 │   ├── rules-data.js                  # Rules reference data
@@ -172,6 +173,8 @@ These scripts are loaded directly by HTML pages and contain UI logic.
   `applyHealingToHP`, `setTempHP`, `getDeathSaveOutcome`, `parseAttackBonus`)
 - `js/modules/character-xp.js` - XP threshold/progress math (`getXPForLevel`,
   `getXPProgressInfo`)
+- `js/character/polymorph-notes.js` - Polymorph / True Polymorph note text (pure). `character.js` keeps the
+  textarea and character handling and the `window.appendPolymorphNotesToSpellNotes` bridge for classic scripts
 - `js/modules/validation.js` - `validateCharacter` on import (warns, doesn't block)
 - `js/modules/export-utils.js` - Export formatting
 - `js/indexed-db-storage.js` - Portrait storage
@@ -776,6 +779,7 @@ Pages (UI Layer)
 │   │   └── modules/character-rest.js       (rest/spell-DC math only, see module doc)
 │   │   └── modules/character-combat.js     (HP/death-save helpers)
 │   │   └── modules/character-xp.js         (XP threshold/progress math)
+│   │   └── character/polymorph-notes.js    (Polymorph note text; pure)
 │   │   └── modules/validation.js           (import-time validation only)
 │   │   └── modules/export-utils.js
 │   │   (does NOT import modules/storage.js — reads/writes localStorage/IndexedDB directly)

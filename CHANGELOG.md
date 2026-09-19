@@ -20,6 +20,13 @@ The DM's Toolbox has evolved through focused feature releases. Minor versions (2
 
 ---
 
+## [Unreleased]
+
+### Known issues
+- **Flaky end-to-end test: "a blank count is invalid, not too many, and nothing is rolled"** (`tests/e2e/dice-callers.spec.js`, Character Sheet hit-dice count) — this test fails intermittently. It has failed once in a full-suite run, once in a run of three solo runs, and once in a comparison run, and passes on most other runs (eight consecutive repeat runs, and two later full-suite runs, all passed). The cause has not been identified; the likely area is timing around the hit-dice modal and the toast it asserts on, and the failure has not been captured with a message. It has not been observed as a product bug: the behavior it checks (a blank hit-dice count shows "Invalid number of hit dice to spend." instead of the over-limit message, and nothing is rolled) works when exercised by hand and in every passing run. Re-run before treating a red result on this test as a regression, and harden the test's waits when it is next touched.
+
+---
+
 ## [2.3.5] - 2026-09-04
 **Fixes — Concentration False Positives, Turn/Defeated Row Visuals, Bestiary Fallback CR Data**
 
