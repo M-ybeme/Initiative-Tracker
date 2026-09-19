@@ -4604,7 +4604,12 @@ import { validateCharacter } from '../modules/validation.js';
       // Expose globally so level-up-system.js can call it after spell additions
       window.appendPolymorphNotesToSpellNotes = appendPolymorphNotesToSpellNotes;
 
-      function attachEventHandlers() {
+      // ============================================================
+      // EVENT WIRING
+      // ============================================================
+      // Each wireXxxEvents() attaches one group of listeners; attachEventHandlers() calls them all, in order.
+
+      function wireCharacterSelectionEvents() {
         const characterSelect = $('characterSelect');
         if (characterSelect) {
           characterSelect.addEventListener('change', e => {
@@ -4632,7 +4637,9 @@ import { validateCharacter } from '../modules/validation.js';
         $('newCharacterBtn').addEventListener('click', createNewCharacter);
         $('saveCharacterBtn').addEventListener('click', () => { _manualSave = true; saveCurrentCharacter(); });
         $('deleteCharacterBtn').addEventListener('click', deleteCurrentCharacter);
+      }
 
+      function wireNewCharacterFlowEvents() {
         // New Character choice modal buttons
         const chooseWizardBtn = $('chooseWizardBtn');
         if (chooseWizardBtn) {
@@ -4682,7 +4689,9 @@ import { validateCharacter } from '../modules/validation.js';
             }
           });
         }
+      }
 
+      function wireImportExportEvents() {
         // Overflow dropdown — items are <a> tags, need preventDefault
         const exportCharBtn = $('exportCharacterBtn');
         if (exportCharBtn) {
@@ -4712,14 +4721,18 @@ import { validateCharacter } from '../modules/validation.js';
           if (file) importCharactersFromFile(file);
           e.target.value = '';
         });
+      }
 
+      function wireDirtyTrackingEvents() {
         // Dirty tracking — single delegated listener on the full sheet
         const sheetContainer = document.getElementById('fullCharacterSheet');
         if (sheetContainer) {
           sheetContainer.addEventListener('input', markDirty);
           sheetContainer.addEventListener('change', markDirty);
         }
+      }
 
+      function wireSheetExportEvents() {
         // Print/Export Character Sheet buttons
         $('printSheetBtn').addEventListener('click', (e) => {
           e.preventDefault();
@@ -4757,7 +4770,9 @@ import { validateCharacter } from '../modules/validation.js';
             showAppToast('Please select a character first.', 'warning');
           }
         });
+      }
 
+      function wirePortraitControlEvents() {
         $('portraitFile').addEventListener('change', e => {
           const file = e.target.files[0];
           if (!file) return;
@@ -4800,7 +4815,9 @@ import { validateCharacter } from '../modules/validation.js';
           editingPortrait.settings.scale = isNaN(val) ? 1 : val;
           applyModalPortraitTransform();
         });
+      }
 
+      function wireSpellSlotEvents() {
         // Spell slot management buttons (use, regain, reset)
         document.querySelectorAll('[data-action="use-slot"]').forEach(btn => {
           btn.addEventListener('click', () => {
@@ -4885,7 +4902,9 @@ import { validateCharacter } from '../modules/validation.js';
             }
           });
         }
+      }
 
+      function wireAutoCalcEvents() {
         // Auto-calc: update mods / PB / passive Perception when key fields change
         [
           'statStr','statDex','statCon','statInt','statWis','statCha',
@@ -4950,7 +4969,9 @@ import { validateCharacter } from '../modules/validation.js';
             }
           });
         });
+      }
 
+      function wireRestAndResourceEvents() {
         // Rest buttons
         const shortRestBtn = $('shortRestBtn');
         const longRestBtn = $('longRestBtn');
@@ -4976,7 +4997,9 @@ import { validateCharacter } from '../modules/validation.js';
             }
           });
         }
+      }
 
+      function wireHitDiceModalEvents() {
         // Hit dice modal buttons
         const hdDecrementBtn = $('hdDecrement');
         const hdIncrementBtn = $('hdIncrement');
@@ -5008,7 +5031,9 @@ import { validateCharacter } from '../modules/validation.js';
         if (hdApplyBtn) {
           hdApplyBtn.addEventListener('click', applyHitDiceHealing);
         }
+      }
 
+      function wirePortraitEditorEvents() {
         const containerModal = $('portraitContainerModal');
         const imgModal = $('portraitPreviewModal');
         let isDragging = false;
@@ -5081,7 +5106,9 @@ import { validateCharacter } from '../modules/validation.js';
           editingPortrait = null;
         });
         $('portraitModal').addEventListener('hidden.bs.modal', () => { editingPortrait = null; });
+      }
 
+      function wireSendToEvents() {
         const sendToTrackerBtn = $('sendToTrackerBtn');
         if (sendToTrackerBtn) {
           sendToTrackerBtn.addEventListener('click', sendCurrentCharacterToTracker);
@@ -5094,7 +5121,9 @@ import { validateCharacter } from '../modules/validation.js';
             sendCurrentCharacterToBattleMap();
           });
         }
+      }
 
+      function wireTokenPreviewEvents() {
         // Token preview modal events
         const tokenZoomSlider = $('tokenZoom');
         if (tokenZoomSlider) {
@@ -5155,7 +5184,9 @@ import { validateCharacter } from '../modules/validation.js';
         if (confirmSendToMapBtn) {
           confirmSendToMapBtn.addEventListener('click', confirmSendToBattleMap);
         }
+      }
 
+      function wireSpellEvents() {
         // Spells events
         const spellSearchInput = $('spellSearchInput');
         const clearSpellListBtn = $('clearSpellListBtn');
@@ -5307,7 +5338,9 @@ import { validateCharacter } from '../modules/validation.js';
                 maxEl.addEventListener('input', updateSpellSlotsDisplay);
             }
         }
+      }
 
+      function wireAttackEvents() {
         // Attack events
         const addAttackBtn = $('addAttackBtn');
         const saveAttackBtn = $('saveAttackBtn');
@@ -5339,7 +5372,9 @@ import { validateCharacter } from '../modules/validation.js';
             }
           });
         }
+      }
 
+      function wireInventoryEvents() {
         // Inventory management handlers
         const addInventoryItemBtn = $('addInventoryItemBtn');
         const saveInventoryItemBtn = $('saveInventoryItemBtn');
@@ -5403,7 +5438,9 @@ import { validateCharacter } from '../modules/validation.js';
             if ($('includeCoinWeight')?.checked) updateEncumbrance();
           });
         });
+      }
 
+      function wireNotesEvents() {
         // Notes category switcher
         const notesCatSelect = $('notesCategorySelect');
         if (notesCatSelect) {
@@ -5421,7 +5458,9 @@ import { validateCharacter } from '../modules/validation.js';
             $('charExtraNotes').value = currentCategorizedNotes[currentNotesCategory];
           });
         }
+      }
 
+      function wireExhaustionAndHpBarEvents() {
         // Exhaustion description
         const exhaustionInput = $('exhaustionLevel');
         if (exhaustionInput) {
@@ -5432,14 +5471,18 @@ import { validateCharacter } from '../modules/validation.js';
         [$('charCurrentHP'), $('charMaxHP')].forEach(el => {
           if (el) el.addEventListener('input', updateHPBar);
         });
+      }
 
+      function initConditionTooltips() {
         // Bootstrap tooltips on condition buttons
         if (window.bootstrap?.Tooltip) {
           document.querySelectorAll('.condition-btn[data-bs-toggle="tooltip"]').forEach(el => {
             new window.bootstrap.Tooltip(el, { trigger: 'hover focus' });
           });
         }
+      }
 
+      function wireHpAdjustEvents() {
         // HP adjust amount input: Enter key triggers Heal
         const hpAdjEl = $('hpAdjustAmount');
         if (hpAdjEl) {
@@ -5447,7 +5490,9 @@ import { validateCharacter } from '../modules/validation.js';
             if (e.key === 'Enter') { e.preventDefault(); adjustHP('heal'); }
           });
         }
+      }
 
+      function wireConditionAndConcentrationEvents() {
         // Condition toggles
         const conditionToggles = document.querySelectorAll('.condition-btn');
         conditionToggles.forEach(btn => {
@@ -5510,7 +5555,9 @@ import { validateCharacter } from '../modules/validation.js';
         if (conditionsField) {
           conditionsField.addEventListener('blur', syncConditionsFromField);
         }
+      }
 
+      function wireSpellcastingStatEvents() {
         // Spellcasting ability & derived stats
         const spellAbilitySelect = $('spellcastingAbility');
         if (spellAbilitySelect) {
@@ -5530,9 +5577,9 @@ import { validateCharacter } from '../modules/validation.js';
             });
           }
         });
+      }
 
-        // ---------- NEW: Interactive roll & action handlers ----------
-
+      function wireRollAndActionEvents() {
         // Roll history clear button
         const clearHistoryBtn = $('clearHistoryBtn');
         if (clearHistoryBtn) {
@@ -5619,7 +5666,9 @@ import { validateCharacter } from '../modules/validation.js';
             rollInitiative();
           }
         });
+      }
 
+      function wireExpertiseEvents() {
         // Expertise checkbox auto-enables proficiency
         SKILL_CONFIGS.forEach(cfg => {
           const expEl = $(cfg.expId);
@@ -5634,7 +5683,9 @@ import { validateCharacter } from '../modules/validation.js';
             });
           }
         });
+      }
 
+      function wireXpEvents() {
         // ---- XP UI events ----
         const xpDisplay = $('xpDisplay');
         if (xpDisplay) {
@@ -5712,7 +5763,9 @@ import { validateCharacter } from '../modules/validation.js';
             updateXPDisplay(character?.xp || 0, parseInt(charLevelEl.value) || 1);
           });
         }
+      }
 
+      function wireAutosaveEvents() {
         // Auto-save when leaving the page or navigating away
         // Use pagehide as it's more reliable than beforeunload (especially on mobile)
         window.addEventListener('pagehide', () => {
@@ -5740,6 +5793,38 @@ import { validateCharacter } from '../modules/validation.js';
             saveCurrentCharacter();
           }
         }, 30000); // 30 seconds
+      }
+
+      // Listener order is behaviour: several blocks bind document-level click and capture handlers, and one
+      // runs an immediate recalculation. Don't reorder or dedupe these calls unless a block is shown to be
+      // independent of the ones before it.
+      function attachEventHandlers() {
+        wireCharacterSelectionEvents();
+        wireNewCharacterFlowEvents();
+        wireImportExportEvents();
+        wireDirtyTrackingEvents();
+        wireSheetExportEvents();
+        wirePortraitControlEvents();
+        wireSpellSlotEvents();
+        wireAutoCalcEvents();
+        wireRestAndResourceEvents();
+        wireHitDiceModalEvents();
+        wirePortraitEditorEvents();
+        wireSendToEvents();
+        wireTokenPreviewEvents();
+        wireSpellEvents();
+        wireAttackEvents();
+        wireInventoryEvents();
+        wireNotesEvents();
+        wireExhaustionAndHpBarEvents();
+        initConditionTooltips();
+        wireHpAdjustEvents();
+        wireConditionAndConcentrationEvents();
+        wireSpellcastingStatEvents();
+        wireRollAndActionEvents();
+        wireExpertiseEvents();
+        wireXpEvents();
+        wireAutosaveEvents();
       }
 
       // ---------- Init ----------
