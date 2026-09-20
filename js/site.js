@@ -1,7 +1,8 @@
 const DM_TOOLBOX_BUILD = {
   name: "The DM's Toolbox",
-  version: "2.3.11",
+  version: "2.3.12",
   recentChanges: [
+    "Fix: the Journal page's export script failed to load (a duplicate SRD_PDF_URL declaration), so every Journal export button did nothing; TXT, Markdown, PDF and bulk export work again",
     "Fix: multiclass characters now track hit dice by die size (for example 3d8 + 4d6): short rests spend from the die you choose, long rests restore the largest dice first, and level-ups add the right die",
     "Fix: on a single-class level-up, switching to a new class now shows that class's steps, hit die and spell slots instead of the current class's; a class with no hit-die data lets you enter HP by hand",
     "Fix: a save that fails no longer looks saved, failures are reported once instead of repeatedly, and the class picker no longer offers a level-20 class",

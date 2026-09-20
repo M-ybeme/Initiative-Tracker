@@ -16,7 +16,7 @@ The DM's Toolbox has evolved through focused feature releases. Minor versions (2
 - **1.9.x**: Battle map measurement tools, persistent fog shapes, and generator integration across NPC/Tavern/Shop systems
 - **1.8.x**: Spell database expansion to 432+ spells, inventory management, loot generator overhaul, and character token generation
 
-**Current version: 2.3.11 (September 2026)**
+**Current version: 2.3.12 (September 2026)**
 
 ---
 
@@ -24,6 +24,24 @@ The DM's Toolbox has evolved through focused feature releases. Minor versions (2
 
 ### Known issues
 - **Flaky end-to-end test: "a blank count is invalid, not too many, and nothing is rolled"** (`tests/e2e/dice-callers.spec.js`, Character Sheet hit-dice count) — this test fails intermittently. It has failed once in a full-suite run, once in a run of three solo runs, and once in a comparison run, and passes on most other runs (eight consecutive repeat runs, and two later full-suite runs, all passed). The cause has not been identified; the likely area is timing around the hit-dice modal and the toast it asserts on, and the failure has not been captured with a message. It has not been observed as a product bug: the behavior it checks (a blank hit-dice count shows "Invalid number of hit dice to spend." instead of the over-limit message, and nothing is rolled) works when exercised by hand and in every passing run. Re-run before treating a red result on this test as a regression, and harden the test's waits when it is next touched.
+
+---
+
+## [2.3.12] - 2026-09-20
+**Fix — Journal Export**
+
+### Fixed
+- **Journal: every export button did nothing** — the browser console showed `Uncaught SyntaxError: Identifier 'SRD_PDF_URL' has already been declared (at journal-export.js)`. `site.js` and `journal-export.js` are plain scripts that share one global namespace, and both declared a top-level `SRD_PDF_URL`, so `journal-export.js` never loaded and `window.JournalExport` did not exist. The script now runs in its own scope and publishes only `window.JournalExport`. Plain Text, Markdown and PDF export and bulk export work again. The `const` to `var` change made in 2.2.6 (to stop a "Live Server re-evaluation" error) could not have fixed this, because a global `var` also collides with a global `const`
+- **Journal: SRD license notices have a single source** — the export script no longer keeps its own copy of the SRD defaults, which could never run on the page; exports read the notices from `site.js`, so their text is unchanged
+
+### Changed
+- **Tests:** new Journal export spec (8 tests: page loads with no script errors, a second load of the script, reload and back/forward navigation, and Plain Text, Markdown, Word, PDF and bulk export through the real controls), mutation-checked against the original file
+
+### Known issues (follow-ups)
+- **Word export still does not work:** `journal.html` loads the `docx` library from `https://unpkg.com/docx@8.5.0/build/index.js`, which returns 404 (`build/index.umd.js` exists). The Word test skips until the library loads
+- The SRD 5.1 and 5.2 defaults disagree between `site.js`, `character-sheet-export.js`, `error-handling.js` and `export-utils.js`, and exports print "SRD 5.2" next to the SRD 5.1 link. This needs one decision and one place for the notices
+- If `site.js` is not loaded before `journal-export.js`, an export shows "window.getSrdLicenseNotices is not a function" instead of a clear message
+- A private build made before `npm run build:pack` is re-run still contains the old script
 
 ---
 
