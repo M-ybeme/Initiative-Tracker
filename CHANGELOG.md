@@ -16,7 +16,7 @@ The DM's Toolbox has evolved through focused feature releases. Minor versions (2
 - **1.9.x**: Battle map measurement tools, persistent fog shapes, and generator integration across NPC/Tavern/Shop systems
 - **1.8.x**: Spell database expansion to 432+ spells, inventory management, loot generator overhaul, and character token generation
 
-**Current version: 2.3.8 (September 2026)**
+**Current version: 2.3.9 (September 2026)**
 
 ---
 
@@ -24,6 +24,32 @@ The DM's Toolbox has evolved through focused feature releases. Minor versions (2
 
 ### Known issues
 - **Flaky end-to-end test: "a blank count is invalid, not too many, and nothing is rolled"** (`tests/e2e/dice-callers.spec.js`, Character Sheet hit-dice count) — this test fails intermittently. It has failed once in a full-suite run, once in a run of three solo runs, and once in a comparison run, and passes on most other runs (eight consecutive repeat runs, and two later full-suite runs, all passed). The cause has not been identified; the likely area is timing around the hit-dice modal and the toast it asserts on, and the failure has not been captured with a message. It has not been observed as a product bug: the behavior it checks (a blank hit-dice count shows "Invalid number of hit dice to spend." instead of the over-limit message, and nothing is rolled) works when exercised by hand and in every passing run. Re-run before treating a red result on this test as a regression, and harden the test's waits when it is next touched.
+
+---
+
+## [2.3.9] - 2026-09-20
+**Multiclass Level-Up Correctness**
+
+### Added
+- **Character Sheet: class picker for multiclass level-up** — pressing Level Up on a multiclass character first asks which class gains the level (each current class, with its level, or "Add a new class"). Single-class characters go straight to the level-up window as before
+
+### Fixed
+- **Character Sheet: a finished level-up was not saved until the next manual save** — the level-up reloaded the sheet and then called a save that the sheet skips while it is loading. The updated character is now written straight to storage, so the level-up survives a reload with no Save press
+- **Character Sheet: levelling a non-primary class used the wrong class's rules** — features, ASI, spell learning and subclass selection now follow the chosen class's own level; hit die and class resources follow the chosen class; Wild Shape updates only when the Druid is the class levelled; proficiency bonus and racial features still follow total level. A subclass chosen for a non-primary class is stored on that class only
+- **Character Sheet: shared spell slots after a multiclass level-up** — slots come from the multiclass caster level, and change only when that level changes. Adding a non-caster class no longer raises them
+- **Character Sheet: "Add a new class" stored the class as `Cleric (Life Domain)`** — the primary class field now holds just the class name; the subclass stays on the class entry
+- **Character Sheet: level-up class picker** — class, subclass and character names are escaped, and pressing Level Up twice quickly no longer stacks a second window
+
+### Changed
+- **Level-up resources:** if the first resource slot holds another class's resource, the levelled class's resource goes to a matching or free slot instead of being skipped
+- **Hit dice:** a multiclass character's hit dice now list each class's dice (for example `2d8 + 4d6`)
+- **Tests:** new multiclass level-up spec drives the real Level Up button and picker and reads storage with no Save press (mutation-checked); the older direct-API level-up tests it replaces were removed
+
+### Known issues (follow-ups)
+- Add a new class: the HP step still uses the primary class's hit die, and a newly added caster class does not recompute shared slots
+- A class level stored as text (`"3"`) or missing can be written as `"31"` or `NaN` by level-up
+- Class resources stored as an array (after a sheet save) are not updated by level-up; `hitDiceRemaining` holds a single die size
+- The save-failure message can be missed because the sheet marks itself saved before the storage write finishes
 
 ---
 

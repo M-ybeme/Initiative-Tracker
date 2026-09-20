@@ -3579,9 +3579,15 @@ import { wireSendToEvents, wireTokenPreviewEvents } from './character-send-to.js
           // Recalculate derived fields (mods, PB, passivePerception) based on the updated data
           recalcDerivedOnCharacter(char);
 
+          commitCharacter(char);
+        }
+
+      // Stamps and writes the characters array, then refreshes the save-related UI. saveCurrentCharacter() ends here
+      // after reading the form; persistCurrentCharacter() enters here directly with an already-updated character.
+      function commitCharacter(char) {
           char.lastUpdated = new Date().toISOString();
 
-          saveCharactersToStorage();
+          const written = saveCharactersToStorage();
           clearDirty();
           if (_manualSave) {
             showAppToast('Character saved', 'success');
@@ -3590,6 +3596,15 @@ import { wireSendToEvents, wireTokenPreviewEvents } from './character-send-to.js
           renderCharacterSelect();
           setLastUpdatedText(char);
           updateStorageUsageDisplay();
+          return written;
+        }
+
+      // Persists the current character object as it stands, without reading the form and regardless of the
+      // form-loading flag. For flows (level-up) that have just updated the object and reloaded the form from it.
+      async function persistCurrentCharacter() {
+          const char = getCurrentCharacter();
+          if (!char) return;
+          await commitCharacter(char);
         }
       function clearFormToEmptyState() {
         // Blank the visible fields without creating a character object
@@ -5279,6 +5294,7 @@ import { wireSendToEvents, wireTokenPreviewEvents } from './character-send-to.js
       // ---------- Global API for Level-Up System ----------
       window.getCurrentCharacter = getCurrentCharacter;
       window.saveCurrentCharacter = saveCurrentCharacter;
+      window.persistCurrentCharacter = persistCurrentCharacter;
       window.loadCharacterIntoForm = fillFormFromCharacter;
       window.getInitiativeAdvantageReason = getInitiativeAdvantageReason;
       window.updateSpellSlotsDisplay = updateSpellSlotsDisplay;

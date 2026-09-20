@@ -1,7 +1,9 @@
 const DM_TOOLBOX_BUILD = {
   name: "The DM's Toolbox",
-  version: "2.3.8",
+  version: "2.3.9",
   recentChanges: [
+    "New: levelling up a multiclass character now asks which class gains the level (or to add a new class); each class levels with its own hit die, features, spells and subclass, and the result is saved immediately",
+    "Fix: a level-up is now stored the moment it completes, instead of being lost until the next manual save",
     "Fix: Character Sheet passive Investigation and Insight (and every skill bonus) now update as soon as an ability score or level is edited, so the first save stores the right values",
     "Fix: the multiclass dialog keeps a single-class character's subclass; level-up raises the class it was started for instead of always the first class; a half-typed or incomplete class field no longer overwrites a multiclass character's classes",
     "Fix: Character Sheet spell save DC and spell attack bonus are now right as soon as a character loads (they briefly showed wrong values until a score was edited)",

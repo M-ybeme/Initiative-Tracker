@@ -162,68 +162,10 @@ test.describe('Multiclass dialog and a single-class subclass', () => {
 test.describe('Level-up on a multiclass character', () => {
   test.beforeEach(async ({ page }) => { await installHydrationCounter(page); });
 
-  // Drives the real level-up modal for the named class and confirms it. The level-up reloads the sheet from the
-  // character and calls save while that reload is still in progress, and the app skips such a save; so the tests
-  // wait for the reload to finish and press Save themselves.
-  async function levelUp(page, className) {
-    const loadedBefore = await page.evaluate(() => window.__characterLoaded);
-    // Bootstrap ignores hide() until the fade-in has finished, so wait for the modal's shown event
-    await page.evaluate(name => new Promise(resolve => {
-      document.addEventListener('shown.bs.modal', e => { if (e.target.id === 'levelUpModal') resolve(); });
-      window.LevelUpSystem.startLevelUp(window.getCurrentCharacter(), name);
-    }), className);
-    await page.evaluate(() => document.getElementById('hpMethodAverage').click());
-    // pick spells until the modal accepts, when the class learns any at this level
-    await page.evaluate(() => {
-      const modalEl = document.getElementById('levelUpModal');
-      const confirm = modalEl.querySelector('#confirmLevelUpBtn');
-      for (let i = 0; i < 6 && confirm.disabled; i++) {
-        const next = modalEl.querySelector('#availableSpellsList [data-spell-name]:not(.text-white)');
-        if (!next) break;
-        next.click();
-      }
-    });
-    await expect(page.locator('#confirmLevelUpBtn')).toBeEnabled();
-    await page.evaluate(() => document.getElementById('confirmLevelUpBtn').click());
-    await expect(page.locator('.modal-backdrop')).toHaveCount(0, { timeout: 10000 });
-    await page.waitForFunction(n => window.__characterLoaded > n, loadedBefore);
-  }
+  // Levelling each class through the real UI is covered in character-level-up-multiclass.spec.js.
 
   const summary = rec => ({
-    level: rec.level, multiclass: rec.multiclass, charClass: rec.charClass, subclass: rec.subclass,
     classes: rec.classes.map(c => [c.className, c.subclass, c.level, c.subclassLevel]),
-  });
-
-  test('levelling the second class raises that class only, and the result survives a reload', async ({ page }) => {
-    const errors = watchErrors(page);
-    await seedAndLoad(page, multiRecord());
-    await levelUp(page, 'Wizard');
-
-    const expected = {
-      level: 6, multiclass: true, charClass: 'Cleric', subclass: 'Life Domain',
-      classes: [['Cleric', 'Life Domain', 2, 1], ['Wizard', 'Evocation', 4, 2]],
-    };
-    expect(summary(await saveViaButton(page, 'multi-1')), 'the save right after the level-up').toEqual(expected);
-    await reload(page);
-    expect(await readShown(page, 'charClass')).toBe('Cleric (Life Domain) / Wizard (Evocation)');
-    expect(await readShown(page, 'charLevel')).toBe('6');
-    expect(summary(await saveViaButton(page, 'multi-1')), 'a save after the reload changes nothing').toEqual(expected);
-    expect(errors, errors.join('\n')).toEqual([]);
-  });
-
-  test('levelling the first class raises that class only, and the result survives a reload', async ({ page }) => {
-    const errors = watchErrors(page);
-    await seedAndLoad(page, multiRecord());
-    await levelUp(page, 'Cleric');
-
-    const expected = {
-      level: 6, multiclass: true, charClass: 'Cleric', subclass: 'Life Domain',
-      classes: [['Cleric', 'Life Domain', 3, 1], ['Wizard', 'Evocation', 3, 2]],
-    };
-    expect(summary(await saveViaButton(page, 'multi-1')), 'the save right after the level-up').toEqual(expected);
-    await reload(page);
-    expect(summary(await saveViaButton(page, 'multi-1'))).toEqual(expected);
-    expect(errors, errors.join('\n')).toEqual([]);
   });
 
   test('the level-up for a class that is not on the character is refused and changes nothing', async ({ page }) => {
@@ -232,17 +174,6 @@ test.describe('Level-up on a multiclass character', () => {
     await page.evaluate(() => window.LevelUpSystem.startLevelUp(window.getCurrentCharacter(), 'Rogue'));
     await expect(page.locator('#levelUpModal')).toHaveCount(0);
     expect(summary((await readPersisted(page))[0]).classes).toEqual(MULTI_CLASSES.map(c => [c.className, c.subclass, c.level, c.subclassLevel]));
-  });
-
-  test('a single-class character still levels up normally', async ({ page }) => {
-    const errors = watchErrors(page);
-    await seedAndLoad(page, singleRecord());
-    await levelUp(page, undefined);
-    const expected = { level: 6, multiclass: false, charClass: 'Wizard', subclass: 'Evocation', classes: [] };
-    expect(summary(await saveViaButton(page, 'single-1')), 'the save right after the level-up').toEqual(expected);
-    await reload(page);
-    expect(summary(await saveViaButton(page, 'single-1'))).toEqual(expected);
-    expect(errors, errors.join('\n')).toEqual([]);
   });
 });
 
