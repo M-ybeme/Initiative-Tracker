@@ -16,20 +16,36 @@ The DM's Toolbox has evolved through focused feature releases. Minor versions (2
 - **1.9.x**: Battle map measurement tools, persistent fog shapes, and generator integration across NPC/Tavern/Shop systems
 - **1.8.x**: Spell database expansion to 432+ spells, inventory management, loot generator overhaul, and character token generation
 
-**Current version: 2.3.7 (September 2026)**
+**Current version: 2.3.8 (September 2026)**
 
 ---
 
 ## [Unreleased]
 
+### Known issues
+- **Flaky end-to-end test: "a blank count is invalid, not too many, and nothing is rolled"** (`tests/e2e/dice-callers.spec.js`, Character Sheet hit-dice count) — this test fails intermittently. It has failed once in a full-suite run, once in a run of three solo runs, and once in a comparison run, and passes on most other runs (eight consecutive repeat runs, and two later full-suite runs, all passed). The cause has not been identified; the likely area is timing around the hit-dice modal and the toast it asserts on, and the failure has not been captured with a message. It has not been observed as a product bug: the behavior it checks (a blank hit-dice count shows "Invalid number of hit dice to spend." instead of the over-limit message, and nothing is rolled) works when exercised by hand and in every passing run. Re-run before treating a red result on this test as a regression, and harden the test's waits when it is next touched.
+
+---
+
+## [2.3.8] - 2026-09-19
+**Fixes — Character Sheet Multiclass Correctness**
+
+### Fixed
+- **Character Sheet: passive Investigation and passive Insight were stale after editing Intelligence or Wisdom** — an ability score or level edit updated only the modifiers and Passive Perception, so the skill bonuses and these two passives stayed old until a reload, and the first save stored the stale passive. Every ability score or level edit now recalculates the skills, then the passives (Jack of All Trades, proficiency and expertise respected). Passive Perception follows the same edits; typing a Perception bonus by hand still only updates Passive Perception
+- **Character Sheet: the multiclass dialog dropped a single-class character's subclass** — opening and applying it turned `Wizard (Evocation)` into `Wizard`. The dialog now reads the subclass and its level from the character
+- **Character Sheet: level-up always raised the first class in `classes[]`** — level-up now finds the class it was started for by name, and a subclass chosen at level-up is stored on that class (the top-level subclass mirrors the first class only). This is groundwork: the level-up window has no class picker yet, so from the sheet it still levels the primary class
+- **Character Sheet: a half-typed class field could destroy a multiclass character's classes** — text such as `Cleric /`, an empty or whitespace-only segment, an unclosed subclass, or a single class left after deleting the rest is no longer applied. The stored `classes[]`, levels and subclasses are kept, and a warning points to Manage Multiclass, which is the way to remove a class on purpose
+
 ### Changed
+- **Class field format:** a class list typed in the field is applied only when it is complete: every segment valid, every new class given a level (`Rogue 1` or `Wizard (Evocation) 2`), and the levels adding up to the character level. Missing levels are no longer guessed as 1. Old multiclass records whose levels do not add up are still kept as stored while the field is unchanged
 - **Character sheet: portrait, token preview, and Send to code moved out of `character.js`** into `js/character/character-portrait.js` (the portrait and its edit dialog) and `js/character/character-send-to.js` (Send to the Initiative Tracker / Battle Map and the token preview). Same behavior: the tracker and Battle Map hand-off payloads, the generated token images, and the saved portrait data are unchanged
 
 ### Tests / Internal
+- Regression tests for the fixes above, each checked by temporarily reintroducing the defect: live passive scores (Int/Wis, proficiency, expertise, Jack of All Trades), the multiclass dialog subclass, first- and second-class level-up, and malformed class-field text, including a multiclass character edited down to one class
 - End-to-end and unit tests for portrait editing, the token preview, and both Send to payloads
 
-### Known issues
-- **Flaky end-to-end test: "a blank count is invalid, not too many, and nothing is rolled"** (`tests/e2e/dice-callers.spec.js`, Character Sheet hit-dice count) — this test fails intermittently. It has failed once in a full-suite run, once in a run of three solo runs, and once in a comparison run, and passes on most other runs (eight consecutive repeat runs, and two later full-suite runs, all passed). The cause has not been identified; the likely area is timing around the hit-dice modal and the toast it asserts on, and the failure has not been captured with a message. It has not been observed as a product bug: the behavior it checks (a blank hit-dice count shows "Invalid number of hit dice to spend." instead of the over-limit message, and nothing is rolled) works when exercised by hand and in every passing run. Re-run before treating a red result on this test as a regression, and harden the test's waits when it is next touched.
+### Known follow-ups
+- The save at the end of a level-up is skipped while the sheet reloads; a non-first-class level-up still uses primary-class data; saving throws do not update live on score edits; hand-typed skill bonuses are replaced on save; old records with wrong stored class levels and `/` inside homebrew class names remain product decisions
 
 ---
 

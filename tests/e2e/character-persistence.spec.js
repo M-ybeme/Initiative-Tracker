@@ -272,10 +272,10 @@ test.describe('Character sheet save / load persistence', () => {
   test('a multiclass class field is saved as separate classes', async ({ page }) => {
     const errors = watchErrors(page);
     await loadSheet(page, { blank: true });
-    await setSheetFields(page, { charName: 'Two Classes', charClass: 'Paladin / Wizard (Evocation)', charLevel: '5' });
+    await setSheetFields(page, { charName: 'Two Classes', charClass: 'Paladin 3 / Wizard (Evocation) 2', charLevel: '5' });
     const saved = await saveViaButton(page, await currentId(page));
     expect(saved.multiclass).toBe(true);
-    expect(saved.classes.map(c => [c.className, c.subclass]), 'classes and subclasses parsed from the field').toEqual([['Paladin', ''], ['Wizard', 'Evocation']]);
+    expect(saved.classes.map(c => [c.className, c.subclass, c.level]), 'classes, subclasses and typed levels parsed from the field').toEqual([['Paladin', '', 3], ['Wizard', 'Evocation', 2]]);
     expect([saved.charClass, saved.subclass], 'primary class mirrors the first class').toEqual(['Paladin', '']);
     await page.reload();
     await loadSheet(page, { blank: false });
@@ -466,10 +466,7 @@ test.describe('Class and multiclass round trips', () => {
 
   test('the multiclass dialog writes the levels it shows, and reopening it shows them again', async ({ page }) => {
     const errors = watchErrors(page);
-    const record = singleRecord();
-    record.subclass = ''; // the dialog does not carry a single class's subclass into its list
-    record.subclassLevel = 0;
-    await seedAndLoad(page, record);
+    await seedAndLoad(page, singleRecord());
     await openMulticlassDialog(page);
     const setEntry = (index, field, value) => page.evaluate(([i, f, v]) => {
       const el = document.querySelector(`#multiclassClassList [data-index="${i}"][data-field="${f}"]`);
@@ -485,11 +482,12 @@ test.describe('Class and multiclass round trips', () => {
     await expect.poll(async () => (await readPersisted(page))[0].multiclass, { message: 'dialog saved the multiclass character' }).toBe(true);
 
     const stored = (await readPersisted(page))[0];
-    expect(stored.classes.map(c => [c.className, c.subclass, c.level]), 'levels chosen in the dialog').toEqual([['Paladin', '', 3], ['Wizard', 'Evocation', 2]]);
+    expect(stored.classes.map(c => [c.className, c.subclass, c.level]), 'levels chosen in the dialog').toEqual([['Paladin', 'Oath of Devotion', 3], ['Wizard', 'Evocation', 2]]);
+    expect(stored.classes[0].subclassLevel, 'the single class subclass keeps its level').toBe(3);
     expect(stored.classes[1].subclassLevel, 'a new subclass starts at its class level').toBe(2);
 
     await reload(page);
-    expect(await readShown(page, 'charClass')).toBe('Paladin / Wizard (Evocation)');
+    expect(await readShown(page, 'charClass')).toBe('Paladin (Oath of Devotion) / Wizard (Evocation)');
     const again = await saveViaButton(page, 'single-1');
     expect(again.classes, 'a save after the reload keeps the dialog levels').toEqual(stored.classes);
 

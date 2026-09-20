@@ -2394,6 +2394,51 @@ import { wireSendToEvents, wireTokenPreviewEvents } from './character-send-to.js
         return withSubclass(char.charClass || '', char.subclass);
       }
 
+      // Reads the class field text back into structure. One segment must be whole: "Class", "Class (Subclass)", and
+      // optionally a trailing level ("Class (Subclass) 3"). A multiclass edit is applied only when it reads as a complete
+      // class list: every segment valid, every level known (typed, or carried from the same class in classes[]; never
+      // guessed), and the levels adding up to the character level. Otherwise the caller keeps the structured data.
+      const CLASS_FIELD_SEGMENT = /^([^()/]+?)(?:\s*\(([^()/]+)\))?(?:\s+(\d+))?$/;
+
+      function readClassField(text, char, totalLevel) {
+        const segments = text.split('/').map(s => s.trim());
+        const wasMulticlass = !!char.multiclass;
+
+        if (segments.length === 1) {
+          // One class. Text alone never collapses a stored multiclass character (a class can pass through this state
+          // mid-edit); removing a class on purpose is done in the Manage Multiclass dialog.
+          if (wasMulticlass && Array.isArray(char.classes) && char.classes.length > 1) return { kind: 'invalid' };
+          if (wasMulticlass && !CLASS_FIELD_SEGMENT.test(segments[0])) return { kind: 'invalid' };
+          return { kind: 'single' };
+        }
+
+        // The text has no levels, so an unchanged field means the structured data is untouched
+        if (wasMulticlass && segments.join(' / ') === formatClassField(char)) return { kind: 'unchanged' };
+
+        const previousClasses = Array.isArray(char.classes) ? char.classes : [];
+        const classes = [];
+        for (const segment of segments) {
+          const match = segment.match(CLASS_FIELD_SEGMENT);
+          if (!match) return { kind: 'invalid' };
+          const className = match[1].trim();
+          const subclass = match[2] ? match[2].trim() : '';
+          const previous = previousClasses.find(c => (c.className || '').toLowerCase() === className.toLowerCase());
+          const level = match[3] ? parseInt(match[3], 10) : (previous ? Number(previous.level) : NaN);
+          if (!Number.isFinite(level) || level < 1) return { kind: 'invalid' };
+          const previousSubclassLevel = previous && previous.subclass === subclass ? (Number(previous.subclassLevel) || 0) : 0;
+          classes.push({
+            className,
+            subclass,
+            level,
+            subclassLevel: subclass ? (previousSubclassLevel || level) : 0
+          });
+        }
+        if (classes.reduce((sum, c) => sum + c.level, 0) !== totalLevel) return { kind: 'invalid' };
+        return { kind: 'multi', classes };
+      }
+
+      let lastRejectedClassText = null;
+
       function fillFormFromCharacter(char) {
           if (!char) return;
 
@@ -3311,52 +3356,37 @@ import { wireSendToEvents, wireTokenPreviewEvents } from './character-send-to.js
           // Supports both single-class: "Wizard (School of Evocation)"
           // and multiclass: "Paladin (Oath of Devotion) / Fighter (Champion)"
           const fullClass = getVal('charClass');
-          const classes = fullClass.split('/').map(c => c.trim());
+          const classEdit = readClassField(fullClass, char, getNum('charLevel'));
 
-          if (classes.length > 1) {
-            // Multiclass character
-            const fieldUnchanged = char.multiclass && classes.join(' / ') === formatClassField(char);
+          if (classEdit.kind === 'invalid') {
+            // Not a complete class list: keep classes[], the class and the subclass exactly as stored
+            if (lastRejectedClassText !== fullClass) {
+              lastRejectedClassText = fullClass;
+              showAppToast('Class field not applied: use "Class (Subclass) / Class (Subclass)", give new classes a level such as "Rogue 1", and make the levels add up to the character level. Or use Manage Multiclass.', 'warning');
+            }
+          } else if (classEdit.kind === 'unchanged' || classEdit.kind === 'multi') {
+            lastRejectedClassText = null;
             char.multiclass = true;
 
-            // An unchanged field keeps classes[] as it is (the text has no levels). An edited field is re-read, and a
-            // class that is still there keeps its previous level and subclass level.
-            if (!fieldUnchanged) {
-              const previousClasses = Array.isArray(char.classes) ? char.classes : [];
-              char.classes = [];
-
-              for (const classStr of classes) {
-                const match = classStr.match(/^([^(]+)(?:\(([^)]+)\))?\s*(\d+)?/);
-                if (match) {
-                  const className = match[1].trim();
-                  const subclass = match[2] ? match[2].trim() : '';
-                  const previous = previousClasses.find(c => (c.className || '').toLowerCase() === className.toLowerCase());
-                  const classLevel = match[3] ? parseInt(match[3], 10) : (previous ? previous.level : 1);
-                  const previousSubclassLevel = previous && previous.subclass === subclass ? (Number(previous.subclassLevel) || 0) : 0;
-
-                  char.classes.push({
-                    className,
-                    subclass,
-                    level: classLevel,
-                    subclassLevel: subclass ? (previousSubclassLevel || classLevel) : 0
-                  });
-                }
-              }
-            }
-            const totalLevel = char.classes.reduce((sum, c) => sum + (Number(c.level) || 0), 0);
+            // An unchanged field keeps classes[] as it is (the text has no levels)
+            if (classEdit.kind === 'multi') char.classes = classEdit.classes;
 
             // For backward compatibility, set primary class as first class
-            if (char.classes.length > 0) {
-              char.charClass = char.classes[0].className;
-              char.subclass = char.classes[0].subclass;
-              char.subclassLevel = char.classes[0].subclassLevel;
+            const primary = char.classes[0];
+            if (primary) {
+              char.charClass = primary.className;
+              char.subclass = primary.subclass;
+              char.subclassLevel = primary.subclassLevel;
             }
 
-            // Class levels are not reconciled with the character level; this only reports a mismatch
+            // Legacy records whose class levels do not add up are kept as stored; this only reports the mismatch
+            const totalLevel = char.classes.reduce((sum, c) => sum + (Number(c.level) || 0), 0);
             if (totalLevel > 0 && totalLevel !== getNum('charLevel')) {
               console.warn(`Total multiclass levels (${totalLevel}) differs from character level (${getNum('charLevel')}). Using character level.`);
             }
 
           } else {
+            lastRejectedClassText = null;
             // Single class character
             char.multiclass = false;
             char.classes = [];
@@ -4345,19 +4375,29 @@ import { wireSendToEvents, wireTokenPreviewEvents } from './character-send-to.js
       }
 
       function wireAutoCalcEvents() {
-        // Auto-calc: update mods / PB / passive Perception when key fields change
+        // Auto-calc: an ability score or level edit changes every skill bonus, and through them the passive scores.
+        // Skills go first so passive Perception (in recalcDerivedFromForm) reads the fresh Perception bonus.
         [
           'statStr','statDex','statCon','statInt','statWis','statCha',
-          'charLevel',
-          'skillPerceptionBonus'   // NEW: keep Passive Perception in sync with Perception bonus
+          'charLevel'
         ].forEach(id => {
           const el = $(id);
           if (el) {
             el.addEventListener('input', () => {
+              recalcSkillsFromForm(false);
               recalcDerivedFromForm();
+              recalcPassivesFromForm();
             });
           }
         });
+
+        // Typing a Perception bonus by hand keeps Passive Perception in sync without rewriting the other skills
+        const perceptionBonusEl = $('skillPerceptionBonus');
+        if (perceptionBonusEl) {
+          perceptionBonusEl.addEventListener('input', () => {
+            recalcDerivedFromForm();
+          });
+        }
         
         // Also run once after handlers are attached to sync with initial form values
         recalcDerivedFromForm();

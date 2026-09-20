@@ -199,15 +199,26 @@ const LevelUpSystem = (function() {
   // ============================================================
   let currentCharacter = null;
   let _levelUpInProgress = false;
+  let levelUpClassName = null; // the class this level-up is for; applyLevelUp finds its classes[] entry by name
 
   // ============================================================
   // LEVEL UP FLOW
   // ============================================================
 
   /**
-   * Initiates the level-up process for the current character
+   * Finds a character's classes[] entry by class name (case-insensitive), or undefined
    */
-  function startLevelUp(character) {
+  function findClassEntry(character, className) {
+    if (!className || !Array.isArray(character.classes)) return undefined;
+    const wanted = className.toLowerCase();
+    return character.classes.find(c => (c.className || '').toLowerCase() === wanted);
+  }
+
+  /**
+   * Initiates the level-up process for the current character.
+   * selectedClass (optional) names the class of a multiclass character to level; it defaults to the primary class.
+   */
+  function startLevelUp(character, selectedClass) {
     if (!character) {
       alert('No character loaded. Please select or create a character first.');
       return;
@@ -221,9 +232,14 @@ const LevelUpSystem = (function() {
     }
 
     // Try both character.class and character.charClass (the actual property name)
-    const className = extractClassName(character.charClass || character.class);
+    const className = extractClassName(selectedClass || character.charClass || character.class);
     if (!className) {
       alert('Unable to determine character class. Please ensure the class field is filled out.');
+      return;
+    }
+
+    if (selectedClass && character.multiclass && !findClassEntry(character, className)) {
+      alert(`${className} is not one of this character's classes.`);
       return;
     }
 
@@ -237,6 +253,7 @@ const LevelUpSystem = (function() {
 
     currentCharacter = character;
     _levelUpInProgress = true;
+    levelUpClassName = className;
 
     const newLevel = currentLevel + 1;
     const changes = LevelUpData.getLevelUpChanges(className, currentLevel, newLevel, character);
@@ -393,11 +410,13 @@ const LevelUpSystem = (function() {
     // Step: Multiclass Choice (optional)
     html += renderMulticlassChoiceStep(character, className, stepNum++);
 
+    // A multiclass character's subclass for this class lives on its classes[] entry
+    const classEntry = character.multiclass ? findClassEntry(character, className) : undefined;
     const needsSubclass = LevelUpData.needsSubclassSelection(
       className,
       currentLevel,
       newLevel,
-      !!character.subclass
+      classEntry ? !!classEntry.subclass : !!character.subclass
     );
 
     // Step: Subclass Selection (if needed)
@@ -2063,6 +2082,7 @@ const LevelUpSystem = (function() {
   function gatherLevelUpData(modal, character, newLevel, classData, changes) {
     const data = {
       newLevel,
+      className: levelUpClassName,
       hpGain: parseInt(modal.querySelector('#hpGainValue').value || '0', 10),
       proficiencyBonus: changes.proficiencyBonus,
       features: changes.features || [],
@@ -2276,11 +2296,10 @@ const LevelUpSystem = (function() {
       character.fullClassString = classString;
 
     } else if (character.multiclass && character.classes && character.classes.length > 0) {
-      // Continue leveling in an existing class (multiclassed character)
-      // Find the primary class and increase its level
-      const primaryClass = character.classes[0];
-      if (primaryClass) {
-        primaryClass.level += 1;
+      // Continue leveling in an existing class (multiclassed character): the class the level-up was for, by name
+      const leveledClass = findClassEntry(character, levelUpData.className || extractClassName(character.charClass));
+      if (leveledClass) {
+        leveledClass.level += 1;
 
         // Update the class field
         const classString = character.classes.map(c =>
@@ -2293,17 +2312,20 @@ const LevelUpSystem = (function() {
 
     // Apply subclass selection if provided
     if (levelUpData.subclass) {
-      character.subclass = levelUpData.subclass;
-      character.subclassLevel = levelUpData.newLevel;
-
-      // If multiclassed, update the appropriate class in the classes array
       if (character.multiclass && character.classes && character.classes.length > 0) {
-        const currentClass = extractClassName(character.charClass);
-        const classEntry = character.classes.find(c => c.className === currentClass);
+        // Multiclassed: the subclass belongs to the class being leveled. character.subclass mirrors the first class only.
+        const classEntry = findClassEntry(character, levelUpData.className || extractClassName(character.charClass));
         if (classEntry) {
           classEntry.subclass = levelUpData.subclass;
           classEntry.subclassLevel = classEntry.level;
+          if (classEntry === character.classes[0]) {
+            character.subclass = classEntry.subclass;
+            character.subclassLevel = classEntry.subclassLevel;
+          }
         }
+      } else {
+        character.subclass = levelUpData.subclass;
+        character.subclassLevel = levelUpData.newLevel;
       }
     }
 

@@ -69,14 +69,16 @@ const MulticlassUI = (function() {
       // Already multiclassed - classes[] is the record (charClass holds only the primary class name)
       multiclassData = currentCharacter.classes.map(c => ({...c}));
     } else {
-      // Single class - create initial entry
+      // Single class - create initial entry. The character's own subclass fields are the record; charClass holds
+      // only the class name (its parenthesised part is a fallback for records that still carry it).
       const match = fullClass.match(/^([^(]+)(?:\(([^)]+)\))?/);
       if (match) {
+        const subclass = currentCharacter.subclass || (match[2] ? match[2].trim() : '');
         multiclassData = [{
           className: match[1].trim(),
-          subclass: match[2] ? match[2].trim() : '',
+          subclass,
           level: parseInt(currentCharacter.level, 10) || 1,
-          subclassLevel: 0
+          subclassLevel: subclass ? (Number(currentCharacter.subclassLevel) || 0) : 0
         }];
       } else {
         multiclassData = [{
