@@ -63,11 +63,11 @@ async function chooseInPicker(page, selector) {
 async function completeModal(page, { subclass, asi, newClass } = {}) {
   await page.evaluate(({ subclass, asi, newClass }) => {
     const modal = document.getElementById('levelUpModal');
-    modal.querySelector('#hpMethodAverage').click();
     if (newClass) {
       const select = modal.querySelector('#multiclassNewClass');
       select.value = newClass; select.dispatchEvent(new Event('change', { bubbles: true }));
     }
+    modal.querySelector('#hpMethodAverage').click();
     if (subclass) modal.querySelector(`input[name="subclassChoice"][value="${subclass}"]`).click();
     if (asi) {
       modal.querySelector('#asiChoiceASI').click();
@@ -155,8 +155,8 @@ test.describe('Levelling an existing class of a multiclass character', () => {
     expect(rec.features).toContain('Ability Score Improvement');
     expect(rec.features, 'not the features of total level 6').not.toMatch(/Tradition Feature|Channel Divinity \(2\/rest\)|Domain Feature/);
     // Wizard resource added beside the Cleric's, which is left alone
-    expect(rec.resources.res1).toEqual({ name: 'Channel Divinity', current: 0, max: 2 });
-    expect(Object.values(rec.resources).find(r => r.name === 'Arcane Recovery')).toMatchObject({ max: 1, current: 1 });
+    expect(rec.resources.find(r => r.name === 'Channel Divinity')).toMatchObject({ current: 0, max: 2 });
+    expect(rec.resources.find(r => r.name === 'Arcane Recovery')).toMatchObject({ max: 1, current: 1 });
 
     await page.reload();
     await loadSheet(page, { blank: false });
@@ -185,8 +185,8 @@ test.describe('Levelling an existing class of a multiclass character', () => {
     expect(rec.maxHP, 'd8 average').toBe(35);
     expect(rec.hitDice).toBe('3d8 + 3d6');
     expect(rec.features || '', 'not the features of total level 6').not.toMatch(/Channel Divinity \(2\/rest\)|Domain Feature/);
-    expect(rec.resources.res1).toEqual({ name: 'Channel Divinity', current: 2, max: 2 }); // replenished
-    expect(Object.values(rec.resources).some(r => r.name === 'Arcane Recovery')).toBe(false);
+    expect(rec.resources.find(r => r.name === 'Channel Divinity')).toMatchObject({ current: 2, max: 2 }); // replenished
+    expect(rec.resources.some(r => r.name === 'Arcane Recovery')).toBe(false);
 
     await page.reload();
     await loadSheet(page, { blank: false });
@@ -326,9 +326,9 @@ test.describe('Adding a new class from the picker', () => {
     await chooseInPicker(page, '[data-level-class-new]');
     await page.evaluate(() => {
       const modal = document.getElementById('levelUpModal');
-      modal.querySelector('#hpMethodAverage').click();
       const select = modal.querySelector('#multiclassNewClass');
       select.value = 'Rogue'; select.dispatchEvent(new Event('change', { bubbles: true }));
+      modal.querySelector('#hpMethodAverage').click();
       for (let i = 0; i < 6 && modal.querySelector('#confirmLevelUpBtn').disabled; i++) {
         modal.querySelector('#availableSpellsList [data-spell-name]:not(.text-white)')?.click();
       }

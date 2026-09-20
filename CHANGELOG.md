@@ -16,7 +16,7 @@ The DM's Toolbox has evolved through focused feature releases. Minor versions (2
 - **1.9.x**: Battle map measurement tools, persistent fog shapes, and generator integration across NPC/Tavern/Shop systems
 - **1.8.x**: Spell database expansion to 432+ spells, inventory management, loot generator overhaul, and character token generation
 
-**Current version: 2.3.9 (September 2026)**
+**Current version: 2.3.10 (September 2026)**
 
 ---
 
@@ -24,6 +24,32 @@ The DM's Toolbox has evolved through focused feature releases. Minor versions (2
 
 ### Known issues
 - **Flaky end-to-end test: "a blank count is invalid, not too many, and nothing is rolled"** (`tests/e2e/dice-callers.spec.js`, Character Sheet hit-dice count) — this test fails intermittently. It has failed once in a full-suite run, once in a run of three solo runs, and once in a comparison run, and passes on most other runs (eight consecutive repeat runs, and two later full-suite runs, all passed). The cause has not been identified; the likely area is timing around the hit-dice modal and the toast it asserts on, and the failure has not been captured with a message. It has not been observed as a product bug: the behavior it checks (a blank hit-dice count shows "Invalid number of hit dice to spend." instead of the over-limit message, and nothing is rolled) works when exercised by hand and in every passing run. Re-run before treating a red result on this test as a regression, and harden the test's waits when it is next touched.
+
+---
+
+## [2.3.10] - 2026-09-20
+**Level-Up Hardening**
+
+### Fixed
+- **Character Sheet: a class level stored as text could be corrupted by level-up** — `"3"` became `"31"` and a missing level became `NaN`. Class levels are now read as numbers while levelling, and a missing or malformed level reads as 0. Stored records are not rewritten, and other classes' entries are left as stored
+- **Character Sheet: "Add a new class" used the primary class's hit die** — the HP step now waits for the new class to be chosen and rolls or averages that class's die (Wizard adding Fighter gains a d10). Changing the choice re-applies a method already picked, and going back to the current class restores its die
+- **Character Sheet: adding a spellcasting class did not update shared spell slots** — slots are now recomputed from the multiclass caster level when the new class is confirmed, and only when that level changes: a full caster raises them, a half caster at level 1 or a non-caster does not. Adding a Warlock sets Pact Magic on its own and leaves shared slots alone
+- **Character Sheet: level-up resource updates were lost on saved characters** — the sheet stores resources as a list, but level-up wrote the older `res1`, `res2`, `res3` keys. Level-up now updates the list (matching by name, refilling to the new maximum, adding new ones, keeping unrelated ones) and converts an older object to the list. The Pact Slots resource follows a Warlock level-up
+- **Character Sheet: a refused level-up changed the spell list** — the known-spell snapshot is now taken only after every check that can refuse the level-up
+- **Character Sheet: the sheet said "saved" before the write finished, and a failed save could look saved** — Save and level-up now wait for the storage write before clearing the unsaved dot or showing "Character saved" / "Level Up Complete". A failed write shows a "Character NOT saved" message, leaves the sheet marked unsaved, and (for level-up) shows a "Level Up Not Saved" notice. An edit made while a write is in progress keeps the sheet marked unsaved
+- **Character Sheet: adding a class the character already has** — the level-up now refuses it with an explanation instead of adding a duplicate entry, double-counting caster levels, or overwriting existing Pact Magic (Cleric 3 / Warlock 3 adding Warlock dropped pact slots from 2 x level 2 to 1 x level 1). To gain a level in that class, choose it in the level-up picker
+
+### Changed
+- The unreachable "resource names may have been customized" warning was removed; the remaining resource-update notice is generic
+- **Tests:** new level-up hardening spec (29 tests, mutation-checked) drives the real Level Up button and modal with a controllable storage stub
+
+### Known issues (follow-ups)
+- A failed write can show an alert, a toast and a level-up notice together, and the 30-second autosave repeats them while storage keeps failing
+- If a save finishes after switching characters, the "last saved" time can briefly show the previous character's
+- Level-up keeps only `res1`–`res3` when converting an older resource object
+- In the single-class level-up window, switching to "Multiclass" still shows the current class's features, ASI and spell steps
+- A new class with no hit-die data cannot complete the HP step; `hitDiceRemaining` still holds a single die size
+- The class picker ignores a click made during its fade-in, and still offers a class already at level 20
 
 ---
 

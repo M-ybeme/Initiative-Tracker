@@ -34,7 +34,10 @@ import { wireSendToEvents, wireTokenPreviewEvents } from './character-send-to.js
       let wizardIsOpen = false;
       let _manualSave = false; // true only when user clicks the Save button
 
+      let editCount = 0; // every edit bumps it, so a save can tell whether the sheet changed while it was writing
+
       function markDirty() {
+        editCount++;
         if (isDirty) return;
         isDirty = true;
         const btn = document.getElementById('saveCharacterBtn');
@@ -3584,27 +3587,38 @@ import { wireSendToEvents, wireTokenPreviewEvents } from './character-send-to.js
 
       // Stamps and writes the characters array, then refreshes the save-related UI. saveCurrentCharacter() ends here
       // after reading the form; persistCurrentCharacter() enters here directly with an already-updated character.
-      function commitCharacter(char) {
+      // The sheet counts as saved, and success is shown, only once the write has actually finished; a failed write
+      // leaves it unsaved and says so. Resolves true when the write succeeded.
+      async function commitCharacter(char) {
+          const manual = _manualSave;
+          _manualSave = false;
+          const editsAtStart = editCount;
           char.lastUpdated = new Date().toISOString();
 
-          const written = saveCharactersToStorage();
-          clearDirty();
-          if (_manualSave) {
-            showAppToast('Character saved', 'success');
-            _manualSave = false;
+          try {
+            await saveCharactersToStorage();
+          } catch (err) {
+            console.error('Character save failed:', err);
+            showAppToast('Character NOT saved: the browser could not write it to storage. Export a backup.', 'danger');
+            markDirty(); // the sheet holds changes that are not stored, e.g. a level-up on a clean sheet
+            return false;
           }
+
+          // Edits made while the write was in flight are not in it, so they keep the sheet marked unsaved
+          if (editCount === editsAtStart) clearDirty();
+          if (manual) showAppToast('Character saved', 'success');
           renderCharacterSelect();
           setLastUpdatedText(char);
           updateStorageUsageDisplay();
-          return written;
+          return true;
         }
 
       // Persists the current character object as it stands, without reading the form and regardless of the
       // form-loading flag. For flows (level-up) that have just updated the object and reloaded the form from it.
       async function persistCurrentCharacter() {
           const char = getCurrentCharacter();
-          if (!char) return;
-          await commitCharacter(char);
+          if (!char) return false;
+          return commitCharacter(char);
         }
       function clearFormToEmptyState() {
         // Blank the visible fields without creating a character object

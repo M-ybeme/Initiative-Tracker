@@ -217,6 +217,78 @@ const LevelUpSystem = (function() {
   }
 
   /**
+   * A classes[] entry's level as a number: numeric strings ("3") read as numbers, and a missing or malformed
+   * level reads as 0. Runtime only: stored records are not rewritten.
+   */
+  function classLevelOf(entry) {
+    const level = parseInt(entry && entry.level, 10);
+    return Number.isFinite(level) && level > 0 ? level : 0;
+  }
+
+  /**
+   * classes[] with every level normalized, for helpers that add the raw levels together
+   */
+  function withNumericLevels(classes) {
+    return classes.map(c => ({ ...c, level: classLevelOf(c) }));
+  }
+
+  /**
+   * The character's classes as [{ className, subclass, level }]: classes[] for a multiclass character, otherwise
+   * its single class
+   */
+  function getExistingClasses(character) {
+    return (character.multiclass && Array.isArray(character.classes) && character.classes.length > 0)
+      ? withNumericLevels(character.classes)
+      : [{
+        className: extractClassName(character.charClass || character.class),
+        subclass: character.subclass || '',
+        level: parseInt(character.level, 10) || 1
+      }];
+  }
+
+  function hasClass(character, className) {
+    const wanted = (className || '').toLowerCase();
+    return getExistingClasses(character).some(c => (c.className || '').toLowerCase() === wanted);
+  }
+
+  /**
+   * The shared spell slots and Pact Magic slots gained by taking level 1 of newClassName, or null for whichever
+   * does not change. Shared slots come from the multiclass caster level and change only when it does; Pact Magic
+   * is separate and comes only from a new Warlock.
+   */
+  function getSpellcastingAfterAddingClass(character, newClassName) {
+    const existing = getExistingClasses(character);
+    // A class the character already has is not being added; nothing new is gained from it
+    if (hasClass(character, newClassName)) return { spellSlots: null, pactSlots: null };
+    const after = [...existing, { className: newClassName, subclass: '', level: 1 }];
+    const changed = LevelUpData.calculateEffectiveCasterLevel(after) !== LevelUpData.calculateEffectiveCasterLevel(existing);
+    return {
+      spellSlots: changed ? LevelUpData.getMulticlassSpellSlots(after) : null,
+      pactSlots: newClassName === 'Warlock' ? LevelUpData.getWarlockPactSlots(1) : null
+    };
+  }
+
+  /**
+   * character.resources as the canonical array of { name, current, max, resetOn }. An older { res1, res2, res3 }
+   * object is converted in place so level-up never writes the legacy keys.
+   */
+  function ensureResourceArray(character) {
+    const raw = character.resources;
+    if (Array.isArray(raw)) return raw;
+    const list = [];
+    if (raw && typeof raw === 'object') {
+      ['res1', 'res2', 'res3'].forEach(key => {
+        const r = raw[key];
+        if (r && (r.name || r.max)) {
+          list.push({ name: r.name || '', current: r.current ?? 0, max: r.max ?? 0, resetOn: r.resetOn || 'long' });
+        }
+      });
+    }
+    character.resources = list;
+    return list;
+  }
+
+  /**
    * Initiates the level-up process for the current character.
    * selectedClass (optional) names the class of a multiclass character to level; it defaults to the primary class.
    * A multiclass character with no selectedClass first chooses between its classes and adding a new one.
@@ -269,15 +341,16 @@ const LevelUpSystem = (function() {
       return;
     }
 
-    character.spellList = getKnownSpellsSnapshot(character);
-
     // Class-specific rules use the class's own level; a single-class character's class level is its level
     const classEntry = character.multiclass ? findClassEntry(character, className) : undefined;
-    const classLevel = classEntry ? (parseInt(classEntry.level, 10) || totalLevel) : totalLevel;
+    const classLevel = classEntry ? classLevelOf(classEntry) : totalLevel;
     if (!addNewClass && classLevel >= 20) {
       alert(`${className} is already at level 20.`);
       return;
     }
+
+    // Every check that can refuse the level-up has passed; only now does it touch the character
+    character.spellList = getKnownSpellsSnapshot(character);
 
     currentCharacter = character;
     _levelUpInProgress = true;
@@ -313,8 +386,9 @@ const LevelUpSystem = (function() {
    * The shared spell slots after levelling classEntry by one, or null when its caster level does not change
    */
   function getMulticlassSlotsAfterLevelUp(character, classEntry) {
-    const after = character.classes.map(c => (c === classEntry ? { ...c, level: (parseInt(c.level, 10) || 0) + 1 } : c));
-    const before = LevelUpData.calculateEffectiveCasterLevel(character.classes);
+    const current = withNumericLevels(character.classes);
+    const after = character.classes.map((c, i) => (c === classEntry ? { ...c, level: classLevelOf(c) + 1 } : current[i]));
+    const before = LevelUpData.calculateEffectiveCasterLevel(current);
     if (LevelUpData.calculateEffectiveCasterLevel(after) === before) return null;
     return LevelUpData.getMulticlassSpellSlots(after);
   }
@@ -326,7 +400,7 @@ const LevelUpSystem = (function() {
     // Rows carry the class's position as a token; the class is looked up from character.classes on click, so no
     // class name is ever written into an attribute
     const rows = character.classes.map((c, index) => {
-      const level = parseInt(c.level, 10) || 0;
+      const level = classLevelOf(c);
       return `<button type="button" class="list-group-item list-group-item-action bg-dark text-light border-secondary" data-level-index="${index}">
         <i class="bi bi-arrow-up me-1"></i>Level ${escapeHtml(c.className)}${c.subclass ? ` (${escapeHtml(c.subclass)})` : ''}
         <span class="text-muted ms-1">${level} → ${level + 1}</span></button>`;
@@ -537,7 +611,8 @@ const LevelUpSystem = (function() {
     }
 
     // Step: Hit Points
-    html += renderHPStep(character, classData, changes, stepNum++);
+    // Adding a class: its hit die is not known until it is chosen, and the primary class must not stand in for it
+    html += renderHPStep(character, levelUpContext.addNewClass ? null : classData, changes, stepNum++);
 
     // Step: Racial Feature (if applicable)
     const racialFeature = LevelUpData.getRacialFeature(character.race, newLevel);
@@ -893,11 +968,15 @@ const LevelUpSystem = (function() {
   }
 
   /**
-   * Step: Hit Point Increase
+   * Step: Hit Point Increase. classData is null while the hit die is not known yet (a new class not chosen);
+   * the die shown and rolled then follows the choice (see the HP handlers in setupLevelUpModalEvents).
    */
   function renderHPStep(character, classData, changes, stepNum) {
     const conMod = calculateAbilityModifier(character.stats?.con || 10);
-    const avgRoll = Math.floor(classData.hitDie / 2) + 1;
+    const hitDie = classData ? classData.hitDie : null;
+    const avgRoll = hitDie ? Math.floor(hitDie / 2) + 1 : null;
+    const dieText = hitDie || '?';
+    const disabled = hitDie ? '' : 'disabled';
 
     return `
       <div class="accordion-item bg-dark border-secondary">
@@ -912,18 +991,21 @@ const LevelUpSystem = (function() {
             <p class="text-muted mb-3">
               Choose how to increase your maximum HP. Your Constitution modifier (+${conMod}) is added automatically.
             </p>
+            <p class="text-warning small mb-3 ${hitDie ? 'd-none' : ''}" id="hpNeedsClass">
+              <i class="bi bi-info-circle me-1"></i>Choose the new class first: its hit die sets the HP gain.
+            </p>
 
             <div class="row g-3">
               <div class="col-md-6">
                 <div class="card bg-secondary bg-opacity-25 border-secondary h-100">
                   <div class="card-body">
                     <h6 class="card-title">
-                      <input type="radio" name="hpMethod" value="roll" id="hpMethodRoll" class="form-check-input me-2" />
+                      <input type="radio" name="hpMethod" value="roll" id="hpMethodRoll" class="form-check-input me-2" ${disabled} />
                       <label for="hpMethodRoll">Roll Hit Die</label>
                     </h6>
-                    <p class="text-muted small mb-2">Roll 1d${classData.hitDie} + ${conMod} (CON modifier)</p>
+                    <p class="text-muted small mb-2">Roll 1d<span class="hp-die">${dieText}</span> + ${conMod} (CON modifier)</p>
                     <button type="button" class="btn btn-sm btn-outline-warning" id="rollHPBtn" disabled>
-                      <i class="bi bi-dice-5 me-1"></i>Roll 1d${classData.hitDie}
+                      <i class="bi bi-dice-5 me-1"></i>Roll 1d<span class="hp-die">${dieText}</span>
                     </button>
                     <div id="hpRollResult" class="mt-2 d-none">
                       <div class="alert alert-info text-light mb-0">
@@ -938,12 +1020,12 @@ const LevelUpSystem = (function() {
                 <div class="card bg-secondary bg-opacity-25 border-secondary h-100">
                   <div class="card-body">
                     <h6 class="card-title">
-                      <input type="radio" name="hpMethod" value="average" id="hpMethodAverage" class="form-check-input me-2" />
+                      <input type="radio" name="hpMethod" value="average" id="hpMethodAverage" class="form-check-input me-2" ${disabled} />
                       <label for="hpMethodAverage">Take Average (Recommended)</label>
                     </h6>
-                    <p class="text-muted small mb-2">Guaranteed ${avgRoll} + ${conMod} (CON modifier)</p>
+                    <p class="text-muted small mb-2">Guaranteed <span id="hpAvgRoll">${avgRoll ?? '?'}</span> + ${conMod} (CON modifier)</p>
                     <div class="alert alert-success text-light mb-0">
-                      <strong>Gain:</strong> ${avgRoll + conMod} HP
+                      <strong>Gain:</strong> <span id="hpAvgGain">${avgRoll === null ? '?' : avgRoll + conMod}</span> HP
                     </div>
                   </div>
                 </div>
@@ -1530,7 +1612,49 @@ const LevelUpSystem = (function() {
     const hpBadge = modal.querySelector('#hpBadge');
 
     const conMod = calculateAbilityModifier(character.stats?.con || 10);
-    const avgRoll = Math.floor(classData.hitDie / 2) + 1;
+    const hpNeedsClass = modal.querySelector('#hpNeedsClass');
+
+    // The hit die follows the path: the levelled class when continuing, the chosen class when adding one
+    // (unknown until it is chosen)
+    let hitDie = levelUpContext.addNewClass ? null : classData.hitDie;
+    const avgRoll = () => Math.floor(hitDie / 2) + 1;
+
+    function applyAverage() {
+      const gain = avgRoll() + conMod;
+      hpGainValue.value = gain;
+      hpBadge.textContent = `+${gain} HP`;
+      hpBadge.className = 'ms-auto me-3 badge bg-success';
+    }
+
+    // Re-point the HP step at the current path's hit die and redo whichever method was already chosen
+    function refreshHitDie() {
+      const adding = modal.querySelector('input[name="multiclassPath"]:checked')?.value === 'multiclass';
+      const chosen = multiclassNewClassSelect && multiclassNewClassSelect.value;
+      hitDie = adding ? (chosen ? (LevelUpData.getClassData(chosen)?.hitDie || null) : null) : classData.hitDie;
+
+      modal.querySelectorAll('.hp-die').forEach(el => { el.textContent = hitDie || '?'; });
+      modal.querySelector('#hpAvgRoll').textContent = hitDie ? avgRoll() : '?';
+      modal.querySelector('#hpAvgGain').textContent = hitDie ? avgRoll() + conMod : '?';
+      hpMethodRadios.forEach(radio => { radio.disabled = !hitDie; });
+      if (hpNeedsClass) hpNeedsClass.classList.toggle('d-none', !!hitDie);
+
+      hpRollResult.classList.add('d-none');
+      hpGainValue.value = '0';
+      const method = modal.querySelector('input[name="hpMethod"]:checked');
+      if (!hitDie || !method) {
+        rollHPBtn.disabled = true;
+        hpBadge.textContent = 'Not Set';
+        hpBadge.className = 'ms-auto me-3 badge bg-primary';
+      } else if (method.value === 'roll') {
+        rollHPBtn.disabled = false;
+        hpBadge.textContent = 'Roll Required';
+        hpBadge.className = 'ms-auto me-3 badge bg-warning';
+      } else {
+        rollHPBtn.disabled = true;
+        applyAverage();
+      }
+      updateSummary(modal, changes);
+    }
 
     hpMethodRadios.forEach(radio => {
       radio.addEventListener('change', (e) => {
@@ -1543,17 +1667,14 @@ const LevelUpSystem = (function() {
         } else if (e.target.value === 'average') {
           rollHPBtn.disabled = true;
           hpRollResult.classList.add('d-none');
-          const gain = avgRoll + conMod;
-          hpGainValue.value = gain;
-          hpBadge.textContent = `+${gain} HP`;
-          hpBadge.className = 'ms-auto me-3 badge bg-success';
+          applyAverage();
           updateSummary(modal, changes);
         }
       });
     });
 
     rollHPBtn.addEventListener('click', () => {
-      const roll = DiceEngine.rollDie(classData.hitDie);
+      const roll = DiceEngine.rollDie(hitDie);
       const total = roll + conMod;
       hpRollValue.textContent = roll;
       hpRollTotal.textContent = total;
@@ -1563,6 +1684,10 @@ const LevelUpSystem = (function() {
       hpBadge.className = 'ms-auto me-3 badge bg-success';
       updateSummary(modal, changes);
     });
+
+    // The path and the new-class choice set the hit die (these listeners run after the ones set up above)
+    multiclassPathRadios.forEach(radio => radio.addEventListener('change', refreshHitDie));
+    if (multiclassNewClassSelect) multiclassNewClassSelect.addEventListener('change', refreshHitDie);
 
     // ASI/Feat Selection
     if (changes.hasASI) {
@@ -2224,6 +2349,12 @@ const LevelUpSystem = (function() {
         return null;
       }
 
+      // Adding a class the character already has would duplicate its entry and rewrite its progression
+      if (hasClass(character, data.multiclassNewClass)) {
+        alert(`${data.multiclassNewClass} is already one of this character's classes. To gain a level in it, choose it when levelling up instead of adding a new class.`);
+        return null;
+      }
+
       // Check prerequisites
       const abilityScores = {
         str: parseInt(character.stats?.str, 10) || 10,
@@ -2239,6 +2370,11 @@ const LevelUpSystem = (function() {
         alert(`Cannot multiclass into ${data.multiclassNewClass}. Prerequisites not met: ${result.missing.join(', ')}`);
         return null;
       }
+
+      // Slots follow the class actually being added, never the levelled/primary class the modal opened for
+      const gained = getSpellcastingAfterAddingClass(character, data.multiclassNewClass);
+      data.spellSlots = gained.spellSlots;
+      data.pactSlots = gained.pactSlots;
     }
 
     // Check for subclass selection if needed
@@ -2419,7 +2555,7 @@ const LevelUpSystem = (function() {
       // Continue leveling in an existing class (multiclassed character): the class the level-up was for, by name
       const leveledClass = findClassEntry(character, levelUpData.className || extractClassName(character.charClass));
       if (leveledClass) {
-        leveledClass.level += 1;
+        leveledClass.level = classLevelOf(leveledClass) + 1;
 
         // Update the class field
         const classString = character.classes.map(c =>
@@ -2537,14 +2673,11 @@ const LevelUpSystem = (function() {
         used:  0
       };
       // Update a matching "Pact Slots" resource tab entry if one exists
-      character.resources = character.resources || {};
-      const newPactResName = `Pact Slots (Lvl ${levelUpData.pactSlots.level})`;
-      for (const key of ['res1', 'res2', 'res3']) {
-        const res = character.resources[key];
-        if (res && res.name && res.name.toLowerCase().includes('pact slot')) {
-          character.resources[key] = { name: newPactResName, max: levelUpData.pactSlots.slots, current: levelUpData.pactSlots.slots };
-          break;
-        }
+      const pactResource = ensureResourceArray(character).find(r => r && r.name && r.name.toLowerCase().includes('pact slot'));
+      if (pactResource) {
+        pactResource.name = `Pact Slots (Lvl ${levelUpData.pactSlots.level})`;
+        pactResource.max = levelUpData.pactSlots.slots;
+        pactResource.current = levelUpData.pactSlots.slots;
       }
     }
 
@@ -2560,59 +2693,26 @@ const LevelUpSystem = (function() {
 
         if (updatedResources && updatedResources.length > 0) {
           resourceUpdateStatus.expected = updatedResources.length;
-          // Initialize resources object if it doesn't exist
-          character.resources = character.resources || {};
+          const resources = ensureResourceArray(character);
 
-          // Try to match existing resources by name and update their max values
-          for (let i = 0; i < updatedResources.length; i++) {
-            const newRes = updatedResources[i];
-            const slotKey = `res${i + 1}`;
-            const existingRes = character.resources[slotKey];
-
-            // Check if existing resource matches by name (case-insensitive)
-            if (existingRes && existingRes.name &&
-                existingRes.name.toLowerCase() === newRes.name.toLowerCase()) {
-              // Update the max value, keep current value but cap it at new max
+          // Match each class resource by name (case-insensitive): update its max and replenish it, or add it
+          for (const newRes of updatedResources) {
+            const existingRes = resources.find(r => r && (r.name || '').toLowerCase() === newRes.name.toLowerCase());
+            if (existingRes) {
               const oldMax = existingRes.max || 0;
               existingRes.max = newRes.max;
-              // If current exceeds new max, cap it
-              if (existingRes.current > newRes.max) {
-                existingRes.current = newRes.max;
-              }
               // On level up, replenish resources to new max (like a long rest)
               existingRes.current = newRes.max;
-              resourceUpdateStatus.updated++;
               console.log(`📈 Updated ${newRes.name}: max ${oldMax} → ${newRes.max}`);
-            } else if (!existingRes || !existingRes.name) {
-              // Slot is empty, add the resource
-              character.resources[slotKey] = {
-                name: newRes.name,
-                current: newRes.max,
-                max: newRes.max
-              };
-              resourceUpdateStatus.updated++;
-              console.log(`➕ Added ${newRes.name} to ${slotKey}`);
             } else {
-              // Slot holds a different resource: another class's, or a user customization. Look for this
-              // resource elsewhere by name, then for a free slot, before giving up.
-              const slotKeys = [...new Set(['res1', 'res2', 'res3', ...Object.keys(character.resources).filter(k => /^res\d+$/.test(k))])];
-              const sameName = slotKeys.find(k => (character.resources[k]?.name || '').toLowerCase() === newRes.name.toLowerCase());
-              const freeSlot = sameName ? null : slotKeys.find(k => !character.resources[k]?.name);
-              const target = sameName || freeSlot;
-              if (target) {
-                character.resources[target] = { name: newRes.name, current: newRes.max, max: newRes.max };
-                resourceUpdateStatus.updated++;
-              } else {
-                resourceUpdateStatus.needsManualUpdate = true;
-              }
+              resources.push({ name: newRes.name, current: newRes.max, max: newRes.max, resetOn: newRes.resetOn || 'long' });
+              console.log(`➕ Added ${newRes.name}`);
             }
+            resourceUpdateStatus.updated++;
           }
 
           if (resourceUpdateStatus.updated > 0) {
             console.log(`🎯 Updated ${resourceUpdateStatus.updated} class resource(s) for ${resourceClassName} level ${leveledClassLevel}`);
-          }
-          if (resourceUpdateStatus.needsManualUpdate) {
-            console.warn('⚠️ Some class resources could not be auto-updated. User may need to manually update resource max values.');
           }
         }
       }
@@ -2633,7 +2733,7 @@ const LevelUpSystem = (function() {
 
         // Total hit dice equals character level; a multiclass character's pool lists each class's dice
         character.hitDice = (character.multiclass && Array.isArray(character.classes) && character.classes.length > 1)
-          ? LevelUpData.calculateMulticlassHitDice(character.classes).displayString
+          ? LevelUpData.calculateMulticlassHitDice(withNumericLevels(character.classes)).displayString
           : `${newLevel}d${hitDieSize}`;
 
         // On level up, add one hit die to the remaining pool
@@ -3001,17 +3101,32 @@ const LevelUpSystem = (function() {
     if (window.loadCharacterIntoForm) {
       window.loadCharacterIntoForm(character);
     }
-    if (window.persistCurrentCharacter) {
-      window.persistCurrentCharacter().catch(err => console.error('Level-up save failed:', err));
-    }
+    const saved = window.persistCurrentCharacter ? window.persistCurrentCharacter() : Promise.resolve(true);
 
     // Refresh XP bar so progress reflects the new level threshold
     if (window.updateXPDisplay) {
       window.updateXPDisplay(character.xp || 0, levelUpData.newLevel);
     }
 
-    // Show success message
-    showLevelUpSuccess(character, levelUpData);
+    // Report success only once the write has succeeded; a failed write is reported as such
+    saved.then(ok => (ok ? showLevelUpSuccess(character, levelUpData) : showLevelUpSaveFailure(character)));
+  }
+
+  /**
+   * The level-up is applied on the sheet but could not be written to storage
+   */
+  function showLevelUpSaveFailure(character) {
+    const container = document.querySelector('.container.backdrop');
+    if (!container) return;
+    const alertDiv = document.createElement('div');
+    alertDiv.innerHTML = `
+      <div class="alert alert-danger alert-dismissible fade show" role="alert" id="levelUpSaveFailure">
+        <h5 class="alert-heading"><i class="bi bi-exclamation-octagon-fill me-2"></i>Level Up Not Saved</h5>
+        <p class="mb-0"><strong>${escapeHtml(character.name || 'Character')}</strong> was levelled up on the sheet, but the
+        character could not be saved. Press Save to try again, and export a backup if it keeps failing.</p>
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+      </div>`;
+    container.insertBefore(alertDiv.firstElementChild, container.firstChild);
   }
 
   /**
@@ -3067,7 +3182,7 @@ const LevelUpSystem = (function() {
       warningMessage = `
         <div class="alert alert-warning mt-2 mb-0 py-2 small">
           <i class="bi bi-exclamation-triangle me-1"></i>
-          <strong>Note:</strong> Some class resources could not be auto-updated (resource names may have been customized).
+          <strong>Note:</strong> Some class resources could not be updated automatically.
           Please check the <strong>Resources &amp; Rests</strong> section and manually update max values if needed.
         </div>
       `;
