@@ -3,7 +3,8 @@ import { getAbilityModifier, getProficiencyBonus, recalcDerivedStats } from './c
 import { getAttackFeatureBonuses as _getAttackFeatureBonuses, addFlatBonusToNotation as _addFlatBonusToNotation, getConcentrationAttackBonus as _getConcentrationAttackBonus } from '../../Attack-rolls.js';
 import { getSpellSlotsForClassLevel as _getSpellSlotsForClassLevel, getPactMagicSlots as _getPactMagicSlots, normalizeSpellEntry as _normalizeSpellEntry, searchSpells as _searchSpells } from './character-spell-data.js';
 import { applyDamageToHP, applyHealingToHP, setTempHP, getDeathSaveOutcome, parseAttackBonus, getCriticalHitNotation } from './character-combat.js';
-import { calcSpellSaveDC, calcSpellAttackBonus, getConcentrationCheckDC, calcLongRestHitDiceRestored, rollHitDiceForHealing } from './character-rest.js';
+import { calcSpellSaveDC, calcSpellAttackBonus, getConcentrationCheckDC, rollHitDiceForHealing } from './character-rest.js';
+import * as HitDice from '../modules/hit-dice.js';
 import { getXPForLevel, getXPProgressInfo } from './character-xp.js';
 import { validateCharacter } from '../modules/validation.js';
 import { addPolymorphNotes } from './polymorph-notes.js';
@@ -1166,7 +1167,10 @@ import { wireSendToEvents, wireTokenPreviewEvents } from './character-send-to.js
         }
       }
 
-      async function saveCharactersToStorage() {
+      // notify: false leaves the failure to the caller (commitCharacter reports it in its own words); the default keeps
+      // the alert for callers that rely on it. A failure always throws either way.
+      async function saveCharactersToStorage({ notify = true } = {}) {
+        const say = (message) => { if (notify) alert(message); };
         // Use IndexedDB if available
         if (USE_INDEXED_DB) {
           try {
@@ -1189,7 +1193,7 @@ import { wireSendToEvents, wireTokenPreviewEvents } from './character-send-to.js
               const sizeInBytes = new Blob([JSON.stringify(characters)]).size;
               const sizeInMB = (sizeInBytes / (1024 * 1024)).toFixed(2);
 
-              alert(
+              say(
                 '⚠️ Storage Quota Exceeded!\n\n' +
                 `Your character data (${sizeInMB} MB) exceeds browser storage limits.\n\n` +
                 'This is usually caused by portrait images.\n\n' +
@@ -1201,7 +1205,7 @@ import { wireSendToEvents, wireTokenPreviewEvents } from './character-send-to.js
                 'Your changes were NOT saved!'
               );
             } else {
-              alert(
+              say(
                 '⚠️ Failed to save characters!\n\n' +
                 'Error: ' + (error.message || 'Unknown error') + '\n\n' +
                 'Possible causes:\n' +
@@ -1218,7 +1222,7 @@ import { wireSendToEvents, wireTokenPreviewEvents } from './character-send-to.js
 
         // If IndexedDB is not available, we can't store characters with images
         console.error('❌ IndexedDB not available - cannot save characters');
-        alert(
+        say(
           '⚠️ IndexedDB Not Available!\n\n' +
           'Your browser does not support IndexedDB or it is disabled.\n\n' +
           'Character data with images cannot be saved.\n\n' +
@@ -3589,36 +3593,55 @@ import { wireSendToEvents, wireTokenPreviewEvents } from './character-send-to.js
       // after reading the form; persistCurrentCharacter() enters here directly with an already-updated character.
       // The sheet counts as saved, and success is shown, only once the write has actually finished; a failed write
       // leaves it unsaved and says so. Resolves true when the write succeeded.
-      async function commitCharacter(char) {
+      //
+      // Sheet-specific UI (the unsaved dot, the last-saved text, the success toast) is touched only while `char` is
+      // still the character on screen: a save can finish after the user has switched to another one. The write
+      // itself is never cancelled, and it stores the whole characters array.
+      //
+      // One failure message per failing operation: a manual Save always reports; automatic saves report the first
+      // failure and then stay quiet until a write succeeds (they keep trying). report:false leaves the message to
+      // the caller (level-up shows its own).
+      let saveFailureReported = false;
+      async function commitCharacter(char, { report = true } = {}) {
           const manual = _manualSave;
           _manualSave = false;
           const editsAtStart = editCount;
           char.lastUpdated = new Date().toISOString();
 
           try {
-            await saveCharactersToStorage();
+            await saveCharactersToStorage({ notify: false });
           } catch (err) {
             console.error('Character save failed:', err);
-            showAppToast('Character NOT saved: the browser could not write it to storage. Export a backup.', 'danger');
-            markDirty(); // the sheet holds changes that are not stored, e.g. a level-up on a clean sheet
+            if (report && (manual || !saveFailureReported)) {
+              const full = err && (err.name === 'QuotaExceededError' || /quota/i.test(err.message || ''));
+              showAppToast(full
+                ? 'Character NOT saved: browser storage is full. Remove portrait images or export a backup.'
+                : 'Character NOT saved: the browser could not write it to storage. Export a backup.', 'danger');
+            }
+            saveFailureReported = true;
+            // the sheet holds changes that are not stored, e.g. a level-up on a clean sheet
+            if (getCurrentCharacter() === char) markDirty();
             return false;
           }
 
-          // Edits made while the write was in flight are not in it, so they keep the sheet marked unsaved
-          if (editCount === editsAtStart) clearDirty();
-          if (manual) showAppToast('Character saved', 'success');
+          saveFailureReported = false;
           renderCharacterSelect();
-          setLastUpdatedText(char);
           updateStorageUsageDisplay();
+          if (getCurrentCharacter() === char) {
+            // Edits made while the write was in flight are not in it, so they keep the sheet marked unsaved
+            if (editCount === editsAtStart) clearDirty();
+            if (manual) showAppToast('Character saved', 'success');
+            setLastUpdatedText(char);
+          }
           return true;
         }
 
       // Persists the current character object as it stands, without reading the form and regardless of the
       // form-loading flag. For flows (level-up) that have just updated the object and reloaded the form from it.
-      async function persistCurrentCharacter() {
+      async function persistCurrentCharacter(options) {
           const char = getCurrentCharacter();
           if (!char) return false;
-          return commitCharacter(char);
+          return commitCharacter(char, options);
         }
       function clearFormToEmptyState() {
         // Blank the visible fields without creating a character object
@@ -3861,25 +3884,25 @@ import { wireSendToEvents, wireTokenPreviewEvents } from './character-send-to.js
         const hdRemaining = $('charHitDiceRemaining')?.value.trim() || '0d0';
         const conMod = getNumber('charConMod', 0);
 
-        // Parse hit dice (e.g., "5d10" -> {count: 5, die: 10})
-        const hdMatch = hdRemaining.match(/^(\d+)d(\d+)/);
-        if (!hdMatch) {
+        // The remaining pool: one size ("5d10") or several ("3d8 + 4d6"), read against the total
+        const pool = HitDice.resolveRemaining(HitDice.parse($('charHitDice')?.value || ''), hdRemaining);
+        if (!pool) {
           showAppToast('Invalid hit dice format — expected XdY (e.g., 5d10).', 'warning');
           return;
         }
 
-        const availableCount = parseInt(hdMatch[1], 10);
-        const dieSize = parseInt(hdMatch[2], 10);
-
-        if (availableCount === 0) {
+        const dieSize = HitDice.defaultSize(pool);
+        if (dieSize === null) {
           showAppToast('No hit dice remaining — take a long rest to restore them.', 'warning');
           return;
         }
+        const availableCount = HitDice.countOf(pool, dieSize);
 
         // Store modal data
         hitDiceModalData = {
           curHP,
           maxHP,
+          pool,
           availableCount,
           dieSize,
           conMod,
@@ -3889,8 +3912,17 @@ import { wireSendToEvents, wireTokenPreviewEvents } from './character-send-to.js
 
         // Update modal UI
         $('hdModalCurrentHP').textContent = `${curHP} / ${maxHP}`;
-        $('hdModalAvailable').textContent = hdRemaining;
+        $('hdModalAvailable').textContent = HitDice.format(pool);
         $('hdConMod').textContent = conMod >= 0 ? `+${conMod}` : `${conMod}`;
+        // With several die sizes still available the player picks which one to spend
+        const sizesLeft = pool.filter(p => p.count > 0);
+        const sizeRow = $('hdDieSizeRow');
+        const sizeSelect = $('hdDieSize');
+        if (sizeRow && sizeSelect) {
+          sizeSelect.innerHTML = sizesLeft.map(p => `<option value="${p.size}">d${p.size} (${p.count} left)</option>`).join('');
+          sizeSelect.value = String(dieSize);
+          sizeRow.style.display = sizesLeft.length > 1 ? '' : 'none';
+        }
         $('hdSpendCount').value = Math.min(1, availableCount);
         $('hdSpendCount').max = availableCount;
         $('hdRollResults').style.display = 'none';
@@ -3936,15 +3968,15 @@ import { wireSendToEvents, wireTokenPreviewEvents } from './character-send-to.js
       function applyHitDiceHealing() {
         if (!hitDiceModalData) return;
 
-        const { curHP, maxHP, spentCount, dieSize, rolledHealing, availableCount } = hitDiceModalData;
+        const { curHP, maxHP, spentCount, dieSize, rolledHealing, pool } = hitDiceModalData;
 
         // Apply healing (can't exceed max HP)
         const newHP = applyHealingToHP(curHP, maxHP, rolledHealing);
         $('charCurrentHP').value = newHP;
 
         // Reduce remaining hit dice
-        const newRemaining = availableCount - spentCount;
-        $('charHitDiceRemaining').value = `${newRemaining}d${dieSize}`;
+        const newPool = HitDice.spend(pool, dieSize, spentCount);
+        $('charHitDiceRemaining').value = HitDice.format(newPool);
 
         // Close modal
         const modal = bootstrap.Modal.getInstance($('hitDiceModal'));
@@ -3954,7 +3986,7 @@ import { wireSendToEvents, wireTokenPreviewEvents } from './character-send-to.js
         hitDiceModalData = null;
 
         // Show success message
-        showAppToast(`Healed ${rolledHealing} HP → ${newHP}/${maxHP} HP. ${newRemaining}d${dieSize} remaining. Remember to Save!`, 'success');
+        showAppToast(`Healed ${rolledHealing} HP → ${newHP}/${maxHP} HP. ${HitDice.format(newPool)} remaining. Remember to Save!`, 'success');
       }
 
       function handleShortRest() {
@@ -4003,16 +4035,11 @@ import { wireSendToEvents, wireTokenPreviewEvents } from './character-send-to.js
         if (hdTotalEl && hdRemainEl) {
           const totalHD = hdTotalEl.value.trim();
           if (totalHD !== '') {
-            // Parse hit dice (e.g., "5d10" -> 5)
-            const match = totalHD.match(/^(\d+)d/);
-            if (match) {
-              const total = parseInt(match[1], 10);
-              const currentRemaining = hdRemainEl.value.trim();
-              const currentNum = currentRemaining.match(/^(\d+)d/) ? parseInt(currentRemaining.match(/^(\d+)d/)[1], 10) : 0;
-
-              // Restore at least half, minimum 1
-              const newRemaining = calcLongRestHitDiceRestored(total, currentNum);
-              hdRemainEl.value = totalHD.replace(/^\d+/, newRemaining);
+            // The total may hold several die sizes ("3d8 + 4d6"); the remaining pool is read against it
+            const totalPool = HitDice.parse(totalHD);
+            if (totalPool) {
+              const remaining = HitDice.resolveRemaining(totalPool, hdRemainEl.value) || totalPool.map(t => ({ size: t.size, count: 0 }));
+              hdRemainEl.value = HitDice.format(HitDice.restoreLong(totalPool, remaining));
             } else {
               // If format is unclear, just restore to full
               hdRemainEl.value = totalHD;
@@ -4535,6 +4562,21 @@ import { wireSendToEvents, wireTokenPreviewEvents } from './character-send-to.js
 
         if (hdRollBtn) {
           hdRollBtn.addEventListener('click', rollHitDice);
+        }
+
+        // A mixed pool spends from one die size at a time: choosing another size changes how many are available
+        const hdDieSizeSelect = $('hdDieSize');
+        if (hdDieSizeSelect) {
+          hdDieSizeSelect.addEventListener('change', () => {
+            if (!hitDiceModalData) return;
+            const size = parseInt(hdDieSizeSelect.value, 10);
+            const available = HitDice.countOf(hitDiceModalData.pool, size);
+            hitDiceModalData.dieSize = size;
+            hitDiceModalData.availableCount = available;
+            const input = $('hdSpendCount');
+            input.max = available;
+            input.value = Math.min(Math.max(parseInt(input.value, 10) || 1, 1), available);
+          });
         }
 
         if (hdApplyBtn) {

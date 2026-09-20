@@ -2348,20 +2348,35 @@
       function rollCombatHitDice() {
         try {
           const hdRemaining = document.getElementById('charHitDiceRemaining')?.value.trim() || '0d0';
-          const match = hdRemaining.match(/(\d+)d(\d+)/i);
+          // One size ("5d10") or several ("3d8 + 4d6"), read against the total; dice are spent from one size
+          const pool = HitDicePool.resolveRemaining(HitDicePool.parse(document.getElementById('charHitDice')?.value || ''), hdRemaining);
 
-          if (!match) {
+          if (!pool) {
             alert('No hit dice remaining information found.');
             return;
           }
 
-          const availableCount = parseInt(match[1], 10);
-          const dieSize = parseInt(match[2], 10);
-
-          if (availableCount <= 0) {
+          let dieSize = HitDicePool.defaultSize(pool);
+          if (dieSize === null) {
             alert('No hit dice remaining! Take a long rest to recover hit dice.');
             return;
           }
+
+          const sizesLeft = pool.filter(p => p.count > 0);
+          if (sizesLeft.length > 1) {
+            const choices = sizesLeft.map(p => `d${p.size} (${p.count} left)`).join(', ');
+            const sizeStr = prompt(`Which hit die do you want to spend?
+
+${choices}`, String(dieSize));
+            if (sizeStr === null) return;
+            const chosen = parseInt(String(sizeStr).replace(/^d/i, ''), 10);
+            if (!sizesLeft.some(p => p.size === chosen)) {
+              alert(`Please choose one of: ${sizesLeft.map(p => 'd' + p.size).join(', ')}.`);
+              return;
+            }
+            dieSize = chosen;
+          }
+          const availableCount = HitDicePool.countOf(pool, dieSize);
 
           // Ask how many to roll
           const countStr = prompt(`You have ${availableCount}d${dieSize} hit dice remaining.\n\nHow many hit dice do you want to spend? (1-${availableCount})`, '1');
@@ -2406,10 +2421,11 @@
           }
 
           // Update hit dice remaining
-          const newRemaining = availableCount - count;
+          const newPool = HitDicePool.spend(pool, dieSize, count);
+          const newRemaining = HitDicePool.format(newPool);
           const hdRemainingEl = document.getElementById('charHitDiceRemaining');
           if (hdRemainingEl) {
-            hdRemainingEl.value = `${newRemaining}d${dieSize}`;
+            hdRemainingEl.value = newRemaining;
             hdRemainingEl.dispatchEvent(new Event('input', { bubbles: true }));
           }
 
@@ -2435,7 +2451,7 @@
             window.showRollToast(`Hit Dice`, total, `+${actualHealing} HP`);
           }
 
-          alert(`Hit Dice Roll:\n\n${resultMsg}\n\nHit dice remaining: ${newRemaining}d${dieSize}`);
+          alert(`Hit Dice Roll:\n\n${resultMsg}\n\nHit dice remaining: ${newRemaining}`);
 
           // Update combat view
           updateCombatCardView();

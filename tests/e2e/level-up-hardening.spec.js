@@ -391,10 +391,8 @@ test.describe('A refused level-up leaves the spell list alone', () => {
     const alerts = dialogsOf(page);
     await seedAndLoad(page, multiRecord({ spellList: SEEDED, classes: [{ ...CLERIC }, { ...WIZARD, level: 20 }] }));
     await addSheetOnlySpell(page);
-    const pickerBefore = await shown(page, 'levelUpClassPickerModal');
-    await page.locator('#levelUpCharacterBtn').click();
-    await waitShown(page, 'levelUpClassPickerModal', pickerBefore);
-    await page.locator('#levelUpClassPickerModal [data-level-index="1"]').click();
+    // the picker no longer offers a class at level 20 (see level-up-followups.spec.js); the guard behind it still holds
+    await page.evaluate(() => window.LevelUpSystem.startLevelUp(window.getCurrentCharacter(), 'Wizard'));
     await expect.poll(() => alerts.join('|')).toContain('already at level 20');
     await expect(page.locator('#levelUpModal')).toHaveCount(0);
     expect(await spellNames(page)).toEqual(['Fireball']);
@@ -503,7 +501,7 @@ test.describe('Success is reported only after the write finished', () => {
     await completeLevelUp(page);
     await expect(page.locator('#levelUpSaveFailure')).toContainText('Level Up Not Saved');
     await expect(page.getByText('Level Up Complete')).toHaveCount(0);
-    expect((await toast(page)).danger).toBe(true);
+    expect((await toast(page)).danger, "the notice is level-up's own, not a second toast").toBe(false);
     expect(await page.locator('#charLevel').inputValue(), 'the sheet shows the new level').toBe('6');
     await expect(dirtyDot(page), 'so it must not look saved').toHaveCount(1);
     expect((await stored(page, 'single-1')).level, 'nothing was written').toBe(5);

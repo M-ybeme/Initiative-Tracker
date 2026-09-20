@@ -226,6 +226,16 @@ const LevelUpSystem = (function() {
   }
 
   /**
+   * A class's hit die as a number, or null when the data does not hold a usable one: a whole number of at least 2,
+   * given as a number or numeric text. Homebrew data can carry text such as "d8 (large)"; that is not a die, so
+   * the class is treated as having no hit-die data (manual HP, nothing added to the hit-dice pool).
+   */
+  function validHitDie(value) {
+    const n = typeof value === 'string' && value.trim() !== '' ? Number(value) : value;
+    return Number.isInteger(n) && n >= 2 ? n : null;
+  }
+
+  /**
    * classes[] with every level normalized, for helpers that add the raw levels together
    */
   function withNumericLevels(classes) {
@@ -244,6 +254,19 @@ const LevelUpSystem = (function() {
         subclass: character.subclass || '',
         level: parseInt(character.level, 10) || 1
       }];
+  }
+
+  /**
+   * The whole hit-dice pool of a multiclass character as text ("2d8 + 4d6"): each class's levels in its own die.
+   * A class with no hit-die data contributes nothing, because no die is guessed for it.
+   */
+  function hitDicePoolOf(classes) {
+    let pool = [];
+    withNumericLevels(classes).forEach(c => {
+      const die = validHitDie(LevelUpData.getClassData(c.className)?.hitDie);
+      if (die && c.level > 0) pool = HitDicePool.add(pool, die, c.level);
+    });
+    return HitDicePool.format(pool);
   }
 
   function hasClass(character, className) {
@@ -277,12 +300,16 @@ const LevelUpSystem = (function() {
     if (Array.isArray(raw)) return raw;
     const list = [];
     if (raw && typeof raw === 'object') {
-      ['res1', 'res2', 'res3'].forEach(key => {
-        const r = raw[key];
-        if (r && (r.name || r.max)) {
-          list.push({ name: r.name || '', current: r.current ?? 0, max: r.max ?? 0, resetOn: r.resetOn || 'long' });
-        }
-      });
+      // Every res<N> key in numeric order (not just res1-res3), keeping each record's own fields
+      Object.keys(raw)
+        .filter(key => /^res\d+$/.test(key))
+        .sort((a, b) => parseInt(a.slice(3), 10) - parseInt(b.slice(3), 10))
+        .forEach(key => {
+          const r = raw[key];
+          if (r && typeof r === 'object' && (r.name || r.max)) {
+            list.push({ ...r, name: r.name || '', current: r.current ?? 0, max: r.max ?? 0, resetOn: r.resetOn || 'long' });
+          }
+        });
     }
     character.resources = list;
     return list;
@@ -360,26 +387,82 @@ const LevelUpSystem = (function() {
       newClassLevel: classLevel + 1,
       totalLevel,
       newTotalLevel: totalLevel + 1,
-      addNewClass
+      pickedNew: addNewClass, // opened from the picker's "Add a new class": there is no "continue" choice
+      path: addNewClass ? 'multiclass' : 'continue',
+      newClass: '' // the class chosen on the multiclass path
     };
 
-    const changes = LevelUpData.getLevelUpChanges(className, classLevel, classLevel + 1, character);
+    showLevelUpModal(character, buildPlan(character));
+  }
+
+  /**
+   * What this level-up gives, for the current path: { classData, changes }. classData is the class that gains the
+   * level (null on the new-class path until one is chosen), and changes.hpMode says how HP is set: 'dice' (roll or
+   * average that class's hit die), 'pending' (no class chosen yet) or 'manual' (the class has no hit die data).
+   *
+   * This is the one builder. The modal calls it when it opens and again whenever the path or the chosen new class
+   * changes, so the steps shown always belong to the class actually gaining the level, never to a stand-in.
+   */
+  function buildPlan(character) {
+    const ctx = levelUpContext;
+
+    if (ctx.path === 'multiclass') {
+      // A new class starts at level 1. Nothing of the class being continued applies: no features, ASI or spell
+      // learning, and the shared/Pact slots are those the character has once the chosen class is added.
+      const classData = ctx.newClass ? LevelUpData.getClassData(ctx.newClass) : null;
+      const gained = ctx.newClass ? getSpellcastingAfterAddingClass(character, ctx.newClass) : { spellSlots: null, pactSlots: null };
+      return {
+        classData,
+        changes: {
+          level: ctx.newTotalLevel,
+          proficiencyBonus: LevelUpData.getProficiencyBonus(ctx.newTotalLevel),
+          features: [],
+          hasASI: false,
+          spellRules: null,
+          spellSlots: gained.spellSlots,
+          pactSlots: gained.pactSlots,
+          hpMode: !ctx.newClass ? 'pending' : (classData && validHitDie(classData.hitDie) ? 'dice' : 'manual')
+        }
+      };
+    }
+
+    const classData = LevelUpData.getClassData(ctx.className);
+    const classEntry = character.multiclass ? findClassEntry(character, ctx.className) : undefined;
+    const changes = LevelUpData.getLevelUpChanges(ctx.className, ctx.classLevel, ctx.newClassLevel, character);
     // The character-wide values follow the total level, not the class level
-    changes.level = totalLevel + 1;
-    changes.proficiencyBonus = LevelUpData.getProficiencyBonus(totalLevel + 1);
-    if (addNewClass) {
-      // The new class is not chosen yet, so the primary class must not stand in for it: no class progression
-      changes.spellSlots = null;
-      changes.pactSlots = null;
-      changes.features = [];
-      changes.hasASI = false;
-      changes.spellRules = null;
-    } else if (classEntry && character.classes.length > 1) {
+    changes.level = ctx.newTotalLevel;
+    changes.proficiencyBonus = LevelUpData.getProficiencyBonus(ctx.newTotalLevel);
+    if (classEntry && character.classes.length > 1) {
       // Shared spell slots come from the multiclass caster level; the per-class table would overwrite them
       changes.spellSlots = getMulticlassSlotsAfterLevelUp(character, classEntry);
     }
+    changes.hpMode = validHitDie(classData.hitDie) ? 'dice' : 'manual';
+    return { classData, changes };
+  }
 
-    showLevelUpModal(character, className, classLevel, classLevel + 1, classData, changes);
+  /**
+   * Rebuilds the plan and redraws the steps after the path or the chosen new class changed. An HP method already
+   * picked is kept when it still applies.
+   */
+  function replanModal(modal, character) {
+    const method = modal.querySelector('input[name="hpMethod"]:checked')?.value;
+    const plan = buildPlan(character);
+    modal._plan = plan;
+    modal.querySelector('.modal-body').innerHTML = renderLevelUpSteps(character, plan);
+    modal.querySelector('.modal-header small').textContent = levelUpHeaderText();
+    setupLevelUpModalEvents(modal, character, levelUpContext.newTotalLevel, plan.classData, plan.changes);
+    if (method) {
+      const radio = modal.querySelector(`input[name="hpMethod"][value="${method}"]`);
+      if (radio && !radio.disabled) radio.click();
+    }
+    updateSummary(modal, plan.changes);
+  }
+
+  function levelUpHeaderText() {
+    const ctx = levelUpContext;
+    return ctx.path === 'multiclass'
+      ? `Level ${ctx.totalLevel} → ${ctx.newTotalLevel}: new class${ctx.newClass ? ` (${ctx.newClass})` : ''}`
+      : `${ctx.className} ${ctx.classLevel} → ${ctx.newClassLevel}`;
   }
 
   /**
@@ -401,9 +484,11 @@ const LevelUpSystem = (function() {
     // class name is ever written into an attribute
     const rows = character.classes.map((c, index) => {
       const level = classLevelOf(c);
-      return `<button type="button" class="list-group-item list-group-item-action bg-dark text-light border-secondary" data-level-index="${index}">
+      // A class already at level 20 cannot be levelled, so it is shown but never offered as a choice
+      const maxed = level >= 20;
+      return `<button type="button" class="list-group-item list-group-item-action bg-dark text-light border-secondary picker-choice" data-level-index="${index}" ${maxed ? 'data-maxed="1"' : ''} disabled>
         <i class="bi bi-arrow-up me-1"></i>Level ${escapeHtml(c.className)}${c.subclass ? ` (${escapeHtml(c.subclass)})` : ''}
-        <span class="text-muted ms-1">${level} → ${level + 1}</span></button>`;
+        <span class="text-muted ms-1">${maxed ? 'level 20 (maximum)' : `${level} → ${level + 1}`}</span></button>`;
     }).join('');
 
     const modal = document.createElement('div');
@@ -421,7 +506,7 @@ const LevelUpSystem = (function() {
             <p class="text-muted">Which class gains the new level?</p>
             <div class="list-group">
               ${rows}
-              <button type="button" class="list-group-item list-group-item-action bg-dark text-light border-secondary" data-level-class-new="1">
+              <button type="button" class="list-group-item list-group-item-action bg-dark text-light border-secondary picker-choice" data-level-class-new="1" disabled>
                 <i class="bi bi-diagram-3 me-1"></i>Add a new class</button>
             </div>
           </div>
@@ -438,6 +523,11 @@ const LevelUpSystem = (function() {
         ? { className: character.classes[Number(button.dataset.levelIndex)].className }
         : { addNew: true };
       bsModal.hide();
+    });
+    // Bootstrap ignores hide() while the modal is still fading in, so a click then would be lost: the choices are
+    // disabled until it has finished showing
+    modal.addEventListener('shown.bs.modal', () => {
+      modal.querySelectorAll('.picker-choice:not([data-maxed])').forEach(button => { button.disabled = false; });
     });
     modal.addEventListener('hidden.bs.modal', () => {
       modal.remove();
@@ -525,8 +615,8 @@ const LevelUpSystem = (function() {
   /**
    * Show the level-up modal with all options
    */
-  function showLevelUpModal(character, className, currentLevel, newLevel, classData, changes) {
-    const modal = createLevelUpModal(character, className, currentLevel, newLevel, classData, changes);
+  function showLevelUpModal(character, plan) {
+    const modal = createLevelUpModal(character, plan);
     document.body.appendChild(modal);
 
     const bsModal = new bootstrap.Modal(modal);
@@ -542,13 +632,14 @@ const LevelUpSystem = (function() {
   /**
    * Create the level-up modal element
    */
-  function createLevelUpModal(character, className, currentLevel, newLevel, classData, changes) {
+  function createLevelUpModal(character, plan) {
     const modal = document.createElement('div');
     modal.className = 'modal fade';
     modal.id = 'levelUpModal';
     modal.setAttribute('tabindex', '-1');
     modal.setAttribute('data-bs-backdrop', 'static');
     modal.setAttribute('data-bs-keyboard', 'false');
+    modal._plan = plan; // replaced whenever the plan is rebuilt (replanModal)
 
     modal.innerHTML = `
       <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
@@ -558,13 +649,13 @@ const LevelUpSystem = (function() {
               <h5 class="modal-title">
                 <i class="bi bi-arrow-up-circle me-2"></i>Level Up: ${character.name || 'Character'}
               </h5>
-              <small class="text-muted">${levelUpContext.addNewClass ? `Level ${levelUpContext.totalLevel} → ${levelUpContext.newTotalLevel}: new class` : `${className} ${currentLevel} → ${newLevel}`}</small>
+              <small class="text-muted">${escapeHtml(levelUpHeaderText())}</small>
             </div>
             <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
           </div>
 
           <div class="modal-body">
-            ${renderLevelUpSteps(character, className, classData, changes)}
+            ${renderLevelUpSteps(character, plan)}
           </div>
 
           <div class="modal-footer border-secondary justify-content-between">
@@ -578,27 +669,43 @@ const LevelUpSystem = (function() {
     `;
 
     // Set up event listeners
-    setupLevelUpModalEvents(modal, character, levelUpContext.newTotalLevel, classData, changes);
+    setupLevelUpModalEvents(modal, character, levelUpContext.newTotalLevel, plan.classData, plan.changes);
+
+    // Confirm Level Up (bound once; it reads whichever plan is current)
+    modal.querySelector('#confirmLevelUpBtn').addEventListener('click', () => {
+      const current = modal._plan;
+      const levelUpData = gatherLevelUpData(modal, character, levelUpContext.newTotalLevel, current.classData, current.changes);
+      if (levelUpData) {
+        applyLevelUp(levelUpData);
+        bootstrap.Modal.getInstance(modal).hide();
+      }
+    });
 
     return modal;
   }
 
   /**
-   * Render all level-up steps (HP, ASI/Feat, Spell Slots, etc.)
+   * Render all level-up steps (HP, ASI/Feat, Spell Slots, etc.) for a plan
    */
-  function renderLevelUpSteps(character, className, classData, changes) {
+  function renderLevelUpSteps(character, plan) {
+    const { classData, changes } = plan;
+    const ctx = levelUpContext;
+    const adding = ctx.path === 'multiclass';
+    // The class the steps talk about: the one continued, or the new one once chosen
+    const className = adding ? (ctx.newClass || ctx.className) : ctx.className;
+
     let html = '<div class="accordion" id="levelUpAccordion">';
     let stepNum = 1;
 
     // Class rules run on the class's level; racial features follow the character's total level
-    const { classLevel, newClassLevel, newTotalLevel: newLevel } = levelUpContext;
+    const { classLevel, newClassLevel, newTotalLevel: newLevel } = ctx;
 
     // Step: Multiclass Choice (optional)
-    html += renderMulticlassChoiceStep(character, className, stepNum++);
+    html += renderMulticlassChoiceStep(character, ctx.className, stepNum++);
 
     // A multiclass character's subclass for this class lives on its classes[] entry
     const classEntry = character.multiclass ? findClassEntry(character, className) : undefined;
-    const needsSubclass = !levelUpContext.addNewClass && LevelUpData.needsSubclassSelection(
+    const needsSubclass = !adding && LevelUpData.needsSubclassSelection(
       className,
       classLevel,
       newClassLevel,
@@ -611,8 +718,7 @@ const LevelUpSystem = (function() {
     }
 
     // Step: Hit Points
-    // Adding a class: its hit die is not known until it is chosen, and the primary class must not stand in for it
-    html += renderHPStep(character, levelUpContext.addNewClass ? null : classData, changes, stepNum++);
+    html += renderHPStep(character, classData, changes, stepNum++);
 
     // Step: Racial Feature (if applicable)
     const racialFeature = LevelUpData.getRacialFeature(character.race, newLevel);
@@ -621,7 +727,7 @@ const LevelUpSystem = (function() {
     }
 
     // Step: Spell Learning (if applicable)
-    const spellRules = levelUpContext.addNewClass ? null : LevelUpData.getSpellLearningRules(className, newClassLevel);
+    const spellRules = adding ? null : LevelUpData.getSpellLearningRules(className, newClassLevel);
     if (spellRules) {
       html += renderSpellLearningStep(character, spellRules, stepNum++);
     }
@@ -650,13 +756,17 @@ const LevelUpSystem = (function() {
    * Step: Multiclass Choice (always shown)
    */
   function renderMulticlassChoiceStep(character, className, stepNum) {
+    const ctx = levelUpContext;
+    const adding = ctx.path === 'multiclass';
+    const classOptions = LevelUpData.getClassesForLevel(1).slice().sort()
+      .map(name => `<option value="${escapeHtml(name)}" ${name === ctx.newClass ? 'selected' : ''}>${escapeHtml(name)}</option>`).join('');
     return `
       <div class="accordion-item bg-dark border-secondary">
         <h2 class="accordion-header">
           <button class="accordion-button bg-dark text-light" type="button"
                   data-bs-toggle="collapse" data-bs-target="#step${stepNum}">
             <strong>Step ${stepNum}: Choose Level-Up Path</strong>
-            <span class="ms-auto me-3 badge ${levelUpContext.addNewClass ? 'bg-warning' : 'bg-info'}" id="multiclassPathBadge">${levelUpContext.addNewClass ? 'Multiclass' : `Continue ${className}`}</span>
+            <span class="ms-auto me-3 badge ${adding ? 'bg-warning' : 'bg-info'}" id="multiclassPathBadge">${adding ? 'Multiclass' : `Continue ${className}`}</span>
           </button>
         </h2>
         <div id="step${stepNum}" class="accordion-collapse collapse show"
@@ -668,9 +778,9 @@ const LevelUpSystem = (function() {
             </p>
 
             <div class="list-group">
-              ${levelUpContext.addNewClass ? '' : `<label class="list-group-item list-group-item-action bg-dark border-secondary cursor-pointer">
+              ${ctx.pickedNew ? '' : `<label class="list-group-item list-group-item-action bg-dark border-secondary cursor-pointer">
                 <div class="d-flex align-items-start gap-2">
-                  <input type="radio" name="multiclassPath" value="continue" checked
+                  <input type="radio" name="multiclassPath" value="continue" ${adding ? '' : 'checked'}
                          class="form-check-input mt-1 multiclass-path-radio" />
                   <div class="flex-grow-1">
                     <h6 class="mb-1"><i class="bi bi-arrow-up me-1"></i>Continue as ${className}</h6>
@@ -681,7 +791,7 @@ const LevelUpSystem = (function() {
 
               <label class="list-group-item list-group-item-action bg-dark border-secondary cursor-pointer">
                 <div class="d-flex align-items-start gap-2">
-                  <input type="radio" name="multiclassPath" value="multiclass" ${levelUpContext.addNewClass ? 'checked' : ''}
+                  <input type="radio" name="multiclassPath" value="multiclass" ${adding ? 'checked' : ''}
                          class="form-check-input mt-1 multiclass-path-radio" />
                   <div class="flex-grow-1">
                     <h6 class="mb-1"><i class="bi bi-diagram-3 me-1"></i>Multiclass into a New Class</h6>
@@ -691,23 +801,11 @@ const LevelUpSystem = (function() {
               </label>
             </div>
 
-            <div id="multiclassClassSelection" class="mt-3 ${levelUpContext.addNewClass ? '' : 'd-none'}">
+            <div id="multiclassClassSelection" class="mt-3 ${adding ? '' : 'd-none'}">
               <label class="form-label">Select New Class:</label>
               <select class="form-select" id="multiclassNewClass">
                 <option value="">Choose a class...</option>
-                <option value="Artificer">Artificer</option>
-                <option value="Barbarian">Barbarian</option>
-                <option value="Bard">Bard</option>
-                <option value="Cleric">Cleric</option>
-                <option value="Druid">Druid</option>
-                <option value="Fighter">Fighter</option>
-                <option value="Monk">Monk</option>
-                <option value="Paladin">Paladin</option>
-                <option value="Ranger">Ranger</option>
-                <option value="Rogue">Rogue</option>
-                <option value="Sorcerer">Sorcerer</option>
-                <option value="Warlock">Warlock</option>
-                <option value="Wizard">Wizard</option>
+                ${classOptions}
               </select>
               <div id="multiclassPrereqWarning" class="alert alert-warning mt-2 d-none">
                 <i class="bi bi-exclamation-triangle me-1"></i>
@@ -968,30 +1066,36 @@ const LevelUpSystem = (function() {
   }
 
   /**
-   * Step: Hit Point Increase. classData is null while the hit die is not known yet (a new class not chosen);
-   * the die shown and rolled then follows the choice (see the HP handlers in setupLevelUpModalEvents).
+   * Step: Hit Point Increase. changes.hpMode says what the step offers:
+   *  - 'dice': roll or take the average of the class's hit die;
+   *  - 'pending': the new class is not chosen yet, so no die is offered (and none is guessed);
+   *  - 'manual': the class has no hit die data, so the player types the HP gain.
    */
   function renderHPStep(character, classData, changes, stepNum) {
     const conMod = calculateAbilityModifier(character.stats?.con || 10);
-    const hitDie = classData ? classData.hitDie : null;
+    const mode = changes.hpMode;
+    const hitDie = mode === 'dice' && classData ? validHitDie(classData.hitDie) : null;
     const avgRoll = hitDie ? Math.floor(hitDie / 2) + 1 : null;
     const dieText = hitDie || '?';
     const disabled = hitDie ? '' : 'disabled';
 
-    return `
-      <div class="accordion-item bg-dark border-secondary">
-        <h2 class="accordion-header">
-          <button class="accordion-button bg-dark text-light" type="button" data-bs-toggle="collapse" data-bs-target="#step${stepNum}">
-            <strong>Step ${stepNum}: Hit Points</strong>
-            <span class="ms-auto me-3 badge bg-primary" id="hpBadge">Not Set</span>
-          </button>
-        </h2>
-        <div id="step${stepNum}" class="accordion-collapse collapse show" data-bs-parent="#levelUpAccordion">
-          <div class="accordion-body">
+    const manualBlock = `
+            <div class="alert alert-warning text-light" id="hpNoHitDie">
+              <i class="bi bi-exclamation-triangle me-1"></i>
+              Hit-die data is not available for <strong>${escapeHtml(levelUpContext.newClass || levelUpContext.className)}</strong>, so HP
+              cannot be rolled or averaged automatically. Enter the HP you gain for this level, including your
+              Constitution modifier (+${conMod}).
+            </div>
+            <div class="row g-2 align-items-center">
+              <div class="col-auto"><label for="hpManualInput" class="col-form-label">HP gained:</label></div>
+              <div class="col-auto"><input type="number" min="1" step="1" class="form-control form-control-sm" id="hpManualInput" /></div>
+            </div>`;
+
+    const diceBlock = `
             <p class="text-muted mb-3">
               Choose how to increase your maximum HP. Your Constitution modifier (+${conMod}) is added automatically.
             </p>
-            <p class="text-warning small mb-3 ${hitDie ? 'd-none' : ''}" id="hpNeedsClass">
+            <p class="text-warning small mb-3 ${mode === 'pending' ? '' : 'd-none'}" id="hpNeedsClass">
               <i class="bi bi-info-circle me-1"></i>Choose the new class first: its hit die sets the HP gain.
             </p>
 
@@ -1030,8 +1134,19 @@ const LevelUpSystem = (function() {
                   </div>
                 </div>
               </div>
-            </div>
+            </div>`;
 
+    return `
+      <div class="accordion-item bg-dark border-secondary">
+        <h2 class="accordion-header">
+          <button class="accordion-button bg-dark text-light" type="button" data-bs-toggle="collapse" data-bs-target="#step${stepNum}">
+            <strong>Step ${stepNum}: Hit Points</strong>
+            <span class="ms-auto me-3 badge bg-primary" id="hpBadge">Not Set</span>
+          </button>
+        </h2>
+        <div id="step${stepNum}" class="accordion-collapse collapse show" data-bs-parent="#levelUpAccordion">
+          <div class="accordion-body">
+            ${mode === 'manual' ? manualBlock : diceBlock}
             <input type="hidden" id="hpGainValue" value="0" />
           </div>
         </div>
@@ -1511,7 +1626,8 @@ const LevelUpSystem = (function() {
    * Set up event listeners for the level-up modal
    */
   function setupLevelUpModalEvents(modal, character, newLevel, classData, changes) {
-    // Multiclass Path Selection
+    // Level-up path: continuing the class, or adding a new one. Either choice changes what the level gives
+    // (features, ASI, spells, slots, hit die), so the plan is rebuilt and the steps redrawn (replanModal).
     const multiclassPathRadios = modal.querySelectorAll('.multiclass-path-radio');
     const multiclassSelection = modal.querySelector('#multiclassClassSelection');
     const multiclassNewClassSelect = modal.querySelector('#multiclassNewClass');
@@ -1519,31 +1635,13 @@ const LevelUpSystem = (function() {
     const multiclassPrereqText = modal.querySelector('#multiclassPrereqText');
     const multiclassPathBadge = modal.querySelector('#multiclassPathBadge');
 
-    multiclassPathRadios.forEach(radio => {
-      radio.addEventListener('change', (e) => {
-        if (e.target.value === 'multiclass') {
-          multiclassSelection.classList.remove('d-none');
-          if (multiclassPathBadge) {
-            multiclassPathBadge.textContent = 'Multiclass';
-            multiclassPathBadge.className = 'ms-auto me-3 badge bg-warning';
-          }
-        } else {
-          multiclassSelection.classList.add('d-none');
-          multiclassPrereqWarning.classList.add('d-none');
-          if (multiclassPathBadge) {
-            multiclassPathBadge.textContent = `Continue ${levelUpContext.className}`;
-            multiclassPathBadge.className = 'ms-auto me-3 badge bg-info';
-          }
-        }
-      });
-    });
-
-    if (multiclassNewClassSelect) {
-      multiclassNewClassSelect.addEventListener('change', (e) => {
-        const newClass = e.target.value;
-        if (!newClass) return;
-
-        // Check prerequisites
+    // Badge, class list and prerequisite note follow the current path and chosen class
+    (function syncPathUi() {
+      const adding = levelUpContext.path === 'multiclass';
+      const newClass = levelUpContext.newClass;
+      multiclassSelection.classList.toggle('d-none', !adding);
+      multiclassPrereqWarning.classList.add('d-none');
+      if (adding && newClass) {
         const abilityScores = {
           str: parseInt(character.stats?.str, 10) || 10,
           dex: parseInt(character.stats?.dex, 10) || 10,
@@ -1552,19 +1650,29 @@ const LevelUpSystem = (function() {
           wis: parseInt(character.stats?.wis, 10) || 10,
           cha: parseInt(character.stats?.cha, 10) || 10
         };
-
         const result = LevelUpData.checkMulticlassPrerequisites(newClass, abilityScores);
         if (!result.meetsRequirements) {
           multiclassPrereqWarning.classList.remove('d-none');
           multiclassPrereqText.textContent = `Requires ${result.missing.join(', ')}`;
-        } else {
-          multiclassPrereqWarning.classList.add('d-none');
         }
+      }
+      if (multiclassPathBadge) {
+        multiclassPathBadge.textContent = !adding ? `Continue ${levelUpContext.className}` : (newClass ? `Multiclass: ${newClass}` : 'Multiclass');
+        multiclassPathBadge.className = `ms-auto me-3 badge ${!adding ? 'bg-info' : (newClass ? 'bg-success' : 'bg-warning')}`;
+      }
+    })();
 
-        if (multiclassPathBadge) {
-          multiclassPathBadge.textContent = `Multiclass: ${newClass}`;
-          multiclassPathBadge.className = 'ms-auto me-3 badge bg-success';
-        }
+    multiclassPathRadios.forEach(radio => {
+      radio.addEventListener('change', (e) => {
+        levelUpContext.path = e.target.value;
+        replanModal(modal, character);
+      });
+    });
+
+    if (multiclassNewClassSelect) {
+      multiclassNewClassSelect.addEventListener('change', (e) => {
+        levelUpContext.newClass = e.target.value;
+        replanModal(modal, character);
       });
     }
 
@@ -1612,52 +1720,15 @@ const LevelUpSystem = (function() {
     const hpBadge = modal.querySelector('#hpBadge');
 
     const conMod = calculateAbilityModifier(character.stats?.con || 10);
-    const hpNeedsClass = modal.querySelector('#hpNeedsClass');
 
-    // The hit die follows the path: the levelled class when continuing, the chosen class when adding one
-    // (unknown until it is chosen)
-    let hitDie = levelUpContext.addNewClass ? null : classData.hitDie;
-    const avgRoll = () => Math.floor(hitDie / 2) + 1;
-
-    function applyAverage() {
-      const gain = avgRoll() + conMod;
-      hpGainValue.value = gain;
-      hpBadge.textContent = `+${gain} HP`;
-      hpBadge.className = 'ms-auto me-3 badge bg-success';
-    }
-
-    // Re-point the HP step at the current path's hit die and redo whichever method was already chosen
-    function refreshHitDie() {
-      const adding = modal.querySelector('input[name="multiclassPath"]:checked')?.value === 'multiclass';
-      const chosen = multiclassNewClassSelect && multiclassNewClassSelect.value;
-      hitDie = adding ? (chosen ? (LevelUpData.getClassData(chosen)?.hitDie || null) : null) : classData.hitDie;
-
-      modal.querySelectorAll('.hp-die').forEach(el => { el.textContent = hitDie || '?'; });
-      modal.querySelector('#hpAvgRoll').textContent = hitDie ? avgRoll() : '?';
-      modal.querySelector('#hpAvgGain').textContent = hitDie ? avgRoll() + conMod : '?';
-      hpMethodRadios.forEach(radio => { radio.disabled = !hitDie; });
-      if (hpNeedsClass) hpNeedsClass.classList.toggle('d-none', !!hitDie);
-
-      hpRollResult.classList.add('d-none');
-      hpGainValue.value = '0';
-      const method = modal.querySelector('input[name="hpMethod"]:checked');
-      if (!hitDie || !method) {
-        rollHPBtn.disabled = true;
-        hpBadge.textContent = 'Not Set';
-        hpBadge.className = 'ms-auto me-3 badge bg-primary';
-      } else if (method.value === 'roll') {
-        rollHPBtn.disabled = false;
-        hpBadge.textContent = 'Roll Required';
-        hpBadge.className = 'ms-auto me-3 badge bg-warning';
-      } else {
-        rollHPBtn.disabled = true;
-        applyAverage();
-      }
-      updateSummary(modal, changes);
-    }
+    // The die belongs to the plan: the class gaining the level, never a stand-in. Null when none is available
+    // ('pending' or 'manual'); the controls are then disabled or absent (see renderHPStep).
+    const hitDie = changes.hpMode === 'dice' && classData ? validHitDie(classData.hitDie) : null;
+    const avgRoll = hitDie ? Math.floor(hitDie / 2) + 1 : 0;
 
     hpMethodRadios.forEach(radio => {
       radio.addEventListener('change', (e) => {
+        if (!hitDie) return;
         if (e.target.value === 'roll') {
           rollHPBtn.disabled = false;
           hpRollResult.classList.add('d-none');
@@ -1667,27 +1738,47 @@ const LevelUpSystem = (function() {
         } else if (e.target.value === 'average') {
           rollHPBtn.disabled = true;
           hpRollResult.classList.add('d-none');
-          applyAverage();
+          const gain = avgRoll + conMod;
+          hpGainValue.value = gain;
+          hpBadge.textContent = `+${gain} HP`;
+          hpBadge.className = 'ms-auto me-3 badge bg-success';
           updateSummary(modal, changes);
         }
       });
     });
 
-    rollHPBtn.addEventListener('click', () => {
-      const roll = DiceEngine.rollDie(hitDie);
-      const total = roll + conMod;
-      hpRollValue.textContent = roll;
-      hpRollTotal.textContent = total;
-      hpRollResult.classList.remove('d-none');
-      hpGainValue.value = total;
-      hpBadge.textContent = `+${total} HP`;
-      hpBadge.className = 'ms-auto me-3 badge bg-success';
-      updateSummary(modal, changes);
-    });
+    if (rollHPBtn) {
+      rollHPBtn.addEventListener('click', () => {
+        if (!hitDie) return;
+        const roll = DiceEngine.rollDie(hitDie);
+        const total = roll + conMod;
+        hpRollValue.textContent = roll;
+        hpRollTotal.textContent = total;
+        hpRollResult.classList.remove('d-none');
+        hpGainValue.value = total;
+        hpBadge.textContent = `+${total} HP`;
+        hpBadge.className = 'ms-auto me-3 badge bg-success';
+        updateSummary(modal, changes);
+      });
+    }
 
-    // The path and the new-class choice set the hit die (these listeners run after the ones set up above)
-    multiclassPathRadios.forEach(radio => radio.addEventListener('change', refreshHitDie));
-    if (multiclassNewClassSelect) multiclassNewClassSelect.addEventListener('change', refreshHitDie);
+    // A class with no hit-die data: the player enters the HP gain (nothing is rolled, averaged or guessed)
+    const hpManualInput = modal.querySelector('#hpManualInput');
+    if (hpManualInput) {
+      hpManualInput.addEventListener('input', () => {
+        const gain = parseInt(hpManualInput.value, 10);
+        if (Number.isFinite(gain) && gain > 0) {
+          hpGainValue.value = gain;
+          hpBadge.textContent = `+${gain} HP`;
+          hpBadge.className = 'ms-auto me-3 badge bg-success';
+        } else {
+          hpGainValue.value = '0';
+          hpBadge.textContent = 'Not Set';
+          hpBadge.className = 'ms-auto me-3 badge bg-primary';
+        }
+        updateSummary(modal, changes);
+      });
+    }
 
     // ASI/Feat Selection
     if (changes.hasASI) {
@@ -2047,15 +2138,7 @@ const LevelUpSystem = (function() {
     // Feature Selection Event Handlers (Fighting Style, Metamagic, etc.)
     setupFeatureSelectionHandlers(modal, character, changes);
 
-    // Confirm Level Up
-    const confirmBtn = modal.querySelector('#confirmLevelUpBtn');
-    confirmBtn.addEventListener('click', () => {
-      const levelUpData = gatherLevelUpData(modal, character, newLevel, classData, changes);
-      if (levelUpData) {
-        applyLevelUp(levelUpData);
-        bootstrap.Modal.getInstance(modal).hide();
-      }
-    });
+    // (Confirm is bound once, in createLevelUpModal, so redrawing the steps does not stack handlers)
   }
 
   /**
@@ -2370,11 +2453,6 @@ const LevelUpSystem = (function() {
         alert(`Cannot multiclass into ${data.multiclassNewClass}. Prerequisites not met: ${result.missing.join(', ')}`);
         return null;
       }
-
-      // Slots follow the class actually being added, never the levelled/primary class the modal opened for
-      const gained = getSpellcastingAfterAddingClass(character, data.multiclassNewClass);
-      data.spellSlots = gained.spellSlots;
-      data.pactSlots = gained.pactSlots;
     }
 
     // Check for subclass selection if needed
@@ -2727,27 +2805,25 @@ const LevelUpSystem = (function() {
     // The die gained is the leveled class's, not the primary class's
     if (leveledClassName) {
       const classData = LevelUpData.getClassData(leveledClassName);
-      if (classData && classData.hitDie) {
-        const hitDieSize = classData.hitDie;
+      const hitDieSize = classData ? validHitDie(classData.hitDie) : null;
+      if (hitDieSize) {
         const newLevel = levelUpData.newLevel;
+
+        // The remaining pool before this level-up, read against the total it belonged to
+        const oldTotal = HitDicePool.parse(character.hitDice);
+        // (a blank remaining field has always meant "all of them" here, so it falls back to the total)
+        const remainingText = (character.hitDiceRemaining || '').trim();
+        const before = (remainingText !== '' && HitDicePool.resolveRemaining(oldTotal, remainingText))
+          || oldTotal
+          || HitDicePool.parse(`${newLevel - 1}d${hitDieSize}`);
 
         // Total hit dice equals character level; a multiclass character's pool lists each class's dice
         character.hitDice = (character.multiclass && Array.isArray(character.classes) && character.classes.length > 1)
-          ? LevelUpData.calculateMulticlassHitDice(withNumericLevels(character.classes)).displayString
+          ? hitDicePoolOf(character.classes)
           : `${newLevel}d${hitDieSize}`;
 
-        // On level up, add one hit die to the remaining pool
-        // Parse current remaining hit dice
-        const currentRemaining = character.hitDiceRemaining || character.hitDice || `${newLevel - 1}d${hitDieSize}`;
-        const match = currentRemaining.match(/(\d+)d(\d+)/);
-        if (match) {
-          const remainingCount = parseInt(match[1], 10);
-          // Add 1 to remaining (gained from leveling up)
-          character.hitDiceRemaining = `${remainingCount + 1}d${hitDieSize}`;
-        } else {
-          // If parsing failed, set to total
-          character.hitDiceRemaining = character.hitDice;
-        }
+        // The level gains one die of the levelled class's size: added to that size's pool, or a new pool
+        character.hitDiceRemaining = HitDicePool.format(HitDicePool.add(before, hitDieSize, 1));
       }
     }
 
@@ -3101,7 +3177,8 @@ const LevelUpSystem = (function() {
     if (window.loadCharacterIntoForm) {
       window.loadCharacterIntoForm(character);
     }
-    const saved = window.persistCurrentCharacter ? window.persistCurrentCharacter() : Promise.resolve(true);
+    // The failure notice is level-up's own (showLevelUpSaveFailure), so the save reports nothing itself
+    const saved = window.persistCurrentCharacter ? window.persistCurrentCharacter({ report: false }) : Promise.resolve(true);
 
     // Refresh XP bar so progress reflects the new level threshold
     if (window.updateXPDisplay) {

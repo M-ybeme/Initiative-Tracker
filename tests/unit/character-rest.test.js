@@ -3,7 +3,6 @@ import {
   calcSpellSaveDC,
   calcSpellAttackBonus,
   getConcentrationCheckDC,
-  calcLongRestHitDiceRestored,
   rollHitDiceForHealing,
   applyShortRest,
   applyLongRest,
@@ -81,44 +80,6 @@ describe('getConcentrationCheckDC', () => {
     expect(getConcentrationCheckDC(null)).toBe(10);
     expect(getConcentrationCheckDC(undefined)).toBe(10);
     expect(getConcentrationCheckDC(NaN)).toBe(10);
-  });
-});
-
-describe('calcLongRestHitDiceRestored', () => {
-  it('restores half of total hit dice (rounded down)', () => {
-    // Level 10 fighter (10 total): restores floor(10/2) = 5
-    expect(calcLongRestHitDiceRestored(10, 0)).toBe(5);
-    expect(calcLongRestHitDiceRestored(10, 3)).toBe(8);
-    expect(calcLongRestHitDiceRestored(8, 0)).toBe(4);
-  });
-
-  it('restores minimum 1 even at level 1', () => {
-    // Level 1: floor(1/2) = 0, but minimum is 1
-    expect(calcLongRestHitDiceRestored(1, 0)).toBe(1);
-    expect(calcLongRestHitDiceRestored(1, 1)).toBe(1); // already at max
-  });
-
-  it('does not exceed total hit dice', () => {
-    // Level 4 has 4 total, already has 3, restores floor(4/2)=2 => min(4, 3+2) = 4
-    expect(calcLongRestHitDiceRestored(4, 3)).toBe(4);
-    // Already at max, still can't exceed max
-    expect(calcLongRestHitDiceRestored(6, 6)).toBe(6);
-  });
-
-  it('rounds down at odd total values', () => {
-    // 7 total: floor(7/2) = 3
-    expect(calcLongRestHitDiceRestored(7, 0)).toBe(3);
-    // 5 total: floor(5/2) = 2
-    expect(calcLongRestHitDiceRestored(5, 0)).toBe(2);
-  });
-
-  it('returns 0 for 0 total hit dice', () => {
-    expect(calcLongRestHitDiceRestored(0, 0)).toBe(0);
-  });
-
-  it('handles null/undefined inputs as 0', () => {
-    expect(calcLongRestHitDiceRestored(null, null)).toBe(0);
-    expect(calcLongRestHitDiceRestored(undefined, 3)).toBe(0);
   });
 });
 

@@ -1,7 +1,10 @@
 const DM_TOOLBOX_BUILD = {
   name: "The DM's Toolbox",
-  version: "2.3.10",
+  version: "2.3.11",
   recentChanges: [
+    "Fix: multiclass characters now track hit dice by die size (for example 3d8 + 4d6): short rests spend from the die you choose, long rests restore the largest dice first, and level-ups add the right die",
+    "Fix: on a single-class level-up, switching to a new class now shows that class's steps, hit die and spell slots instead of the current class's; a class with no hit-die data lets you enter HP by hand",
+    "Fix: a save that fails no longer looks saved, failures are reported once instead of repeatedly, and the class picker no longer offers a level-20 class",
     "Fix: levelling up no longer corrupts class levels stored as text, adding a new class uses that class's hit die and spell slots, level-up resources work for every saved character, and a failed save is never shown as saved",
     "Fix: adding a class a character already has is refused instead of overwriting its Pact Magic",
     "New: levelling up a multiclass character now asks which class gains the level (or to add a new class); each class levels with its own hit die, features, spells and subclass, and the result is saved immediately",

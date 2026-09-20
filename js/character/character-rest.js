@@ -39,36 +39,14 @@ export function getConcentrationCheckDC(damage) {
 }
 
 /**
- * Calculate how many hit dice are restored after a long rest.
- * Rules: restore hit dice equal to half total (rounded down), minimum 1.
- * Cannot exceed total hit dice.
- * @param {number} totalCount   - total hit dice the character has
- * @param {number} currentCount - hit dice remaining before the rest
- * @returns {number} new remaining hit dice count
- */
-export function calcLongRestHitDiceRestored(totalCount, currentCount) {
-  const total = Math.max(0, Math.floor(totalCount) || 0);
-  const current = Math.max(0, Math.floor(currentCount) || 0);
-  if (total === 0) return 0;
-  const restored = Math.max(1, Math.floor(total / 2));
-  return Math.min(total, current + restored);
-}
-
-/**
  * Roll hit dice for healing during a short rest: each die adds the CON modifier and the total heals
  * at least 1 HP per die spent. The rule itself lives in the dice engine (rollHitDice); this is its
  * name in the rest module. Returns { rolls, rawTotal, healing }.
  */
 export { rollHitDice as rollHitDiceForHealing } from '../modules/dice.js';
+import * as HitDice from '../modules/hit-dice.js';
 
-function parseHitDiceStr(hdStr) {
-  const bs = String.fromCharCode(92);
-  const m = (hdStr || "").match(new RegExp("^(" + bs + "d+)d(" + bs + "d+)"));
-  if (!m) return { count: 0, size: 0 };
-  return { count: parseInt(m[1], 10), size: parseInt(m[2], 10) };
-}
-
-export function applyShortRest(char, healAmount, hitDiceSpent) {
+export function applyShortRest(char, healAmount, hitDiceSpent, dieSize) {
   if (!char) return char;
   const maxHP = parseInt(char.maxHP) || 0;
   const currentHP = parseInt(char.currentHP) || 0;
@@ -76,9 +54,11 @@ export function applyShortRest(char, healAmount, hitDiceSpent) {
   char.currentHP = Math.min(maxHP, currentHP + heal);
   const spent = Math.max(0, Math.floor(parseInt(hitDiceSpent) || 0));
   if (spent > 0 && char.hitDiceRemaining) {
-    const { count, size } = parseHitDiceStr(char.hitDiceRemaining);
-    if (size > 0) {
-      char.hitDiceRemaining = Math.max(0, count - spent) + "d" + size;
+    // Dice are spent from one size: the one given, else the largest that still has dice
+    const pool = HitDice.resolveRemaining(HitDice.parse(char.hitDice), char.hitDiceRemaining);
+    if (pool) {
+      const size = dieSize || HitDice.defaultSize(pool) || pool[0].size;
+      char.hitDiceRemaining = HitDice.format(HitDice.spend(pool, size, spent));
     }
   }
   return char;
@@ -90,14 +70,12 @@ export function applyLongRest(char) {
   char.currentHP = parseInt(char.maxHP) || 0;
   char.tempHP = 0;
 
-  // Restore hit dice: regain half total (rounded down), minimum 1
+  // Restore hit dice: regain half the total number (rounded down, minimum 1), largest die first
   if (char.hitDiceRemaining !== undefined && char.hitDice !== undefined) {
-    const { count: total, size } = parseHitDiceStr(char.hitDice);
-    const { count: remaining } = parseHitDiceStr(char.hitDiceRemaining);
-    if (total > 0 && size > 0) {
-      const restored = Math.max(1, Math.floor(total / 2));
-      const newCount = Math.min(total, remaining + restored);
-      char.hitDiceRemaining = newCount + "d" + size;
+    const total = HitDice.parse(char.hitDice);
+    if (total && HitDice.totalDice(total) > 0) {
+      const remaining = HitDice.resolveRemaining(total, char.hitDiceRemaining) || total.map(t => ({ size: t.size, count: 0 }));
+      char.hitDiceRemaining = HitDice.format(HitDice.restoreLong(total, remaining));
     }
   }
 

@@ -16,7 +16,7 @@ The DM's Toolbox has evolved through focused feature releases. Minor versions (2
 - **1.9.x**: Battle map measurement tools, persistent fog shapes, and generator integration across NPC/Tavern/Shop systems
 - **1.8.x**: Spell database expansion to 432+ spells, inventory management, loot generator overhaul, and character token generation
 
-**Current version: 2.3.10 (September 2026)**
+**Current version: 2.3.11 (September 2026)**
 
 ---
 
@@ -24,6 +24,35 @@ The DM's Toolbox has evolved through focused feature releases. Minor versions (2
 
 ### Known issues
 - **Flaky end-to-end test: "a blank count is invalid, not too many, and nothing is rolled"** (`tests/e2e/dice-callers.spec.js`, Character Sheet hit-dice count) — this test fails intermittently. It has failed once in a full-suite run, once in a run of three solo runs, and once in a comparison run, and passes on most other runs (eight consecutive repeat runs, and two later full-suite runs, all passed). The cause has not been identified; the likely area is timing around the hit-dice modal and the toast it asserts on, and the failure has not been captured with a message. It has not been observed as a product bug: the behavior it checks (a blank hit-dice count shows "Invalid number of hit dice to spend." instead of the over-limit message, and nothing is rolled) works when exercised by hand and in every passing run. Re-run before treating a red result on this test as a regression, and harden the test's waits when it is next touched.
+
+---
+
+## [2.3.11] - 2026-09-20
+**Level-Up Follow-Ups and Multiclass Hit Dice**
+
+### Fixed
+- **Character Sheet: multiclass hit dice were tracked as one die size** — a mixed pool such as `3d8 + 4d6` could only be spent from its first die. Hit dice are now a pool by die size: the short-rest window offers a die choice when more than one size is left, spending a d6 leaves the d8s, a long rest restores half the total number of dice (at least 1) largest die first, and Combat Mode asks which die to spend. Level-up adds its die to that size (or starts a new size). Single-class values such as `5d8` read and print exactly as before, and an older single remaining value (for example `6d6` against a total of `2d8 + 4d6`) is counted against the total, not discarded
+- **Character Sheet: a remaining hit-dice value that cannot be right is now kept in range** — a count above the total is cut back, a die size the total does not have is dropped, and blank or `0d0` means no dice are left ("No hit dice remaining") instead of "Invalid hit dice format". Spending or adding with a non-numeric, fractional or negative count changes nothing
+- **Character Sheet: switching a single-class level-up to a new class kept the current class's steps** — the current class's features, ASI requirement, spell learning and spell slots stayed on screen. Changing the path or the chosen class now rebuilds the level-up: the steps, hit die and spell slots belong to the class being added, and switching back restores the current class's. An HP method already picked is kept when it still applies
+- **Character Sheet: a new class with no usable hit die** — no die is guessed and the current class's die is never used. The HP step explains that hit-die data is missing and lets you type the HP gained; nothing is added to the hit-dice pool. Text that is not a die (for example `d8 (large)` in homebrew data) counts as missing; numeric text such as `10` still works. The New Class list is now built from the classes the app knows, so homebrew classes appear in it
+- **Character Sheet: a save that finished after switching characters could change the wrong sheet** — the unsaved dot, last-saved time and "Character saved" message are now touched only if the same character is still on screen. The write itself always completes
+- **Character Sheet: older resource records lost keys on level-up** — the conversion to the resource list now keeps every `res1`, `res2`, `res4`, … key in numeric order, with each record's own fields
+- **Character Sheet: one failure message per failed save** — a failed Save shows a single "not saved" message (no extra browser alert), a failed level-up shows only its own notice, and repeated automatic-save failures are reported once until a save succeeds or you press Save. The sheet stays marked unsaved throughout and autosave keeps trying
+- **Character Sheet: the level-up class picker** — a class already at level 20 is shown but not offered, and the choices stay disabled until the window has finished opening, so a click during the fade-in is no longer lost
+
+### Changed
+- New shared hit-dice module (`js/modules/hit-dice-engine.js`) used by the sheet, Combat Mode, the rest rules and level-up; the stored `hitDice` and `hitDiceRemaining` stay plain text with no schema change
+- A multiclass hit-dice total now merges equal die sizes (Cleric d8 + Rogue d8 prints `3d8`), and a class with no hit-die data adds no dice
+- Removed the unused long-rest helper `calcLongRestHitDiceRestored`; its rule is now covered by the hit-dice tests
+- **Tests:** new level-up follow-up spec (24 tests) and hit-dice unit tests (38), mutation-checked; `HitDicePool` added to the ESLint globals
+
+### Known issues (follow-ups)
+- Changing the level-up path or new class clears a racial-feature choice and a manual HP value, and the class list loses focus
+- If a level-up save fails, later automatic-save failures stay quiet; a failure for a character no longer on screen shows no unsaved marker; the level-up save chain has no catch for an error after a successful write
+- A newly added class's level-1 features, spells and selectable choices (for example a Fighter's Fighting Style) are not offered
+- The sheet export prints hit dice as `remaining/level` followed by the raw hit-dice text
+- The long-rest hit-dice logic is written twice (sheet and rest module)
+- The Playwright test server can crash with `EMFILE` on long runs of the full suite; run the specs in smaller groups
 
 ---
 

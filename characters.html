@@ -20,6 +20,7 @@
   <script src="/js/generated/srd-allowlist.js"></script>
   <script src="/js/modules/srd-content-filter.js"></script>
   <script src="/js/modules/dice-engine.js"></script>
+  <script src="/js/modules/hit-dice-engine.js"></script>
 
   <style>
     .bgimage{
@@ -3910,6 +3911,11 @@
               <label class="form-label mb-0"><strong>Available Hit Dice:</strong></label>
               <span id="hdModalAvailable" class="badge bg-secondary fs-6">0d0</span>
             </div>
+          </div>
+
+          <div class="mb-3" id="hdDieSizeRow" style="display: none;">
+            <label for="hdDieSize" class="form-label">Which hit die?</label>
+            <select class="form-select" id="hdDieSize"></select>
           </div>
 
           <div class="mb-3">

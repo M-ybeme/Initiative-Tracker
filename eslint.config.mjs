@@ -67,6 +67,7 @@ export default [
         DM_TOOLBOX_BUILD: 'readonly',
         LevelUpData: 'readonly',
         DiceEngine: 'readonly',        // js/modules/dice-engine.js (classic script)
+        HitDicePool: 'readonly',       // js/modules/hit-dice-engine.js (classic script)
         SPELLS_DATA: 'readonly',
         RULES_DATA: 'readonly',
 
