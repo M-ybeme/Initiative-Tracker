@@ -16,7 +16,7 @@ The DM's Toolbox has evolved through focused feature releases. Minor versions (2
 - **1.9.x**: Battle map measurement tools, persistent fog shapes, and generator integration across NPC/Tavern/Shop systems
 - **1.8.x**: Spell database expansion to 432+ spells, inventory management, loot generator overhaul, and character token generation
 
-**Current version: 2.3.12 (September 2026)**
+**Current version: 2.3.13 (September 2026)**
 
 ---
 
@@ -24,6 +24,30 @@ The DM's Toolbox has evolved through focused feature releases. Minor versions (2
 
 ### Known issues
 - **Flaky end-to-end test: "a blank count is invalid, not too many, and nothing is rolled"** (`tests/e2e/dice-callers.spec.js`, Character Sheet hit-dice count) — this test fails intermittently. It has failed once in a full-suite run, once in a run of three solo runs, and once in a comparison run, and passes on most other runs (eight consecutive repeat runs, and two later full-suite runs, all passed). The cause has not been identified; the likely area is timing around the hit-dice modal and the toast it asserts on, and the failure has not been captured with a message. It has not been observed as a product bug: the behavior it checks (a blank hit-dice count shows "Invalid number of hit dice to spend." instead of the over-limit message, and nothing is rolled) works when exercised by hand and in every passing run. Re-run before treating a red result on this test as a regression, and harden the test's waits when it is next touched.
+
+---
+
+## [2.3.13] - 2026-09-20
+**SRD 5.2.1 Licensing and Journal Word Export**
+
+### Fixed
+- **Journal: Word export did not work** — `journal.html` loaded the `docx` library from `https://unpkg.com/docx@8.5.0/build/index.js`, which returns 404, so the library never loaded. It now loads the same version's working build, `build/index.umd.js`. Word export produces a real `.docx`
+- **SRD licensing: the app mixed SRD 5.1 and 5.2** — the shared notices served SRD 5.1 text and the 5.1 PDF link (`media.wizards.com`), while four export formatters printed a hard-coded "SRD 5.2" label beside it. The notices, the label and the reference link now all come from one place and refer to SRD 5.2.1; the reference link is the official SRD 5.2.1 PDF. No formatter guesses the version any more
+- **Exports: the official SRD 5.2.1 attribution statement is used, exactly as published** — Journal (Plain Text, Markdown, Word, PDF), the character-sheet exports and footer, and the diagnostics panel print it once and unchanged. Formatters no longer link words inside it, append a second Creative Commons URL, or add a separate "License:" line, because the statement already contains the SRD and Creative Commons links. The product identity disclaimer stays a separate element
+- **SRD licensing: a missing shared dependency now says so** — if the shared notices are not available, an export fails with "SRD licensing information is unavailable." instead of a cryptic error, and the diagnostics panel shows that message
+
+### Changed
+- The 2.3.12 Journal load error (`SRD_PDF_URL` declared in both `site.js` and `journal-export.js`) stays covered by the Journal export tests. The 2.2.6 `const` to `var` change never addressed it: a global `var` also collides with a global `const`
+- The root README's SRD reference link points at the canonical `https://www.dndbeyond.com/srd`; `docs/licensing/README.md` and the README quote the official attribution statement
+
+### Internal / Tests
+- The notices (version, label, reference link, attribution, disclaimer) are defined once in `js/site.js` (`window.getSrdLicenseNotices()`), inside a scope that adds no globals; `error-handling.js`, `character-sheet-export.js`, `journal-export.js` and `export-utils.js` no longer keep copies. `export-utils.js`, which no page loads, takes the notices as an explicit option
+- New SRD licensing spec: the notices identify SRD 5.2.1 and the official PDF, the attribution equals the official statement word for word, and Journal TXT, Markdown, Word and PDF, the character-sheet footer and the diagnostics panel each print it once and unchanged. The Journal Word test is now a real export (no skip) that checks a `.docx` container is produced
+
+### Known issues (follow-ups)
+- `docs/SPELLS.md` still describes the spell dataset as SRD 5.1; that is a data-source claim to audit separately, not licensing metadata
+- The product identity disclaimer still says "System Reference Document 5.2" (only the required attribution statement names 5.2.1)
+- The Journal PDF test skips if the jsPDF library cannot be loaded from its CDN
 
 ---
 

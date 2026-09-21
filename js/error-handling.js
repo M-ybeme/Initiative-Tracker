@@ -320,50 +320,18 @@ export function handleExportError(error, operation, format = 'file') {
 // DIAGNOSTICS PANEL
 // ============================================================
 
-const DIAGNOSTICS_LICENSE_PHRASE = 'Creative Commons Attribution 4.0 International License';
-const SRD_PDF_URL = 'https://media.wizards.com/2016/downloads/DND/SRD-OGL_V5.1.pdf';
-const DIAGNOSTICS_LICENSE_DEFAULTS = {
-  attributionText: 'This work includes material from the System Reference Document 5.1 by Wizards of the Coast LLC and is licensed for our use under the Creative Commons Attribution 4.0 International License.',
-  productIdentityDisclaimer: 'The DM\'s Toolbox references rules and mechanics from the Dungeons & Dragons 5e System Reference Document 5.1. Wizards of the Coast, Dungeons & Dragons, Forgotten Realms, Ravenloft, Eberron, the dragon ampersand, beholders, githyanki, githzerai, mind flayers, yuan-ti, and all other Wizards of the Coast product identity are trademarks of Wizards of the Coast LLC in the U.S.A. and other countries. The DM\'s Toolbox is not affiliated with, endorsed, sponsored, or specifically approved by Wizards of the Coast LLC.',
-  licenseUrl: 'https://creativecommons.org/licenses/by/4.0/',
-  srdUrl: SRD_PDF_URL
-};
-
+// The license notices come from site.js (window.getSrdLicenseNotices); null when it is not available. There is no
+// local copy of them here.
 function resolveDiagnosticsLicenseInfo() {
-  if (typeof window !== 'undefined') {
-    if (typeof window.getSrdLicenseNotices === 'function') {
-      return window.getSrdLicenseNotices();
-    }
-    if (window.SRDLicensing) {
-      return {
-        attributionText: window.SRDLicensing.attributionText || DIAGNOSTICS_LICENSE_DEFAULTS.attributionText,
-        productIdentityDisclaimer: window.SRDLicensing.productIdentityDisclaimer || DIAGNOSTICS_LICENSE_DEFAULTS.productIdentityDisclaimer,
-        licenseUrl: window.SRDLicensing.licenseUrl || DIAGNOSTICS_LICENSE_DEFAULTS.licenseUrl,
-        srdUrl: window.SRDLicensing.srdUrl || DIAGNOSTICS_LICENSE_DEFAULTS.srdUrl
-      };
-    }
+  if (typeof window === 'undefined' || typeof window.getSrdLicenseNotices !== 'function') {
+    return null;
   }
-  return { ...DIAGNOSTICS_LICENSE_DEFAULTS };
+  return window.getSrdLicenseNotices();
 }
 
 function diagnosticsEscapeHtml(text = '') {
   const entities = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
   return text.replace(/[&<>"']/g, (char) => entities[char] || char);
-}
-
-function formatDiagnosticsAttribution(text, url) {
-  const safeText = diagnosticsEscapeHtml(text);
-  if (!url) {
-    return safeText;
-  }
-  const encodedPhrase = diagnosticsEscapeHtml(DIAGNOSTICS_LICENSE_PHRASE);
-  if (!safeText.includes(encodedPhrase)) {
-    return `${safeText} <a href="${url}" target="_blank" rel="noopener noreferrer" style="color:#6fe7d2;">${encodedPhrase}</a>`;
-  }
-  return safeText.replace(
-    encodedPhrase,
-    `<a href="${url}" target="_blank" rel="noopener noreferrer" style="color:#6fe7d2;">${encodedPhrase}</a>`
-  );
 }
 
 function formatDiagnosticsTimestamp(value) {
@@ -576,10 +544,13 @@ async function showDiagnosticsPanel() {
   const packDiagnostics = await getContentPackDiagnostics();
   const error = getLastError();
   const licenseInfo = resolveDiagnosticsLicenseInfo();
-  const licenseAttributionHtml = formatDiagnosticsAttribution(licenseInfo.attributionText, licenseInfo.licenseUrl);
-  const licenseDisclaimerHtml = diagnosticsEscapeHtml(licenseInfo.productIdentityDisclaimer);
-  const srdPdfLinkHtml = licenseInfo.srdUrl
-    ? `<div style="font-size: 11px; line-height: 1.5; margin-top: 6px;">SRD 5.2 Reference PDF: <a href="${diagnosticsEscapeHtml(licenseInfo.srdUrl)}" target="_blank" rel="noopener noreferrer" style="color:#6fe7d2;">Download from Wizards</a></div>`
+  // Without site.js's notices the panel says so, rather than showing a copy of them
+  const licenseAttributionHtml = licenseInfo
+    ? diagnosticsEscapeHtml(licenseInfo.attributionText)
+    : 'SRD licensing information is unavailable.';
+  const licenseDisclaimerHtml = licenseInfo ? diagnosticsEscapeHtml(licenseInfo.productIdentityDisclaimer) : '';
+  const srdPdfLinkHtml = licenseInfo && licenseInfo.srdUrl
+    ? `<div style="font-size: 11px; line-height: 1.5; margin-top: 6px;">${diagnosticsEscapeHtml(licenseInfo.referenceLabel)}: <a href="${diagnosticsEscapeHtml(licenseInfo.srdUrl)}" target="_blank" rel="noopener noreferrer" style="color:#6fe7d2;">Download from Wizards</a></div>`
     : '';
 
   const packSectionHtml = (() => {

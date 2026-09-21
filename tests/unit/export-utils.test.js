@@ -1,13 +1,24 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, afterEach } from 'vitest';
 import {
   formatModifier,
-  generateCharacterText,
-  generateCharacterMarkdown,
+  generateCharacterText as generateCharacterTextWith,
+  generateCharacterMarkdown as generateCharacterMarkdownWith,
   generateCharacterJSON,
   generateStatBlock,
   generateInitiativeExport,
   parseCharacterImport
 } from '../../js/modules/export-utils.js';
+
+// The module never defines license notices. In the browser they come from site.js (window.getSrdLicenseNotices); these
+// tests pass them in explicitly, so no browser global is needed.
+const LICENSE = {
+  referenceLabel: 'SRD 5.2.1 Reference PDF',
+  srdUrl: 'https://example.test/srd/SRD_CC_v5.2.1.pdf',
+  attributionText: 'This work includes material from the System Reference Document 5.2.1 (“SRD 5.2.1”) by Wizards of the Coast LLC, available at https://www.dndbeyond.com/srd. The SRD 5.2.1 is licensed under the Creative Commons Attribution 4.0 International License, available at https://creativecommons.org/licenses/by/4.0/legalcode.',
+  productIdentityDisclaimer: 'Test disclaimer for System Reference Document 5.2.'
+};
+const generateCharacterText = (character) => generateCharacterTextWith(character, { licenseInfo: LICENSE });
+const generateCharacterMarkdown = (character) => generateCharacterMarkdownWith(character, { licenseInfo: LICENSE });
 
 describe('formatModifier', () => {
   it('formats positive modifiers with +', () => {
@@ -100,6 +111,7 @@ describe('generateCharacterText', () => {
     const text = generateCharacterText(testCharacter);
     expect(text).toContain('LICENSE & ATTRIBUTION');
     expect(text).toContain('System Reference Document 5.2');
+    expect(text).toContain(`${LICENSE.referenceLabel}: ${LICENSE.srdUrl}`);
   });
 });
 
@@ -155,6 +167,43 @@ describe('generateCharacterMarkdown', () => {
     const md = generateCharacterMarkdown(testCharacter);
     expect(md).toContain('## License & Attribution');
     expect(md).toContain('Creative Commons Attribution 4.0 International License');
+    expect(md).toContain(`[${LICENSE.referenceLabel}](${LICENSE.srdUrl})`);
+    expect(md).not.toContain('[Creative Commons');
+  });
+});
+
+describe('license notices are a required input, never defined here', () => {
+  const character = { name: 'Test Hero', level: 3 };
+  afterEach(() => { delete globalThis.getSrdLicenseNotices; });
+
+  it('fails with a clear message when neither an explicit value nor the shared accessor exists', () => {
+    expect(() => generateCharacterTextWith(character)).toThrow('SRD licensing information is unavailable.');
+    expect(() => generateCharacterMarkdownWith(character)).toThrow('SRD licensing information is unavailable.');
+  });
+
+  it('prints the label and link it is given, whatever they are (no version is assumed)', () => {
+    const custom = { ...LICENSE, referenceLabel: 'Some Reference', srdUrl: 'https://example.test/other.pdf' };
+    expect(generateCharacterTextWith(character, { licenseInfo: custom })).toContain('Some Reference: https://example.test/other.pdf');
+    expect(generateCharacterMarkdownWith(character, { licenseInfo: custom })).toContain('[Some Reference](https://example.test/other.pdf)');
+  });
+
+  it('reads the shared accessor when one is present on the global scope', () => {
+    globalThis.getSrdLicenseNotices = () => ({ ...LICENSE, referenceLabel: 'From the accessor' });
+    expect(generateCharacterTextWith(character)).toContain('From the accessor:');
+  });
+
+  it('prints the attribution statement exactly once and unchanged, in both formats', () => {
+    for (const out of [generateCharacterTextWith(character, { licenseInfo: LICENSE }), generateCharacterMarkdownWith(character, { licenseInfo: LICENSE })]) {
+      expect(out.split(LICENSE.attributionText).length - 1).toBe(1);
+      expect(out.split('creativecommons.org').length - 1, 'no Creative Commons URL besides the one in the statement').toBe(1);
+      expect(out).not.toContain('by/4.0/)');
+      expect(out).not.toContain('License: ');
+    }
+  });
+
+  it('a null character still returns an empty string without needing notices', () => {
+    expect(generateCharacterTextWith(null)).toBe('');
+    expect(generateCharacterMarkdownWith(null)).toBe('');
   });
 });
 

@@ -110,15 +110,18 @@ test.describe('Journal export through the real controls', () => {
     expect(errors, errors.join('\n')).toEqual([]);
   });
 
-  test('Word export downloads a .docx', async ({ page }) => {
+  test('Word export downloads a real .docx', async ({ page }) => {
+    const errors = watchErrors(page);
     await openJournal(page);
-    // journal.html loads docx from https://unpkg.com/docx@8.5.0/build/index.js, which is currently a 404, so the library
-    // never loads and Word export cannot work. This test runs as soon as the library does load.
-    test.skip(!(await page.evaluate(() => typeof window.docx === 'object')), 'the docx library did not load (the page URL for it is a 404)');
+    // journal.html loads docx 8.5.0's UMD build (build/index.umd.js), which publishes window.docx
+    expect(await page.evaluate(() => ['Document', 'Packer', 'Paragraph', 'TextRun', 'HeadingLevel'].every(k => k in (window.docx || {})))).toBe(true);
     await writeEntry(page, 'Export Check', 'Goblins on the road');
     const download = await exportViaUi(page, 'word');
     expect(download.suggestedFilename()).toBe('export_check.docx');
-    expect(fs.statSync(await download.path()).size).toBeGreaterThan(1000);
+    const bytes = fs.readFileSync(await download.path());
+    expect(bytes.length).toBeGreaterThan(1000);
+    expect(bytes.subarray(0, 2).toString('latin1'), 'a .docx is a ZIP container').toBe('PK');
+    expect(errors, errors.join('\n')).toEqual([]);
   });
 
   test('PDF export downloads a .pdf', async ({ page }) => {

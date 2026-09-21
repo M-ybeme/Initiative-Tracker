@@ -2,7 +2,7 @@
 
 **A comprehensive, browser-based suite of tools for tabletop RPG Game Masters**
 
-**Live Site:** [https://dnddmtoolbox.netlify.app/](https://dnddmtoolbox.netlify.app/) · **Version:** 2.3.12
+**Live Site:** [https://dnddmtoolbox.netlify.app/](https://dnddmtoolbox.netlify.app/) · **Version:** 2.3.13
 
 ---
 
@@ -298,9 +298,9 @@ The DM's Toolbox includes accessibility features:
 
 ### SRD Attribution Text
 
-This work includes material from the System Reference Document 5.2 by Wizards of the Coast LLC and is licensed for our use under the Creative Commons Attribution 4.0 International License.
+This work includes material from the System Reference Document 5.2.1 (“SRD 5.2.1”) by Wizards of the Coast LLC, available at https://www.dndbeyond.com/srd. The SRD 5.2.1 is licensed under the Creative Commons Attribution 4.0 International License, available at https://creativecommons.org/licenses/by/4.0/legalcode.
 
 ### Reference Materials
 
 - [Creative Commons Attribution 4.0 International License](https://creativecommons.org/licenses/by/4.0/)
-- [D&D 5.2 System Reference Document (2024)](https://www.dndbeyond.com/resources/1781-systems-reference-document-52)
+- [D&D System Reference Document 5.2.1](https://www.dndbeyond.com/srd)

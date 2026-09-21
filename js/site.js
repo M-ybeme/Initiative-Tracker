@@ -1,7 +1,9 @@
 const DM_TOOLBOX_BUILD = {
   name: "The DM's Toolbox",
-  version: "2.3.12",
+  version: "2.3.13",
   recentChanges: [
+    "Fix: exports, the diagnostics panel and the character-sheet footer now show the official SRD 5.2.1 attribution statement exactly as published, with the SRD 5.2.1 reference link, instead of mixed SRD 5.1 and 5.2 wording",
+    "Fix: Journal Word export works again (its Word library link was broken)",
     "Fix: the Journal page's export script failed to load (a duplicate SRD_PDF_URL declaration), so every Journal export button did nothing; TXT, Markdown, PDF and bulk export work again",
     "Fix: multiclass characters now track hit dice by die size (for example 3d8 + 4d6): short rests spend from the die you choose, long rests restore the largest dice first, and level-ups add the right die",
     "Fix: on a single-class level-up, switching to a new class now shows that class's steps, hit die and spell slots instead of the current class's; a class with no hit-die data lets you enter HP by hand",
@@ -24,37 +26,39 @@ console.log(
   `${DM_TOOLBOX_BUILD.name} v${DM_TOOLBOX_BUILD.version} – built ${DM_TOOLBOX_BUILD.buildTime} by ${DM_TOOLBOX_BUILD.author}`
 );
 
-const SRD_PDF_URL = 'https://media.wizards.com/2016/downloads/DND/SRD-OGL_V5.1.pdf';
-const SRD_LICENSE_DEFAULTS = {
-  attributionText: 'This work includes material from the System Reference Document 5.1 by Wizards of the Coast LLC and is licensed for our use under the Creative Commons Attribution 4.0 International License.',
-  productIdentityDisclaimer: 'The DM\'s Toolbox references rules and mechanics from the Dungeons & Dragons 5e System Reference Document 5.1. Wizards of the Coast, Dungeons & Dragons, Forgotten Realms, Ravenloft, Eberron, the dragon ampersand, beholders, githyanki, githzerai, mind flayers, yuan-ti, and all other Wizards of the Coast product identity are trademarks of Wizards of the Coast LLC in the U.S.A. and other countries. The DM\'s Toolbox is not affiliated with, endorsed, sponsored, or specifically approved by Wizards of the Coast LLC.',
-  licenseUrl: 'https://creativecommons.org/licenses/by/4.0/',
-  srdUrl: SRD_PDF_URL
-};
+// SRD licensing notices: the one place their text, version and reference link are defined. Everything that prints
+// them (Journal and character-sheet exports, the diagnostics panel) calls window.getSrdLicenseNotices() and uses the
+// fields it returns, including `referenceLabel` for the "SRD x.y.z Reference PDF" line, so no formatter guesses the
+// version. `attributionText` is the official statement and is printed exactly as it is here: formatters must not
+// link, rewrite or add to it (it already contains the SRD and Creative Commons links). window.SRDLicensing can
+// override individual fields before this runs. Scoped so it adds no other globals.
+(function () {
+  const SRD_VERSION = '5.2.1';
+  const DEFAULTS = Object.freeze({
+    referenceLabel: `SRD ${SRD_VERSION} Reference PDF`,
+    // The official English SRD 5.2.1 PDF, linked from https://www.dndbeyond.com/srd
+    srdUrl: 'https://media.dndbeyond.com/compendium-images/srd/5.2/SRD_CC_v5.2.1.pdf',
+    attributionText: 'This work includes material from the System Reference Document 5.2.1 (“SRD 5.2.1”) by Wizards of the Coast LLC, available at https://www.dndbeyond.com/srd. The SRD 5.2.1 is licensed under the Creative Commons Attribution 4.0 International License, available at https://creativecommons.org/licenses/by/4.0/legalcode.',
+    productIdentityDisclaimer: 'The DM\'s Toolbox references rules and mechanics from the Dungeons & Dragons 5e System Reference Document 5.2. Wizards of the Coast, Dungeons & Dragons, Forgotten Realms, Ravenloft, Eberron, the dragon ampersand, beholders, githyanki, githzerai, mind flayers, yuan-ti, and all other Wizards of the Coast product identity are trademarks of Wizards of the Coast LLC in the U.S.A. and other countries. The DM\'s Toolbox is not affiliated with, endorsed, sponsored, or specifically approved by Wizards of the Coast LLC.'
+  });
 
-function resolveLicenseInfo(source) {
-  const info = { ...SRD_LICENSE_DEFAULTS };
-  if (source && typeof source === 'object') {
-    if (typeof source.attributionText === 'string' && source.attributionText.trim()) {
-      info.attributionText = source.attributionText.trim();
+  function resolveLicenseInfo(source) {
+    const info = { ...DEFAULTS };
+    if (source && typeof source === 'object') {
+      Object.keys(DEFAULTS).forEach((key) => {
+        if (typeof source[key] === 'string' && source[key].trim()) {
+          info[key] = source[key].trim();
+        }
+      });
     }
-    if (typeof source.productIdentityDisclaimer === 'string' && source.productIdentityDisclaimer.trim()) {
-      info.productIdentityDisclaimer = source.productIdentityDisclaimer.trim();
-    }
-    if (typeof source.licenseUrl === 'string' && source.licenseUrl.trim()) {
-      info.licenseUrl = source.licenseUrl.trim();
-    }
-    if (typeof source.srdUrl === 'string' && source.srdUrl.trim()) {
-      info.srdUrl = source.srdUrl.trim();
-    }
+    return info;
   }
-  return info;
-}
 
-window.SRDLicensing = resolveLicenseInfo(window.SRDLicensing);
-window.getSrdLicenseNotices = function getSrdLicenseNotices() {
-  return resolveLicenseInfo(window.SRDLicensing);
-};
+  window.SRDLicensing = resolveLicenseInfo(window.SRDLicensing);
+  window.getSrdLicenseNotices = function getSrdLicenseNotices() {
+    return resolveLicenseInfo(window.SRDLicensing);
+  };
+})();
 
 // Initialize global error handling and diagnostics panel
 // Uses dynamic import since site.js is loaded as a regular script

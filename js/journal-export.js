@@ -6,23 +6,21 @@
 // exists (that is what happened with SRD_PDF_URL). The only thing published to the page is window.JournalExport.
 (() => {
 
-// The license name inside the shared attribution text, which wrapLicensePhrase links
-const JOURNAL_LICENSE_PHRASE = 'Creative Commons Attribution 4.0 International License';
-
 window.JournalExport = {
-  // The license notices come from site.js (loaded before this file); there is no local copy of them
+  // The license notices (text, SRD version label, reference link) come from site.js, loaded before this file;
+  // there is no local copy of them
   getLicenseNotices() {
+    if (typeof window.getSrdLicenseNotices !== 'function') {
+      throw new Error('SRD licensing information is unavailable.');
+    }
     return window.getSrdLicenseNotices();
   },
 
   buildPlainTextLicenseSection() {
     const info = this.getLicenseNotices();
     const lines = ['', 'License & Attribution', '---------------------', info.attributionText];
-    if (info.licenseUrl) {
-      lines.push(`License: ${info.licenseUrl}`);
-    }
     if (info.srdUrl) {
-      lines.push(`SRD 5.2 PDF: ${info.srdUrl}`);
+      lines.push(`${info.referenceLabel}: ${info.srdUrl}`);
     }
     lines.push(info.productIdentityDisclaimer);
     return lines.join('\n');
@@ -30,10 +28,9 @@ window.JournalExport = {
 
   buildMarkdownLicenseSection() {
     const info = this.getLicenseNotices();
-    const attribution = this.wrapLicensePhrase(info.attributionText, info.licenseUrl, 'markdown');
-    const lines = ['\n---', '## License & Attribution', attribution];
+    const lines = ['\n---', '## License & Attribution', info.attributionText];
     if (info.srdUrl) {
-      lines.push('', `[SRD 5.2 Reference PDF](${info.srdUrl})`);
+      lines.push('', `[${info.referenceLabel}](${info.srdUrl})`);
     }
     lines.push('', info.productIdentityDisclaimer);
     return lines.join('\n');
@@ -41,22 +38,20 @@ window.JournalExport = {
 
   buildDocxLicenseParagraphs({ Paragraph, HeadingLevel }) {
     const info = this.getLicenseNotices();
-    const attribution = info.licenseUrl ? `${info.attributionText} (${info.licenseUrl})` : info.attributionText;
     const paragraphs = [
       new Paragraph({ text: '', spacing: { after: 200 } }),
       new Paragraph({ text: 'License & Attribution', heading: HeadingLevel.HEADING_2 }),
-      new Paragraph({ text: attribution }),
+      new Paragraph({ text: info.attributionText }),
       new Paragraph({ text: info.productIdentityDisclaimer })
     ];
     if (info.srdUrl) {
-      paragraphs.push(new Paragraph({ text: `SRD 5.2 Reference PDF: ${info.srdUrl}` }));
+      paragraphs.push(new Paragraph({ text: `${info.referenceLabel}: ${info.srdUrl}` }));
     }
     return paragraphs;
   },
 
   appendPdfLicense(doc, heading = 'License & Attribution') {
     const info = this.getLicenseNotices();
-    const attribution = info.licenseUrl ? `${info.attributionText} (${info.licenseUrl})` : info.attributionText;
     doc.addPage();
     let yPosition = 20;
     doc.setFontSize(16);
@@ -65,30 +60,17 @@ window.JournalExport = {
     yPosition += 10;
     doc.setFontSize(11);
     doc.setFont(undefined, 'normal');
-    const attributionLines = doc.splitTextToSize(attribution, 170);
+    const attributionLines = doc.splitTextToSize(info.attributionText, 170);
     doc.text(attributionLines, 20, yPosition);
     yPosition += attributionLines.length * 6;
     const disclaimerLines = doc.splitTextToSize(info.productIdentityDisclaimer, 170);
     yPosition += 6;
     doc.text(disclaimerLines, 20, yPosition);
     if (info.srdUrl) {
-      const srdLines = doc.splitTextToSize(`SRD 5.2 Reference PDF: ${info.srdUrl}`, 170);
+      const srdLines = doc.splitTextToSize(`${info.referenceLabel}: ${info.srdUrl}`, 170);
       yPosition += 6;
       doc.text(srdLines, 20, yPosition);
     }
-  },
-
-  wrapLicensePhrase(text, url, format) {
-    if (!url) {
-      return text;
-    }
-    if (!text.includes(JOURNAL_LICENSE_PHRASE)) {
-      return `${text} (${url})`;
-    }
-    if (format === 'markdown') {
-      return text.replace(JOURNAL_LICENSE_PHRASE, `[${JOURNAL_LICENSE_PHRASE}](${url})`);
-    }
-    return text.replace(JOURNAL_LICENSE_PHRASE, `${JOURNAL_LICENSE_PHRASE} (${url})`);
   },
 
   // Convert Quill Delta/HTML to plain text
