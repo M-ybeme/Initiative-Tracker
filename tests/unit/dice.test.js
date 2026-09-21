@@ -291,6 +291,7 @@ import {
   rollD20,
   describeFeatureRoll,
   getCriticalHitNotation,
+  normalizeLegacyDamageNotation,
   rollHitDice,
   rollDie as engineRollDie
 } from '../../js/modules/dice.js';
@@ -313,7 +314,7 @@ describe('the engine is one implementation reachable two ways', () => {
     runInNewContext(source, context);
     expect(Object.keys(context.DiceEngine).sort()).toEqual(
       ['MAX_DICE_COUNT', 'MAX_DICE_NOTATION_LENGTH', 'MAX_DIE_SIDES', 'createSeededRandom', 'describeFeatureRoll',
-        'getCriticalHitNotation', 'parseDiceExpression', 'parseDiceNotation', 'rollAbilityScore',
+        'getCriticalHitNotation', 'normalizeLegacyDamageNotation', 'parseDiceExpression', 'parseDiceNotation', 'rollAbilityScore',
         'rollAbilityScoreSet', 'rollD20', 'rollDiceExpression', 'rollDiceNotation', 'rollDie',
         'rollHitDice', 'rollMultipleDice'].sort());
     expect(context.DiceEngine.rollDie(6, () => 0.5)).toBe(4);
@@ -561,6 +562,26 @@ describe('getCriticalHitNotation', () => {
     expect(getCriticalHitNotation('1d8+3')).toBe('2d8+3');
     expect(getCriticalHitNotation('2d6-1')).toBe('4d6-1');
     expect(getCriticalHitNotation('d10')).toBe('2d10');
+  });
+  // Policy: a critical hit doubles the dice rolled; a keep group doubles its kept count with its dice
+  // ("drop the lowest 1 of 4" -> "drop the lowest 2 of 8"), so the keep rule is never silently lost.
+  it('doubles the kept count of keep-highest and keep-lowest groups along with the dice', () => {
+    expect(getCriticalHitNotation('4d6kh3')).toBe('8d6kh6');
+    expect(getCriticalHitNotation('4d6kl2')).toBe('8d6kl4');
+    expect(getCriticalHitNotation('4d6kh3+2')).toBe('8d6kh6+2');
+    expect(getCriticalHitNotation('2d20kl1-1')).toBe('4d20kl2-1');
+    expect(getCriticalHitNotation(' 4D6KH3 ')).toBe('8d6kh6');
+  });
+  it('leaves ordinary notation as it was', () => {
+    expect(getCriticalHitNotation('1d8')).toBe('2d8');
+    expect(getCriticalHitNotation('2d6+3')).toBe('4d6+3');
+  });
+  it('a doubled keep group still parses and keeps the same share of its dice', () => {
+    const crit = parseDiceNotation(getCriticalHitNotation('4d6kh3'));
+    expect(crit).toMatchObject({ count: 8, sides: 6, keepHighest: 6, keepLowest: null });
+    const rolled = rollDiceNotation('8d6kh6', undefined);
+    expect(rolled.rolls).toHaveLength(8);
+    expect(rolled.kept).toHaveLength(6);
   });
   it('is null for anything that is not one dice group', () => {
     expect(getCriticalHitNotation('2d6+1d4')).toBeNull();
@@ -824,5 +845,30 @@ describe('getCriticalHitNotation at the dice limit', () => {
 
   it('a normal roll of that count is still fine, so only the crit is refused', () => {
     expect(rollDiceNotation(largestSafe + 1 + 'd6', () => 0.5)).not.toBeNull();
+  });
+});
+
+describe('negative zero', () => {
+  it('a "-0" modifier is 0, not -0, in single notation and in expressions', () => {
+    expect(Object.is(parseDiceNotation('1d6-0').modifier, 0)).toBe(true);
+    const rolled = rollDiceNotation('1d6-0', () => 0.5);
+    expect(Object.is(rolled.modifier, 0)).toBe(true);
+    const expr = rollDiceExpression('1d6-0', () => 0.5);
+    expect(expr.parts.filter(p => p.type === 'mod').every(p => Object.is(p.n, 0))).toBe(true);
+    expect(Object.is(rollDiceExpression('-0').total, 0)).toBe(true);
+  });
+});
+
+describe('normalizeLegacyDamageNotation', () => {
+  it('drops trailing damage-type words and nothing else', () => {
+    expect(normalizeLegacyDamageNotation('1d8+3 slashing')).toBe('1d8+3');
+    expect(normalizeLegacyDamageNotation('2d6 fire and cold')).toBe('2d6');
+    expect(normalizeLegacyDamageNotation('2d6+3')).toBe('2d6+3');
+    expect(normalizeLegacyDamageNotation('2d6+ fire')).toBe('2d6+'); // still invalid for the parsers
+    expect(normalizeLegacyDamageNotation('hello world')).toBe('hello world');
+  });
+  it('leaves an over-long string alone', () => {
+    const long = '1d6 ' + 'fire '.repeat(80);
+    expect(normalizeLegacyDamageNotation(long)).toBe(long);
   });
 });

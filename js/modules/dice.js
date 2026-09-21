@@ -23,6 +23,7 @@ export const {
   rollD20,
   describeFeatureRoll,
   getCriticalHitNotation,
+  normalizeLegacyDamageNotation,
   rollHitDice,
   rollAbilityScore,
   rollAbilityScoreSet,

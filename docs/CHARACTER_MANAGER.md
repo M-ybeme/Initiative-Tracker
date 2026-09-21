@@ -6,6 +6,10 @@ This document provides comprehensive information about the DM's Toolbox Characte
 
 The Character Manager is a complete D&D 5e character sheet system integrated into The DM's Toolbox. It supports full character creation, leveling (1-20), multiclassing, spell management, inventory tracking, and export functionality.
 
+### Last-Opened Character
+
+On startup the Character Manager reopens the character you last had open. If that character no longer exists (for example it was deleted), it falls back to the first character in the list. The choice is a per-browser preference kept outside the character record, so it is not part of exports.
+
 ## SRD Scope
 
 - The public build only surfaces races, subclasses, feats, and spells that appear in the System Reference Document 5.2.
@@ -173,6 +177,10 @@ The Character Manager is a complete D&D 5e character sheet system integrated int
 
 A **Jack of All Trades** checkbox sits above the Skills table. When enabled, `floor(proficiency bonus / 2)` is added to all non-proficient skill bonuses — covering the Bard class feature without requiring manual edits to every skill. The toggle is saved with the character and recalculates immediately on change.
 
+### Saving Throw and Skill Totals
+
+Saving-throw totals and skill totals are derived values, shown read-only. They update immediately when an ability score, the level (proficiency bonus), a proficiency or expertise checkbox, or Jack of All Trades changes: ability modifier + proficiency (doubled for expertise, halved for Jack of All Trades on non-proficient skills). They cannot be typed over, and there is currently no separate field for extra miscellaneous bonuses.
+
 ### Combat Snapshot (v2.2.1)
 
 **Features:**
@@ -211,7 +219,7 @@ All ability check, saving throw, and skill roll buttons support three modes:
 **Interactive Conditions:**
 - Active conditions appear as colored removal badges; click **×** to remove
 - **+** dropdown button adds any of the 19 standard conditions (Blinded, Charmed, Deafened, Exhaustion, Frightened, Grappled, Incapacitated, Invisible, Paralyzed, Petrified, Poisoned, Prone, Restrained, Stunned, Unconscious, Surprised, Concentrating, Blessed, Hexed, Raging)
-- Add/remove syncs immediately to the full sheet's condition buttons
+- Add/remove syncs immediately to the full sheet's condition buttons and the Conditions field, and is saved with the character
 
 **Exhaustion:**
 `−` / `+` buttons adjust level 0–10; saves automatically.
@@ -220,10 +228,10 @@ All ability check, saving throw, and skill roll buttons support three modes:
 When a slot (Action, Bonus Action, or Reaction) has already been used and is clicked again, a Bootstrap modal offers to start a new turn rather than using a browser `confirm()` dialog.
 
 **Short Rest / Long Rest:**
-Buttons at the bottom of the Resources panel. Short Rest opens the Hit Dice healing dialog (roll or take average, respects CON modifier, enforces max HP). Long Rest fully restores HP, spell slots, and class resources.
+Buttons at the bottom of the Resources panel. Short Rest opens the Hit Dice healing dialog (roll or take average, adds the character's CON modifier to each die, enforces max HP). Long Rest fully restores HP, spell slots, and class resources.
 
 **Rolls & History:**
-All rolls appear in the Dice History panel (last 50). The history button in combat view opens the full roll history modal.
+All rolls appear in the Dice History panel (last 50). The history button in combat view opens the full roll history modal. Attack damage rolled from Combat Mode (including critical hits and secondary damage) is recorded there too.
 
 ---
 
@@ -299,7 +307,7 @@ The Notes tab now supports a category selector instead of a single free-form fie
 - **Loot Leads** – treasure locations, item wishlist, pending sales
 - **Quest Hooks** – active and potential quest threads
 
-Switch between categories using the dropdown; each stores its own text. All categories are saved with the character and included in exports.
+Switch between categories using the dropdown; each stores its own text. All categories are saved with the character and included in exports. The category you are viewing is remembered as a per-browser interface preference (not stored in the character), so it stays selected across page reloads and when you switch characters.
 
 ---
 

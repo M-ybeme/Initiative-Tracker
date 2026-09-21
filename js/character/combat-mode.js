@@ -24,7 +24,8 @@
  *                 getAttackFeatureBonuses, addFlatBonusToNotation, getConcentrationAttackBonus,
  *                 getInitiativeAdvantageReason, isConcentrating, setConcentration,
  *                 handleConcentrationCheck, syncConditionsToField, updateSpellSlotsDisplay,
- *                 handleShortRest, handleLongRest, rollDice, renderRollHistory.
+ *                 rollDice, renderRollHistory. (Short and Long Rest are not called directly: the
+ *                 card's rest buttons click the sheet's own #shortRestBtn / #longRestBtn.)
  *   Events        the document events "characterLoaded" and "concentrationChanged" that character.js
  *                 dispatches, plus DOMContentLoaded.
  *
@@ -1181,12 +1182,9 @@
       // window.DiceEngine. This section only turns its results into the breakdown text shown here.
 
       // Older saved attacks sometimes carry the damage type inside the notation ("1d8+3 slashing").
-      // The engine is deliberately strict, so this wrapper first drops a trailing run of recognized
-      // damage-type / descriptive words that are separated from the dice by whitespace, and warns so
-      // the saved data can be found and fixed. Nothing else is repaired: the dice part is passed on
-      // exactly, and whatever the engine still rejects ("2d6+ fire", "4d6kh", "hello world") rolls 0.
-      const LEGACY_DAMAGE_WORDS = 'acid|bludgeoning|cold|fire|force|lightning|necrotic|piercing|poison|psychic|radiant|slashing|thunder|damage|magical|nonmagical|weapon|bonus|extra|and';
-      const LEGACY_TRAILING_TEXT = new RegExp(`\\s+(?:${LEGACY_DAMAGE_WORDS})(?:[ ,/-]+(?:${LEGACY_DAMAGE_WORDS}))*\\s*$`, 'i');
+      // The engine (DiceEngine.normalizeLegacyDamageNotation) drops the trailing words; this wrapper
+      // also warns so the saved data can be found and fixed. Whatever the engine still rejects
+      // ("2d6+ fire", "4d6kh", "hello world") rolls 0.
       // Diagnostics name the saved string, but never echo a huge one.
       function describeSavedText(text) {
         const s = String(text);
@@ -1194,9 +1192,7 @@
       }
       function normalizeLegacyDamageNotation(notation) {
         const text = String(notation);
-        // Past the engine's length limit the engine rejects the text anyway, so the regex never runs on it.
-        if (text.length > DiceEngine.MAX_DICE_NOTATION_LENGTH) return text;
-        const cleaned = text.replace(LEGACY_TRAILING_TEXT, '');
+        const cleaned = DiceEngine.normalizeLegacyDamageNotation(text); // the same cleanup the sheet's damage rolls use
         if (cleaned.trimEnd() !== text.trimEnd()) { // trailing spaces alone are not "dropped text"
           console.warn(`Combat Mode: dropped trailing text from saved dice notation "${describeSavedText(text)}"; rolling "${cleaned}"`);
         }
@@ -1236,8 +1232,9 @@
           return { total: 0, breakdown: '0', rolls: [] };
         }
         const rolls = expr.parts.flatMap(part => part.rolls || []);
+        const modifier = expr.parts.reduce((n, part) => n + (part.type === 'mod' ? part.n : 0), 0);
         const breakdown = rolls.length ? `${notation} = [${rolls.join(', ')}] = ${expr.total}` : String(expr.total);
-        return { total: expr.total, breakdown, rolls };
+        return { total: expr.total, breakdown, rolls, modifier };
       }
 
       // Roll attack (d20 + bonus)
@@ -1342,11 +1339,22 @@
           let breakdown = result1.breakdown;
           if (flatBonus) breakdown += ` <span class="text-info-emphasis">(+${flatBonus})</span>`;
 
+          // The attack's own damage (main + secondary) is one roll-history entry; feature and
+          // concentration extras below are logged separately, so they are not part of these numbers.
+          const allRolls = [...(result1.rolls || [])];
+          let mod = result1.modifier || 0;
+          let attackDamage = result1.total;
+          let historyNotation = mainNotation;
+
           // Handle secondary damage
           if (attack.damage2) {
             const result2 = parseDiceAndRoll(attack.damage2, isCrit);
             total += result2.total;
             breakdown += ` + ${result2.breakdown}`;
+            allRolls.push(...(result2.rolls || []));
+            mod += result2.modifier || 0;
+            attackDamage += result2.total;
+            historyNotation += ` + ${attack.damage2}`;
           }
 
           // Extra feature rolls (e.g. Improved Divine Smite 1d8 radiant)
@@ -1394,13 +1402,11 @@
           try {
             if (typeof window.addToRollHistory === 'function') {
               window.addToRollHistory({
-                notation: attack.damage + (isCrit ? ' (crit)' : ''),
+                notation: historyNotation + (isCrit ? ' (crit)' : ''),
                 description: `${attack.name} Damage${isCrit ? ' (Crit)' : ''}`,
-                // eslint-disable-next-line no-undef -- known bug: allRolls is never defined, so this throws a ReferenceError that the surrounding try/catch swallows and damage rolls never reach the roll history
                 rolls: allRolls,
-                // eslint-disable-next-line no-undef -- mod: same known bug as allRolls above
                 modifier: mod,
-                total: total,
+                total: attackDamage,
                 timestamp: new Date().toISOString(),
                 isCritical: false,
                 isFumble: false
@@ -1507,7 +1513,7 @@
             const _advantages = window.getInitiativeAdvantageReason?.(_char);
             if (_advantages) {
               const _tips = _advantages.map(a => a.tip).join(' · ');
-              window.showAppToast?.(`Initiative reminder: ${_tips}`, 'info', 5000);
+              window.showAppToast?.(`Initiative reminder: ${_tips}`, 'info', 5000); // (message, type, delay ms)
             }
           } catch (e) { /* non-fatal */ }
 
@@ -2536,20 +2542,10 @@ ${choices}`, String(dieSize));
 
       // ── Short Rest / Long Rest from combat view ──────────────────────────────
       document.getElementById('combatShortRestBtn')?.addEventListener('click', () => {
-        const shortRestBtn = document.getElementById('shortRestBtn');
-        if (shortRestBtn) {
-          shortRestBtn.click();
-        } else if (typeof window.handleShortRest === 'function') {
-          window.handleShortRest();
-        }
+        document.getElementById('shortRestBtn')?.click(); // the sheet's own button runs the rest
       });
       document.getElementById('combatLongRestBtn')?.addEventListener('click', () => {
-        const longRestBtn = document.getElementById('longRestBtn');
-        if (longRestBtn) {
-          longRestBtn.click();
-        } else if (typeof window.handleLongRest === 'function') {
-          window.handleLongRest();
-        }
+        document.getElementById('longRestBtn')?.click(); // the sheet's own button runs the rest
       });
 
       // Toggle combat mode

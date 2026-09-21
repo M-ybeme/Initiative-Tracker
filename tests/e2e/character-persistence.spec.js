@@ -137,8 +137,9 @@ async function assertHydratedSheet(page) {
   expect(lists.spellState, 'spell list state').toEqual(G.SPELL_TITLES);
   expect(lists.resources, 'resource rows').toEqual(G.RESOURCES);
 
-  // categorised notes: each category keeps its own text, and the selector comes back on "general"
-  expect(await readShown(page, 'notesCategorySelect'), 'notes category after load').toBe('general');
+  // categorised notes: each category keeps its own text, and the selector stays on the category the user was in
+  // (page state, remembered across loads; the exact category is pinned in character-correctness-pass.spec.js)
+  expect(Object.keys(G.CATEGORISED_NOTES), 'notes category after load').toContain(await readShown(page, 'notesCategorySelect'));
   for (const [category, text] of Object.entries(G.CATEGORISED_NOTES)) {
     await setSheetFields(page, { notesCategorySelect: category });
     expect(await readShown(page, 'charExtraNotes'), `notes category ${category}`).toBe(text);

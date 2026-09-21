@@ -97,12 +97,15 @@ test.describe('Passive Investigation and Insight while editing', () => {
     expect(await readShown(page, 'charPassivePerception'), 'passive Perception follows the same edit').toBe('14'); // 10 + WIS +4, not proficient
   });
 
-  test('typing a Perception bonus by hand is not overwritten by the other skills recalculating', async ({ page }) => {
+  test('skill bonuses are read-only derived values, so a hand edit cannot fake one', async ({ page }) => {
     await loadSheet(page, { blank: true });
-    await setSheetFields(page, { charLevel: '5', statWis: '10' });
-    await setSheetFields(page, { skillPerceptionBonus: '9', skillStealthBonus: '7' });
-    expect(await readShown(page, 'charPassivePerception')).toBe('19');
-    expect(await readShown(page, 'skillStealthBonus'), 'another typed bonus is left alone by the Perception edit').toBe('7');
+    for (const id of ['skillPerceptionBonus', 'skillStealthBonus']) {
+      await expect(page.locator('#' + id)).toHaveAttribute('readonly', '');
+    }
+    await setSheetFields(page, { charLevel: '5', statWis: '10', statDex: '14' });
+    expect(await readShown(page, 'skillPerceptionBonus')).toBe('0');
+    expect(await readShown(page, 'skillStealthBonus')).toBe('2');
+    expect(await readShown(page, 'charPassivePerception')).toBe('10');
   });
 });
 

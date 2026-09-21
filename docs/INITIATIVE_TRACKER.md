@@ -31,6 +31,7 @@
 - **Precision input**: enter any amount in the Amount box and click the − (damage) or + (heal) icon button. Logs the exact value in the Combat Log.
 - **Temp HP (THP)**: badge next to the HP field with its own ±1 buttons. Damage always drains THP before real HP; only the remainder reduces the character.
 - Typing directly in the HP field and tabbing away commits the change.
+- **Numeric entry**: HP, initiative, the Amount box and the other numeric fields take whole numbers. `20`, `020` (read as 20) and, where negatives make sense, `-3` are accepted. `1e3`, `12.5` and `3abc` are rejected rather than partly read: an inline edit snaps back to the stored value, and the Add form or a required amount shows a message. A blank field means 0 in the Add form; elsewhere blank is not accepted.
 - HP color: red ≤ 25 %, orange 25–50 %, yellow-orange 50–75 %, green > 75 %.
 - **Healing above 0 HP** automatically clears death saves and removes Stable.
 
@@ -47,6 +48,8 @@ Open **Bulk HP** to affect multiple creatures at once — useful for AoE spells,
 - Click the ⭐ button on any combatant to toggle concentration on/off.
 - While concentration is active, the tracker accumulates real HP damage taken **from that point on**. A prompt appears at the next turn transition (anyone's, not just theirs) with the pre-calculated DC (`max(10, ⌊damage / 2⌋)`). Damage taken before concentration was turned on — or after a previous spell's concentration ended — never counts toward the check.
 - **Pass** keeps concentration; **Fail** removes it automatically.
+- Checks that are due together are asked one at a time. Each prompt is answered once, so repeated clicks on Pass or Fail never use up the prompts queued behind it.
+- Dismissing the prompt with **×** skips that check without recording a pass or fail, and the next queued check appears as normal. A dismissed check is not asked again.
 
 ### Death Saves
 
@@ -59,7 +62,7 @@ Open **Bulk HP** to affect multiple creatures at once — useful for AoE spells,
 
 ### Status Effects
 
-- Click the 😊 icon to open the status modal for a combatant.
+- Click the 😊 icon to open the status modal for a combatant. Adding or removing an effect updates the badges and the effect list immediately while the modal stays open.
 - 14 standard conditions: Blinded, Charmed, Deafened, Exhaustion, Frightened, Grappled, Incapacitated, Invisible, Paralyzed, Petrified, Poisoned, Prone, Restrained, Unconscious.
 - Each condition supports an optional **duration (rounds)**. Durations tick down automatically at the start of each new round; expired effects are removed automatically.
 - Active conditions and concentration appear as emoji chips in the row with a tooltip summary.

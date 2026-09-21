@@ -1,4 +1,4 @@
-import { rollDiceNotation, rollD20, describeFeatureRoll } from '../modules/dice.js';
+import { rollDiceNotation, rollD20, describeFeatureRoll, normalizeLegacyDamageNotation } from '../modules/dice.js';
 import { getAbilityModifier, getProficiencyBonus, recalcDerivedStats } from './character-calculations.js';
 import { getAttackFeatureBonuses as _getAttackFeatureBonuses, addFlatBonusToNotation as _addFlatBonusToNotation, getConcentrationAttackBonus as _getConcentrationAttackBonus } from '../../Attack-rolls.js';
 import { getSpellSlotsForClassLevel as _getSpellSlotsForClassLevel, getPactMagicSlots as _getPactMagicSlots, normalizeSpellEntry as _normalizeSpellEntry, searchSpells as _searchSpells } from './character-spell-data.js';
@@ -17,7 +17,7 @@ import { wireSendToEvents, wireTokenPreviewEvents } from './character-send-to.js
       const $ = (id) => document.getElementById(id);
 
       // ---------- App Toast ----------
-      function showAppToast(message, type = 'success') {
+      function showAppToast(message, type = 'success', delay = 2500) {
         const toastEl = document.getElementById('appToast');
         const bodyEl  = document.getElementById('appToastBody');
         if (!toastEl || !bodyEl) return;
@@ -26,7 +26,9 @@ import { wireSendToEvents, wireTokenPreviewEvents } from './character-send-to.js
         toastEl.className = `toast align-items-center border-0 mb-2 ${colorMap[type] || 'bg-secondary'}`;
         bodyEl.textContent = message;
 
-        const bsToast = bootstrap.Toast.getOrCreateInstance(toastEl, { delay: 2500 });
+        // Bootstrap applies options only when it creates the instance, so recreate it to honour this call's delay
+        bootstrap.Toast.getInstance(toastEl)?.dispose();
+        const bsToast = new bootstrap.Toast(toastEl, { delay });
         bsToast.show();
       }
 
@@ -420,7 +422,10 @@ import { wireSendToEvents, wireTokenPreviewEvents } from './character-send-to.js
         // Apply always-on feature bonuses
         const char = getCurrentCharacter();
         const { flatBonus, extraRolls, rerollLowDice, rollTwiceTakeBest } = getAttackFeatureBonuses(char, attack);
-        const notation = flatBonus ? addFlatBonusToNotation(attack.damage, flatBonus) : attack.damage;
+        // Older saved attacks may carry the damage type in the notation ("1d8+3 slashing"); clean it
+        // the same way Combat Mode does, so both views roll the same stored attack the same way.
+        const damageText = normalizeLegacyDamageNotation(attack.damage);
+        const notation = flatBonus ? addFlatBonusToNotation(damageText, flatBonus) : damageText;
         const features = { rerollLowDice, rollTwiceTakeBest };
 
         const damageType = attack.damageType || 'Damage';
@@ -479,18 +484,19 @@ import { wireSendToEvents, wireTokenPreviewEvents } from './character-send-to.js
 
         const damageType = attack.damageType2 || 'Extra Damage';
         const description = `${attack.name} - ${damageType}`;
+        const damage2 = normalizeLegacyDamageNotation(attack.damage2);
 
         if (rollType === 'critical') {
           // Critical hit: double the dice (not the modifier)
-          const critNotation = getCriticalHitNotation(attack.damage2);
+          const critNotation = getCriticalHitNotation(damage2);
           if (!critNotation) {
-            console.error('Invalid dice notation:', attack.damage2);
+            console.error('Invalid dice notation:', damage2);
             return null;
           }
           return rollDice(critNotation, `${description} (CRIT!)`);
         } else if (rollType === 'half') {
           // Half damage (resistance)
-          const result = rollDice(attack.damage2, description);
+          const result = rollDice(damage2, description);
           if (result) {
             const halfTotal = Math.floor(result.total / 2);
             addToRollHistory({
@@ -505,7 +511,7 @@ import { wireSendToEvents, wireTokenPreviewEvents } from './character-send-to.js
           return result;
         } else {
           // Normal damage
-          return rollDice(attack.damage2, description);
+          return rollDice(damage2, description);
         }
       }
 
@@ -989,6 +995,17 @@ import { wireSendToEvents, wireTokenPreviewEvents } from './character-send-to.js
 
       let characters = [];
       let currentCharacterId = null;
+
+      // UI preference (not part of any character record): which character the user last had open
+      const LAST_CHARACTER_KEY = 'dmtoolbox.lastCharacterId';
+      function rememberLastCharacter(id) {
+        try { if (id) localStorage.setItem(LAST_CHARACTER_KEY, id); } catch (e) { /* preference only */ }
+      }
+      function pickStartupCharacterId(list) {
+        let last = null;
+        try { last = localStorage.getItem(LAST_CHARACTER_KEY); } catch (e) { /* preference only */ }
+        return list.some(c => c.id === last) ? last : list[0].id;
+      }
       let currentSpellList = [];
       let currentAttackList = [];
       let isLoadingCharacter = false; // Flag to prevent saves during character load
@@ -997,6 +1014,27 @@ import { wireSendToEvents, wireTokenPreviewEvents } from './character-send-to.js
       const NOTE_CATEGORIES = ['general', 'sessionNotes', 'lootLeads', 'questHooks'];
       let currentCategorizedNotes = { general: '', sessionNotes: '', lootLeads: '', questHooks: '' };
       let currentNotesCategory = 'general';
+      const NOTES_CATEGORY_KEY = 'dmtoolbox.notesCategory';
+      const NOTES_PLACEHOLDERS = {
+        general: "Scratch space, prep notes, anything that doesn't fit the other tabs.",
+        sessionNotes: 'What happened this session, key decisions, cliffhangers...',
+        lootLeads: 'Rumored treasures, reward offers, leads on magic items...',
+        questHooks: 'Active quests, leads, rumours, faction asks...'
+      };
+      try {
+        const savedCat = localStorage.getItem(NOTES_CATEGORY_KEY);
+        if (NOTE_CATEGORIES.includes(savedCat)) currentNotesCategory = savedCat;
+      } catch (e) { /* preference only */ }
+
+      // Point the Notes textarea and category select at one category (its text comes from currentCategorizedNotes)
+      function showNotesCategory(cat) {
+        currentNotesCategory = NOTE_CATEGORIES.includes(cat) ? cat : 'general';
+        const sel = $('notesCategorySelect');
+        if (sel) sel.value = currentNotesCategory;
+        const ta = $('charExtraNotes');
+        ta.placeholder = NOTES_PLACEHOLDERS[currentNotesCategory] || '';
+        ta.value = currentCategorizedNotes[currentNotesCategory] ?? '';
+      }
 
       // Expose spell and attack lists globally for combat view
       window.currentSpellList = currentSpellList;
@@ -2448,6 +2486,7 @@ import { wireSendToEvents, wireTokenPreviewEvents } from './character-send-to.js
 
       function fillFormFromCharacter(char) {
           if (!char) return;
+          rememberLastCharacter(char.id);
 
           // Set flag to prevent auto-saves while loading
           isLoadingCharacter = true;
@@ -2651,9 +2690,8 @@ import { wireSendToEvents, wireTokenPreviewEvents } from './character-send-to.js
             lootLeads: saved.lootLeads ?? '',
             questHooks: saved.questHooks ?? ''
           };
-          currentNotesCategory = 'general';
-          if ($('notesCategorySelect')) $('notesCategorySelect').value = 'general';
-          $('charExtraNotes').value = currentCategorizedNotes.general;
+          // The active category is page state, not character state: keep whichever one the user is in.
+          showNotesCategory(currentNotesCategory);
           updateXPDisplay(char.xp || 0, parseInt(char.level) || 1);
       
           $('portraitUrl').value = char.portraitType === 'url' ? (char.portraitData || '') : '';
@@ -3882,7 +3920,7 @@ import { wireSendToEvents, wireTokenPreviewEvents } from './character-send-to.js
         const curHP = getNumber('charCurrentHP', 0);
         const maxHP = getNumber('charMaxHP', 0);
         const hdRemaining = $('charHitDiceRemaining')?.value.trim() || '0d0';
-        const conMod = getNumber('charConMod', 0);
+        const conMod = getNumber('modCon', 0); // the sheet's Constitution modifier field
 
         // The remaining pool: one size ("5d10") or several ("3d8 + 4d6"), read against the total
         const pool = HitDice.resolveRemaining(HitDice.parse($('charHitDice')?.value || ''), hdRemaining);
@@ -4431,7 +4469,7 @@ import { wireSendToEvents, wireTokenPreviewEvents } from './character-send-to.js
       }
 
       function wireAutoCalcEvents() {
-        // Auto-calc: an ability score or level edit changes every skill bonus, and through them the passive scores.
+        // Auto-calc: an ability score or level edit changes every save and skill bonus, and through them the passive scores.
         // Skills go first so passive Perception (in recalcDerivedFromForm) reads the fresh Perception bonus.
         [
           'statStr','statDex','statCon','statInt','statWis','statCha',
@@ -4440,6 +4478,7 @@ import { wireSendToEvents, wireTokenPreviewEvents } from './character-send-to.js
           const el = $(id);
           if (el) {
             el.addEventListener('input', () => {
+              recalcSavesFromForm(false);
               recalcSkillsFromForm(false);
               recalcDerivedFromForm();
               recalcPassivesFromForm();
@@ -4447,14 +4486,6 @@ import { wireSendToEvents, wireTokenPreviewEvents } from './character-send-to.js
           }
         });
 
-        // Typing a Perception bonus by hand keeps Passive Perception in sync without rewriting the other skills
-        const perceptionBonusEl = $('skillPerceptionBonus');
-        if (perceptionBonusEl) {
-          perceptionBonusEl.addEventListener('input', () => {
-            recalcDerivedFromForm();
-          });
-        }
-        
         // Also run once after handlers are attached to sync with initial form values
         recalcDerivedFromForm();
                 // Auto-calc: recalc when save prof checkboxes change
@@ -4487,24 +4518,6 @@ import { wireSendToEvents, wireTokenPreviewEvents } from './character-send-to.js
             recalcPassivesFromForm();
           });
         }
-
-        // Auto-calc: if user clears a save/skill bonus and leaves the field, recompute it
-        const bonusFieldIds = [
-          ...SAVE_CONFIGS.map(c => c.bonusId),
-          ...SKILL_CONFIGS.map(c => c.bonusId)
-        ];
-
-        bonusFieldIds.forEach(id => {
-          const el = $(id);
-          if (!el) return;
-          el.addEventListener('blur', () => {
-            if (el.value.trim() === '') {
-              recalcSavesFromForm(true);
-              recalcSkillsFromForm(true);
-              recalcPassivesFromForm();
-            }
-          });
-        });
       }
 
       function wireRestAndResourceEvents() {
@@ -4845,15 +4858,8 @@ import { wireSendToEvents, wireTokenPreviewEvents } from './character-send-to.js
           notesCatSelect.addEventListener('change', () => {
             // Save current category's content before switching
             currentCategorizedNotes[currentNotesCategory] = $('charExtraNotes').value;
-            currentNotesCategory = notesCatSelect.value;
-            const placeholders = {
-              general: 'Scratch space, prep notes, anything that doesn\'t fit the other tabs.',
-              sessionNotes: 'What happened this session, key decisions, cliffhangers...',
-              lootLeads: 'Rumored treasures, reward offers, leads on magic items...',
-              questHooks: 'Active quests, leads, rumours, faction asks...'
-            };
-            $('charExtraNotes').placeholder = placeholders[currentNotesCategory] || '';
-            $('charExtraNotes').value = currentCategorizedNotes[currentNotesCategory];
+            showNotesCategory(notesCatSelect.value);
+            try { localStorage.setItem(NOTES_CATEGORY_KEY, currentNotesCategory); } catch (e) { /* preference only */ }
           });
         }
       }
@@ -5278,7 +5284,7 @@ import { wireSendToEvents, wireTokenPreviewEvents } from './character-send-to.js
           if (!characters.length) {
             createNewCharacter();
           } else {
-            currentCharacterId = characters[0].id;
+            currentCharacterId = pickStartupCharacterId(characters);
             renderCharacterSelect();
             fillFormFromCharacter(getCurrentCharacter());
           }
@@ -5349,6 +5355,8 @@ import { wireSendToEvents, wireTokenPreviewEvents } from './character-send-to.js
 
       // ---------- Global API for Level-Up System ----------
       window.getCurrentCharacter = getCurrentCharacter;
+      window.showAppToast = showAppToast;                       // Combat Mode's initiative reminder
+      window.syncConditionsToField = syncConditionsToField;     // Combat Mode toggles condition buttons directly
       window.saveCurrentCharacter = saveCurrentCharacter;
       window.persistCurrentCharacter = persistCurrentCharacter;
       window.loadCharacterIntoForm = fillFormFromCharacter;

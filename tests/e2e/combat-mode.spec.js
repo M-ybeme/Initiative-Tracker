@@ -25,7 +25,7 @@ function watchErrors(page) {
 const SHEET = {
   charName: 'Testa Brightblade', charRace: 'Human', charClass: 'Fighter', charLevel: '5',
   charAC: '17', charCurrentHP: '27', charMaxHP: '40', charTempHP: '0', charSpeed: '30',
-  charInitMod: '3', saveStrBonus: '5', statDex: '14', statCon: '14' // statDex 14 gives the +2 Dexterity modifier
+  charInitMod: '3', statStr: '20', statDex: '14', statCon: '14' // statStr 20 gives the +5 Strength save (saves are derived, not typed); statDex 14 the +2 Dexterity modifier
 };
 
 // Loads the page and waits until both the character module and the Combat Mode script are ready.

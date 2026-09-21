@@ -997,7 +997,7 @@ describe('Initiative Tracker: combatants are addressed by stable id', () => {
         expect(input.isConnected).toBe(true);
       });
 
-      it.each([['020', '20'], ['20.7', '20'], ['20abc', '20'], [' 20 ', '20']])(
+      it.each([['020', '20'], [' 20 ', '20']])(
         'an initiative entry %j that normalizes to the current value shows the canonical %j and it becomes the baseline',
         async (typed, canonical) => {
           await loadTracker([A, B, C]);

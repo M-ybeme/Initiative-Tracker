@@ -24,6 +24,7 @@ const statusEffects = [
   const concQueue = [];
   let concToast = null;
   let concPromptActive = false;
+  let concActivePrompt = null; // the prompt on screen; cleared when Pass, Fail or X takes it off screen
   let playerView = false;
   function initModals() {
     const statusEl = document.getElementById('statusModal');
@@ -376,13 +377,18 @@ const statusEffects = [
       .forEach(c=>{
         const li = document.createElement('li');
         li.className = 'list-group-item d-flex justify-content-between align-items-center bg-dark text-light border-light';
+        // Saved templates are keyed by name, so the name is stored on each button as a DOM property
+        // (never spliced into markup) and the template is looked up from it at click time.
         li.innerHTML = `
-          <span><strong>${c.name}</strong> — <em>${c.type}</em> • AC: ${c.ac} • HP: ${c.maxHP}</span>
+          <span><strong data-slot="name"></strong> — <em data-slot="type"></em> • AC: ${escHtml(c.ac)} • HP: ${escHtml(c.maxHP)}</span>
           <div class="d-flex gap-2">
-            <button class="btn btn-sm btn-outline-light" data-act="load" data-name="${c.name}">Load</button>
-            <button class="btn btn-sm btn-outline-success" data-act="add" data-name="${c.name}">Add</button>
-            <button class="btn btn-sm btn-outline-danger" data-act="del" data-name="${c.name}">Delete</button>
+            <button class="btn btn-sm btn-outline-light" data-act="load">Load</button>
+            <button class="btn btn-sm btn-outline-success" data-act="add">Add</button>
+            <button class="btn btn-sm btn-outline-danger" data-act="del">Delete</button>
           </div>`;
+        li.querySelector('[data-slot="name"]').textContent = c.name;
+        li.querySelector('[data-slot="type"]').textContent = c.type;
+        li.querySelectorAll('button[data-act]').forEach(b => { b.dataset.name = c.name; });
         ul.appendChild(li);
       });
     ul.querySelectorAll('button[data-act]').forEach(btn=>{
@@ -410,10 +416,10 @@ const statusEffects = [
   // Saved template form
   $('save-character-btn').addEventListener('click', ()=>{
     const name = $('save-name').value.trim();
-    const maxHP = parseInt($('save-health').value,10);
-    const ac = parseInt($('save-ac').value,10);
+    const maxHP = parseWholeNumber($('save-health').value);
+    const ac = parseWholeNumber($('save-ac').value);
     const type = $('save-type').value;
-    if (!name || isNaN(maxHP) || isNaN(ac)) { alert('Please enter valid Name, Max HP, and AC.'); return; }
+    if (!name || maxHP === null || ac === null) { alert('Please enter valid Name, Max HP, and AC.'); return; }
     addSavedTemplate({ name, maxHP, ac, type, initiative:0 });
     $('save-name').value=''; $('save-health').value=''; $('save-ac').value='';
   });
@@ -467,7 +473,9 @@ function buildDiceHistory(){
   diceHistory.forEach(entry=>{
     const div = document.createElement('div');
     div.className = 'border-bottom pb-1 mb-1';
-    div.innerHTML = `<strong>${entry.timestamp}</strong>: ${entry.text}`;
+    const stamp = document.createElement('strong');
+    stamp.textContent = entry.timestamp;
+    div.append(stamp, `: ${entry.text}`); // text nodes: history is persisted and can be imported
     wrap.appendChild(div);
   });
 }
@@ -579,12 +587,13 @@ $('clear-dice-history').addEventListener('click', ()=>{
     if (!concPromptActive) drainConcentrationQueue();
   }
   function drainConcentrationQueue() {
-    if (!concQueue.length) { concPromptActive = false; return; }
+    if (!concQueue.length) { concPromptActive = false; concActivePrompt = null; return; }
     concPromptActive = true;
 
     const item = concQueue.shift();
     const c = getCharacterById(item.id);
     if (!c) return drainConcentrationQueue(); // character deleted
+    concActivePrompt = item;
 
     // Fill toast contents
     document.getElementById('concToastName').textContent = c.name;
@@ -600,52 +609,53 @@ $('clear-dice-history').addEventListener('click', ()=>{
     passBtn.dataset.dc = String(item.dc);
     failBtn.dataset.dmg = String(item.dmg);
     failBtn.dataset.dc = String(item.dc);
+    passBtn.disabled = false;
+    failBtn.disabled = false;
+    const closeBtn = document.getElementById('concCloseBtn');
+    if (closeBtn) closeBtn.disabled = false;
   
     // Show toast
     concToast.show();
   }
-  // Button handlers (bind once)
-  document.getElementById('concPassBtn')?.addEventListener('click', (e) => {
-    const c = getCharacterById(e.currentTarget.dataset.characterId);
-    const dmg = parseInt(e.currentTarget.dataset.dmg || '0', 10) || 0;
-    const dc = parseInt(e.currentTarget.dataset.dc || '10', 10) || 10;
-    if (c) {
+  // Button handlers (bind once). A prompt leaves the screen exactly once: the first Pass, Fail or X takes it
+  // off concActivePrompt and disables the controls, so a double click (or Pass then Fail, or repeated X)
+  // finds nothing to resolve and hides the toast only once. Bootstrap would otherwise start one hide
+  // transition per click, and each completion would dismiss whatever prompt is showing by then.
+  // `passed` is true (Pass), false (Fail) or null (dismissed with X: no result is logged, and the check is
+  // not asked again, because its pending damage was already taken off the combatant when it was queued).
+  function resolveConcentrationPrompt(passed) {
+    const item = concActivePrompt;
+    if (!item) return;
+    concActivePrompt = null;
+    ['concPassBtn', 'concFailBtn', 'concCloseBtn'].forEach(id => {
+      const btn = document.getElementById(id);
+      if (btn) btn.disabled = true;
+    });
+    const c = getCharacterById(item.id);
+    if (c && passed !== null) {
       c.concDamagePending = 0;
+      if (!passed) c.concentration = false; // auto-break
       logEvent({
         type: 'concentration',
-        summary: 'Concentration Check Passed',
+        summary: passed ? 'Concentration Check Passed' : 'Concentration Check Failed',
         targetId: c.id,
         targetName: c.name,
         source: 'concentration-check',
-        details: `Damage ${dmg} • DC ${dc}`,
-        concentration: 'Maintained concentration'
+        details: `Damage ${item.dmg} • DC ${item.dc}`,
+        concentration: passed ? 'Maintained concentration' : 'Concentration lost'
       });
     }
+    if (passed === false) buildTable();     // reflect star-off immediately
     concToast.hide();
-    // allow Bootstrap fade-out then continue
-    setTimeout(() => { drainConcentrationQueue(); }, 120);
-  });
-  document.getElementById('concFailBtn')?.addEventListener('click', (e) => {
-    const c = getCharacterById(e.currentTarget.dataset.characterId);
-    if (c) {
-      c.concDamagePending = 0;
-      c.concentration = false;     // auto-break
-      const dmg = parseInt(e.currentTarget.dataset.dmg || '0', 10) || 0;
-      const dc = parseInt(e.currentTarget.dataset.dc || '10', 10) || 10;
-      logEvent({
-        type: 'concentration',
-        summary: 'Concentration Check Failed',
-        targetId: c.id,
-        targetName: c.name,
-        source: 'concentration-check',
-        details: `Damage ${dmg} • DC ${dc}`,
-        concentration: 'Concentration lost'
-      });
-    }
-    buildTable();                  // reflect star-off immediately
-    concToast.hide();
-    setTimeout(() => { drainConcentrationQueue(); }, 120);
-  });
+    // The next prompt is drained by the toast's hidden handler below, once this one has finished fading
+    // out (a show() that lands mid-fade is undone by the hide's completion). If the toast was not
+    // showing there will be no hidden event, so drain now.
+    if (!concToastEl?.classList.contains('show')) drainConcentrationQueue();
+  }
+  concToastEl?.addEventListener('hidden.bs.toast', () => drainConcentrationQueue());
+  document.getElementById('concPassBtn')?.addEventListener('click', () => resolveConcentrationPrompt(true));
+  document.getElementById('concFailBtn')?.addEventListener('click', () => resolveConcentrationPrompt(false));
+  document.getElementById('concCloseBtn')?.addEventListener('click', () => resolveConcentrationPrompt(null));
   function safeHpPercent(c){
     // MaxHP can be 0 (e.g., lair actions, traps, narrative tokens)
     if (!Number.isFinite(c.maxHP) || c.maxHP <= 0) return 0;
@@ -957,6 +967,14 @@ $('clear-dice-history').addEventListener('click', ()=>{
   // event type, attached once at boot (wireCombatantListEvents): buttons route by data-action,
   // inline editors by data-field, and the combatant is always resolved at event time from
   // data-character-id via getCharacterById(), never from position or a render-time closure.
+  // Integer value of numeric text, or null when the text is not a plain integer. Accepted: optional
+  // surrounding whitespace, an optional sign, digits ("020" is 20). Everything else is rejected rather
+  // than reinterpreted: empty, "20abc", "20.7" and exponent forms such as "1e3" (parseInt would cut
+  // those to 20, 20 and 1). Null means a rejected edit, not 0: the caller restores the model value.
+  function parseWholeNumber(text) {
+    const t = String(text ?? '').trim();
+    return /^[+-]?\d+$/.test(t) ? parseInt(t, 10) : null;
+  }
   function updateDeathState(c) {
     // cap and derive "stable" at 3 successes, no auto-death to keep it GM-controlled
     c.deathSaves.s = Math.min(3, Math.max(0, c.deathSaves.s|0));
@@ -967,7 +985,7 @@ $('clear-dice-history').addEventListener('click', ()=>{
     const wrap = triggerEl.closest('.precision-control');
     const input = wrap ? wrap.querySelector('.precision-amount') : null;
     if (!input) return { amount: 0, input: null };
-    const raw = parseInt(input.value, 10);
+    const raw = parseWholeNumber(input.value);
     return { amount: Math.max(0, Math.abs(raw || 0)), input };
   }
   function applyPrecisionAdjust(c, el, sign) {
@@ -1137,7 +1155,7 @@ $('clear-dice-history').addEventListener('click', ()=>{
     'legendary-enable'(c) {
       const raw = prompt(`Legendary Actions for ${c.name}\nEnter max (default: 3):`, '3');
       if (raw === null) return; // cancelled
-      const val = Math.max(1, parseInt(raw, 10) || 3);
+      const val = Math.max(1, parseWholeNumber(raw) || 3);
       pushHistory(`Enable Legendary Actions for ${c.name}`);
       c.legendaryActions = { max: val, remaining: val };
       logEvent({
@@ -1270,14 +1288,6 @@ $('clear-dice-history').addEventListener('click', ()=>{
     } else {
       inp.value = c.name;
     }
-  }
-  // Integer value of a numeric editor, or null when the text has no leading integer (empty,
-  // whitespace, letters first). Null means a rejected edit, not 0: the caller restores the model
-  // value. This is parseInt semantics, not strict validation: "20abc" and "20.7" give 20, and
-  // exponent forms are cut at the "e" ("1e3" gives 1).
-  function parseWholeNumber(text) {
-    const n = parseInt(text, 10);
-    return Number.isNaN(n) ? null : n;
   }
   function commitHp(inp) {
     const c = getCharacterById(inp.dataset.characterId);
@@ -1638,17 +1648,25 @@ $('clear-dice-history').addEventListener('click', ()=>{
     localStorage.setItem('initiativeHelpSeen', '1');
   }
   // ---------- Status Modal logic ----------
-  function openStatusModal(id){
+  // The combatant whose status modal is open, so a cross-tab state reload can redraw it in place.
+  let statusModalId = null;
+  // Draws the modal's badges and dropdown for one combatant (no show). False when it no longer exists.
+  function renderStatusModal(id){
     const c = getCharacterById(id);
-    if (!c) return;
-    // Badges
+    if (!c) return false;
+    // Badges. Built from DOM nodes: status names and icons can come from imported data.
     const badges = $('status-badges'); badges.innerHTML = '';
     c.status.forEach(s=>{
       const rem = (typeof s.remaining==='number' && s.remaining>=0) ? ` (${s.remaining})` : '';
       const span = document.createElement('span');
       span.className = 'badge bg-secondary px-2 py-1';
-      span.innerHTML = `${s.icon} ${s.name}${rem}
-        <i class="bi bi-x ms-1 remove-status" data-eff="${s.name}" role="button" title="Remove"></i>`;
+      span.append(`${s.icon} ${s.name}${rem} `);
+      const x = document.createElement('i');
+      x.className = 'bi bi-x ms-1 remove-status';
+      x.dataset.eff = s.name;
+      x.setAttribute('role', 'button');
+      x.title = 'Remove';
+      span.append(x);
       badges.appendChild(span);
     });
     badges.querySelectorAll('.remove-status').forEach(x=>{
@@ -1669,7 +1687,7 @@ $('clear-dice-history').addEventListener('click', ()=>{
         statusPayload: `Removed ${eff}`
       });
       buildTable();
-      openStatusModal(id);
+      renderStatusModal(id);
     });
   });
     // Dropdown
@@ -1692,10 +1710,10 @@ $('clear-dice-history').addEventListener('click', ()=>{
       if (!pendingEffect) { alert('Choose an effect first.'); return; }
       const target = getCharacterById(id); // see remove handler: never the object captured at open
       if (!target) return;
-      const durVal = parseInt($('status-duration').value,10);
+      const durVal = parseWholeNumber($('status-duration').value);
       const base = statusEffects.find(x=>x.name===pendingEffect) || {icon:'❓'};
       const eff = { name: pendingEffect, icon: base.icon };
-      if (!isNaN(durVal) && durVal >= 0) eff.remaining = durVal;
+      if (durVal !== null && durVal >= 0) eff.remaining = durVal;
       pushHistory(`Add ${pendingEffect} to ${target.name}`);
       target.status.push(eff);
       logEvent({
@@ -1707,20 +1725,26 @@ $('clear-dice-history').addEventListener('click', ()=>{
         statusPayload: `Added ${pendingEffect}${typeof eff.remaining === 'number' ? ` (${eff.remaining} rnds)` : ''}`
       });
       $('status-duration').value = '';
-      // keep modal open
-      statusModal = bootstrap.Modal.getOrCreateInstance(document.getElementById('statusModal'));
-      statusModal.show();
       buildTable();
+      renderStatusModal(id); // the modal stays open: redraw its badges and dropdown with the new effect
     };
-    
-    
+    return true;
+  }
+  function openStatusModal(id){
+    if (!getCharacterById(id)) return;
     const modalEl = document.getElementById('statusModal');
-      if (!modalEl) {
-        console.error('Status modal element missing');
-        return;
-      }
-      statusModal = bootstrap.Modal.getOrCreateInstance(modalEl);
-      statusModal.show();
+    if (!modalEl) {
+      console.error('Status modal element missing');
+      return;
+    }
+    renderStatusModal(id);
+    statusModalId = id;
+    if (!modalEl.dataset.statusCloseWired) {
+      modalEl.dataset.statusCloseWired = '1';
+      modalEl.addEventListener('hidden.bs.modal', () => { statusModalId = null; });
+    }
+    statusModal = bootstrap.Modal.getOrCreateInstance(modalEl);
+    statusModal.show();
   }
   // ---------- Round & durations ----------
   function tickStatusDurationsOnNewRound(){
@@ -1776,10 +1800,14 @@ $('clear-dice-history').addEventListener('click', ()=>{
     $('initiative-form').addEventListener('submit', e=>{
     e.preventDefault();
     const name  = $('character-name').value.trim();
-    const safeNum = v => {
-      const n = parseInt(String(v).trim(), 10);
-      return isNaN(n) ? 0 : n;
-    };
+    // Blank means 0. Anything else must be a plain integer: "12.5" or "1e2" is refused with a message,
+    // never turned into 0 or a reinterpreted prefix.
+    const fields = [$('initiative-roll'), $('character-health'), $('character-ac')];
+    if (fields.some(f => f.value.trim() !== '' && parseWholeNumber(f.value) === null)) {
+      alert('Initiative, HP and AC must be whole numbers.');
+      return;
+    }
+    const safeNum = v => parseWholeNumber(v) ?? 0;
   
     const init  = safeNum($('initiative-roll').value);
     const maxHP = safeNum($('character-health').value);
@@ -1892,7 +1920,7 @@ $('clear-dice-history').addEventListener('click', ()=>{
   $('bulkHPApply').addEventListener('click', ()=>{
     const targetType = document.querySelector('input[name="bulkTarget"]:checked').value;
     const action = document.querySelector('input[name="bulkAction"]:checked').value;
-    const amount = parseInt($('bulkAmount').value, 10) || 0;
+    const amount = parseWholeNumber($('bulkAmount').value) || 0;
 
     if (action !== 'fullheal' && amount <= 0) {
       alert('Please enter a valid HP amount.');
@@ -2113,6 +2141,10 @@ $('clear-dice-history').addEventListener('click', ()=>{
       try {
         loadState();
         buildTable();
+        if (statusModalId && !renderStatusModal(statusModalId)) { // the open modal's combatant is gone
+          statusModalId = null;
+          statusModal?.hide();
+        }
       } catch (err) {
         console.error('Failed to sync state from storage event:', err);
       }

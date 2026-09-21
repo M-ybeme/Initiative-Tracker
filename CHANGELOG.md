@@ -16,7 +16,7 @@ The DM's Toolbox has evolved through focused feature releases. Minor versions (2
 - **1.9.x**: Battle map measurement tools, persistent fog shapes, and generator integration across NPC/Tavern/Shop systems
 - **1.8.x**: Spell database expansion to 432+ spells, inventory management, loot generator overhaul, and character token generation
 
-**Current version: 2.3.13 (September 2026)**
+**Current version: 2.3.14 (September 2026)**
 
 ---
 
@@ -24,6 +24,41 @@ The DM's Toolbox has evolved through focused feature releases. Minor versions (2
 
 ### Known issues
 - **Flaky end-to-end test: "a blank count is invalid, not too many, and nothing is rolled"** (`tests/e2e/dice-callers.spec.js`, Character Sheet hit-dice count) — this test fails intermittently. It has failed once in a full-suite run, once in a run of three solo runs, and once in a comparison run, and passes on most other runs (eight consecutive repeat runs, and two later full-suite runs, all passed). The cause has not been identified; the likely area is timing around the hit-dice modal and the toast it asserts on, and the failure has not been captured with a message. It has not been observed as a product bug: the behavior it checks (a blank hit-dice count shows "Invalid number of hit dice to spend." instead of the over-limit message, and nothing is rolled) works when exercised by hand and in every passing run. Re-run before treating a red result on this test as a regression, and harden the test's waits when it is next touched.
+
+---
+
+## [2.3.14] - 2026-09-21
+**User-Facing Correctness Pass**
+
+### Fixed
+- **Character Sheet: saving throws update immediately** when an ability score or the level changes (they used to stay stale until a proficiency toggle or reload)
+- **Character Sheet: skill and saving-throw totals are consistently derived** — they looked editable but were overwritten on the next save or ability edit; they are now read-only calculated values
+- **Character Sheet: the selected Notes category is remembered** across reloads and character switches instead of resetting to General
+- **Character Sheet: the last-opened character reopens on startup** when it still exists (falls back to the first character otherwise)
+- **Combat Mode: damage rolls now reach the roll history** (a swallowed `ReferenceError` dropped them); the entry records the dice, modifier and total
+- **Combat Mode: conditions added or removed on the card now sync to the sheet's Conditions field and are saved**, and the initiative-advantage reminder toast now appears
+- **Short Rest now adds the character's CON modifier** to each hit die (the dialog read a field that does not exist)
+- **Initiative Tracker: numeric fields reject exponent, decimal and junk text** (`1e3`, `12.5`, `3abc`) instead of partly parsing it; the Add form refuses non-integer text (`12.5`, `1e2`) with a message instead of silently turning it into 0
+- **Initiative Tracker: the status modal refreshes immediately** after adding or removing an effect, and when another tab changes the combatant
+- **Initiative Tracker: concentration prompts resolve once** — repeated Pass/Fail clicks no longer consume queued prompts, dismissing the prompt with × no longer blocks later checks (a dismissed check records neither pass nor fail), and the next prompt waits for the previous toast to finish hiding
+- **Initiative Tracker: saved-character names, dice history and status names/icons are rendered as text**, not markup
+- Sheet and Combat Mode now clean legacy damage text such as `1d8+3 slashing` the same way, so one stored attack rolls identically in both
+
+### Changed
+- Character skill and saving-throw totals are explicitly derived, read-only UI (there is no miscellaneous-bonus field yet)
+- Initiative whole-number input validation is stricter
+- A critical hit on a keep-highest/lowest damage group now doubles both the dice and the kept count (`4d6kh3` becomes `8d6kh6`) instead of silently dropping the keep rule; this is an approximation of rolling the original group twice
+- `-0` modifiers are normalised to `0` in the dice engine
+
+### Internal / Tests
+- New targeted regression coverage for the Character Sheet, Initiative Tracker and Combat Mode (`character-correctness-pass`, `initiative-correctness-pass`, `combat-mode-correctness`, `initiative-numeric-input`), mutation-checked
+- The shared app toast now honours its per-call delay (Bootstrap ignored the option after the first toast)
+- Legacy damage-notation cleanup lives once in the dice engine (`DiceEngine.normalizeLegacyDamageNotation`)
+
+### Known issues (follow-ups)
+- True independent-group crit semantics for keep/drop dice (roll the original group twice and sum)
+- The status modal's cross-tab redraw loses an effect that was picked but not yet added
+- Hand-typed miscellaneous bonuses for skills/saves would need an explicit override field
 
 ---
 

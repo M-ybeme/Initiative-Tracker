@@ -557,7 +557,7 @@ test.describe('dice limits in the other callers', () => {
       await rollWith(page, '2');
       await expect(page.locator('#hdRollResults')).toBeVisible();
       await expect(page.locator('#hdTotalHealing')).toHaveText(/^\+\d+ HP$/);
-      await expect(page.locator('#hdRollDetails')).toHaveText(/^\[\d+\+\d+, \d+\+\d+\]$/); // two dice
+      await expect(page.locator('#hdRollDetails')).toHaveText(/^\[\d+\+\(?-?\d+\)?, \d+\+\(?-?\d+\)?\]$/); // two dice, each plus the CON modifier (negative on a blank sheet)
       expect(errors, errors.join('\n')).toEqual([]);
     });
 

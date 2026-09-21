@@ -104,7 +104,7 @@
     const sides = parseInt(match[2], 10);
     const keepDirection = match[3];
     const keepCount = match[4] ? parseInt(match[4], 10) : null;
-    const modifier = match[5] ? parseInt(match[5], 10) : 0;
+    const modifier = (match[5] ? parseInt(match[5], 10) : 0) || 0; // "-0" parses to -0: normalise to 0
 
     if (!validDice(count, sides)) return null;
     if (keepCount !== null && (keepCount <= 0 || keepCount > count)) return null;
@@ -201,7 +201,7 @@
       const sign = m[1] === '-' ? -1 : 1;
 
       if (m[6] !== undefined) { // flat modifier
-        terms.push({ type: 'mod', n: sign * parseInt(m[6], 10) });
+        terms.push({ type: 'mod', n: (sign * parseInt(m[6], 10)) || 0 }); // "-0" is 0, not -0
         continue;
       }
       const count = m[2] ? parseInt(m[2], 10) : 1;
@@ -282,20 +282,42 @@
   }
 
   /**
-   * The notation for a critical hit: the dice count doubles, the modifier does not.
-   * "1d8+3" -> "2d8+3". Returns null if the notation is not a single valid dice group, or if
-   * doubling the dice would pass MAX_DICE_COUNT (so no caller can fall back to a normal roll
-   * without knowing the crit failed).
+   * The notation for a critical hit: the dice rolled double, the modifier does not.
+   * "1d8+3" -> "2d8+3". A keep-highest/lowest group doubles its kept count along with its dice, so it
+   * keeps the same mechanic on twice the damage dice: "4d6kh3" (drop the lowest 1 of 4) becomes
+   * "8d6kh6" (drop the lowest 2 of 8), never "8d6" with the keep rule silently lost.
+   * Returns null if the notation is not a single valid dice group, or if doubling the dice would
+   * pass MAX_DICE_COUNT (so no caller can fall back to a normal roll without knowing the crit failed).
    * @param {string} notation
    * @returns {string|null}
    */
   function getCriticalHitNotation(notation) {
     const parsed = parseDiceNotation(notation);
     if (!parsed) return null;
-    const { count, sides, modifier } = parsed;
+    const { count, sides, modifier, keepHighest, keepLowest } = parsed;
     if (!validDice(count * 2, sides)) return null;
+    const keepStr = keepHighest ? 'kh' + keepHighest * 2 : keepLowest ? 'kl' + keepLowest * 2 : '';
     const modStr = modifier > 0 ? '+' + modifier : modifier < 0 ? String(modifier) : '';
-    return count * 2 + 'd' + sides + modStr;
+    return count * 2 + 'd' + sides + keepStr + modStr;
+  }
+
+  // Older saved attacks sometimes carry the damage type inside the notation ("1d8+3 slashing"). The
+  // parsers are deliberately strict, so every place that rolls a saved attack first drops a trailing
+  // run of recognised damage-type / descriptive words that are separated from the dice by whitespace.
+  // Nothing else is repaired: the dice part is passed on exactly, and whatever the parsers still
+  // reject ("2d6+ fire", "4d6kh", "hello world") stays invalid.
+  const LEGACY_DAMAGE_WORDS = 'acid|bludgeoning|cold|fire|force|lightning|necrotic|piercing|poison|psychic|radiant|slashing|thunder|damage|magical|nonmagical|weapon|bonus|extra|and';
+  const LEGACY_TRAILING_TEXT = new RegExp('\\s+(?:' + LEGACY_DAMAGE_WORDS + ')(?:[ ,/-]+(?:' + LEGACY_DAMAGE_WORDS + '))*\\s*$', 'i');
+  /**
+   * Saved attack damage text without its trailing legacy words. Text past MAX_DICE_NOTATION_LENGTH is
+   * returned untouched (the parsers reject it anyway, and the regex never scans it).
+   * @param {*} notation
+   * @returns {string}
+   */
+  function normalizeLegacyDamageNotation(notation) {
+    const text = String(notation);
+    if (tooLong(text)) return text;
+    return text.replace(LEGACY_TRAILING_TEXT, '');
   }
 
   /**
@@ -358,6 +380,7 @@
     rollD20,
     describeFeatureRoll,
     getCriticalHitNotation,
+    normalizeLegacyDamageNotation,
     rollHitDice,
     rollAbilityScore,
     rollAbilityScoreSet,

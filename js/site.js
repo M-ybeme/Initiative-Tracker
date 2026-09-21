@@ -1,7 +1,10 @@
 const DM_TOOLBOX_BUILD = {
   name: "The DM's Toolbox",
-  version: "2.3.13",
+  version: "2.3.14",
   recentChanges: [
+    "Fix: Character Sheet saving throws update as soon as an ability score or level changes; saving-throw and skill totals are now read-only calculated values, the Notes category and the last-opened character are remembered, and Short Rest adds your CON modifier",
+    "Fix: Combat Mode damage rolls now appear in the roll history, and conditions changed on the card sync to the sheet",
+    "Fix: Initiative Tracker numeric fields reject entries like 1e3 or 12.5, the status modal updates as you add or remove effects, and concentration prompts can no longer be lost by repeated clicks or by dismissing one",
     "Fix: exports, the diagnostics panel and the character-sheet footer now show the official SRD 5.2.1 attribution statement exactly as published, with the SRD 5.2.1 reference link, instead of mixed SRD 5.1 and 5.2 wording",
     "Fix: Journal Word export works again (its Word library link was broken)",
     "Fix: the Journal page's export script failed to load (a duplicate SRD_PDF_URL declaration), so every Journal export button did nothing; TXT, Markdown, PDF and bulk export work again",
