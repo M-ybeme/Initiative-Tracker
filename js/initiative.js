@@ -1649,7 +1649,28 @@ $('clear-dice-history').addEventListener('click', ()=>{
   }
   // ---------- Status Modal logic ----------
   // The combatant whose status modal is open, so a cross-tab state reload can redraw it in place.
-  let statusModalId = null;
+  // State of the open status modal session (not stored on the combatant or in localStorage): which combatant
+  // it is for, and the effect picked in the dropdown but not yet added. It outlives a single render, so a
+  // redraw (Add, Remove, a storage event from another tab) keeps a valid pick; it is reset when the modal
+  // opens or closes. The duration box is static markup, so its text already survives a redraw.
+  const statusModalSession = { id: null, pendingEffect: null };
+  // The duration box is static markup (not part of statusModalSession), so clearing it is a DOM write,
+  // factored out here since both a session reset and a mid-render invalidation need to do it.
+  function clearStatusDuration() {
+    const dur = $('status-duration');
+    if (dur) dur.value = '';
+  }
+  function resetStatusModalSession(id = null) {
+    statusModalSession.id = id;
+    statusModalSession.pendingEffect = null;
+    clearStatusDuration();
+  }
+  // The dropdown item that has keyboard focus, if any, so a redraw can restore it.
+  function focusedStatusDropdownItem() {
+    const active = document.activeElement;
+    const list = $('status-dropdown-list');
+    return active && list && list.contains(active) ? active.dataset.eff || null : null;
+  }
   // Draws the modal's badges and dropdown for one combatant (no show). False when it no longer exists.
   function renderStatusModal(id){
     const c = getCharacterById(id);
@@ -1691,6 +1712,7 @@ $('clear-dice-history').addEventListener('click', ()=>{
     });
   });
     // Dropdown
+    const focusedEff = focusedStatusDropdownItem();
     const list = $('status-dropdown-list'); list.innerHTML = '';
     statusEffects.forEach(effect=>{
       const has = c.status.some(s=> s.name === effect.name);
@@ -1698,15 +1720,33 @@ $('clear-dice-history').addEventListener('click', ()=>{
       li.innerHTML = `<a class="dropdown-item ${has?'disabled text-muted':''}" href="#" data-eff="${effect.name}">${effect.icon} ${effect.name}</a>`;
       list.appendChild(li);
     });
-    let pendingEffect = null;
+    // A pick that is no longer valid (the effect was added to this combatant meanwhile) is dropped, never added,
+    // and its typed duration goes with it: the two are one uncommitted action, and a stale duration must not
+    // carry over to whatever the user picks next. A redraw where the pick is still valid (or there was none to
+    // begin with) leaves the duration box alone.
+    const hadPending = statusModalSession.pendingEffect !== null;
+    const stillPickable = hadPending && [...list.querySelectorAll('a[data-eff]')]
+      .some(a => a.dataset.eff === statusModalSession.pendingEffect && !a.classList.contains('disabled'));
+    if (hadPending && !stillPickable) {
+      statusModalSession.pendingEffect = null;
+      clearStatusDuration();
+    }
+    const markPending = () => list.querySelectorAll('a[data-eff]').forEach(a => {
+      a.classList.toggle('active', a.dataset.eff === statusModalSession.pendingEffect);
+    });
+    markPending();
     list.querySelectorAll('a[data-eff]').forEach(a=>{
       a.addEventListener('click', function(e){
         e.preventDefault();
         if (this.classList.contains('disabled')) return;
-        pendingEffect = this.dataset.eff;
+        statusModalSession.pendingEffect = this.dataset.eff;
+        markPending();
       });
     });
+    // The menu was rebuilt under the user's keyboard focus: put focus back on the same item.
+    if (focusedEff) [...list.querySelectorAll('a[data-eff]')].find(a => a.dataset.eff === focusedEff)?.focus();
     $('add-status-btn').onclick = function(){
+      const pendingEffect = statusModalSession.pendingEffect;
       if (!pendingEffect) { alert('Choose an effect first.'); return; }
       const target = getCharacterById(id); // see remove handler: never the object captured at open
       if (!target) return;
@@ -1716,6 +1756,7 @@ $('clear-dice-history').addEventListener('click', ()=>{
       if (durVal !== null && durVal >= 0) eff.remaining = durVal;
       pushHistory(`Add ${pendingEffect} to ${target.name}`);
       target.status.push(eff);
+      statusModalSession.pendingEffect = null; // committed: the pick is spent
       logEvent({
         type: 'status-add',
         summary: `Added ${pendingEffect}`,
@@ -1737,11 +1778,11 @@ $('clear-dice-history').addEventListener('click', ()=>{
       console.error('Status modal element missing');
       return;
     }
+    resetStatusModalSession(id); // every open starts with nothing picked
     renderStatusModal(id);
-    statusModalId = id;
     if (!modalEl.dataset.statusCloseWired) {
       modalEl.dataset.statusCloseWired = '1';
-      modalEl.addEventListener('hidden.bs.modal', () => { statusModalId = null; });
+      modalEl.addEventListener('hidden.bs.modal', () => { resetStatusModalSession(); });
     }
     statusModal = bootstrap.Modal.getOrCreateInstance(modalEl);
     statusModal.show();
@@ -2141,8 +2182,8 @@ $('clear-dice-history').addEventListener('click', ()=>{
       try {
         loadState();
         buildTable();
-        if (statusModalId && !renderStatusModal(statusModalId)) { // the open modal's combatant is gone
-          statusModalId = null;
+        if (statusModalSession.id && !renderStatusModal(statusModalSession.id)) { // the open modal's combatant is gone
+          resetStatusModalSession();
           statusModal?.hide();
         }
       } catch (err) {

@@ -1,6 +1,6 @@
 {
   "name": "initiative-tracker",
-  "version": "2.3.15",
+  "version": "2.3.16",
   "description": "**A comprehensive, browser-based suite of tools for tabletop RPG Game Masters**",
   "main": "index.js",
   "directories": {

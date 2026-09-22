@@ -16,7 +16,7 @@ The DM's Toolbox has evolved through focused feature releases. Minor versions (2
 - **1.9.x**: Battle map measurement tools, persistent fog shapes, and generator integration across NPC/Tavern/Shop systems
 - **1.8.x**: Spell database expansion to 432+ spells, inventory management, loot generator overhaul, and character token generation
 
-**Current version: 2.3.15 (September 2026)**
+**Current version: 2.3.16 (September 2026)**
 
 ---
 
@@ -24,6 +24,25 @@ The DM's Toolbox has evolved through focused feature releases. Minor versions (2
 
 ### Known issues
 - **Flaky end-to-end test: "a blank count is invalid, not too many, and nothing is rolled"** (`tests/e2e/dice-callers.spec.js`, Character Sheet hit-dice count) — this test fails intermittently. It has failed once in a full-suite run, once in a run of three solo runs, and once in a comparison run, and passes on most other runs (eight consecutive repeat runs, and two later full-suite runs, all passed). The cause has not been identified; the likely area is timing around the hit-dice modal and the toast it asserts on, and the failure has not been captured with a message. It has not been observed as a product bug: the behavior it checks (a blank hit-dice count shows "Invalid number of hit dice to spend." instead of the over-limit message, and nothing is rolled) works when exercised by hand and in every passing run. Re-run before treating a red result on this test as a regression, and harden the test's waits when it is next touched.
+
+---
+
+## [2.3.16] - 2026-09-21
+**Initiative Status Modal: Cross-Tab Pending Selection**
+
+### Fixed
+- **The status modal keeps an uncommitted effect selection across cross-tab redraws** — picking an effect (and typing a duration) in the modal used to be lost the instant another tab changed the combatant's statuses and the modal redrew; the pick and its duration now survive that redraw and Add still works normally
+- **A pending duration no longer leaks onto a different effect** — if the picked effect is invalidated by a cross-tab redraw (another tab already added it), its typed duration is cleared along with the pick, so a duration meant for one effect cannot silently apply to whatever is picked next
+- Cross-tab status updates keep refreshing the open modal immediately, without ever committing the pending pick on their own
+
+### Internal / Tests
+- New two-tab (real browser contexts) regression coverage: the pick and duration surviving a redraw and being added exactly once; another tab removing or adding an effect while a pick is pending; the combatant being deleted; closing and reopening starting clean; keyboard focus on the dropdown surviving a redraw; and the duration-invalidation/duration-preservation pair
+- Mutation-checked: removing the pending-state restore, resetting on every render, skipping the close/open reset, committing the pick during a redraw, skipping invalidation, dropping focus restoration, clearing duration on every redraw, and skipping the duration reset on invalidation are all caught
+
+### Known issues (follow-ups)
+- Picking a different effect in the same tab (no other tab involved) does not clear a previously typed duration; this pass only covers the cross-tab invalidation case
+- True independent-group crit semantics for keep/drop dice (roll the original group twice and sum)
+- Hand-typed miscellaneous bonuses for skills/saves would need an explicit override field
 
 ---
 

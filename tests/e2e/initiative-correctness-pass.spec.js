@@ -150,6 +150,196 @@ test.describe('status modal', () => {
   });
 });
 
+// The effect picked in the status modal's dropdown (but not yet added) and the duration typed beside it are pending
+// UI state of the open modal. A redraw caused by another tab's write must keep them; only Add, closing or opening
+// the modal, or the pick becoming invalid may discard them.
+test.describe('status modal: pending selection across cross-tab redraws (two real tabs)', () => {
+  test.use(desktop);
+
+  // Tab A is the tracker; tab B is any other page on the same origin that writes the tracker's storage key,
+  // so tab A receives a genuine `storage` event.
+  async function twoTabs(context, characters) {
+    const a = await context.newPage();
+    const dialogs = [];
+    a.on('dialog', d => { dialogs.push(d.message()); d.accept(); });
+    const errors = watchErrors(a);
+    await seed(a, characters);
+    const b = await context.newPage();
+    await b.goto('/index.html');
+    return { a, b, dialogs, errors };
+  }
+  const writeFromB = (b, body) => b.evaluate(src => {
+    const data = JSON.parse(localStorage.getItem('initiativeTrackerData'));
+    new Function('data', src)(data);
+    localStorage.setItem('initiativeTrackerData', JSON.stringify(data));
+  }, body);
+  const openStatus = async (a) => {
+    await a.locator('#initiative-order [data-action="status"]').first().click();
+    await expect(a.locator('#statusModal')).toBeVisible();
+  };
+  const pick = async (a, name) => {
+    await a.locator('#statusModal .dropdown-toggle').click();
+    await a.locator(`#status-dropdown-list a[data-eff="${name}"]`).click();
+  };
+  const names = async (a) => (await savedState(a)).characters[0].status.map(x => x.name);
+  const badges = a => a.locator('#status-badges .badge');
+
+  test('a picked effect and its duration survive a cross-tab redraw and are added exactly once', async ({ context }) => {
+    const { a, b, dialogs, errors } = await twoTabs(context, [char('a', 'Alpha', 10)]);
+    await openStatus(a);
+    await pick(a, 'Prone');
+    await a.locator('#status-duration').fill('3');
+
+    await writeFromB(b, "data.characters[0].status = [{ name: 'Charmed', icon: '🔮' }];");
+    await expect(badges(a)).toHaveCount(1); // the modal redrew from the other tab's state
+    await expect(a.locator('#status-dropdown-list a[data-eff="Prone"]')).toHaveClass(/active/);
+    await expect(a.locator('#status-duration')).toHaveValue('3');
+    expect(await names(a), 'the pick is not persisted before Add').toEqual(['Charmed']);
+
+    await a.locator('#add-status-btn').click();
+    await expect(badges(a)).toHaveCount(2);
+    expect(dialogs).toEqual([]);
+    const st = (await savedState(a)).characters[0].status;
+    expect(st.map(x => x.name)).toEqual(['Charmed', 'Prone']);
+    expect(st[1].remaining).toBe(3);
+    await expect(a.locator('#status-dropdown-list a.active')).toHaveCount(0); // spent
+    await a.locator('#add-status-btn').click(); // nothing picked any more: it cannot add a second one
+    expect(dialogs).toEqual(['Choose an effect first.']);
+    expect(await names(a)).toEqual(['Charmed', 'Prone']);
+    expect(errors, errors.join('\n')).toEqual([]);
+  });
+
+  test('another tab removing an existing effect redraws the modal and keeps the pick', async ({ context }) => {
+    const { a, b, dialogs } = await twoTabs(context, [char('a', 'Alpha', 10, { status: [{ name: 'Charmed', icon: '🔮' }] })]);
+    await openStatus(a);
+    await expect(badges(a)).toHaveCount(1);
+    await pick(a, 'Prone');
+    await writeFromB(b, 'data.characters[0].status = [];');
+    await expect(badges(a)).toHaveCount(0);
+    await expect(a.locator('#status-dropdown-list a[data-eff="Prone"]')).toHaveClass(/active/);
+    await a.locator('#add-status-btn').click();
+    await expect.poll(() => names(a)).toEqual(['Prone']);
+    expect(dialogs).toEqual([]);
+  });
+
+  test('removing an effect in this modal keeps an unrelated pick', async ({ context }) => {
+    const { a } = await twoTabs(context, [char('a', 'Alpha', 10, { status: [{ name: 'Charmed', icon: '🔮' }] })]);
+    await openStatus(a);
+    await pick(a, 'Prone');
+    await a.locator('#status-badges .remove-status').first().click();
+    await expect(badges(a)).toHaveCount(0);
+    await expect(a.locator('#status-dropdown-list a[data-eff="Prone"]')).toHaveClass(/active/);
+    await a.locator('#add-status-btn').click();
+    await expect.poll(() => names(a)).toEqual(['Prone']);
+  });
+
+  test('a pick that another tab already added is dropped, and Add does not add anything', async ({ context }) => {
+    const { a, b, dialogs } = await twoTabs(context, [char('a', 'Alpha', 10)]);
+    await openStatus(a);
+    await pick(a, 'Prone');
+    await writeFromB(b, "data.characters[0].status = [{ name: 'Prone', icon: '🛌' }];");
+    await expect(badges(a)).toHaveCount(1);
+    await expect(a.locator('#status-dropdown-list a.active')).toHaveCount(0);
+    await a.locator('#add-status-btn').click();
+    expect(dialogs).toEqual(['Choose an effect first.']);
+    expect(await names(a)).toEqual(['Prone']); // still exactly one
+  });
+
+  // Pins both sides of the pending-duration lifecycle: a stale duration must not survive an invalidated pick
+  // (this test), and a valid pick's duration must survive an unrelated redraw (the next test).
+  test('an invalidated pick clears its duration, so a later pick does not inherit it', async ({ context }) => {
+    const { a, b, dialogs } = await twoTabs(context, [char('a', 'Alpha', 10)]);
+    await openStatus(a);
+    await pick(a, 'Prone');
+    await a.locator('#status-duration').fill('3');
+    await writeFromB(b, "data.characters[0].status = [{ name: 'Prone', icon: '🛌' }];");
+    await expect(badges(a)).toHaveCount(1); // the redraw happened
+    await expect(a.locator('#status-dropdown-list a.active')).toHaveCount(0); // Prone is no longer pending
+    await expect(a.locator('#status-duration')).toHaveValue(''); // reset to the modal's normal default
+    await a.locator('#add-status-btn').click();
+    expect(dialogs).toEqual(['Choose an effect first.']); // Prone was not accidentally added by tab A
+    expect(await names(a)).toEqual(['Prone']); // still exactly the one tab B added
+
+    await pick(a, 'Blinded');
+    await expect(a.locator('#status-duration')).toHaveValue(''); // the new pick does not inherit the stale 3
+    await a.locator('#add-status-btn').click();
+    const statuses = (await savedState(a)).characters[0].status;
+    expect(statuses.map(x => x.name)).toEqual(['Prone', 'Blinded']);
+    expect(statuses[1].remaining).toBeUndefined(); // not the stale 3; indefinite, the current default
+  });
+
+  test('a valid pick and its duration survive an unrelated cross-tab redraw', async ({ context }) => {
+    const { a, b } = await twoTabs(context, [char('a', 'Alpha', 10)]);
+    await openStatus(a);
+    await pick(a, 'Prone');
+    await a.locator('#status-duration').fill('3');
+    await writeFromB(b, "data.characters[0].status = [{ name: 'Charmed', icon: '🔮' }];"); // unrelated status
+    await expect(badges(a)).toHaveCount(1);
+    await expect(a.locator('#status-dropdown-list a[data-eff="Prone"]')).toHaveClass(/active/);
+    await expect(a.locator('#status-duration')).toHaveValue('3'); // untouched: Prone is still a valid pick
+    await a.locator('#add-status-btn').click();
+    const statuses = (await savedState(a)).characters[0].status;
+    expect(statuses.map(x => x.name)).toEqual(['Charmed', 'Prone']);
+    expect(statuses[1].remaining).toBe(3);
+  });
+
+  test('a redraw does not commit the pick by itself', async ({ context }) => {
+    const { a, b } = await twoTabs(context, [char('a', 'Alpha', 10)]);
+    await openStatus(a);
+    await pick(a, 'Prone');
+    // Each write from B is observable in A as a redraw (the badge count flips), so every redraw has happened
+    // before the assertions; none of them may commit or drop the pick.
+    for (let i = 0; i < 3; i++) {
+      await writeFromB(b, "data.characters[0].status = [{ name: 'Charmed', icon: '🔮' }];");
+      await expect(badges(a)).toHaveCount(1);
+      await expect(a.locator('#status-dropdown-list a[data-eff="Prone"]')).toHaveClass(/active/);
+      await writeFromB(b, 'data.characters[0].status = [];');
+      await expect(badges(a)).toHaveCount(0);
+      await expect(a.locator('#status-dropdown-list a[data-eff="Prone"]')).toHaveClass(/active/);
+    }
+    expect(await names(a)).toEqual([]);
+  });
+
+  test('closing the modal discards the pick and the duration; reopening starts clean', async ({ context }) => {
+    const { a, dialogs } = await twoTabs(context, [char('a', 'Alpha', 10)]);
+    await openStatus(a);
+    await pick(a, 'Prone');
+    await a.locator('#status-duration').fill('5');
+    await a.locator('#statusModal .btn-close').click();
+    await expect(a.locator('#statusModal')).toBeHidden();
+    await openStatus(a);
+    await expect(a.locator('#status-dropdown-list a.active')).toHaveCount(0);
+    await expect(a.locator('#status-duration')).toHaveValue('');
+    await a.locator('#add-status-btn').click();
+    expect(dialogs).toEqual(['Choose an effect first.']);
+    expect(await names(a)).toEqual([]);
+  });
+
+  test('the combatant being deleted in another tab closes the modal and clears the pick', async ({ context }) => {
+    const { a, b, errors } = await twoTabs(context, [char('a', 'Alpha', 20), char('b', 'Bravo', 10)]);
+    await openStatus(a);
+    await pick(a, 'Prone');
+    await a.locator('#status-duration').fill('2');
+    await writeFromB(b, "data.characters = data.characters.filter(c => c.id !== 'a');");
+    await expect(a.locator('#statusModal')).toBeHidden();
+    // opening it for the remaining combatant: nothing left over from Alpha
+    await openStatus(a);
+    await expect(a.locator('#status-dropdown-list a.active')).toHaveCount(0);
+    await expect(a.locator('#status-duration')).toHaveValue('');
+    expect(errors, errors.join('\n')).toEqual([]);
+  });
+
+  test('keyboard focus on a dropdown item stays on it when the modal redraws', async ({ context }) => {
+    const { a, b } = await twoTabs(context, [char('a', 'Alpha', 10)]);
+    await openStatus(a);
+    await a.locator('#statusModal .dropdown-toggle').click();
+    await a.locator('#status-dropdown-list a[data-eff="Blinded"]').focus();
+    await writeFromB(b, "data.characters[0].status = [{ name: 'Charmed', icon: '🔮' }];");
+    await expect(badges(a)).toHaveCount(1);
+    expect(await a.evaluate(() => document.activeElement?.dataset?.eff)).toBe('Blinded');
+  });
+});
+
 test.describe('concentration prompts', () => {
   test.use(desktop);
 
