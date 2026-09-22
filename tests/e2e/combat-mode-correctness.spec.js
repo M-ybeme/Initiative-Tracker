@@ -87,7 +87,7 @@ test.describe('damage rolls reach roll history', () => {
     const h = await history(page);
     expect(h).toHaveLength(1);
     // main 3+5+2+2 = 12; secondary 4+1-1 = 4
-    expect(h[0]).toMatchObject({ notation: '2d6+1d4+2 + 2d6-1', rolls: [3, 5, 2, 4, 1], modifier: 1, total: 16 });
+    expect(h[0]).toMatchObject({ notation: '2d6+1d4+2 + 2d6-1', rolls: [3, 5, 2, 4, 1], modifier: 1, total: 16, isCritical: false });
     expect(errors, errors.join('\n')).toEqual([]);
   });
 
@@ -99,18 +99,99 @@ test.describe('damage rolls reach roll history', () => {
     await rollDamage(page, 0, 'critical', [[8, 6], [8, 2]]);
     const h = await history(page);
     expect(h).toHaveLength(1);
-    expect(h[0]).toMatchObject({ description: 'Longsword Damage (Crit)', notation: '1d8+3 (crit)', rolls: [6, 2], modifier: 3, total: 11 });
+    expect(h[0]).toMatchObject({ description: 'Longsword Damage (Crit)', notation: '1d8+3 (crit)', rolls: [6, 2], kept: [6, 2], dropped: [], modifier: 3, total: 11, isCritical: true });
     expect(errors, errors.join('\n')).toEqual([]);
   });
 
-  test('a critical hit on a keep-highest damage group keeps the same mechanic on twice the dice', async ({ page }) => {
+  // A crit rolls the original group twice, independently: 4d6kh3 is two keep-3-of-4 rolls (13 + 14), not 8d6kh6 (30).
+  test('a critical hit on a keep-highest group rolls it twice independently, adds the modifier once, and records kept and dropped dice', async ({ page }) => {
+    const errors = watchErrors(page);
     await loadPage(page);
     await enterCombatMode(page);
-    await addAttacks(page, [{ name: 'Odd Blade', type: 'melee-weapon', bonus: '+5', damage: '4d6kh3', damageType: 'force' }]);
-    await rollDamage(page, 0, 'critical', [[6, 1], [6, 2], [6, 3], [6, 4], [6, 5], [6, 6], [6, 1], [6, 2]]);
+    await addAttacks(page, [{ name: 'Odd Blade', type: 'melee-weapon', bonus: '+5', damage: '4d6kh3+2', damageType: 'force' }]);
+    await rollDamage(page, 0, 'critical', [[6, 6], [6, 6], [6, 1], [6, 1], [6, 5], [6, 5], [6, 4], [6, 4]]);
+    const h = await history(page);
+    expect(h).toHaveLength(1);
+    expect(h[0]).toMatchObject({
+      description: 'Odd Blade Damage (Crit)', notation: '4d6kh3+2 (crit)',
+      rolls: [6, 6, 1, 1, 5, 5, 4, 4], modifier: 2, total: 13 + 14 + 2, isCritical: true,
+    });
+    expect(h[0].kept.slice().sort()).toEqual([1, 4, 5, 5, 6, 6]);
+    expect(h[0].dropped.slice().sort()).toEqual([1, 4]);
+    // the recorded numbers are truthful: the kept dice plus the modifier make the total
+    expect(h[0].kept.reduce((a, b) => a + b, 0) + h[0].modifier).toBe(h[0].total);
+    await expect(page.locator('#combatRollResult0')).toContainText('29');
+    await expect(page.locator('#combatRollResult0')).toContainText('→ kept');
+    expect(errors, errors.join('\n')).toEqual([]);
+  });
+
+  test('a critical hit on a keep-lowest group is two independent keep-lowest rolls', async ({ page }) => {
+    await loadPage(page);
+    await enterCombatMode(page);
+    await addAttacks(page, [{ name: 'Cursed Blade', type: 'melee-weapon', bonus: '+5', damage: '4d6kl2', damageType: 'necrotic' }]);
+    await rollDamage(page, 0, 'critical', [[6, 6], [6, 6], [6, 6], [6, 6], [6, 1], [6, 1], [6, 1], [6, 1]]);
     const [entry] = await history(page);
-    expect(entry.total).toBe(2 + 2 + 3 + 4 + 5 + 6); // 8d6 rolled; the six highest of [1,2,3,4,5,6,1,2] count (drops the two 1s)
-    expect(entry.rolls).toHaveLength(8);
+    expect(entry.total).toBe(6 + 6 + 1 + 1); // 8d6kl4 would give 4
+    expect(entry.isCritical).toBe(true);
+  });
+
+  test('a crit on several dice groups is rolled as written, so it is not recorded as a critical roll', async ({ page }) => {
+    await loadPage(page);
+    await enterCombatMode(page);
+    await addAttacks(page, [{ name: 'Flame Tongue', type: 'melee-weapon', bonus: '+5', damage: '2d6+1d4+2', damageType: 'fire' }]);
+    await rollDamage(page, 0, 'critical', [[6, 3], [6, 5], [4, 2]]);
+    const [entry] = await history(page);
+    expect(entry).toMatchObject({ rolls: [3, 5, 2], modifier: 2, total: 12, isCritical: false });
+  });
+
+  test('a crit that would pass the dice limit is refused: 0 damage, not marked critical', async ({ page }) => {
+    await loadPage(page);
+    await enterCombatMode(page);
+    await addAttacks(page, [{ name: 'Huge', type: 'melee-weapon', bonus: '+5', damage: '501d6', damageType: 'force' }]);
+    await rollDamage(page, 0, 'critical');
+    const [entry] = await history(page);
+    expect(entry).toMatchObject({ total: 0, isCritical: false });
+  });
+
+  test('a normal (non-crit) keep-highest roll is one group and not marked critical', async ({ page }) => {
+    await loadPage(page);
+    await enterCombatMode(page);
+    await addAttacks(page, [{ name: 'Odd Blade', type: 'melee-weapon', bonus: '+5', damage: '4d6kh3+2', damageType: 'force' }]);
+    await rollDamage(page, 0, 'normal', [[6, 6], [6, 6], [6, 1], [6, 1]]);
+    const [entry] = await history(page);
+    expect(entry).toMatchObject({ notation: '4d6kh3+2', rolls: [6, 6, 1, 1], modifier: 2, total: 15, isCritical: false });
+    expect(entry.kept.slice().sort()).toEqual([1, 6, 6]);
+    expect(entry.dropped).toEqual([1]);
+  });
+
+  test('the sheet own critical damage buttons roll the same independent groups, and the secondary group too', async ({ page }) => {
+    const errors = watchErrors(page);
+    await loadPage(page);
+    await enterCombatMode(page);
+    await addAttacks(page, [{ name: 'Odd Blade', type: 'melee-weapon', bonus: '+5', damage: '4d6kh3+2', damage2: '2d8kl1', damageType: 'force', damageType2: 'cold' }]);
+    await page.evaluate(() => {
+      window.rollHistory.length = 0;
+      const faces = [[6, 6], [6, 6], [6, 1], [6, 1], [6, 5], [6, 5], [6, 4], [6, 4], [8, 2], [8, 3], [8, 7], [8, 8]];
+      window.__dice.push(...faces.map(([sides, face]) => (face - 0.5) / sides));
+      for (const attr of ['data-damage-roll', 'data-damage2-roll']) {
+        const b = document.createElement('button');
+        b.setAttribute(attr, '0');
+        b.setAttribute('data-roll-type', 'critical');
+        document.body.appendChild(b);
+        b.click();
+        b.remove();
+      }
+    });
+    const h = await history(page); // newest first: secondary, then primary
+    expect(h).toHaveLength(2);
+    expect(h[1]).toMatchObject({ notation: '4d6kh3+2 (crit)', rolls: [6, 6, 1, 1, 5, 5, 4, 4], modifier: 2, total: 29, isCritical: true });
+    expect(h[1].dropped.slice().sort()).toEqual([1, 4]);
+    // 2d8kl1 twice: (2,3) keeps 2 and (7,8) keeps 7 = 9; one merged 4d8kl2 would keep 2 and 3 = 5
+    expect(h[0]).toMatchObject({ notation: '2d8kl1 (crit)', isCritical: true, modifier: 0 });
+    expect(h[0].rolls).toEqual([2, 3, 7, 8]);
+    expect(h[0].total).toBe(2 + 7);
+    expect(h[0].dropped.slice().sort()).toEqual([3, 8]);
+    expect(errors, errors.join('\n')).toEqual([]);
   });
 
   test('a legacy attack ("1d8+3 slashing", "1d4 fire") rolls the same in Combat Mode and on the sheet', async ({ page }) => {

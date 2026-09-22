@@ -5,7 +5,6 @@ import {
   setTempHP,
   getDeathSaveOutcome,
   getDeathSaveState,
-  getCriticalHitNotation,
   parseAttackBonus,
 } from '../../js/character/character-combat.js';
 
@@ -147,33 +146,6 @@ describe('getDeathSaveState', () => {
   it('handles null/undefined as 0', () => {
     expect(getDeathSaveState(null, null)).toBe('dying');
     expect(getDeathSaveState(undefined, 3)).toBe('dead');
-  });
-});
-
-describe('getCriticalHitNotation', () => {
-  it('doubles dice count for simple notation', () => {
-    expect(getCriticalHitNotation('2d6')).toBe('4d6');
-    expect(getCriticalHitNotation('1d8')).toBe('2d8');
-    expect(getCriticalHitNotation('3d10')).toBe('6d10');
-  });
-
-  it('preserves positive modifier', () => {
-    expect(getCriticalHitNotation('2d6+3')).toBe('4d6+3');
-    expect(getCriticalHitNotation('1d8+5')).toBe('2d8+5');
-  });
-
-  it('preserves negative modifier', () => {
-    expect(getCriticalHitNotation('2d6-2')).toBe('4d6-2');
-  });
-
-  it('omits modifier when it is 0', () => {
-    expect(getCriticalHitNotation('2d6')).toBe('4d6');
-  });
-
-  it('returns null for invalid notation', () => {
-    expect(getCriticalHitNotation('invalid')).toBeNull();
-    expect(getCriticalHitNotation('')).toBeNull();
-    expect(getCriticalHitNotation(null)).toBeNull();
   });
 });
 

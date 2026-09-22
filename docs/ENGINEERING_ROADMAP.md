@@ -195,7 +195,8 @@ Every phase assumes the shipped build only contains SRD-allowed data and copy. W
         calls `applyDamageToHP`, `applyHealingToHP`, `setTempHP`, `getDeathSaveOutcome`, and
         `parseAttackBonus` from this module. `getDeathSaveState`/`getCriticalHitNotation`/
         `parseAttackBonus`'s sibling formatter had no confirmed live duplicate or a minor
-        formatting divergence (see module) and were left as-is.
+        formatting divergence (see module) and were left as-is. (`getCriticalHitNotation` was removed later: a
+        critical hit is now rolled by the dice engine as the group twice, independently.)
   * [x] XP tracking → `character-xp.js` — added 2026-09-18: `character.js` now calls
         `getXPForLevel`/`getXPProgressInfo` instead of three separate inline copies of the
         XP threshold table/percentage math (one of which was undiscovered until this pass).

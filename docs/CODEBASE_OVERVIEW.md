@@ -369,8 +369,8 @@ logs, labels or characters; callers format the plain results.
 - `parseDiceExpression(expr)` / `rollDiceExpression(expr, randomFn)` - several terms: "2d6+1d4+3", "1d6-1d4", "4d6kh3", "5"
 - `rollD20(mode, bonus, randomFn)` - the one entry point for normal / advantage / disadvantage d20 rolls
 - Limits: `MAX_DICE_COUNT` (1000), `MAX_DIE_SIDES` (1,000,000) and `MAX_DICE_NOTATION_LENGTH` (200 characters of raw text, checked before any parsing so a long string is never scanned and many groups cannot add up to the same problem). Anything beyond a limit is invalid (rejected, never truncated or clamped).
-- One validity rule for dice dimensions (whole numbers from 1 up to the limits) is shared by both parsers, `rollHitDice` and `rollMultipleDice`. The parsers and `rollHitDice` return null; `rollMultipleDice` is the low-level call and throws `RangeError`. `getCriticalHitNotation` returns null when doubling the dice would pass `MAX_DICE_COUNT`.
-- `getCriticalHitNotation(notation)` - doubles the dice, keeps the modifier
+- One validity rule for dice dimensions (whole numbers from 1 up to the limits) is shared by both parsers, `rollHitDice` and `rollMultipleDice`. The parsers and `rollHitDice` return null; `rollMultipleDice` is the low-level call and throws `RangeError`. A critical `rollDiceNotation` returns null when rolling the group twice would pass `MAX_DICE_COUNT`.
+- `rollDiceNotation(notation, randomFn, { critical: true })` - a critical hit: the group is rolled twice, independently (so `4d6kh3` is two keep-3-of-4 rolls, not `8d6kh6`), and the flat modifier is added once. Results list `rolls`, `kept`, `dropped` and `groups`
 - `rollHitDice(dieSize, count, conMod, randomFn)` - CON per die, minimum 1 HP per die
 - `rollAbilityScore`, `rollAbilityScoreSet`, `createSeededRandom`
 

@@ -22,7 +22,6 @@ export const {
   rollDiceExpression,
   rollD20,
   describeFeatureRoll,
-  getCriticalHitNotation,
   normalizeLegacyDamageNotation,
   rollHitDice,
   rollAbilityScore,

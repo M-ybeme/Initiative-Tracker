@@ -1177,7 +1177,7 @@
       // Combat Dice Rolling Functions
       // ========================================
 
-      // The dice rules (parsing, critical doubling, Great Weapon Fighting rerolls, Savage Attacker,
+      // The dice rules (parsing, critical hits, Great Weapon Fighting rerolls, Savage Attacker,
       // d20 advantage) live in the shared engine, js/modules/dice-engine.js, loaded in <head> as
       // window.DiceEngine. This section only turns its results into the breakdown text shown here.
 
@@ -1199,42 +1199,55 @@
         return cleaned;
       }
 
-      // Roll dice notation such as "2d6+3". `doubleDice` doubles the dice for a critical hit;
+      // Roll dice notation such as "2d6+3". `critical` makes it a critical hit: a single dice group is rolled
+      // twice, independently (so "4d6kh3" keeps 3 of each 4), with the flat modifier added once;
       // `features` is { rerollLowDice, rollTwiceTakeBest }. A bare number ("5") or a multi-group
       // expression ("2d6+1d4") is rolled by the engine's expression roller; anything unreadable is 0.
       // `savedText` is the string as it was saved (for diagnostics), when `notation` was already
       // cleaned or adjusted by the caller.
-      function parseDiceAndRoll(notation, doubleDice = false, features = {}, savedText = notation) {
-        if (!notation) return { total: 0, breakdown: '0', rolls: [] };
+      function parseDiceAndRoll(notation, critical = false, features = {}, savedText = notation) {
+        if (!notation) return { total: 0, breakdown: '0', rolls: [], kept: [], dropped: [] };
         notation = normalizeLegacyDamageNotation(notation);
 
-        // A critical hit on a single dice group doubles it. If doubling would pass the engine's dice
+        // A critical hit on a single dice group rolls it twice. If that would pass the engine's dice
         // limit the crit is refused; it must not quietly roll normal damage instead.
-        let critNotation = null;
-        if (doubleDice && DiceEngine.parseDiceNotation(notation)) {
-          critNotation = DiceEngine.getCriticalHitNotation(notation);
-          if (!critNotation) {
-            console.warn(`Combat Mode: a critical hit on "${describeSavedText(savedText)}" would pass the ${DiceEngine.MAX_DICE_COUNT}-dice limit; rolling 0`);
-            return { total: 0, breakdown: '0', rolls: [] };
-          }
-        } // (a bare number or several groups have no single group to double and are rolled as written)
-        const rolled = DiceEngine.rollDiceNotation(critNotation || notation, undefined, features);
+        // (a bare number or several groups have no single group to repeat and are rolled as written)
+        // The result's `critical` says whether a crit was really rolled (false for several groups or a refused crit)
+        const crit = critical && !!DiceEngine.parseDiceNotation(notation);
+        const rolled = DiceEngine.rollDiceNotation(notation, undefined, { ...features, critical: crit });
+        if (crit && !rolled) {
+          console.warn(`Combat Mode: a critical hit on "${describeSavedText(savedText)}" would pass the ${DiceEngine.MAX_DICE_COUNT}-dice limit; rolling 0`);
+          return { total: 0, breakdown: '0', rolls: [], kept: [], dropped: [] };
+        }
         if (rolled) {
           const modStr = rolled.modifier >= 0 ? `+${rolled.modifier}` : String(rolled.modifier);
-          const breakdown = `${rolled.count}d${rolled.sides}${modStr} = [${rolled.rolls.join(', ')}]${modStr} = ${rolled.total}${DiceEngine.describeFeatureRoll(rolled)}`;
-          return { total: rolled.total, breakdown, rolls: rolled.rolls, sides: rolled.sides, modifier: rolled.modifier };
+          // Plain dice read as before ("2d8+3 = [5, 6]+3"). When a keep rule dropped dice, each group is shown on
+          // its own with the dice that counted: "4d6 ×2 = [6, 6, 1, 1 → kept 6, 6, 1] + [5, 5, 4, 4 → kept 5, 5, 4]".
+          let dice;
+          let head;
+          if (rolled.dropped.length) {
+            dice = rolled.groups.map(g => `[${g.rolls.join(', ')}${g.dropped.length ? ` → kept ${g.kept.join(', ')}` : ''}]`).join(' + ');
+            head = `${rolled.count}d${rolled.sides}${crit ? ' ×2' : ''}`;
+          } else {
+            dice = `[${rolled.rolls.join(', ')}]`;
+            head = `${rolled.count * rolled.groups.length}d${rolled.sides}`;
+          }
+          const breakdown = `${head}${modStr} = ${dice}${modStr} = ${rolled.total}${DiceEngine.describeFeatureRoll(rolled)}`;
+          return { total: rolled.total, breakdown, rolls: rolled.rolls, kept: rolled.kept, dropped: rolled.dropped, sides: rolled.sides, modifier: rolled.modifier, critical: crit };
         }
 
         const expr = DiceEngine.rollDiceExpression(notation);
         if (!expr) {
           const cleanedNote = notation !== savedText ? ` (as rolled: "${describeSavedText(notation)}")` : '';
           console.warn(`Combat Mode: could not read dice notation "${describeSavedText(savedText)}"${cleanedNote}; rolling 0`);
-          return { total: 0, breakdown: '0', rolls: [] };
+          return { total: 0, breakdown: '0', rolls: [], kept: [], dropped: [] };
         }
         const rolls = expr.parts.flatMap(part => part.rolls || []);
+        const kept = expr.parts.flatMap(part => part.kept || []);
+        const dropped = expr.parts.flatMap(part => part.dropped || []);
         const modifier = expr.parts.reduce((n, part) => n + (part.type === 'mod' ? part.n : 0), 0);
         const breakdown = rolls.length ? `${notation} = [${rolls.join(', ')}] = ${expr.total}` : String(expr.total);
-        return { total: expr.total, breakdown, rolls, modifier };
+        return { total: expr.total, breakdown, rolls, kept, dropped, modifier };
       }
 
       // Roll attack (d20 + bonus)
@@ -1342,6 +1355,8 @@
           // The attack's own damage (main + secondary) is one roll-history entry; feature and
           // concentration extras below are logged separately, so they are not part of these numbers.
           const allRolls = [...(result1.rolls || [])];
+          const allKept = [...(result1.kept || [])];
+          const allDropped = [...(result1.dropped || [])];
           let mod = result1.modifier || 0;
           let attackDamage = result1.total;
           let historyNotation = mainNotation;
@@ -1352,6 +1367,8 @@
             total += result2.total;
             breakdown += ` + ${result2.breakdown}`;
             allRolls.push(...(result2.rolls || []));
+            allKept.push(...(result2.kept || []));
+            allDropped.push(...(result2.dropped || []));
             mod += result2.modifier || 0;
             attackDamage += result2.total;
             historyNotation += ` + ${attack.damage2}`;
@@ -1366,7 +1383,7 @@
               window.addToRollHistory({
                 notation: en + (isCrit ? ' (crit)' : ''),
                 description: `${attack.name} - ${label}${isCrit ? ' (Crit)' : ''}`,
-                rolls: rx.rolls, modifier: rx.modifier || 0,
+                rolls: rx.rolls, kept: rx.kept, dropped: rx.dropped, modifier: rx.modifier || 0,
                 total: rx.total, timestamp: new Date().toISOString()
               });
             }
@@ -1381,7 +1398,7 @@
               window.addToRollHistory({
                 notation: concBonus.notation,
                 description: `${attack.name} - ${concBonus.label}`,
-                rolls: cr.rolls, modifier: cr.modifier || 0,
+                rolls: cr.rolls, kept: cr.kept, dropped: cr.dropped, modifier: cr.modifier || 0,
                 total: cr.total, timestamp: new Date().toISOString()
               });
             }
@@ -1404,11 +1421,13 @@
               window.addToRollHistory({
                 notation: historyNotation + (isCrit ? ' (crit)' : ''),
                 description: `${attack.name} Damage${isCrit ? ' (Crit)' : ''}`,
-                rolls: allRolls,
+                rolls: allRolls,   // every die rolled
+                kept: allKept,     // the dice that counted (all of `rolls` unless a keep rule dropped some)
+                dropped: allDropped,
                 modifier: mod,
                 total: attackDamage,
                 timestamp: new Date().toISOString(),
-                isCritical: false,
+                isCritical: !!result1.critical, // only when the main damage was really rolled as a crit
                 isFumble: false
               });
             }
@@ -1746,6 +1765,8 @@
           if (Array.isArray(roll.rolls)) {
             if (roll.isAdvantage || roll.isDisadvantage) {
               rollDisplay = `[${roll.rolls[0]}, ${roll.rolls[1]}] → <span class="${resultClass}">${roll.chosen ?? roll.total}</span>`;
+            } else if (roll.dropped && roll.dropped.length) {
+              rollDisplay = `[${roll.rolls.join(', ')}] → kept [${roll.kept.join(', ')}]`;
             } else {
               rollDisplay = roll.rolls.length > 1
                 ? `[${roll.rolls.join(', ')}]`

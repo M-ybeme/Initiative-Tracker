@@ -2,7 +2,7 @@ import { rollDiceNotation, rollD20, describeFeatureRoll, normalizeLegacyDamageNo
 import { getAbilityModifier, getProficiencyBonus, recalcDerivedStats } from './character-calculations.js';
 import { getAttackFeatureBonuses as _getAttackFeatureBonuses, addFlatBonusToNotation as _addFlatBonusToNotation, getConcentrationAttackBonus as _getConcentrationAttackBonus } from '../../Attack-rolls.js';
 import { getSpellSlotsForClassLevel as _getSpellSlotsForClassLevel, getPactMagicSlots as _getPactMagicSlots, normalizeSpellEntry as _normalizeSpellEntry, searchSpells as _searchSpells } from './character-spell-data.js';
-import { applyDamageToHP, applyHealingToHP, setTempHP, getDeathSaveOutcome, parseAttackBonus, getCriticalHitNotation } from './character-combat.js';
+import { applyDamageToHP, applyHealingToHP, setTempHP, getDeathSaveOutcome, parseAttackBonus } from './character-combat.js';
 import { calcSpellSaveDC, calcSpellAttackBonus, getConcentrationCheckDC, rollHitDiceForHealing } from './character-rest.js';
 import * as HitDice from '../modules/hit-dice.js';
 import { getXPForLevel, getXPProgressInfo } from './character-xp.js';
@@ -110,9 +110,11 @@ import { wireSendToEvents, wireTokenPreviewEvents } from './character-send-to.js
         }
 
         const result = {
-          notation,
+          notation: features && features.critical ? `${notation} (crit)` : notation,
           description: description + describeFeatureRoll(rolled),
           rolls: rolled.rolls,
+          kept: rolled.kept,       // the dice that counted; dropped ones are in `dropped`
+          dropped: rolled.dropped,
           modifier: rolled.modifier,
           total: rolled.total,
           timestamp: new Date().toISOString(),
@@ -289,6 +291,8 @@ import { wireSendToEvents, wireTokenPreviewEvents } from './character-send-to.js
           if (roll.isAdvantage || roll.isDisadvantage) {
             const _unchosen = roll.rolls.find(r => r !== roll.chosen);
             rollDisplay = `[${roll.rolls[0]}, ${roll.rolls[1]}] → <span class="${resultClass}">${roll.chosen}</span>`;
+          } else if (roll.dropped && roll.dropped.length) {
+            rollDisplay = `[${roll.rolls.join(', ')}] → kept [${roll.kept.join(', ')}]`;
           } else {
             rollDisplay = roll.rolls.length > 1
               ? `[${roll.rolls.join(', ')}]`
@@ -437,16 +441,13 @@ import { wireSendToEvents, wireTokenPreviewEvents } from './character-send-to.js
         const applyConc = concBonus ? confirm(concBonus.prompt) : false;
 
         if (rollType === 'critical') {
-          const critNotation = getCriticalHitNotation(notation);
-          if (!critNotation) { console.error('Invalid dice notation:', notation); return null; }
-          // GWF and SA apply to doubled crit dice too
-          const result = rollDice(critNotation, `${description} (CRIT!)`, features);
+          // The group is rolled twice, independently (keep/drop rules apply to each roll); GWF and SA apply too.
+          // A null result (invalid notation, or rolling twice would pass the engine's dice limit) is reported by rollDice.
+          const result = rollDice(notation, `${description} (CRIT!)`, { ...features, critical: true });
+          if (!result) return null;
           extraRolls.forEach(({ notation: en, label }) => {
-            // extraRolls are fixed small dice (e.g. 1d8), so doubling them cannot pass the engine's dice
-            // limit and the `|| en` fallback is unreachable today. If extra rolls ever get large, a null
-            // here would roll them undoubled: handle it like the main crit above instead.
-            const critEn = getCriticalHitNotation(en) || en;
-            rollDice(critEn, `${attack.name} - ${label} (CRIT!)`);
+            // extraRolls are fixed small dice (e.g. 1d8), so rolling them twice cannot pass the engine's dice limit.
+            rollDice(en, `${attack.name} - ${label} (CRIT!)`, { critical: true });
           });
           if (applyConc) rollDice(concBonus.notation, `${attack.name} - ${concBonus.label}`);
           return result;
@@ -487,13 +488,8 @@ import { wireSendToEvents, wireTokenPreviewEvents } from './character-send-to.js
         const damage2 = normalizeLegacyDamageNotation(attack.damage2);
 
         if (rollType === 'critical') {
-          // Critical hit: double the dice (not the modifier)
-          const critNotation = getCriticalHitNotation(damage2);
-          if (!critNotation) {
-            console.error('Invalid dice notation:', damage2);
-            return null;
-          }
-          return rollDice(critNotation, `${description} (CRIT!)`);
+          // Critical hit: the group is rolled twice, independently (the modifier is added once)
+          return rollDice(damage2, `${description} (CRIT!)`, { critical: true });
         } else if (rollType === 'half') {
           // Half damage (resistance)
           const result = rollDice(damage2, description);
@@ -1795,7 +1791,7 @@ import { wireSendToEvents, wireTokenPreviewEvents } from './character-send-to.js
               <div class="mb-1">
                 <span class="text-muted small me-1">${damageLabel}:</span>
                 <div class="btn-group btn-group-sm" role="group">
-                  <button type="button" class="btn btn-success" data-damage-roll="${index}" data-roll-type="critical" title="Critical Hit (double dice)">
+                  <button type="button" class="btn btn-success" data-damage-roll="${index}" data-roll-type="critical" title="Critical Hit (roll the dice twice)">
                     <i class="bi bi-heart-fill"></i>
                   </button>
                   <button type="button" class="btn btn-outline-light" data-damage-roll="${index}" data-roll-type="normal" title="Normal Damage">
@@ -1816,7 +1812,7 @@ import { wireSendToEvents, wireTokenPreviewEvents } from './character-send-to.js
               <div class="mb-1">
                 <span class="text-muted small me-1">${damage2Label}:</span>
                 <div class="btn-group btn-group-sm" role="group">
-                  <button type="button" class="btn btn-success" data-damage2-roll="${index}" data-roll-type="critical" title="Critical Hit (double dice)">
+                  <button type="button" class="btn btn-success" data-damage2-roll="${index}" data-roll-type="critical" title="Critical Hit (roll the dice twice)">
                     <i class="bi bi-heart-fill"></i>
                   </button>
                   <button type="button" class="btn btn-outline-light" data-damage2-roll="${index}" data-roll-type="normal" title="Normal Damage">

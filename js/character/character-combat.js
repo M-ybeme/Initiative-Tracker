@@ -100,12 +100,6 @@ export function getDeathSaveState(successes, failures) {
 }
 
 /**
- * The critical-hit notation: the die count doubles and the modifier is unchanged ("2d6+3" ->
- * "4d6+3"); null for invalid notation. The rule lives in the dice engine.
- */
-export { getCriticalHitNotation } from '../modules/dice.js';
-
-/**
  * Parse a to-hit bonus string (e.g. '+5', '-2', '3') into a number.
  * Returns 0 if the string contains no recognizable number.
  * @param {string} bonusStr

@@ -3,8 +3,8 @@
  *
  * It owns dice semantics only: parsing notation, rolling, modifiers, keep-highest/lowest,
  * multi-term expressions, d20 advantage/disadvantage, Great Weapon Fighting rerolls, Savage
- * Attacker, critical-hit doubling and hit-dice healing. It knows nothing about the DOM, combat
- * logs, labels or characters; callers turn its plain results into text.
+ * Attacker, critical hits (a group rolled twice, independently) and hit-dice healing. It knows
+ * nothing about the DOM, combat logs, labels or characters; callers turn its plain results into text.
  *
  * Runtime constraint: initiative.html and the inline/classic scripts on characters.html are
  * classic scripts, so they cannot `import`. This file is therefore a classic script that
@@ -118,58 +118,80 @@
     };
   }
 
+  // The dice of `rolls` that are not in `kept` (a die may repeat, so this removes one match per kept die).
+  function droppedDice(rolls, kept) {
+    const pool = rolls.slice();
+    for (const k of kept) pool.splice(pool.indexOf(k), 1);
+    return pool;
+  }
+
   /**
-   * Roll one dice group ("2d6+3", "4d6kh3"), with the two optional weapon-feature mechanics:
+   * Roll one dice group ("2d6+3", "4d6kh3"), with the optional weapon-feature mechanics:
    *   rerollLowDice     Great Weapon Fighting: a die showing 1 or 2 is rerolled once and the new
    *                     roll must be used.
    *   rollTwiceTakeBest Savage Attacker: roll all the dice twice and keep the set with the higher
    *                     total (the first set on a tie). Both can apply; GWF is applied to each set.
+   *   critical          A critical hit: the original group is rolled twice, independently, and both
+   *                     results are summed; the flat modifier is added once. "4d6kh3" is two separate
+   *                     4d6-keep-3 rolls, not 8d6 keep 6. With Savage Attacker the whole critical set
+   *                     (both groups) is what is rolled twice. Null if doubling the dice would pass
+   *                     MAX_DICE_COUNT, so a caller can never fall back to a normal roll without knowing.
    * `twiceRoll` reports the two totals compared (without the modifier), or is null.
+   * The result lists every die (`rolls`), the dice that counted (`kept`) and the ones that did not
+   * (`dropped`), plus each group on its own (`groups`: two for a critical hit, otherwise one).
+   * `isCritical` is true for a critical hit, or a natural 20 on a d20 group.
    * Returns null for invalid notation.
    * @param {string} notation
    * @param {() => number} [randomFn]
-   * @param {{rerollLowDice?: boolean, rollTwiceTakeBest?: boolean}} [features]
+   * @param {{rerollLowDice?: boolean, rollTwiceTakeBest?: boolean, critical?: boolean}} [features]
    */
   function rollDiceNotation(notation, randomFn = Math.random, features = {}) {
     const parsed = parseDiceNotation(notation);
     if (!parsed) return null;
     const { count, sides, modifier, keepHighest, keepLowest } = parsed;
-    const { rerollLowDice = false, rollTwiceTakeBest = false } = features || {};
+    const { rerollLowDice = false, rollTwiceTakeBest = false, critical = false } = features || {};
+    if (critical && !validDice(count * 2, sides)) return null;
 
-    const rollSet = () => {
-      const set = [];
+    const rollGroup = () => {
+      const rolls = [];
       for (let i = 0; i < count; i++) {
         let r = rollDie(sides, randomFn);
         if (rerollLowDice && r <= 2) r = rollDie(sides, randomFn);
-        set.push(r);
+        rolls.push(r);
       }
-      return set;
+      const kept = selectKept(rolls, keepHighest ? 'h' : keepLowest ? 'l' : null, keepHighest || keepLowest);
+      return { rolls, kept, dropped: droppedDice(rolls, kept) };
     };
+    const rollSet = () => Array.from({ length: critical ? 2 : 1 }, rollGroup);
+    const setTotal = (groups) => sum(groups.flatMap((g) => g.kept));
 
-    let rolls = rollSet();
+    let groups = rollSet();
     let twiceRoll = null;
     if (rollTwiceTakeBest) {
       const second = rollSet();
-      const firstTotal = sum(rolls);
-      const secondTotal = sum(second);
+      const firstTotal = setTotal(groups);
+      const secondTotal = setTotal(second);
       if (firstTotal >= secondTotal) {
         twiceRoll = { taken: firstTotal, discarded: secondTotal };
       } else {
         twiceRoll = { taken: secondTotal, discarded: firstTotal };
-        rolls = second;
+        groups = second;
       }
     }
 
-    const kept = selectKept(rolls, keepHighest ? 'h' : keepLowest ? 'l' : null, keepHighest || keepLowest);
+    const rolls = groups.flatMap((g) => g.rolls);
+    const kept = groups.flatMap((g) => g.kept);
     return {
       notation,
       count,
       sides,
       rolls,
       kept,
+      dropped: groups.flatMap((g) => g.dropped),
+      groups,
       modifier,
       total: sum(kept) + modifier,
-      isCritical: sides === 20 && kept.includes(20),
+      isCritical: critical || (sides === 20 && kept.includes(20)),
       isFumble: sides === 20 && kept.includes(1),
       rerollLowDice,
       rollTwiceTakeBest,
@@ -235,7 +257,7 @@
       const kept = selectKept(rolls, term.keepDir, term.keepN);
       const subtotal = term.sign * sum(kept);
       total += subtotal;
-      return { ...term, rolls, kept, subtotal };
+      return { ...term, rolls, kept, dropped: droppedDice(rolls, kept), subtotal };
     });
     return { total, parts };
   }
@@ -279,26 +301,6 @@
       isAdvantage: mode === 'advantage',
       isDisadvantage: mode === 'disadvantage'
     };
-  }
-
-  /**
-   * The notation for a critical hit: the dice rolled double, the modifier does not.
-   * "1d8+3" -> "2d8+3". A keep-highest/lowest group doubles its kept count along with its dice, so it
-   * keeps the same mechanic on twice the damage dice: "4d6kh3" (drop the lowest 1 of 4) becomes
-   * "8d6kh6" (drop the lowest 2 of 8), never "8d6" with the keep rule silently lost.
-   * Returns null if the notation is not a single valid dice group, or if doubling the dice would
-   * pass MAX_DICE_COUNT (so no caller can fall back to a normal roll without knowing the crit failed).
-   * @param {string} notation
-   * @returns {string|null}
-   */
-  function getCriticalHitNotation(notation) {
-    const parsed = parseDiceNotation(notation);
-    if (!parsed) return null;
-    const { count, sides, modifier, keepHighest, keepLowest } = parsed;
-    if (!validDice(count * 2, sides)) return null;
-    const keepStr = keepHighest ? 'kh' + keepHighest * 2 : keepLowest ? 'kl' + keepLowest * 2 : '';
-    const modStr = modifier > 0 ? '+' + modifier : modifier < 0 ? String(modifier) : '';
-    return count * 2 + 'd' + sides + keepStr + modStr;
   }
 
   // Older saved attacks sometimes carry the damage type inside the notation ("1d8+3 slashing"). The
@@ -379,7 +381,6 @@
     rollDiceExpression,
     rollD20,
     describeFeatureRoll,
-    getCriticalHitNotation,
     normalizeLegacyDamageNotation,
     rollHitDice,
     rollAbilityScore,

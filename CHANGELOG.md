@@ -16,7 +16,7 @@ The DM's Toolbox has evolved through focused feature releases. Minor versions (2
 - **1.9.x**: Battle map measurement tools, persistent fog shapes, and generator integration across NPC/Tavern/Shop systems
 - **1.8.x**: Spell database expansion to 432+ spells, inventory management, loot generator overhaul, and character token generation
 
-**Current version: 2.3.14 (September 2026)**
+**Current version: 2.3.15 (September 2026)**
 
 ---
 
@@ -24,6 +24,30 @@ The DM's Toolbox has evolved through focused feature releases. Minor versions (2
 
 ### Known issues
 - **Flaky end-to-end test: "a blank count is invalid, not too many, and nothing is rolled"** (`tests/e2e/dice-callers.spec.js`, Character Sheet hit-dice count) — this test fails intermittently. It has failed once in a full-suite run, once in a run of three solo runs, and once in a comparison run, and passes on most other runs (eight consecutive repeat runs, and two later full-suite runs, all passed). The cause has not been identified; the likely area is timing around the hit-dice modal and the toast it asserts on, and the failure has not been captured with a message. It has not been observed as a product bug: the behavior it checks (a blank hit-dice count shows "Invalid number of hit dice to spend." instead of the over-limit message, and nothing is rolled) works when exercised by hand and in every passing run. Re-run before treating a red result on this test as a regression, and harden the test's waits when it is next touched.
+
+---
+
+## [2.3.15] - 2026-09-21
+**Critical-Hit Keep/Drop Dice**
+
+### Fixed
+- **Critical hits on keep-highest/lowest damage dice are now exact** — a crit rolls the original group twice, independently, and adds both results, so `4d6kh3` is two separate keep-3-of-4 rolls instead of the approximation `8d6kh6` (which changed the odds). `4d6kl2` behaves the same way. The flat modifier is added once. Great Weapon Fighting applies inside each group, and Savage Attacker rolls the whole critical set twice and keeps the higher
+- **Combat Mode: crit damage is marked critical in the roll history** (it was always recorded as not critical), but only when the damage was really rolled as a crit; damage on several dice groups is still rolled as written and is not marked
+- **Roll history is truthful for keep/drop rolls** — entries now record every die rolled, the dice that counted and the dice dropped, and both history views show `[6, 6, 1, 1] → kept [6, 6, 1]`, so the dice always add up to the total
+
+### Changed
+- Combat Mode's damage breakdown shows each group when a keep rule dropped dice; plain dice read as before
+- The Critical Hit button titles say "roll the dice twice"
+
+### Internal / Tests
+- Critical hits are a `critical` option on `DiceEngine.rollDiceNotation` (results add `kept`, `dropped` and `groups`); `getCriticalHitNotation` is removed because one notation string cannot express two independent groups
+- New deterministic unit tests (27 vs 30 for `kh`, 14 vs 4 for `kl`, modifier once, feature interactions, dice-limit boundary) and Combat Mode / sheet E2E coverage, mutation-checked
+
+### Known issues (follow-ups)
+- History `kept` for a multi-group expression with a subtracted dice term is unsigned, so its dice do not sum to the total
+- A crit refused for passing the dice limit only logs to the console
+- The status modal's cross-tab redraw loses an effect that was picked but not yet added
+- Hand-typed miscellaneous bonuses for skills/saves would need an explicit override field
 
 ---
 

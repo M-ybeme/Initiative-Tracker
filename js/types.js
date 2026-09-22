@@ -439,9 +439,10 @@
  * @property {string} notation - Original notation
  * @property {number[]} rolls - Individual die results
  * @property {number[]} kept - Kept dice (after keep highest/lowest)
+ * @property {number[]} [dropped] - Dice a keep rule dropped (rolls = kept + dropped)
  * @property {number} modifier - Modifier applied
  * @property {number} total - Final total
- * @property {boolean} [isCritical] - Rolled a 20 (d20 only)
+ * @property {boolean} [isCritical] - A critical hit (damage rolled as a crit), or a natural 20 on a d20
  * @property {boolean} [isFumble] - Rolled a 1 (d20 only)
  */
 

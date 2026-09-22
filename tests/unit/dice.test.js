@@ -290,7 +290,6 @@ import {
   rollDiceExpression,
   rollD20,
   describeFeatureRoll,
-  getCriticalHitNotation,
   normalizeLegacyDamageNotation,
   rollHitDice,
   rollDie as engineRollDie
@@ -314,7 +313,7 @@ describe('the engine is one implementation reachable two ways', () => {
     runInNewContext(source, context);
     expect(Object.keys(context.DiceEngine).sort()).toEqual(
       ['MAX_DICE_COUNT', 'MAX_DICE_NOTATION_LENGTH', 'MAX_DIE_SIDES', 'createSeededRandom', 'describeFeatureRoll',
-        'getCriticalHitNotation', 'normalizeLegacyDamageNotation', 'parseDiceExpression', 'parseDiceNotation', 'rollAbilityScore',
+        'normalizeLegacyDamageNotation', 'parseDiceExpression', 'parseDiceNotation', 'rollAbilityScore',
         'rollAbilityScoreSet', 'rollD20', 'rollDiceExpression', 'rollDiceNotation', 'rollDie',
         'rollHitDice', 'rollMultipleDice'].sort());
     expect(context.DiceEngine.rollDie(6, () => 0.5)).toBe(4);
@@ -557,36 +556,118 @@ describe('rollD20', () => {
   });
 });
 
-describe('getCriticalHitNotation', () => {
-  it('doubles the dice and leaves the modifier', () => {
-    expect(getCriticalHitNotation('1d8+3')).toBe('2d8+3');
-    expect(getCriticalHitNotation('2d6-1')).toBe('4d6-1');
-    expect(getCriticalHitNotation('d10')).toBe('2d10');
+// Critical hits: the original dice group is rolled twice, independently, and both results are added; the flat
+// modifier is added once. So "4d6kh3" is two separate keep-3-of-4 rolls, never "8d6kh6".
+describe('critical hits (rollDiceNotation with critical: true)', () => {
+  const crit = { critical: true };
+  const sum = (xs) => xs.reduce((a, b) => a + b, 0);
+
+  it('1d8 rolls the die twice and adds both', () => {
+    const r = rollDiceNotation('1d8', dice(8, 3, 6), crit);
+    expect(r).toMatchObject({ rolls: [3, 6], kept: [3, 6], dropped: [], total: 9, modifier: 0, isCritical: true });
+    expect(r.groups).toHaveLength(2);
   });
-  // Policy: a critical hit doubles the dice rolled; a keep group doubles its kept count with its dice
-  // ("drop the lowest 1 of 4" -> "drop the lowest 2 of 8"), so the keep rule is never silently lost.
-  it('doubles the kept count of keep-highest and keep-lowest groups along with the dice', () => {
-    expect(getCriticalHitNotation('4d6kh3')).toBe('8d6kh6');
-    expect(getCriticalHitNotation('4d6kl2')).toBe('8d6kl4');
-    expect(getCriticalHitNotation('4d6kh3+2')).toBe('8d6kh6+2');
-    expect(getCriticalHitNotation('2d20kl1-1')).toBe('4d20kl2-1');
-    expect(getCriticalHitNotation(' 4D6KH3 ')).toBe('8d6kh6');
+
+  it('2d6+3 rolls 2d6 twice and adds the flat +3 once', () => {
+    const r = rollDiceNotation('2d6+3', dice(6, 1, 2, 3, 4), crit);
+    expect(r.rolls).toEqual([1, 2, 3, 4]);
+    expect(r.modifier).toBe(3);
+    expect(r.total).toBe(1 + 2 + 3 + 4 + 3); // one +3, not two
   });
-  it('leaves ordinary notation as it was', () => {
-    expect(getCriticalHitNotation('1d8')).toBe('2d8');
-    expect(getCriticalHitNotation('2d6+3')).toBe('4d6+3');
+
+  it('a negative modifier is applied once', () => {
+    expect(rollDiceNotation('2d6-1', dice(6, 4, 4, 5, 5), crit).total).toBe(4 + 4 + 5 + 5 - 1);
   });
-  it('a doubled keep group still parses and keeps the same share of its dice', () => {
-    const crit = parseDiceNotation(getCriticalHitNotation('4d6kh3'));
-    expect(crit).toMatchObject({ count: 8, sides: 6, keepHighest: 6, keepLowest: null });
-    const rolled = rollDiceNotation('8d6kh6', undefined);
-    expect(rolled.rolls).toHaveLength(8);
-    expect(rolled.kept).toHaveLength(6);
+
+  it('4d6kh3 is two independent keep-3-of-4 rolls: 27, not the 30 that 8d6kh6 would give', () => {
+    // group 1: 6,6,1,1 keeps 6,6,1 = 13; group 2: 5,5,4,4 keeps 5,5,4 = 14
+    const r = rollDiceNotation('4d6kh3', dice(6, 6, 6, 1, 1, 5, 5, 4, 4), crit);
+    expect(r.total).toBe(27);
+    expect(r.groups.map((g) => sum(g.kept))).toEqual([13, 14]);
+    expect(r.rolls).toEqual([6, 6, 1, 1, 5, 5, 4, 4]);
+    expect(r.kept.slice().sort()).toEqual([1, 4, 5, 5, 6, 6]);
+    expect(r.dropped.slice().sort()).toEqual([1, 4]); // one die dropped from EACH group
+    // what the old approximation produced on the same dice
+    expect(rollDiceNotation('8d6kh6', dice(6, 6, 6, 1, 1, 5, 5, 4, 4)).total).toBe(30);
   });
-  it('is null for anything that is not one dice group', () => {
-    expect(getCriticalHitNotation('2d6+1d4')).toBeNull();
-    expect(getCriticalHitNotation('nope')).toBeNull();
-    expect(getCriticalHitNotation('')).toBeNull();
+
+  it('4d6kl2 is two independent keep-lowest-2 rolls: 14, not the 4 that 8d6kl4 would give', () => {
+    // group 1: 6,6,6,6 keeps 6,6 = 12; group 2: 1,1,1,1 keeps 1,1 = 2
+    const r = rollDiceNotation('4d6kl2', dice(6, 6, 6, 6, 6, 1, 1, 1, 1), crit);
+    expect(r.total).toBe(14);
+    expect(r.groups.map((g) => sum(g.kept))).toEqual([12, 2]);
+    expect(rollDiceNotation('8d6kl4', dice(6, 6, 6, 6, 6, 1, 1, 1, 1)).total).toBe(4);
+  });
+
+  it('the flat modifier of a keep group is added once', () => {
+    const r = rollDiceNotation('4d6kh3+2', dice(6, 6, 6, 1, 1, 5, 5, 4, 4), crit);
+    expect(r.total).toBe(13 + 14 + 2);
+  });
+
+  it('non-crit rolls are unchanged: one group, no doubling', () => {
+    const r = rollDiceNotation('4d6kh3+2', dice(6, 6, 6, 1, 1));
+    expect(r).toMatchObject({ rolls: [6, 6, 1, 1], kept: [1, 6, 6], dropped: [1], total: 15, isCritical: false });
+    expect(r.groups).toHaveLength(1);
+    expect(rollDiceNotation('1d8', dice(8, 5), { critical: false }).total).toBe(5);
+  });
+
+  it('a natural 20 on a d20 group still reports isCritical without critical: true', () => {
+    expect(rollDiceNotation('1d20', dice(20, 20)).isCritical).toBe(true);
+    expect(rollDiceNotation('1d20', dice(20, 7)).isCritical).toBe(false);
+  });
+
+  it('applies Great Weapon Fighting to each group', () => {
+    // group 1 rolls a 1 (rerolled to 4); group 2 rolls an 8
+    const r = rollDiceNotation('1d8', mixed([8, 1], [8, 4], [8, 8]), { critical: true, rerollLowDice: true });
+    expect(r.rolls).toEqual([4, 8]);
+    expect(r.total).toBe(12);
+  });
+
+  it('Savage Attacker rolls the whole critical set twice and takes the higher', () => {
+    const r = rollDiceNotation('1d6', dice(6, 1, 2, 5, 6), { critical: true, rollTwiceTakeBest: true });
+    expect(r.total).toBe(11);
+    expect(r.twiceRoll).toEqual({ taken: 11, discarded: 3 });
+    expect(r.groups).toHaveLength(2);
+  });
+
+  it('Great Weapon Fighting rerolls inside each keep group before the keep rule is applied', () => {
+    // 4d6kh3 twice with GWF: group 1 rolls 1,6,6,6 (the 1 is rerolled to 2) keeps 6,6,6; group 2 rolls 5,5,5,5 keeps three 5s
+    const r = rollDiceNotation('4d6kh3', mixed([6, 1], [6, 2], [6, 6], [6, 6], [6, 6], [6, 5], [6, 5], [6, 5], [6, 5]), { critical: true, rerollLowDice: true });
+    expect(r.groups.map((g) => g.rolls)).toEqual([[2, 6, 6, 6], [5, 5, 5, 5]]);
+    expect(r.total).toBe(18 + 15);
+  });
+
+  it('Savage Attacker rolls the whole two-group keep set twice and takes the higher set', () => {
+    // set 1: 6,6,1,1 -> 13 and 5,5,4,4 -> 14 = 27; set 2: 1,1,1,1 -> 3 and 2,2,2,2 -> 6 = 9
+    const r = rollDiceNotation('4d6kh3', dice(6, 6, 6, 1, 1, 5, 5, 4, 4, 1, 1, 1, 1, 2, 2, 2, 2), { critical: true, rollTwiceTakeBest: true });
+    expect(r.total).toBe(27);
+    expect(r.twiceRoll).toEqual({ taken: 27, discarded: 9 });
+    expect(r.dropped).toHaveLength(2);
+  });
+
+  it('is null when rolling the group twice would pass the dice limit; 500d6 twice is fine', () => {
+    expect(rollDiceNotation('600d6', () => 0.5, crit)).toBeNull();
+    expect(rollDiceNotation('500d6', () => 0.5, crit).rolls).toHaveLength(1000);
+  });
+
+  it('a crit needs a single valid dice group', () => {
+    expect(rollDiceNotation('2d6+1d4', () => 0.5, crit)).toBeNull();
+    expect(rollDiceNotation('nope', () => 0.5, crit)).toBeNull();
+  });
+});
+
+describe('kept and dropped dice on every roll', () => {
+  it('kept and dropped together are the dice rolled, for keep-highest and keep-lowest; none dropped otherwise', () => {
+    expect(rollDiceNotation('4d6kh3', dice(6, 2, 5, 3, 5))).toMatchObject({ kept: [3, 5, 5], dropped: [2] });
+    expect(rollDiceNotation('4d6kl3', dice(6, 2, 5, 3, 5))).toMatchObject({ kept: [2, 3, 5], dropped: [5] });
+    expect(rollDiceNotation('2d6', dice(6, 2, 5))).toMatchObject({ kept: [2, 5], dropped: [] });
+  });
+  it('a repeated die is dropped once per copy, not once per value', () => {
+    expect(rollDiceNotation('4d6kh2', dice(6, 4, 4, 4, 4))).toMatchObject({ kept: [4, 4], dropped: [4, 4] });
+  });
+  it('expression parts report dropped dice too', () => {
+    const r = rollDiceExpression('4d6kh3+2', dice(6, 1, 2, 3, 4));
+    expect(r.parts[0]).toMatchObject({ kept: [2, 3, 4], dropped: [1] });
   });
 });
 
@@ -667,9 +748,9 @@ describe('parser safety limits', () => {
     expect(rollHitDice(8, 1000, 0, () => 0.5)).toMatchObject({ rolls: expect.any(Array) });
   });
 
-  it('a critical hit is refused when doubling would pass the maximum (see the crit boundary tests)', () => {
-    expect(getCriticalHitNotation('600d6')).toBeNull();
-    expect(rollDiceNotation(getCriticalHitNotation('500d6'), () => 0.5)).not.toBeNull();
+  it('a critical hit is refused when rolling the group twice would pass the maximum', () => {
+    expect(rollDiceNotation('600d6', () => 0.5, { critical: true })).toBeNull();
+    expect(rollDiceNotation('500d6', () => 0.5, { critical: true })).not.toBeNull();
   });
 });
 
@@ -829,18 +910,21 @@ describe('one shared validity rule for dice counts and sides', () => {
   });
 });
 
-describe('getCriticalHitNotation at the dice limit', () => {
+describe('critical hits at the dice limit', () => {
   const { MAX_DICE_COUNT } = globalThis.DiceEngine;
   const largestSafe = MAX_DICE_COUNT / 2;
+  const crit = { critical: true };
 
-  it('doubles the largest count whose double is still allowed', () => {
-    expect(getCriticalHitNotation(largestSafe + 'd6+3')).toBe(MAX_DICE_COUNT + 'd6+3');
-    expect(rollDiceNotation(getCriticalHitNotation(largestSafe + 'd6+3'), () => 0.5)).not.toBeNull();
+  it('rolls the largest group whose two rolls still fit', () => {
+    const r = rollDiceNotation(largestSafe + 'd6+3', () => 0.5, crit);
+    expect(r).not.toBeNull();
+    expect(r.rolls).toHaveLength(MAX_DICE_COUNT);
+    expect(r.modifier).toBe(3);
   });
 
-  it('returns null for the first count whose double passes the limit', () => {
-    expect(getCriticalHitNotation(largestSafe + 1 + 'd6+3')).toBeNull();
-    expect(getCriticalHitNotation(MAX_DICE_COUNT + 'd6')).toBeNull();
+  it('returns null for the first count whose two rolls pass the limit', () => {
+    expect(rollDiceNotation(largestSafe + 1 + 'd6+3', () => 0.5, crit)).toBeNull();
+    expect(rollDiceNotation(MAX_DICE_COUNT + 'd6', () => 0.5, crit)).toBeNull();
   });
 
   it('a normal roll of that count is still fine, so only the crit is refused', () => {

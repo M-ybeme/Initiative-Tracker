@@ -1,7 +1,8 @@
 const DM_TOOLBOX_BUILD = {
   name: "The DM's Toolbox",
-  version: "2.3.14",
+  version: "2.3.15",
   recentChanges: [
+    "Fix: a critical hit on a keep-highest/lowest damage group (for example 4d6kh3) now rolls that group twice independently and adds both, instead of one merged 8d6kh6; the flat modifier is added once, and the roll history shows which dice were kept and dropped",
     "Fix: Character Sheet saving throws update as soon as an ability score or level changes; saving-throw and skill totals are now read-only calculated values, the Notes category and the last-opened character are remembered, and Short Rest adds your CON modifier",
     "Fix: Combat Mode damage rolls now appear in the roll history, and conditions changed on the card sync to the sheet",
     "Fix: Initiative Tracker numeric fields reject entries like 1e3 or 12.5, the status modal updates as you add or remove effects, and concentration prompts can no longer be lost by repeated clicks or by dismissing one",
