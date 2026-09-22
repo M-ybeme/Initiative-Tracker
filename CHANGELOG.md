@@ -16,7 +16,7 @@ The DM's Toolbox has evolved through focused feature releases. Minor versions (2
 - **1.9.x**: Battle map measurement tools, persistent fog shapes, and generator integration across NPC/Tavern/Shop systems
 - **1.8.x**: Spell database expansion to 432+ spells, inventory management, loot generator overhaul, and character token generation
 
-**Current version: 2.3.16 (September 2026)**
+**Current version: 2.3.17 (September 2026)**
 
 ---
 
@@ -24,6 +24,26 @@ The DM's Toolbox has evolved through focused feature releases. Minor versions (2
 
 ### Known issues
 - **Flaky end-to-end test: "a blank count is invalid, not too many, and nothing is rolled"** (`tests/e2e/dice-callers.spec.js`, Character Sheet hit-dice count) — this test fails intermittently. It has failed once in a full-suite run, once in a run of three solo runs, and once in a comparison run, and passes on most other runs (eight consecutive repeat runs, and two later full-suite runs, all passed). The cause has not been identified; the likely area is timing around the hit-dice modal and the toast it asserts on, and the failure has not been captured with a message. It has not been observed as a product bug: the behavior it checks (a blank hit-dice count shows "Invalid number of hit dice to spend." instead of the over-limit message, and nothing is rolled) works when exercised by hand and in every passing run. Re-run before treating a red result on this test as a regression, and harden the test's waits when it is next touched.
+
+---
+
+## [2.3.17] - 2026-09-21
+**NPC Generator: Naming-Style Dropdown**
+
+### Fixed
+- **NPC Generator naming-style dropdown now uses the selected race/culture directly** instead of re-detecting it from text — manually picking a style in the "Pick a Name" modal (or the Regenerate button) no longer routes it through the free-text description heuristic that only recognized 12 of 29 styles
+- **Human cultural styles and races such as Goliath, Firbolg, Triton, Aarakocra, Tabaxi, Kenku, Hobgoblin, Kobold, Bugbear, Yuan-ti, Changeling and Warforged now generate from their correct naming tables** instead of silently collapsing to Human (Latin)
+- **Half-Orc no longer incorrectly generates plain Orc names**
+- A failed or slow load of the naming-style data no longer breaks NPC generation or the name picker; naming degrades to "[No name yet]" instead
+
+### Internal
+- NPC Generator now uses the shared canonical Name Generator style registry (`js/name/name-data.js`) instead of maintaining a duplicate copy; the Race/Culture dropdown is built from that registry instead of a hand-typed option list
+- Added regression coverage across every visible NPC naming style, including the Half-Orc/Orc and Hobgoblin/Goblin substring traps and a selection sequence that rules out stale-style reuse
+
+### Known issues (follow-ups)
+- The naming-style registry's error path (an unknown or unavailable style) is console-only, with no user-visible message in the modal
+- A future style renamed or removed in the shared registry without an existing raceMap keyword entry updated to match would silently stop being auto-detected from description text; no test currently pins that cross-consistency
+- The dropdown's category grouping (Common/Uncommon/Monstrous/Special) is still hand-curated in two places (this page and the dedicated Name Generator), though each entry is now guarded against a missing key
 
 ---
 

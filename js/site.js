@@ -1,7 +1,8 @@
 const DM_TOOLBOX_BUILD = {
   name: "The DM's Toolbox",
-  version: "2.3.16",
+  version: "2.3.17",
   recentChanges: [
+    "Fix: the NPC Generator's Race/Culture naming style now generates from the style you actually picked, instead of silently falling back to Human (Latin) names (or Half-Orc to plain Orc) for most of the 29 listed styles",
     "Fix: the Initiative status modal keeps an effect you picked but had not yet added when another tab changes the combatant's statuses, instead of losing the selection; if that pick is invalidated (the effect was already added elsewhere), its typed duration is cleared too, so it cannot carry over to whatever you pick next",
     "Fix: a critical hit on a keep-highest/lowest damage group (for example 4d6kh3) now rolls that group twice independently and adds both, instead of one merged 8d6kh6; the flat modifier is added once, and the roll history shows which dice were kept and dropped",
     "Fix: Character Sheet saving throws update as soon as an ability score or level changes; saving-throw and skill totals are now read-only calculated values, the Notes category and the last-opened character are remembered, and Short Rest adds your CON modifier",

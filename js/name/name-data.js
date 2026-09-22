@@ -1,5 +1,9 @@
 // ---------- Race Syllable Tables ----------
-// `let` so importTables() can extend TABLES.Styles at runtime
+// `let` so importTables() can extend TABLES.Styles at runtime.
+// This is a classic (non-module) script: `TABLES` is a top-level lexical binding shared with any other
+// classic <script> loaded after this one on the same page (name.html, npc.html), NOT a property of
+// `window`. Do not add type="module" to this file or to any of its consumers' <script> tags — that
+// would break every one of them silently (they'd stop seeing `TABLES` at all).
 let TABLES = {
   Styles: {
     "Human (Latin)": { start:["mar","luc","val","cass","dom","jul","oct","aur","fel","max"], mid:["a","e","i","o","u","an","or","us","ian","ell"], end:["a","us","ius","ian","ella","ina","or","io","ius","um"] },

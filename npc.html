@@ -15,6 +15,10 @@
   <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" crossorigin="anonymous"></script>
   <script src="/js/site.js"></script>
+  <!-- The naming-style table (TABLES.Styles) that also powers name.html, so the two never drift apart.
+       Only the data file is loaded, not name-engine.js/name-ui.js: the NPC page keeps its own small
+       start+mid+end generator below and has no need for that page's granular controls. -->
+  <script src="/js/name/name-data.js"></script>
   <style>
     .bgimage{
         background: url('images/BGMap.png') no-repeat center center fixed;
@@ -805,8 +809,7 @@ function generate(){
     let generatedName = "[No name yet]";
     let nameClass = "text-info";
     if(autoName){
-      const race = detectRaceFromDescription(desc);
-      const { names } = generateNamesForNPC(`race: ${race}`, 1);
+      const { names } = generateNamesForNPC(desc, 1);
       generatedName = names[0] || "[No name yet]";
       nameClass = "text-success";
     }
@@ -955,6 +958,12 @@ function downloadNPCsJson(){
 }
 
 // ---------- Name Generator Integration ----------
+// True once /js/name/name-data.js has actually loaded and defined TABLES.Styles. Every naming call site
+// checks this first: that script tag has no `defer`/error handler, so a failed or slow load (a bad
+// deploy, a blocked request) must degrade naming gracefully, not throw a ReferenceError that aborts the
+// whole NPC-generation loop or the "Pick a Name" modal over what should be a purely cosmetic failure.
+function stylesReady(){ return typeof TABLES !== "undefined" && !!TABLES.Styles; }
+
 function detectRaceFromDescription(desc){
   const text = desc.toLowerCase();
   const raceMap = {
@@ -972,52 +981,36 @@ function detectRaceFromDescription(desc){
     fey: /\b(fey|fairy|faerie)/i
   };
 
-  for(const [race, pattern] of Object.entries(raceMap)){
-    if(pattern.test(text)) return race.charAt(0).toUpperCase() + race.slice(1);
+  // Guarantees the return value is always a real TABLES.Styles key, never just a plausible-looking one:
+  // every caller (the modal's initial auto-detect, the bulk auto-name path) can trust it without its own
+  // extra check. A keyword match whose capitalized form isn't a real style (a future raceMap entry that
+  // drifts out of sync) is skipped rather than returned, falling through toward the default.
+  if(stylesReady()){
+    for(const [race, pattern] of Object.entries(raceMap)){
+      const key = race.charAt(0).toUpperCase() + race.slice(1);
+      if(pattern.test(text) && TABLES.Styles[key]) return key;
+    }
   }
-  return "Human (Latin)"; // default
+  return "Human (Latin)"; // default; used as-is by callers guarded with stylesReady()
 }
 
-function generateNamesForNPC(desc, count = 10){
-  // Simple name generator using same RNG approach
-  const race = detectRaceFromDescription(desc);
+// Rolls `count` names from an exact TABLES.Styles key (the canonical table shared with name.html;
+// see /js/name/name-data.js). No text detection and no substitute style: the caller already knows
+// the style key (the Race/Culture dropdown value, or a key already resolved by detectRaceFromDescription
+// below), so an unknown key here is a caller bug, not a generation choice: it logs an error and returns
+// no names, rather than silently falling back to whatever style last happened to resolve.
+function generateNamesForStyle(styleKey, count = 10){
+  if(!stylesReady()){
+    console.error("NPC name generator: the naming-style registry (/js/name/name-data.js) has not loaded");
+    return { names: [], race: styleKey };
+  }
+  const style = TABLES.Styles[styleKey];
+  if(!style){
+    console.error(`NPC name generator: unknown naming style "${styleKey}"`);
+    return { names: [], race: styleKey };
+  }
   const seed = "npc-name-" + Date.now() + "-" + Math.random();
   const rng = prand(seed);
-
-  // Syllable tables kept in sync with name.html TABLES.Styles
-  const nameStyles = {
-    "Human (Latin)": { start:["mar","luc","val","cass","dom","jul","oct","aur","fel","max"], mid:["a","e","i","o","u","an","or","us","ian","ell"], end:["a","us","ius","ian","ella","ina","or","io","ius","um"] },
-    "Human (Norse)": { start:["al","bir","ein","har","ing","jor","kar","leif","sig","thor","ulf"], mid:["a","e","i","ar","ir","or","un","vald","bjorn","frid"], end:["ar","en","ir","or","ulf","vald","son","hild","brand","rid"] },
-    "Human (Arabic)": { start:["al","has","kal","ras","sal"], mid:["a","i","im","ad"], end:["id","im","an","een"] },
-    "Human (Asian)": { start:["li","mei","yan","jin","ming"], mid:["an","ing","ao","ei"], end:["li","ying","feng","long"] },
-    "Dwarf":      { start:["br","dr","gr","kr","th","kh","st","sk","dur","bal","kor"], mid:["a","o","u","an","or","un","grim","gar","dr","brom"], end:["ar","orn","dur","mir","grin","gar","rak","dun","rik","stone"] },
-    "Elf":        { start:["ae","e","i","lia","fae","sha","thi","yla","ari","ela"], mid:["ri","na","la","th","si","el","ia","lith","mir","vya"], end:["el","iel","ith","ien","a","ara","ielle","wyn","ion","ria"] },
-    "Halfling":   { start:["al","ben","cor","dav","eli","fil","jon","mer","pip","sam"], mid:["a","e","i","o","u","on","an","el","er","il"], end:["o","y","ie","in","er","o","an","wick","foot","hill"] },
-    "Gnome":      { start:["bod","cor","dim","fiz","gar","ned","pil","quin","ros","tim"], mid:["a","e","i","o","u","al","el","il","on","um"], end:["bin","dle","wick","ock","bit","er","um","win","ick","bur"] },
-    "Dragonborn": { start:["arj","bal","drax","fen","gal","kry","mor","rax","thal","vor"], mid:["a","e","i","o","u","ar","ir","or","ul","an"], end:["thor","rax","ion","ys","dor","drim","thas","var","mir","zor"] },
-    "Half-Orc":   { start:["gr","thr","kar","dur","gor"], mid:["a","o","u","ar","ok"], end:["ak","og","ush","gak","rim"] },
-    "Tiefling":   { start:["az","bal","mal","xan","vor","zar","oth","vel","sama","bel"], mid:["a","e","i","o","u","az","ath","ir","or","ul","z"], end:["zor","oth","iel","ion","ius","ith","zel","rax","mon","eon"] },
-    "Drow":       { start:["zae","xil","drae","vyr","zil","nyx","ssra","il","shi","ria"], mid:["ri","z","ss","yl","dra","vyr","il","ae","ith","yr"], end:["th","z","rin","thrae","ith","ria","zra","lyn","ithra","zz"] },
-    "Goliath":    { start:["kav","kul","mav","thu","vok"], mid:["a","o","u","ak"], end:["aak","oth","nak","kar"] },
-    "Firbolg":    { start:["adh","bru","car","dun","eir"], mid:["al","ir","an","or"], end:["an","ach","ion","os"] },
-    "Genasi":     { start:["aer","ign","ter","hyd","zel","cal","phyr","pyra","thal","lum"], mid:["a","e","i","o","u","ra","ri","el","or","um"], end:["os","on","ius","ara","eth","or","as","ion","ir","al"] },
-    "Triton":     { start:["cor","del","mar","nal","por"], mid:["a","i","an","or"], end:["is","os","ian","us"] },
-    "Aarakocra":  { start:["kee","aak","quil","aar","kaa"], mid:["ka","ra","ki","ak"], end:["kra","aar","kek","rill"] },
-    "Tabaxi":     { start:["cloud","rain","mist","storm","wind"], mid:["on","in"], end:["mountains","water","forest","leaves","sky"] },
-    "Kenku":      { start:["kik","kak","krek","chik","kaw"], mid:["i","a","e","ee"], end:["kaw","eek","awk","ik"] },
-    "Orc":        { start:["gr","br","dr","kr","mok","gar","zug","tok","urk","rag"], mid:["a","o","u","ag","og","uk","ur","ar","ok","ug"], end:["th","g","k","z","gor","nak","ruk","dok","zug","tar"] },
-    "Goblin":     { start:["sk","sn","gr","kr","zik","rag","nib","skr","blit","krik"], mid:["a","e","i","o","u","ak","ik","ok","zz","g"], end:["it","ik","ak","ug","azz","nix","gob","git","grit","zag"] },
-    "Hobgoblin":  { start:["kor","mag","drak","ghor","zar"], mid:["a","o","u","ag"], end:["gan","thul","ruk","dak"] },
-    "Kobold":     { start:["kik","mik","tik","drix","zix"], mid:["i","a","ix","ak"], end:["ix","ak","ik","zik"] },
-    "Lizardfolk": { start:["sli","dra","kra","iss","thi","ska","tro","laz","ss","vrak"], mid:["s","ss","az","iz","or","ur","ar","ra","ri","ko"], end:["th","ss","k","zz","g","sith","gash","kriss","zith","gor"] },
-    "Bugbear":    { start:["gru","hru","kru","skar","thag"], mid:["u","oo","ag","ur"], end:["ub","ash","ug","urz"] },
-    "Yuan-ti":    { start:["sss","sess","iss","zss","rass"], mid:["i","e","ss","eth"], end:["ith","eth","iss","ra"] },
-    "Fey":        { start:["ly","fae","tia","ari","elo","vio","nyx","syl","zea","aur"], mid:["li","ra","ri","si","na","ve","ya","ie","el","mi"], end:["wyn","elle","ria","ith","ara","ien","iel","is","ora","yse"] },
-    "Changeling": { start:["bin","jin","sin","ven","wyn"], mid:["a","e","i","ar"], end:["ak","et","ix","yn"] },
-    "Warforged":  { start:["bul","cog","iron","steel","war"], mid:["wark","guard","mark"], end:["ed","er","on","ium"] }
-  };
-
-  const style = nameStyles[race] || nameStyles["Human (Latin)"];
   const names = [];
 
   for(let i = 0; i < count; i++){
@@ -1031,7 +1024,50 @@ function generateNamesForNPC(desc, count = 10){
     names.push(name);
   }
 
-  return { names, race };
+  return { names, race: styleKey };
+}
+
+// Automatic naming from free-text NPC description (used only when no style is already known, e.g. the
+// "Generate Name" auto-fill on a freshly created NPC). detectRaceFromDescription is a best-effort keyword
+// match over a subset of styles and always resolves to something, defaulting to Human (Latin); that
+// default is a deliberate, documented fallback for this heuristic path only, never for a manual pick.
+function generateNamesForNPC(desc, count = 10){
+  return generateNamesForStyle(detectRaceFromDescription(desc), count);
+}
+// Published for regression tests only, so they can call the exact production generator as an oracle
+// (with Math.random/Date.now scripted) instead of parsing generated names for style fingerprints.
+window.generateNamesForStyle = generateNamesForStyle;
+
+// Builds #raceSelect's <option>s from TABLES.Styles (never a hand-typed list): the grouping/order below
+// is curation only (which category a style displays under), and every entry is guarded by an existence
+// check against TABLES.Styles, the same convention name.html's own style dropdown (populateStyles in
+// name-ui.js) uses, so a style renamed or removed there can't leave a dead option here.
+function populateRaceSelectOptions(){
+  const sel = document.getElementById("raceSelect");
+  if(!sel) return;
+  if(!stylesReady()){
+    console.error("NPC name generator: the naming-style registry (/js/name/name-data.js) has not loaded");
+    return; // leaves the <select> empty rather than throwing while building it
+  }
+  const raceGroups = {
+    "Common Races":    ["Human (Latin)", "Human (Norse)", "Human (Arabic)", "Human (Asian)", "Dwarf", "Elf", "Halfling", "Gnome"],
+    "Uncommon Races":  ["Dragonborn", "Half-Orc", "Tiefling", "Drow", "Goliath", "Firbolg", "Genasi", "Triton", "Aarakocra", "Tabaxi", "Kenku"],
+    "Monstrous Races": ["Orc", "Goblin", "Hobgoblin", "Kobold", "Lizardfolk", "Bugbear", "Yuan-ti"],
+    "Special Races":   ["Fey", "Changeling", "Warforged"]
+  };
+  sel.innerHTML = "";
+  for(const [groupLabel, styleKeys] of Object.entries(raceGroups)){
+    const optgroup = document.createElement("optgroup");
+    optgroup.label = groupLabel;
+    styleKeys.forEach(styleKey => {
+      if(!TABLES.Styles[styleKey]) return;
+      const opt = document.createElement("option");
+      opt.value = styleKey;
+      opt.textContent = styleKey;
+      optgroup.appendChild(opt);
+    });
+    if(optgroup.children.length) sel.appendChild(optgroup);
+  }
 }
 
 function showNamePickerModal(npcTile, desc){
@@ -1058,45 +1094,9 @@ function showNamePickerModal(npcTile, desc){
                 <i class="bi bi-people me-1"></i>Race/Culture:
               </label>
               <div class="input-group">
-                <select id="raceSelect" class="form-select">
-                  <optgroup label="Common Races">
-                    <option value="Human (Latin)">Human (Latin)</option>
-                    <option value="Human (Norse)">Human (Norse)</option>
-                    <option value="Human (Arabic)">Human (Arabic)</option>
-                    <option value="Human (Asian)">Human (Asian)</option>
-                    <option value="Dwarf">Dwarf</option>
-                    <option value="Elf">Elf</option>
-                    <option value="Halfling">Halfling</option>
-                    <option value="Gnome">Gnome</option>
-                  </optgroup>
-                  <optgroup label="Uncommon Races">
-                    <option value="Dragonborn">Dragonborn</option>
-                    <option value="Half-Orc">Half-Orc</option>
-                    <option value="Tiefling">Tiefling</option>
-                    <option value="Drow">Drow</option>
-                    <option value="Goliath">Goliath</option>
-                    <option value="Firbolg">Firbolg</option>
-                    <option value="Genasi">Genasi</option>
-                    <option value="Triton">Triton</option>
-                    <option value="Aarakocra">Aarakocra</option>
-                    <option value="Tabaxi">Tabaxi</option>
-                    <option value="Kenku">Kenku</option>
-                  </optgroup>
-                  <optgroup label="Monstrous Races">
-                    <option value="Orc">Orc</option>
-                    <option value="Goblin">Goblin</option>
-                    <option value="Hobgoblin">Hobgoblin</option>
-                    <option value="Kobold">Kobold</option>
-                    <option value="Lizardfolk">Lizardfolk</option>
-                    <option value="Bugbear">Bugbear</option>
-                    <option value="Yuan-ti">Yuan-ti</option>
-                  </optgroup>
-                  <optgroup label="Special Races">
-                    <option value="Fey">Fey</option>
-                    <option value="Changeling">Changeling</option>
-                    <option value="Warforged">Warforged</option>
-                  </optgroup>
-                </select>
+                <!-- Populated from TABLES.Styles by populateRaceSelectOptions() below, the same canonical
+                     registry name.html's own style dropdown reads from, so the two can't drift apart. -->
+                <select id="raceSelect" class="form-select"></select>
                 <button class="btn btn-outline-info" id="regenerateNames" title="Generate new names">
                   <i class="bi bi-arrow-clockwise"></i> Regenerate
                 </button>
@@ -1115,11 +1115,14 @@ function showNamePickerModal(npcTile, desc){
         </div>
       </div>`;
     document.body.appendChild(modal);
+    populateRaceSelectOptions();
   }
 
   // Function to generate and populate names
   function populateNames(race){
-    const { names } = generateNamesForNPC(`race: ${race}`, 12);
+    // `race` here is an exact dropdown/detected style key, never free text: use the direct-style
+    // path, not the description-inference one.
+    const { names } = generateNamesForStyle(race, 12);
     const grid = document.getElementById("nameGrid");
     grid.innerHTML = "";
 
