@@ -142,15 +142,92 @@ test.describe('damage rolls reach roll history', () => {
     await rollDamage(page, 0, 'critical', [[6, 3], [6, 5], [4, 2]]);
     const [entry] = await history(page);
     expect(entry).toMatchObject({ rolls: [3, 5, 2], modifier: 2, total: 12, isCritical: false });
+    // The Critical button was pressed, but a multi-group expression cannot double: the notation,
+    // description and badge must follow the actual roll outcome (isCritical: false), not the button.
+    expect(entry.notation).not.toContain('(crit)');
+    expect(entry.description).not.toContain('(Crit)');
+    await expect(page.locator('#combatRollResult0')).not.toContainText('CRIT!');
   });
 
-  test('a crit that would pass the dice limit is refused: 0 damage, not marked critical', async ({ page }) => {
+  test('a crit that would pass the dice limit is refused: no fake history entry, a specific toast, no dice rolled', async ({ page }) => {
+    const errors = watchErrors(page);
     await loadPage(page);
     await enterCombatMode(page);
     await addAttacks(page, [{ name: 'Huge', type: 'melee-weapon', bonus: '+5', damage: '501d6', damageType: 'force' }]);
     await rollDamage(page, 0, 'critical');
+    expect(await history(page)).toHaveLength(0); // not "0 damage, marked critical" — nothing was rolled at all
+    await expect(page.locator('#combatRollResult0')).toContainText('Critical roll exceeds the maximum dice limit.');
+    await expect(page.locator('#combatRollResult0')).not.toContainText('Invalid');
+    await expect(page.locator('#combatRollResult0 .roll-total')).toHaveCount(0);
+    await expect(page.locator('#appToastBody')).toContainText('Critical roll exceeds the maximum dice limit.');
+    expect(errors, errors.join('\n')).toEqual([]);
+  });
+
+  test('a crit refused on the secondary group also aborts the whole roll (no partial history)', async ({ page }) => {
+    await loadPage(page);
+    await enterCombatMode(page);
+    await addAttacks(page, [{ name: 'Huge', type: 'melee-weapon', bonus: '+5', damage: '1d8+3', damage2: '501d6', damageType: 'force' }]);
+    await rollDamage(page, 0, 'critical', [[8, 5], [8, 6]]);
+    expect(await history(page)).toHaveLength(0); // the main group's dice are not kept just because it rolled fine
+    await expect(page.locator('#appToastBody')).toContainText('Critical roll exceeds the maximum dice limit.');
+  });
+
+  test('a crit refused on a later extra feature roll leaves no stranded history from an earlier one', async ({ page }) => {
+    await loadPage(page);
+    await enterCombatMode(page);
+    await addAttacks(page, [{ name: 'Huge', type: 'melee-weapon', bonus: '+5', damage: '1d8+3', damageType: 'force' }]);
+    // Two extra feature rolls: the first is small and would succeed on its own; the second is huge and
+    // refuses. All of it must be rolled and checked before anything is committed, so the first extra
+    // roll's history entry cannot be left behind with no main "Huge Damage" entry to explain it.
+    await page.evaluate(() => {
+      window.getAttackFeatureBonuses = () => ({
+        flatBonus: 0,
+        extraRolls: [{ notation: '1d4', label: 'Small Feature' }, { notation: '501d6', label: 'Huge Feature' }],
+        rerollLowDice: false, rollTwiceTakeBest: false
+      });
+    });
+    // "1d4" also doubles for the crit (2 faces); "501d6" doubled exceeds the limit and is refused
+    // before it would ever draw from this queue.
+    await rollDamage(page, 0, 'critical', [[8, 5], [8, 6], [4, 2], [4, 3]]);
+    expect(await history(page)).toHaveLength(0); // not even the small feature roll's entry survives
+    await expect(page.locator('#appToastBody')).toContainText('Critical roll exceeds the maximum dice limit.');
+  });
+
+  test('signed mixed expression: a subtracted dice group reconciles with the total', async ({ page }) => {
+    await loadPage(page);
+    await enterCombatMode(page);
+    await addAttacks(page, [{ name: 'Trickster Blade', type: 'melee-weapon', bonus: '+5', damage: '2d6 - 1d4 + 3', damageType: 'force' }]);
+    await rollDamage(page, 0, 'normal', [[6, 4], [6, 5], [4, 2]]);
     const [entry] = await history(page);
-    expect(entry).toMatchObject({ total: 0, isCritical: false });
+    // 4 + 5 - 2 + 3 = 10, not 4 + 5 + 2 + 3 = 14
+    expect(entry.total).toBe(10);
+    expect(entry.groups).toMatchObject([
+      { sign: 1, rolls: [4, 5], kept: [4, 5] },
+      { sign: -1, rolls: [2], kept: [2] }
+    ]);
+    expect(entry.modifier).toBe(3);
+    const sumOfSignedGroups = entry.groups.reduce((n, g) => n + g.sign * g.kept.reduce((a, b) => a + b, 0), 0);
+    expect(sumOfSignedGroups + entry.modifier).toBe(entry.total);
+    await expect(page.locator('#combatRollResult0')).toContainText('2d6 - 1d4 + 3 = [4, 5] -[2] +3 = 10');
+  });
+
+  test('signed keep group: a subtracted keep-highest group shows all rolled dice, only the kept ones subtracted', async ({ page }) => {
+    await loadPage(page);
+    await enterCombatMode(page);
+    await addAttacks(page, [{ name: 'Trickster Blade', type: 'melee-weapon', bonus: '+5', damage: '2d6 - 4d6kh3 + 2', damageType: 'force' }]);
+    await rollDamage(page, 0, 'normal', [[6, 4], [6, 5], [6, 6], [6, 5], [6, 4], [6, 1]]);
+    const [entry] = await history(page);
+    // kept: 2d6 -> 4,5 (+9); 4d6kh3 rolled 6,5,4,1 keeps the top 3 (4,5,6; kept dice come back sorted
+    // ascending), drops 1, and the whole group is subtracted (-15); +2 modifier
+    expect(entry.total).toBe(9 - 15 + 2);
+    expect(entry.groups).toMatchObject([
+      { sign: 1, rolls: [4, 5], kept: [4, 5], dropped: [] },
+      { sign: -1, rolls: [6, 5, 4, 1], kept: [4, 5, 6], dropped: [1] }
+    ]);
+    // the dropped die does not participate in the visible subtotal
+    const sumOfSignedGroups = entry.groups.reduce((n, g) => n + g.sign * g.kept.reduce((a, b) => a + b, 0), 0);
+    expect(sumOfSignedGroups + entry.modifier).toBe(entry.total);
+    await expect(page.locator('#combatRollResult0')).toContainText('→ kept 4, 5, 6');
   });
 
   test('a normal (non-crit) keep-highest roll is one group and not marked critical', async ({ page }) => {
@@ -191,6 +268,25 @@ test.describe('damage rolls reach roll history', () => {
     expect(h[0].rolls).toEqual([2, 3, 7, 8]);
     expect(h[0].total).toBe(2 + 7);
     expect(h[0].dropped.slice().sort()).toEqual([3, 8]);
+    expect(errors, errors.join('\n')).toEqual([]);
+  });
+
+  test('the sheet own critical button also refuses a crit past the dice limit: no history, a specific toast', async ({ page }) => {
+    const errors = watchErrors(page);
+    await loadPage(page);
+    await enterCombatMode(page);
+    await addAttacks(page, [{ name: 'Huge', type: 'melee-weapon', bonus: '+5', damage: '501d6', damageType: 'force' }]);
+    await page.evaluate(() => {
+      window.rollHistory.length = 0;
+      const b = document.createElement('button');
+      b.setAttribute('data-damage-roll', '0');
+      b.setAttribute('data-roll-type', 'critical');
+      document.body.appendChild(b);
+      b.click();
+      b.remove();
+    });
+    expect(await history(page)).toHaveLength(0); // no fake history entry
+    await expect(page.locator('#appToastBody')).toContainText('Critical roll exceeds the maximum dice limit.');
     expect(errors, errors.join('\n')).toEqual([]);
   });
 
@@ -236,6 +332,41 @@ test.describe('host dependencies used by Combat Mode', () => {
     await page.click('#combatInitiativeBox');
     await expect(page.locator('#appToastBody')).toContainText('Initiative reminder: roll with advantage (Feral Instinct)');
     await expect(page.locator('#appToast')).toBeVisible();
+    expect(errors, errors.join('\n')).toEqual([]);
+  });
+
+  // showAppToast disposes and recreates its Bootstrap Toast instance on every call so a per-call delay
+  // is honored (Bootstrap only applies options when it creates the instance). These pin that consecutive
+  // calls do not leak, duplicate or drop the hidden.bs.toast reaction, and each call's own delay is used.
+  test('toast lifecycle: a later call replaces an in-progress toast and honors its own (shorter) delay', async ({ page }) => {
+    const errors = watchErrors(page);
+    await loadPage(page);
+    await page.evaluate(() => {
+      window.__hiddenCount = 0;
+      document.getElementById('appToast').addEventListener('hidden.bs.toast', () => { window.__hiddenCount++; });
+      window.showAppToast('first', 'success', 5000); // long enough that it would still be showing
+    });
+    await expect(page.locator('#appToastBody')).toHaveText('first');
+    await page.evaluate(() => window.showAppToast('second', 'warning', 80)); // replaces the still-showing first toast
+    await expect(page.locator('#appToastBody')).toHaveText('second');
+    // The second call's own short delay hides it; the discarded first toast's long delay must not still
+    // be pending (it would otherwise never hide within this test, or fire a second, unexpected hide).
+    await expect.poll(() => page.evaluate(() => document.getElementById('appToast').classList.contains('show')), { timeout: 2000 }).toBe(false);
+    expect(await page.evaluate(() => window.__hiddenCount)).toBe(1); // exactly one hide: not duplicated, not dropped
+    expect(errors, errors.join('\n')).toEqual([]);
+  });
+
+  test('toast lifecycle: many consecutive calls do not accumulate listeners or leave a stale instance', async ({ page }) => {
+    const errors = watchErrors(page);
+    await loadPage(page);
+    await page.evaluate(() => {
+      window.__hiddenCount = 0;
+      document.getElementById('appToast').addEventListener('hidden.bs.toast', () => { window.__hiddenCount++; });
+      for (let i = 0; i < 10; i++) window.showAppToast(`toast ${i}`, 'info', 50); // each replaces the last
+    });
+    await expect(page.locator('#appToastBody')).toHaveText('toast 9'); // the last call's content wins
+    await expect.poll(() => page.evaluate(() => document.getElementById('appToast').classList.contains('show')), { timeout: 2000 }).toBe(false);
+    expect(await page.evaluate(() => window.__hiddenCount)).toBe(1); // one instance ever actually shown+hidden, not ten
     expect(errors, errors.join('\n')).toEqual([]);
   });
 

@@ -22,6 +22,7 @@ export const {
   rollDiceExpression,
   rollD20,
   describeFeatureRoll,
+  describeSignedGroup,
   normalizeLegacyDamageNotation,
   rollHitDice,
   rollAbilityScore,

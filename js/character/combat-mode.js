@@ -24,7 +24,7 @@
  *                 getAttackFeatureBonuses, addFlatBonusToNotation, getConcentrationAttackBonus,
  *                 getInitiativeAdvantageReason, isConcentrating, setConcentration,
  *                 handleConcentrationCheck, syncConditionsToField, updateSpellSlotsDisplay,
- *                 rollDice, renderRollHistory. (Short and Long Rest are not called directly: the
+ *                 rollDice, renderRollHistory, formatRollDisplay. (Short and Long Rest are not called directly: the
  *                 card's rest buttons click the sheet's own #shortRestBtn / #longRestBtn.)
  *   Events        the document events "characterLoaded" and "concentrationChanged" that character.js
  *                 dispatches, plus DOMContentLoaded.
@@ -1205,6 +1205,11 @@
       // expression ("2d6+1d4") is rolled by the engine's expression roller; anything unreadable is 0.
       // `savedText` is the string as it was saved (for diagnostics), when `notation` was already
       // cleaned or adjusted by the caller.
+      //
+      // A refused critical (doubling would pass the engine's dice limit) is reported as
+      // `{ ..., critRefused: true }` instead of the generic "rolled 0" shape, so a caller can tell it
+      // apart from genuinely unreadable notation and show a specific message instead of rolling
+      // anything or logging it as invalid.
       function parseDiceAndRoll(notation, critical = false, features = {}, savedText = notation) {
         if (!notation) return { total: 0, breakdown: '0', rolls: [], kept: [], dropped: [] };
         notation = normalizeLegacyDamageNotation(notation);
@@ -1216,8 +1221,8 @@
         const crit = critical && !!DiceEngine.parseDiceNotation(notation);
         const rolled = DiceEngine.rollDiceNotation(notation, undefined, { ...features, critical: crit });
         if (crit && !rolled) {
-          console.warn(`Combat Mode: a critical hit on "${describeSavedText(savedText)}" would pass the ${DiceEngine.MAX_DICE_COUNT}-dice limit; rolling 0`);
-          return { total: 0, breakdown: '0', rolls: [], kept: [], dropped: [] };
+          console.warn(`Combat Mode: a critical hit on "${describeSavedText(savedText)}" would pass the ${DiceEngine.MAX_DICE_COUNT}-dice limit; refusing (not rolling as normal damage)`);
+          return { total: 0, breakdown: '0', rolls: [], kept: [], dropped: [], critRefused: true };
         }
         if (rolled) {
           const modStr = rolled.modifier >= 0 ? `+${rolled.modifier}` : String(rolled.modifier);
@@ -1242,12 +1247,36 @@
           console.warn(`Combat Mode: could not read dice notation "${describeSavedText(savedText)}"${cleanedNote}; rolling 0`);
           return { total: 0, breakdown: '0', rolls: [], kept: [], dropped: [] };
         }
-        const rolls = expr.parts.flatMap(part => part.rolls || []);
-        const kept = expr.parts.flatMap(part => part.kept || []);
-        const dropped = expr.parts.flatMap(part => part.dropped || []);
+        // Each dice term carries its own sign ("2d6 - 1d4"), and a keep rule can drop some of its dice
+        // ("2d6 - 4d6kh3"). A term's raw rolls are never negated (a die that shows 2 is still recorded
+        // as 2); only the group as a whole is shown as subtracted. `rolls`/`kept`/`dropped` below stay
+        // flattened for callers/history fields that only need "every die" regardless of sign; `groups`
+        // (added only when a sign or a keep rule actually needs it) is what the breakdown and the
+        // shared history renderer use to stay truthful about which groups were added and which were
+        // subtracted.
+        const diceParts = expr.parts.filter(part => part.type === 'dice');
+        const rolls = diceParts.flatMap(part => part.rolls);
+        const kept = diceParts.flatMap(part => part.kept);
+        const dropped = diceParts.flatMap(part => part.dropped);
         const modifier = expr.parts.reduce((n, part) => n + (part.type === 'mod' ? part.n : 0), 0);
-        const breakdown = rolls.length ? `${notation} = [${rolls.join(', ')}] = ${expr.total}` : String(expr.total);
-        return { total: expr.total, breakdown, rolls, kept, dropped, modifier };
+        const needsSignedDisplay = diceParts.some(part => part.sign < 0 || part.dropped.length);
+
+        let breakdown;
+        if (!rolls.length) {
+          breakdown = String(expr.total);
+        } else if (!needsSignedDisplay) {
+          // Plain additive groups ("2d6+1d4"): the simple flat list already reconciles with the total.
+          breakdown = `${notation} = [${rolls.join(', ')}] = ${expr.total}`;
+        } else {
+          const modSuffix = modifier ? ` ${modifier >= 0 ? '+' : ''}${modifier}` : '';
+          const groupsText = diceParts.map((part, i) => DiceEngine.describeSignedGroup(part, i)).join(' ');
+          breakdown = `${notation} = ${groupsText}${modSuffix} = ${expr.total}`;
+        }
+
+        const groups = needsSignedDisplay
+          ? diceParts.map(part => ({ sign: part.sign, rolls: part.rolls, kept: part.kept, dropped: part.dropped }))
+          : undefined;
+        return { total: expr.total, breakdown, rolls, kept, dropped, modifier, ...(groups ? { groups } : {}) };
       }
 
       // Roll attack (d20 + bonus)
@@ -1321,6 +1350,28 @@
         }
       }
 
+      // A dice-notation result (single group, or a crit's two independent groups) has no explicit sign
+      // of its own; an expression result already carries one per term in `.groups`. Used only when
+      // merging main + secondary damage into one history entry, so a signed group from one side does
+      // not leave the other side's dice invisible in the shared history renderer.
+      //
+      // Note: this `{sign, rolls, kept, dropped}` shape is a history-entry concept and is NOT the same
+      // as DiceEngine's own `rolled.groups` (a rollDiceNotation result's independent dice groups — 1
+      // normally, 2 for a critical hit — which has no `sign`). Don't pass a DiceEngine `groups` array
+      // here directly; it would be silently treated as all-positive (a missing `sign` reads as >= 0).
+      function toPlainGroups(result) {
+        return (result.rolls && result.rolls.length)
+          ? [{ sign: 1, rolls: result.rolls, kept: result.kept, dropped: result.dropped }]
+          : [];
+      }
+
+      // A critical hit refused for exceeding the engine's dice limit: no dice were rolled, so nothing
+      // is displayed or logged as if they had been (no fake history entry, no misleading CRIT badge).
+      function showCritRefused(attackIndex) {
+        showInlineRollResult(attackIndex, '<div class="small text-warning-emphasis">Critical roll exceeds the maximum dice limit.</div>');
+        window.showAppToast?.('Critical roll exceeds the maximum dice limit.', 'warning');
+      }
+
       // Roll damage
       function rollCombatDamage(attackIndex, rollType) {
         try {
@@ -1347,7 +1398,21 @@
           const concBonus = window.getConcentrationAttackBonus?.();
           const applyConc = concBonus ? confirm(concBonus.prompt) : false;
 
+          // Roll every part of the attack (main, secondary, extra feature dice) before committing
+          // anything to history or the display. A critical refused anywhere aborts the whole roll, so
+          // nothing can be partially applied: no history entry left over from a part that did succeed
+          // while the part that failed is silently missing, and no misleading history/badge for a part
+          // that was never actually rolled as a crit.
           const result1 = parseDiceAndRoll(mainNotation, isCrit, diceFeatures, attack.damage);
+          const result2 = attack.damage2 ? parseDiceAndRoll(attack.damage2, isCrit) : null;
+          const extraResults = extraRolls.map(({ notation: en, label }) => ({ en, label, rx: parseDiceAndRoll(en, isCrit) }));
+          // These are normally fixed small dice that can never hit the engine's limit even doubled, but
+          // a homebrew content pack could define a huge one.
+          if (result1.critRefused || result2?.critRefused || extraResults.some(({ rx }) => rx.critRefused)) {
+            showCritRefused(attackIndex);
+            return;
+          }
+
           let total = result1.total;
           let breakdown = result1.breakdown;
           if (flatBonus) breakdown += ` <span class="text-info-emphasis">(+${flatBonus})</span>`;
@@ -1360,10 +1425,12 @@
           let mod = result1.modifier || 0;
           let attackDamage = result1.total;
           let historyNotation = mainNotation;
+          // Signed groups (from a subtracted or keep/drop dice group in an expression), if any side of
+          // the attack actually needed them; null until then so the common plain case adds nothing new.
+          let allGroups = result1.groups ? result1.groups.slice() : null;
 
           // Handle secondary damage
-          if (attack.damage2) {
-            const result2 = parseDiceAndRoll(attack.damage2, isCrit);
+          if (result2) {
             total += result2.total;
             breakdown += ` + ${result2.breakdown}`;
             allRolls.push(...(result2.rolls || []));
@@ -1372,22 +1439,29 @@
             mod += result2.modifier || 0;
             attackDamage += result2.total;
             historyNotation += ` + ${attack.damage2}`;
+            if (result2.groups) {
+              allGroups = (allGroups || toPlainGroups(result1)).concat(result2.groups);
+            } else if (allGroups) {
+              allGroups = allGroups.concat(toPlainGroups(result2));
+            }
           }
 
-          // Extra feature rolls (e.g. Improved Divine Smite 1d8 radiant)
-          extraRolls.forEach(({ notation: en, label }) => {
-            const rx = parseDiceAndRoll(en, isCrit);
+          // Extra feature rolls (e.g. Improved Divine Smite 1d8 radiant). Each is labeled by whether it
+          // actually rolled as a crit (`rx.critical`), not by the button pressed: a multi-group extra
+          // notation cannot double either, the same as the main attack's own damage.
+          for (const { en, label, rx } of extraResults) {
             total += rx.total;
             breakdown += ` + ${rx.breakdown} <span class="text-warning-emphasis">${label}</span>`;
             if (typeof window.addToRollHistory === 'function') {
               window.addToRollHistory({
-                notation: en + (isCrit ? ' (crit)' : ''),
-                description: `${attack.name} - ${label}${isCrit ? ' (Crit)' : ''}`,
+                notation: en + (rx.critical ? ' (crit)' : ''),
+                description: `${attack.name} - ${label}${rx.critical ? ' (Crit)' : ''}`,
                 rolls: rx.rolls, kept: rx.kept, dropped: rx.dropped, modifier: rx.modifier || 0,
-                total: rx.total, timestamp: new Date().toISOString()
+                total: rx.total, timestamp: new Date().toISOString(),
+                ...(rx.groups ? { groups: rx.groups } : {})
               });
             }
-          });
+          }
 
           // Concentration bonus (Hex, Hunter's Mark, Spirit Shroud — crits don't double these)
           if (applyConc) {
@@ -1399,10 +1473,17 @@
                 notation: concBonus.notation,
                 description: `${attack.name} - ${concBonus.label}`,
                 rolls: cr.rolls, kept: cr.kept, dropped: cr.dropped, modifier: cr.modifier || 0,
-                total: cr.total, timestamp: new Date().toISOString()
+                total: cr.total, timestamp: new Date().toISOString(),
+                ...(cr.groups ? { groups: cr.groups } : {})
               });
             }
           }
+
+          // A crit was actually requested only if the main group was really rolled twice — a
+          // multi-group/expression main notation cannot double, so this can be false even though the
+          // Critical button was pressed (isCrit). The badge, notation, description and toast below all
+          // follow this, not the button, so they never claim a crit that did not happen.
+          const wasCrit = !!result1.critical;
 
           // Build result display
           const dmgType = attack.damageType || '';
@@ -1410,7 +1491,7 @@
           html += `<span class="roll-total text-danger">${total}</span>`;
           html += `<span class="small text-muted">${breakdown}`;
           if (dmgType) html += ` ${dmgType}`;
-          if (isCrit) html += ' <span class="badge bg-warning text-dark">CRIT!</span>';
+          if (wasCrit) html += ' <span class="badge bg-warning text-dark">CRIT!</span>';
           html += '</span></div>';
 
           showInlineRollResult(attackIndex, html);
@@ -1419,16 +1500,17 @@
           try {
             if (typeof window.addToRollHistory === 'function') {
               window.addToRollHistory({
-                notation: historyNotation + (isCrit ? ' (crit)' : ''),
-                description: `${attack.name} Damage${isCrit ? ' (Crit)' : ''}`,
+                notation: historyNotation + (wasCrit ? ' (crit)' : ''),
+                description: `${attack.name} Damage${wasCrit ? ' (Crit)' : ''}`,
                 rolls: allRolls,   // every die rolled
                 kept: allKept,     // the dice that counted (all of `rolls` unless a keep rule dropped some)
                 dropped: allDropped,
                 modifier: mod,
                 total: attackDamage,
                 timestamp: new Date().toISOString(),
-                isCritical: !!result1.critical, // only when the main damage was really rolled as a crit
-                isFumble: false
+                isCritical: wasCrit,
+                isFumble: false,
+                ...(allGroups ? { groups: allGroups } : {})
               });
             }
           } catch (e) { /* ignore history errors */ }
@@ -1436,7 +1518,7 @@
           // Show toast
           try {
             if (typeof window.showRollToast === 'function') {
-              window.showRollToast(`${attack.name} Damage`, total, isCrit ? 'Critical!' : null);
+              window.showRollToast(`${attack.name} Damage`, total, wasCrit ? 'Critical!' : null);
             }
           } catch (e) { /* ignore toast errors */ }
         } catch (err) {
@@ -1741,10 +1823,9 @@
           const isCrit   = roll.isCritical || false;
           const isFumble = roll.isFumble   || false;
 
-          let resultClass = '';
-          let badgeClass  = 'bg-secondary';
-          if (isCrit)   { resultClass = 'text-success fw-bold'; badgeClass = 'bg-success'; }
-          if (isFumble) { resultClass = 'text-danger fw-bold';  badgeClass = 'bg-danger'; }
+          let badgeClass = 'bg-secondary';
+          if (isCrit)   badgeClass = 'bg-success';
+          if (isFumble) badgeClass = 'bg-danger';
 
           // Format timestamp
           let timeStr = '';
@@ -1760,23 +1841,10 @@
           else if (desc.includes('save'))  icon = 'bi-shield-check';
           else if (desc.includes('check') || desc.includes('initiative')) icon = 'bi-person-check';
 
-          // Format individual rolls
-          let rollDisplay = '';
-          if (Array.isArray(roll.rolls)) {
-            if (roll.isAdvantage || roll.isDisadvantage) {
-              rollDisplay = `[${roll.rolls[0]}, ${roll.rolls[1]}] → <span class="${resultClass}">${roll.chosen ?? roll.total}</span>`;
-            } else if (roll.dropped && roll.dropped.length) {
-              rollDisplay = `[${roll.rolls.join(', ')}] → kept [${roll.kept.join(', ')}]`;
-            } else {
-              rollDisplay = roll.rolls.length > 1
-                ? `[${roll.rolls.join(', ')}]`
-                : `<span class="${resultClass}">${roll.rolls[0]}</span>`;
-            }
-          }
-
-          const modDisplay = (roll.modifier && roll.modifier !== 0)
-            ? ` ${roll.modifier >= 0 ? '+' : ''}${roll.modifier}`
-            : '';
+          // Kept/dropped/signed-group formatting is shared with the sheet's own roll-history list
+          // (character.js), so the two renderers cannot drift apart on what a roll actually showed.
+          const { rollDisplay, modDisplay, totalSuffix } =
+            window.formatRollDisplay?.(roll) || { rollDisplay: '', modDisplay: '', totalSuffix: '' };
 
           html += `
             <div class="dice-history-item d-flex align-items-center gap-3 p-2 border-bottom border-secondary">
@@ -1784,7 +1852,7 @@
               <div class="flex-grow-1">
                 <div class="fw-bold small"><i class="bi ${icon} me-1 text-muted"></i>${roll.description || 'Roll'}</div>
                 <div class="small text-muted">${roll.notation || ''}${modDisplay}</div>
-                ${rollDisplay ? `<div class="small">${rollDisplay}${modDisplay ? ` = <span class="${resultClass}">${roll.total}</span>` : ''}</div>` : ''}
+                ${rollDisplay ? `<div class="small">${rollDisplay}${totalSuffix}</div>` : ''}
               </div>
               <div class="small text-muted text-end flex-shrink-0">${timeStr}</div>
             </div>

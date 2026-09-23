@@ -138,7 +138,10 @@
    *                     MAX_DICE_COUNT, so a caller can never fall back to a normal roll without knowing.
    * `twiceRoll` reports the two totals compared (without the modifier), or is null.
    * The result lists every die (`rolls`), the dice that counted (`kept`) and the ones that did not
-   * (`dropped`), plus each group on its own (`groups`: two for a critical hit, otherwise one).
+   * (`dropped`), plus each group on its own (`groups`: two for a critical hit, otherwise one; each
+   * group is `{rolls, kept, dropped}` — no `sign`. A caller building a *signed* multi-term history
+   * entry, such as js/character/combat-mode.js's parseDiceAndRoll, uses its own `{sign, rolls, kept,
+   * dropped}` shape for that instead; the two are not interchangeable).
    * `isCritical` is true for a critical hit, or a natural 20 on a d20 group.
    * Returns null for invalid notation.
    * @param {string} notation
@@ -277,6 +280,25 @@
   }
 
   /**
+   * The text for one signed dice group in a breakdown or history display, e.g. "[3, 5]", "-[2]",
+   * "+[6, 5, 4, 1 → kept 4, 5, 6]". Used for the dice-term groups of a rollDiceExpression result
+   * (a subtracted group, or a keep rule that dropped some dice, needs to say so explicitly so the
+   * display reconciles with the total). `index` is the group's position among its siblings: the
+   * first group's own positive sign is implicit ("2d6+1d4" reads as "[..] +[..]", not "+[..] +[..]").
+   * A die that rolled low is never shown negative — only the group as a whole is marked subtracted.
+   * @param {{sign:1|-1, rolls:number[], kept:number[], dropped:number[]}} group
+   * @param {number} index
+   * @returns {string}
+   */
+  function describeSignedGroup(group, index) {
+    const sign = group.sign < 0 ? '-' : (index === 0 ? '' : '+');
+    const dice = (group.dropped && group.dropped.length)
+      ? `[${group.rolls.join(', ')} → kept ${group.kept.join(', ')}]`
+      : `[${group.rolls.join(', ')}]`;
+    return `${sign}${dice}`;
+  }
+
+  /**
    * Roll a d20 with optional advantage or disadvantage and add a bonus.
    * @param {'normal'|'advantage'|'disadvantage'} [mode]
    * @param {number} [bonus]
@@ -381,6 +403,7 @@
     rollDiceExpression,
     rollD20,
     describeFeatureRoll,
+    describeSignedGroup,
     normalizeLegacyDamageNotation,
     rollHitDice,
     rollAbilityScore,

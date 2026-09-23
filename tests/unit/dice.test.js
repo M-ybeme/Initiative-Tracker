@@ -290,6 +290,7 @@ import {
   rollDiceExpression,
   rollD20,
   describeFeatureRoll,
+  describeSignedGroup,
   normalizeLegacyDamageNotation,
   rollHitDice,
   rollDie as engineRollDie
@@ -313,8 +314,8 @@ describe('the engine is one implementation reachable two ways', () => {
     runInNewContext(source, context);
     expect(Object.keys(context.DiceEngine).sort()).toEqual(
       ['MAX_DICE_COUNT', 'MAX_DICE_NOTATION_LENGTH', 'MAX_DIE_SIDES', 'createSeededRandom', 'describeFeatureRoll',
-        'normalizeLegacyDamageNotation', 'parseDiceExpression', 'parseDiceNotation', 'rollAbilityScore',
-        'rollAbilityScoreSet', 'rollD20', 'rollDiceExpression', 'rollDiceNotation', 'rollDie',
+        'describeSignedGroup', 'normalizeLegacyDamageNotation', 'parseDiceExpression', 'parseDiceNotation',
+        'rollAbilityScore', 'rollAbilityScoreSet', 'rollD20', 'rollDiceExpression', 'rollDiceNotation', 'rollDie',
         'rollHitDice', 'rollMultipleDice'].sort());
     expect(context.DiceEngine.rollDie(6, () => 0.5)).toBe(4);
   });
@@ -442,6 +443,22 @@ describe('describeFeatureRoll', () => {
   it('lists Savage Attacker before Great Weapon Fighting', () => {
     const r = rollDiceNotation('1d6', dice(6, 4, 3), { rerollLowDice: true, rollTwiceTakeBest: true });
     expect(describeFeatureRoll(r)).toBe(' [SA: 4 vs 3] [GWF]');
+  });
+});
+
+describe('describeSignedGroup', () => {
+  it('the first group has no explicit sign when positive', () => {
+    expect(describeSignedGroup({ sign: 1, rolls: [4, 5], kept: [4, 5], dropped: [] }, 0)).toBe('[4, 5]');
+  });
+  it('a later positive group gets an explicit +', () => {
+    expect(describeSignedGroup({ sign: 1, rolls: [2], kept: [2], dropped: [] }, 1)).toBe('+[2]');
+  });
+  it('a negative group is marked, even in the first position', () => {
+    expect(describeSignedGroup({ sign: -1, rolls: [2], kept: [2], dropped: [] }, 0)).toBe('-[2]');
+  });
+  it('a keep rule that dropped dice shows the ones that did not count', () => {
+    const group = { sign: -1, rolls: [6, 5, 4, 1], kept: [4, 5, 6], dropped: [1] };
+    expect(describeSignedGroup(group, 1)).toBe('-[6, 5, 4, 1 → kept 4, 5, 6]');
   });
 });
 

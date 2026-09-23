@@ -1,7 +1,9 @@
 const DM_TOOLBOX_BUILD = {
   name: "The DM's Toolbox",
-  version: "2.3.17",
+  version: "2.3.18",
   recentChanges: [
+    "Fix: Combat Mode damage history for a subtracted or keep/drop dice group (for example \"2d6 - 4d6kh3\") now shows the correct sign and which dice were dropped, instead of a flattened list that looked like it added up to more than the actual total",
+    "Fix: a critical hit refused for exceeding the dice limit now shows \"Critical roll exceeds the maximum dice limit.\" instead of a misleading invalid-notation message, and no longer leaves behind a fake 0-damage history entry, a CRIT badge, or a partially-applied secondary/feature roll",
     "Fix: the NPC Generator's Race/Culture naming style now generates from the style you actually picked, instead of silently falling back to Human (Latin) names (or Half-Orc to plain Orc) for most of the 29 listed styles",
     "Fix: the Initiative status modal keeps an effect you picked but had not yet added when another tab changes the combatant's statuses, instead of losing the selection; if that pick is invalidated (the effect was already added elsewhere), its typed duration is cleared too, so it cannot carry over to whatever you pick next",
     "Fix: a critical hit on a keep-highest/lowest damage group (for example 4d6kh3) now rolls that group twice independently and adds both, instead of one merged 8d6kh6; the flat modifier is added once, and the roll history shows which dice were kept and dropped",

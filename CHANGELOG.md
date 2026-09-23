@@ -16,7 +16,7 @@ The DM's Toolbox has evolved through focused feature releases. Minor versions (2
 - **1.9.x**: Battle map measurement tools, persistent fog shapes, and generator integration across NPC/Tavern/Shop systems
 - **1.8.x**: Spell database expansion to 432+ spells, inventory management, loot generator overhaul, and character token generation
 
-**Current version: 2.3.17 (September 2026)**
+**Current version: 2.3.18 (September 2026)**
 
 ---
 
@@ -24,6 +24,30 @@ The DM's Toolbox has evolved through focused feature releases. Minor versions (2
 
 ### Known issues
 - **Flaky end-to-end test: "a blank count is invalid, not too many, and nothing is rolled"** (`tests/e2e/dice-callers.spec.js`, Character Sheet hit-dice count) — this test fails intermittently. It has failed once in a full-suite run, once in a run of three solo runs, and once in a comparison run, and passes on most other runs (eight consecutive repeat runs, and two later full-suite runs, all passed). The cause has not been identified; the likely area is timing around the hit-dice modal and the toast it asserts on, and the failure has not been captured with a message. It has not been observed as a product bug: the behavior it checks (a blank hit-dice count shows "Invalid number of hit dice to spend." instead of the over-limit message, and nothing is rolled) works when exercised by hand and in every passing run. Re-run before treating a red result on this test as a regression, and harden the test's waits when it is next touched.
+
+---
+
+## [2.3.18] - 2026-09-23
+**Combat Mode + Dice History Correctness Pass**
+
+### Fixed
+- **Dice history now correctly represents subtracted dice groups and reconciles with displayed totals** — a signed multi-term expression such as `2d6 - 1d4 + 3` used to store and display every die as if it were added (`[4, 5, 2] +3` for a roll that actually totals 10, not 14); the breakdown and history now show `[4, 5] -[2] +3 = 10`, matching the real math
+- **Keep/drop history now preserves signed group semantics** — a subtracted keep-highest/lowest group (`2d6 - 4d6kh3 + 2`) now shows all four dice rolled, which three were kept, and that the group as a whole was subtracted, instead of folding every rolled and kept die from both groups into one flat, unsigned list
+- **Critical rolls that exceed the dice limit now show a specific user-facing message** ("Critical roll exceeds the maximum dice limit.") **instead of a misleading invalid-notation error**, in both Combat Mode and the Character Sheet's own critical-hit buttons
+- **Refused critical rolls no longer produce misleading history or a fake CRIT badge** — a crit refused for exceeding the dice limit (main damage, secondary damage, or an extra feature roll) now aborts the whole roll before anything is committed: no 0-damage history entry, no partially-applied secondary damage or feature bonus, and no stranded entry from an earlier part of the same roll
+- **A multi-group damage expression rolled with the Critical button is no longer mislabeled as a crit** — since a multi-group notation (`2d6+1d4`) can't actually double, the notation, description and CRIT badge now follow whether a crit really happened, not which button was pressed
+- **Combat Mode's mobile roll toast** (shown automatically on narrow screens) **now shows the same correct signed/kept/dropped breakdown as the roll history**, instead of a flattened, sign-agnostic dice list for the same roll
+
+### Internal
+- Extracted a shared `DiceEngine.describeSignedGroup` formatter (one signed dice group's display text) used by both Combat Mode's inline roll breakdown and the sheet's shared history formatter, so the two cannot drift apart on how a signed/kept/dropped group is shown
+- Extracted a shared `formatRollDisplay` history-entry formatter used by the sheet's roll-history list, Combat Mode's dice-history modal, and the mobile roll toast — previously each implemented its own copy of the kept/dropped/advantage rendering
+- Audited `showAppToast`'s Bootstrap Toast lifecycle: disposing and recreating the toast instance on every call raced a still-in-flight fade transition from a prior call, which could throw ("Cannot read properties of null (reading 'classList')") when the stale transition's callback later ran against the disposed instance. Fixed with `animation: false`, which makes show/hide complete synchronously so there is nothing left pending to race a later call — a deliberate, minimal trade of the fade transition for lifecycle correctness
+- Added deterministic history/crit-limit regression coverage (Vitest + Playwright), including a reconciliation check (`sum(signed kept groups) + modifier === total`) for the signed-expression cases
+
+### Known issues (follow-ups)
+- The Character Sheet's own damage-rolling path (`rollDice`/`rollAttackDamage`) still only understands single dice-group notation; a multi-term expression such as `2d6 - 1d4 + 3` rolls nothing there (Combat Mode's separate roller handles it). This pass fixed how Combat Mode *displays* signed expressions; it did not add expression support to the sheet's own roller
+- `showRollToast`'s multi-result (spell attack + damage) branch was not audited for the same lifecycle pattern as `showAppToast`; it constructs a new `bootstrap.Toast` on every call without disposing the previous one first, which is a separate, pre-existing pattern outside this pass's scope
+- The `groups` field on a history entry (a signed multi-term expression's per-group breakdown) and DiceEngine's own `rolled.groups` (a critical hit's two independent, unsigned groups) are two different shapes that happen to share a name; both are now commented to warn against mixing them, but they were not unified or renamed
 
 ---
 

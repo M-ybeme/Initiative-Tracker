@@ -1,4 +1,4 @@
-import { rollDiceNotation, rollD20, describeFeatureRoll, normalizeLegacyDamageNotation } from '../modules/dice.js';
+import { rollDiceNotation, parseDiceNotation, MAX_DICE_COUNT, rollD20, describeFeatureRoll, describeSignedGroup, normalizeLegacyDamageNotation } from '../modules/dice.js';
 import { getAbilityModifier, getProficiencyBonus, recalcDerivedStats } from './character-calculations.js';
 import { getAttackFeatureBonuses as _getAttackFeatureBonuses, addFlatBonusToNotation as _addFlatBonusToNotation, getConcentrationAttackBonus as _getConcentrationAttackBonus } from '../../Attack-rolls.js';
 import { getSpellSlotsForClassLevel as _getSpellSlotsForClassLevel, getPactMagicSlots as _getPactMagicSlots, normalizeSpellEntry as _normalizeSpellEntry, searchSpells as _searchSpells } from './character-spell-data.js';
@@ -26,9 +26,16 @@ import { wireSendToEvents, wireTokenPreviewEvents } from './character-send-to.js
         toastEl.className = `toast align-items-center border-0 mb-2 ${colorMap[type] || 'bg-secondary'}`;
         bodyEl.textContent = message;
 
-        // Bootstrap applies options only when it creates the instance, so recreate it to honour this call's delay
+        // Bootstrap applies options (including delay) only when it creates the instance, so recreate it
+        // to honour this call's delay. `animation: false` is load-bearing, not cosmetic: an animated
+        // show()/hide() queues an async completion callback (a transitionend listener plus a timeout
+        // fallback) that closes over this instance. Disposing an instance while that callback is still
+        // pending (i.e. calling showAppToast again within the fade duration of the last call) nulls out
+        // the instance's fields but cannot cancel the callback, so it later runs against a disposed
+        // instance and throws "Cannot read properties of null (reading 'classList')". Without animation,
+        // show()/hide() complete synchronously, so there is never a pending callback for a later call to race.
         bootstrap.Toast.getInstance(toastEl)?.dispose();
-        const bsToast = new bootstrap.Toast(toastEl, { delay });
+        const bsToast = new bootstrap.Toast(toastEl, { delay, animation: false });
         bsToast.show();
       }
 
@@ -103,9 +110,18 @@ import { wireSendToEvents, wireTokenPreviewEvents } from './character-send-to.js
       //   features.rerollLowDice     - GWF: reroll each die showing 1 or 2 (must use the new roll)
       //   features.rollTwiceTakeBest - SA: roll all dice twice, take the higher total
       function rollDice(notation, description = '', features = {}) {
+        // A critical hit doubles one dice group. If that alone would pass the engine's dice limit, the
+        // notation itself was fine — parseDiceNotation still accepts it — so this is not "invalid
+        // notation" and must not be reported or logged as one; the crit is refused, not rolled at all.
+        const parsedForCrit = features && features.critical ? parseDiceNotation(notation) : null;
         const rolled = rollDiceNotation(notation, undefined, features);
         if (!rolled) {
-          console.error('Invalid dice notation:', notation);
+          if (parsedForCrit) {
+            console.warn(`Critical roll on "${notation}" would pass the ${MAX_DICE_COUNT}-dice limit; refusing (not rolling as normal damage)`);
+            showAppToast('Critical roll exceeds the maximum dice limit.', 'warning');
+          } else {
+            console.error('Invalid dice notation:', notation);
+          }
           return null;
         }
 
@@ -220,17 +236,15 @@ import { wireSendToEvents, wireTokenPreviewEvents } from './character-send-to.js
         } else if (typeof labelOrResult === 'object' && labelOrResult !== null) {
           // --- Single result object ---
           const result = labelOrResult;
-          let resultClass = '';
-          if (result.isCritical) { resultClass = 'text-success fw-bold'; bgClass = 'bg-success'; }
-          else if (result.isFumble) { resultClass = 'text-danger fw-bold'; bgClass = 'bg-danger'; }
+          const resultClass = result.isCritical ? 'text-success fw-bold' : result.isFumble ? 'text-danger fw-bold' : '';
+          if (result.isCritical) bgClass = 'bg-success';
+          else if (result.isFumble) bgClass = 'bg-danger';
 
-          let rollDisplay = '';
-          if (result.isAdvantage || result.isDisadvantage) {
-            rollDisplay = `[${result.rolls[0]}, ${result.rolls[1]}] → ${result.chosen}`;
-          } else {
-            rollDisplay = result.rolls.length > 1 ? `[${result.rolls.join(', ')}]` : `${result.rolls[0]}`;
-          }
-          const modDisplay = result.modifier !== 0 ? ` ${result.modifier >= 0 ? '+' : ''}${result.modifier}` : '';
+          // Shares the kept/dropped/signed-group formatting with the roll-history renderers (this is
+          // the same result object, shown as a toast on mobile by addToRollHistory), so a signed
+          // expression ("2d6 - 4d6kh3 + 2") reads the same way here too instead of falling back to a
+          // flattened, sign-agnostic dice list.
+          const { rollDisplay, modDisplay } = formatRollDisplay(result);
           const details = `${rollDisplay}${modDisplay} = <span class="${resultClass}">${result.total}</span>`;
 
           bodyHTML = `
@@ -265,6 +279,45 @@ import { wireSendToEvents, wireTokenPreviewEvents } from './character-send-to.js
         new bootstrap.Toast(toastElement, { autohide: true, delay: 6000 }).show();
       }
 
+      // Shared by this list and Combat Mode's dice-history modal (js/character/combat-mode.js, which
+      // reads window.rollHistory and calls window.formatRollDisplay): the same history entry is
+      // rendered in both places, so the kept/dropped/signed-group formatting lives here once. Returns
+      // HTML fragments built only from numbers and fixed punctuation — safe to interpolate directly.
+      // The caller's own template still owns roll.description/roll.notation.
+      function formatRollDisplay(roll) {
+        const resultClass = roll.isCritical ? 'text-success fw-bold' : roll.isFumble ? 'text-danger fw-bold' : '';
+        // Falsy (0 or a missing/undefined modifier on some future caller) shows nothing, rather than
+        // the literal text "undefined".
+        const modDisplay = roll.modifier
+          ? ` ${roll.modifier >= 0 ? '+' : ''}${roll.modifier}`
+          : '';
+
+        let rollDisplay = '';
+        if (roll.isAdvantage || roll.isDisadvantage) {
+          if (Array.isArray(roll.rolls) && roll.rolls.length >= 2) {
+            rollDisplay = `[${roll.rolls[0]}, ${roll.rolls[1]}] → <span class="${resultClass}">${roll.chosen ?? roll.total}</span>`;
+          }
+        } else if (Array.isArray(roll.groups) && roll.groups.length) {
+          // A signed multi-group expression ("2d6 - 4d6kh3 + 2"): each group keeps its sign, and a keep
+          // rule shows the dice that were rolled but did not count, so this reconciles with the total
+          // without the reader needing to trust it.
+          rollDisplay = roll.groups.map((g, i) => describeSignedGroup(g, i)).join(' ');
+        } else if (Array.isArray(roll.rolls) && roll.dropped && roll.dropped.length) {
+          rollDisplay = `[${roll.rolls.join(', ')}] → kept [${(roll.kept || []).join(', ')}]`;
+        } else if (Array.isArray(roll.rolls) && roll.rolls.length) {
+          rollDisplay = roll.rolls.length > 1
+            ? `[${roll.rolls.join(', ')}]`
+            : `<span class="${resultClass}">${roll.rolls[0]}</span>`;
+        }
+
+        // A signed-group entry only shows its total here (the badge always shows it too); a plain
+        // roll without a modifier already shows the same number via rollDisplay, so it is not repeated.
+        const showTotal = !!modDisplay || (Array.isArray(roll.groups) && roll.groups.length > 0);
+        const totalSuffix = showTotal ? ` = <span class="${resultClass}">${roll.total}</span>` : '';
+
+        return { rollDisplay, modDisplay, totalSuffix };
+      }
+
       function renderRollHistory() {
         const container = $('rollHistoryList');
         if (!container) return;
@@ -279,36 +332,18 @@ import { wireSendToEvents, wireTokenPreviewEvents } from './character-send-to.js
           return;
         }
 
-        rollHistory.forEach((roll, _index) => {
+        rollHistory.forEach((roll) => {
           const div = document.createElement('div');
           div.className = 'roll-history-item p-2 border-bottom border-secondary';
 
-          let resultClass = '';
-          if (roll.isCritical) resultClass = 'text-success fw-bold';
-          else if (roll.isFumble) resultClass = 'text-danger fw-bold';
-
-          let rollDisplay = '';
-          if (roll.isAdvantage || roll.isDisadvantage) {
-            const _unchosen = roll.rolls.find(r => r !== roll.chosen);
-            rollDisplay = `[${roll.rolls[0]}, ${roll.rolls[1]}] → <span class="${resultClass}">${roll.chosen}</span>`;
-          } else if (roll.dropped && roll.dropped.length) {
-            rollDisplay = `[${roll.rolls.join(', ')}] → kept [${roll.kept.join(', ')}]`;
-          } else {
-            rollDisplay = roll.rolls.length > 1
-              ? `[${roll.rolls.join(', ')}]`
-              : `<span class="${resultClass}">${roll.rolls[0]}</span>`;
-          }
-
-          const modDisplay = roll.modifier !== 0
-            ? ` ${roll.modifier >= 0 ? '+' : ''}${roll.modifier}`
-            : '';
+          const { rollDisplay, modDisplay, totalSuffix } = formatRollDisplay(roll);
 
           div.innerHTML = `
             <div class="d-flex justify-content-between align-items-start">
               <div class="flex-grow-1">
                 ${roll.description ? `<div class="small fw-bold">${roll.description}</div>` : ''}
                 <div class="small text-muted">${roll.notation}${modDisplay}</div>
-                <div class="small">${rollDisplay}${modDisplay ? ` = <span class="${resultClass}">${roll.total}</span>` : ''}</div>
+                <div class="small">${rollDisplay}${totalSuffix}</div>
               </div>
               <div class="text-end">
                 <div class="badge ${roll.isCritical ? 'bg-success' : roll.isFumble ? 'bg-danger' : 'bg-secondary'}">${roll.total}</div>
@@ -331,6 +366,7 @@ import { wireSendToEvents, wireTokenPreviewEvents } from './character-send-to.js
       window.addToRollHistory = addToRollHistory;
       window.showRollToast = showRollToast;
       window.renderRollHistory = renderRollHistory;
+      window.formatRollDisplay = formatRollDisplay;
       window.rollDice = rollDice;
 
       // ---------- Player Action Functions ----------

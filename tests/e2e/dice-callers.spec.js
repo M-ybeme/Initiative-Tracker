@@ -173,7 +173,7 @@ test.describe('Combat Mode rolls (inline script on characters.html)', () => {
   });
 
   // Puts one attack in the list Combat Mode reads and clicks its real delegated roll button.
-  async function combatRoll(page, { kind, attack, type = 'normal', character = null }) {
+  async function clickCombatRoll(page, { kind, attack, type = 'normal', character = null }) {
     await page.evaluate(({ kind, attack, type, character }) => {
       window.currentAttackList = [attack];
       window.getCurrentCharacter = () => character;
@@ -182,6 +182,11 @@ test.describe('Combat Mode rolls (inline script on characters.html)', () => {
         <button class="combat-roll-${kind}" data-index="0" data-type="${type}">roll</button>`;
       host.querySelector('button').click();
     }, { kind, attack, type, character });
+  }
+  // Same, but also reads the total and breakdown — only valid when dice were actually rolled (a refused
+  // critical shows a message instead of a total, so that caller uses clickCombatRoll directly).
+  async function combatRoll(page, options) {
+    await clickCombatRoll(page, options);
     const total = await page.locator('#combatRollResult0 .roll-total').innerText();
     const detail = await page.locator('#combatRollResult0 .small').innerText();
     return `${total} | ${detail.replace(/\s+/g, ' ').trim()}`; // the total, then the breakdown beside it
@@ -441,7 +446,12 @@ test.describe('Combat Mode rolls (inline script on characters.html)', () => {
 
       test('501 dice would double past the limit: the crit is refused, not rolled as normal damage', async ({ page }) => {
         await script(page, [[6, 3]]);
-        expect(await combatRoll(page, { kind: 'damage', attack: { ...sword, damage: '501d6' }, type: 'critical' })).toBe('0 | 0 slashing CRIT!');
+        await clickCombatRoll(page, { kind: 'damage', attack: { ...sword, damage: '501d6' }, type: 'critical' });
+        // No total and no CRIT badge: nothing was rolled, so nothing is shown as if it had been.
+        await expect(page.locator('#combatRollResult0')).toContainText('Critical roll exceeds the maximum dice limit.');
+        await expect(page.locator('#combatRollResult0 .roll-total')).toHaveCount(0);
+        await expect(page.locator('#appToastBody')).toContainText('Critical roll exceeds the maximum dice limit.');
+        expect(await page.evaluate(() => window.rollHistory.length)).toBe(0); // no fake history entry
         expect(await unscriptedDiceLeft(page)).toBe(1); // nothing was rolled
         expect(warnings.some(w => /critical hit on "501d6" would pass the 1000-dice limit/.test(w))).toBe(true);
       });
