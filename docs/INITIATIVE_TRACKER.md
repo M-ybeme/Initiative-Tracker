@@ -100,7 +100,7 @@ Open **Combat Log** in the controls strip to see a full history of the session, 
 
 - Quick buttons: d4, d6, d8, d10, d12, d20, d100.
 - **Adv** = 2d20 keep highest; **Dis** = 2d20 keep lowest.
-- **Custom expression** box supports: `2d6+3`, `4d6kh3` (keep 3 highest), `2d20kl1` (keep lowest), `adv`, `dis`, multi-term expressions.
+- **Custom expression** box supports: `2d6+3`, `4d6kh3` (keep 3 highest), `2d20kl1` (keep lowest), `adv`, `dis`, multi-term expressions. An expression over a limit (more than 1000 dice in a group, dice over 1,000,000 sides, more than 200 characters, or numbers too large to add up exactly) is refused with a message naming the limit.
 - Results show in a toast and are saved to the **Roll History** panel (collapsible).
 
 ### Saved Character Templates

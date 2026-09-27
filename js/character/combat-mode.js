@@ -1184,7 +1184,7 @@
       // Older saved attacks sometimes carry the damage type inside the notation ("1d8+3 slashing").
       // The engine (DiceEngine.normalizeLegacyDamageNotation) drops the trailing words; this wrapper
       // also warns so the saved data can be found and fixed. Whatever the engine still rejects
-      // ("2d6+ fire", "4d6kh", "hello world") rolls 0.
+      // ("2d6+ fire", "4d6kh", "hello world") is refused with a message, not rolled.
       // Diagnostics name the saved string, but never echo a huge one.
       function describeSavedText(text) {
         const s = String(text);
@@ -1199,31 +1199,33 @@
         return cleaned;
       }
 
-      // Roll dice notation such as "2d6+3". `critical` makes it a critical hit: a single dice group is rolled
-      // twice, independently (so "4d6kh3" keeps 3 of each 4), with the flat modifier added once;
-      // `features` is { rerollLowDice, rollTwiceTakeBest }. A bare number ("5") or a multi-group
-      // expression ("2d6+1d4") is rolled by the engine's expression roller; anything unreadable is 0.
-      // `savedText` is the string as it was saved (for diagnostics), when `notation` was already
-      // cleaned or adjusted by the caller.
+      // Roll dice notation such as "2d6+3". `critical` makes it a critical hit: every dice group is rolled
+      // twice, independently (so "4d6kh3" keeps 3 of each 4, and "2d6 - 1d4 + 3" rolls 2d6 twice and
+      // subtracts 1d4 twice), with flat terms added once; `features` is { rerollLowDice, rollTwiceTakeBest }.
+      // One dice group goes to the engine's group roller, anything else ("5", "2d6+1d4") to its expression
+      // roller, with the same critical and features. `savedText` is the string as it was saved (for
+      // diagnostics), when `notation` was already cleaned or adjusted by the caller.
       //
-      // A refused critical (doubling would pass the engine's dice limit) is reported as
-      // `{ ..., critRefused: true }` instead of the generic "rolled 0" shape, so a caller can tell it
-      // apart from genuinely unreadable notation and show a specific message instead of rolling
-      // anything or logging it as invalid.
+      // Notation that cannot be rolled (unreadable, over a dice or number limit, or a critical whose doubled
+      // dice would pass a limit) is reported as `{ ..., refused: {code, message} }`, the engine's
+      // explanation, so a caller shows it instead of recording a roll that never happened; a refused
+      // critical is never rolled as normal damage. `critical` on the result says whether a crit was rolled.
+      // `featureNote` is the Savage Attacker / Great Weapon Fighting note for the history entry (including
+      // " [GWF not applied: subtracted dice]" when a feature could not apply); `featuresNotApplied` lists those.
       function parseDiceAndRoll(notation, critical = false, features = {}, savedText = notation) {
         if (!notation) return { total: 0, breakdown: '0', rolls: [], kept: [], dropped: [] };
         notation = normalizeLegacyDamageNotation(notation);
 
-        // A critical hit on a single dice group rolls it twice. If that would pass the engine's dice
-        // limit the crit is refused; it must not quietly roll normal damage instead.
-        // (a bare number or several groups have no single group to repeat and are rolled as written)
-        // The result's `critical` says whether a crit was really rolled (false for several groups or a refused crit)
-        const crit = critical && !!DiceEngine.parseDiceNotation(notation);
-        const rolled = DiceEngine.rollDiceNotation(notation, undefined, { ...features, critical: crit });
-        if (crit && !rolled) {
-          console.warn(`Combat Mode: a critical hit on "${describeSavedText(savedText)}" would pass the ${DiceEngine.MAX_DICE_COUNT}-dice limit; refusing (not rolling as normal damage)`);
-          return { total: 0, breakdown: '0', rolls: [], kept: [], dropped: [], critRefused: true };
+        const single = !!DiceEngine.parseDiceNotation(notation);
+        const rolled = single ? DiceEngine.rollDiceNotation(notation, undefined, { ...features, critical }) : null;
+        const expr = single ? null : DiceEngine.rollDiceExpression(notation, undefined, { ...features, critical });
+        if (!rolled && !expr) {
+          const refused = DiceEngine.describeDiceProblem(notation, { critical }) || { code: 'malformed', message: 'Dice notation not recognized.' };
+          const cleanedNote = notation !== savedText ? ` (as rolled: "${describeSavedText(notation)}")` : '';
+          console.warn(`Combat Mode: not rolling dice notation "${describeSavedText(savedText)}"${cleanedNote}${critical ? ' as a critical hit' : ''}: ${refused.message}`);
+          return { total: 0, breakdown: '0', rolls: [], kept: [], dropped: [], refused };
         }
+        const crit = !!critical;
         if (rolled) {
           const modStr = rolled.modifier >= 0 ? `+${rolled.modifier}` : String(rolled.modifier);
           // Plain dice read as before ("2d8+3 = [5, 6]+3"). When a keep rule dropped dice, each group is shown on
@@ -1238,45 +1240,34 @@
             head = `${rolled.count * rolled.groups.length}d${rolled.sides}`;
           }
           const breakdown = `${head}${modStr} = ${dice}${modStr} = ${rolled.total}${DiceEngine.describeFeatureRoll(rolled)}`;
-          return { total: rolled.total, breakdown, rolls: rolled.rolls, kept: rolled.kept, dropped: rolled.dropped, sides: rolled.sides, modifier: rolled.modifier, critical: crit };
+          return { total: rolled.total, breakdown, rolls: rolled.rolls, kept: rolled.kept, dropped: rolled.dropped, sides: rolled.sides, modifier: rolled.modifier, critical: crit, featureNote: DiceEngine.describeFeatureRoll(rolled) };
         }
 
-        const expr = DiceEngine.rollDiceExpression(notation);
-        if (!expr) {
-          const cleanedNote = notation !== savedText ? ` (as rolled: "${describeSavedText(notation)}")` : '';
-          console.warn(`Combat Mode: could not read dice notation "${describeSavedText(savedText)}"${cleanedNote}; rolling 0`);
-          return { total: 0, breakdown: '0', rolls: [], kept: [], dropped: [] };
-        }
         // Each dice term carries its own sign ("2d6 - 1d4"), and a keep rule can drop some of its dice
         // ("2d6 - 4d6kh3"). A term's raw rolls are never negated (a die that shows 2 is still recorded
-        // as 2); only the group as a whole is shown as subtracted. `rolls`/`kept`/`dropped` below stay
-        // flattened for callers/history fields that only need "every die" regardless of sign; `groups`
-        // (added only when a sign or a keep rule actually needs it) is what the breakdown and the
-        // shared history renderer use to stay truthful about which groups were added and which were
-        // subtracted.
-        const diceParts = expr.parts.filter(part => part.type === 'dice');
-        const rolls = diceParts.flatMap(part => part.rolls);
-        const kept = diceParts.flatMap(part => part.kept);
-        const dropped = diceParts.flatMap(part => part.dropped);
-        const modifier = expr.parts.reduce((n, part) => n + (part.type === 'mod' ? part.n : 0), 0);
-        const needsSignedDisplay = diceParts.some(part => part.sign < 0 || part.dropped.length);
+        // as 2); only the group as a whole is shown as subtracted. The history fields come from the
+        // engine's summarizeExpression (the same summary the sheet records): `rolls`/`kept`/`dropped`
+        // flattened, and `groups` (signed, only when a sign or a keep rule needs it) for the breakdown
+        // and the shared history renderer, so the entry reconciles with the total.
+        const summary = DiceEngine.summarizeExpression(expr);
+        const { rolls, modifier, groups } = summary;
 
+        // A critical expression rolls each dice group twice ("2d6+1d4 ×2 dice"); each roll is its own group.
+        const head = `${notation}${expr.critical && rolls.length ? ' ×2 dice' : ''}`;
+        const featureNote = DiceEngine.describeFeatureRoll(expr);
         let breakdown;
         if (!rolls.length) {
           breakdown = String(expr.total);
-        } else if (!needsSignedDisplay) {
+        } else if (!groups) {
           // Plain additive groups ("2d6+1d4"): the simple flat list already reconciles with the total.
-          breakdown = `${notation} = [${rolls.join(', ')}] = ${expr.total}`;
+          breakdown = `${head} = [${rolls.join(', ')}] = ${expr.total}${featureNote}`;
         } else {
           const modSuffix = modifier ? ` ${modifier >= 0 ? '+' : ''}${modifier}` : '';
-          const groupsText = diceParts.map((part, i) => DiceEngine.describeSignedGroup(part, i)).join(' ');
-          breakdown = `${notation} = ${groupsText}${modSuffix} = ${expr.total}`;
+          const groupsText = groups.map((group, i) => DiceEngine.describeSignedGroup(group, i)).join(' ');
+          breakdown = `${head} = ${groupsText}${modSuffix} = ${expr.total}${featureNote}`;
         }
 
-        const groups = needsSignedDisplay
-          ? diceParts.map(part => ({ sign: part.sign, rolls: part.rolls, kept: part.kept, dropped: part.dropped }))
-          : undefined;
-        return { total: expr.total, breakdown, rolls, kept, dropped, modifier, ...(groups ? { groups } : {}) };
+        return { ...summary, breakdown, critical: expr.critical && rolls.length > 0, featureNote, featuresNotApplied: expr.featuresNotApplied };
       }
 
       // Roll attack (d20 + bonus)
@@ -1365,11 +1356,15 @@
           : [];
       }
 
-      // A critical hit refused for exceeding the engine's dice limit: no dice were rolled, so nothing
-      // is displayed or logged as if they had been (no fake history entry, no misleading CRIT badge).
-      function showCritRefused(attackIndex) {
-        showInlineRollResult(attackIndex, '<div class="small text-warning-emphasis">Critical roll exceeds the maximum dice limit.</div>');
-        window.showAppToast?.('Critical roll exceeds the maximum dice limit.', 'warning');
+      // A refused roll (the engine's reason, from parseDiceAndRoll's `refused`): no dice were rolled, so
+      // nothing is displayed or logged as if they had been (no fake history entry, no CRIT badge). The
+      // message is shown where the result would have been, and as a toast.
+      function showRollRefused(attackIndex, message) {
+        const box = document.createElement('div');
+        box.className = 'small text-warning-emphasis';
+        box.textContent = message;
+        showInlineRollResult(attackIndex, box.outerHTML);
+        window.showAppToast?.(message, 'warning');
       }
 
       // Roll damage
@@ -1408,8 +1403,13 @@
           const extraResults = extraRolls.map(({ notation: en, label }) => ({ en, label, rx: parseDiceAndRoll(en, isCrit) }));
           // These are normally fixed small dice that can never hit the engine's limit even doubled, but
           // a homebrew content pack could define a huge one.
-          if (result1.critRefused || result2?.critRefused || extraResults.some(({ rx }) => rx.critRefused)) {
-            showCritRefused(attackIndex);
+          // Any part that cannot be rolled (unreadable, over a limit, or a critical past a limit) aborts the
+          // whole roll: it used to roll 0 and record a 0-damage history entry for a roll that never happened.
+          const refusedPart = [[result1, 'damage'], [result2, 'secondary damage'], ...extraResults.map(({ rx, label }) => [rx, label])]
+            .find(([r]) => r && r.refused);
+          if (refusedPart) {
+            const [{ refused }, what] = refusedPart;
+            showRollRefused(attackIndex, `${attack.name} ${what}: ${refused.message}`);
             return;
           }
 
@@ -1447,8 +1447,7 @@
           }
 
           // Extra feature rolls (e.g. Improved Divine Smite 1d8 radiant). Each is labeled by whether it
-          // actually rolled as a crit (`rx.critical`), not by the button pressed: a multi-group extra
-          // notation cannot double either, the same as the main attack's own damage.
+          // actually rolled as a crit (`rx.critical`, false for a flat number: it has no dice to double).
           for (const { en, label, rx } of extraResults) {
             total += rx.total;
             breakdown += ` + ${rx.breakdown} <span class="text-warning-emphasis">${label}</span>`;
@@ -1479,11 +1478,16 @@
             }
           }
 
-          // A crit was actually requested only if the main group was really rolled twice — a
-          // multi-group/expression main notation cannot double, so this can be false even though the
-          // Critical button was pressed (isCrit). The badge, notation, description and toast below all
-          // follow this, not the button, so they never claim a crit that did not happen.
+          // Whether the main damage really rolled as a crit (its dice doubled): false for flat damage with no
+          // dice even when the Critical button was pressed (isCrit). The badge, notation, description and
+          // toast below all follow this, not the button, so they never claim a crit that did not happen.
           const wasCrit = !!result1.critical;
+          // GWF / Savage Attacker requested but not applicable to this damage (a subtracted dice group): say so.
+          const skipped = result1.featuresNotApplied || [];
+          if (skipped.length) {
+            const names = skipped.map(f => (f === 'rerollLowDice' ? 'Great Weapon Fighting' : 'Savage Attacker')).join(' and ');
+            window.showAppToast?.(`${attack.name}: ${names} not applied (the damage subtracts a dice group).`, 'info');
+          }
 
           // Build result display
           const dmgType = attack.damageType || '';
@@ -1501,7 +1505,9 @@
             if (typeof window.addToRollHistory === 'function') {
               window.addToRollHistory({
                 notation: historyNotation + (wasCrit ? ' (crit)' : ''),
-                description: `${attack.name} Damage${wasCrit ? ' (Crit)' : ''}`,
+                // the same Savage Attacker / GWF note the sheet's history carries (" [SA: 12 vs 8]"), so
+                // an entry says when a second set was rolled and discarded
+                description: `${attack.name} Damage${wasCrit ? ' (Crit)' : ''}${result1.featureNote || ''}`,
                 rolls: allRolls,   // every die rolled
                 kept: allKept,     // the dice that counted (all of `rolls` unless a keep rule dropped some)
                 dropped: allDropped,

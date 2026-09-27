@@ -6,7 +6,9 @@
  *
  * character.js imports these directly. Rolling the dice is not done here: it lives in the shared
  * dice engine (js/modules/dice-engine.js), which character.js reaches through js/modules/dice.js.
+ * addFlatBonusToNotation reads notation with that engine's parsers.
  */
+import { parseDiceNotation, parseDiceExpression } from './js/modules/dice.js';
 
 export const CONCENTRATION_ATTACK_BONUSES = {
   'hex': { notation: '1d6', label: 'Necrotic (Hex)', prompt: 'Concentrating on Hex — add +1d6 Necrotic to this attack?' },
@@ -36,12 +38,25 @@ export function getAttackFeatureBonuses(char, attack) {
   return out;
 }
 
+/**
+ * The notation with a flat bonus (Dueling +2, ...) added, read by the dice engine's own parsers, so a
+ * bonus is never silently lost on notation the engine can roll:
+ *   one dice group  "1d8 + 3", "4d6kh3+1"  -> the modifier is merged: "1d8+5", "4d6kh3+3" (still one
+ *                                             group, so a critical hit can still double it)
+ *   an expression   "2d6+1d4", "5"         -> the bonus is appended as a term: "2d6+1d4+2", "5+2"
+ * Notation the engine cannot roll is returned unchanged; rolling it is refused with a message.
+ * Call it on text already cleaned by normalizeLegacyDamageNotation (the trailing words would make
+ * "1d8+3 slashing" unreadable here).
+ */
 export function addFlatBonusToNotation(notation, bonus) {
   if (!bonus) return notation;
-  const m = (notation || '').trim().match(/^(\d*d\d+)([+-]\d+)?$/i);
-  if (!m) return notation;
-  const newMod = parseInt(m[2] || '0', 10) + bonus;
-  if (newMod > 0) return m[1] + "+" + newMod;
-  if (newMod < 0) return m[1] + String(newMod);
-  return m[1];
+  const text = String(notation ?? '').trim();
+  const group = parseDiceNotation(text);
+  if (group) {
+    const keep = group.keepHighest ? `kh${group.keepHighest}` : group.keepLowest ? `kl${group.keepLowest}` : '';
+    const mod = group.modifier + bonus;
+    return `${group.count}d${group.sides}${keep}${mod > 0 ? `+${mod}` : mod < 0 ? String(mod) : ''}`;
+  }
+  if (parseDiceExpression(text)) return `${text}${bonus > 0 ? '+' : ''}${bonus}`;
+  return notation;
 }

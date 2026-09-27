@@ -3,7 +3,7 @@
  *
  * It owns dice semantics only: parsing notation, rolling, modifiers, keep-highest/lowest,
  * multi-term expressions, d20 advantage/disadvantage, Great Weapon Fighting rerolls, Savage
- * Attacker, critical hits (a group rolled twice, independently) and hit-dice healing. It knows
+ * Attacker, critical hits (every dice group rolled twice, independently) and hit-dice healing. It knows
  * nothing about the DOM, combat logs, labels or characters; callers turn its plain results into text.
  *
  * Runtime constraint: initiative.html and the inline/classic scripts on characters.html are
@@ -34,12 +34,20 @@
   const MAX_DICE_COUNT = 1000;
   const MAX_DIE_SIDES = 1000000;
   const MAX_DICE_NOTATION_LENGTH = 200;
+  //   Numbers: every flat term, and the largest total the whole roll could reach (the sum of each
+  //   modifier's size and each group's count x sides, doubled for a critical hit), must be a safe
+  //   integer (Number.MAX_SAFE_INTEGER, the bound the app already uses for whole-number input), so
+  //   every total is exact. "1d6+9007199254740993" is refused, not rolled as ...992.
+  const MAX_ROLL_MAGNITUDE = Number.MAX_SAFE_INTEGER;
 
   // The one definition of a usable dice group: whole numbers, at least 1, within the limits.
   const validDice = (count, sides) =>
     Number.isInteger(count) && count >= 1 && count <= MAX_DICE_COUNT &&
     Number.isInteger(sides) && sides >= 1 && sides <= MAX_DIE_SIDES;
   const tooLong = (text) => text.length > MAX_DICE_NOTATION_LENGTH;
+  // Whitespace is ignored between symbols ("1d8 + 3", "1 d 6"), but never allowed to join two numbers:
+  // removing it from "2d6 3" would roll a d63.
+  const splitsNumber = (text) => /\d\s+\d/.test(text);
 
   /**
    * Roll one die.
@@ -96,7 +104,7 @@
    * @returns {{count:number, sides:number, modifier:number, keepHighest:number|null, keepLowest:number|null}|null}
    */
   function parseDiceNotation(notation) {
-    if (!notation || typeof notation !== 'string' || tooLong(notation)) return null;
+    if (!notation || typeof notation !== 'string' || tooLong(notation) || splitsNumber(notation)) return null;
     const match = notation.trim().replace(/\s+/g, '').toLowerCase().match(SINGLE_NOTATION);
     if (!match) return null;
 
@@ -108,6 +116,7 @@
 
     if (!validDice(count, sides)) return null;
     if (keepCount !== null && (keepCount <= 0 || keepCount > count)) return null;
+    if (!Number.isSafeInteger(modifier) || Math.abs(modifier) + count * sides > MAX_ROLL_MAGNITUDE) return null;
 
     return {
       count,
@@ -117,6 +126,22 @@
       keepLowest: keepDirection === 'l' ? keepCount : null
     };
   }
+
+  // Why a critical hit on these terms (every dice group rolled twice, flat terms once) would pass a
+  // limit, or null. The one check behind both rollers' crit refusals and describeDiceProblem: each doubled
+  // group must stay within MAX_DICE_COUNT ('critical-limit'), and the largest reachable total within
+  // MAX_ROLL_MAGNITUDE ('number-too-large': the numbers, not the dice, are what is too big).
+  function criticalProblem(terms) {
+    let magnitude = 0;
+    for (const t of terms) {
+      if (t.type === 'mod') { magnitude += Math.abs(t.n); continue; }
+      if (!validDice(t.count * 2, t.sides)) return 'critical-limit';
+      magnitude += 2 * t.count * t.sides;
+    }
+    return magnitude > MAX_ROLL_MAGNITUDE ? 'number-too-large' : null;
+  }
+  const criticalFits = ({ count, sides, modifier }) =>
+    !criticalProblem([{ type: 'dice', count, sides }, { type: 'mod', n: modifier }]);
 
   // The dice of `rolls` that are not in `kept` (a die may repeat, so this removes one match per kept die).
   function droppedDice(rolls, kept) {
@@ -153,7 +178,7 @@
     if (!parsed) return null;
     const { count, sides, modifier, keepHighest, keepLowest } = parsed;
     const { rerollLowDice = false, rollTwiceTakeBest = false, critical = false } = features || {};
-    if (critical && !validDice(count * 2, sides)) return null;
+    if (critical && !criticalFits(parsed)) return null;
 
     const rollGroup = () => {
       const rolls = [];
@@ -210,74 +235,207 @@
    * @returns {Array<{type:'dice', sign:1|-1, count:number, sides:number, keepDir:'h'|'l'|null, keepN:number|null}|{type:'mod', n:number}>|null}
    */
   function parseDiceExpression(expression) {
-    if (typeof expression !== 'string' || tooLong(expression)) return null;
+    const scan = scanExpression(expression);
+    return scan.error ? null : scan.terms;
+  }
+
+  // The one expression scanner: the terms, or the first reason the text cannot be rolled (a code from
+  // DICE_PROBLEMS). parseDiceExpression and describeDiceProblem both use it, so the reason reported
+  // is always the reason the roll was refused.
+  function scanExpression(expression) {
+    if (typeof expression !== 'string') return { error: 'malformed' };
+    if (tooLong(expression)) return { error: 'too-long' };
+    if (splitsNumber(expression)) return { error: 'malformed' };
     const text = expression.replace(/\s+/g, '').toLowerCase();
-    if (!text) return null;
+    if (!text) return { error: 'empty' };
 
     const termRe = new RegExp('([+-]?)(?:' + DICE_TERM + '|(\\d+))', 'y');
     const terms = [];
+    let magnitude = 0;
     let index = 0;
     while (index < text.length) {
       termRe.lastIndex = index;
       const m = termRe.exec(text);
-      if (!m) return null;
-      if (terms.length > 0 && !m[1]) return null;
+      if (!m) return { error: 'malformed' };
+      if (terms.length > 0 && !m[1]) return { error: 'malformed' };
       index = termRe.lastIndex;
       const sign = m[1] === '-' ? -1 : 1;
 
       if (m[6] !== undefined) { // flat modifier
-        terms.push({ type: 'mod', n: (sign * parseInt(m[6], 10)) || 0 }); // "-0" is 0, not -0
+        const n = parseInt(m[6], 10);
+        if (!Number.isSafeInteger(n)) return { error: 'number-too-large' };
+        magnitude += n;
+        if (magnitude > MAX_ROLL_MAGNITUDE) return { error: 'number-too-large' };
+        terms.push({ type: 'mod', n: (sign * n) || 0 }); // "-0" is 0, not -0
         continue;
       }
       const count = m[2] ? parseInt(m[2], 10) : 1;
       const sides = parseInt(m[3], 10);
       const keepDir = m[4] || null;
       const keepN = m[5] ? parseInt(m[5], 10) : null;
-      if (!validDice(count, sides)) return null;
-      if (keepN !== null && (keepN <= 0 || keepN > count)) return null;
+      if (count < 1 || sides < 1) return { error: 'no-dice' };
+      if (count > MAX_DICE_COUNT) return { error: 'dice-count' };
+      if (sides > MAX_DIE_SIDES) return { error: 'die-sides' };
+      if (keepN !== null && (keepN <= 0 || keepN > count)) return { error: 'keep-count' };
+      magnitude += count * sides;
+      if (magnitude > MAX_ROLL_MAGNITUDE) return { error: 'number-too-large' };
       terms.push({ type: 'dice', sign, count, sides, keepDir, keepN });
     }
-    return terms;
+    return { terms, magnitude };
+  }
+
+  // User-facing text for each reason notation is refused. Plain language, no internals.
+  const DICE_PROBLEMS = {
+    empty: 'There is no dice notation to roll.',
+    malformed: 'Dice notation not recognized. Use a form like 2d6+3, 1d8+1d6 or 4d6kh3.',
+    'too-long': `Dice notation is too long (at most ${MAX_DICE_NOTATION_LENGTH} characters).`,
+    'no-dice': 'A dice group needs at least 1 die, and each die at least 1 side.',
+    'dice-count': `Too many dice: at most ${MAX_DICE_COUNT} in one group.`,
+    'die-sides': `Dice can have at most ${MAX_DIE_SIDES.toLocaleString('en-US')} sides.`,
+    'keep-count': 'A keep rule must keep at least 1 die and no more dice than are rolled.',
+    'number-too-large': 'The numbers in this roll are too large to add up exactly.',
+    'critical-limit': 'Critical roll exceeds the maximum dice limit.'
+  };
+
+  /**
+   * Why a roll of this notation would be refused, or null if it would roll. `critical: true` also
+   * checks the critical version (every dice group rolled twice, flat terms once): 'critical-limit' when
+   * a doubled group passes the dice limit, 'number-too-large' when the total could pass the number bound.
+   * The engine's rollers stay the enforcement: this only explains their refusal.
+   * @param {string} notation
+   * @param {{critical?: boolean}} [options]
+   * @returns {{code: string, message: string}|null}
+   */
+  function describeDiceProblem(notation, options = {}) {
+    const scan = scanExpression(notation);
+    const code = scan.error || (options && options.critical ? criticalProblem(scan.terms) : null);
+    return code ? { code, message: DICE_PROBLEMS[code] } : null;
+  }
+
+  /**
+   * The history fields of a rollDiceExpression result, shared by every caller that records one:
+   * every die (`rolls`), the dice that counted (`kept`), the rest (`dropped`), the summed flat
+   * `modifier`, and the `total`. When a group is subtracted or a keep rule dropped dice, `groups`
+   * holds each dice group with its sign (`{sign, rolls, kept, dropped}`), because the flattened lists
+   * alone do not add up to the total; then sum(sign x kept of each group) + modifier === total.
+   * (Unrelated to rollDiceNotation's own unsigned `groups`.)
+   * @param {{total:number, parts:Array<object>}} expr
+   */
+  function summarizeExpression(expr) {
+    const diceParts = expr.parts.filter((part) => part.type === 'dice');
+    const modifier = expr.parts.reduce((n, part) => n + (part.type === 'mod' ? part.n : 0), 0);
+    const needsSignedGroups = diceParts.some((part) => part.sign < 0 || part.dropped.length);
+    return {
+      total: expr.total,
+      rolls: diceParts.flatMap((part) => part.rolls),
+      kept: diceParts.flatMap((part) => part.kept),
+      dropped: diceParts.flatMap((part) => part.dropped),
+      modifier,
+      ...(needsSignedGroups
+        ? { groups: diceParts.map((part) => ({ sign: part.sign, rolls: part.rolls, kept: part.kept, dropped: part.dropped })) }
+        : {})
+    };
   }
 
   /**
    * Roll a multi-term expression. Each dice part reports every die (`rolls`), the dice that counted
-   * (`kept`) and its signed `subtotal`; flat parts report `n`. Returns null for invalid input.
+   * (`kept`), the rest (`dropped`) and its signed `subtotal`; flat parts report `n`. Returns null for
+   * invalid input, or for a critical hit that would pass a limit (never a normal roll instead).
+   *
+   * `features` are the ones rollDiceNotation takes, with the same meaning:
+   *   critical          every dice group is rolled twice, independently, keeping its sign and its keep
+   *                     rule ("2d6 - 1d4 + 3" rolls like "2d6 + 2d6 - 1d4 - 1d4 + 3"; "4d6kh3" is two
+   *                     keep-3-of-4 rolls, never 8d6kh6); flat terms are added once. Each roll of a group
+   *                     is its own part, so the parts still add up to the total.
+   *   rerollLowDice     Great Weapon Fighting: each die showing 1 or 2 is rerolled once (the new roll counts)
+   *   rollTwiceTakeBest Savage Attacker: all the dice (the whole critical set on a crit) are rolled twice
+   *                     and the set with the higher total kept (the first on a tie); `twiceRoll` reports
+   *                     the two dice totals, as for a single group.
+   * GWF and SA are only applied when every dice group is added. Their rules do not cover a subtracted
+   * group (rerolling its low dice would lower the damage), so for such an expression they are not
+   * applied, and `featuresNotApplied` lists them so a caller can say so; `rerollLowDice` and
+   * `rollTwiceTakeBest` on the result say what was really applied.
    * @param {string} expression
    * @param {() => number} [randomFn]
-   * @returns {{total:number, parts:Array<object>}|null}
+   * @param {{critical?: boolean, rerollLowDice?: boolean, rollTwiceTakeBest?: boolean}} [features]
+   * @returns {{total:number, parts:Array<object>, critical:boolean, rerollLowDice:boolean, rollTwiceTakeBest:boolean, twiceRoll:object|null, featuresNotApplied:string[]}|null}
    */
-  function rollDiceExpression(expression, randomFn = Math.random) {
+  function rollDiceExpression(expression, randomFn = Math.random, features = {}) {
     const terms = parseDiceExpression(expression);
     if (!terms) return null;
-    let total = 0;
-    const parts = terms.map((term) => {
-      if (term.type === 'mod') {
-        total += term.n;
-        return term;
+    const { critical = false, rerollLowDice = false, rollTwiceTakeBest = false } = features || {};
+    if (critical && criticalProblem(terms)) return null;
+
+    const signed = terms.some((t) => t.type === 'dice' && t.sign < 0);
+    const featuresNotApplied = signed
+      ? [rerollLowDice && 'rerollLowDice', rollTwiceTakeBest && 'rollTwiceTakeBest'].filter(Boolean)
+      : [];
+    const gwf = rerollLowDice && !signed;
+    const sa = rollTwiceTakeBest && !signed;
+
+    const rollAll = () => {
+      let total = 0;
+      const parts = [];
+      for (const term of terms) {
+        if (term.type === 'mod') {
+          total += term.n;
+          parts.push(term);
+          continue;
+        }
+        for (let copy = 0; copy < (critical ? 2 : 1); copy++) {
+          const rolls = [];
+          for (let i = 0; i < term.count; i++) {
+            let r = rollDie(term.sides, randomFn);
+            if (gwf && r <= 2) r = rollDie(term.sides, randomFn);
+            rolls.push(r);
+          }
+          const kept = selectKept(rolls, term.keepDir, term.keepN);
+          const subtotal = term.sign * sum(kept);
+          total += subtotal;
+          parts.push({ ...term, rolls, kept, dropped: droppedDice(rolls, kept), subtotal });
+        }
       }
-      const rolls = rollMultipleDice(term.count, term.sides, randomFn);
-      const kept = selectKept(rolls, term.keepDir, term.keepN);
-      const subtotal = term.sign * sum(kept);
-      total += subtotal;
-      return { ...term, rolls, kept, dropped: droppedDice(rolls, kept), subtotal };
-    });
-    return { total, parts };
+      return { total, parts };
+    };
+
+    let set = rollAll();
+    let twiceRoll = null;
+    if (sa) {
+      // the flat terms are the same in both sets, so comparing totals compares the dice
+      const other = rollAll();
+      const flat = terms.reduce((n, t) => n + (t.type === 'mod' ? t.n : 0), 0);
+      const [taken, discarded] = set.total >= other.total ? [set, other] : [other, set];
+      twiceRoll = { taken: taken.total - flat, discarded: discarded.total - flat };
+      set = taken;
+    }
+    return {
+      total: set.total,
+      parts: set.parts,
+      critical,
+      rerollLowDice: gwf,
+      rollTwiceTakeBest: sa,
+      twiceRoll,
+      featuresNotApplied
+    };
   }
 
   /**
    * The note appended to a feature roll's description or breakdown: " [SA: 12 vs 8]" (Savage
    * Attacker: the total taken vs the total discarded) and " [GWF]" (Great Weapon Fighting), in that
-   * order. Empty for a roll with neither feature.
-   * @param {{twiceRoll?: {taken:number, discarded:number}|null, rerollLowDice?: boolean}} result a rollDiceNotation result
+   * order, and " [SA, GWF not applied: subtracted dice]" for features an expression could not apply
+   * (see rollDiceExpression). Empty for a roll with no feature requested.
+   * @param {{twiceRoll?: {taken:number, discarded:number}|null, rerollLowDice?: boolean, featuresNotApplied?: string[]}} result a rollDiceNotation or rollDiceExpression result
    * @returns {string}
    */
   function describeFeatureRoll(result) {
     let note = '';
     if (result.twiceRoll) note += ` [SA: ${result.twiceRoll.taken} vs ${result.twiceRoll.discarded}]`;
     if (result.rerollLowDice) note += ' [GWF]';
+    const skipped = (result.featuresNotApplied || []).map((f) => FEATURE_NAMES[f]).filter(Boolean);
+    if (skipped.length) note += ` [${skipped.join(', ')} not applied: subtracted dice]`;
     return note;
   }
+  const FEATURE_NAMES = { rollTwiceTakeBest: 'SA', rerollLowDice: 'GWF' };
 
   /**
    * The text for one signed dice group in a breakdown or history display, e.g. "[3, 5]", "-[2]",
@@ -401,6 +559,8 @@
     rollDiceNotation,
     parseDiceExpression,
     rollDiceExpression,
+    describeDiceProblem,
+    summarizeExpression,
     rollD20,
     describeFeatureRoll,
     describeSignedGroup,

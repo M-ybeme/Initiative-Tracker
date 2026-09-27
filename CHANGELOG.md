@@ -16,7 +16,7 @@ The DM's Toolbox has evolved through focused feature releases. Minor versions (2
 - **1.9.x**: Battle map measurement tools, persistent fog shapes, and generator integration across NPC/Tavern/Shop systems
 - **1.8.x**: Spell database expansion to 432+ spells, inventory management, loot generator overhaul, and character token generation
 
-**Current version: 2.3.19 (September 2026)**
+**Current version: 2.3.20 (September 2026)**
 
 ---
 
@@ -24,6 +24,41 @@ The DM's Toolbox has evolved through focused feature releases. Minor versions (2
 
 ### Known issues
 - **Flaky end-to-end test: "a blank count is invalid, not too many, and nothing is rolled"** (`tests/e2e/dice-callers.spec.js`, Character Sheet hit-dice count) — this test fails intermittently. It has failed once in a full-suite run, once in a run of three solo runs, and once in a comparison run, and passes on most other runs (eight consecutive repeat runs, and two later full-suite runs, all passed). The cause has not been identified; the likely area is timing around the hit-dice modal and the toast it asserts on, and the failure has not been captured with a message. It has not been observed as a product bug: the behavior it checks (a blank hit-dice count shows "Invalid number of hit dice to spend." instead of the over-limit message, and nothing is rolled) works when exercised by hand and in every passing run. Re-run before treating a red result on this test as a regression, and harden the test's waits when it is next touched.
+
+---
+
+## [2.3.20] - 2026-09-27
+**Dice Engine and Combat Mode Correctness Pass**
+
+### Fixed
+- **The Character Sheet rolls attack damage with several dice groups** — damage such as `2d6+1d4` or `2d6 - 1d4 + 3` rolled nothing on the sheet (only a console error), while Combat Mode rolled it. The sheet now rolls it the same way: the history entry records each subtracted or keep/drop group with its sign, so the dice add up to the total
+- **A critical hit on several dice groups doubles every damage die** — both the sheet and Combat Mode rolled `2d6+1d4+3` as written on a crit (Combat Mode since 2.3.18), dealing normal damage while the same click's smite dice were doubled. Every dice group is now rolled twice, independently, keeping its sign and keep rule, with flat modifiers added once: `2d6+1d4+3` rolls like `4d6+2d4+3`, and `2d6 - 1d4 + 3` like `4d6 - 2d4 + 3`. A crit that would take any group past the dice limit, or the total past the number bound, is refused with that reason, never rolled as normal damage
+- **Great Weapon Fighting and Savage Attacker apply to damage with several dice groups** — they were silently dropped. GWF rerolls every die showing 1 or 2, and Savage Attacker rolls all the dice (the whole critical set on a crit) twice and keeps the higher total, as for a single group. For damage that subtracts a dice group these rules do not say what to do, so they are not applied: the roll history says `[GWF, SA not applied: subtracted dice]` and a notice is shown
+- **Spell roll toasts show every roll correctly** — the combined toast for a spell cast read the first die of each roll directly: a flat-number roll such as Goodberry's `1` showed `Healing: undefined +1 = 1`, and a subtracted dice group lost its sign. It now uses the same formatting as the roll history
+- **A flat bonus (Dueling +2) is no longer dropped silently** — it was only added to damage written exactly like `1d8+3`; for `1d8 + 3` (spaces), `4d6kh3+1` (a keep rule), `2d6+1d4` or a flat number the bonus was lost while the roll's label still said "+2". The bonus is now added to anything the dice engine can roll (merged into a single group's modifier, so a critical hit can still double the dice, or added as a term to an expression)
+- **Damage that cannot be rolled is refused with a reason, not recorded as a roll** — Combat Mode rolled unreadable notation as 0 and added a 0-damage entry to the roll history; the sheet did nothing visible. Both now show a message naming the problem (not recognized, too many dice, too many sides, too long, numbers too large, or a critical past the dice limit; a critical that is only too large in its numbers says so rather than blaming the dice limit), record nothing, and do not roll the attack's extra feature dice on their own. The Initiative Tracker's dice box names a broken limit instead of calling valid notation an "Invalid format"
+- **Totals are always exact** — a modifier past `Number.MAX_SAFE_INTEGER` (`1d6+9007199254740993`, or several large modifiers together) was accepted and the total lost precision. Such rolls are refused: every flat term, and the largest total a roll could reach, must be a safe integer
+- **Whitespace can no longer join two numbers** — the dice parsers removed all whitespace before reading, so a typo such as `2d6 3` was rolled as a d63. It is refused; spacing between symbols (`1d8 + 3`, `1 d 6`) still reads normally
+- **Combat Mode's damage history now carries the Savage Attacker / Great Weapon Fighting note** (`[SA: 9 vs 4]`) that the sheet's history already had, so an entry says when a second set of dice was rolled and discarded
+
+### Verified, not changed
+- **Critical hits on keep/drop dice stay exact:** a crit rolls the original group twice, independently, and adds the modifier once (`4d6kh3` is two keep-3-of-4 rolls), as since 2.3.15, and the same now holds for each group of a multi-group expression. The `8d6kh6` transformation is the approximation 2.3.14 used and 2.3.15 replaced, because keeping the best 6 of 8 dice has different odds
+- **Signed and keep/drop roll metadata was already truthful in the engine and Combat Mode** (2.3.18); it now also comes from one shared summary (`DiceEngine.summarizeExpression`), and a randomized reconstruction test (2000 rolls per expression) checks that the recorded dice and modifiers add up to every total
+- **Legacy damage words:** only a trailing run of recognized words is dropped; anything ambiguous (`2d6 fire and 1d6 cold`, `1d8+2 plus 1d6 radiant`) is refused whole, never partly rolled
+- **Combat Mode host dependencies** (app toast, condition sync, Short/Long Rest, initiative reminder, roll history): every `window.*` function the card uses is published by the sheet or guarded, and the 2.3.14 damage-history `ReferenceError` fix is still covered by real-browser tests
+
+### Internal / Tests
+- New engine functions `describeDiceProblem` (the reason a roll is refused, from the parsers' own scanner, so it cannot disagree with them) and `summarizeExpression` (the history fields of an expression roll), used by the sheet, Combat Mode and the Initiative Tracker instead of separate copies
+- `rollDiceExpression` takes the same `{ critical, rerollLowDice, rollTwiceTakeBest }` features as `rollDiceNotation`; one critical-limit check (`criticalProblem`) serves both rollers and `describeDiceProblem`. Combat Mode has one refusal path (the separate critical-refusal flag, wrapper and hard-coded message are gone); every refusal shows the engine's reason prefixed with the attack name
+- The sheet's roll toasts (single and spell-cast rows) share one formatter with the roll history
+- `addFlatBonusToNotation` reads notation with the engine's parsers instead of its own regular expression
+- New `dice-semantics` unit tests (number bounds, a reason for every refusal and agreement with the rollers, with and without a crit, crit keep/drop on single groups and expressions, GWF/SA on expressions, signed/negative keep-drop reconstruction, legacy strings) and a real-browser `dice-damage-paths` spec that runs each damage case through both the sheet and Combat Mode, plus the spell roll toast
+- `dice-callers` tests that pinned "unreadable notation totals 0" now pin the refusal (message shown, nothing rolled, nothing recorded); the Combat Mode test that pinned "a crit on several dice groups is rolled as written" now pins the doubled roll; the engine's public API list, the expression result shape and one `addFlatBonusToNotation` expectation (`d6` is now written `1d6+2`, the same roll) were updated
+
+### Known issues (follow-ups)
+- The flaky "a blank count is invalid" hit-dice test (see [Unreleased]) was reproduced on 2.3.19 code as well (5 of 30 runs): `#appToastBody` is empty when the test reads it. It is not caused by this pass
+- `rollD20`'s bonus (attack bonus text on the sheet and in Combat Mode) is not bounded like dice-notation modifiers; an absurd typed attack bonus (16+ digits) could still give an inexact total on the advantage/disadvantage paths
+- The roll-history list on the sheet builds its rows from HTML strings that include the roll description (the attack name)
 
 ---
 

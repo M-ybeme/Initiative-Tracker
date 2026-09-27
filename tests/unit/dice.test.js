@@ -313,10 +313,10 @@ describe('the engine is one implementation reachable two ways', () => {
     const context = {};
     runInNewContext(source, context);
     expect(Object.keys(context.DiceEngine).sort()).toEqual(
-      ['MAX_DICE_COUNT', 'MAX_DICE_NOTATION_LENGTH', 'MAX_DIE_SIDES', 'createSeededRandom', 'describeFeatureRoll',
+      ['MAX_DICE_COUNT', 'MAX_DICE_NOTATION_LENGTH', 'MAX_DIE_SIDES', 'createSeededRandom', 'describeDiceProblem', 'describeFeatureRoll',
         'describeSignedGroup', 'normalizeLegacyDamageNotation', 'parseDiceExpression', 'parseDiceNotation',
         'rollAbilityScore', 'rollAbilityScoreSet', 'rollD20', 'rollDiceExpression', 'rollDiceNotation', 'rollDie',
-        'rollHitDice', 'rollMultipleDice'].sort());
+        'rollHitDice', 'rollMultipleDice', 'summarizeExpression'].sort());
     expect(context.DiceEngine.rollDie(6, () => 0.5)).toBe(4);
   });
 
@@ -510,7 +510,7 @@ describe('rollDiceExpression', () => {
 
   it('a flat number rolls no dice', () => {
     const script = vi.fn();
-    expect(rollDiceExpression('7', script)).toEqual({ total: 7, parts: [{ type: 'mod', n: 7 }] });
+    expect(rollDiceExpression('7', script)).toMatchObject({ total: 7, parts: [{ type: 'mod', n: 7 }], critical: false, twiceRoll: null });
     expect(script).not.toHaveBeenCalled();
   });
 

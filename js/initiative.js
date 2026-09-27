@@ -574,7 +574,11 @@ $('roll-custom-dice').addEventListener('click', function(){
     showRoll(r.total, expr);
     addToHistory(line);
   }catch(e){
-    alert("Invalid format.\nExamples:\n  2d6+3\n  2d6+1d4+3\n  4d6kh3 (keep highest 3)\n  2d20kl1 (disadvantage)");
+    // A limit (too many dice, too many sides, numbers too large) is named; unreadable text gets the examples.
+    const problem = DiceEngine.describeDiceProblem(expr);
+    alert(problem && problem.code !== 'malformed' && problem.code !== 'empty'
+      ? problem.message
+      : "Invalid format.\nExamples:\n  2d6+3\n  2d6+1d4+3\n  4d6kh3 (keep highest 3)\n  2d20kl1 (disadvantage)");
   }
 });
 $('clear-dice-history').addEventListener('click', ()=>{

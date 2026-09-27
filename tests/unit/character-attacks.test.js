@@ -5,6 +5,7 @@ import {
   getAttackFeatureBonuses,
   addFlatBonusToNotation,
 } from '../../Attack-rolls.js';
+import { parseDiceNotation, parseDiceExpression, rollDiceNotation, rollDiceExpression } from '../../js/modules/dice.js';
 
 describe('CONCENTRATION_ATTACK_BONUSES', () => {
   it('contains hex entry with 1d6', () => {
@@ -196,7 +197,45 @@ describe('addFlatBonusToNotation', () => {
     expect(addFlatBonusToNotation('', 2)).toBe('');
   });
 
-  it('handles d-notation without count prefix', () => {
-    expect(addFlatBonusToNotation('d6', 2)).toBe('d6+2');
+  it('handles d-notation without count prefix (written out as the same roll, 1d6)', () => {
+    expect(addFlatBonusToNotation('d6', 2)).toBe('1d6+2');
+  });
+
+  // The bonus used to be dropped silently for any notation outside /^\d*d\d+[+-]\d+$/ while the roll's
+  // label still said "+2". Everything the dice engine can roll now gets it.
+  describe('notation the old pattern skipped', () => {
+    it.each([
+      ['spaces around the modifier', '1d8 + 3', '1d8+5'],
+      ['upper case', '1D8+3', '1d8+5'],
+      ['keep-highest group', '4d6kh3+1', '4d6kh3+3'],
+      ['keep-lowest group', '2d20kl1', '2d20kl1+2']
+    ])('%s: merged into the single group, so a critical hit can still double it', (_l, notation, expected) => {
+      expect(addFlatBonusToNotation(notation, 2)).toBe(expected);
+      expect(parseDiceNotation(expected)).not.toBeNull();
+    });
+
+    it.each([
+      ['several dice groups', '2d6+1d4', '2d6+1d4+2'],
+      ['a subtracted group', '2d6 - 1d4 + 3', '2d6 - 1d4 + 3+2'],
+      ['a flat number', '5', '5+2'],
+      ['a negative bonus on an expression', '2d6+1d4', '2d6+1d4-1', -1]
+    ])('%s: appended as a term the expression roller adds', (_l, notation, expected, bonus = 2) => {
+      const out = addFlatBonusToNotation(notation, bonus);
+      expect(out).toBe(expected);
+      const terms = parseDiceExpression(out);
+      expect(terms.filter(t => t.type === 'mod').reduce((n, t) => n + t.n, 0))
+        .toBe(parseDiceExpression(notation).filter(t => t.type === 'mod').reduce((n, t) => n + t.n, 0) + bonus);
+    });
+
+    it('the bonus reaches the rolled total on every readable path', () => {
+      const zeros = () => 0; // every die rolls 1
+      expect(rollDiceNotation(addFlatBonusToNotation('1d8 + 3', 2), zeros).total).toBe(1 + 5);
+      expect(rollDiceExpression(addFlatBonusToNotation('2d6+1d4', 2), zeros).total).toBe(3 + 2);
+    });
+
+    it('unreadable notation is left alone for the roller to refuse (not given a bonus it cannot carry)', () => {
+      expect(addFlatBonusToNotation('1d8+3 slashing', 2)).toBe('1d8+3 slashing');
+      expect(addFlatBonusToNotation('2d6+ fire', 2)).toBe('2d6+ fire');
+    });
   });
 });

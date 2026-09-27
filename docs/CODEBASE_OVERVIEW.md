@@ -366,15 +366,20 @@ logs, labels or characters; callers format the plain results.
 - `parseDiceNotation(notation)` - one group: "2d6+3", "d8", "4d6kh3", "2d20kl1-1"
 - `rollDiceNotation(notation, randomFn, { rerollLowDice, rollTwiceTakeBest })` - roll one group; returns `rolls`, `kept`, `total`, `twiceRoll`, crit/fumble flags
 - `describeFeatureRoll(result)` - the " [SA: 11 vs 5] [GWF]" note for a feature roll
-- `parseDiceExpression(expr)` / `rollDiceExpression(expr, randomFn)` - several terms: "2d6+1d4+3", "1d6-1d4", "4d6kh3", "5"
+- `parseDiceExpression(expr)` / `rollDiceExpression(expr, randomFn, features)` - several terms: "2d6+1d4+3", "1d6-1d4", "4d6kh3", "5". Each dice part carries its `sign`, every die (`rolls`, never negated), the dice that counted (`kept`), the rest (`dropped`) and its signed `subtotal`. `features` are the group roller's: `critical` rolls every dice group twice, independently, keeping its sign and keep rule, with flat terms once ("2d6-1d4+3" rolls like 4d6-2d4+3); GWF and Savage Attacker apply as for one group when every group is added, and are not applied (listed in `featuresNotApplied`, noted by `describeFeatureRoll`) when a group is subtracted
+- `summarizeExpression(expr)` - the history fields of an expression roll (flattened `rolls`/`kept`/`dropped`, summed `modifier`, `total`, and signed `groups` when a group is subtracted or a keep rule dropped dice). Invariant: sum(sign x sum(kept)) over `groups` (or sum(kept) when there are none) + `modifier` === `total`. The sheet and Combat Mode both record expression rolls through it
+- `describeDiceProblem(notation, { critical })` - why a roll would be refused, or null: `{ code, message }` with a user-facing message per reason (`empty`, `malformed`, `too-long`, `no-dice`, `dice-count`, `die-sides`, `keep-count`, `number-too-large`, `critical-limit`). It uses the parsers' own scanner, so it reports a problem exactly when neither parser accepts the notation. Callers show the message and record nothing (no 0-damage history entry)
 - `rollD20(mode, bonus, randomFn)` - the one entry point for normal / advantage / disadvantage d20 rolls
 - Limits: `MAX_DICE_COUNT` (1000), `MAX_DIE_SIDES` (1,000,000) and `MAX_DICE_NOTATION_LENGTH` (200 characters of raw text, checked before any parsing so a long string is never scanned and many groups cannot add up to the same problem). Anything beyond a limit is invalid (rejected, never truncated or clamped).
-- One validity rule for dice dimensions (whole numbers from 1 up to the limits) is shared by both parsers, `rollHitDice` and `rollMultipleDice`. The parsers and `rollHitDice` return null; `rollMultipleDice` is the low-level call and throws `RangeError`. A critical `rollDiceNotation` returns null when rolling the group twice would pass `MAX_DICE_COUNT`.
+- Numbers: every flat term, and the largest total a roll could reach (the sum of each modifier's size and each group's count x sides, doubled for a critical hit), must be at most `Number.MAX_SAFE_INTEGER`, so every total is exact (`"1d6+9007199254740993"` is refused, not rolled as ...992). Whitespace is ignored between symbols but may not join two numbers (`"2d6 3"` is refused; it used to roll a d63).
+- One validity rule for dice dimensions (whole numbers from 1 up to the limits) is shared by both parsers, `rollHitDice` and `rollMultipleDice`. The parsers and `rollHitDice` return null; `rollMultipleDice` is the low-level call and throws `RangeError`. A critical `rollDiceNotation` or `rollDiceExpression` returns null when rolling a group twice would pass `MAX_DICE_COUNT` ('critical-limit') or the total the number bound ('number-too-large').
 - `rollDiceNotation(notation, randomFn, { critical: true })` - a critical hit: the group is rolled twice, independently (so `4d6kh3` is two keep-3-of-4 rolls, not `8d6kh6`), and the flat modifier is added once. Results list `rolls`, `kept`, `dropped` and `groups`
 - `rollHitDice(dieSize, count, conMod, randomFn)` - CON per die, minimum 1 HP per die
 - `rollAbilityScore`, `rollAbilityScoreSet`, `createSeededRandom`
 
-**Strict on purpose:** the engine accepts no text around the dice (`"1d8+3 slashing"` is invalid). Combat Mode alone drops recognized trailing damage words from older saved attacks before rolling and `console.warn`s when it does.
+**Strict on purpose:** the engine accepts no text around the dice (`"1d8+3 slashing"` is invalid). `normalizeLegacyDamageNotation` drops a trailing run of recognized damage words (Combat Mode also `console.warn`s when it does); anything else, such as words between terms (`"2d6 fire and 1d6 cold"`), is refused whole, never partly rolled.
+
+**Damage notation, one path:** the sheet and Combat Mode clean legacy words first (`normalizeLegacyDamageNotation`), then add a flat bonus (`addFlatBonusToNotation`), then roll: one dice group through `rollDiceNotation`, several groups or a bare number through `rollDiceExpression`, both with the same critical and features. A refused roll (including a crit past a limit) shows `describeDiceProblem`'s reason and is never re-rolled as normal damage.
 
 **Stays with the callers:** result text and history entries (`formatParts` in `initiative.js`, the
 Combat Mode breakdown, the sheet's roll history), attack labels, prompts, feature lookup
@@ -477,7 +482,7 @@ inline `validate()` closures, which already covers creation-time choices adequat
 - `CONCENTRATION_ATTACK_BONUSES` - Data constant for Hex, Hunter's Mark, Spirit Shroud
 - `getConcentrationAttackBonus(spellName)` - Returns bonus entry for a concentration spell
 - `getAttackFeatureBonuses(char, attack)` - Dueling (+2 melee), GWF (reroll 1s/2s), Savage Attacker (roll twice), Improved Divine Smite (Paladin 11+)
-- `addFlatBonusToNotation(notation, bonus)` - Bakes a flat bonus into a dice notation string
+- `addFlatBonusToNotation(notation, bonus)` - Adds a flat bonus to notation, read by the dice engine's parsers: merged into the modifier of one dice group ("1d8 + 3" -> "1d8+5", "4d6kh3+1" -> "4d6kh3+3", so a crit can still double it), appended as a term to an expression ("2d6+1d4" -> "2d6+1d4+2"), unreadable notation returned unchanged (and refused when rolled)
 
 Rolling is not done here: `character.js` rolls through `dice.js` (the dice engine).
 

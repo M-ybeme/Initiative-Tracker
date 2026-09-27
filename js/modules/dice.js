@@ -20,6 +20,8 @@ export const {
   rollDiceNotation,
   parseDiceExpression,
   rollDiceExpression,
+  describeDiceProblem,
+  summarizeExpression,
   rollD20,
   describeFeatureRoll,
   describeSignedGroup,

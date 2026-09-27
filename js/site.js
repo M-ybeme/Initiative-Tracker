@@ -1,7 +1,10 @@
 const DM_TOOLBOX_BUILD = {
   name: "The DM's Toolbox",
-  version: "2.3.19",
+  version: "2.3.20",
   recentChanges: [
+    "Fix: the Character Sheet now rolls attack damage with several dice groups (for example \"2d6+1d4\" or \"2d6 - 1d4 + 3\") the way Combat Mode does, instead of rolling nothing; a critical hit on such damage doubles every damage die (2d6+1d4+3 rolls like 4d6+2d4+3), Great Weapon Fighting and Savage Attacker apply to it, and a flat bonus such as Dueling +2 is no longer silently dropped for damage written with spaces, a keep rule or several groups",
+    "Fix: spell roll toasts no longer show \"undefined\" for a flat-number roll such as Goodberry's healing, and keep the sign of a subtracted dice group",
+    "Fix: damage notation that cannot be rolled is refused with a message saying why (not recognized, too many dice, too many sides, numbers too large) instead of rolling 0 in Combat Mode or nothing on the sheet, and nothing is added to the roll history",
     "Fix: Initiative Tracker keeps your place while you edit: Enter keeps focus in the field, Tab lands on the next field, a button clicked right after typing is no longer ignored, and a redraw from another tab keeps focus on the same combatant",
     "Fix: Initiative Tracker Combat Log entries show combatant names and imported text literally instead of as markup, and an edit for a combatant that was just deleted no longer looks saved",
     "Fix: Initiative Tracker no longer saves a half-typed edit when another tab changes the tracker, no longer loses a row drop when a change arrives mid-drag, and a closing tab no longer writes an older snapshot over a newer one",

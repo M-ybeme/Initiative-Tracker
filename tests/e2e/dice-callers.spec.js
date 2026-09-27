@@ -191,6 +191,17 @@ test.describe('Combat Mode rolls (inline script on characters.html)', () => {
     const detail = await page.locator('#combatRollResult0 .small').innerText();
     return `${total} | ${detail.replace(/\s+/g, ' ').trim()}`; // the total, then the breakdown beside it
   }
+  // A refused roll (notation the engine cannot roll) shows the engine's reason where the result would be,
+  // and records nothing. Returns that message.
+  async function combatRefusal(page, options) {
+    await page.evaluate(() => { window.rollHistory.length = 0; });
+    await clickCombatRoll(page, options);
+    const message = await page.locator('#combatRollResult0 .text-warning-emphasis').innerText();
+    expect(await page.locator('#combatRollResult0 .roll-total').count()).toBe(0); // no "0" total shown
+    expect(await page.evaluate(() => window.rollHistory.length)).toBe(0); // no 0-damage history entry
+    return message;
+  }
+  const NOT_RECOGNIZED = 'Sword damage: Dice notation not recognized. Use a form like 2d6+3, 1d8+1d6 or 4d6kh3.';
   const sword = { name: 'Sword', bonus: '+5', damage: '1d8+3', damageType: 'slashing', type: 'melee-weapon' };
 
   test('an attack roll adds the bonus', async ({ page }) => {
@@ -261,9 +272,10 @@ test.describe('Combat Mode rolls (inline script on characters.html)', () => {
     expect(await combatRoll(page, { kind: 'damage', attack: { ...sword, damage: '5' } })).toBe('5 | 5 slashing');
   });
 
-  test('unreadable damage notation totals 0', async ({ page }) => {
+  // It used to "total 0" and record a 0-damage history entry for a roll that never happened.
+  test('unreadable damage notation is refused with a message, rolls nothing and records nothing', async ({ page }) => {
     await script(page, [[6, 3]]);
-    expect(await combatRoll(page, { kind: 'damage', attack: { ...sword, damage: 'lots' } })).toBe('0 | 0 slashing');
+    expect(await combatRefusal(page, { kind: 'damage', attack: { ...sword, damage: 'lots' } })).toBe(NOT_RECOGNIZED);
     expect(await unscriptedDiceLeft(page)).toBe(1); // nothing was rolled
   });
 
@@ -337,22 +349,23 @@ test.describe('Combat Mode rolls (inline script on characters.html)', () => {
       expect(warnings.filter(w => /dropped trailing text/.test(w))).toHaveLength(0);
     });
 
-    // Only whitespace-separated damage words are dropped. Everything else the engine rejects stays 0
-    // (with a warning naming the notation) and no die is rolled: nothing is "rescued".
+    // Only whitespace-separated damage words are dropped. Everything else the engine rejects is refused
+    // (with the engine's reason, and a warning naming the notation) and no die is rolled: nothing is "rescued".
     for (const raw of ['hello world', '2d6+ fire', '4d6kh', '1d8+3slashing', '1d8 sonic', '1d8+3 sl', 'slashing 1d8', '1d8 +', '1001d6']) {
       test(`${JSON.stringify(raw)} is not rescued`, async ({ page }) => {
         await script(page, [[6, 3], [6, 3]]);
-        expect(await combatRoll(page, { kind: 'damage', attack: { ...sword, damage: raw } })).toBe('0 | 0 slashing');
+        expect(await combatRefusal(page, { kind: 'damage', attack: { ...sword, damage: raw } }))
+          .toBe(raw === '1001d6' ? 'Sword damage: Too many dice: at most 1000 in one group.' : NOT_RECOGNIZED);
         expect(await unscriptedDiceLeft(page)).toBe(2); // nothing was rolled
-        const unreadable = warnings.filter(w => /could not read dice notation/.test(w));
+        const unreadable = warnings.filter(w => /not rolling dice notation/.test(w));
         expect(unreadable).toHaveLength(1);
         expect(unreadable[0]).toContain(`"${raw}"`); // the string that was actually saved, not a cleaned copy
       });
     }
 
     test('an unreadable string that was also cleaned up names the original and the cleaned text', async ({ page }) => {
-      await combatRoll(page, { kind: 'damage', attack: { ...sword, damage: '2d6+ fire' } });
-      const unreadable = warnings.find(w => /could not read dice notation/.test(w));
+      await combatRefusal(page, { kind: 'damage', attack: { ...sword, damage: '2d6+ fire' } });
+      const unreadable = warnings.find(w => /not rolling dice notation/.test(w));
       expect(unreadable).toContain('"2d6+ fire"');
       expect(unreadable).toContain('as rolled: "2d6+"');
     });
@@ -387,9 +400,10 @@ test.describe('Combat Mode rolls (inline script on characters.html)', () => {
       for (const raw of ['1d8+ slashing', 'hello world', '1d8+3 sonic', '1d8+3slashing']) {
         test(`${JSON.stringify(raw)} is not rescued by the bonus step`, async ({ page }) => {
           await script(page, [[8, 5]]);
-          expect(await roll(page, raw)).toBe('0 | 0 (+2) slashing'); // 0 rolled: the (+2) is only the breakdown label
+          // refused outright: it used to show "0 (+2)", a bonus label on a roll that never happened
+          expect(await combatRefusal(page, { kind: 'damage', attack: { ...sword, damage: raw }, character: duelist })).toBe(NOT_RECOGNIZED);
           expect(await unscriptedDiceLeft(page)).toBe(1);
-          expect(warnings.some(w => /could not read dice notation/.test(w))).toBe(true);
+          expect(warnings.some(w => /not rolling dice notation/.test(w))).toBe(true);
         });
       }
     });
@@ -412,11 +426,12 @@ test.describe('Combat Mode rolls (inline script on characters.html)', () => {
         await script(page, [[6, 3]]);
         const raw = '1d8+3 ' + 'fire '.repeat(50000) + 'x';
         const started = Date.now();
-        expect(await combatRoll(page, { kind: 'damage', attack: { ...sword, damage: raw } })).toBe('0 | 0 slashing');
+        expect(await combatRefusal(page, { kind: 'damage', attack: { ...sword, damage: raw } }))
+          .toBe('Sword damage: Dice notation is too long (at most 200 characters).');
         expect(Date.now() - started).toBeLessThan(5000);
         expect(await regexRuns(page)).toBe(0);
         expect(await unscriptedDiceLeft(page)).toBe(1);
-        const unreadable = warnings.filter(w => /could not read dice notation/.test(w));
+        const unreadable = warnings.filter(w => /not rolling dice notation/.test(w));
         expect(unreadable).toHaveLength(1);
         expect(unreadable[0]).toContain('250007 characters'); // named, but not echoed in full
         expect(unreadable[0].length).toBeLessThan(300);
@@ -432,7 +447,8 @@ test.describe('Combat Mode rolls (inline script on characters.html)', () => {
 
         const runsBefore = await regexRuns(page);
         await script(page, [[8, 5]]);
-        expect(await combatRoll(page, { kind: 'damage', attack: { ...sword, damage: at200 + ' ' } })).toBe('0 | 0 slashing'); // 201
+        expect(await combatRefusal(page, { kind: 'damage', attack: { ...sword, damage: at200 + ' ' } })) // 201
+          .toBe('Sword damage: Dice notation is too long (at most 200 characters).');
         expect(await regexRuns(page)).toBe(runsBefore); // no further regex run
         expect(await unscriptedDiceLeft(page)).toBe(1);
       });
@@ -453,7 +469,7 @@ test.describe('Combat Mode rolls (inline script on characters.html)', () => {
         await expect(page.locator('#appToastBody')).toContainText('Critical roll exceeds the maximum dice limit.');
         expect(await page.evaluate(() => window.rollHistory.length)).toBe(0); // no fake history entry
         expect(await unscriptedDiceLeft(page)).toBe(1); // nothing was rolled
-        expect(warnings.some(w => /critical hit on "501d6" would pass the 1000-dice limit/.test(w))).toBe(true);
+        expect(warnings.some(w => /not rolling dice notation "501d6" as a critical hit: Critical roll exceeds the maximum dice limit/.test(w))).toBe(true);
       });
 
       test('the same 501 dice as a normal hit still roll', async ({ page }) => {
@@ -477,7 +493,8 @@ test.describe('Combat Mode rolls (inline script on characters.html)', () => {
   test('a huge damage notation is rejected instantly and rolls no dice', async ({ page }) => {
     await script(page, [[6, 3]]);
     const started = Date.now();
-    expect(await combatRoll(page, { kind: 'damage', attack: { ...sword, damage: '99999999d6' } })).toBe('0 | 0 slashing');
+    expect(await combatRefusal(page, { kind: 'damage', attack: { ...sword, damage: '99999999d6' } }))
+      .toBe('Sword damage: Too many dice: at most 1000 in one group.');
     expect(Date.now() - started).toBeLessThan(2000);
     expect(await unscriptedDiceLeft(page)).toBe(1);
   });
@@ -519,7 +536,15 @@ test.describe('dice limits in the other callers', () => {
     }
     expect(Date.now() - started).toBeLessThan(5000);
     expect(dialogs).toHaveLength(6);
-    expect(dialogs.every(m => /Invalid format/.test(m))).toBe(true);
+    // each names the limit it broke (they used to all say "Invalid format", though the format was fine)
+    expect(dialogs).toEqual([
+      'Too many dice: at most 1000 in one group.',
+      'Too many dice: at most 1000 in one group.',
+      'Dice can have at most 1,000,000 sides.',
+      'Too many dice: at most 1000 in one group.',
+      'Dice notation is too long (at most 200 characters).',
+      'Dice notation is too long (at most 200 characters).'
+    ]);
     expect(await unscriptedDiceLeft(page)).toBe(1);
     await expect(page.locator('#dice-result')).toHaveText('');
   });

@@ -1,4 +1,4 @@
-import { rollDiceNotation, parseDiceNotation, MAX_DICE_COUNT, rollD20, describeFeatureRoll, describeSignedGroup, normalizeLegacyDamageNotation } from '../modules/dice.js';
+import { rollDiceNotation, parseDiceNotation, rollDiceExpression, summarizeExpression, describeDiceProblem, rollD20, describeFeatureRoll, describeSignedGroup, normalizeLegacyDamageNotation } from '../modules/dice.js';
 import { getAbilityModifier, getProficiencyBonus, recalcDerivedStats } from './character-calculations.js';
 import { getAttackFeatureBonuses as _getAttackFeatureBonuses, addFlatBonusToNotation as _addFlatBonusToNotation, getConcentrationAttackBonus as _getConcentrationAttackBonus } from '../../Attack-rolls.js';
 import { getSpellSlotsForClassLevel as _getSpellSlotsForClassLevel, getPactMagicSlots as _getPactMagicSlots, normalizeSpellEntry as _normalizeSpellEntry, searchSpells as _searchSpells } from './character-spell-data.js';
@@ -109,36 +109,55 @@ import { wireSendToEvents, wireTokenPreviewEvents } from './character-send-to.js
       // wrappers add only what belongs to the sheet: the description, a timestamp and the roll history.
       //   features.rerollLowDice     - GWF: reroll each die showing 1 or 2 (must use the new roll)
       //   features.rollTwiceTakeBest - SA: roll all dice twice, take the higher total
+      //   features.critical          - a critical hit: every dice group is rolled twice, flat terms once
+      // One dice group ("2d6+3", "4d6kh3") is rolled by the engine's group roller; several groups or a bare
+      // number ("2d6+1d4", "2d6 - 1d4 + 3", "5") by its expression roller, with the same critical and
+      // features, the same as Combat Mode. Notation that cannot be rolled is refused with a specific message
+      // (unreadable, over a limit, or a crit whose doubled dice would pass a limit), nothing is recorded,
+      // and a refused crit is never rolled as normal damage. " (CRIT!)" is added only for a crit that was
+      // rolled. GWF / Savage Attacker cannot apply to damage that subtracts a dice group (see the engine);
+      // the history says so, and a notice is shown.
       function rollDice(notation, description = '', features = {}) {
-        // A critical hit doubles one dice group. If that alone would pass the engine's dice limit, the
-        // notation itself was fine — parseDiceNotation still accepts it — so this is not "invalid
-        // notation" and must not be reported or logged as one; the crit is refused, not rolled at all.
-        const parsedForCrit = features && features.critical ? parseDiceNotation(notation) : null;
-        const rolled = rollDiceNotation(notation, undefined, features);
-        if (!rolled) {
-          if (parsedForCrit) {
-            console.warn(`Critical roll on "${notation}" would pass the ${MAX_DICE_COUNT}-dice limit; refusing (not rolling as normal damage)`);
-            showAppToast('Critical roll exceeds the maximum dice limit.', 'warning');
-          } else {
-            console.error('Invalid dice notation:', notation);
-          }
+        const critical = !!(features && features.critical);
+        const single = !!parseDiceNotation(notation);
+        const rolled = single ? rollDiceNotation(notation, undefined, features) : null;
+        const expr = single ? null : rollDiceExpression(notation, undefined, features);
+        if (!rolled && !expr) {
+          const problem = describeDiceProblem(notation, { critical });
+          const message = problem ? problem.message : 'Dice notation not recognized.';
+          console.warn(`Not rolling "${String(notation).slice(0, 80)}": ${message}`);
+          showAppToast(description ? `${description}: ${message}` : message, 'warning');
           return null;
         }
 
-        const result = {
-          notation: features && features.critical ? `${notation} (crit)` : notation,
-          description: description + describeFeatureRoll(rolled),
-          rolls: rolled.rolls,
-          kept: rolled.kept,       // the dice that counted; dropped ones are in `dropped`
-          dropped: rolled.dropped,
-          modifier: rolled.modifier,
-          total: rolled.total,
-          timestamp: new Date().toISOString(),
-          isCritical: rolled.isCritical,
-          isFumble: rolled.isFumble
-        };
+        const result = rolled
+          ? {
+            notation: critical ? `${notation} (crit)` : notation,
+            description: description + (critical ? ' (CRIT!)' : '') + describeFeatureRoll(rolled),
+            rolls: rolled.rolls,
+            kept: rolled.kept,       // the dice that counted; dropped ones are in `dropped`
+            dropped: rolled.dropped,
+            modifier: rolled.modifier,
+            total: rolled.total,
+            timestamp: new Date().toISOString(),
+            isCritical: rolled.isCritical,
+            isFumble: rolled.isFumble
+          }
+          : {
+            notation: expr.critical ? `${notation} (crit)` : notation,
+            description: description + (expr.critical ? ' (CRIT!)' : '') + describeFeatureRoll(expr),
+            ...summarizeExpression(expr), // rolls, kept, dropped, modifier, total, and signed groups when needed
+            timestamp: new Date().toISOString(),
+            isCritical: expr.critical,
+            isFumble: false
+          };
 
         addToRollHistory(result);
+        const skipped = expr ? expr.featuresNotApplied : [];
+        if (skipped.length) {
+          const names = skipped.map(f => (f === 'rerollLowDice' ? 'Great Weapon Fighting' : 'Savage Attacker')).join(' and ');
+          showAppToast(`${description || notation}: ${names} not applied (the damage subtracts a dice group).`, 'info');
+        }
         return result;
       }
 
@@ -214,18 +233,11 @@ import { wireSendToEvents, wireTokenPreviewEvents } from './character-send-to.js
             const badge = r.isCritical ? 'bg-success' : r.isFumble ? 'bg-danger' : 'bg-dark bg-opacity-50';
             // Short label: everything after " - "
             const label = (r.description || '').replace(/^[^-]+ - /, '') || r.description || 'Roll';
-            let rollDisplay = '';
-            if (r.isAdvantage || r.isDisadvantage) {
-              rollDisplay = `[${r.rolls[0]}, ${r.rolls[1]}] → ${r.chosen}`;
-            } else {
-              rollDisplay = r.rolls.length > 1 ? `[${r.rolls.join(', ')}]` : `${r.rolls[0]}`;
-            }
-            const modStr = r.modifier !== 0 ? ` ${r.modifier >= 0 ? '+' : ''}${r.modifier}` : '';
             return `
               <div class="d-flex justify-content-between align-items-center gap-2 mt-1">
                 <div class="small">
                   <span class="text-white-50">${label}:</span>
-                  <span class="${rc}">${rollDisplay}${modStr} = ${r.total}</span>
+                  <span class="${rc}">${rollToastDetails(r)}</span>
                 </div>
                 <div class="badge ${badge}">${r.total}</div>
               </div>`;
@@ -244,8 +256,7 @@ import { wireSendToEvents, wireTokenPreviewEvents } from './character-send-to.js
           // the same result object, shown as a toast on mobile by addToRollHistory), so a signed
           // expression ("2d6 - 4d6kh3 + 2") reads the same way here too instead of falling back to a
           // flattened, sign-agnostic dice list.
-          const { rollDisplay, modDisplay } = formatRollDisplay(result);
-          const details = `${rollDisplay}${modDisplay} = <span class="${resultClass}">${result.total}</span>`;
+          const details = rollToastDetails(result, resultClass);
 
           bodyHTML = `
             <div class="d-flex align-items-center justify-content-between gap-2">
@@ -316,6 +327,15 @@ import { wireSendToEvents, wireTokenPreviewEvents } from './character-send-to.js
         const totalSuffix = showTotal ? ` = <span class="${resultClass}">${roll.total}</span>` : '';
 
         return { rollDisplay, modDisplay, totalSuffix };
+      }
+
+      // "dice modifier = total" for a toast row, from the shared history formatter (signed and keep/drop
+      // groups, advantage), so a toast reads like the roll history. A roll with no dice (a flat number such
+      // as Goodberry's "1") is just its total: there are no dice to show.
+      function rollToastDetails(roll, totalClass = '') {
+        const { rollDisplay, modDisplay } = formatRollDisplay(roll);
+        const total = totalClass ? `<span class="${totalClass}">${roll.total}</span>` : String(roll.total);
+        return rollDisplay ? `${rollDisplay}${modDisplay} = ${total}` : total;
       }
 
       function renderRollHistory() {
@@ -479,23 +499,22 @@ import { wireSendToEvents, wireTokenPreviewEvents } from './character-send-to.js
         if (rollType === 'critical') {
           // The group is rolled twice, independently (keep/drop rules apply to each roll); GWF and SA apply too.
           // A null result (invalid notation, or rolling twice would pass the engine's dice limit) is reported by rollDice.
-          const result = rollDice(notation, `${description} (CRIT!)`, { ...features, critical: true });
+          const result = rollDice(notation, description, { ...features, critical: true });
           if (!result) return null;
           extraRolls.forEach(({ notation: en, label }) => {
             // extraRolls are fixed small dice (e.g. 1d8), so rolling them twice cannot pass the engine's dice limit.
-            rollDice(en, `${attack.name} - ${label} (CRIT!)`, { critical: true });
+            rollDice(en, `${attack.name} - ${label}`, { critical: true });
           });
           if (applyConc) rollDice(concBonus.notation, `${attack.name} - ${concBonus.label}`);
           return result;
         } else if (rollType === 'half') {
           const result = rollDice(notation, description, features);
-          if (result) {
-            addToRollHistory({
-              notation: 'Resistance', description: `${description} (Halved)`,
-              rolls: [], modifier: 0, total: Math.floor(result.total / 2),
-              timestamp: new Date().toISOString()
-            });
-          }
+          if (!result) return null; // refused (with a message): the extras are not rolled on their own
+          addToRollHistory({
+            notation: 'Resistance', description: `${description} (Halved)`,
+            rolls: [], modifier: 0, total: Math.floor(result.total / 2),
+            timestamp: new Date().toISOString()
+          });
           extraRolls.forEach(({ notation: en, label }) => {
             const r = rollDice(en, `${attack.name} - ${label}`);
             if (r) addToRollHistory({
@@ -508,6 +527,7 @@ import { wireSendToEvents, wireTokenPreviewEvents } from './character-send-to.js
           return result;
         } else {
           const result = rollDice(notation, description, features);
+          if (!result) return null; // refused (with a message): the extras are not rolled on their own
           extraRolls.forEach(({ notation: en, label }) => rollDice(en, `${attack.name} - ${label}`));
           if (applyConc) rollDice(concBonus.notation, `${attack.name} - ${concBonus.label}`);
           return result;
@@ -525,7 +545,7 @@ import { wireSendToEvents, wireTokenPreviewEvents } from './character-send-to.js
 
         if (rollType === 'critical') {
           // Critical hit: the group is rolled twice, independently (the modifier is added once)
-          return rollDice(damage2, `${description} (CRIT!)`, { critical: true });
+          return rollDice(damage2, description, { critical: true });
         } else if (rollType === 'half') {
           // Half damage (resistance)
           const result = rollDice(damage2, description);

@@ -135,18 +135,17 @@ test.describe('damage rolls reach roll history', () => {
     expect(entry.isCritical).toBe(true);
   });
 
-  test('a crit on several dice groups is rolled as written, so it is not recorded as a critical roll', async ({ page }) => {
+  // A critical hit doubles every damage die: 2d6+1d4+2 rolls as 4d6+2d4+2 (each group rolled twice), not as written.
+  test('a crit on several dice groups doubles every group and adds the flat modifier once', async ({ page }) => {
     await loadPage(page);
     await enterCombatMode(page);
     await addAttacks(page, [{ name: 'Flame Tongue', type: 'melee-weapon', bonus: '+5', damage: '2d6+1d4+2', damageType: 'fire' }]);
-    await rollDamage(page, 0, 'critical', [[6, 3], [6, 5], [4, 2]]);
+    await rollDamage(page, 0, 'critical', [[6, 3], [6, 5], [6, 1], [6, 6], [4, 2], [4, 4]]);
     const [entry] = await history(page);
-    expect(entry).toMatchObject({ rolls: [3, 5, 2], modifier: 2, total: 12, isCritical: false });
-    // The Critical button was pressed, but a multi-group expression cannot double: the notation,
-    // description and badge must follow the actual roll outcome (isCritical: false), not the button.
-    expect(entry.notation).not.toContain('(crit)');
-    expect(entry.description).not.toContain('(Crit)');
-    await expect(page.locator('#combatRollResult0')).not.toContainText('CRIT!');
+    expect(entry).toMatchObject({ rolls: [3, 5, 1, 6, 2, 4], modifier: 2, total: 3 + 5 + 1 + 6 + 2 + 4 + 2, isCritical: true });
+    expect(entry.notation).toContain('(crit)');
+    expect(entry.description).toContain('(Crit)');
+    await expect(page.locator('#combatRollResult0')).toContainText('CRIT!');
   });
 
   test('a crit that would pass the dice limit is refused: no fake history entry, a specific toast, no dice rolled', async ({ page }) => {
