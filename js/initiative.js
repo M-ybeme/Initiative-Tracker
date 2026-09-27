@@ -68,11 +68,13 @@ const statusEffects = [
 
           // Handle initiative - if useActualInitiative flag is set, use the value directly
           // Otherwise treat it as a bonus and roll
+          // The form's submit applies the whole-number rule; a bonus sent as text ("3") must not be
+          // string-concatenated onto the roll (15 + "3" is "153").
           if (data.useActualInitiative) {
-            $('initiative-roll').value = data.initiative || 0;
+            $('initiative-roll').value = data.initiative ?? 0;
           } else {
             const d20Roll = DiceEngine.rollDie(20);
-            const initBonus = data.initiative || 0;
+            const initBonus = toWholeNumber(data.initiative, 0);
             $('initiative-roll').value = d20Roll + initBonus;
           }
 
@@ -181,14 +183,16 @@ const statusEffects = [
 
       if (!data || !Array.isArray(data.characters)) return;
 
+      // Values are passed through as sent: normalizeChar applies the whole-number rule (a Number()
+      // here would first turn "1e3" into 1000 and let it through).
       const normalizeFromBuilder = (c) => normalizeChar({
         id: c.id,  
         name: c.name ?? 'Unknown',
         type: c.type ?? 'Enemy',
-        initiative: Number(c.initiative || 0),
-        currentHP: Number(c.currentHP ?? c.maxHP ?? 1),
-        maxHP:     Number(c.maxHP     ?? c.currentHP ?? 1),
-        tempHP:    Number(c.tempHP ?? 0),
+        initiative: c.initiative ?? 0,
+        currentHP: c.currentHP ?? c.maxHP ?? 1,
+        maxHP:     c.maxHP     ?? c.currentHP ?? 1,
+        tempHP:    c.tempHP ?? 0,
         ac: (c.ac ?? null),
         notes: c.notes ?? '',
         concentration: !!c.concentration,
@@ -199,14 +203,13 @@ const statusEffects = [
 
       // Append must not reuse ids already in the tracker; replace discards them, so nothing is taken.
       const taken = data.mode === 'replace' ? undefined : new Set(characters.map(c => c.id));
-      const importedChars = normalizeCharList(data.characters.map(normalizeFromBuilder), taken);
+      const importedChars = normalizeCharList(objectEntries(data.characters).map(normalizeFromBuilder), taken);
 
       if (data.mode === 'replace') {
         // Explicit full replace (only when the sender really wants that)
         characters   = importedChars;
-        currentTurn  = Number(data.currentTurn ?? 0);
-        combatRound  = Number(data.combatRound ?? 1);
-        diceHistory  = Array.isArray(data.diceHistory) ? data.diceHistory : [];
+        setTurnState(data.currentTurn, data.combatRound);
+        diceHistory  = objectEntries(data.diceHistory);
         console.info(`Session replaced from external page (${importedChars.length} characters).`);
       } else {
         // DEFAULT: append into whatever is already in the tracker
@@ -216,14 +219,9 @@ const statusEffects = [
 
         // If the tracker was empty, allow sender's turn/round to seed it.
         if (hadNone) {
-          if (typeof data.currentTurn === 'number') {
-            currentTurn = Number(data.currentTurn);
-          }
-          if (typeof data.combatRound === 'number') {
-            combatRound = Number(data.combatRound);
-          }
+          setTurnState(data.currentTurn ?? currentTurn, data.combatRound ?? combatRound);
           if (Array.isArray(data.diceHistory) && !diceHistory.length) {
-            diceHistory = data.diceHistory;
+            diceHistory = objectEntries(data.diceHistory);
           }
         }
 
@@ -239,53 +237,60 @@ const statusEffects = [
       c.maxHP = c.currentHP;      
     }
   }
-    function normalizeChar(c){
-    const cur = +c.currentHP || 0;
-    const max = +c.maxHP || 0;
-    const fixedMax = Math.max(max, cur); 
+  // Characters arrive from storage, other tabs, imported files and other pages, so every field is
+  // untrusted: numbers go through toWholeNumber (the editors' whole-number rule), text is made a string.
+  function normalizeChar(c){
+    const cur = toWholeNumber(c.currentHP, 0);
+    const max = toWholeNumber(c.maxHP, 0);
+    const fixedMax = Math.max(max, cur);
+    const ds = c.deathSaves && typeof c.deathSaves === 'object' ? c.deathSaves : {};
+    const la = c.legendaryActions && typeof c.legendaryActions === 'object' ? c.legendaryActions : {};
+    const laMax = Math.max(0, toWholeNumber(la.max, 0));
+    const clampSaves = v => Math.min(3, Math.max(0, toWholeNumber(v, 0)));
 
     return {
       // Every character has a stable id (legacy/imported data without one gets one here;
       // coerced to a string so it round-trips through DOM attributes).
       id: c.id ? String(c.id) : createCharId(),
 
-      name: c.name,
-      type: c.type || 'PC',
-      initiative: +c.initiative || 0,
+      name: String(c.name ?? ''),
+      type: String(c.type || 'PC'),
+      initiative: toWholeNumber(c.initiative, 0),
       currentHP: cur,
       maxHP: fixedMax,
-      tempHP: +c.tempHP || 0,
+      tempHP: Math.max(0, toWholeNumber(c.tempHP, 0)),
       ac: (c.ac ?? null),
-      notes: c.notes || '',
+      notes: String(c.notes || ''),
       concentration: !!c.concentration,
       deathSaves: {
-        s: Math.min(3, Math.max(0, +(c.deathSaves?.s ?? 0))),
-        f: Math.min(3, Math.max(0, +(c.deathSaves?.f ?? 0))),
-        stable: !!(c.deathSaves?.stable)
+        s: clampSaves(ds.s),
+        f: clampSaves(ds.f),
+        stable: !!ds.stable
       },
-      status: (c.status || []).map(s =>
+      status: (Array.isArray(c.status) ? c.status : []).filter(s => typeof s === 'string' || (s && typeof s === 'object')).map(s =>
         typeof s === 'string'
           ? { name: s, icon: (statusEffects.find(e => e.name === s)?.icon || '❓') }
           : {
-              name: s.name,
-              icon: s.icon || (statusEffects.find(e => e.name === s.name)?.icon || '❓'),
-              remaining: (typeof s.remaining === 'number' ? s.remaining : undefined)
+              name: String(s.name ?? ''),
+              icon: String(s.icon || (statusEffects.find(e => e.name === s.name)?.icon || '❓')),
+              remaining: (typeof s.remaining === 'number' ? toWholeNumber(s.remaining, undefined) : undefined)
             }
       ),
       // keep any existing concDamagePending if present
-      concDamagePending: +c.concDamagePending || 0,
+      concDamagePending: Math.max(0, toWholeNumber(c.concDamagePending, 0)),
       reactionUsed: !!c.reactionUsed,
       legendaryActions: {
-        max: Math.max(0, +(c.legendaryActions?.max ?? 0)),
-        remaining: Math.max(0, +(c.legendaryActions?.remaining ?? c.legendaryActions?.max ?? 0))
+        max: laMax,
+        remaining: Math.max(0, toWholeNumber(la.remaining, laMax))
       }
     };
   }
   // normalizeChar over a whole list, additionally giving a fresh id to any entry whose id repeats
-  // (within the list, or in `taken`) — identity lookups need ids to be unique.
+  // (within the list, or in `taken`) — identity lookups need ids to be unique. Entries that are not
+  // objects (null, a string) are dropped rather than crashing the whole load.
   function normalizeCharList(list, taken = new Set()) {
     const seen = new Set(taken);
-    return (list || []).map(normalizeChar).map(c => {
+    return (Array.isArray(list) ? list : []).filter(c => c && typeof c === 'object').map(normalizeChar).map(c => {
       if (seen.has(c.id)) c.id = createCharId();
       seen.add(c.id);
       return c;
@@ -296,17 +301,41 @@ const statusEffects = [
     const payload = { characters, currentTurn, combatRound, diceHistory, combatLog };
     localStorage.setItem(key, JSON.stringify(payload));
     if (manual) updateSaveHistory();
+    else localDirty = false; // the shared autosave now holds this tab's changes
+  }
+  // True while this tab has changed the session and not yet written it to the shared autosave key
+  // (Auto-Save off, or nothing saved yet). State loaded from storage is not a local change: it is
+  // never written back, so it cannot overwrite a newer save from another tab.
+  let localDirty = false;
+  // Every local change goes through here: it is this tab's to persist.
+  function persistLocal() {
+    localDirty = true;
+    if (autoSaveEnabled) saveState();
+  }
+  // Turn pointer and round from saved/imported data: a whole-number turn inside the list (else the
+  // first combatant) and a whole-number round of at least 1. Call after `characters` is set.
+  function setTurnState(turn, round) {
+    const t = toWholeNumber(turn, 0);
+    currentTurn = t >= 0 && t < characters.length ? t : 0;
+    const r = toWholeNumber(round, 1);
+    combatRound = r >= 1 ? r : 1;
+  }
+  const objectEntries = list => (Array.isArray(list) ? list : []).filter(e => e && typeof e === 'object');
+  // A whole saved session (autosave, a manual save, an imported file). Throws only on a non-object,
+  // so callers keep their own error handling.
+  function applySessionData(data) {
+    if (!data || typeof data !== 'object') throw new TypeError('Session data is not an object');
+    characters = normalizeCharList(data.characters);
+    setTurnState(data.currentTurn, data.combatRound);
+    diceHistory = objectEntries(data.diceHistory);
+    combatLog = objectEntries(data.combatLog).slice(-COMBAT_LOG_LIMIT);
   }
   function loadState(){
     const raw = localStorage.getItem('initiativeTrackerData');
     if(!raw) return;
     try{
-      const data = JSON.parse(raw);
-      characters = normalizeCharList(data.characters);
-      currentTurn = data.currentTurn||0;
-      combatRound = data.combatRound||1;
-      diceHistory = Array.isArray(data.diceHistory) ? data.diceHistory : [];
-      combatLog = Array.isArray(data.combatLog) ? data.combatLog.slice(-COMBAT_LOG_LIMIT) : [];
+      applySessionData(JSON.parse(raw));
+      localDirty = false; // the model is what storage holds
     }catch(e){ console.warn('Load failed', e); }
   }
   // ---------- Undo ----------
@@ -323,9 +352,8 @@ const statusEffects = [
     if (!last) return;
     const { state } = last;
     characters = normalizeCharList(state.characters);
-    currentTurn = state.currentTurn ?? 0;
-    combatRound = state.combatRound ?? 1;
-    combatLog = Array.isArray(state.combatLog) ? state.combatLog : [];
+    setTurnState(state.currentTurn, state.combatRound);
+    combatLog = objectEntries(state.combatLog);
     buildTable();
   }
   
@@ -419,7 +447,7 @@ const statusEffects = [
     const maxHP = parseWholeNumber($('save-health').value);
     const ac = parseWholeNumber($('save-ac').value);
     const type = $('save-type').value;
-    if (!name || maxHP === null || ac === null) { alert('Please enter valid Name, Max HP, and AC.'); return; }
+    if (!name || maxHP === null || ac === null || maxHP < 0 || ac < 0) { alert('Please enter valid Name, Max HP, and AC.'); return; }
     addSavedTemplate({ name, maxHP, ac, type, initiative:0 });
     $('save-name').value=''; $('save-health').value=''; $('save-ac').value='';
   });
@@ -466,7 +494,7 @@ const statusEffects = [
 function addToHistory(text){
   diceHistory.unshift({ text, timestamp: new Date().toLocaleTimeString() });
   buildDiceHistory();
-  if (autoSaveEnabled) saveState();
+  persistLocal();
 }
 function buildDiceHistory(){
   const wrap = $('dice-history-log'); wrap.innerHTML='';
@@ -491,7 +519,11 @@ function formatParts(parts){
 }
 function showRoll(total, detailText){
   const el = document.querySelector('#rollToast .toast-body');
-  el.innerHTML = `🎲 ${total}<div class="small opacity-75 mt-1">${detailText||''}</div>`;
+  // detailText can echo the user's typed dice expression: text only.
+  const detail = document.createElement('div');
+  detail.className = 'small opacity-75 mt-1';
+  detail.textContent = detailText || '';
+  el.replaceChildren(`🎲 ${total}`, detail);
   const toastEl = document.getElementById('rollToast');
   // Ensure autohide + short delay every time
   const t = new bootstrap.Toast(toastEl, { autohide: true, delay: 900 });
@@ -546,7 +578,7 @@ $('roll-custom-dice').addEventListener('click', function(){
   }
 });
 $('clear-dice-history').addEventListener('click', ()=>{
-  if (confirm("Clear all dice history?")) { diceHistory = []; buildDiceHistory(); if (autoSaveEnabled) saveState(); }
+  if (confirm("Clear all dice history?")) { diceHistory = []; buildDiceHistory(); persistLocal(); }
 });
   // ---------- Helpers ----------
   function hpClass(percent){
@@ -597,8 +629,10 @@ $('clear-dice-history').addEventListener('click', ()=>{
 
     // Fill toast contents
     document.getElementById('concToastName').textContent = c.name;
-    document.getElementById('concToastMsg').innerHTML =
-      `Took <strong>${item.dmg}</strong> damage this turn. DC = <strong>${item.dc}</strong> (max(10, ⌊damage/2⌋)).`;
+    const strong = v => { const s = document.createElement('strong'); s.textContent = String(v); return s; };
+    document.getElementById('concToastMsg').replaceChildren(
+      'Took ', strong(item.dmg), ' damage this turn. DC = ', strong(item.dc), ' (max(10, ⌊damage/2⌋)).'
+    );
 
     // Stash the character id on buttons for handlers
     const passBtn = document.getElementById('concPassBtn');
@@ -765,7 +799,7 @@ $('clear-dice-history').addEventListener('click', ()=>{
       combatLog.push(entry);
       if (combatLog.length > COMBAT_LOG_LIMIT) combatLog.shift();
       buildCombatLog();
-      if (autoSaveEnabled) saveState();
+      persistLocal();
     }
 
     function logHpChange(target, payload = {}) {
@@ -866,32 +900,34 @@ $('clear-dice-history').addEventListener('click', ()=>{
 
       emptyState.classList.add('d-none');
 
+      // Log entries are persisted, imported and synced from other tabs, so every field is untrusted:
+      // group by the round's string form (a non-numeric round must not break the lookup), keep element
+      // ids index-based, and put entry values into the DOM as text only.
       const grouped = combatLog.reduce((acc, entry) => {
-        const key = entry.round ?? '—';
-        if (!acc[key]) acc[key] = [];
-        acc[key].push(entry);
+        const key = String(entry.round ?? '—');
+        if (!acc.has(key)) acc.set(key, []);
+        acc.get(key).push(entry);
         return acc;
-      }, {});
+      }, new Map());
 
-      const rounds = Object.keys(grouped)
-        .map(v => (v === '—' ? v : Number(v)))
-        .sort((a, b) => {
-          if (a === '—') return 1;
-          if (b === '—') return -1;
-          return b - a;
-        });
+      const rounds = [...grouped.keys()].sort((a, b) => {
+        const na = Number(a), nb = Number(b);
+        const fa = a !== '—' && Number.isFinite(na), fb = b !== '—' && Number.isFinite(nb);
+        if (fa && fb) return nb - na;
+        return fa ? -1 : fb ? 1 : 0; // numbered rounds first, newest first
+      });
 
       accordion.innerHTML = '';
 
       rounds.forEach((roundKey, idx) => {
-        const entries = grouped[roundKey].slice().sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
-        const collapseId = `combat-log-round-${roundKey}-${idx}`;
+        const entries = grouped.get(roundKey).slice().sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+        const collapseId = `combat-log-round-${idx}`;
         const wrapper = document.createElement('div');
         wrapper.className = 'accordion-item bg-dark border-secondary';
         wrapper.innerHTML = `
           <h2 class="accordion-header" id="${collapseId}-header">
             <button class="accordion-button ${idx === 0 ? '' : 'collapsed'} bg-dark text-light" type="button" data-bs-toggle="collapse" data-bs-target="#${collapseId}" aria-expanded="${idx === 0}">
-              Round ${roundKey} <span class="badge bg-secondary ms-2">${entries.length} entries</span>
+              <span data-slot="round"></span> <span class="badge bg-secondary ms-2">${entries.length} entries</span>
             </button>
           </h2>
           <div id="${collapseId}" class="accordion-collapse collapse ${idx === 0 ? 'show' : ''}" data-bs-parent="#combat-log-accordion">
@@ -916,6 +952,7 @@ $('clear-dice-history').addEventListener('click', ()=>{
               </div>
             </div>
           </div>`;
+        wrapper.querySelector('[data-slot="round"]').textContent = `Round ${roundKey}`;
 
         const tbody = wrapper.querySelector('tbody');
         entries.forEach(entry => {
@@ -929,7 +966,7 @@ $('clear-dice-history').addEventListener('click', ()=>{
           const detailText = [entry.details, entry.statusPayload, entry.deathSaves ? `Death Saves — S:${entry.deathSaves.s} F:${entry.deathSaves.f}${entry.deathSaves.stable ? ' (Stable)' : ''}` : '', entry.concentration ?? '']
             .filter(Boolean)
             .join(' • ');
-          const sourceBadges = (entry.sources || []).map(flag => `<span class="badge bg-secondary me-1">${formatSourceLabel(flag)}</span>`).join('') || '—';
+          const sources = Array.isArray(entry.sources) ? entry.sources : [];
           let loggedTime = '—';
           if (entry.timestamp) {
             const entryDate = new Date(entry.timestamp);
@@ -945,16 +982,30 @@ $('clear-dice-history').addEventListener('click', ()=>{
           }
 
           const row = document.createElement('tr');
-          row.innerHTML = `
-            <td>${turnLabel}</td>
-            <td>${entry.actorName || entry.turnName || '—'}</td>
-            <td>${entry.targetName || '—'}</td>
-            <td>${entry.summary}</td>
-            <td>${hpText}</td>
-            <td>${thpText}</td>
-            <td>${detailText || '—'}</td>
-            <td>${sourceBadges}</td>
-            <td>${loggedTime}</td>`;
+          const cell = text => {
+            const td = document.createElement('td');
+            td.textContent = String(text);
+            return td;
+          };
+          const sourceCell = document.createElement('td');
+          sources.forEach(flag => {
+            const badge = document.createElement('span');
+            badge.className = 'badge bg-secondary me-1';
+            badge.textContent = formatSourceLabel(String(flag));
+            sourceCell.appendChild(badge);
+          });
+          if (!sources.length) sourceCell.textContent = '—';
+          row.append(
+            cell(turnLabel),
+            cell(entry.actorName || entry.turnName || '—'),
+            cell(entry.targetName || '—'),
+            cell(entry.summary ?? ''),
+            cell(hpText),
+            cell(thpText),
+            cell(detailText || '—'),
+            sourceCell,
+            cell(loggedTime)
+          );
           tbody.appendChild(row);
         });
 
@@ -973,7 +1024,23 @@ $('clear-dice-history').addEventListener('click', ()=>{
   // those to 20, 20 and 1). Null means a rejected edit, not 0: the caller restores the model value.
   function parseWholeNumber(text) {
     const t = String(text ?? '').trim();
-    return /^[+-]?\d+$/.test(t) ? parseInt(t, 10) : null;
+    if (!/^[+-]?\d+$/.test(t)) return null;
+    const n = parseInt(t, 10);
+    return Number.isSafeInteger(n) ? n : null; // 30 digits would come back as 1e+29
+  }
+  // A stored or imported value, which can be a JSON number or text. Text follows the editors' strict
+  // rule (parseWholeNumber: "12.5", "1e3", "0x10" are refused). A number is already a number, not
+  // something a person typed, so a finite one is truncated (45.5 -> 45) rather than thrown away: other
+  // pages hand over whatever their own fields held, and an older save can hold a fraction. NaN,
+  // Infinity, integers too large to store exactly, booleans and everything else give `fallback`.
+  function toWholeNumber(value, fallback) {
+    if (typeof value === 'number') {
+      if (!Number.isFinite(value)) return fallback;
+      const n = Math.trunc(value) || 0; // (-0.5 truncates to -0; store 0)
+      return Number.isSafeInteger(n) ? n : fallback;
+    }
+    if (typeof value === 'string') return parseWholeNumber(value) ?? fallback;
+    return fallback;
   }
   function updateDeathState(c) {
     // cap and derive "stable" at 3 successes, no auto-death to keep it GM-controlled
@@ -985,8 +1052,10 @@ $('clear-dice-history').addEventListener('click', ()=>{
     const wrap = triggerEl.closest('.precision-control');
     const input = wrap ? wrap.querySelector('.precision-amount') : null;
     if (!input) return { amount: 0, input: null };
+    // A positive whole number, or 0 (refused by the caller). A negative entry is refused, not flipped:
+    // "-5" in the damage box must not quietly deal 5.
     const raw = parseWholeNumber(input.value);
-    return { amount: Math.max(0, Math.abs(raw || 0)), input };
+    return { amount: raw !== null && raw > 0 ? raw : 0, input };
   }
   function applyPrecisionAdjust(c, el, sign) {
     const { amount, input } = readPrecisionAmount(el);
@@ -1155,7 +1224,10 @@ $('clear-dice-history').addEventListener('click', ()=>{
     'legendary-enable'(c) {
       const raw = prompt(`Legendary Actions for ${c.name}\nEnter max (default: 3):`, '3');
       if (raw === null) return; // cancelled
-      const val = Math.max(1, parseWholeNumber(raw) || 3);
+      // Blank takes the default; anything else must be a whole number of at least 1 ("1e3", "0" and
+      // "-2" used to become 3, 3 and 1 without a word).
+      const val = raw.trim() === '' ? 3 : parseWholeNumber(raw);
+      if (val === null || val < 1) { alert('Legendary Actions must be a whole number of at least 1.'); return; }
       pushHistory(`Enable Legendary Actions for ${c.name}`);
       c.legendaryActions = { max: val, remaining: val };
       logEvent({
@@ -1279,7 +1351,7 @@ $('clear-dice-history').addEventListener('click', ()=>{
   }
   function commitName(inp) {
     const c = getCharacterById(inp.dataset.characterId);
-    if (!c) return;
+    if (!c) return false; // the combatant is gone: see commitInlineField
     const v = (inp.value || '').trim();
     if (v && v !== c.name) {
       pushHistory(`Rename ${c.name} → ${v}`);
@@ -1291,7 +1363,7 @@ $('clear-dice-history').addEventListener('click', ()=>{
   }
   function commitHp(inp) {
     const c = getCharacterById(inp.dataset.characterId);
-    if (!c) return;
+    if (!c) return false; // the combatant is gone: see commitInlineField
     const oldHP = c.currentHP;
     const typed = parseWholeNumber(inp.value);
     if (typed === null) { inp.value = String(oldHP); return; } // rejected: keep the model value
@@ -1327,7 +1399,7 @@ $('clear-dice-history').addEventListener('click', ()=>{
   }
   function commitInitiative(inp) {
     const char = getCharacterById(inp.dataset.characterId);
-    if (!char) return;
+    if (!char) return false; // the combatant is gone: see commitInlineField
     const newVal = parseWholeNumber(inp.value);
     if (newVal === null || newVal === char.initiative) {
       inp.value = String(char.initiative); // rejected or normalized ("020", "20.7"): show what is stored
@@ -1350,10 +1422,22 @@ $('clear-dice-history').addEventListener('click', ()=>{
   function commitInlineField(inp) {
     const field = inlineFieldOf(inp);
     if (!field || !isEdited(inp)) return;
+    const before = inp.dataset.original ?? inp.defaultValue;
     // Pre-set the baseline: a commit that re-renders removes this input, and the focusout that
     // removal fires would otherwise see it as still edited and commit the same edit twice.
     inp.dataset.original = inp.value;
-    inlineFieldCommits[field](inp);
+    if (inlineFieldCommits[field](inp) === false) {
+      // The combatant this editor belongs to no longer exists (deleted, undone, or removed by another
+      // tab before the edit was committed). Nothing is written and nobody else is touched; the typed
+      // text must not stay on screen looking saved, so the field goes back to what it showed before
+      // the edit and the list is redrawn from the model, which drops the orphaned row. (A running
+      // render is already redrawing from the model.)
+      // (The baseline goes back too, or the focusout that removing this editor fires would see the
+      // restored text as an edit and run this again.)
+      inp.value = before;
+      inp.dataset.original = before;
+      if (inp.isConnected && !rendering) buildTable({ save: false }); // nothing changed here: nothing to save
+    }
     // If the input survived (rejected, normalized or no-op commit), the baseline is what it now shows.
     if (inp.isConnected) inp.dataset.original = inp.value;
   }
@@ -1363,27 +1447,56 @@ $('clear-dice-history').addEventListener('click', ()=>{
     if (inlineFieldOf(e.target)) e.target.dataset.original ??= e.target.value;
   }
   function handleCombatantFocusOut(e) {
+    // Focus is moving to another control in a list (Tab, Shift+Tab, a click or a tap): let the move
+    // finish before this commit's re-render replaces that control. The redraw runs in the next task,
+    // with the control focused by then, so buildTable() moves focus to its re-rendered twin.
+    if (listRootOf(e.relatedTarget) && !renderHold.focusMove) {
+      renderHold.focusMove = true;
+      setTimeout(() => { renderHold.focusMove = false; releaseRenderHold(); }, 0);
+    }
     commitInlineField(e.target);
+    releaseRenderHold(); // the edit is resolved (committed, rejected or unchanged): a held redraw may run
   }
   function handleCombatantKeydown(e) {
     const field = inlineFieldOf(e.target);
     if (!field || !keyboardFields.includes(field)) return;
-    if (e.key === 'Enter') { e.preventDefault(); commitInlineField(e.target); }
+    if (e.key === 'Enter') { e.preventDefault(); commitInlineField(e.target); releaseRenderHold(); }
     // Escape restores what the field showed when it gained focus; the blur that follows then finds it unedited.
     if (e.key === 'Escape') { e.target.value = e.target.dataset.original ?? e.target.defaultValue; e.target.blur(); }
+  }
+  // An editor put back to the value it had when focused (typed over and back, or cleared by a revert)
+  // is no longer holding a redraw.
+  function handleCombatantInput(e) {
+    if (inlineFieldOf(e.target) && !isEdited(e.target)) releaseRenderHold();
   }
 
   // Attached once at boot to the two containers that survive every re-render (never from
   // buildTable), so repeated renders cannot stack handlers.
   function wireCombatantListEvents() {
-    ['initiative-order', 'mobile-initiative-order'].forEach(id => {
+    LIST_ROOT_IDS.forEach(id => {
       const root = $(id);
       if (!root) return;
       root.addEventListener('click', handleCombatantClick);
       root.addEventListener('keydown', handleCombatantKeydown);
       root.addEventListener('focusin', handleCombatantFocusIn);
       root.addEventListener('focusout', handleCombatantFocusOut);
+      root.addEventListener('input', handleCombatantInput);
+      root.addEventListener('pointerdown', e => { if (e.isPrimary && e.button === 0) renderHold.press = true; });
     });
+    // A press ends with its click. The window listener runs after the list's own click handler (it is
+    // the last stop of the bubble), so the action has already been applied to the model when the held
+    // redraw runs. A press that produces no click ends on pointercancel (a touch scroll, or the browser
+    // taking over for a native drag; a Sortable drag has its own hold, see renderHold.drag), and
+    // pointerup's next-task check catches any other press without a click (a mouse click is dispatched
+    // in the same task as its pointerup, so it runs first).
+    const endPress = () => {
+      if (!renderHold.press) return;
+      renderHold.press = false;
+      releaseRenderHold();
+    };
+    window.addEventListener('click', endPress);
+    window.addEventListener('pointercancel', endPress);
+    window.addEventListener('pointerup', () => { if (renderHold.press) setTimeout(endPress, 0); });
     // The notes modal's Save button is static too; bind it once instead of on every render.
     $('notes-save-btn')?.addEventListener('click', () => {
       const noteTarget = getCharacterById(modalCharacterId);
@@ -1397,7 +1510,7 @@ $('clear-dice-history').addEventListener('click', ()=>{
         const modal = bootstrap.Modal.getInstance(modalEl);
         modal?.hide();
       }
-      if (autoSaveEnabled) saveState();
+      persistLocal();
     });
   }
   // ---------- Build UI ----------
@@ -1407,17 +1520,94 @@ $('clear-dice-history').addEventListener('click', ()=>{
   // needed; the running render finishes, then one fresh render runs from the current model.
   let rendering = false;
   let rerenderRequested = false;
-  function buildTable(){
+  // A render replaces every row. Running one while focus is moving to another list control, or while a
+  // press (mouse button or finger down) on a list is in progress, destroys the control the user is going
+  // to: focus falls to <body>, and a click whose mousedown target was replaced is never delivered (edit
+  // a field, then click -5 on another row: the -5 was lost). A render requested then (typically the
+  // commit of the editor being left, or another tab's update) saves the model at once and redraws the
+  // list when the move or press is over. Nothing else waits: the model is already current, and every
+  // handler resolves its combatant by id, so a click on a not-yet-redrawn row still hits the right one.
+  //
+  // Two more reasons hold a redraw. A Sortable drag (`drag`): redrawing removes the row being dragged
+  // and the drop is lost. And a focused list editor holding text the user has not committed: redrawing
+  // removes it, and Chromium's focusout on the removed field would commit the half-typed value (a "1"
+  // on the way to "15" becoming 1 HP). External state still loads into the model at once; the list
+  // shows it when the edit is committed, cancelled or put back, and the commit then applies to the
+  // newest model, changing only the edited field.
+  const renderHold = { focusMove: false, press: false, drag: false, pending: false };
+  function dirtyEditorFocused() {
+    const el = document.activeElement;
+    return !!(inlineFieldOf(el) && listRootOf(el) && isEdited(el));
+  }
+  function renderHeld() {
+    return renderHold.focusMove || renderHold.press || renderHold.drag || dirtyEditorFocused();
+  }
+  function releaseRenderHold() {
+    if (!renderHold.pending || renderHeld()) return;
+    renderHold.pending = false;
+    buildTable({ save: false }); // whatever changed was saved when the render was held
+  }
+  // `save: false` is for a render of state that came from storage (another tab's save): writing it
+  // straight back is an echo that can only lose data, because between this tab reading the snapshot and
+  // writing it the other tab may already have saved a newer one, which the echo would overwrite. A
+  // request made during that render (an editor committing as it is removed) is a local change, so the
+  // pass it triggers saves.
+  function buildTable({ save = true } = {}){
     if (rendering) { rerenderRequested = true; return; }
+    if (renderHeld()) {
+      renderHold.pending = true;
+      if (save) persistLocal();
+      return;
+    }
+    renderHold.pending = false;
+    const focusKey = listFocusKey(document.activeElement);
     rendering = true;
     try {
+      let saveThisPass = save;
       do {
         rerenderRequested = false;
         renderCombatantList();
+        if (saveThisPass) persistLocal();
+        saveThisPass = true;
       } while (rerenderRequested);
     } finally {
       rendering = false; // a throwing render must not block every later one
       rerenderRequested = false;
+    }
+    restoreListFocus(focusKey);
+  }
+  // ---------- Focus across re-renders ----------
+  // A render replaces the focused control with a new element. Focus is carried over by what the
+  // control is (its list, combatant id, and kind), never by position, which a re-sort or another tab's
+  // change can shift. If that combatant or control no longer exists, focus is left where it fell.
+  const LIST_ROOT_IDS = ['initiative-order', 'mobile-initiative-order'];
+  function listRootOf(el) {
+    if (!el || el.nodeType !== 1) return null;
+    return LIST_ROOT_IDS.map(id => $(id)).find(root => root && root !== el && root.contains(el)) || null;
+  }
+  function controlSignature(el) {
+    return [el.tagName, el.dataset.field, el.dataset.action, el.dataset.delta, el.dataset.kind,
+      el.classList.contains('precision-amount')].join('|');
+  }
+  function listFocusKey(el) {
+    const root = listRootOf(el);
+    if (!root || !el.dataset.characterId) return null;
+    let selection = null; // caret/selection of a text field, kept if its text is unchanged
+    try {
+      if (typeof el.selectionStart === 'number') selection = [el.selectionStart, el.selectionEnd, el.value];
+    } catch { /* a control without a text selection */ }
+    return { root: root.id, id: el.dataset.characterId, sig: controlSignature(el), selection };
+  }
+  function restoreListFocus(key) {
+    if (!key) return;
+    const active = document.activeElement;
+    if (active && active !== document.body && active.isConnected) return; // focus is somewhere real: never take it
+    const target = [...($(key.root)?.querySelectorAll('[data-character-id]') || [])]
+      .find(el => el.dataset.characterId === key.id && controlSignature(el) === key.sig);
+    if (!target) return;
+    target.focus({ preventScroll: true });
+    if (key.selection && target.value === key.selection[2]) {
+      try { target.setSelectionRange(key.selection[0], key.selection[1]); } catch { /* not a text field */ }
     }
   }
   function renderCombatantList(){
@@ -1471,7 +1661,7 @@ $('clear-dice-history').addEventListener('click', ()=>{
               <button class="btn btn-outline-success precision-heal" data-action="precision-heal" data-character-id="${cid}" title="Apply healing"><i class="bi bi-plus-circle"></i></button>
             </div>
             <div class="tempHP ms-2 temphp-wrap">
-              <span class="temphp-badge">THP: <span class="temphp-val">${c.tempHP||0}</span></span>
+              <span class="temphp-badge">THP: <span class="temphp-val">${escHtml(c.tempHP||0)}</span></span>
               <div class="btn-group btn-group-sm temp-btns" role="group">
                 <button class="btn btn-outline-info temphp-btn" data-action="temp-hp" data-character-id="${cid}" data-delta="-1">-1</button>
                 <button class="btn btn-outline-info temphp-btn" data-action="temp-hp" data-character-id="${cid}" data-delta="1">+1</button>
@@ -1491,8 +1681,8 @@ $('clear-dice-history').addEventListener('click', ()=>{
                   <span class="ds-dead" title="Failed 3 death saves">&#x1F480; Dead</span>
                   <button class="btn btn-outline-secondary ds-reset" data-action="death-save-reset" data-character-id="${cid}" title="Reset Death Saves">↺</button>
                 ` : c.deathSaves.stable ? `<span class="ds-stable">Stable</span>` : `
-                  <span class="ds-pill success">S: ${c.deathSaves.s}</span>
-                  <span class="ds-pill fail">F: ${c.deathSaves.f}</span>
+                  <span class="ds-pill success">S: ${escHtml(c.deathSaves.s)}</span>
+                  <span class="ds-pill fail">F: ${escHtml(c.deathSaves.f)}</span>
                   <div class="btn-group btn-group-sm ds-btns" role="group">
                     <button class="btn btn-outline-success ds-add" data-action="death-save" data-character-id="${cid}" data-kind="s">+S</button>
                     <button class="btn btn-outline-danger ds-add" data-action="death-save" data-character-id="${cid}" data-kind="f">+F</button>
@@ -1515,7 +1705,7 @@ $('clear-dice-history').addEventListener('click', ()=>{
               </div>
               ${laMax > 0 ? `
               <div class="la-row">
-                <span class="badge ${laRem>0?'bg-warning text-dark':'bg-secondary'}" title="Legendary Actions remaining">&#x1F451; ${laRem}/${laMax}</span>
+                <span class="badge ${laRem>0?'bg-warning text-dark':'bg-secondary'}" title="Legendary Actions remaining">&#x1F451; ${escHtml(laRem)}/${escHtml(laMax)}</span>
                 <button class="btn btn-sm btn-outline-warning la-use-btn" data-action="legendary-use" data-character-id="${cid}" title="Use 1 Legendary Action"${laRem<=0?' disabled':''}>&#x2212;</button>
                 <button class="btn btn-sm btn-outline-secondary la-reset-btn" data-action="legendary-reset" data-character-id="${cid}" title="Reset Legendary Actions">&#x21BA;</button>
                 <button class="btn btn-sm btn-outline-danger la-disable-btn" data-action="legendary-disable" data-character-id="${cid}" title="Disable Legendary Actions">&#x2715;</button>
@@ -1583,7 +1773,7 @@ $('clear-dice-history').addEventListener('click', ()=>{
               </div>
               ${laMax > 0 ? `
               <div class="la-row mt-1">
-                <span class="badge ${laRem>0?'bg-warning text-dark':'bg-secondary'}" title="Legendary Actions remaining">&#x1F451; ${laRem}/${laMax}</span>
+                <span class="badge ${laRem>0?'bg-warning text-dark':'bg-secondary'}" title="Legendary Actions remaining">&#x1F451; ${escHtml(laRem)}/${escHtml(laMax)}</span>
                 <button class="btn btn-sm btn-outline-warning la-use-btn" data-action="legendary-use" data-character-id="${cid}" title="Use 1 Legendary Action"${laRem<=0?' disabled':''}>&#x2212;</button>
                 <button class="btn btn-sm btn-outline-secondary la-reset-btn" data-action="legendary-reset" data-character-id="${cid}" title="Reset Legendary Actions">&#x21BA;</button>
                 <button class="btn btn-sm btn-outline-danger la-disable-btn" data-action="legendary-disable" data-character-id="${cid}" title="Disable Legendary Actions">&#x2715;</button>
@@ -1609,10 +1799,24 @@ $('clear-dice-history').addEventListener('click', ()=>{
     if (!sortableInstance) {
       const tbodyEl = $('initiative-order');
       if (tbodyEl) {
+        // The drag hold starts at `choose` (pointerdown on the handle), not `start`: Sortable fires
+        // `start` a task after the browser's dragstart, and the pointercancel that comes with
+        // dragstart has already ended the press hold by then. Every chosen press ends in _onDrop with
+        // `unchoose` then (when Sortable is active) `end`, in one synchronous call; the microtask from
+        // `unchoose` runs after both, so it only releases a press that `end` did not.
         sortableInstance = new Sortable(tbodyEl, {
           handle: '.drag-handle',
           animation: 150,
+          onChoose: function () { renderHold.drag = true; },
+          onUnchoose: function () {
+            window.queueMicrotask(() => {
+              if (!renderHold.drag) return;
+              renderHold.drag = false;
+              releaseRenderHold();
+            });
+          },
           onEnd: function (evt) {
+            renderHold.drag = false; // this handler's buildTable() redraws, including anything held
             // Identify the dragged combatant by id (a row's DOM position is not identity), and the
             // drop slot by the combatant whose row now follows it.
             const movedIdx = getCharacterIndexById(evt.item?.dataset.characterId);
@@ -1639,7 +1843,6 @@ $('clear-dice-history').addEventListener('click', ()=>{
     }
     buildDiceHistory();
     buildCombatLog();
-    if (autoSaveEnabled) saveState();
   }
   // First-visit helper: show the Help panel once
   if (!localStorage.getItem('initiativeHelpSeen')) {
@@ -1717,7 +1920,12 @@ $('clear-dice-history').addEventListener('click', ()=>{
     statusEffects.forEach(effect=>{
       const has = c.status.some(s=> s.name === effect.name);
       const li = document.createElement('li');
-      li.innerHTML = `<a class="dropdown-item ${has?'disabled text-muted':''}" href="#" data-eff="${effect.name}">${effect.icon} ${effect.name}</a>`;
+      const a = document.createElement('a');
+      a.className = `dropdown-item ${has?'disabled text-muted':''}`;
+      a.href = '#';
+      a.dataset.eff = effect.name;
+      a.textContent = `${effect.icon} ${effect.name}`;
+      li.appendChild(a);
       list.appendChild(li);
     });
     // A pick that is no longer valid (the effect was added to this combatant meanwhile) is dropped, never added,
@@ -1750,7 +1958,14 @@ $('clear-dice-history').addEventListener('click', ()=>{
       if (!pendingEffect) { alert('Choose an effect first.'); return; }
       const target = getCharacterById(id); // see remove handler: never the object captured at open
       if (!target) return;
-      const durVal = parseWholeNumber($('status-duration').value);
+      // Blank means no duration; anything else must be a whole number of rounds, 0 or more ("1e3" or
+      // "-2" used to be dropped silently, adding the effect with no duration at all).
+      const durText = $('status-duration').value;
+      const durVal = parseWholeNumber(durText);
+      if (durText.trim() !== '' && (durVal === null || durVal < 0)) {
+        alert('Duration must be a whole number of rounds, or blank for no duration.');
+        return;
+      }
       const base = statusEffects.find(x=>x.name===pendingEffect) || {icon:'❓'};
       const eff = { name: pendingEffect, icon: base.icon };
       if (durVal !== null && durVal >= 0) eff.remaining = durVal;
@@ -1843,9 +2058,11 @@ $('clear-dice-history').addEventListener('click', ()=>{
     const name  = $('character-name').value.trim();
     // Blank means 0. Anything else must be a plain integer: "12.5" or "1e2" is refused with a message,
     // never turned into 0 or a reinterpreted prefix.
+    // Initiative may be negative (a low roll with a DEX penalty); HP and AC may not.
     const fields = [$('initiative-roll'), $('character-health'), $('character-ac')];
-    if (fields.some(f => f.value.trim() !== '' && parseWholeNumber(f.value) === null)) {
-      alert('Initiative, HP and AC must be whole numbers.');
+    if (fields.some(f => f.value.trim() !== '' && parseWholeNumber(f.value) === null)
+        || fields.slice(1).some(f => (parseWholeNumber(f.value) ?? 0) < 0)) {
+      alert('Initiative, HP and AC must be whole numbers (HP and AC cannot be negative).');
       return;
     }
     const safeNum = v => parseWholeNumber(v) ?? 0;
@@ -2072,12 +2289,7 @@ $('clear-dice-history').addEventListener('click', ()=>{
   $('saveHistorySelect').addEventListener('change', function(){
     const raw = localStorage.getItem(this.value); if(!raw) return;
     try{
-      const data = JSON.parse(raw);
-      characters = normalizeCharList(data.characters);
-      currentTurn = data.currentTurn||0;
-      combatRound = data.combatRound||1;
-      diceHistory = Array.isArray(data.diceHistory) ? data.diceHistory : [];
-      combatLog = Array.isArray(data.combatLog) ? data.combatLog.slice(-COMBAT_LOG_LIMIT) : [];
+      applySessionData(JSON.parse(raw));
       buildTable();
     }catch(e){ alert('Failed to load that save.'); }
   });
@@ -2103,13 +2315,10 @@ $('clear-dice-history').addEventListener('click', ()=>{
     r.onload = e=>{
       try{
         const d = JSON.parse(e.target.result);
-        characters = normalizeCharList(d.characters);
-        currentTurn = d.currentTurn||0;
-        combatRound = d.combatRound||1;
-        diceHistory = Array.isArray(d.diceHistory) ? d.diceHistory : [];
-        combatLog = Array.isArray(d.combatLog) ? d.combatLog.slice(-COMBAT_LOG_LIMIT) : [];
+        applySessionData(d);
         if (Array.isArray(d.savedTemplates)) {
-          setSaved(d.savedTemplates.slice(0, MAX_SAVED));
+          // the saved-template list is keyed by name: an entry without a text name cannot be listed
+          setSaved(objectEntries(d.savedTemplates).filter(t => typeof t.name === 'string').slice(0, MAX_SAVED));
           buildSavedUI();
         }
         buildTable(); alert('Session imported successfully.');
@@ -2155,7 +2364,7 @@ $('clear-dice-history').addEventListener('click', ()=>{
     if (!confirm('Clear the entire combat log?')) return;
     combatLog = [];
     buildCombatLog();
-    if (autoSaveEnabled) saveState();
+    persistLocal();
   });
   // Keyboard shortcuts (not when typing)
   document.addEventListener('keydown', e=>{
@@ -2174,14 +2383,16 @@ $('clear-dice-history').addEventListener('click', ()=>{
   updateSaveHistory();
   buildSavedUI();
   buildTable();
-  window.addEventListener('beforeunload', ()=>{ if (autoSaveEnabled) saveState(); });
+  // Only this tab's own unsaved changes: a tab that has changed nothing since it last saved or loaded
+  // may be holding an older snapshot than another tab has saved since, and must not write it back.
+  window.addEventListener('beforeunload', ()=>{ if (autoSaveEnabled && localDirty) saveState(); });
   // Cross-tab sync: when another tab updates localStorage, reload state here
   window.addEventListener('storage', (e) => {
     // Only care about the main auto-save key
     if (e.key === 'initiativeTrackerData') {
       try {
         loadState();
-        buildTable();
+        buildTable({ save: false }); // this state just came from storage: see buildTable
         if (statusModalSession.id && !renderStatusModal(statusModalSession.id)) { // the open modal's combatant is gone
           resetStatusModalSession();
           statusModal?.hide();

@@ -28,10 +28,11 @@
 ### HP & Damage
 
 - **Quick buttons** (−5, −1, +1, +5) for fast adjustments.
-- **Precision input**: enter any amount in the Amount box and click the − (damage) or + (heal) icon button. Logs the exact value in the Combat Log.
+- **Precision input**: enter a positive whole amount in the Amount box and click the − (damage) or + (heal) icon button. Logs the exact value in the Combat Log. A negative amount is refused (it is not quietly turned positive).
 - **Temp HP (THP)**: badge next to the HP field with its own ±1 buttons. Damage always drains THP before real HP; only the remainder reduces the character.
 - Typing directly in the HP field and tabbing away commits the change.
-- **Numeric entry**: HP, initiative, the Amount box and the other numeric fields take whole numbers. `20`, `020` (read as 20) and, where negatives make sense, `-3` are accepted. `1e3`, `12.5` and `3abc` are rejected rather than partly read: an inline edit snaps back to the stored value, and the Add form or a required amount shows a message. A blank field means 0 in the Add form; elsewhere blank is not accepted.
+- **Inline editing and focus**: a name, initiative or HP edit commits when you leave the field (Tab, a click elsewhere) and name/initiative also on **Enter**; **Escape** cancels. Enter keeps you in the same field (following the combatant if the edit re-sorted the list), Tab lands on the next field, and clicking a button on another row right after typing applies both the edit and the button. When the list redraws under you (another tab's change, a re-sort), focus stays on the same combatant's field. A change from another tab never commits a field you are still typing in: it is saved at once, and the list shows it as soon as you finish (Tab, Enter, clicking elsewhere) or cancel (Escape) the edit. If the combatant you were editing was deleted meanwhile, nothing is saved for it. A row being dragged is never redrawn mid-drag; changes that arrive during a drag appear after the drop.
+- **Numeric entry**: HP, initiative, the Amount box and the other numeric fields take whole numbers. `20`, `020` (read as 20) and, where negatives make sense, `-3` are accepted. `1e3`, `12.5` and `3abc` are rejected rather than partly read: an inline edit snaps back to the stored value, and the Add form or a required amount shows a message. A blank field means 0 in the Add form; elsewhere blank is not accepted. HP and AC in the Add form and in saved templates cannot be negative. Sessions loaded from storage, another tab, an imported file or another page follow the same rule for text (`"12.5"` or `"1e3"` is read as 0 rather than partly used); a value that is already a number keeps its whole part (a Max HP of 45.5 sent from the Character Sheet arrives as 45).
 - HP color: red ≤ 25 %, orange 25–50 %, yellow-orange 50–75 %, green > 75 %.
 - **Healing above 0 HP** automatically clears death saves and removes Stable.
 
@@ -64,7 +65,7 @@ Open **Bulk HP** to affect multiple creatures at once — useful for AoE spells,
 
 - Click the 😊 icon to open the status modal for a combatant. Adding or removing an effect updates the badges and the effect list immediately while the modal stays open.
 - 14 standard conditions: Blinded, Charmed, Deafened, Exhaustion, Frightened, Grappled, Incapacitated, Invisible, Paralyzed, Petrified, Poisoned, Prone, Restrained, Unconscious.
-- Each condition supports an optional **duration (rounds)**. Durations tick down automatically at the start of each new round; expired effects are removed automatically.
+- Each condition supports an optional **duration (rounds)**: blank means no duration, otherwise a whole number of rounds (0 or more). Anything else is refused with a message instead of silently adding the effect with no duration. Durations tick down automatically at the start of each new round; expired effects are removed automatically.
 - Active conditions and concentration appear as emoji chips in the row with a tooltip summary.
 
 ### Reactions
@@ -76,7 +77,7 @@ Open **Bulk HP** to affect multiple creatures at once — useful for AoE spells,
 ### Legendary Actions
 
 - Click the dim **👑** crown button on any combatant to enable Legendary Actions.
-- You'll be prompted for the maximum (default: 3). A counter badge appears showing `remaining/max`.
+- You'll be prompted for the maximum (blank takes the default of 3; anything other than a whole number of at least 1 is refused with a message). A counter badge appears showing `remaining/max`.
 - **−** spends one legendary action; **↺** resets remaining to max; **✕** disables legendary actions for that creature.
 - The counter **automatically resets to full** at the start of that creature's turn (per 5e rules).
 
@@ -121,7 +122,7 @@ Open **Combat Log** in the controls strip to see a full history of the session, 
 | **Import Session** | Restores from a previously exported JSON |
 | **Undo** (up to 50 steps) | Rolls back the last HP/status/reorder/etc. change |
 | **Clear Saved Data** | Wipes all Initiative Tracker data from localStorage |
-| **Cross-tab sync** | Changes in one tab/window auto-sync to others |
+| **Cross-tab sync** | Changes in one tab/window auto-sync to others. A tab only saves its own changes (it never writes back what it just received, and closing it writes only changes it has not saved), but if two tabs change the tracker at the same moment, the later save wins |
 
 Undo history is **in-memory only** — it does not survive a page reload.
 

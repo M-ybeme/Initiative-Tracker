@@ -161,6 +161,26 @@ const rowOrder = () =>
 const saved = () => JSON.parse(localStorage.getItem('initiativeTrackerData'));
 const savedById = id => saved().characters.find(c => c.id === id);
 const savedOrder = () => saved().characters.map(c => c.id);
+// A snapshot written by another tab (replaceStateFromAnotherTab) has no combatLog key, and this tab
+// renders it without writing it back, so an absent log is an empty one.
+const savedLog = () => saved().combatLog ?? [];
+// Records every write of the tracker's autosave key while a recording is active. Installed once, at
+// file load: in happy-dom, re-spying Storage.prototype.setItem after a restore stops intercepting (the
+// store keeps the first method it resolved), which would make "no writes" assertions pass vacuously.
+// Tests that expect a write (e.g. the other tab's own save) double as the check that recording works.
+const writeLog = { active: null };
+{
+  const protoSetItem = window.Storage.prototype.setItem;
+  window.Storage.prototype.setItem = function (k, v) {
+    if (writeLog.active && k === 'initiativeTrackerData') writeLog.active.push(JSON.parse(v));
+    return protoSetItem.call(this, k, v);
+  };
+}
+function trackerWrites() {
+  writeLog.active = [];
+  return writeLog.active;
+}
+const stopRecordingWrites = () => { writeLog.active = null; };
 
 function click(el) {
   el.dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
@@ -195,6 +215,7 @@ function setInitiative(id, value) {
 }
 
 describe('Initiative Tracker: combatants are addressed by stable id', () => {
+  afterEach(stopRecordingWrites);
   let A, B, C;
   beforeEach(() => {
     A = makeChar('id-A', 'Alpha', 5);
@@ -394,14 +415,14 @@ describe('Initiative Tracker: combatants are addressed by stable id', () => {
       openStatus('id-B');
       replaceStateFromAnotherTab([A, C]); // Bravo was deleted in the other tab
       pick('Poisoned');
-      const logBefore = saved().combatLog.length;
+      const logBefore = savedLog().length;
 
       expect(() => click(document.getElementById('add-status-btn'))).not.toThrow();
 
       expect(savedOrder()).toEqual(['id-A', 'id-C']);
       expect(savedById('id-A').status).toEqual([]);
       expect(savedById('id-C').status).toEqual([]);
-      expect(saved().combatLog).toHaveLength(logBefore); // nothing logged for a change that didn't happen
+      expect(savedLog()).toHaveLength(logBefore); // nothing logged for a change that didn't happen
     });
   });
 
@@ -447,7 +468,7 @@ describe('Initiative Tracker: combatants are addressed by stable id', () => {
     const mobileCard = id => document.querySelector(`#mobile-initiative-order .card[data-character-id="${id}"]`);
     const hpOf = id => savedById(id).currentHP;
     const damageLogFor = id =>
-      saved().combatLog.filter(e => e.targetId === id && e.type === 'damage');
+      savedLog().filter(e => e.targetId === id && e.type === 'damage');
     // Each of these re-renders the whole list (and would stack listeners if wiring lived in it).
     const rerender = (times = 5) => {
       for (let i = 0; i < times; i++) click(row('id-A').querySelector('.react-btn'));
@@ -576,7 +597,7 @@ describe('Initiative Tracker: combatants are addressed by stable id', () => {
 
       expect(saved().characters.map(c => c.currentHP)).toEqual([20, 20, 20]);
       expect(savedOrder()).toEqual(['id-A', 'id-B', 'id-C']);
-      expect(saved().combatLog).toHaveLength(0);
+      expect(savedLog()).toHaveLength(0);
     });
 
     it('a disabled control stays inert', async () => {
@@ -588,7 +609,7 @@ describe('Initiative Tracker: combatants are addressed by stable id', () => {
       click(btn);
 
       expect(savedById('id-B').legendaryActions.remaining).toBe(0);
-      expect(saved().combatLog).toHaveLength(0);
+      expect(savedLog()).toHaveLength(0);
     });
 
     it('legendary use spends exactly one action per click', async () => {
@@ -816,7 +837,7 @@ describe('Initiative Tracker: combatants are addressed by stable id', () => {
 
         expect(e.read()).toBe(e.newer);
         expect(find(e.view, e.sel).value).toBe(String(e.newer)); // the re-rendered field shows it too
-        expect(saved().combatLog).toHaveLength(0); // no phantom history/log from a stale write
+        expect(savedLog()).toHaveLength(0); // no phantom history/log from a stale write
       });
 
       it('a deliberate edit commits when the field is left', async () => {
@@ -843,22 +864,30 @@ describe('Initiative Tracker: combatants are addressed by stable id', () => {
         expect(e.read()).toBe(e.committed);
       });
 
-      it('a deliberate edit is not thrown away when the list is re-rendered under it', async () => {
+      // Another tab's update must not force-commit an edit the user has not finished (a redraw used to
+      // remove the field, and Chromium's focusout then committed the half-typed text). The update
+      // reaches the model at once; the redraw waits, and the edit is neither committed nor lost.
+      it('an uncommitted edit is neither committed nor thrown away when another tab\'s update arrives', async () => {
         await loadTracker([A, B, C]);
         const input = find(e.view, e.sel);
         input.focus();
         input.value = e.typed;
         replaceStateFromAnotherTab([A, { ...B, ...e.external }, C]);
 
+        expect(e.read()).toBe(e.newer); // storage holds the other tab's value, not the half-typed one
+        expect(input.isConnected).toBe(true); // the field was not redrawn away
+        expect(document.activeElement).toBe(input);
+        expect(input.value).toBe(e.typed);
+        expect(savedLog()).toHaveLength(0);
+
+        input.blur(); // the user finishes the edit
         expect(e.read()).toBe(e.committed);
         expect(saved().characters).toHaveLength(3);
       });
 
-      // The render-integrity invariant, for both views. It used to fail for mobile cards: the commit
-      // an uncommitted mobile edit makes during the re-render ran its own buildTable() inside the
-      // outer render (via the removal-time focusout), and the outer render then appended its rows
-      // on top: 6 desktop rows, 3 cards.
-      it('the list stays intact and the edit lands exactly once after that re-render', async () => {
+      // The render-integrity invariant, for both views: once the held redraw runs (when the edit is
+      // committed) the list is exactly the model, with the edit applied once on top of the newer state.
+      it('the list stays intact and the edit lands exactly once, on top of the newer state', async () => {
         await loadTracker([A, B, C]);
         const input = find(e.view, e.sel);
         expect(input, 'the editor exists').not.toBeNull();
@@ -868,10 +897,13 @@ describe('Initiative Tracker: combatants are addressed by stable id', () => {
         expect(document.querySelectorAll('#initiative-order tr')).toHaveLength(3); // healthy before
 
         replaceStateFromAnotherTab([A, { ...B, ...e.external }, C]);
+        expectListIntact(3);
+        input.blur();
 
         expectListIntact(3);
-        expect(e.read()).toBe(e.committed); // last writer wins: the deliberate edit survives
-        expect(saved().combatLog).toHaveLength(e.field === 'hp' ? 1 : 0); // one log entry, only for HP
+        expect(input.isConnected).toBe(false); // the held redraw ran
+        expect(e.read()).toBe(e.committed); // the user's finished edit is the last change to this field
+        expect(savedLog()).toHaveLength(e.field === 'hp' ? 1 : 0); // one log entry, only for HP
         click(document.getElementById('undo-btn')); // one history entry: a single undo goes back to the other tab's value
         expect(e.read()).toBe(e.newer);
       });
@@ -1035,7 +1067,7 @@ describe('Initiative Tracker: combatants are addressed by stable id', () => {
           expect(input.value).toBe(f.model);
           expect(input.dataset.original).toBe(f.model);
           expect(f.read()).toBe(20);
-          expect(saved().combatLog).toHaveLength(0);
+          expect(savedLog()).toHaveLength(0);
           expect(savedOrder()).toEqual(['id-A', 'id-B', 'id-C']);
           expect(savedById('id-B').deathSaves).toEqual({ s: 0, f: 0, stable: false });
           click(document.getElementById('undo-btn')); // nothing was pushed, so there is nothing to undo
@@ -1123,6 +1155,474 @@ describe('Initiative Tracker: combatants are addressed by stable id', () => {
 
       click(document.getElementById('undo-btn'));
       expect(savedById('id-B').name).toBe('Bravo'); // one entry: a double commit would need two undos
+    });
+
+    // The commit of an editor whose combatant no longer exists (deleted, undone, or removed by another
+    // tab before the edit was committed). The editor used to keep the typed text, and adopt it as its
+    // baseline, so the field looked saved while nothing was; Escape could not bring the old value back.
+    describe('an edit committed after its combatant is gone', () => {
+      const ALL = [['Alpha', 20, 5], ['Bravo', 20, 20], ['Charlie', 20, 10]];
+      const model = () => saved().characters.map(c => [c.name, c.currentHP, c.initiative]);
+      // An editor left over for a combatant that is not in the model: its row was not redrawn.
+      const orphanEditor = (sel, view = 'desktop') => {
+        const input = find(view, sel);
+        input.dataset.characterId = 'id-gone';
+        return input;
+      };
+
+      describe.each([
+        { field: 'name', sel: '.name-input', typed: 'Zed', shown: 'Bravo', views: ['desktop', 'mobile'] },
+        { field: 'hp', sel: '.health-input', typed: '3', shown: '20', views: ['desktop', 'mobile'] },
+        { field: 'initiative', sel: '.init-input', typed: '77', shown: '20', views: ['desktop'] } // (a card shows initiative as text)
+      ])('$field editor', e => {
+        it.each(e.views)('writes nothing, and the list is redrawn from the model (%s)', async view => {
+          await loadTracker([A, B, C]);
+          const input = orphanEditor(e.sel, view);
+          input.focus();
+          input.value = e.typed;
+          const writes = trackerWrites();
+          expect(() => input.blur()).not.toThrow();
+          expect(writes).toHaveLength(0); // the redraw does not save: the model did not change
+          stopRecordingWrites();
+
+          expect(model()).toEqual(ALL); // nothing written, nobody else changed, nothing recreated
+          expect(savedLog()).toHaveLength(0);
+          expect(input.value).toBe(e.shown); // the typed text is not left on screen as if saved
+          expect(input.isConnected).toBe(false); // the orphaned editor was replaced by the redraw
+          expect(document.querySelector('[data-character-id="id-gone"]')).toBeNull();
+          expect(find(view, e.sel).value).toBe(e.shown);
+          expectListIntact(3);
+          click(document.getElementById('undo-btn')); // nothing was pushed
+          expect(model()).toEqual(ALL);
+        });
+      });
+
+      it('Enter on such an editor behaves the same, and the combatant stays gone', async () => {
+        await loadTracker([A, B, C]);
+        const input = orphanEditor('.name-input');
+        input.focus();
+        input.value = 'Zed';
+        expect(() => key(input, 'Enter')).not.toThrow();
+        expect(model()).toEqual(ALL);
+        expect(input.value).toBe('Bravo');
+        expectListIntact(3);
+        expect(saved().characters.some(c => c.name === 'Zed' || c.id === 'id-gone')).toBe(false);
+      });
+
+      // The realistic way to reach the path: another tab deletes the combatant while its field holds an
+      // uncommitted edit. The redraw waits for the edit (see 'dirty editor' below), so the field is still
+      // on screen when the user finishes it, and its combatant is gone by then.
+      it('another tab deleting the combatant mid-edit: finishing the edit writes nothing and drops the row', async () => {
+        await loadTracker([A, B, C]);
+        const input = find('desktop', '.health-input');
+        input.focus();
+        input.value = '3'; // typed, not committed
+        const writes = trackerWrites();
+
+        replaceStateFromAnotherTab([A, C]); // Bravo was deleted elsewhere
+        expect(input.isConnected).toBe(true); // held: the user is still typing
+        input.blur(); // the user finishes the edit
+
+        expect(writes).toHaveLength(1); // only the other tab's own save; nothing from this tab
+        stopRecordingWrites();
+        expect(saved().characters.map(c => [c.id, c.currentHP])).toEqual([['id-A', 20], ['id-C', 20]]);
+        expect(savedLog()).toHaveLength(0);
+        expect(input.value).toBe('20'); // reverted, not left showing the typed 3
+        expectListIntact(2);
+        expect(document.querySelector('[data-character-id="id-B"]')).toBeNull();
+      });
+    });
+
+    // A render replaces the focused control with a new element; focus is carried to its twin by
+    // list, combatant id and kind of control, never by position. It used to fall to <body>.
+    describe('focus across re-renders', () => {
+      const focusedControl = () => {
+        const a = document.activeElement;
+        return a && a !== document.body ? `${a.dataset.characterId}:${a.dataset.field || a.dataset.action}` : 'body';
+      };
+
+      it('Enter keeps focus in the committed field, following its combatant through a re-sort', async () => {
+        await loadTracker([A, B, C]);
+        const input = find('desktop', '.init-input', 'id-C');
+        input.focus();
+        input.value = '99';
+        key(input, 'Enter');
+
+        expect(rowOrder()).toEqual(['id-C', 'id-B', 'id-A']);
+        expect(input.isConnected).toBe(false);
+        expect(document.activeElement).toBe(find('desktop', '.init-input', 'id-C'));
+        expect(document.activeElement.dataset.original).toBe('99'); // the new field's baseline
+      });
+
+      it.each(['desktop', 'mobile'])('another tab\'s change keeps focus on the same combatant\'s field (%s)', async view => {
+        await loadTracker([A, B, C]);
+        find(view, '.name-input', 'id-B').focus();
+
+        replaceStateFromAnotherTab([{ ...B, initiative: 40, currentHP: 3 }, A, C]); // Bravo moved and changed
+
+        expect(document.activeElement).toBe(find(view, '.name-input', 'id-B'));
+        expect(focusedControl()).toBe('id-B:name');
+      });
+
+      it('a focused button keeps focus after its own action re-renders the list', async () => {
+        await loadTracker([A, B, C]);
+        const btn = find('desktop', '.hit-btn[data-delta="-1"]');
+        btn.focus();
+        click(btn);
+
+        expect(btn.isConnected).toBe(false);
+        expect(document.activeElement).toBe(find('desktop', '.hit-btn[data-delta="-1"]'));
+        click(document.activeElement);
+        expect(hpOf('id-B')).toBe(18);
+      });
+
+      it('focus is not handed to anybody else when the focused combatant is gone', async () => {
+        await loadTracker([A, B, C]);
+        find('desktop', '.name-input').focus();
+
+        replaceStateFromAnotherTab([A, C]);
+
+        expect(focusedControl()).toBe('body');
+      });
+
+      it('a render never takes focus from something outside the list', async () => {
+        await loadTracker([A, B, C]);
+        const outside = document.getElementById('character-name');
+        outside.focus();
+        replaceStateFromAnotherTab([A, { ...B, currentHP: 1 }, C]);
+        expect(document.activeElement).toBe(outside);
+      });
+    });
+
+    // A render of state that came from storage must not write it back (an echo can overwrite a newer
+    // save from the other tab); a local change made during that render still saves.
+    describe('storage-driven renders and writes', () => {
+      // The other tab's snapshot is stored exactly as written; any write from this tab would replace it.
+      const raw = () => localStorage.getItem('initiativeTrackerData');
+
+      it("re-rendering another tab's save writes nothing back", async () => {
+        await loadTracker([A, B, C]);
+        find('desktop', '.health-input').focus(); // focused, not edited
+        for (const hp of [15, 14, 13]) {
+          replaceStateFromAnotherTab([A, { ...B, currentHP: hp }, C]);
+          const written = raw();
+          expect(JSON.parse(written).combatLog).toBeUndefined(); // still the other tab's snapshot
+          expect(find('desktop', '.health-input').value).toBe(String(hp)); // and it was rendered
+        }
+        expect(hpOf('id-B')).toBe(13);
+        expect(document.activeElement).toBe(find('desktop', '.health-input'));
+      });
+
+      it('an edit finished after another tab\'s update is saved once, on top of that update', async () => {
+        await loadTracker([A, B, C]);
+        const input = find('desktop', '.name-input');
+        input.focus();
+        input.value = 'Brutus';
+        const writes = trackerWrites();
+        replaceStateFromAnotherTab([A, { ...B, currentHP: 15 }, C]);
+        expect(writes).toHaveLength(1); // the other tab's; the held redraw wrote nothing
+
+        input.blur();
+        expect(writes).toHaveLength(2); // exactly one write, for the edit
+        stopRecordingWrites();
+        expect(savedById('id-B')).toMatchObject({ name: 'Brutus', currentHP: 15 });
+        expectListIntact(3);
+        click(document.getElementById('undo-btn')); // one history entry
+        expect(savedById('id-B')).toMatchObject({ name: 'Bravo', currentHP: 15 });
+      });
+    });
+
+    // Rule: external state may update the model, but must not force-commit a focused inline edit the
+    // user has not finished. The list redraw waits until the edit is committed, cancelled or put back.
+    describe('dirty editor and external updates', () => {
+      const hpInput = (id = 'id-B') => find('desktop', '.health-input', id);
+
+      it('a partial value is not committed, and completing it afterwards applies only that field', async () => {
+        await loadTracker([A, B, C]);
+        const input = hpInput();
+        input.focus();
+        input.value = '1'; // on the way to 15
+
+        replaceStateFromAnotherTab([{ ...A, currentHP: 11 }, B, { ...C, name: 'Chuck' }]); // changes to others
+
+        expect(hpOf('id-B')).toBe(20); // "1" was not committed
+        expect(savedLog()).toHaveLength(0);
+        expect(input.isConnected).toBe(true);
+        expect(document.activeElement).toBe(input);
+        expect(row('id-A').querySelector('.health-input').value).toBe('20'); // display waits…
+
+        input.value = '15'; // the user finishes typing
+        input.blur();
+
+        expect(saved().characters.map(c => [c.id, c.name, c.currentHP])).toEqual([
+          ['id-A', 'Alpha', 11], ['id-B', 'Bravo', 15], ['id-C', 'Chuck', 20]
+        ]); // exact model: the external changes kept, the edit applied once
+        expect(savedLog().map(e => e.summary)).toEqual(['Damage 5']);
+        expect(row('id-A').querySelector('.health-input').value).toBe('11'); // …and then shows it
+        expectListIntact(3);
+      });
+
+      it('Escape cancels the edit and the held external state is then shown', async () => {
+        await loadTracker([A, B, C]);
+        const input = find('desktop', '.name-input');
+        input.focus();
+        input.value = 'Brut';
+        replaceStateFromAnotherTab([A, { ...B, currentHP: 9 }, C]);
+
+        key(input, 'Escape');
+
+        expect(savedById('id-B')).toMatchObject({ name: 'Bravo', currentHP: 9 });
+        expect(input.isConnected).toBe(false); // the held redraw ran once the edit was resolved
+        expect(find('desktop', '.health-input').value).toBe('9');
+        expect(find('desktop', '.name-input').value).toBe('Bravo');
+        expectListIntact(3);
+      });
+
+      it('typing the original value back releases the held redraw without a commit', async () => {
+        await loadTracker([A, B, C]);
+        const input = hpInput();
+        input.focus();
+        input.value = '2';
+        replaceStateFromAnotherTab([{ ...A, currentHP: 4 }, B, C]);
+        expect(input.isConnected).toBe(true);
+
+        input.value = '20';
+        input.dispatchEvent(new window.Event('input', { bubbles: true }));
+
+        expect(input.isConnected).toBe(false);
+        expect(row('id-A').querySelector('.health-input').value).toBe('4');
+        expect(document.activeElement).toBe(hpInput()); // focus carried to the redrawn field
+        expect(savedLog()).toHaveLength(0);
+      });
+
+      it('an external update to the edited combatant\'s other fields is kept when the edit lands', async () => {
+        await loadTracker([A, B, C]);
+        const input = find('desktop', '.name-input');
+        input.focus();
+        input.value = 'Brutus';
+        replaceStateFromAnotherTab([A, { ...B, currentHP: 3, initiative: 40 }, C]);
+        key(input, 'Enter');
+
+        expect(savedById('id-B')).toMatchObject({ name: 'Brutus', currentHP: 3, initiative: 40 });
+        expect(rowOrder()).toEqual(['id-A', 'id-B', 'id-C']); // stored order (the other tab's), not re-sorted here
+        expect(document.activeElement).toBe(find('desktop', '.name-input')); // Enter keeps focus
+      });
+
+      it('an unfocused edited field does not hold anything', async () => {
+        await loadTracker([A, B, C]);
+        const input = hpInput();
+        input.focus();
+        input.value = '5';
+        input.blur(); // committed
+        replaceStateFromAnotherTab([{ ...A, currentHP: 1 }, { ...B, currentHP: 5 }, C]);
+        expect(row('id-A').querySelector('.health-input').value).toBe('1');
+      });
+    });
+
+    // Only this tab's own unsaved changes may be written when the tab closes.
+    describe('unload writes only local, unsaved changes', () => {
+      const unload = () => window.dispatchEvent(new window.Event('beforeunload'));
+
+      it('an untouched tab that only received updates writes nothing on close', async () => {
+        await loadTracker([A, B, C]);
+        replaceStateFromAnotherTab([A, { ...B, currentHP: 5 }, C]);
+        // the other tab saves again; this tab has not been told yet
+        localStorage.setItem('initiativeTrackerData', JSON.stringify({ characters: [A, { ...B, currentHP: 1 }, C], currentTurn: 0, combatRound: 1 }));
+        const writes = trackerWrites();
+        unload();
+        expect(writes).toHaveLength(0);
+        expect(hpOf('id-B')).toBe(1); // the newer save survived
+      });
+
+      it('with Auto-Save on, local changes are already saved, so closing writes nothing more', async () => {
+        await loadTracker([A, B, C]);
+        click(row('id-B').querySelector('.hit-btn[data-delta="-5"]'));
+        const writes = trackerWrites();
+        unload();
+        expect(writes).toHaveLength(0);
+        expect(hpOf('id-B')).toBe(15);
+      });
+
+      it('changes made with Auto-Save off are written on close once Auto-Save is back on', async () => {
+        await loadTracker([A, B, C]);
+        const toggle = document.getElementById('autoSaveToggle');
+        toggle.checked = false;
+        toggle.dispatchEvent(new window.Event('change'));
+        click(row('id-B').querySelector('.hit-btn[data-delta="-5"]'));
+        expect(hpOf('id-B')).toBe(20); // not saved while off
+
+        const writes = trackerWrites();
+        unload();
+        expect(writes).toHaveLength(0); // Auto-Save is off: closing does not save either (as before)
+
+        toggle.checked = true;
+        toggle.dispatchEvent(new window.Event('change'));
+        unload();
+        expect(writes).toHaveLength(1);
+        expect(hpOf('id-B')).toBe(15);
+      });
+
+      it('loading another tab\'s state clears a pending local change (it was replaced)', async () => {
+        await loadTracker([A, B, C]);
+        const toggle = document.getElementById('autoSaveToggle');
+        toggle.checked = false;
+        toggle.dispatchEvent(new window.Event('change'));
+        click(row('id-B').querySelector('.hit-btn[data-delta="-5"]')); // unsaved local change
+        replaceStateFromAnotherTab([A, B, { ...C, currentHP: 2 }]);
+        toggle.checked = true;
+        toggle.dispatchEvent(new window.Event('change'));
+
+        const writes = trackerWrites();
+        unload();
+        expect(writes).toHaveLength(0);
+        expect(savedById('id-C').currentHP).toBe(2);
+      });
+    });
+
+    // The press hold must end on every way a press can end, and never before: a list redraw during a
+    // press replaces the pressed control and loses its click.
+    describe('press hold release paths', () => {
+      const pointer = (el, type, props = {}) => {
+        const ev = new window.Event(type, { bubbles: true, cancelable: true });
+        Object.entries({ isPrimary: true, button: 0, pointerType: 'mouse', ...props })
+          .forEach(([k, v]) => Object.defineProperty(ev, k, { value: v }));
+        el.dispatchEvent(ev);
+      };
+      const nextTask = () => new Promise(r => setTimeout(r, 0));
+
+      it('pointerdown holds redraws until pointercancel, and not after', async () => {
+        await loadTracker([A, B, C]);
+        const btn = row('id-A').querySelector('.hit-btn[data-delta="-5"]');
+        pointer(btn, 'pointerdown');
+        replaceStateFromAnotherTab([A, { ...B, currentHP: 7 }, C]);
+        expect(btn.isConnected).toBe(true); // held during the press
+        expect(hpOf('id-B')).toBe(7); // the model is current anyway
+
+        pointer(btn, 'pointercancel');
+        expect(btn.isConnected).toBe(false);
+        expect(row('id-B').querySelector('.health-input').value).toBe('7');
+        replaceStateFromAnotherTab([A, { ...B, currentHP: 6 }, C]);
+        expect(row('id-B').querySelector('.health-input').value).toBe('6'); // not stuck
+      });
+
+      it('a press ends with its click, after the click\'s own action ran', async () => {
+        await loadTracker([A, B, C]);
+        const btn = row('id-A').querySelector('.hit-btn[data-delta="-5"]');
+        pointer(btn, 'pointerdown');
+        replaceStateFromAnotherTab([A, { ...B, currentHP: 7 }, C]);
+        pointer(btn, 'pointerup');
+        expect(btn.isConnected).toBe(true); // not released by pointerup itself
+        click(btn);
+        expect(hpOf('id-A')).toBe(15); // the click landed on the held control
+        expect(btn.isConnected).toBe(false); // and the redraw followed
+        expect(row('id-B').querySelector('.health-input').value).toBe('7');
+      });
+
+      it('pointerup with no click releases on the next task', async () => {
+        await loadTracker([A, B, C]);
+        const btn = row('id-A').querySelector('.hit-btn[data-delta="-5"]');
+        pointer(btn, 'pointerdown');
+        replaceStateFromAnotherTab([A, { ...B, currentHP: 7 }, C]);
+        pointer(btn, 'pointerup');
+        expect(btn.isConnected).toBe(true);
+        await nextTask();
+        expect(btn.isConnected).toBe(false);
+        expect(hpOf('id-A')).toBe(20); // no click, no action
+      });
+
+      it('a touch press (non-mouse pointer) holds the same way', async () => {
+        await loadTracker([A, B, C]);
+        const btn = document.querySelector('#mobile-initiative-order .card[data-character-id="id-A"] .hit-btn[data-delta="-5"]');
+        pointer(btn, 'pointerdown', { pointerType: 'touch' });
+        replaceStateFromAnotherTab([A, { ...B, currentHP: 7 }, C]);
+        expect(btn.isConnected).toBe(true);
+        pointer(btn, 'pointerup', { pointerType: 'touch' });
+        click(btn);
+        expect(hpOf('id-A')).toBe(15);
+        expect(btn.isConnected).toBe(false);
+      });
+
+      it('a secondary-button or non-primary pointer does not hold', async () => {
+        await loadTracker([A, B, C]);
+        const btn = row('id-A').querySelector('.hit-btn[data-delta="-5"]');
+        pointer(btn, 'pointerdown', { button: 2 });
+        replaceStateFromAnotherTab([A, { ...B, currentHP: 7 }, C]);
+        expect(btn.isConnected).toBe(false);
+      });
+    });
+
+    // A Sortable drag holds redraws from `choose` (pointerdown on the handle) to `end`; the pointercancel
+    // the browser sends when the native drag starts must not end it.
+    describe('drag hold', () => {
+      const pointer = (el, type) => {
+        const ev = new window.Event(type, { bubbles: true });
+        Object.defineProperty(ev, 'isPrimary', { value: true });
+        Object.defineProperty(ev, 'button', { value: 0 });
+        el.dispatchEvent(ev);
+      };
+      const drop = (itemId, beforeId) => {
+        // what Sortable does at the drop: the dragged row sits before `beforeId` (or last), then unchoose, end
+        const item = row(itemId);
+        const tbody = document.getElementById('initiative-order');
+        tbody.insertBefore(item, beforeId ? row(beforeId) : null);
+        sortableOptions.onUnchoose?.({});
+        sortableOptions.onEnd({ item });
+      };
+      const flushMicrotasks = () => Promise.resolve();
+
+      it('an update during a drag waits, and the drop applies to the newest model', async () => {
+        await loadTracker([A, B, C]);
+        const handle = row('id-C').querySelector('.drag-handle');
+        pointer(handle, 'pointerdown');
+        sortableOptions.onChoose({});
+        pointer(handle, 'pointercancel'); // the native drag starts
+        sortableOptions.onStart?.({});
+
+        replaceStateFromAnotherTab([A, { ...B, currentHP: 4 }, C]);
+        expect(rowOrder()).toEqual(['id-A', 'id-B', 'id-C']); // no redraw mid-drag, no duplicate
+        expect(document.querySelectorAll('#initiative-order tr')).toHaveLength(3);
+
+        drop('id-C', 'id-A');
+        await flushMicrotasks();
+
+        expect(savedOrder()).toEqual(['id-C', 'id-A', 'id-B']);
+        expect(hpOf('id-B')).toBe(4); // the other tab's change kept
+        expectListIntact(3);
+        expect(rowOrder()).toEqual(['id-C', 'id-A', 'id-B']);
+      });
+
+      it('an edit committed by pressing the drag handle is saved at once and shown after the drop', async () => {
+        await loadTracker([A, B, C]);
+        const hp = row('id-B').querySelector('.health-input');
+        hp.focus();
+        hp.value = '7';
+        const handle = row('id-C').querySelector('.drag-handle');
+        pointer(handle, 'pointerdown');
+        sortableOptions.onChoose({});
+        hp.blur(); // mousedown on the handle takes focus away: the edit commits
+        expect(hpOf('id-B')).toBe(7); // saved immediately
+        expect(hp.isConnected).toBe(true); // redraw held for the drag
+        pointer(handle, 'pointercancel');
+        expect(hp.isConnected).toBe(true); // still held
+
+        drop('id-C', 'id-A');
+        await flushMicrotasks();
+        expect(savedOrder()).toEqual(['id-C', 'id-A', 'id-B']);
+        expect(hpOf('id-B')).toBe(7);
+        expectListIntact(3);
+      });
+
+      it('a press on the handle that never becomes a drag (no end) is released by unchoose', async () => {
+        await loadTracker([A, B, C]);
+        const handle = row('id-C').querySelector('.drag-handle');
+        sortableOptions.onChoose({});
+        replaceStateFromAnotherTab([A, { ...B, currentHP: 4 }, C]);
+        expect(handle.isConnected).toBe(true);
+        sortableOptions.onUnchoose({});
+        await flushMicrotasks();
+        expect(handle.isConnected).toBe(false); // not stuck
+        expect(row('id-B').querySelector('.health-input').value).toBe('4');
+      });
     });
   });
 
@@ -1293,7 +1793,7 @@ describe('Initiative Tracker: combatants are addressed by stable id', () => {
         fake.blur();
 
         expect(savedById('id-A').currentHP).toBe(20);
-        expect(saved().combatLog).toHaveLength(0);
+        expect(savedLog()).toHaveLength(0);
       });
     });
   });

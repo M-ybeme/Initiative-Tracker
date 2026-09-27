@@ -1,7 +1,10 @@
 const DM_TOOLBOX_BUILD = {
   name: "The DM's Toolbox",
-  version: "2.3.18",
+  version: "2.3.19",
   recentChanges: [
+    "Fix: Initiative Tracker keeps your place while you edit: Enter keeps focus in the field, Tab lands on the next field, a button clicked right after typing is no longer ignored, and a redraw from another tab keeps focus on the same combatant",
+    "Fix: Initiative Tracker Combat Log entries show combatant names and imported text literally instead of as markup, and an edit for a combatant that was just deleted no longer looks saved",
+    "Fix: Initiative Tracker no longer saves a half-typed edit when another tab changes the tracker, no longer loses a row drop when a change arrives mid-drag, and a closing tab no longer writes an older snapshot over a newer one",
     "Fix: Combat Mode damage history for a subtracted or keep/drop dice group (for example \"2d6 - 4d6kh3\") now shows the correct sign and which dice were dropped, instead of a flattened list that looked like it added up to more than the actual total",
     "Fix: a critical hit refused for exceeding the dice limit now shows \"Critical roll exceeds the maximum dice limit.\" instead of a misleading invalid-notation message, and no longer leaves behind a fake 0-damage history entry, a CRIT badge, or a partially-applied secondary/feature roll",
     "Fix: the NPC Generator's Race/Culture naming style now generates from the style you actually picked, instead of silently falling back to Human (Latin) names (or Half-Orc to plain Orc) for most of the 29 listed styles",

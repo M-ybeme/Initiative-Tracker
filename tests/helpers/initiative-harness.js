@@ -82,7 +82,8 @@ export function makeChar(id, name, initiative, extra = {}) {
   };
 }
 
-export async function loadTracker(characters = [], currentTurn = 0) {
+// `extraStorage` is written after the reset and before the script boots (e.g. another page's hand-off).
+export async function loadTracker(characters = [], currentTurn = 0, extraStorage = {}) {
   detachPreviousTracker();
   localStorage.clear();
   localStorage.setItem('initiativeHelpSeen', '1');
@@ -90,6 +91,7 @@ export async function loadTracker(characters = [], currentTurn = 0) {
     'initiativeTrackerData',
     JSON.stringify({ characters, currentTurn, combatRound: 1 })
   );
+  for (const [k, v] of Object.entries(extraStorage)) localStorage.setItem(k, v);
   document.body.innerHTML = bodyHtml;
   installGlobals();
   vi.resetModules();

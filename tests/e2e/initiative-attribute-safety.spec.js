@@ -265,13 +265,15 @@ test.describe('inline editors and another tab (real storage events)', () => {
 
 test.describe('re-render while a mobile editor holds an uncommitted edit (real storage events)', () => {
   test.use({ viewport: { width: 390, height: 844 } });
-  // The commit that removing the focused input triggers used to render inside the running render,
-  // and the outer render then appended its rows again: 6 desktop rows for 3 combatants.
+  // The commit that removing the focused input triggered used to render inside the running render, and
+  // the outer render then appended its rows again: 6 desktop rows for 3 combatants. Since 2.3.19 another
+  // tab's update does not redraw a list whose focused editor holds unfinished text at all (and so cannot
+  // force-commit it); the redraw runs once the edit is finished, and the list must still come out exact.
   const cases = [
     { field: 'name', sel: '.name-input', typed: 'Brutus', logEntries: 1, // only the other tab's Damage 5
-      check: b => expect(b.name).toBe('Brutus') },
+      read: b => b.name, committed: 'Brutus', original: 'Bravo' },
     { field: 'HP', sel: '.health-input', typed: '7', logEntries: 2, // the other tab's Damage 5, and this edit
-      check: b => expect(b.currentHP).toBe(7) }
+      read: b => b.currentHP, committed: 7, original: 20 }
   ];
   for (const c of cases) {
     test(`an uncommitted ${c.field} edit survives another tab's update without duplicating the list`, async ({ context, page }) => {
@@ -293,8 +295,14 @@ test.describe('re-render while a mobile editor holds an uncommitted edit (real s
       await other.locator('#mobile-initiative-order .card[data-character-id="id-A"] .hit-btn[data-delta="-5"]').click();
 
       await expect.poll(() => page.evaluate(() => window.__storageEvents)).toBeGreaterThan(before);
-      await expect.poll(async () => (await savedState(page)).characters.find(x => x.id === 'id-B')[c.field === 'name' ? 'name' : 'currentHP'])
-        .toBe(c.field === 'name' ? c.typed : 7); // the deliberate edit was committed by the re-render
+      await nextFrames(page);
+      const bravo = async () => (await savedState(page)).characters.find(x => x.id === 'id-B');
+      expect(c.read(await bravo())).toBe(c.original); // the update did not commit the unfinished edit
+      await expect(input).toHaveValue(c.typed); // nor throw it away
+      await expect(input).toBeFocused();
+
+      await input.press('Tab'); // the user finishes the edit
+      await expect.poll(async () => c.read(await bravo())).toBe(c.committed);
       const counts = () => page.evaluate(() => ({
         rows: [...document.querySelectorAll('#initiative-order tr')].map(r => r.dataset.characterId),
         cards: [...document.querySelectorAll('#mobile-initiative-order .card')].map(r => r.dataset.characterId)
@@ -306,7 +314,6 @@ test.describe('re-render while a mobile editor holds an uncommitted edit (real s
       expect(new Set(cards).size).toBe(3);
       const state = await savedState(page);
       expect(state.characters).toHaveLength(3);
-      c.check(state.characters.find(x => x.id === 'id-B'));
       expect(state.characters.find(x => x.id === 'id-A').currentHP).toBe(15); // the other tab's change kept
       expect(state.combatLog ?? []).toHaveLength(c.logEntries);
       expect(errors, errors.join('\n')).toEqual([]);
