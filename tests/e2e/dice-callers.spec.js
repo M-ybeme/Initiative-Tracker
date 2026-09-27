@@ -562,9 +562,16 @@ test.describe('dice limits in the other callers', () => {
 
   test.describe('Character Sheet hit-dice count', () => {
     // Opens the hit-dice modal (a short rest does it) for a saved pool such as "3d8".
+    // The sheet first answers its own start screen (a blank character), as a user must: left open, the
+    // start screen finishes fading in over the hit-dice modal and its focus trap takes focus from the
+    // count field while the test types into it (the typed blank was lost and "1" was rolled instead).
     async function openHitDiceModal(page, pool) {
       await page.goto('/characters.html');
       await page.waitForFunction(() => typeof window.rollDice === 'function');
+      await page.locator('#chooseBlankBtn').click({ timeout: 8000 });
+      await expect(page.locator('#newCharacterChoiceModal')).toBeHidden();
+      await expect(page.locator('.modal-backdrop')).toHaveCount(0);
+      await page.waitForFunction(() => window.getCurrentCharacter() !== null);
       await page.evaluate(p => { document.getElementById('charHitDiceRemaining').value = p; }, pool);
       await page.evaluate(() => document.getElementById('shortRestBtn').click());
       await page.waitForSelector('#hitDiceModal.show');
@@ -611,19 +618,16 @@ test.describe('dice limits in the other callers', () => {
       await expect(page.locator('#appToastBody')).toContainText('Too many hit dice');
       await expect(page.locator('#hdRollResults')).toBeHidden();
     });
-  });
 
-  test('the Character Sheet hit-dice roll refuses a saved count beyond the limit', async ({ page }) => {
-    const errors = watchErrors(page);
-    await page.goto('/characters.html');
-    await page.waitForFunction(() => typeof window.rollDice === 'function');
-    await page.evaluate(() => { document.getElementById('charHitDiceRemaining').value = '5000d8'; });
-    await page.evaluate(() => document.getElementById('shortRestBtn').click()); // opens the hit-dice modal
-    await page.waitForSelector('#hitDiceModal.show');
-    await page.fill('#hdSpendCount', '5000');
-    await page.evaluate(() => document.getElementById('hdRollBtn').click());
-    await expect(page.locator('#appToastBody')).toContainText('Too many hit dice');
-    await expect(page.locator('#hdRollResults')).toBeHidden(); // nothing was rolled or offered to apply
-    expect(errors, errors.join('\n')).toEqual([]);
+    // Through the shared setup above (start screen answered first): typing into the count used to race the
+    // start screen's focus trap here too.
+    test('the Character Sheet hit-dice roll refuses a saved count beyond the limit', async ({ page }) => {
+      const errors = watchErrors(page);
+      await openHitDiceModal(page, '5000d8');
+      await rollWith(page, '5000');
+      await expect(page.locator('#appToastBody')).toContainText('Too many hit dice');
+      await expect(page.locator('#hdRollResults')).toBeHidden(); // nothing was rolled or offered to apply
+      expect(errors, errors.join('\n')).toEqual([]);
+    });
   });
 });

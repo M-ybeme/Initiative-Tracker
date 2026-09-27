@@ -16,14 +16,31 @@ The DM's Toolbox has evolved through focused feature releases. Minor versions (2
 - **1.9.x**: Battle map measurement tools, persistent fog shapes, and generator integration across NPC/Tavern/Shop systems
 - **1.8.x**: Spell database expansion to 432+ spells, inventory management, loot generator overhaul, and character token generation
 
-**Current version: 2.3.20 (September 2026)**
+**Current version: 2.3.21 (September 2026)**
 
 ---
 
 ## [Unreleased]
 
-### Known issues
-- **Flaky end-to-end test: "a blank count is invalid, not too many, and nothing is rolled"** (`tests/e2e/dice-callers.spec.js`, Character Sheet hit-dice count) — this test fails intermittently. It has failed once in a full-suite run, once in a run of three solo runs, and once in a comparison run, and passes on most other runs (eight consecutive repeat runs, and two later full-suite runs, all passed). The cause has not been identified; the likely area is timing around the hit-dice modal and the toast it asserts on, and the failure has not been captured with a message. It has not been observed as a product bug: the behavior it checks (a blank hit-dice count shows "Invalid number of hit dice to spend." instead of the over-limit message, and nothing is rolled) works when exercised by hand and in every passing run. Re-run before treating a red result on this test as a regression, and harden the test's waits when it is next touched.
+---
+
+## [2.3.21] - 2026-09-27
+**Test Infrastructure Stabilization**
+
+### Fixed
+- **Character Sheet: choosing an option on the New Character screen while it was still opening left it stuck open** — Bootstrap ignores a modal's hide() during its fade-in, so a quick click on "Start blank" (or "Use the wizard"), including on the start screen that opens as the page loads, created the character but left the screen and its dark backdrop over the sheet for good. A choice made while the screen is opening now closes it as soon as it has finished opening
+
+### Internal / Tests
+- **The full browser suite runs in one process again.** The test server crashed with `EMFILE` part-way through a full run, failing every later test with `ERR_CONNECTION_REFUSED`, so the suite had to be run in groups. Cause (measured by counting the server's open files through a full run): `serve` turns on ETags by default, and `serve-handler` 6.1.6 opens a file before comparing its ETag, then answers `304 Not Modified` without closing it. Browsers revalidate cached scripts on every reload and second tab — about 8,200 times per run — so the server leaked one file per 304 until it hit the Windows limit of 8,192 open files. The test server now runs with `--no-etag` (it always answers 200 and closes every file; at most about 20 are open at once) on its own port, 3100, so a dev server running on 3000 (`npx serve .`, ETags on) is never reused in its place, and `npm run test:e2e` runs all 494 tests in one go
+- **The flaky hit-dice test ("a blank count is invalid…") is fixed.** Captured cause: the test opened the hit-dice modal without answering the sheet's start screen, which then finished fading in on top and its focus trap took focus from the count field while the test typed into it, so the field kept "1" and a normal roll followed. The test now answers the start screen first, as a user must. Not a hit-dice bug
+- **The intermittent "backdrop still there" failure in Character Sheet test setup is fixed** — it was the start-screen bug above, reached when a test's click landed during the fade-in under load
+- A test that only passes on a retry now fails the run (`failOnFlakyTests`); CI keeps its retries only to record traces
+- New `start-screen` spec (a choice 0, 50 and 250 ms into the fade-in closes the screen; a later open is not closed by a leftover request); it fails on 2.3.20
+- `CONTRIBUTING.md` documents the canonical commands and the harness notes
+
+### Known issues (follow-ups)
+- The d20 bonus (attack bonus text on the sheet and in Combat Mode) is still not bounded like dice-notation modifiers; a 16+ digit typed attack bonus can give an inexact total on the advantage/disadvantage paths. A clean refusal needs each d20 caller to check before its side effects (Combat Mode marks the action used before it rolls), so it is left for its own change
+- Clicking a New Character choice twice in quick succession (for example a double-click on "Start blank") still creates two characters; this fix only stops the screen from staying open
 
 ---
 

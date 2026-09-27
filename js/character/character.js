@@ -3387,11 +3387,36 @@ import { wireSendToEvents, wireTokenPreviewEvents } from './character-send-to.js
           lastUpdated: null
         };
       }
+      // Closing the New Character choice modal. Bootstrap ignores hide() while a modal is still fading
+      // in, so a choice made in that window (a quick click, or on the start screen that opens as the page
+      // loads) created the character but left the modal and its backdrop open for good. A close requested
+      // while the modal is opening is carried out as soon as it has finished opening. The open state is
+      // tracked from here, where the modal is shown, because the start screen opens before the page's
+      // other event handlers are attached.
+      let choiceModalOpening = false;
+      let choiceModalCloseRequested = false;
+      function trackChoiceModal(el) {
+        if (el.dataset.openStateTracked) return;
+        el.dataset.openStateTracked = '1';
+        el.addEventListener('show.bs.modal', () => { choiceModalOpening = true; choiceModalCloseRequested = false; });
+        el.addEventListener('shown.bs.modal', () => {
+          choiceModalOpening = false;
+          if (choiceModalCloseRequested) {
+            choiceModalCloseRequested = false;
+            bootstrap.Modal.getInstance(el)?.hide();
+          }
+        });
+      }
+      function closeChoiceModal() {
+        if (choiceModalOpening) choiceModalCloseRequested = true;
+        else bootstrap.Modal.getInstance(document.getElementById('newCharacterChoiceModal'))?.hide();
+      }
       function createNewCharacter() {
         // Show the styled choice modal instead of a raw confirm()
         const choiceModal = document.getElementById('newCharacterChoiceModal');
         if (choiceModal && typeof bootstrap !== 'undefined') {
           const bsModal = bootstrap.Modal.getOrCreateInstance(choiceModal);
+          trackChoiceModal(choiceModal);
           bsModal.show();
         } else {
           // Fallback if modal not present
@@ -4305,14 +4330,14 @@ import { wireSendToEvents, wireTokenPreviewEvents } from './character-send-to.js
         const chooseWizardBtn = $('chooseWizardBtn');
         if (chooseWizardBtn) {
           chooseWizardBtn.addEventListener('click', () => {
-            bootstrap.Modal.getInstance(document.getElementById('newCharacterChoiceModal'))?.hide();
+            closeChoiceModal();
             _doCreateWithWizard();
           });
         }
         const chooseBlankBtn = $('chooseBlankBtn');
         if (chooseBlankBtn) {
           chooseBlankBtn.addEventListener('click', () => {
-            bootstrap.Modal.getInstance(document.getElementById('newCharacterChoiceModal'))?.hide();
+            closeChoiceModal();
             _doCreateBlankCharacter();
           });
         }

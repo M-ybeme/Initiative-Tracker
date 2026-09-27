@@ -50,7 +50,18 @@ npm run test:e2e:ui
 
 # Run E2E tests in headed browser (visible)
 npm run test:e2e:headed
+
+# One spec, or one test by name, or a test repeated to check for flakiness
+npx playwright test tests/e2e/dice-callers.spec.js
+npx playwright test -g "a blank count is"
+npx playwright test tests/e2e/start-screen.spec.js --repeat-each=40
 ```
+
+`npm run test:e2e` runs the whole browser suite in one process; no partitioning is needed. Notes on the harness:
+
+- Playwright starts its own static server on port 3100 (`npx serve -l 3100 --no-etag`, see `playwright.config.js`), separate from the dev server on port 3000, so a running `npx serve .` never stands in for it. The `--no-etag` flag is required: with ETags, `serve-handler` leaks a file descriptor on every `304 Not Modified`, and a full run crashed the server with `EMFILE`.
+- A test that fails and then passes on a retry still fails the run (`failOnFlakyTests`). CI retries only to record a trace.
+- Tests on `characters.html` should answer the page's own start screen (for example `loadSheet(page, { blank: true })` in `tests/helpers/character-sheet.js`) before typing into the sheet or its modals. Left open, it finishes fading in over whatever the test opened and its focus trap takes the focus the test is typing into.
 
 ## Test Requirements
 
