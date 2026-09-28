@@ -53,6 +53,9 @@ export default [
         navigator: 'readonly',
         performance: 'readonly',
         crypto: 'readonly',
+        btoa: 'readonly',
+        WebSocket: 'readonly',
+        RTCPeerConnection: 'readonly',
 
         // External libraries loaded via CDN
         bootstrap: 'readonly',

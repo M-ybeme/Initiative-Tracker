@@ -1,6 +1,6 @@
 const DM_TOOLBOX_BUILD = {
   name: "The DM's Toolbox",
-  version: "2.3.21",
+  version: "2.3.22",
   recentChanges: [
     "Fix: choosing an option on the Character Sheet's New Character screen while it is still opening no longer leaves the screen stuck open over the sheet",
     "Fix: the Character Sheet now rolls attack damage with several dice groups (for example \"2d6+1d4\" or \"2d6 - 1d4 + 3\") the way Combat Mode does, instead of rolling nothing; a critical hit on such damage doubles every damage die (2d6+1d4+3 rolls like 4d6+2d4+3), Great Weapon Fighting and Savage Attacker apply to it, and a flat bonus such as Dueling +2 is no longer silently dropped for damage written with spaces, a keep rule or several groups",

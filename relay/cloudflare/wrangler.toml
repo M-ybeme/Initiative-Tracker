@@ -1,0 +1,17 @@
+name = "dmtoolbox-live-share-relay"
+main = "worker.mjs"
+compatibility_date = "2025-09-01"
+
+# One Durable Object per Live Share room. SQLite-backed classes are required on the Workers
+# free plan; the relay stores nothing, it only holds the room's WebSockets in memory.
+[[durable_objects.bindings]]
+name = "ROOMS"
+class_name = "RelayRoomObject"
+
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["RelayRoomObject"]
+
+[vars]
+# Pages allowed to open relay WebSockets (exact Origin match, comma-separated).
+ALLOWED_ORIGINS = "https://dnddmtoolbox.netlify.app,http://localhost:3000,http://localhost:3100"

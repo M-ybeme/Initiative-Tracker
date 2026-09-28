@@ -16,11 +16,28 @@ The DM's Toolbox has evolved through focused feature releases. Minor versions (2
 - **1.9.x**: Battle map measurement tools, persistent fog shapes, and generator integration across NPC/Tavern/Shop systems
 - **1.8.x**: Spell database expansion to 432+ spells, inventory management, loot generator overhaul, and character token generation
 
-**Current version: 2.3.21 (September 2026)**
+**Current version: 2.3.22 (September 2026)**
 
 ---
 
 ## [Unreleased]
+
+---
+
+## [2.3.22] - 2026-09-28
+**Live Share Milestone 0 — Networking Proof of Concept**
+
+Development prototype only: it isn't linked from the site, it has no seats, password or admission, and anyone holding a room link can connect to that room (see `docs/DMS_Toolbox_Live_Share_Planning.md` §11, §24).
+
+### Added
+- **Live Share signaling relay** (`relay/`): one generic room protocol (`room-core.mjs`, one host and one player per room in Milestone 0 — a second player is refused as "room full" — opaque WebRTC offer/answer/ICE relay, frame size and rate limits; a malformed upgrade request is answered with 400 instead of stopping the Node relay) shared by a local Node relay (`node-relay.mjs`, for development and Playwright) and a Cloudflare Worker with one Durable Object per room (`cloudflare/`). The relay knows nothing about seats, passwords or game state
+- **Browser Live Share client** (`js/modules/live-share/`): relay WebSocket client, RTCPeerConnection + RTCDataChannel link (STUN only), validation of every relayed and data-channel message, 128-bit room ids carried in the join link's URL fragment. A `?relay=` development override is honoured only on localhost pages; the live site always uses its configured relay, so a crafted link can't redirect signaling
+- **Prototype page** `liveshare-dev.html`: the host starts a room and gets a (hidden by default) join link; when a player joins, the two browsers open a data channel and the host sends "hello", which the player displays. Both sides can disconnect cleanly. A diagnostics panel shows signaling, peer connection, ICE and data channel states and labels failures as signaling, ICE, data channel or negotiation. It never contains the room link or IP addresses
+
+### Internal / Tests
+- Unit tests for the relay room logic, message validation, room ids and PeerLink failure classification; an integration test of the Node relay over real WebSockets; a Playwright spec that connects a host and a player in separate browser contexts through the local relay (started by `playwright.config.js` on port 8788) and checks "hello", leave, end session, no-host and unreachable-relay signaling failures, and an ICE failure. The same spec passes against the Cloudflare relay under `wrangler dev` (`LIVE_SHARE_TEST_RELAY`)
+- `ws` is now an explicit dev dependency
+- `relay/README.md` documents the protocol, local and Cloudflare commands, deployment, and the manual remote-network test
 
 ---
 

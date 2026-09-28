@@ -37,10 +37,21 @@ export default defineConfig({
   // Port 3100 is the test server's own, never the dev server's 3000 (`npx serve .` in the README, which
   // keeps ETags on). Locally Playwright reuses whatever already listens on its port without checking its
   // flags, so sharing 3000 would let a running dev server take the place of this one and bring the leak back.
-  webServer: {
-    command: 'npx serve -l 3100 --no-etag',
-    url: 'http://localhost:3100',
-    reuseExistingServer: !process.env.CI,
-    timeout: 120000,
-  },
+  //
+  // The second server is the local Live Share signaling relay (relay/node-relay.mjs) on its own test
+  // port, 8788, so Live Share tests never depend on the deployed Cloudflare relay or a dev relay on 8787.
+  webServer: [
+    {
+      command: 'npx serve -l 3100 --no-etag',
+      url: 'http://localhost:3100',
+      reuseExistingServer: !process.env.CI,
+      timeout: 120000,
+    },
+    {
+      command: 'node relay/node-relay.mjs --port 8788',
+      url: 'http://localhost:8788/health',
+      reuseExistingServer: !process.env.CI,
+      timeout: 30000,
+    },
+  ],
 });
