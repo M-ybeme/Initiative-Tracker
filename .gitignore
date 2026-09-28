@@ -27,3 +27,7 @@ npm-debug.log*
 
 # Internal notes
 internal-roadmaps/
+
+# dev-toolkit (local review tooling state and generated repo profile)
+.dev-toolkit/
+docs/repo-profile.md
