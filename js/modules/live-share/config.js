@@ -3,7 +3,7 @@
  */
 
 // Set after the first `wrangler deploy` of relay/cloudflare (see relay/README.md).
-export const PRODUCTION_RELAY_URL = '';
+export const PRODUCTION_RELAY_URL = 'wss://dmtoolbox-live-share-relay.dmtoolbox.workers.dev';
 
 export const LOCAL_RELAY_URL = 'ws://localhost:8787';
 
