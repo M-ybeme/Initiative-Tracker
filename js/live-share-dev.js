@@ -8,14 +8,19 @@
  *
  * Development query parameters (kept in join links, so host and player agree):
  *   ?relay=ws://host:port   use this relay instead of the default
- *   ?forceRelay=1           ICE may only use TURN relays; with none configured this forces an ICE
- *                           failure, which exercises the failure diagnostics
+ *   ?forceRelay=1           ICE may only use TURN relay candidates (debug/test only: normal use
+ *                           keeps "all", so direct paths win); with no TURN available the browser
+ *                           gathers nothing, which exercises the "WebRTC blocked" diagnostics
+ *
+ * TURN: before each connection the page fetches short-lived TURN credentials from the relay
+ * (ice-config.js). If that fails the connection goes ahead STUN-only, with a notice.
  *   ?iceTimeoutMs=20000     how long a peer may take to connect before it is reported as failed
  */
 import { resolveRelayUrl } from './modules/live-share/config.js';
 import { generateRoomId, buildJoinUrl, readRoomIdFromHash } from './modules/live-share/room-id.js';
 import { SignalingClient } from './modules/live-share/signaling-client.js';
 import { PeerLink } from './modules/live-share/peer-link.js';
+import { resolveIceServers } from './modules/live-share/ice-config.js';
 import { encodeHello, parseChannelMessage } from './modules/live-share/protocol.js';
 
 const $ = (id) => document.getElementById(id);
@@ -37,12 +42,25 @@ const diag = {
   lastProtocolError: null,
   lastSent: null,
   lastReceived: null,
+  // TURN availability only ({configured, status, message}); credentials are never kept here.
+  turn: null,
   peers: {},
 };
 
 function clampInt(value, min, max, fallback) {
   const n = Number.parseInt(value, 10);
   return Number.isFinite(n) ? Math.min(max, Math.max(min, n)) : fallback;
+}
+
+// Fetch this connection's ICE servers and show whether the TURN fallback is available.
+async function prepareIceServers() {
+  const { iceServers, turn } = await resolveIceServers({ relayUrl });
+  diag.turn = turn;
+  const note = $('ls-turn-note');
+  note.textContent = turn.message;
+  note.classList.toggle('d-none', turn.status === 'available');
+  renderDiagnostics();
+  return iceServers;
 }
 
 function renderDiagnostics() {
@@ -64,7 +82,14 @@ function trackSignaling(client) {
 }
 
 function describeFailure(failure) {
-  const label = failure.kind === 'signaling' ? 'Signaling failure' : failure.kind === 'ice' ? 'Connection failure (ICE)' : `Connection failure (${failure.kind})`;
+  const label =
+    failure.kind === 'signaling'
+      ? 'Signaling failure'
+      : failure.kind === 'ice'
+        ? 'Connection failure (ICE)'
+        : failure.kind === 'no-candidates'
+          ? 'WebRTC blocked in this browser'
+          : `Connection failure (${failure.kind})`;
   return `${label}: ${failure.message}`;
 }
 
@@ -110,7 +135,7 @@ function initHost() {
   const dropPeer = (peerId) => {
     const entry = peers.get(peerId);
     if (!entry) return;
-    entry.link.close();
+    if (entry.link) entry.link.close();
     peers.delete(peerId);
     delete diag.peers[peerId];
     diag.playersOnRelay = peers.size;
@@ -118,11 +143,19 @@ function initHost() {
     renderDiagnostics();
   };
 
-  const addPeer = (peerId) => {
-    const link = new PeerLink({ role: 'host', sendSignal: (data) => signaling.sendSignal(data, peerId), ...linkOptions });
-    const entry = { link, status: 'Connecting…' };
+  const addPeer = async (peerId) => {
+    const entry = { link: null, status: 'Preparing connection…' };
     peers.set(peerId, entry);
     diag.playersOnRelay = peers.size;
+    renderPeers();
+    // Fresh TURN credentials for each player. The player sends nothing until the host's offer, so
+    // nothing is missed while this runs.
+    const iceServers = await prepareIceServers();
+    const session = signaling;
+    if (peers.get(peerId) !== entry || !session || session.state !== 'ready') return; // left or ended meanwhile
+    const link = new PeerLink({ role: 'host', sendSignal: (data) => session.sendSignal(data, peerId), iceServers, ...linkOptions });
+    entry.link = link;
+    entry.status = 'Connecting…';
     const update = (status) => {
       entry.status = status;
       renderPeers();
@@ -136,7 +169,14 @@ function initHost() {
       update('Connected — sent "hello"');
       renderDiagnostics();
     });
-    link.on('failed', (failure) => update(describeFailure(failure)));
+    link.on('failed', (failure) => {
+      update(describeFailure(failure));
+      // The player's row goes when it leaves; keep the last failure so the diagnosis survives.
+      diag.lastPeerFailure = failure;
+      // Gathering no candidates is about this browser, not the player: say so on the host itself.
+      if (failure.kind === 'no-candidates') setStatus(describeFailure(failure));
+      renderDiagnostics();
+    });
     link.on('close', () => {
       if (!link.failure) update('Disconnected');
     });
@@ -176,7 +216,7 @@ function initHost() {
     signaling.on('peer-left', ({ peerId }) => dropPeer(peerId));
     signaling.on('signal', ({ from, data }) => {
       const entry = peers.get(from);
-      if (entry) entry.link.handleSignal(data);
+      if (entry && entry.link) entry.link.handleSignal(data);
     });
     signaling.on('closed', ({ error }) => {
       if (error) {
@@ -206,7 +246,7 @@ function initHost() {
 
 // ---- Player -----------------------------------------------------------------------------------
 
-function initPlayer(roomId) {
+async function initPlayer(roomId) {
   diag.role = 'player';
   diag.roomFound = null;
   $('ls-player').classList.remove('d-none');
@@ -227,6 +267,15 @@ function initPlayer(roomId) {
     renderDiagnostics();
   };
 
+  $('ls-leave').addEventListener('click', () => leave('You left the session.'));
+  window.addEventListener('pagehide', () => leave());
+
+  // TURN credentials first: once the relay says "welcome" the host's offer follows at once, so the
+  // peer connection must be ready to take it.
+  setStatus('Preparing connection…');
+  const iceServers = await prepareIceServers();
+  if (ended) return;
+
   signaling = new SignalingClient({ relayUrl, roomId, role: 'peer' });
   trackSignaling(signaling);
   setStatus('Connecting to relay…');
@@ -234,7 +283,7 @@ function initPlayer(roomId) {
   signaling.on('ready', () => {
     diag.roomFound = true;
     setStatus('Connecting to host…');
-    link = new PeerLink({ role: 'player', sendSignal: (data) => signaling.sendSignal(data), ...linkOptions });
+    link = new PeerLink({ role: 'player', sendSignal: (data) => signaling.sendSignal(data), iceServers, ...linkOptions });
     link.on('diagnostics', ({ snapshot }) => {
       diag.peers.host = snapshot;
       renderDiagnostics();
@@ -272,8 +321,6 @@ function initPlayer(roomId) {
     leave(error.code === 'host-left' ? error.message : `Signaling failure: ${error.message}`);
   });
 
-  $('ls-leave').addEventListener('click', () => leave('You left the session.'));
-  window.addEventListener('pagehide', () => leave());
   signaling.connect();
   renderDiagnostics();
 }

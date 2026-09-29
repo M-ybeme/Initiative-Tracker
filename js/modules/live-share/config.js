@@ -8,8 +8,9 @@ export const PRODUCTION_RELAY_URL = 'wss://dmtoolbox-live-share-relay.dmtoolbox.
 export const LOCAL_RELAY_URL = 'ws://localhost:8787';
 
 // STUN only lets each browser learn its public address; no traffic flows through it. It does
-// reveal the browser's IP address to the STUN provider, like any WebRTC call. TURN (relayed
-// traffic for networks that block direct connections) arrives in Milestone 8.
+// reveal the browser's IP address to the STUN provider, like any WebRTC call. TURN servers (relayed
+// traffic for networks that block direct connections) are added per connection, with short-lived
+// credentials fetched from the relay: see ice-config.js.
 export const DEFAULT_ICE_SERVERS = [
   { urls: ['stun:stun.cloudflare.com:3478', 'stun:stun.l.google.com:19302'] },
 ];

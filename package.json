@@ -1,6 +1,6 @@
 {
   "name": "initiative-tracker",
-  "version": "2.3.22",
+  "version": "2.3.23",
   "description": "**A comprehensive, browser-based suite of tools for tabletop RPG Game Masters**",
   "main": "index.js",
   "directories": {
@@ -52,9 +52,16 @@
     "happy-dom": "^20.3.4",
     "husky": "^9.1.7",
     "lint-staged": "^16.2.7",
+    "node-turn": "^0.0.6",
     "prettier": "^3.8.1",
     "serve": "^14.2.5",
     "vitest": "^4.0.17",
     "ws": "^8.22.0"
+  },
+  "overrides": {
+    "node-turn": {
+      "log4js": "^6.9.1",
+      "js-yaml": "^4.3.2"
+    }
   }
 }

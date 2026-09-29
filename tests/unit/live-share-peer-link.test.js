@@ -181,3 +181,253 @@ describe('PeerLink failure classification', () => {
   });
 });
 
+
+describe('PeerLink ICE candidate lifecycle', () => {
+  const localCandidate = (typ, n = 1) => ({ candidate: `candidate:${n} 1 udp 100 x.local 5000 typ ${typ}`, sdpMid: '0', sdpMLineIndex: 0 });
+  const remote = (typ, n = 1) => ({ kind: 'candidate', candidate: { candidate: `candidate:${n} 1 udp 100 x 6000 typ ${typ}`, sdpMid: '0', sdpMLineIndex: 0 } });
+  const offer = { kind: 'description', description: { type: 'offer', sdp: 'v=0 offer' } };
+
+  it('counts and sends every local candidate, by type, and does not send the end-of-candidates marker', async () => {
+    const { link, sent, pc } = makeLink('host');
+    await link.start();
+    sent.length = 0;
+    pc.onicecandidate({ candidate: localCandidate('host', 1) });
+    pc.onicecandidate({ candidate: localCandidate('host', 2) });
+    pc.onicecandidate({ candidate: localCandidate('srflx', 3) });
+    pc.onicecandidate({ candidate: null });
+    expect(sent).toHaveLength(3);
+    expect(sent.every((s) => s.kind === 'candidate')).toBe(true);
+    expect(link.diagnostics().candidates).toMatchObject({
+      localGenerated: 3,
+      localSent: 3,
+      localGatheringComplete: true,
+      localTypes: { host: 2, srflx: 1 },
+    });
+    expect(link.failure).toBeNull();
+    link.close();
+  });
+
+  it('does not count a candidate as sent when the relay refuses it', async () => {
+    const link = new PeerLink({ role: 'host', sendSignal: () => false, RTCPeerConnectionImpl: FakePC });
+    const pc = FakePC.last;
+    pc.onicecandidate({ candidate: localCandidate('host') });
+    expect(link.diagnostics().candidates).toMatchObject({ localGenerated: 1, localSent: 0 });
+    expect(link.diagnostics().candidates.lastError).toMatch(/could not be sent/);
+    link.close();
+  });
+
+  it('a browser that gathers no candidates fails at once as "no-candidates", not as a timeout', async () => {
+    const { link, failures, pc } = makeLink('host');
+    await link.start();
+    pc.onicecandidate({ candidate: null });
+    expect(failures).toHaveLength(1);
+    expect(failures[0].kind).toBe('no-candidates');
+    expect(failures[0].message).toMatch(/gathered no network candidates/);
+    expect(link.closed).toBe(true);
+  });
+
+  it('gathering state "complete" with no candidates is also caught, and reported once', async () => {
+    const { link, failures, pc } = makeLink('player');
+    await link.start();
+    pc.iceGatheringState = 'complete';
+    pc.onicegatheringstatechange();
+    pc.onicecandidate({ candidate: null });
+    expect(failures.map((f) => f.kind)).toEqual(['no-candidates']);
+    link.close();
+  });
+
+  it('queues candidates that arrive before the remote description and applies each exactly once after it', async () => {
+    const { link, pc } = makeLink('player');
+    await link.start();
+    await link.handleSignal(remote('host', 1));
+    await link.handleSignal(remote('srflx', 2));
+    expect(pc.added).toEqual([]);
+    expect(link.diagnostics().candidates).toMatchObject({ remoteReceived: 2, remoteQueued: 2, remoteApplied: 0, remotePending: 2 });
+
+    await link.handleSignal(offer);
+    expect(pc.added.map((c) => c.candidate)).toEqual([remote('host', 1).candidate.candidate, remote('srflx', 2).candidate.candidate]);
+    expect(link.diagnostics().candidates).toMatchObject({ remoteApplied: 2, remotePending: 0 });
+
+    await link.handleSignal(remote('srflx', 3)); // after the description: applied directly
+    expect(pc.added).toHaveLength(3);
+    expect(link.diagnostics().candidates).toMatchObject({
+      remoteReceived: 3,
+      remoteQueued: 2,
+      remoteApplied: 3,
+      remoteApplyErrors: 0,
+      remotePending: 0,
+      remoteTypes: { host: 1, srflx: 2 },
+    });
+    expect(link.diagnostics().remoteDescriptionSet).toBe(true);
+    link.close();
+  });
+
+  it('a candidate arriving while setRemoteDescription is still in progress is queued and applied once', async () => {
+    const { link, pc } = makeLink('player');
+    await link.start();
+    let finishSRD;
+    pc.setRemoteDescription = (d) =>
+      new Promise((resolve) => {
+        finishSRD = () => {
+          pc.remoteDescription = d;
+          resolve();
+        };
+      });
+    const describing = link.handleSignal(offer);
+    await link.handleSignal(remote('srflx', 7)); // SRD has not finished yet
+    expect(pc.added).toEqual([]);
+    finishSRD();
+    await describing;
+    expect(pc.added.map((c) => c.candidate)).toEqual([remote('srflx', 7).candidate.candidate]);
+    expect(link.diagnostics().candidates).toMatchObject({ remoteQueued: 1, remoteApplied: 1, remotePending: 0 });
+    link.close();
+  });
+
+  it('counts an addIceCandidate failure, keeps its error, and carries on with the next candidate', async () => {
+    const { link, pc, failures } = makeLink('player');
+    await link.start();
+    await link.handleSignal(offer);
+    const realAdd = pc.addIceCandidate.bind(pc);
+    pc.addIceCandidate = async (c) => {
+      if (c.candidate.includes('typ host')) throw Object.assign(new Error('bad candidate'), { name: 'OperationError' });
+      return realAdd(c);
+    };
+    await link.handleSignal(remote('host', 1));
+    await link.handleSignal(remote('srflx', 2));
+    expect(link.diagnostics().candidates).toMatchObject({ remoteReceived: 2, remoteApplied: 1, remoteApplyErrors: 1 });
+    expect(link.diagnostics().candidates.lastError).toBe('addIceCandidate failed: OperationError: bad candidate');
+    expect(failures).toEqual([]);
+    link.close();
+  });
+
+  it('does not apply candidates after the link is closed', async () => {
+    const { link, pc } = makeLink('player');
+    await link.start();
+    await link.handleSignal(offer);
+    link.close();
+    await link.handleSignal(remote('srflx'));
+    expect(pc.added).toEqual([]);
+  });
+
+  describe('timeout message says which step of the candidate path stalled', () => {
+    beforeEach(() => vi.useFakeTimers());
+    afterEach(() => vi.useRealTimers());
+
+    async function answeredHost() {
+      const made = makeLink('host');
+      await made.link.start();
+      made.pc.onicecandidate({ candidate: localCandidate('host') });
+      await made.link.handleSignal({ kind: 'description', description: { type: 'answer', sdp: 'v=0 answer' } });
+      return made;
+    }
+
+    it('no candidates received from the other side', async () => {
+      const { failures } = await answeredHost();
+      vi.advanceTimersByTime(5000);
+      expect(failures[0].kind).toBe('ice');
+      expect(failures[0].message).toMatch(/received no network candidates from the player/);
+    });
+
+    it('candidates received but none applied', async () => {
+      const { link, pc, failures } = await answeredHost();
+      pc.addIceCandidate = async () => {
+        throw new Error('nope');
+      };
+      await link.handleSignal(remote('srflx'));
+      vi.advanceTimersByTime(5000);
+      expect(failures[0].message).toMatch(/received 1 candidates from the player but none could be applied \(addIceCandidate failed: Error: nope\)/);
+    });
+
+    it('candidates exchanged but ICE never connected: the network needs TURN', async () => {
+      const { link, pc, failures } = await answeredHost();
+      await link.handleSignal(remote('srflx'));
+      pc.iceConnectionState = 'checking';
+      vi.advanceTimersByTime(5000);
+      expect(failures[0].kind).toBe('ice');
+      expect(failures[0].message).toMatch(/candidates were exchanged.*\(ICE state: checking\).*TURN/);
+    });
+  });
+});
+
+describe('PeerLink selected candidate pair and TURN use', () => {
+  const TURN = { urls: ['turn:turn.example:3478?transport=udp'], username: 'u', credential: 'c' };
+
+  // getStats() as Chrome reports it: the transport names the selected pair.
+  function chromeStats(localType, remoteType, { relayProtocol = 'udp', protocol = 'udp' } = {}) {
+    return new Map([
+      ['T1', { type: 'transport', selectedCandidatePairId: 'P1' }],
+      ['P1', { type: 'candidate-pair', localCandidateId: 'L1', remoteCandidateId: 'R1', state: 'succeeded' }],
+      ['L1', { type: 'local-candidate', candidateType: localType, protocol, relayProtocol: localType === 'relay' ? relayProtocol : undefined, address: '203.0.113.7' }],
+      ['R1', { type: 'remote-candidate', candidateType: remoteType, protocol, address: '198.51.100.9' }],
+    ]);
+  }
+
+  // Firefox: no selectedCandidatePairId; the pair itself is marked selected.
+  function firefoxStats(localType, remoteType) {
+    return new Map([
+      ['P0', { type: 'candidate-pair', localCandidateId: 'L0', remoteCandidateId: 'R0', state: 'failed' }],
+      ['P1', { type: 'candidate-pair', localCandidateId: 'L1', remoteCandidateId: 'R1', state: 'succeeded', selected: true }],
+      ['L0', { type: 'local-candidate', candidateType: 'relay', protocol: 'udp' }],
+      ['R0', { type: 'remote-candidate', candidateType: 'relay', protocol: 'udp' }],
+      ['L1', { type: 'local-candidate', candidateType: localType, protocol: 'udp' }],
+      ['R1', { type: 'remote-candidate', candidateType: remoteType, protocol: 'udp' }],
+    ]);
+  }
+
+  async function connectedWith(stats, iceServers) {
+    const link = new PeerLink({ role: 'host', sendSignal: () => true, RTCPeerConnectionImpl: FakePC, ...(iceServers ? { iceServers } : {}) });
+    const pc = FakePC.last;
+    pc.getStats = async () => stats;
+    pc.connectionState = 'connected';
+    pc.onconnectionstatechange();
+    await new Promise((r) => setTimeout(r, 0));
+    const snapshot = link.diagnostics();
+    link.close();
+    return snapshot;
+  }
+
+  it.each([
+    ['host', 'host', false],
+    ['srflx', 'srflx', false],
+    ['prflx', 'srflx', false],
+    ['host', 'prflx', false],
+    ['relay', 'srflx', true],
+    ['srflx', 'relay', true],
+    ['relay', 'relay', true],
+  ])('local %s / remote %s -> usingTurnRelay %s', async (local, remote, relayed) => {
+    const d = await connectedWith(chromeStats(local, remote), [TURN]);
+    expect(d).toMatchObject({ localCandidateType: local, remoteCandidateType: remote, usingTurnRelay: relayed, turnConfigured: true });
+    expect(d.turnTransport).toBe(local === 'relay' ? 'udp' : null);
+  });
+
+  it('reports how this browser reaches the TURN server (tcp / tls)', async () => {
+    expect((await connectedWith(chromeStats('relay', 'host', { relayProtocol: 'tls' }), [TURN])).turnTransport).toBe('tls');
+    expect((await connectedWith(chromeStats('relay', 'host', { relayProtocol: 'tcp' }), [TURN])).turnTransport).toBe('tcp');
+  });
+
+  it("uses Firefox's selected pair, not a failed relay pair", async () => {
+    expect(await connectedWith(firefoxStats('host', 'srflx'), [TURN])).toMatchObject({ localCandidateType: 'host', remoteCandidateType: 'srflx', usingTurnRelay: false });
+  });
+
+  it('TURN being configured does not make usingTurnRelay true; no stats means unknown, not relayed', async () => {
+    const d = await connectedWith(new Map(), [TURN]);
+    expect(d).toMatchObject({ turnConfigured: true, usingTurnRelay: false, localCandidateType: null });
+  });
+
+  it('turnConfigured is false with STUN-only servers', async () => {
+    expect((await connectedWith(chromeStats('host', 'host'))).turnConfigured).toBe(false);
+  });
+
+  it('keeps addresses and credentials out of the diagnostics', async () => {
+    const text = JSON.stringify(await connectedWith(chromeStats('relay', 'relay'), [TURN]));
+    expect(text).not.toMatch(/203\.0\.113\.7|198\.51\.100\.9/);
+    expect(text).not.toContain('"c"');
+    expect(text).not.toContain('credential');
+  });
+
+  it('passes the ICE servers and policy to RTCPeerConnection, defaulting to "all" (direct paths preferred)', () => {
+    const link = new PeerLink({ role: 'host', sendSignal: () => true, RTCPeerConnectionImpl: FakePC, iceServers: [TURN] });
+    expect(FakePC.last.config).toEqual({ iceServers: [TURN], iceTransportPolicy: 'all' });
+    link.close();
+  });
+});

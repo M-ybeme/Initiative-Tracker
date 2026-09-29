@@ -9,7 +9,8 @@ import {
   MAX_CHANNEL_MESSAGE_BYTES,
 } from '../../js/modules/live-share/protocol.js';
 import { generateRoomId, isValidRoomId, buildJoinUrl, readRoomIdFromHash } from '../../js/modules/live-share/room-id.js';
-import { resolveRelayUrl, LOCAL_RELAY_URL, PRODUCTION_RELAY_URL } from '../../js/modules/live-share/config.js';
+import { resolveRelayUrl, LOCAL_RELAY_URL, PRODUCTION_RELAY_URL, DEFAULT_ICE_SERVERS } from '../../js/modules/live-share/config.js';
+import { candidateType } from '../../js/modules/live-share/peer-link.js';
 
 describe('room ids and join links', () => {
   it('generates 22-character base64url ids from 128 random bits', () => {
@@ -65,6 +66,20 @@ describe('relay URL resolution', () => {
   });
 });
 
+describe('ICE server configuration', () => {
+  it('is STUN only, with well-formed stun:host:port URLs, shared by host and player', () => {
+    expect(Array.isArray(DEFAULT_ICE_SERVERS)).toBe(true);
+    const urls = DEFAULT_ICE_SERVERS.flatMap((server) => [].concat(server.urls));
+    expect(urls.length).toBeGreaterThan(0);
+    for (const url of urls) expect(url).toMatch(/^stun:[a-z0-9.-]+\.[a-z]{2,}:\d{2,5}$/);
+    // No TURN before Milestone 8, and so no credentials in the public page.
+    for (const server of DEFAULT_ICE_SERVERS) {
+      expect(server).not.toHaveProperty('username');
+      expect(server).not.toHaveProperty('credential');
+    }
+  });
+});
+
 describe('relay frames', () => {
   it('accepts known frames', () => {
     expect(parseRelayFrame('{"type":"registered"}').ok).toBe(true);
@@ -89,6 +104,28 @@ describe('negotiation payloads', () => {
     expect(parseSignalData(offer)).toEqual({ ok: true, signal: offer });
     const cand = candidateSignal({ candidate: 'candidate:1 1 udp 1 x 1 typ host', sdpMid: '0', sdpMLineIndex: 0 });
     expect(parseSignalData(cand)).toEqual({ ok: true, signal: cand });
+  });
+
+  it('accepts real browser candidates of every shape (mDNS host, IPv6 srflx, TCP, Firefox index-only) unchanged', () => {
+    const lines = [
+      'candidate:2395300328 1 udp 2113937151 3f1c9e1a-0b7d-4c52-9d2a-8f2c0e6a1b44.local 58113 typ host generation 0 ufrag Ymm1 network-cost 999',
+      'candidate:842163049 1 udp 1677729535 2001:db8:85a3:0:0:8a2e:370:7334 61558 typ srflx raddr :: rport 0 generation 0 ufrag BYCM network-cost 999',
+      'candidate:1 1 tcp 1518280447 3f1c9e1a-0b7d-4c52-9d2a-8f2c0e6a1b44.local 9 typ host tcptype active generation 0 ufrag Ymm1 network-cost 999',
+    ];
+    for (const line of lines) {
+      const signal = candidateSignal({ candidate: line, sdpMid: '0', sdpMLineIndex: 0, usernameFragment: 'Ymm1' });
+      expect(parseSignalData(JSON.parse(JSON.stringify(signal)))).toEqual({ ok: true, signal });
+      expect(signal.candidate.candidate).toBe(line);
+    }
+    const firefox = candidateSignal({ candidate: lines[0], sdpMid: null, sdpMLineIndex: 0 });
+    expect(parseSignalData(firefox).ok).toBe(true);
+  });
+
+  it('reads the candidate type without looking at the address', () => {
+    expect(candidateType('candidate:1 1 udp 1 x.local 5 typ host generation 0')).toBe('host');
+    expect(candidateType('candidate:1 1 udp 1 203.0.113.9 5 typ srflx raddr 0.0.0.0 rport 0')).toBe('srflx');
+    expect(candidateType('candidate:1 1 udp 1 203.0.113.9 5 typ relay')).toBe('relay');
+    expect(candidateType('garbage')).toBe('unknown');
   });
 
   it('drops unexpected fields', () => {

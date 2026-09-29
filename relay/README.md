@@ -21,10 +21,12 @@ seats, passwords, the Battle Map or any game state.
 | `node-relay.mjs` | Local relay (Node + `ws`) for development and Playwright |
 | `cloudflare/worker.mjs` | Deployed relay: a Worker routes each room to its own Durable Object |
 | `cloudflare/wrangler.toml` | Cloudflare config (Durable Object binding, allowed page origins) |
+| `turn-credentials.mjs` | `GET /turn-credentials`: short-lived TURN credentials, shared unchanged by both runtimes (see [TURN fallback](#turn-fallback)) |
 
 Browser side (`js/modules/live-share/`): `signaling-client.js` (relay WebSocket), `peer-link.js`
 (RTCPeerConnection + data channel, failure classification), `protocol.js` (message validation),
-`room-id.js` (room ids and join links), `config.js` (relay URL and STUN servers). The prototype page is
+`room-id.js` (room ids and join links), `config.js` (relay URL and STUN servers), `ice-config.js` (fetches
+TURN credentials and builds each connection's ICE servers). The prototype page is
 `liveshare-dev.html` with `js/live-share-dev.js`. It isn't linked from the site navigation.
 
 ## How Milestone 0 works
@@ -73,14 +75,45 @@ gathering, signaling and data channel states, the selected candidate *types* (ho
 last protocol error and the last message sent or received. It never contains the room id, join link
 or IP addresses.
 
+Each peer connection also counts its ICE candidates through every step, so a stalled connection shows
+which step stopped (`peers.<id>.candidates`):
+
+| Field | Meaning |
+| --- | --- |
+| `localGenerated` / `localTypes` | candidates this browser gathered, by type (`host` is usually an mDNS `.local` name, `srflx` comes from STUN) |
+| `localSent` | of those, how many went to the relay (should equal `localGenerated`) |
+| `localGatheringComplete` | this browser finished gathering |
+| `remoteReceived` / `remoteTypes` | candidates that arrived from the other side (should equal the other side's `localSent`) |
+| `remoteQueued` | of those, how many arrived before the offer/answer was applied and waited for it |
+| `remoteApplied` / `remoteApplyErrors` | `addIceCandidate` successes and failures; `lastError` keeps the latest failure |
+| `remotePending` | candidates still waiting for the remote description (0 once it is set) |
+
+`remoteDescriptionSet` says whether the other side's offer/answer has been applied. There is no
+end-of-candidates message: the other side doesn't need one for a data channel.
+
 Failures are labelled by where they happened:
 
 | Label | Meaning |
 | --- | --- |
 | `Signaling failure: …` | The relay couldn't be reached, the room has no host, the host left, or the other side never answered through the relay |
-| `Connection failure (ICE)` | Offer and answer were exchanged, but no network path between the browsers worked. On a STUN-only build this usually means that network needs TURN (Milestone 8), not that the design is wrong |
+| `Connection failure (ICE)` | Offer and answer were exchanged, but no network path between the browsers worked. With TURN available this means even the relay path failed (check `turn` and the TURN notice); without TURN, that network probably needs it |
 | `Connection failure (datachannel)` | ICE connected, but the data channel never opened |
 | `Connection failure (negotiation)` | A browser rejected the offer or answer |
+| `WebRTC blocked in this browser` | This browser gathered **no** ICE candidates at all, so it can't connect to anyone. Reported as soon as gathering ends, on the host's status line or the player's. Almost always an extension (VPN or "WebRTC leak" protection), a privacy setting (e.g. Brave shields) or a managed policy |
+
+An ICE timeout says which step stalled: no candidates received from the other side (look at the other
+side: it probably shows `WebRTC blocked in this browser`), candidates received but none applied, or
+candidates exchanged with no working path (a network that needs TURN).
+
+**Checking a browser:** in its developer console on any page, this prints how many candidates the browser
+can gather (a normal browser gathers several within a second; `0` means WebRTC is blocked there):
+
+```js
+const pc = new RTCPeerConnection({ iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] });
+pc.createDataChannel('x'); let n = 0;
+pc.onicecandidate = (e) => (e.candidate ? n++ : console.log('candidates gathered:', n));
+await pc.setLocalDescription(await pc.createOffer());
+```
 
 ## Running locally
 
@@ -96,8 +129,8 @@ on a local page (`localhost`, `127.0.0.1`, `[::1]`): any other origin, including
 ignores it and always uses `PRODUCTION_RELAY_URL`, so a crafted link to the real site can't route
 signaling through a relay of its author's choosing. An override that isn't a valid `ws://`/`wss://` URL
 falls back to the local relay. Two more development
-parameters exist: `?forceRelay=1` allows only TURN candidates (with no TURN configured, this
-forces an ICE failure) and `?iceTimeoutMs=`.
+parameters exist: `?forceRelay=1` allows only TURN relay candidates (debug/test only; see
+[TURN fallback](#turn-fallback)) and `?iceTimeoutMs=`.
 
 To run the real Cloudflare code locally instead of the Node relay:
 
@@ -110,16 +143,33 @@ npx wrangler@4 dev --port 8787       # same URL, same protocol, Durable Objects 
 
 ```bash
 npx vitest run tests/unit/live-share-relay.test.js tests/unit/live-share-protocol.test.js \
-  tests/unit/live-share-peer-link.test.js tests/integration/live-share-node-relay.test.js
-npx playwright test tests/e2e/live-share-networking.spec.js
+  tests/unit/live-share-peer-link.test.js tests/unit/live-share-turn.test.js \
+  tests/integration/live-share-node-relay.test.js
+npx playwright test tests/e2e/live-share-networking.spec.js tests/e2e/live-share-mdns.spec.js
 ```
+
+`live-share-networking.spec.js` launches Chromium with plain local IP host candidates;
+`live-share-mdns.spec.js` runs the same flow with Chrome's default mDNS (`.local`) host candidates, as
+real browsers gather them. Both assert that every candidate is generated, sent, received and applied.
+The networking spec also covers TURN: a direct path wins while TURN is available (`usingTurnRelay:
+false`), a forced relay-only connection goes through a TURN server (`usingTurnRelay: true`), and a
+page that can't get TURN credentials still connects directly.
+
+Playwright's global setup (`tests/helpers/live-share-turn-server.js`) starts a small TURN server
+(`node-turn`, loopback only, UDP port 3479) with credentials made up fresh for each run, and starts the
+Node relay with the same values as `DEV_TURN_*`, so no test needs Cloudflare or the internet.
 
 Playwright starts the Node relay on port 8788 itself. To run the same browser spec against another
 relay (for example `wrangler dev`, or the deployed Worker), set `LIVE_SHARE_TEST_RELAY`:
 
 ```bash
-LIVE_SHARE_TEST_RELAY=ws://127.0.0.1:8787 npx playwright test tests/e2e/live-share-networking.spec.js
+LIVE_SHARE_TEST_RELAY=ws://127.0.0.1:8787 npx playwright test tests/e2e/live-share-networking.spec.js tests/e2e/live-share-mdns.spec.js
 ```
+
+For the TURN tests to pass against `wrangler dev`, give the Worker the test TURN server's credentials:
+set `LIVE_SHARE_TEST_TURN_USERNAME` and `LIVE_SHARE_TEST_TURN_CREDENTIAL` to values of your choice
+for the Playwright run, and start `wrangler dev` with the same values as
+`--var DEV_TURN_URLS:turn:127.0.0.1:3479?transport=udp --var DEV_TURN_USERNAME:… --var DEV_TURN_CREDENTIAL:…`.
 
 ## Deploying the Cloudflare relay
 
@@ -133,10 +183,11 @@ npx wrangler@4 deploy                # prints https://dmtoolbox-live-share-relay
 curl https://dmtoolbox-live-share-relay.<subdomain>.workers.dev/health   # -> ok
 ```
 
-No secrets are involved: the Worker holds no credentials, and `ALLOWED_ORIGINS` in `wrangler.toml` lists
-the page origins allowed to open relay WebSockets (the Netlify site, plus localhost:3000 and :3100 for
-development). This Origin check stops other websites from using the relay from their visitors'
-browsers. It isn't authentication.
+Signaling needs no secrets. The only secrets are the TURN key's (see [TURN fallback](#turn-fallback)),
+and they live in Wrangler secrets, never in `wrangler.toml`. `ALLOWED_ORIGINS` in `wrangler.toml` lists
+the page origins allowed to open relay WebSockets and fetch TURN credentials (the Netlify site, plus
+localhost:3000 and :3100 for development). This Origin check stops other websites from using the relay
+from their visitors' browsers. It isn't authentication.
 
 After the first deploy, set `PRODUCTION_RELAY_URL` in `js/modules/live-share/config.js` to the `wss://`
 form of that URL, and deploy the site to Netlify. The deployed page has no other way to reach a relay
@@ -144,6 +195,121 @@ form of that URL, and deploy the site to Netlify. The deployed page has no other
 configured". Before that, you can check the deployed Worker from a local page, which is in
 `ALLOWED_ORIGINS`: `http://localhost:3000/liveshare-dev?relay=wss://dmtoolbox-live-share-relay.<subdomain>.workers.dev`,
 or `LIVE_SHARE_TEST_RELAY=wss://… npx playwright test tests/e2e/live-share-networking.spec.js`.
+
+## TURN fallback
+
+Some networks (many mobile carriers, symmetric NATs, corporate and school networks) block every direct
+path between two browsers, so STUN alone can't connect them. A **TURN server** then relays the
+browsers' WebRTC packets. Live Share uses TURN only as a fallback: peer connections keep
+`iceTransportPolicy: "all"`, so ICE still picks a direct (`host` / `srflx` / `prflx`) path whenever one
+works, and uses a `relay` candidate only when nothing direct does.
+
+### Signaling and TURN are separate
+
+| | Signaling relay (this Worker / Durable Objects) | TURN (Cloudflare Realtime TURN) |
+| --- | --- | --- |
+| Carries | offers, answers, ICE candidates, while connecting | the connection's encrypted WebRTC packets, only when no direct path works |
+| Knows | room ids and connection ids | the two browsers' IP addresses and ports, packet sizes and timing |
+| Can read content | no content passes through it | no: the data channel is end-to-end encrypted (DTLS) between the browsers |
+| Stores | nothing | nothing from the app; the provider keeps its own usage/billing records |
+
+The Worker's only TURN role is `GET /turn-credentials`, a stateless route kept apart from the room code
+(`turn-credentials.mjs`): no TURN traffic passes through the Worker or the Durable Objects. The app
+never stores campaign data on either service. As with any relay, the TURN provider can see *that*
+two addresses exchanged encrypted traffic, how much and when; it cannot read it.
+
+### Credential flow
+
+```text
+page (host: each time a player joins; player: before joining the room)
+  └─ GET https://<relay>/turn-credentials         (Origin must be in ALLOWED_ORIGINS)
+       └─ Worker: POST https://rtc.live.cloudflare.com/v1/turn/keys/$TURN_KEY_ID/credentials/generate-ice-servers
+                  Authorization: Bearer $TURN_KEY_API_TOKEN, { "ttl": 14400 }
+       ◄─ { iceServers: [{ urls: [turn:…udp, turn:…tcp, turns:…tls], username, credential }], ttlSeconds }
+  └─ RTCPeerConnection({ iceServers: [STUN…, TURN…], iceTransportPolicy: "all" })
+```
+
+- The long-term TURN key (`TURN_KEY_ID`, `TURN_KEY_API_TOKEN`) never leaves the Worker; browsers only
+  ever get credentials that expire after **4 hours** (`TURN_CREDENTIAL_TTL_SECONDS`, long enough for a
+  play session: TURN checks them again whenever a browser refreshes its relay allocation).
+- The Worker keeps TURN over UDP (3478, 443), TCP (3478, 80) and TLS (5349, 443) and drops the port-53
+  URLs, which browsers block.
+- The page holds credentials in memory for one connection attempt: never in storage, logs or diagnostics.
+- Responses are `Cache-Control: no-store`; provider errors reach the page only as `turn-unavailable`.
+
+### When TURN is unavailable
+
+If the credential request fails, times out (5 s), is refused or returns anything unusable, the page
+says **"TURN unavailable; direct connections may still work."** and connects STUN-only. A relay with no
+TURN source answers `503 turn-not-configured` and the page says so. Neither stops a room from being
+created or joined; only networks that need a relay will fail, with the usual ICE diagnosis.
+
+### Setting up Cloudflare TURN (production)
+
+1. In the Cloudflare dashboard, open **Realtime → TURN Server** and create a TURN key. Note its
+   **Key ID** and **API token** (the token is shown once).
+2. Store both as Worker secrets (you'll be prompted for each value; nothing goes into a file or the repo):
+
+   ```bash
+   cd relay/cloudflare
+   npx wrangler@4 secret put TURN_KEY_ID
+   npx wrangler@4 secret put TURN_KEY_API_TOKEN
+   npx wrangler@4 deploy
+   ```
+
+3. Check it (expect `200` and a JSON body with `iceServers`; the credentials shown are short-lived):
+
+   ```bash
+   curl -i -H "Origin: https://dnddmtoolbox.netlify.app" https://dmtoolbox-live-share-relay.<subdomain>.workers.dev/turn-credentials
+   ```
+
+Cloudflare bills TURN by relayed traffic, with a monthly free allowance; see Cloudflare's Realtime
+pricing page. Only connections that actually need a relay use it.
+
+**Rotating the TURN key:** create a new TURN key, `wrangler secret put` both values again and deploy,
+then delete the old key in the dashboard. Pages fetch credentials per connection, so new connections use
+the new key at once; credentials minted from the old key stop working when it is deleted (and expire
+within 4 hours regardless).
+
+**Abuse note:** the Origin check keeps other websites' pages from requesting credentials, but a
+non-browser client can send any Origin, so anyone could mint short-lived credentials and relay traffic
+at the project's expense. Rate limiting and tying credentials to a live room are Milestone 8 work.
+
+### Local development
+
+`node relay/node-relay.mjs` serves the same `/turn-credentials` route from environment variables:
+
+| Variables | Effect |
+| --- | --- |
+| `TURN_KEY_ID`, `TURN_KEY_API_TOKEN` | real Cloudflare TURN credentials (the same key as production, or a separate development key) |
+| `DEV_TURN_URLS` (comma-separated `turn:` URLs), `DEV_TURN_USERNAME`, `DEV_TURN_CREDENTIAL` | a fixed TURN server of your own, e.g. a local test server |
+| neither | `503 turn-not-configured`: STUN-only, which is all you need on one machine or one network |
+| `LIVE_SHARE_ALLOWED_ORIGINS` | page origins it serves (default `http://localhost:3000,http://localhost:3100`, as in `wrangler.toml`) |
+
+For `wrangler dev`, put the same variables in `relay/cloudflare/.dev.vars` (gitignored) or pass them
+with `--var NAME:value`.
+
+### Diagnostics
+
+| Field | Meaning |
+| --- | --- |
+| `turn.status` (page) | `available`, `not-configured` or `unavailable` for this page's last credential fetch |
+| `turnConfigured` (peer) | this connection was given at least one TURN server |
+| `localCandidateType` / `remoteCandidateType` | the selected candidate pair, from `getStats()`: `host`, `srflx`, `prflx` or `relay` |
+| `usingTurnRelay` | `true` only when the selected pair has a `relay` candidate on either side, never just because TURN was configured |
+| `turnTransport` | when this side's selected candidate is `relay`: how it reaches the TURN server (`udp`, `tcp` or `tls`) |
+| `transportProtocol` | the selected candidate's protocol |
+
+Troubleshooting:
+
+- `turn.status: "not-configured"` on the live site → the TURN secrets aren't set on the Worker.
+- `turn.status: "unavailable"` → the credential request failed; the Worker's logs
+  (`npx wrangler@4 tail`) show `turn-credentials: TURN provider answered 401` and similar, never secrets.
+- TURN available but `Connection failure (ICE)` → even the relay path failed; try `?forceRelay=1` on
+  both sides to test TURN alone. Networks that block UDP need TURN over TCP/TLS, which the credentials
+  include.
+- `?forceRelay=1` (debug/test only) makes both pages relay-only, which proves TURN end to end:
+  expect `usingTurnRelay: true` and `localCandidateType: "relay"`.
 
 ## Manual remote-network test (Milestone 0 exit)
 
@@ -154,9 +320,10 @@ so every scenario starts a new room.
 1. **Baseline, same Wi-Fi:** desktop opens `https://dnddmtoolbox.netlify.app/liveshare-dev`, clicks
    **Start room**, **Copy join link**. Send the link to a phone on the same Wi-Fi and open it. Expect
    "hello" on the phone, and on the desktop `Connected — sent "hello"`.
-2. **Remote, mobile data:** turn Wi-Fi off on the phone and open a new join link (start a new room).
-   Expect the same result. The diagnostics' `localCandidateType`/`remoteCandidateType` will usually
-   show `srflx` (NAT traversal via STUN).
+2. **Remote, mobile data:** use a clean Chrome or Guest profile as the host, turn Wi-Fi off on the
+   phone and open a new join link (start a new room). Expect the same result. The diagnostics show
+   either a direct path (`srflx`/`prflx`, `usingTurnRelay: false`) or, on carriers that block direct
+   paths, `localCandidateType`/`remoteCandidateType: "relay"` and `usingTurnRelay: true`.
 3. **Remote, two home networks:** start a new room; a person on another network opens its link.
 4. **Clean disconnect:** tap **Leave** on the phone (the desktop's player list empties), then start a
    new room, join, and click **End session** on the desktop (the phone shows "The host ended the

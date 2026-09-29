@@ -16,11 +16,34 @@ The DM's Toolbox has evolved through focused feature releases. Minor versions (2
 - **1.9.x**: Battle map measurement tools, persistent fog shapes, and generator integration across NPC/Tavern/Shop systems
 - **1.8.x**: Spell database expansion to 432+ spells, inventory management, loot generator overhaul, and character token generation
 
-**Current version: 2.3.22 (September 2026)**
+**Current version: 2.3.23 (September 2026)**
 
 ---
 
 ## [Unreleased]
+
+---
+
+## [2.3.23] - 2026-09-28
+**Live Share networking hardening and TURN fallback**
+
+Still the Milestone 0 development prototype (`liveshare-dev.html`, not linked from the site). **TURN has not been validated in production yet:** it is tested locally and against the Cloudflare Worker running under `wrangler dev`, but the deployed relay has no TURN key configured yet and the real desktop-to-phone-on-mobile-data test is still to do (steps in `relay/README.md`).
+
+### Added
+- **ICE candidate lifecycle diagnostics.** Each connection counts its ICE candidates through every step (generated, sent, received, queued before the offer/answer, applied, `addIceCandidate` errors), by candidate type and never by address, and shows whether the remote description is set. A connection timeout now says which step stalled: no candidates received from the other side, candidates received but none applied, or candidates exchanged with no working path. A browser that gathers no candidates at all (WebRTC blocked by an extension, privacy setting or policy) is reported at once as "WebRTC blocked in this browser" instead of timing out 20 s later; on the host this stays on its status line
+- **TURN fallback via Cloudflare Realtime TURN.** When no direct path works (for example a desktop host and a phone on mobile data), a connection can go through a TURN relay over UDP, TCP or TLS. Each page fetches short-lived (4-hour) TURN credentials from the relay's new `/turn-credentials` route, which is restricted to the site's origins and kept separate from room signaling; the long-term TURN key stays in Wrangler secrets and never reaches the page, logs or diagnostics. The diagnostics show `turn.status`, `turnConfigured`, the selected candidate pair, `usingTurnRelay` and `turnTransport`
+
+### Changed
+- **Direct connections are still preferred.** Peer connections keep ICE transport policy "all", so a direct (`host` / `srflx` / `prflx`) path wins whenever one works and TURN is used only when nothing direct does. `usingTurnRelay` comes from the selected candidate pair in `getStats()`, never from TURN merely being configured. Relay-only (`?forceRelay=1`) stays a debug/test switch
+- **STUN-only fallback when TURN credentials are unavailable.** If the credential request fails, times out (5 s), is refused or returns anything unusable, the page says "TURN unavailable; direct connections may still work." and connects STUN-only; a relay with no TURN key answers "not configured". Neither stops a room from being created or joined
+
+### Fixed
+- Importing `relay/node-relay.mjs` without a script path (e.g. `node -e`) no longer crashes on start-up
+
+### Internal / Tests
+- Playwright's global setup starts a loopback TURN server (`node-turn`, dev dependency; its unused CLI dependencies `log4js` and `js-yaml` are overridden to patched versions) with per-run credentials, and always starts a fresh local relay that hands them out, so forced-relay tests need neither Cloudflare nor the internet
+- New tests: credential endpoint (origin checks, no secret in any response, provider failures, not configured, Node/Cloudflare origin parity, no TURN secret in `wrangler.toml`), browser ICE server resolution and STUN fallback, selected-pair classification (`usingTurnRelay` true only for a relay candidate, Chrome and Firefox stats shapes), candidate lifecycle (queueing and exactly-once flush, apply errors, zero-candidate detection), real Chrome-shaped candidates, and browser specs for the direct path with TURN available, forced TURN, TURN unavailable, mDNS candidate gathering and blocked WebRTC
+- `relay/README.md` documents signaling vs TURN roles, the credential flow, Wrangler secret setup and rotation, local development variables, diagnostics and troubleshooting
 
 ---
 

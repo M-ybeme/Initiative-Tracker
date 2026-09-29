@@ -1,7 +1,15 @@
+import { randomBytes } from 'node:crypto';
 import { defineConfig, devices } from '@playwright/test';
+
+// Test-only credentials for the local TURN server (tests/helpers/live-share-turn-server.js), made up
+// fresh for each run. Set on process.env so the global setup and every worker agree on them.
+process.env.LIVE_SHARE_TEST_TURN_USERNAME ||= `test-${randomBytes(4).toString('hex')}`;
+process.env.LIVE_SHARE_TEST_TURN_CREDENTIAL ||= randomBytes(18).toString('base64url');
 
 export default defineConfig({
   testDir: './tests/e2e',
+  // A loopback-only TURN server for the Live Share specs' relayed-path tests.
+  globalSetup: './tests/helpers/live-share-turn-server.js',
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
   // CI retries a failed test to record a trace (see `trace: 'on-first-retry'`), but a test that only
@@ -40,6 +48,8 @@ export default defineConfig({
   //
   // The second server is the local Live Share signaling relay (relay/node-relay.mjs) on its own test
   // port, 8788, so Live Share tests never depend on the deployed Cloudflare relay or a dev relay on 8787.
+  // Its /turn-credentials endpoint hands out the local TURN server's test credentials (DEV_TURN_*). It is
+  // always started fresh, never reused, so it can't be a relay started without those credentials.
   webServer: [
     {
       command: 'npx serve -l 3100 --no-etag',
@@ -50,8 +60,13 @@ export default defineConfig({
     {
       command: 'node relay/node-relay.mjs --port 8788',
       url: 'http://localhost:8788/health',
-      reuseExistingServer: !process.env.CI,
+      reuseExistingServer: false,
       timeout: 30000,
+      env: {
+        DEV_TURN_URLS: 'turn:127.0.0.1:3479?transport=udp',
+        DEV_TURN_USERNAME: process.env.LIVE_SHARE_TEST_TURN_USERNAME,
+        DEV_TURN_CREDENTIAL: process.env.LIVE_SHARE_TEST_TURN_CREDENTIAL,
+      },
     },
   ],
 });

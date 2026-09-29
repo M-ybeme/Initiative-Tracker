@@ -6,21 +6,46 @@
  *   node relay/node-relay.mjs [--port 8787]
  *
  * GET /health answers "ok"; WebSocket upgrades go to /rooms/<roomId>?role=host|peer.
+ * GET /turn-credentials is the same TURN credential endpoint as the Cloudflare relay
+ * (turn-credentials.mjs). It reads TURN_KEY_ID/TURN_KEY_API_TOKEN (real Cloudflare TURN) or
+ * DEV_TURN_URLS/DEV_TURN_USERNAME/DEV_TURN_CREDENTIAL (a local TURN server) from the environment;
+ * with neither it answers 503 and browsers continue STUN-only. LIVE_SHARE_ALLOWED_ORIGINS overrides
+ * the page origins it serves (default: the development origins in cloudflare/wrangler.toml).
  */
 import http from 'node:http';
 import { pathToFileURL } from 'node:url';
 import { WebSocketServer } from 'ws';
 import { RelayRoom, RELAY_LIMITS, parseRoomRequest } from './room-core.mjs';
+import { handleTurnCredentialRequest } from './turn-credentials.mjs';
+
+// The development origins of cloudflare/wrangler.toml's ALLOWED_ORIGINS (a unit test checks they agree).
+export const DEV_ALLOWED_ORIGINS = 'http://localhost:3000,http://localhost:3100';
 
 // `host` defaults to all interfaces (dual-stack), so both localhost/::1 and a phone on the same
 // Wi-Fi can reach a development relay.
-export function startRelay({ port = 8787, host, limits = RELAY_LIMITS } = {}) {
+export function startRelay({
+  port = 8787,
+  host,
+  limits = RELAY_LIMITS,
+  turnEnv = process.env,
+  allowedOrigins = process.env.LIVE_SHARE_ALLOWED_ORIGINS || DEV_ALLOWED_ORIGINS,
+  fetchImpl = globalThis.fetch,
+} = {}) {
   const rooms = new Map(); // roomId -> RelayRoom
 
   const server = http.createServer((req, res) => {
-    if (req.url === '/health') {
+    const path = String(req.url || '').split('?')[0];
+    if (path === '/health') {
       res.writeHead(200, { 'content-type': 'text/plain', 'access-control-allow-origin': '*' });
       return res.end('ok');
+    }
+    if (path === '/turn-credentials') {
+      handleTurnCredentialRequest({ method: req.method, origin: req.headers.origin }, turnEnv, {
+        allowedOrigins,
+        fetchImpl,
+        log: (reason) => console.warn(`turn-credentials: ${reason}`),
+      }).then(({ status, headers, body }) => res.writeHead(status, headers).end(body));
+      return;
     }
     res.writeHead(404).end();
   });
@@ -80,7 +105,7 @@ export function startRelay({ port = 8787, host, limits = RELAY_LIMITS } = {}) {
   });
 }
 
-if (import.meta.url === pathToFileURL(process.argv[1]).href) {
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   const portArg = process.argv.indexOf('--port');
   const port = portArg > -1 ? Number(process.argv[portArg + 1]) : Number(process.env.PORT) || 8787;
   startRelay({ port }).then(({ port: actual }) => {

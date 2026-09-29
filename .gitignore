@@ -34,3 +34,6 @@ docs/repo-profile.md
 
 # Cloudflare wrangler local state (relay/cloudflare)
 .wrangler/
+
+# Local Wrangler secrets (relay/cloudflare)
+.dev.vars

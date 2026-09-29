@@ -8,14 +8,27 @@
  * Milestone 0 keeps room state in memory and uses plain (non-hibernating) WebSockets: a room
  * lives only while its sockets are open, which is all signaling needs. Hibernation, room
  * lifetime/grace periods and connection-attempt limits are later milestones (7 and 8).
+ *
+ * `GET /turn-credentials` is a separate, stateless route (../turn-credentials.mjs): it mints
+ * short-lived Cloudflare Realtime TURN credentials from the TURN_KEY_ID / TURN_KEY_API_TOKEN Wrangler
+ * secrets. It never touches the Durable Objects, and TURN traffic itself never passes through here.
  */
 import { RelayRoom, parseRoomRequest } from '../room-core.mjs';
+import { handleTurnCredentialRequest, isAllowedOrigin } from '../turn-credentials.mjs';
 
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
     if (url.pathname === '/health') {
       return new Response('ok', { headers: { 'access-control-allow-origin': '*' } });
+    }
+    if (url.pathname === '/turn-credentials') {
+      const { status, headers, body } = await handleTurnCredentialRequest(
+        { method: request.method, origin: request.headers.get('Origin') },
+        env,
+        { allowedOrigins: env.ALLOWED_ORIGINS, log: (reason) => console.warn(`turn-credentials: ${reason}`) }
+      );
+      return new Response(body, { status, headers });
     }
 
     const parsed = parseRoomRequest(url);
@@ -32,16 +45,9 @@ export default {
   },
 };
 
-// Browsers always send Origin on WebSocket upgrades. This stops other websites from using the
-// relay from their visitors' browsers; it is not authentication (non-browser clients can set it).
-function isAllowedOrigin(origin, allowed) {
-  if (!origin) return false;
-  return String(allowed || '')
-    .split(',')
-    .map((o) => o.trim())
-    .filter(Boolean)
-    .includes(origin);
-}
+// isAllowedOrigin: browsers always send Origin on WebSocket upgrades and cross-origin fetches. This
+// stops other websites from using the relay from their visitors' browsers; it is not
+// authentication (non-browser clients can set it).
 
 export class RelayRoomObject {
   constructor(ctx, env) {

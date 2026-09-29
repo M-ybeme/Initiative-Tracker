@@ -13,12 +13,84 @@ let relay;
 let relayUrl;
 
 beforeAll(async () => {
-  relay = await startRelay({ port: 0, host: '127.0.0.1' });
+  relay = await startRelay({ port: 0, host: '127.0.0.1', turnEnv: {} });
   relayUrl = `ws://127.0.0.1:${relay.port}`;
 });
 
 afterAll(async () => {
   await relay.close();
+});
+
+describe('Live Share Node relay: /turn-credentials', () => {
+  const ORIGIN = 'http://localhost:3100';
+  const relays = [];
+  afterAll(async () => {
+    await Promise.all(relays.map((r) => r.close()));
+  });
+
+  async function relayWith(turnEnv, extra = {}) {
+    const r = await startRelay({ port: 0, host: '127.0.0.1', turnEnv, ...extra });
+    relays.push(r);
+    return `http://127.0.0.1:${r.port}/turn-credentials`;
+  }
+
+  const get = (url, headers = { Origin: ORIGIN }, method = 'GET') => fetch(url, { method, headers });
+
+  it('hands out the development TURN server to an allowed origin, uncached, with CORS for that origin', async () => {
+    const url = await relayWith({ DEV_TURN_URLS: 'turn:127.0.0.1:3479?transport=udp', DEV_TURN_USERNAME: 'dev', DEV_TURN_CREDENTIAL: 'devpass' });
+    const res = await get(url);
+    expect(res.status).toBe(200);
+    expect(res.headers.get('access-control-allow-origin')).toBe(ORIGIN);
+    expect(res.headers.get('cache-control')).toBe('no-store');
+    const body = await res.json();
+    expect(body.iceServers).toEqual([{ urls: ['turn:127.0.0.1:3479?transport=udp'], username: 'dev', credential: 'devpass' }]);
+  });
+
+  it('refuses other origins and requests with no Origin, without CORS headers', async () => {
+    const url = await relayWith({ DEV_TURN_URLS: 'turn:127.0.0.1:3479', DEV_TURN_USERNAME: 'dev', DEV_TURN_CREDENTIAL: 'devpass' });
+    for (const headers of [{ Origin: 'https://evil.example' }, {}]) {
+      const res = await get(url, headers);
+      expect(res.status).toBe(403);
+      expect(res.headers.get('access-control-allow-origin')).toBeNull();
+      expect(await res.text()).not.toContain('devpass');
+    }
+  });
+
+  it('answers 503 turn-not-configured without any TURN source', async () => {
+    const res = await get(await relayWith({}));
+    expect(res.status).toBe(503);
+    expect(await res.json()).toEqual({ error: 'turn-not-configured' });
+  });
+
+  it('mints Cloudflare credentials through the provider API, and leaks nothing when the provider fails', async () => {
+    const env = { TURN_KEY_ID: 'kid', TURN_KEY_API_TOKEN: 'secret-token-xyz' };
+    const ok = async () => ({
+      ok: true,
+      status: 201,
+      json: async () => ({ iceServers: [{ urls: ['turns:turn.cloudflare.com:443?transport=tcp'], username: 'cfu', credential: 'cfc' }] }),
+    });
+    const good = await get(await relayWith(env, { fetchImpl: ok }));
+    expect((await good.json()).iceServers[0]).toMatchObject({ username: 'cfu', credential: 'cfc' });
+
+    const failing = async () => ({ ok: false, status: 401, json: async () => ({ errors: ['token secret-token-xyz is invalid'] }) });
+    const bad = await get(await relayWith(env, { fetchImpl: failing }));
+    expect(bad.status).toBe(502);
+    const text = await bad.text();
+    expect(text).toBe(JSON.stringify({ error: 'turn-unavailable' }));
+    expect(text).not.toContain('secret-token-xyz');
+  });
+
+  it('uses the same origin list as the Cloudflare relay by default', async () => {
+    const url = await relayWith({ DEV_TURN_URLS: 'turn:127.0.0.1:3479', DEV_TURN_USERNAME: 'd', DEV_TURN_CREDENTIAL: 'p' });
+    expect((await get(url, { Origin: 'http://localhost:3000' })).status).toBe(200);
+    expect((await get(url, { Origin: 'http://localhost:3100' })).status).toBe(200);
+    expect((await get(url, { Origin: 'http://localhost:5173' })).status).toBe(403);
+  });
+
+  it('rejects other methods', async () => {
+    const url = await relayWith({ DEV_TURN_URLS: 'turn:127.0.0.1:3479', DEV_TURN_USERNAME: 'd', DEV_TURN_CREDENTIAL: 'p' });
+    expect((await get(url, { Origin: ORIGIN }, 'POST')).status).toBe(405);
+  });
 });
 
 function client(roomId, role) {

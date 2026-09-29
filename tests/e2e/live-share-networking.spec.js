@@ -3,30 +3,11 @@
 // RTCDataChannel. No network access beyond localhost is needed: with no reachable STUN server the
 // browsers still connect over their host candidates.
 import { test, expect } from '@playwright/test';
-
-// LIVE_SHARE_TEST_RELAY runs this spec against another relay speaking the same protocol, e.g.
-// `wrangler dev` (ws://localhost:8787) or the deployed Cloudflare relay (wss://...workers.dev).
-const RELAY = process.env.LIVE_SHARE_TEST_RELAY || 'ws://localhost:8788';
-// The clean URL: `serve` redirects /liveshare-dev.html to /liveshare-dev and drops the query string.
-const PAGE = `/liveshare-dev?relay=${RELAY}`;
+import { PAGE, startHost, diagnostics, expectCandidatePathComplete, blockTurnCredentials, selectedPath } from '../helpers/live-share.js';
 
 // Chromium hides local IPs behind mDNS names by default; two contexts on one machine can then fail
 // to resolve each other's candidates. Real deployments are unaffected (they use STUN candidates).
 test.use({ launchOptions: { args: ['--disable-features=WebRtcHideLocalIpsWithMdns'] } });
-
-async function startHost(browser) {
-  const context = await browser.newContext();
-  const page = await context.newPage();
-  await page.goto(PAGE);
-  await page.getByTestId('start-room').click();
-  await expect(page.getByTestId('host-status')).toHaveText('Room open — waiting for players');
-  const joinUrl = await page.getByTestId('join-link').textContent();
-  return { context, page, joinUrl };
-}
-
-async function diagnostics(page) {
-  return JSON.parse(await page.getByTestId('diagnostics').textContent());
-}
 
 test.describe('Live Share networking (Milestone 0)', () => {
   test('host and player connect over a data channel, "hello" arrives, and both disconnect cleanly', async ({ browser }) => {
@@ -42,6 +23,20 @@ test.describe('Live Share networking (Milestone 0)', () => {
     await expect(player.getByTestId('received-message')).toHaveText('hello', { timeout: 20000 });
     await expect(player.getByTestId('player-status')).toHaveText('Connected to host');
     await expect(host.page.getByTestId('peer-list')).toContainText('Connected — sent "hello"');
+
+    await expectCandidatePathComplete(host.page, player);
+
+    // TURN was available as a fallback, but a direct path won: TURN is not used just because it is configured.
+    for (const [page, key] of [[host.page, null], [player, 'host']]) {
+      const path = await selectedPath(page, key);
+      expect(path).toMatchObject({ turnConfigured: true, usingTurnRelay: false, turnTransport: null });
+      // Direct: host candidates, or peer-reflexive when the connection comes up before the other
+      // side's candidate has arrived through signaling (common on a fast local link). Never relay.
+      expect(['host', 'prflx']).toContain(path.localCandidateType);
+      expect(['host', 'prflx']).toContain(path.remoteCandidateType);
+      expect((await diagnostics(page)).turn).toMatchObject({ configured: true, status: 'available' });
+    }
+    await expect(player.getByTestId('turn-note')).toBeHidden();
 
     const hostDiag = await diagnostics(host.page);
     expect(hostDiag).toMatchObject({ role: 'host', signaling: 'ready', roomRegistered: true, playersOnRelay: 1, lastSent: 'hello' });
@@ -114,28 +109,122 @@ test.describe('Live Share networking (Milestone 0)', () => {
     await expect(page.getByTestId('host-status')).toContainText('Signaling failure: Could not reach the relay');
   });
 
-  test('when no network path works, the failure is reported as ICE, not signaling', async ({ browser }) => {
-    // forceRelay=1 allows only TURN candidates; with no TURN server there are none, so signaling
-    // completes but ICE cannot.
-    const url = `${PAGE}&forceRelay=1&iceTimeoutMs=3000`;
+  test('a player whose browser gathers no ICE candidates is told WebRTC is blocked, not left to time out', async ({ browser }) => {
+    // forceRelay=1 on the player only: it may use TURN candidates alone, and with no TURN server it
+    // gathers none, exactly like a browser whose WebRTC is blocked by an extension or policy.
+    const host = await startHost(browser);
+    const playerContext = await browser.newContext();
+    const player = await playerContext.newPage();
+    await blockTurnCredentials(player); // relay-only with no TURN server: nothing to gather
+    await player.goto(host.joinUrl.replace('#room=', '&forceRelay=1&iceTimeoutMs=15000#room='));
+
+    // Reported as soon as gathering ends, well before the 15 s connection timeout.
+    await expect(player.getByTestId('player-status')).toContainText('WebRTC blocked in this browser', { timeout: 5000 });
+    const playerLink = (await diagnostics(player)).peers.host;
+    expect(playerLink.failure.kind).toBe('no-candidates');
+    expect(playerLink.stage).toBe('answered');
+    expect(playerLink.candidates).toMatchObject({ localGenerated: 0, localSent: 0, localGatheringComplete: true });
+    await expect(player.getByTestId('received-message')).toHaveText('');
+    // The player leaves; the host's room stays open for the next one.
+    await expect(host.page.getByTestId('peer-list')).toContainText('No players connected.');
+    await expect(host.page.getByTestId('host-status')).toHaveText('Room open — waiting for players');
+
+    await host.context.close();
+    await playerContext.close();
+  });
+
+  test('a player whose host sends no candidates is told so by its ICE diagnosis', async ({ browser }) => {
+    // Only the host is blocked (forceRelay on the host page, not in the player's link): the player
+    // gathers normally but never receives a candidate from the host, the reported symptom.
     const hostContext = await browser.newContext();
     const host = await hostContext.newPage();
-    await host.goto(url);
+    await blockTurnCredentials(host); // relay-only with no TURN server: the host gathers nothing
+    await host.goto(`${PAGE}&forceRelay=1`);
     await host.getByTestId('start-room').click();
     await expect(host.getByTestId('host-status')).toHaveText('Room open — waiting for players');
-    const joinUrl = await host.getByTestId('join-link').textContent();
+    const joinUrl = (await host.getByTestId('join-link').textContent()).replace('&forceRelay=1', '&iceTimeoutMs=3000');
 
     const playerContext = await browser.newContext();
     const player = await playerContext.newPage();
     await player.goto(joinUrl);
 
     await expect(player.getByTestId('player-status')).toContainText('Connection failure (ICE)', { timeout: 15000 });
-    const diag = await diagnostics(player);
-    expect(diag.signaling).toBe('closed');
-    expect(diag.roomFound).toBe(true);
-    expect(diag.peers.host.failure.kind).toBe('ice');
-    expect(diag.peers.host.stage).toBe('answered');
-    await expect(player.getByTestId('received-message')).toHaveText('');
+    await expect(player.getByTestId('player-status')).toContainText('received no network candidates from the host');
+    const playerLink = (await diagnostics(player)).peers.host;
+    expect(playerLink.stage).toBe('answered');
+    expect(playerLink.candidates.remoteReceived).toBe(0);
+    expect(playerLink.candidates.localGenerated).toBeGreaterThan(0);
+    await expect(host.getByTestId('host-status')).toContainText('WebRTC blocked in this browser');
+
+    await hostContext.close();
+    await playerContext.close();
+  });
+
+  test('forced TURN: with relay-only ICE the connection goes through the TURN server and "hello" arrives', async ({ browser }) => {
+    // forceRelay=1 (debug/test only) on both sides: only relay candidates from the local TURN server.
+    const hostContext = await browser.newContext();
+    const hostPage = await hostContext.newPage();
+    await hostPage.goto(`${PAGE}&forceRelay=1`);
+    await hostPage.getByTestId('start-room').click();
+    await expect(hostPage.getByTestId('host-status')).toHaveText('Room open — waiting for players');
+    const joinUrl = await hostPage.getByTestId('join-link').textContent();
+    expect(joinUrl).toContain('forceRelay=1');
+
+    const playerContext = await browser.newContext();
+    const player = await playerContext.newPage();
+    const started = Date.now();
+    await player.goto(joinUrl);
+    await expect(player.getByTestId('received-message')).toHaveText('hello', { timeout: 20000 });
+    const connectMs = Date.now() - started;
+
+    const counts = await expectCandidatePathComplete(hostPage, player);
+    expect(Object.keys(counts.host.localTypes)).toEqual(['relay']);
+    expect(Object.keys(counts.player.localTypes)).toEqual(['relay']);
+    for (const [page, key] of [[hostPage, null], [player, 'host']]) {
+      const path = await selectedPath(page, key);
+      expect(path).toMatchObject({
+        turnConfigured: true,
+        usingTurnRelay: true,
+        localCandidateType: 'relay',
+        remoteCandidateType: 'relay',
+        turnTransport: 'udp',
+        dataChannelState: 'open',
+        connectionState: 'connected',
+      });
+    }
+    expect((await diagnostics(player)).lastReceived).toBe('hello');
+    // Well inside the 20 s connection timeout on a relayed path.
+    expect(connectMs).toBeLessThan(10000);
+
+    // No credential ever reaches the diagnostics.
+    const text = JSON.stringify(await diagnostics(hostPage)) + JSON.stringify(await diagnostics(player));
+    expect(text).not.toContain(process.env.LIVE_SHARE_TEST_TURN_CREDENTIAL);
+    expect(text).not.toContain(process.env.LIVE_SHARE_TEST_TURN_USERNAME);
+
+    await hostContext.close();
+    await playerContext.close();
+  });
+
+  test('TURN unavailable: both sides say so, and a direct connection still works', async ({ browser }) => {
+    const hostContext = await browser.newContext();
+    const hostPage = await hostContext.newPage();
+    await blockTurnCredentials(hostPage);
+    await hostPage.goto(PAGE);
+    await hostPage.getByTestId('start-room').click();
+    await expect(hostPage.getByTestId('host-status')).toHaveText('Room open — waiting for players');
+    const joinUrl = await hostPage.getByTestId('join-link').textContent();
+
+    const playerContext = await browser.newContext();
+    const player = await playerContext.newPage();
+    await blockTurnCredentials(player);
+    await player.goto(joinUrl);
+    await expect(player.getByTestId('received-message')).toHaveText('hello', { timeout: 20000 });
+
+    for (const [page, key] of [[hostPage, null], [player, 'host']]) {
+      await expect(page.getByTestId('turn-note')).toHaveText('TURN unavailable; direct connections may still work.');
+      expect((await diagnostics(page)).turn).toMatchObject({ configured: false, status: 'unavailable' });
+      expect(await selectedPath(page, key)).toMatchObject({ turnConfigured: false, usingTurnRelay: false, dataChannelState: 'open' });
+    }
 
     await hostContext.close();
     await playerContext.close();
