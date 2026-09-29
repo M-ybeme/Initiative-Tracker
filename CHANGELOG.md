@@ -16,11 +16,22 @@ The DM's Toolbox has evolved through focused feature releases. Minor versions (2
 - **1.9.x**: Battle map measurement tools, persistent fog shapes, and generator integration across NPC/Tavern/Shop systems
 - **1.8.x**: Spell database expansion to 432+ spells, inventory management, loot generator overhaul, and character token generation
 
-**Current version: 2.3.23 (September 2026)**
+**Current version: 2.3.24 (September 2026)**
 
 ---
 
 ## [Unreleased]
+
+---
+
+## [2.3.24] - 2026-09-28
+**Battle Map Live Share state seam (Live Share Milestone 1)**
+
+### Live Share
+- **Battle Map share-state seam (Milestone 1).** The Battle Map now has one read-only, player-safe view of its state for Live Share to use later (`js/modules/battle-map-share-state.js`). It is an allowlist: only map size, map transform, grid, token positions, sizes, rotation, names (only where the label is shown) and conditions, and persistent measurements are copied, so fields added to the Battle Map later are never shared by accident. A share-state revision moves only when something players could see changes, and one centralized signal reports it (checked after each redraw, unsaved-change mark and save, not at each edit site). HP and max HP, token and map images (no data URLs or image sources), auras, vision cones, fog, selection, drag, dialog and save bookkeeping, the DM's own pan/zoom and browser-storage data are never included. Nothing is sent over the network yet (that is Milestone 2), and saving, loading and editing the map work as before
+
+### Internal / Tests
+- Unit tests for the projection (hand-written expected snapshots, explicit absence of HP, private, editor, fog, asset and storage data, unknown fields never leaking, read-only) and for the revision (every player-visible change bumps it once; editor-only changes never do); a browser spec drives the real Battle Map (placing a token, editing HP through the HP dialog, toggling a label, reloading)
 
 ---
 

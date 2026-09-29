@@ -9,7 +9,7 @@
 **Authority:** The DM's browser owns all session, seat, admission and game state  
 **Synchronization (V1):** Throttled whole-state player-safe snapshots  
 **Product philosophy:** Temporary shared tactical state without moving persistent campaign data into centralized cloud storage.
-**Progress:** Milestone 0 complete and validated in production (2.3.22–2.3.23, 2026-09-28); Milestone 1 in progress.
+**Progress:** Milestone 0 complete and validated in production (2.3.22–2.3.23, 2026-09-28); Milestone 1 (share-state seam) complete in 2.3.24.
 
 **Revision note:** This plan was revised after an architecture review against the current codebase. Compared with the first draft, seats, passwords and room admission moved from the signaling service to the DM's browser; synchronization starts as whole snapshots instead of snapshots plus patches; a Battle Map state boundary and the player-safe projection are now the first Battle Map milestone; fog is explicitly a trusted-player feature; and the roadmap proves networking and remote rendering before building room UX.
 
@@ -874,6 +874,13 @@ Initially omit: map asset, fog, HP, and any permissions.
 
 Exit: every Battle Map change that players should see produces a new snapshot through the seam, and the projection tests prove what is excluded.
 
+**Status: complete (2.3.24).** The seam is `js/modules/battle-map-share-state.js`, wired into `battlemap.html`:
+
+- `projectPlayerSafeState({ state, persistentMeasurements })` is a pure allowlist projection: schema/version, map size (no image), map transform, grid, and per token only id, position, size, rotation, name (only where its label is shown) and conditions; plus persistent measurements. Every value is coerced to a primitive, so a field added to the Battle Map later is not shared unless it is added to the projection.
+- One change detector: after every rendered frame, every `setDirty()` and every `save()`, the seam recomputes the projection and, only if its content differs from the last one, increases `revision` and signals `onChange({ revision })`. Editor-only changes (selection, drag, the DM's pan/zoom, HP, fog, aura, vision cone, token images) never move the revision.
+- `window.BattleMapLiveShare` exposes `getPlayerSafeState()` (content plus revision) and `onShareableStateChanged(fn)` for later milestones. Nothing is sent anywhere yet.
+- Revisions restart at each page load; Milestone 2 pairs them with its session when it rejects stale snapshots.
+
 ## Milestone 2 — Remote Structured Rendering
 
 - send throttled whole-state snapshots over WebRTC,
@@ -1122,7 +1129,7 @@ Intentionally unresolved until the relevant milestone:
 - **Snapshot throttle interval** — the exact interval, starting from a value to be tuned with real use (Milestone 2).
 - **Payload and asset size limits** — maximum map image, token image and message sizes (Milestones 3 and 8).
 - **Seat-session credential generation** — the library and format used to create the random opaque tokens (Milestone 5).
-- **Share-state seam mechanism** — how the single "shareable state changed" signal is implemented inside the Battle Map (Milestone 1).
+- ~~**Share-state seam mechanism**~~ — decided in Milestone 1: change detection by value. The seam recomputes the allowlisted projection at three existing funnels (each rendered frame, `setDirty()`, `save()`) and signals only when the player-visible content differs, instead of adding a notifier call to each of the ~40 mutation sites.
 - **Host grace period and room lifetime** — durations for host-refresh recovery and room expiry (Milestone 7).
 
 ---

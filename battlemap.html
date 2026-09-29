@@ -21,6 +21,7 @@
   <script src="/js/generated/srd-allowlist.js"></script>
   <script src="/js/modules/srd-content-filter.js"></script>
   <script src="/js/indexed-db-storage.js"></script>
+  <script src="/js/modules/battle-map-share-state.js"></script>
 
   <style>
     :root {
@@ -938,11 +939,30 @@
   /** @typedef {{ id:string, type:'line'|'cone'|'circle', x1:number, y1:number, x2:number, y2:number, color:string, selected?:boolean }} PersistentMeasurement */
   const persistentMeasurements = /** @type{PersistentMeasurement[]} */([]);
 
+  // --- Live Share share-state seam (Milestone 1; js/modules/battle-map-share-state.js)
+  // One read-only boundary over the state above: an allowlisted player-safe projection plus one
+  // "player-visible state changed" signal. It is checked after every rendered frame (visible changes
+  // request one), after every setDirty() (changes made while the tab is hidden, when frames pause)
+  // and on every save() (edits that commit without either); the revision only moves when the
+  // projected content changes, so the extra checks cost nothing but a comparison.
+  // Nothing here sends anything anywhere; Live Share will subscribe in a later milestone.
+  const shareState = window.BattleMapShareState
+    ? window.BattleMapShareState.createShareStateSeam({
+        getSource: () => ({ state, persistentMeasurements }),
+        onError: (err) => console.warn('Battle Map share-state check failed', err),
+      })
+    : null;
+  window.BattleMapLiveShare = Object.freeze({
+    getPlayerSafeState: () => (shareState ? shareState.getPlayerSafeState() : null),
+    onShareableStateChanged: (fn) => (shareState ? shareState.onChange(fn) : () => {}),
+  });
+
   // --- Dirty flag tracking for unsaved changes
   let isDirty = false;
   const unsavedIndicator = document.getElementById('unsavedIndicator');
 
   function setDirty() {
+    if (shareState) shareState.schedule();
     if (!isDirty) {
       isDirty = true;
       if (unsavedIndicator) {
@@ -1006,6 +1026,8 @@
   const USE_INDEXED_DB = IndexedDBStorage && IndexedDBStorage.isSupported();
 
   async function save(){
+    // Some edits commit straight through save() without a render or setDirty() (placing a token).
+    if (shareState) shareState.schedule();
     // Always capture the fog canvas if it exists, regardless of enabled flag
     const fogData = (fog.width > 1 && fog.height > 1) ? tryCanvasToDataURL(fog) : null;
 
@@ -1248,6 +1270,9 @@
     if (dirty.ui || state.ui.measuring) renderUiLayer();
 
     dirty.map = dirty.fog = dirty.tokens = dirty.grid = dirty.ui = false;
+
+    // Player-visible state may have changed with this frame (never throws; see shareState above).
+    if (shareState) shareState.check();
   }
 
   // Render map image and grid on the map layer
