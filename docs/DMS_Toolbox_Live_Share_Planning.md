@@ -9,6 +9,7 @@
 **Authority:** The DM's browser owns all session, seat, admission and game state  
 **Synchronization (V1):** Throttled whole-state player-safe snapshots  
 **Product philosophy:** Temporary shared tactical state without moving persistent campaign data into centralized cloud storage.
+**Progress:** Milestone 0 complete and validated in production (2.3.22–2.3.23, 2026-09-28); Milestone 1 in progress.
 
 **Revision note:** This plan was revised after an architecture review against the current codebase. Compared with the first draft, seats, passwords and room admission moved from the signaling service to the DM's browser; synchronization starts as whole snapshots instead of snapshots plus patches; a Battle Map state boundary and the player-safe projection are now the first Battle Map milestone; fog is explicitly a trusted-player feature; and the roadmap proves networking and remote rendering before building room UX.
 
@@ -850,6 +851,16 @@ Exit:
 
 Universal remote-network reliability is not required before TURN exists. Failure on a particular remote network during the STUN-only milestone does not by itself invalidate the architecture; it may indicate that TURN is required.
 
+**Status: complete (2.3.22 and 2.3.23, validated in production on 2026-09-28).** The prototype is `liveshare-dev.html`; the relay, TURN setup and diagnostics are documented in `relay/README.md`.
+
+- Signaling: the Cloudflare Worker + Durable Object relay was deployed and worked in production (room creation, discovery, offer/answer and ICE candidate relay).
+- Direct path: a clean Chrome host and a Brave desktop player connected directly (ICE connected, data channel open, `"hello"` received, `usingTurnRelay: false`).
+- Remote path: a clean Chrome host and an Android phone on 5G connected through TURN (connection and ICE `connected`, data channel open, `"hello"` received, `usingTurnRelay: true`; the phone's selected pair was `prflx` locally and `relay` remotely over UDP, with all 16 received ICE candidates applied and none pending). The STUN-only build could not connect on that path.
+- TURN was pulled forward from Milestone 8 because the real 5G path needed it. It is a fallback only: ICE keeps transport policy "all", a direct path wins whenever one works, and TURN is used only when none does.
+- Diagnostics separate signaling, ICE, data-channel and negotiation failures, count every ICE candidate step, and report a browser that gathers no candidates at all. During testing the developer's normal Chrome profile gathered zero candidates (WebRTC blocked in that profile by an extension or setting); that was an environment issue, not an application defect, and is now reported as "WebRTC blocked in this browser".
+
+Remaining networking work stays in its milestones: connection-attempt and credential rate limits (Milestone 8), room lifetime and reconnect (Milestone 7), and admission (Milestone 5).
+
 ## Milestone 1 — Battle Map Share-State Seam
 
 No sharing UI required.
@@ -1103,8 +1114,8 @@ Battle Map Live Share is stable when, after TURN and network hardening (Mileston
 
 Intentionally unresolved until the relevant milestone:
 
-- **Signaling provider** — Cloudflare Workers + Durable Objects, PartyKit, or another small WebSocket relay (decide for Milestone 0).
-- **TURN provider and credential mechanism** — which service, and how short-lived credentials are issued (Milestone 8).
+- ~~**Signaling provider**~~ — decided in Milestone 0: Cloudflare Workers + Durable Objects (one Durable Object per room), with a local Node relay speaking the same protocol for development and tests.
+- ~~**TURN provider and credential mechanism**~~ — decided in Milestone 0 (earlier than planned, because a real mobile-data path needed it): Cloudflare Realtime TURN. The relay Worker's `/turn-credentials` route mints 4-hour credentials from a TURN key held in Wrangler secrets. Rate limiting that route remains Milestone 8 work.
 - **Fog encoding/compression** — image format, resolution, whether painted fog and fog shapes are combined or sent separately (Milestone 4).
 - **Asset caching strategy** — whether and how to hash/cache assets across reconnects (after Milestone 3).
 - **External token-image fallback** — what happens for an external token image the host browser cannot fetch or read because of CORS: require the DM to import/store it locally before sharing, show players a placeholder, allow direct third-party loading only as an explicit privacy tradeoff, or another approach (Milestone 3).

@@ -1,5 +1,10 @@
 # Live Share signaling relay (Milestone 0)
 
+> **Milestone 0 is complete** (2.3.22–2.3.23, validated in production on 2026-09-28): production
+> signaling, a direct desktop-to-desktop connection (`usingTurnRelay: false`) and a desktop-to-Android-5G
+> connection through TURN (`usingTurnRelay: true`) all delivered `"hello"` over the data channel. See
+> [Milestone 0 results](#milestone-0-results).
+
 Live Share (see [the planning document](../docs/DMS_Toolbox_Live_Share_Planning.md)) connects the
 DM's browser to each player's browser over WebRTC. Browsers cannot find each other on their own, so a
 small **signaling relay** passes the WebRTC setup messages (offer, answer, ICE candidates) between them.
@@ -297,7 +302,7 @@ with `--var NAME:value`.
 | `turnConfigured` (peer) | this connection was given at least one TURN server |
 | `localCandidateType` / `remoteCandidateType` | the selected candidate pair, from `getStats()`: `host`, `srflx`, `prflx` or `relay` |
 | `usingTurnRelay` | `true` only when the selected pair has a `relay` candidate on either side, never just because TURN was configured |
-| `turnTransport` | when this side's selected candidate is `relay`: how it reaches the TURN server (`udp`, `tcp` or `tls`) |
+| `turnTransport` | when this side's selected candidate is `relay`: how it reaches the TURN server (`udp`, `tcp` or `tls`). `null` when this side's own candidate is not a relay, even if `usingTurnRelay` is true because the *other* side is relaying (then its diagnostics show the transport) |
 | `transportProtocol` | the selected candidate's protocol |
 
 Troubleshooting:
@@ -310,6 +315,33 @@ Troubleshooting:
   include.
 - `?forceRelay=1` (debug/test only) makes both pages relay-only, which proves TURN end to end:
   expect `usingTurnRelay: true` and `localCandidateType: "relay"`.
+
+## Milestone 0 results
+
+Validated in production on 2026-09-28 with the deployed Worker, Durable Objects and Cloudflare Realtime
+TURN, using a clean Chrome Guest profile as the host:
+
+| Path | Result |
+| --- | --- |
+| Chrome host → Brave desktop player | ICE `connected`, data channel `open`, `"hello"` received, `usingTurnRelay: false` (direct path) |
+| Chrome host → Android phone on 5G (Wi-Fi off) | connection and ICE `connected`, data channel `open`, `"hello"` received, `turn.status: "available"`, `usingTurnRelay: true`; the phone's selected pair was `prflx` (local) / `relay` (remote) over UDP |
+
+On the phone, the candidate lifecycle lined up: 9 local candidates generated and sent (host 1, srflx 2,
+relay 6), 16 remote candidates received and applied, 0 apply errors, 0 pending. TURN was used only on
+the path that needed it; the direct path stayed direct.
+
+The phone's `turnTransport` was `null`: its own selected candidate was peer-reflexive, and the relay in
+the pair was the host's TURN allocation, so the transport to TURN appears in the host's diagnostics.
+
+The developer's normal Chrome profile gathered **zero** ICE candidates (WebRTC blocked in that profile by
+an extension or setting). That was an environment issue, not an application defect; the page now
+reports it as "WebRTC blocked in this browser", and the console check in [Diagnostics](#diagnostics)
+confirms it.
+
+What the services hold: the Cloudflare Worker and Durable Objects do signaling and TURN credential
+issuance only; Cloudflare Realtime TURN relays the encrypted WebRTC packets when no direct path works.
+Neither stores the app's game state. The TURN provider does see the two endpoints' addresses and the
+traffic volume and timing (see [Signaling and TURN are separate](#signaling-and-turn-are-separate)).
 
 ## Manual remote-network test (Milestone 0 exit)
 
