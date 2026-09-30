@@ -276,8 +276,8 @@ test.describe('Live Share remote structured rendering (Milestone 2)', () => {
       const msg = JSON.parse(text);
       expect(Object.keys(msg).sort()).toEqual(['payload', 'type', 'v']);
       expect(msg).toMatchObject({ v: 0, type: 'battlemap-snapshot' });
-      expect(Object.keys(msg.payload).sort()).toEqual(['grid', 'map', 'mapTransform', 'measurements', 'revision', 'schema', 'tokens', 'version']);
-      for (const t of msg.payload.tokens) expect(Object.keys(t).sort()).toEqual(['conditions', 'h', 'id', 'name', 'rot', 'w', 'x', 'y']);
+      expect(Object.keys(msg.payload).sort()).toEqual(['background', 'grid', 'map', 'mapTransform', 'measurements', 'revision', 'schema', 'tokens', 'version']);
+      for (const t of msg.payload.tokens) expect(Object.keys(t).sort()).toEqual(['assetId', 'conditions', 'h', 'id', 'name', 'rot', 'w', 'x', 'y']);
       expect(text).not.toMatch(/"hp"|maxHp|imgSrc|data:image|\/images\/|"selected"|"view"|fog|aura|visionCone/i);
     }
 
@@ -327,7 +327,7 @@ test.describe('Live Share remote structured rendering (Milestone 2)', () => {
       const base = JSON.parse(window.__lsSent[0]);
       const send = (msg) => window.__lsChannels[0].send(JSON.stringify(msg));
       send({ ...base, payload: { ...base.payload, revision: 1e9, schema: 'something.else' } });
-      send({ ...base, payload: { ...base.payload, revision: 1e9, version: 2 } });
+      send({ ...base, payload: { ...base.payload, revision: 1e9, version: 3 } });
       send({ ...base, payload: { ...base.payload, revision: '1000' } });
       send({ ...base, payload: { ...base.payload, revision: 1e9, tokens: [{ ...base.payload.tokens[0], x: 'NaN' }] } });
       send({ ...base, payload: { ...base.payload, revision: 1e9, tokens: Array(501).fill(base.payload.tokens[0]) } });

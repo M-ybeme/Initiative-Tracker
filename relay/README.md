@@ -40,6 +40,10 @@ map read-only. It uses the same relay and query parameters (`?relay=`, `?forceRe
 `?iceTimeoutMs=`), and the data channel carries `{v:0, type:'battlemap-snapshot', payload}` messages
 (see the planning document, Milestone 2).
 
+Milestone 3 (2.3.26) adds asset transfer on the same data channel, player-requested and never through
+the relay: `asset-request` (player → host), `asset-meta`/`asset-abort` and binary 16 KiB chunk frames
+(host → player) for the player-visible background (map with fog baked in) and custom token art.
+
 ## How Milestone 0 works
 
 1. The host opens `liveshare-dev.html` and clicks **Start room**. The browser generates a 128-bit

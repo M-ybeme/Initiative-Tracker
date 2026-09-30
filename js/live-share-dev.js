@@ -8,6 +8,9 @@
  * Milestone 2: the Battle Map can host too (battlemap.html?liveshare=1, js/battlemap-live-share.js),
  * and its join links open this page as a player. The player then draws each Battle Map snapshot it
  * receives, read-only, keeping only the newest revision (battlemap-snapshot.js, battlemap-view.js).
+ * Milestone 3: it then asks for the assets that snapshot references and it doesn't have yet (the
+ * player-visible background, custom token art), fills them in as they arrive, and releases them all
+ * when the session ends (asset-cache.js). The structured map never waits for them.
  * No admission model yet (planning doc §11, §24).
  *
  * Development query parameters (kept in join links, so host and player agree):
@@ -26,7 +29,9 @@ import { SignalingClient } from './modules/live-share/signaling-client.js';
 import { PeerLink } from './modules/live-share/peer-link.js';
 import { HostSession } from './modules/live-share/host-session.js';
 import { resolveIceServers } from './modules/live-share/ice-config.js';
-import { encodeHello, parseChannelMessage } from './modules/live-share/protocol.js';
+import { encodeHello, parseChannelMessage, PROTOCOL_VERSION } from './modules/live-share/protocol.js';
+import { encodeAssetRequest } from './modules/live-share/asset-protocol.js';
+import { createAssetCache } from './modules/live-share/asset-cache.js';
 import { createSnapshotReceiver } from './modules/live-share/battlemap-snapshot.js';
 import { renderBattleMapSnapshot } from './modules/live-share/battlemap-view.js';
 
@@ -254,14 +259,40 @@ async function initPlayer(roomId) {
   };
 
   // The Battle Map, if the host is sharing one: newest revision wins, older ones are ignored.
+  let latest = null;
+  const assets = createAssetCache({
+    requestAssets: (ids) => link && link.send(encodeAssetRequest(PROTOCOL_VERSION, ids)),
+    onReady: () => draw(),
+  });
+  // Structured state first; the background and token art fill in whenever they are here.
+  const draw = () => {
+    if (!latest) return;
+    const background = assets.backgroundFor(latest);
+    renderBattleMapSnapshot($('ls-map'), latest, { background, tokenUrl: (id) => assets.url(id) });
+    const status = latest.background ? assets.status(latest.background.assetId) : null;
+    $('ls-map-assets').textContent = !latest.background
+      ? 'No map image shared.'
+      : background && background.current
+        ? 'Map image shown.'
+        : status === 'failed'
+          ? 'The map image could not be loaded.' // never an older image in its place
+          : background
+            ? 'Updating the map image…'
+            : 'Loading the map image…';
+    diag.assets = assets.stats();
+    renderDiagnostics();
+  };
   const receiver = createSnapshotReceiver({
     onApply: (snapshot) => {
-      renderBattleMapSnapshot($('ls-map'), snapshot);
+      latest = snapshot;
+      assets.sync(snapshot);
+      draw();
       $('ls-map-section').classList.remove('d-none');
       setMapStatus(`Live — revision ${snapshot.revision}`);
     },
   });
   diag.snapshots = receiver.stats();
+  diag.assets = assets.stats();
   const setMapStatus = (text) => {
     $('ls-map-status').textContent = text;
   };
@@ -277,6 +308,9 @@ async function initPlayer(roomId) {
     if (ended) return;
     ended = true;
     markMapDisconnected();
+    // The session is over: every received image is released; the structured map stays.
+    assets.dispose();
+    draw();
     if (link) link.close();
     if (signaling) signaling.close();
     $('ls-leave').disabled = true;
@@ -312,6 +346,7 @@ async function initPlayer(roomId) {
         diag.lastProtocolError = parsed.error;
         if (parsed.type === 'battlemap-snapshot') receiver.reject(parsed.error);
         diag.snapshots = receiver.stats();
+        if (parsed.type && parsed.type.startsWith('asset-')) diag.assetProtocolErrors = (diag.assetProtocolErrors || 0) + 1;
         renderDiagnostics();
         return;
       }
@@ -323,6 +358,13 @@ async function initPlayer(roomId) {
         receiver.receive(parsed.message.snapshot);
         diag.snapshots = receiver.stats();
         renderDiagnostics();
+      } else if (parsed.message.type === 'asset-meta') {
+        assets.handleMeta(parsed.message.asset);
+      } else if (parsed.message.type === 'asset-chunk') {
+        assets.handleChunk(parsed.message);
+      } else if (parsed.message.type === 'asset-abort') {
+        assets.handleAbort(parsed.message);
+        diag.assets = assets.stats();
       }
     });
     link.on('failed', (failure) => leave(describeFailure(failure)));

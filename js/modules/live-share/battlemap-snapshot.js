@@ -19,7 +19,7 @@
 
 // Must match BattleMapShareState.SCHEMA / VERSION (checked by the unit tests).
 export const SNAPSHOT_SCHEMA = 'dmtoolbox.battlemap.player-safe';
-export const SNAPSHOT_VERSION = 1;
+export const SNAPSHOT_VERSION = 2; // 2: Milestone 3 background and token asset references
 
 // The Milestone 1 projection's own limits: it never produces more than this.
 export const MAX_TOKENS = 500;
@@ -32,6 +32,7 @@ const MAX_ID = 100;
 export const MAX_COORD = 1e7;
 
 const MEASUREMENT_TYPES = new Set(['line', 'cone', 'circle']);
+const ASSET_ID = /^[0-9a-f]{64}$/;
 const HEX_COLOR = /^#[0-9a-f]{3,8}$/i;
 
 const isPlainObject = (v) => !!v && typeof v === 'object' && !Array.isArray(v);
@@ -66,6 +67,18 @@ function hexColor(v, what) {
   if (typeof v !== 'string' || !HEX_COLOR.test(v)) fail(`${what} is not a hex color`);
   return v;
 }
+function assetRef(v, what) {
+  if (v === null) return null;
+  if (typeof v !== 'string' || !ASSET_ID.test(v)) fail(`${what} is not an asset id`);
+  return v;
+}
+function background(v) {
+  if (v === null) return null;
+  obj(v, 'background');
+  if (!Number.isSafeInteger(v.revision) || v.revision < 1) fail('background.revision is not a positive integer');
+  if (v.assetId === null) fail('background.assetId is missing');
+  return { assetId: assetRef(v.assetId, 'background.assetId'), revision: v.revision };
+}
 function list(v, max, what) {
   if (!Array.isArray(v)) fail(`${what} is not an array`);
   if (v.length > max) fail(`${what} has more than ${max} entries`);
@@ -84,6 +97,7 @@ function readToken(t, i) {
     rot: coord(t.rot, `${where}.rot`),
     name: t.name === null ? null : text(t.name, `${where}.name`),
     conditions: list(t.conditions, MAX_CONDITIONS, `${where}.conditions`).map((c, j) => text(c, `${where}.conditions[${j}]`)),
+    assetId: assetRef(t.assetId, `${where}.assetId`),
   };
 }
 
@@ -125,6 +139,7 @@ export function validateBattleMapSnapshot(payload) {
         version: SNAPSHOT_VERSION,
         revision: payload.revision,
         map: { width: size(map.width, 'map.width'), height: size(map.height, 'map.height') },
+        background: background(payload.background),
         mapTransform: { scale: size(mt.scale, 'mapTransform.scale'), x: coord(mt.x, 'mapTransform.x'), y: coord(mt.y, 'mapTransform.y') },
         grid: {
           size: size(grid.size, 'grid.size'),

@@ -9,8 +9,13 @@
  *   hello               Milestone 0 test message
  *   battlemap-snapshot  Milestone 2: the Battle Map's whole player-safe state (battlemap-snapshot.js).
  *                       Whole snapshots only, never patches; the player keeps the newest revision.
+ *   asset-meta, asset-abort, binary asset chunks
+ *                       Milestone 3: player-visible assets, sent only on request (asset-protocol.js)
+ * and player -> host:
+ *   asset-request       Milestone 3: the asset ids a player is missing
  */
 import { validateBattleMapSnapshot } from './battlemap-snapshot.js';
+import { parseAssetChunk, validateAssetRequest, validateAssetMeta, validateAssetAbort } from './asset-protocol.js';
 
 export const PROTOCOL_VERSION = 0;
 // Largest data-channel message either side accepts. A Battle Map snapshot is usually a few KB (a
@@ -117,6 +122,8 @@ export function encodeBattleMapSnapshot(snapshot) {
  * `{ ok: false, error, type? }`; `type` is set when a message of a known type failed validation.
  */
 export function parseChannelMessage(raw) {
+  // Binary messages are asset chunks (Milestone 3); everything else is JSON text.
+  if (raw instanceof ArrayBuffer || ArrayBuffer.isView(raw)) return parseAssetChunk(raw);
   const parsed = parseJson(raw, MAX_CHANNEL_MESSAGE_BYTES);
   if (!parsed.ok) return parsed;
   const msg = parsed.value;
@@ -130,6 +137,11 @@ export function parseChannelMessage(raw) {
     const checked = validateBattleMapSnapshot(msg.payload);
     if (!checked.ok) return { ok: false, type: 'battlemap-snapshot', error: `bad battlemap-snapshot: ${checked.error}` };
     return { ok: true, message: { type: 'battlemap-snapshot', snapshot: checked.snapshot } };
+  }
+  const assetValidators = { 'asset-request': validateAssetRequest, 'asset-meta': validateAssetMeta, 'asset-abort': validateAssetAbort };
+  if (Object.prototype.hasOwnProperty.call(assetValidators, msg.type)) {
+    const checked = assetValidators[msg.type](msg);
+    return checked.ok ? checked : { ok: false, type: msg.type, error: checked.error };
   }
   return { ok: false, error: 'unknown message type' };
 }

@@ -1,7 +1,9 @@
 const DM_TOOLBOX_BUILD = {
   name: "The DM's Toolbox",
-  version: "2.3.25",
+  version: "2.3.26",
   recentChanges: [
+    "Fix: a Battle Map whose saved fog layer can't be loaded now covers the whole map instead of silently clearing the fog, and importing such a map no longer stops part-way",
+    "New (Live Share test mode, battlemap.html?liveshare=1): players now see the real map with your fog baked in, plus uploaded and Character Manager token art; the uncovered map, fog data, token image sources and HP are never sent, and the ordinary Battle Map does no extra work",
     "Fix: choosing an option on the Character Sheet's New Character screen while it is still opening no longer leaves the screen stuck open over the sheet",
     "Fix: the Character Sheet now rolls attack damage with several dice groups (for example \"2d6+1d4\" or \"2d6 - 1d4 + 3\") the way Combat Mode does, instead of rolling nothing; a critical hit on such damage doubles every damage die (2d6+1d4+3 rolls like 4d6+2d4+3), Great Weapon Fighting and Savage Attacker apply to it, and a flat bonus such as Dueling +2 is no longer silently dropped for damage written with spaces, a keep rule or several groups",
     "Fix: spell roll toasts no longer show \"undefined\" for a flat-number roll such as Goodberry's healing, and keep the sign of a subtracted dice group",

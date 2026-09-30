@@ -20,7 +20,9 @@
  *
  * Backpressure: bufferedAmount() is how many bytes the channel has queued but not yet sent, and
  * `drain` fires when that falls to BUFFERED_LOW_WATER_BYTES, so a sender can hold back while the
- * channel is busy and resume when it clears (snapshot-sender.js).
+ * channel is busy and resume when it clears (snapshot-sender.js, asset-sender.js).
+ *
+ * Messages are text (JSON) or binary (Milestone 3 asset chunks, delivered as ArrayBuffer).
  *
  * Events: open, message {data}, drain, close, failed {kind, message}, diagnostics {snapshot}
  */
@@ -29,7 +31,9 @@ import { hasTurnServer } from './ice-config.js';
 import { describeSignal, candidateSignal, parseSignalData } from './protocol.js';
 
 export const DATA_CHANNEL_LABEL = 'live-share';
-export const BUFFERED_LOW_WATER_BYTES = 64 * 1024;
+// Below every sender's own "busy" level (snapshots 64 KiB, assets 40 KiB), so a sender that held
+// back always sees the channel drain past it.
+export const BUFFERED_LOW_WATER_BYTES = 16 * 1024;
 
 export class PeerLink {
   constructor({
@@ -208,6 +212,7 @@ export class PeerLink {
       this.emitDiagnostics();
       this.emit('open');
     };
+    channel.binaryType = 'arraybuffer';
     channel.onmessage = (event) => this.emit('message', { data: event.data });
     channel.bufferedAmountLowThreshold = BUFFERED_LOW_WATER_BYTES;
     channel.onbufferedamountlow = () => this.emit('drain');
@@ -220,7 +225,7 @@ export class PeerLink {
     };
   }
 
-  /** Send text if the channel is open. Returns whether it was handed to the channel; never throws. */
+  /** Send text or binary if the channel is open. Returns whether it was handed to the channel; never throws. */
   send(text) {
     if (!this.channel || this.channel.readyState !== 'open') return false;
     try {

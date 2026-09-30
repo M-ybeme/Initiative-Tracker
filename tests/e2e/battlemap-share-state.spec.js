@@ -52,7 +52,7 @@ test.describe('Battle Map share-state seam (Live Share Milestone 1)', () => {
     const errors = watchErrors(page);
     await openMap(page);
     const empty = await snapshot(page);
-    expect(empty).toMatchObject({ schema: 'dmtoolbox.battlemap.player-safe', version: 1, tokens: [], measurements: [] });
+    expect(empty).toMatchObject({ schema: 'dmtoolbox.battlemap.player-safe', version: 2, background: null, tokens: [], measurements: [] });
     expect(empty.revision).toBeGreaterThanOrEqual(1);
 
     await addPresetToken(page, 'Fighter');
@@ -60,7 +60,7 @@ test.describe('Battle Map share-state seam (Live Share Milestone 1)', () => {
     expect(placed.revision).toBeGreaterThan(empty.revision);
     expect(placed.tokens).toHaveLength(1);
     const [token] = placed.tokens;
-    expect(Object.keys(token).sort()).toEqual(['conditions', 'h', 'id', 'name', 'rot', 'w', 'x', 'y']);
+    expect(Object.keys(token).sort()).toEqual(['assetId', 'conditions', 'h', 'id', 'name', 'rot', 'w', 'x', 'y']);
     expect(token).toMatchObject({ name: null, conditions: [], rot: 0, w: 50, h: 50 }); // label off by default
     expect(await page.evaluate(() => window.__shareSignals)).toContain(placed.revision);
 

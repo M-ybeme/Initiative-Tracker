@@ -66,15 +66,18 @@ function fixture() {
   };
 }
 
+// Version 2 since Milestone 3: `background` and token `assetId` are references to player-safe
+// assets. Without any prepared assets (as here) both are null.
 const EXPECTED = {
   schema: 'dmtoolbox.battlemap.player-safe',
-  version: 1,
+  version: 2,
   map: { width: 1400, height: 900 },
+  background: null,
   mapTransform: { scale: 1.5, x: -20, y: 10 },
   grid: { size: 70, unitsPerCell: 5, color: '#6aa5ff', alpha: 0.35, show: true, offsetX: 3, offsetY: 4 },
   tokens: [
-    { id: 't_goblin1', x: 210, y: 140, w: 70, h: 70, rot: 0.5, name: 'Goblin Boss', conditions: ['Poisoned', 'Prone'] },
-    { id: 't_ranger', x: 350, y: 280, w: 70, h: 70, rot: 0, name: null, conditions: [] },
+    { id: 't_goblin1', x: 210, y: 140, w: 70, h: 70, rot: 0.5, name: 'Goblin Boss', conditions: ['Poisoned', 'Prone'], assetId: null },
+    { id: 't_ranger', x: 350, y: 280, w: 70, h: 70, rot: 0, name: null, conditions: [], assetId: null },
   ],
   measurements: [{ id: 'm_1', type: 'cone', x1: 10, y1: 20, x2: 110, y2: 60, color: '#ff8800' }],
 };
@@ -102,18 +105,18 @@ describe('player-safe projection: what is included', () => {
   it('is exactly the approved fields (hand-written expected snapshot)', () => {
     expect(projectPlayerSafeState(fixture())).toEqual(EXPECTED);
     expect(SCHEMA).toBe(EXPECTED.schema);
-    expect(VERSION).toBe(1);
+    expect(VERSION).toBe(2);
   });
 
   it('gives each token exactly the approved keys, in the same shape', () => {
     for (const token of projectPlayerSafeState(fixture()).tokens) {
-      expect(Object.keys(token).sort()).toEqual(['conditions', 'h', 'id', 'name', 'rot', 'w', 'x', 'y']);
+      expect(Object.keys(token).sort()).toEqual(['assetId', 'conditions', 'h', 'id', 'name', 'rot', 'w', 'x', 'y']);
     }
   });
 
   it('has exactly the approved top-level and nested keys', () => {
     const p = projectPlayerSafeState(fixture());
-    expect(Object.keys(p).sort()).toEqual(['grid', 'map', 'mapTransform', 'measurements', 'schema', 'tokens', 'version']);
+    expect(Object.keys(p).sort()).toEqual(['background', 'grid', 'map', 'mapTransform', 'measurements', 'schema', 'tokens', 'version']);
     expect(Object.keys(p.map).sort()).toEqual(['height', 'width']);
     expect(Object.keys(p.mapTransform).sort()).toEqual(['scale', 'x', 'y']);
     expect(Object.keys(p.grid).sort()).toEqual(['alpha', 'color', 'offsetX', 'offsetY', 'show', 'size', 'unitsPerCell']);
@@ -135,8 +138,9 @@ describe('player-safe projection: what is included', () => {
   it('handles an empty Battle Map', () => {
     expect(projectPlayerSafeState({ state: { map: { imgSrc: '', img: null, w: 0, h: 0 }, mapTransform: { scale: 1, x: 0, y: 0 }, grid: {}, tokens: [] }, persistentMeasurements: [] })).toEqual({
       schema: 'dmtoolbox.battlemap.player-safe',
-      version: 1,
+      version: 2,
       map: { width: 0, height: 0 },
+      background: null,
       mapTransform: { scale: 1, x: 0, y: 0 },
       grid: { size: 50, unitsPerCell: 5, color: '#6aa5ff', alpha: 0.35, show: true, offsetX: 0, offsetY: 0 },
       tokens: [],
@@ -220,7 +224,7 @@ describe('player-safe projection: what is excluded', () => {
     src.state.grid.color = 'url(javascript:alert(1))';
     src.persistentMeasurements[0].color = { evil: true };
     const p = projectPlayerSafeState(src);
-    expect(p.tokens[0]).toEqual({ id: 't_goblin1', x: 0, y: 140, w: 70, h: 70, rot: 0, name: null, conditions: ['Prone'] });
+    expect(p.tokens[0]).toEqual({ id: 't_goblin1', x: 0, y: 140, w: 70, h: 70, rot: 0, name: null, conditions: ['Prone'], assetId: null });
     expect(p.grid.color).toBe('#6aa5ff');
     expect(p.measurements[0].color).toBe('#8bd3ff');
   });

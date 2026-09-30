@@ -160,3 +160,52 @@ describe('Battle Map player view', () => {
     expect(svg.querySelector('a, button, input, foreignObject, [onclick], [tabindex]')).toBeNull();
   });
 });
+
+describe('Battle Map player view: assets (Milestone 3)', () => {
+  const ART = 'd'.repeat(64);
+  const withMap = (over = {}) =>
+    snapshot({ map: { width: 1000, height: 600 }, mapTransform: { scale: 1.5, x: -20, y: 10 }, background: { assetId: 'b'.repeat(64), revision: 3 }, ...over });
+
+  it('draws the background as the bottom layer, placed and scaled by the map transform', () => {
+    renderBattleMapSnapshot(svg, withMap(), { background: { url: 'blob:http://localhost/bg', assetId: 'b'.repeat(64) } });
+    const img = svg.querySelector('.ls-background-image');
+    expect(['href', 'x', 'y', 'width', 'height', 'preserveAspectRatio'].map((a) => img.getAttribute(a))).toEqual(['blob:http://localhost/bg', '-20', '10', '1500', '900', 'none']);
+    const order = [...svg.children].map((n) => n.getAttribute('class'));
+    expect(order).toEqual(['ls-background', 'ls-map-surface', 'ls-background-image', 'ls-grid', 'ls-tokens', 'ls-measurements']);
+  });
+
+  it('keeps the neutral placeholder surface while the background is missing', () => {
+    renderBattleMapSnapshot(svg, withMap(), { background: null });
+    expect(svg.querySelector('.ls-background-image')).toBeNull();
+    expect(svg.querySelector('.ls-map-surface')).not.toBeNull();
+  });
+
+  it('only ever uses blob: URLs it made itself', () => {
+    for (const url of ['https://evil.example/map.png', 'data:image/png;base64,AAAA', 'javascript:alert(1)', '']) {
+      renderBattleMapSnapshot(svg, withMap({ tokens: [{ id: 't', x: 0, y: 0, w: 50, h: 50, rot: 0, name: null, conditions: [], assetId: ART }] }), {
+        background: { url, assetId: 'x' },
+        tokenUrl: () => url,
+      });
+      expect(svg.querySelector('image')).toBeNull();
+    }
+  });
+
+  it('draws custom token art when it has arrived, and the marker otherwise', () => {
+    const tokens = [
+      { id: 'art', x: 100, y: 100, w: 50, h: 80, rot: Math.PI, name: 'Hero', conditions: [], assetId: ART },
+      { id: 'waiting', x: 200, y: 100, w: 50, h: 50, rot: 0, name: null, conditions: [], assetId: 'e'.repeat(64) },
+      { id: 'plain', x: 300, y: 100, w: 50, h: 50, rot: 0, name: null, conditions: [], assetId: null },
+    ];
+    const urls = { [ART]: 'blob:http://localhost/art' };
+    renderBattleMapSnapshot(svg, withMap({ tokens }), { tokenUrl: (id) => urls[id] || null });
+    const [art, waiting, plain] = svg.querySelectorAll('.ls-token');
+    expect(art.getAttribute('data-art')).toBe('image');
+    const img = art.querySelector('.ls-token-art');
+    expect(['href', 'x', 'y', 'width', 'height'].map((a) => img.getAttribute(a))).toEqual(['blob:http://localhost/art', '-25', '-40', '50', '80']);
+    expect(art.querySelector('.ls-token-body').getAttribute('transform')).toBe('translate(125 140) rotate(180)');
+    expect(art.querySelector('.ls-token-name').textContent).toBe('Hero');
+    expect(waiting.getAttribute('data-art')).toBe('marker');
+    expect(plain.getAttribute('data-art')).toBe('marker');
+    expect(plain.querySelector('ellipse')).not.toBeNull();
+  });
+});

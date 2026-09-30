@@ -4,7 +4,8 @@
 // Milestone 1 seam, the real HostSession, SignalingClient and PeerLink negotiating through the local
 // Node relay over real WebSockets, the real snapshot sender, protocol and player receiver. Node has
 // no WebRTC, so RTCPeerConnection is an in-memory pair joined once offer and answer have crossed the
-// relay; its data channel delivers messages in order, asynchronously, like the real one.
+// relay (tests/helpers/memory-webrtc.js); its data channel delivers messages in order,
+// asynchronously, like the real one.
 // The real WebRTC path is covered by tests/e2e/live-share-battlemap.spec.js.
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import WebSocket from 'ws';
@@ -16,97 +17,11 @@ import { HostSession } from '../../js/modules/live-share/host-session.js';
 import { createSnapshotSender } from '../../js/modules/live-share/snapshot-sender.js';
 import { createSnapshotReceiver } from '../../js/modules/live-share/battlemap-snapshot.js';
 import { parseChannelMessage } from '../../js/modules/live-share/protocol.js';
+import { createMemoryWebRTC, until } from '../helpers/memory-webrtc.js';
 
 const { createShareStateSeam } = globalThis.BattleMapShareState;
 
-// ---- An in-memory RTCPeerConnection pair ---------------------------------------------------------
-
-const offers = new Map(); // offer id -> player PC
-
-class MemoryChannel {
-  constructor(label) {
-    this.label = label;
-    this.readyState = 'connecting';
-    this.bufferedAmount = 0;
-    this.peer = null;
-    this.sent = [];
-  }
-  send(data) {
-    if (this.readyState !== 'open') throw new Error('InvalidStateError');
-    this.sent.push(data);
-    const peer = this.peer;
-    setTimeout(() => peer.readyState === 'open' && peer.onmessage && peer.onmessage({ data }), 0);
-  }
-  close() {
-    if (this.readyState === 'closed') return;
-    this.readyState = 'closed';
-    this.onclose && this.onclose();
-    if (this.peer) this.peer.close();
-  }
-  open() {
-    this.readyState = 'open';
-    this.onopen && this.onopen();
-  }
-}
-
-let nextOffer = 1;
-class MemoryPC {
-  constructor() {
-    this.connectionState = 'new';
-    this.iceConnectionState = 'new';
-    this.iceGatheringState = 'new';
-    this.signalingState = 'stable';
-    this.localDescription = null;
-    this.remoteDescription = null;
-  }
-  createDataChannel(label) {
-    this.channel = new MemoryChannel(label);
-    return this.channel;
-  }
-  async createOffer() {
-    this.offerId = `offer-${nextOffer++}`;
-    return { type: 'offer', sdp: `v=0 ${this.offerId}` };
-  }
-  async createAnswer() {
-    return { type: 'answer', sdp: `v=0 answer-to ${this.offerId}` };
-  }
-  async setLocalDescription(d) {
-    this.localDescription = d;
-  }
-  async setRemoteDescription(d) {
-    this.remoteDescription = d;
-    const id = d.sdp.match(/offer-\d+/)[0];
-    if (d.type === 'offer') {
-      this.offerId = id;
-      offers.set(id, this);
-    } else {
-      this.connect(offers.get(id));
-    }
-  }
-  async addIceCandidate() {}
-  async getStats() {
-    return new Map();
-  }
-  close() {
-    this.connectionState = 'closed';
-  }
-  // Host side, once the answer is in: the player's side of the channel appears, then both open.
-  connect(player) {
-    const mine = this.channel;
-    const theirs = new MemoryChannel(mine.label);
-    mine.peer = theirs;
-    theirs.peer = mine;
-    for (const pc of [this, player]) {
-      pc.connectionState = pc.iceConnectionState = 'connected';
-      pc.onconnectionstatechange && pc.onconnectionstatechange();
-    }
-    setTimeout(() => {
-      player.ondatachannel({ channel: theirs });
-      theirs.open();
-      mine.open();
-    }, 0);
-  }
-}
+const { MemoryPC } = createMemoryWebRTC();
 
 // ---- Harness -------------------------------------------------------------------------------------
 
@@ -119,16 +34,6 @@ beforeAll(async () => {
 afterAll(async () => {
   await relay.close();
 });
-
-async function until(check, timeoutMs = 3000) {
-  const end = Date.now() + timeoutMs;
-  for (;;) {
-    const value = check();
-    if (value) return value;
-    if (Date.now() > end) throw new Error('timed out waiting');
-    await new Promise((r) => setTimeout(r, 5));
-  }
-}
 
 // The Battle Map side: canonical state (with HP, images, selection, the DM's view) behind the seam,
 // exactly as battlemap.html wires it. `edit(fn)` changes state then runs the seam's check, as the
@@ -224,7 +129,7 @@ describe('Live Share Battle Map sync through the local relay', () => {
     const { h, p } = await connect(map);
     const first = await until(() => p.latest());
     expect(first.revision).toBe(revision);
-    expect(first.tokens).toEqual([{ id: 't_ogre', x: 100, y: 100, w: 100, h: 100, rot: 0, name: 'Ogre', conditions: [] }]);
+    expect(first.tokens).toEqual([{ id: 't_ogre', x: 100, y: 100, w: 100, h: 100, rot: 0, name: 'Ogre', conditions: [], assetId: null }]);
     expect(map.seam.revision).toBe(revision); // nothing changed to trigger it
     expect(h.sender.diagnostics()).toMatchObject({ snapshotsSent: 1, lastSnapshotSentRevision: revision });
     p.close();

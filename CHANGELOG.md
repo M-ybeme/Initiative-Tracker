@@ -16,11 +16,30 @@ The DM's Toolbox has evolved through focused feature releases. Minor versions (2
 - **1.9.x**: Battle map measurement tools, persistent fog shapes, and generator integration across NPC/Tavern/Shop systems
 - **1.8.x**: Spell database expansion to 432+ spells, inventory management, loot generator overhaul, and character token generation
 
-**Current version: 2.3.25 (September 2026)**
+**Current version: 2.3.26 (September 2026)**
 
 ---
 
 ## [Unreleased]
+
+---
+
+## [2.3.26] - 2026-09-29
+**Live Share player-visible asset transfer (Live Share Milestone 3)**
+
+### Live Share
+- **Players see the real map, with fog baked in.** The DM's browser composites the map image and the current fog (painted fog, cover shapes and reveal shapes, exactly as the DM's map draws them) into one player-visible image and sends only that. Anything under fog is opaque in it, soft fog edges and see-through fog colours included, so the uncovered map never leaves the DM's browser. Moving tokens, changing the grid or moving/scaling the map sends no image; changing the fog or the map sends a new one (debounced, and never a composite made stale by later fog edits)
+- **Custom token art.** Uploaded token images and Character Manager tokens appear on the player's map. Built-in preset tokens keep their markers, and images the DM's browser can't read (other sites without CORS) fall back to the marker. Players never load token images from other sites; a shared image is sent once
+- **Progressive, request-based transfer.** The player shows the map structure at once, then asks for the images it is missing (in batches); they fill in as they arrive, and a new background replaces the old one without flashing. If the new one can't be loaded, the player shows the neutral map surface, never an older image with different fog, and fog states that come back (fog toggled off and on) are shown every time. Images are sent in 16 KiB binary chunks, paced so token movement never waits behind them, and are verified (type, size, SHA-256) before use. Everything received is released when the session ends; nothing is stored
+- Background encoding: WebP (quality 0.85) with PNG fallback, chosen by benchmark (a 3072×2048 painted map: 488 KiB vs 11.2 MiB PNG). Limits: 8192 px per side, 16.7 M pixels (larger maps are scaled down), 16 MiB per background; 512 px and 1 MiB per token image
+- **Only in Live Share mode.** The map image and token art are prepared only when the Battle Map is opened with `?liveshare=1`; the ordinary Battle Map does no extra work
+- **Fog that fails to load covers the map.** A saved fog layer that can't be decoded now covers the whole map (previously it was silently cleared, and could even stop an import from finishing), and nothing is shared while saved fog is still loading
+- The player-safe snapshot (now version 2) gains only references: `background: { assetId, revision }` and a token `assetId`. Diagnostics show background revision, encode status and time, and asset counts and bytes, never image content or sources
+
+### Internal / Tests
+- Unit tests for fog masking, change detection and the background revision (token moves never rebuild, and grid and map transform are not background inputs at all; fog, shapes, fog on/off and map changes do), stale-composite discard, failure fallbacks, custom-art rules, the asset protocol (validation, binary chunks), the player cache (possession, reassembly in any order, duplicates, hash/type/length checks, object URL lifetime) and the sender (budgeted pacing, supersession, limits). Integration through the local relay with a bandwidth-limited in-memory channel proves snapshots keep flowing during a large transfer. Browser specs check composition pixel by pixel after encoding, and drive the real Battle Map: fogged map, token move with no image traffic, fog change, custom art sent once, unreadable art falling back, cleanup at session end, and a background of more than 100 chunks with a structured update arriving mid-transfer. During development each key guard was deliberately broken to confirm a test fails (not recorded as a script)
+- Review fixes before release, each with a regression test: a background that comes back (fog A, B, A, … with identical ids) is requested, served and shown every time, in unit tests and over the local relay (retries now count only unfinished attempts, the host's per-player send cap resets when an asset leaves, and a failed background never falls back to an older one); more than 64 missing assets are requested in batches (70-asset test); asset preparation only runs with `?liveshare=1` (browser test counting encodes and hashes, with a Live Share control); the token-move test now waits past the rebuild window before asserting no new background; and a corrupt saved fog layer is checked pixel by pixel on the player to be fully covered
+- `scripts/bench-live-share-background.mjs` benchmarks background encoding
 
 ---
 

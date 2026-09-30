@@ -9,6 +9,10 @@
  * sends the seam's snapshot unchanged, so only what projectPlayerSafeState() allowlists can leave
  * the page. Sending is throttled, backpressure-aware and latest-state-wins (snapshot-sender.js).
  *
+ * Milestone 3: players ask for the assets a snapshot references (the player-visible background,
+ * custom token art) and the asset sender answers from seam.getAsset(id): bytes the Battle Map side
+ * already prepared, never the map image, fog or token image sources (asset-sender.js).
+ *
  * Development query parameters, carried into the join link like on liveshare-dev.html:
  *   ?relay=ws://host:port  ?forceRelay=1  ?iceTimeoutMs=20000
  */
@@ -16,6 +20,8 @@ import { resolveRelayUrl } from './modules/live-share/config.js';
 import { buildJoinUrl } from './modules/live-share/room-id.js';
 import { HostSession } from './modules/live-share/host-session.js';
 import { createSnapshotSender } from './modules/live-share/snapshot-sender.js';
+import { createAssetSender } from './modules/live-share/asset-sender.js';
+import { parseChannelMessage, PROTOCOL_VERSION } from './modules/live-share/protocol.js';
 
 const params = new URLSearchParams(location.search);
 
@@ -33,13 +39,20 @@ function initLiveShareHost(seam) {
   let joinUrl = null;
 
   const sender = createSnapshotSender({ getSnapshot: () => seam.getPlayerSafeState() });
-  // The seam's one "player-visible state changed" signal: the only trigger for later snapshots.
-  seam.onShareableStateChanged(() => sender.notifyChanged());
+  const assetSender = createAssetSender({ protocolVersion: PROTOCOL_VERSION, getAsset: seam.getAsset, hasAsset: seam.hasAsset });
+  // The seam's one "player-visible state changed" signal: the only trigger for later snapshots. A
+  // new background also ends any transfer of the one it replaced.
+  seam.onShareableStateChanged(() => {
+    sender.notifyChanged();
+    assetSender.assetsChanged();
+  });
 
   // States, counts and revisions only: no room id or link, no IP addresses, no snapshot content.
-  const diag = { signaling: 'idle', signalingError: null, turn: null, peers: {}, snapshots: null };
+  const diag = { signaling: 'idle', signalingError: null, turn: null, peers: {}, snapshots: null, assets: null, preparedAssets: null, lastProtocolError: null };
   const renderDiagnostics = () => {
     diag.snapshots = sender.diagnostics();
+    diag.assets = assetSender.diagnostics();
+    diag.preparedAssets = seam.getAssetDiagnostics ? seam.getAssetDiagnostics() : null;
     ui.diag.textContent = JSON.stringify(diag, null, 2);
   };
   // Counters change with every send; a small refresh keeps the panel current without hooking sends.
@@ -100,7 +113,17 @@ function initLiveShareHost(seam) {
         if (peers.has(peerId)) diag.peers[peerId] = snapshot;
       });
       // The player gets the current map as soon as its channel opens, then every change.
+      // Players send only asset requests (untrusted: validated, and answered from the seam only).
+      link.on('message', ({ data }) => {
+        const parsed = parseChannelMessage(data);
+        if (!parsed.ok || parsed.message.type !== 'asset-request') {
+          diag.lastProtocolError = parsed.ok ? `unexpected ${parsed.message.type} from a player` : parsed.error;
+          return;
+        }
+        assetSender.request(peerId, parsed.message.assetIds);
+      });
       link.on('open', () => {
+        assetSender.addPeer(peerId, link);
         sender.addPeer(peerId, link);
         setPeer(peerId, 'Connected — sharing the map');
         renderDiagnostics();
@@ -108,11 +131,13 @@ function initLiveShareHost(seam) {
       link.on('failed', (failure) => setPeer(peerId, `Connection failure (${failure.kind}): ${failure.message}`));
       link.on('close', () => {
         sender.removePeer(peerId);
+        assetSender.removePeer(peerId);
         if (!link.failure) setPeer(peerId, 'Disconnected');
       });
     });
     session.on('peer-left', ({ peerId }) => {
       sender.removePeer(peerId);
+      assetSender.removePeer(peerId);
       peers.delete(peerId);
       delete diag.peers[peerId];
       renderPeers();
@@ -135,6 +160,7 @@ function initLiveShareHost(seam) {
     if (!session || !session.active) return;
     session.end();
     sender.dispose();
+    assetSender.dispose();
     setStatus('Session ended');
     setButtons(false);
     renderDiagnostics();
@@ -189,7 +215,7 @@ function buildPanel() {
   title.textContent = 'Live Share — development prototype';
   const note = document.createElement('div');
   note.style.cssText = 'color:#fbbf24;font-size:12px;margin-bottom:6px';
-  note.textContent = 'Anyone with the link can watch this map. No map or token images, fog or HP are shared.';
+  note.textContent = 'Anyone with the link can watch this map. Players get the map as you show it to them, with fog baked in, and custom token art; never the uncovered map, HP or DM-only data.';
   const status = document.createElement('div');
   status.dataset.testid = 'host-status';
   status.textContent = 'Not started';

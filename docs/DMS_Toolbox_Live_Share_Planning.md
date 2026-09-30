@@ -9,9 +9,11 @@
 **Authority:** The DM's browser owns all session, seat, admission and game state  
 **Synchronization (V1):** Throttled whole-state player-safe snapshots  
 **Product philosophy:** Temporary shared tactical state without moving persistent campaign data into centralized cloud storage.
-**Progress:** Milestone 0 complete and validated in production (2.3.22–2.3.23, 2026-09-28); Milestone 1 (share-state seam) complete in 2.3.24; Milestone 2 (remote structured rendering) implemented in 2.3.25.
+**Progress:** Milestone 0 complete and validated in production (2.3.22–2.3.23, 2026-09-28); Milestone 1 (share-state seam) complete in 2.3.24; Milestone 2 (remote structured rendering) complete and validated in production in 2.3.25. Milestone 3 (player-visible background and asset transfer) implemented in 2.3.26, validated locally; a real-device check is still to do. Its asset and fog design was revised on 2026-09-29 (see below).
 
-**Revision note:** This plan was revised after an architecture review against the current codebase. Compared with the first draft, seats, passwords and room admission moved from the signaling service to the DM's browser; synchronization starts as whole snapshots instead of snapshots plus patches; a Battle Map state boundary and the player-safe projection are now the first Battle Map milestone; fog is explicitly a trusted-player feature; and the roadmap proves networking and remote rendering before building room UX.
+**Revision note:** This plan was revised after an architecture review against the current codebase. Compared with the first draft, seats, passwords and room admission moved from the signaling service to the DM's browser; synchronization starts as whole snapshots instead of snapshots plus patches; a Battle Map state boundary and the player-safe projection are now the first Battle Map milestone; ~~fog is explicitly a trusted-player feature~~ (superseded by the second revision below); and the roadmap proves networking and remote rendering before building room UX.
+
+**Second revision (2026-09-29, after Milestone 2 was validated in production):** the map and fog asset design changed. Players no longer receive the original map image plus a separate fog overlay. Instead the DM's browser composites a **player-visible background** (the map with the current fog baked in) and transfers only that raster. Tokens, names, conditions, auras, measurements and other dynamic overlays stay structured state drawn on top of it. Token images are transferred only for custom art, identified by content-derived asset ids, and sent once per session. §2.3, §3, §5.4, §6, §13, §14, §15, §16, §22–§26 and §30 were updated and Milestones 3 and 4 were replaced. The original design is kept, marked superseded, in §32 and in §24.
 
 ---
 
@@ -41,7 +43,14 @@ The feature must preserve the current local-first design of The DM's Toolbox.
 
 Live Share must not require campaign data, saved encounters, journals, characters, or other persistent application state to be stored on a central server.
 
-Only data explicitly required for the active shared session leaves the host browser, and it goes to the players' browsers, not to a server.
+~~Only data explicitly required for the active shared session leaves the host browser, and it goes to the players' browsers, not to a server.~~
+
+Only data explicitly required for the active shared session leaves the host browser, and it is sent to the players' browsers. No server stores it. More precisely:
+
+- The **signaling relay** (§20) carries only connection setup: room registration and WebRTC offers, answers and ICE candidates. It never receives Battle Map or other game state, and it keeps only ephemeral room bookkeeping.
+- On a **direct WebRTC connection**, session data goes browser to browser.
+- Where ICE selects a **TURN relay** (§21), the same WebRTC packets pass through the TURN server, still DTLS-encrypted between the two browsers. TURN forwards packets; it cannot read them.
+- **No persistent campaign or game state** is stored on the relay, the TURN service or any other server.
 
 ## 2.2 The DM's browser is authoritative
 
@@ -62,7 +71,8 @@ Players receive a filtered representation of host state and, in later versions, 
 Information shared with players falls into two categories with different guarantees (see §13):
 
 - **Structured secrets** — hidden entity data, exact HP, DM notes, private metadata. These are **never transmitted** when hidden. The guarantee is enforced by the player-safe projection and proven by tests that the fields are absent, not merely hidden in the player UI.
-- **Fog of war over the map image** — a **trusted-player** feature. The whole map image is transferred and fog is drawn over it in the player client. This hides the map from normal viewing, not from a player who inspects the transferred data.
+- ~~**Fog of war over the map image** — a **trusted-player** feature. The whole map image is transferred and fog is drawn over it in the player client. This hides the map from normal viewing, not from a player who inspects the transferred data.~~ *(Superseded on 2026-09-29; see §13.2 and §32.)*
+- **Fog of war over the map image** — the DM's browser composites the map with the current fog and transfers only that player-visible raster (§13.2, §15). The player receives only the current player-visible raster rather than the original unobscured map asset, so hidden terrain is not intentionally transmitted as part of the Live Share view. This is a stronger boundary than the original trusted-player overlay, but it is not absolute secrecy (§13.2).
 
 ## 2.4 No accounts required
 
@@ -113,8 +123,8 @@ The only server-side component is a small realtime signaling relay. It connects 
 - Host-authoritative WebRTC session
 - Player-safe Battle Map projection
 - Throttled whole-state structured snapshots
-- Map image and token image transfer
-- Fog-of-war synchronization (trusted-player model)
+- ~~Map image and token image transfer~~ A host-composited player-visible background (map with fog baked in) and selective transfer of custom token images (§15)
+- ~~Fog-of-war synchronization (trusted-player model)~~ Fog-of-war synchronization through the composited background (§13.2, §16)
 - Token-position, condition and public-measurement synchronization
 - Player map pings
 - Connection status
@@ -131,7 +141,7 @@ The only server-side component is a small realtime signaling relay. It connects 
 - Incremental patch/event synchronization (only if profiling shows a need)
 - Token visibility controls ("Visible to Players")
 - Enemy health visibility options
-- Asset hash/caching across reconnects or sessions
+- ~~Asset hash/caching across reconnects or sessions~~ Asset caching beyond the current session. Content-derived asset ids and a session-scoped player cache are now part of Milestone 3 (§15.4).
 - Player token movement
 - Player HP editing
 - Initiative editing by players
@@ -186,7 +196,8 @@ Player A  ◀──────────── DM Host ───────�
 - own the room's seats, password, lock state and permissions
 - decide seat claims, kicks and resets
 - track connected players and their seats
-- maintain the session revision counter
+- ~~maintain the session revision counter~~
+- carry the seam's revisions to players without owning them: the structured snapshot revision and, from Milestone 3, the background revision both come from the Battle Map side (§5.4, §14)
 - drive snapshot sending and resync
 
 ## 5.2 Signaling Client
@@ -211,7 +222,9 @@ The single boundary between Battle Map internals and Live Share (see §6 and Mil
 
 - produce the player-safe structured state on demand,
 - signal that shareable state has changed,
-- expose the fog and asset data Live Share transfers.
+- ~~expose the fog and asset data Live Share transfers.~~
+- produce the player-visible background composite (the map image with the current fog baked in) and the bytes of custom token images, each with its own identity (§15). Composition happens on the Battle Map side of the seam, so networking code receives encoded bytes and ids, never the original map image or the fog canvas.
+- own the structured snapshot revision (Milestone 1) and, from Milestone 3, the separate background revision (§14).
 
 Live Share code talks only to this seam, never to Battle Map internals directly.
 
@@ -260,7 +273,7 @@ Consequences for the plan:
 
 1. **Do not wire WebRTC into the existing dirty/render call sites.** Establish one explicit share-state seam first (Milestone 1): conceptually a `getPlayerSafeBattleMapState()` and a single observable "shareable state changed" notification. The exact mechanism is an implementation decision.
 2. **Unit-test the seam heavily**, before any networking uses it.
-3. **Fog needs its own transfer channel** (§16), separate from structured snapshots.
+3. ~~**Fog needs its own transfer channel** (§16), separate from structured snapshots.~~ **Fog is baked into the player-visible background on the host** (§15.2, §16), not transferred separately. The fog bitmap is already aligned with the map image (it is sized to the image's natural pixels, and fog shapes are stored in image coordinates), so the composite is built in map image space and placed by the map transform. That background is separate from structured snapshots.
 4. **Token visibility and HP visibility are product features to be designed later**, not filters that already exist (§13).
 
 ---
@@ -293,11 +306,11 @@ Consequences for the plan:
    3. the seat exists and is enabled,
    4. the seat is available.
 7. The DM's browser accepts or rejects the claim. On acceptance it records the seat as claimed and issues a temporary seat-session credential.
-8. The accepted player enters the session and receives the first snapshot and assets.
+8. The accepted player enters the session and receives the current structured snapshot, then the player-visible background and any custom token assets it needs (§15.5).
 
 Seat selection is provisional: choosing a seat in the join screen reserves nothing. A seat is claimed only when the DM's browser accepts an explicit **Join Room** request. Because every claim is decided in one place (the DM's browser, one decision at a time), two players cannot both win the same seat.
 
-This join flow is product behavior, from Milestone 5 onward (§24). From then on, admission is mandatory: a connected but not-yet-admitted player receives only admission state (seats, whether a password is required, whether the room is locked) — never map state, assets, fog or pings — until the DM's browser accepts its join request. The development prototypes of Milestones 0–4 have no admission step (§11).
+This join flow is product behavior, from Milestone 5 onward (§24). From then on, admission is mandatory: a connected but not-yet-admitted player receives only admission state (seats, whether a password is required, whether the room is locked) — never map state, background, other assets or pings — until the DM's browser accepts its join request. The development prototypes of Milestones 0–4 have no admission step (§11).
 
 ## Room Lock
 
@@ -476,7 +489,7 @@ The normal Toolbox navigation does not replace the Live Share page; other Toolbo
 
 No temporary seat logic is added to these milestones just to imitate the later model.
 
-**From Milestone 5 onward**, the join screen, seats and optional password above are the product behavior, and admission is mandatory: an unadmitted peer receives only admission-related state, and no map state, assets, fog or pings are available to it until the DM's browser accepts its join request.
+**From Milestone 5 onward**, the join screen, seats and optional password above are the product behavior, and admission is mandatory: an unadmitted peer receives only admission-related state, and no map state, background, other assets or pings are available to it until the DM's browser accepts its join request.
 
 ---
 
@@ -523,11 +536,12 @@ Initial player-safe structured state:
 - map dimensions and transform
 - grid configuration
 - token IDs, positions, sizes, rotation
-- token image references (resolved through asset transfer, §15)
+- ~~token image references (resolved through asset transfer, §15)~~ token asset ids: `null` for ordinary tokens, and an id only for tokens with custom art, resolved through asset transfer (§15.3)
+- the background reference: the player-visible background's asset id and background revision (§15.2)
 - public token names, where the token's label is shown
 - public conditions
 - public persistent measurements
-- session revision
+- the structured snapshot revision (§14)
 
 Never transmitted (unless a future DM feature deliberately shares it):
 
@@ -541,17 +555,23 @@ Never transmitted (unless a future DM feature deliberately shares it):
 
 The first Battle Map milestone treats **all currently placed tokens as visible** and **omits HP entirely**.
 
-## 13.2 Fog of war (trusted-player model)
+**Milestone 3 deliberately extends the Milestone 1 allowlist** with exactly two references: `background: { assetId, revision }` on the snapshot, and `assetId: null | id` on each token. They are added to `projectPlayerSafeState()` like every other field. Networking still consumes only the seam's output and never reaches into canonical Battle Map state; the bytes those ids name also come from the seam (§5.4). Presentation-only overlays such as auras and vision cones also belong to the structured layer (§13.4), but they are not in the Milestone 1 projection. Adding them is a deliberate allowlist change (§30).
 
-For the initial implementation:
+## 13.2 Fog of war (host-composited background)
 
-- the complete map image may be transferred to the player,
-- fog is transferred separately and drawn over the map in the player client,
-- a technically motivated player may be able to inspect the underlying transferred image.
+*Revised on 2026-09-29. The original trusted-player model is preserved in §32.1.*
 
-This is a deliberate tradeoff. Fog in Live Share hides the map from normal viewing at the table; it is **not** adversarial information security, and the documentation must not claim it is.
+The DM's browser composites the original map image with the current fog state (painted cover and reveal, plus fog shapes) into one player-visible raster, and only that raster is transferred (§15.2). In it, areas hidden from players are opaque fog, whatever see-through fog display the DM uses for themselves.
 
-The alternative — sending only pre-composited revealed regions of the map, and re-sending as fog is revealed — is out of scope because of its complexity and bandwidth cost.
+- The player receives only the current player-visible raster rather than the original unobscured map asset, so hidden terrain is not intentionally transmitted as part of the Live Share view.
+- The original map image is never sent to players, and the player client never needs it.
+- Revealing an area sends a new background that includes the newly visible pixels; nothing still hidden is sent ahead of time.
+
+This is a **stronger privacy boundary** than the original model, in which the player's browser held the whole unobscured map under a client-side overlay that a technically motivated player could remove. It is still not absolute secrecy or cryptographic protection, and the documentation must not claim otherwise:
+
+- a player keeps whatever it has already received, so covering a revealed area again hides it from the live view but does not retract earlier backgrounds,
+- the fog only covers map pixels. Tokens and other structured overlays are sent as structured state (§13.1), so a token standing in a fogged area is still visible to players until a hidden-token feature exists (§13.3),
+- the guarantee depends on the host composing correctly, so it is tested as part of Milestone 3 (§25).
 
 ## 13.3 Later visibility features (not required for early milestones)
 
@@ -559,6 +579,15 @@ The alternative — sending only pre-composited revealed regions of the map, and
 - enemy health visibility: hidden / health bar or state / exact HP.
 
 These are new DM-side features. Neither is required for the networking proof of concept or the first remote rendering.
+
+## 13.4 Presentation overlays vs. visibility
+
+Two different things must not be confused:
+
+- **Presentation-only overlays** — an aura radius, a vision-radius circle or cone, and similar indicators. They are structured state drawn on top of the background (Layer 2, §15.1), and are never baked into the raster.
+- **Actual visibility logic** — if a future vision system decides which map pixels a player is allowed to see, that visibility mask becomes an input to host-side background composition, alongside fog (and likely to filtering of structured state too).
+
+No vision-based visibility is planned for Milestones 3 or 4. Milestone 3 is not expanded into a vision system.
 
 ---
 
@@ -573,7 +602,7 @@ These are new DM-side features. Neither is required for the networking proof of 
 5. The entire small structured snapshot is sent to each admitted player.
 6. The player replaces its current rendered state with the snapshot.
 
-Each snapshot carries a monotonically increasing session revision. A player ignores any snapshot older than the one it has already applied. A newly connected or reconnected player simply receives the current snapshot.
+Each snapshot carries ~~a monotonically increasing session revision~~ the structured snapshot revision (below). A player ignores any snapshot that is not newer than the one it has already applied. A newly connected or reconnected player simply receives the current snapshot.
 
 V1 does not use:
 
@@ -582,61 +611,131 @@ V1 does not use:
 - revision-gap detection and recovery,
 - ordered event reconstruction.
 
+## Revisions
+
+Three different things are called "revision". No single counter controls all of them:
+
+- **Structured snapshot revision** — `revision` in each `battlemap-snapshot` (Milestones 1–2). The share-state seam owns it, and it increases only when player-visible structured content changes. It restarts at 1 when the host's Battle Map page loads. A player's receiver lives for one connection to one host page load, and applies only revisions newer than the last one it applied.
+- **Background revision** — `background.revision` (Milestone 3). It is produced with the player-visible composite and increases only when that background changes, independently of the snapshot revision. A background change also changes the snapshot's background reference, so the snapshot revision moves then too; the reverse never happens (a token move does not touch the background revision).
+- **Room/session revision (future; none exists today)** — if host-refresh resumption (Milestone 7) needs players to tell a reloaded host page's revisions from the previous page's, that will be a separate session identifier or epoch paired with the revisions above, not a reuse of either counter.
+
 The structured Battle Map state is small (a table's worth of tokens and measurements), so whole snapshots are expected to be cheap. Incremental updates should be introduced only if profiling demonstrates a real need.
 
-Fog and binary assets are not part of the structured snapshot; they use their own channels (§15, §16).
+~~Fog and binary assets are not part of the structured snapshot; they use their own channels (§15, §16).~~ Raster data (the player-visible background and custom token images) is not part of the structured snapshot. The snapshot carries only asset ids and the background revision, and the bytes travel through asset transfer (§15). Moving a token changes only the snapshot revision; it never recomposites or retransmits the background.
 
 ---
 
 # 15. Asset Transfer
 
-Images used by the Battle Map exist in the DM's browser, so players need them transferred.
+*Revised on 2026-09-29. The original design (the map image transferred as is, with fog on its own channel) is preserved in §32.2.*
 
-Assets that may need host-to-player transfer:
+Two kinds of raster data go to players, both over the WebRTC DataChannel and never through the relay:
 
-- the map image,
-- locally stored token images,
-- token images represented as data URLs,
-- externally referenced token images.
+1. **The player-visible background**, one raster the host composites from the map image and the current fog (§15.2).
+2. **Custom token images**, only for tokens that actually use custom art (§15.3).
 
-Privacy goal: **player browsers should not independently fetch arbitrary external token URLs** when the host can transfer the asset instead. Fetching them directly would make each player's browser contact third-party hosts.
+Everything else players see stays structured state (§14), drawn on top.
 
-What the host can transfer depends on where the image comes from:
+## 15.1 Layers
 
-- **Data URLs and locally stored images** can be transferred directly.
-- **Same-origin or CORS-enabled external images** can potentially be fetched by the host browser and relayed.
-- **Arbitrary third-party images** may block the host browser from fetching or reading the image data, because host-side fetching and repackaging of external URLs is subject to browser CORS rules.
+```text
+Layer 1  player-visible raster background   map + fog / cover / reveal, composited on the host
+Layer 2  structured dynamic overlays        tokens, names, conditions, auras, measurements,
+                                            other player-safe structured state
+```
 
-So the host cannot guarantee to transfer every external token image. The fallback for an external image the host cannot read is an open decision for Milestone 3 (§30). Possible policies include requiring the DM to import/store the image locally before sharing, showing players a placeholder, allowing direct third-party loading only as an explicit privacy tradeoff, or another approach chosen during implementation.
+Frequently changing game objects are never baked into the raster. Moving a token or an aura must not force a recomposite and a new image transfer.
 
-Transfer approach:
+## 15.2 Player-visible background
 
-- transfer assets over the WebRTC DataChannel,
-- send metadata before the data,
-- split large files into chunks,
-- enforce size limits,
-- reconstruct each asset as a Blob on the player client,
-- render from temporary object URLs,
-- discard temporary assets when the session ends.
+```text
+DM Battle Map
+  original map image + fog bitmap (painted cover / reveal) + fog shapes
+      ↓   host-side canvas composition, in map image space
+  player-visible composite
+      ↓   encode: WebP where supported and effective, PNG fallback
+  background asset (asset id, metadata, bytes)
+      ↓   chunked DataChannel transfer
+  player: drawn as Layer 1, placed in the world by the snapshot's map transform
+```
+
+- **Where it is made.** Composition happens on the Battle Map side of the share-state seam (§5.4). Networking code receives encoded bytes and their identity; it never reads the original map image, the fog bitmap or any other canonical state.
+- **Coordinates.** The composite is in the map image's own pixel space, the same space as the fog bitmap and fog shapes. Changing the map's scale or offset (the map transform, already structured state) moves the background on the player without recompositing it.
+- **Hidden means opaque.** Areas hidden from players are opaque in the composite (§13.2). The unobscured source map is never sent.
+- **Background revision and identity, separate from the snapshot revision.** The background has its own revision and asset id. The structured snapshot only refers to it:
+
+  ```text
+  snapshot revision 195
+    background: { assetId: "…", revision: 7 }
+  ```
+
+  - *Moving a token:* the snapshot revision changes; the background revision does not; no image is transferred.
+  - *Painting fog:* the snapshot revision may change (its background reference changes); the background revision changes; a new background is composited and transferred.
+- **Whole backgrounds in V1.** A new, complete composite is sent whenever the background changes. Dirty-region updates, tiling and differential background transfer are possible later optimizations, only if profiling shows a need (Milestone 4).
+- **Encoding.** Canvas-based composition; WebP where the browser can encode it and it is effective, otherwise PNG. Quality and compression settings are to be chosen from benchmarks on real battle maps, not fixed in advance. The maximum composite resolution and byte size are a Milestone 3 decision (§30).
+- **Latest wins.** If the background changes again before a transfer finishes, the older transfer may be abandoned in favour of the newer background.
+- **When no composite can be made** (no map loaded, or encoding fails), players keep the neutral placeholder surface from Milestone 2. The structured map keeps working.
+
+## 15.3 Selective token images
+
+- **Ordinary tokens need no image.** Default and generic tokens keep the lightweight structured marker and label that players already see in Milestone 2, and their `assetId` is `null`. Not every token needs an asset.
+- **Custom art is transferred.** A token image is sent only when the token uses a meaningful custom asset: user-uploaded token art, a character portrait or token from the Character Manager, or another explicitly attached special image. How the host tells custom art from generic art is an implementation decision for Milestone 3 (§30).
+- **Shared images are sent once.** Tokens that use the same custom image share one asset id, and the image is transferred once and reused.
+- **Failure degrades gracefully.** If an image is unavailable, can't be read, or fails to transfer, the player shows the structured marker and name. A missing image never breaks the map.
+- **External URLs.** Players never fetch external token URLs themselves; that would make each player's browser contact third-party hosts. The host transfers an external image only if its browser can read it (same-origin or CORS-enabled). Otherwise the token falls back to its marker (§30).
+
+## 15.4 Asset identity, cache and deduplication
+
+```text
+snapshot:
+  background: { assetId: "…", revision: 7 }
+  tokens[i].assetId: null | "…"
+
+asset transfer:
+  assetId
+  metadata (kind, MIME type, byte length, pixel size)
+  chunked bytes
+```
+
+- **Stable, content-derived ids** where practical, for example a hash of the encoded bytes (SHA-256 through Web Crypto), so identical bytes deduplicate naturally. The player can also check that reassembled bytes match the id before using them.
+- **Session-scoped cache on the player**, keyed by asset id. If an asset id is already present, it is not retransmitted: the host tracks what each player already holds.
+- **Nothing persists beyond the session.** Assets live in memory as Blobs and temporary object URLs. They are released when superseded (an older background) and when the session ends. Persisting Live Share assets is not planned unless a later milestone explicitly decides it.
+- **Transfer mechanics.** Metadata is sent before the data, and large assets are split into chunks. Size limits are enforced on both sides. Each asset is validated (MIME allowlist, declared size, chunk count, id match), and anything oversized or malformed is rejected. Asset chunks respect channel backpressure like snapshots do, and must not starve structured snapshots; whether that needs interleaving or a second DataChannel is decided in Milestone 3 (§30).
+
+## 15.5 Progressive rendering
+
+The player never waits for rasters before showing the map:
+
+```text
+connect
+  ↓
+structured state renders immediately
+  ↓
+placeholder map surface + placeholder token markers visible
+  ↓
+background asset arrives → background fills in
+  ↓
+custom token assets arrive → token art fills in
+  ↓
+normal structured state updates continue independently throughout
+```
+
+A failed or slow asset transfer leaves the placeholder in place; it never blocks structured updates.
 
 The signaling relay never receives or stores assets.
-
-A later asset-hash/cache system could avoid re-sending unchanged assets (for example after a reconnect). It is not required for the earliest milestones.
 
 ---
 
 # 16. Fog Synchronization
 
-Fog is synchronized separately from the structured snapshot, because painted fog is pixel data, not small objects.
+*Revised on 2026-09-29. The original separate fog channel is preserved in §32.3.*
 
-Conceptual model:
+Fog has no channel of its own. It is baked into the player-visible background (§15.2): a fog change produces a new background revision, a new composite and a new background transfer, while structured snapshots continue independently.
 
-- **Structured snapshot** — grid, tokens, conditions, measurements and other small structured state (§14).
-- **Fog snapshot** — a compressed/rendered representation of the current fog (painted fog and fog shapes combined, or sent side by side), sent on its own channel, throttled, and not emitted for each individual brush event.
-
-V1 does not require an incremental fog-event protocol. The fog snapshot follows the trusted-player model (§13.2).
-
-The exact fog encoding and compression is an open decision (§30).
+- The host recomposites after fog changes, throttled or debounced rather than per brush event, and V1 sends the whole background.
+- Milestone 3 does this in the simplest reasonable way. Making frequent fog edits efficient (recomposition scheduling, background transfer throttling, and dirty-region or tile updates only if measurements justify them) is Milestone 4.
+- The fog encoding question is now the background encoding question (§15.2, §30).
+- Presentation-only vision indicators stay structured. A future visibility mask would join fog as an input to composition (§13.4).
 
 ---
 
@@ -667,7 +766,7 @@ Expected behavior:
 3. re-establish the WebRTC connection,
 4. present the existing temporary seat-session credential (kept in the player's `sessionStorage`, §8) to the DM's browser,
 5. the DM's browser validates the credential and re-admits the player to the same seat,
-6. receive the current snapshot, fog and any missing assets,
+6. receive the current structured snapshot, the current player-visible background (fog is part of it, §16) and any custom token assets it is missing,
 7. resume the session.
 
 ## Host Refresh
@@ -693,13 +792,9 @@ The browser cannot and should not be forcibly prevented from leaving the page.
 
 Live Share needs a small realtime component alongside the existing static site. The normal application stays a static Netlify site; ordinary request/response serverless functions are not a fit for holding WebSocket connections and relaying messages between browsers in real time.
 
-Realistic implementation categories:
+~~Realistic implementation categories: Cloudflare Workers + Durable Objects, PartyKit, another small hosted WebSocket relay. No provider is chosen yet (§30).~~
 
-- Cloudflare Workers + Durable Objects,
-- PartyKit,
-- another small hosted WebSocket relay.
-
-No provider is chosen yet (§30).
+**Chosen in Milestone 0 and running in production:** Cloudflare Workers + Durable Objects, one Durable Object per room (`relay/cloudflare/`). A local Node relay (`relay/node-relay.mjs`) speaks the same protocol and is used for development and automated tests. Deployment and operation are documented in `relay/README.md`.
 
 ## Responsibilities (deliberately limited)
 
@@ -708,7 +803,7 @@ No provider is chosen yet (§30).
 - relay WebRTC signaling messages (offers, answers, ICE candidates),
 - expire rooms (host grace period, maximum lifetime, idle timeout),
 - basic abuse and rate limits appropriate to a relay (connection attempts, message rate, message size),
-- issue short-lived TURN credentials, if the chosen TURN setup requires it (§21).
+- issue short-lived TURN credentials: implemented as the Worker's `GET /turn-credentials` route (§21).
 
 ## Not the relay's job
 
@@ -733,22 +828,25 @@ The implementation requires:
 - the signaling relay (§20)
 - ICE negotiation
 - STUN
-- TURN for production reliability
+- TURN as a fallback for networks that block direct connections
 
 Approach:
 
-- direct peer-to-peer connection is attempted first,
+- direct peer-to-peer connection is attempted first, and stays preferred: ICE transport policy remains `all`, so a direct path wins whenever one works,
 - STUN helps browsers discover how to reach each other across home routers,
-- some network environments (certain corporate, school, mobile and strict NAT setups) cannot connect directly and require a TURN relay,
-- production reliability will likely require TURN support,
-- STUN-only is acceptable for the earliest experiments.
+- some network environments (certain corporate, school, mobile and strict NAT setups) cannot connect directly; there the connection goes through TURN,
+- ~~production reliability will likely require TURN support,~~
+- ~~STUN-only is acceptable for the earliest experiments.~~
+
+**Status: implemented and validated in production (Milestone 0, 2.3.23).** Cloudflare Realtime TURN is the fallback. A desktop-to-5G-phone path that could not connect STUN-only connected through it, while a direct desktop pair did not use it. Whether TURN is in use is reported from the selected candidate pair, not from configuration. If credentials can't be fetched, the page says so and connects STUN-only; rooms are never blocked.
 
 TURN credentials:
 
-- long-lived reusable TURN credentials must not be embedded in the public static application (anyone could read and reuse them),
-- a production setup should use short-lived credentials or an appropriate managed credential mechanism, typically issued by the signaling component.
+- the long-lived TURN key stays server-side, in Wrangler secrets, and is never embedded in the public static application,
+- the relay Worker's `GET /turn-credentials` route (origin-restricted, not cached) issues short-lived credentials (4 hours) for each connection attempt; pages hold them in memory only and never show them in diagnostics,
+- still to do (Milestone 8): rate limiting that route and monitoring TURN usage.
 
-This is not designed in detail until after the networking proof of concept.
+~~This is not designed in detail until after the networking proof of concept.~~ Details: `relay/README.md`.
 
 Topology is host-and-spoke: each player connects only to the DM's browser.
 
@@ -764,7 +862,7 @@ These apply to product behavior (Milestone 5 onward). The development prototypes
 - DM-browser-side admission: password check, lock check, seat validation
 - seat claims decided in one place (the DM's browser)
 - one active connection per seat in V1
-- admission is mandatory: an unadmitted peer receives only admission-related state, and no map state, assets, fog or pings until the DM's browser accepts its join request
+- admission is mandatory: an unadmitted peer receives only admission-related state, and no map state, background, other assets or pings until the DM's browser accepts its join request
 - temporary seat-session credentials are high-entropy, random, opaque capability tokens issued and validated by the DM's browser, scoped to one session and one seat, and never derived from seat names, seat IDs, the password or a counter (§8)
 - explicit message schema validation on both sides
 - reject unknown message types
@@ -779,7 +877,8 @@ These apply to product behavior (Milestone 5 onward). The development prototypes
 - short-lived ephemeral rooms
 - no DOM injection from player-supplied or relayed data (render as text)
 - dependency security review
-- no false claims about fog secrecy (§13.2)
+- ~~no false claims about fog secrecy (§13.2)~~ the fog model is documented accurately: players receive only the player-visible composite, which is stronger than an overlay but claims no absolute secrecy (§13.2)
+- the original unobscured map asset is never transmitted to players (§15.2)
 
 ## Threat Scenarios to Test
 
@@ -798,6 +897,8 @@ These apply to product behavior (Milestone 5 onward). The development prototypes
 - a player referencing tokens it was not sent
 - room access after session end
 - structured secrets appearing in any transmitted snapshot
+- the original map image, or pixels hidden under fog, appearing in any transmitted background
+- malformed, oversized or out-of-order asset chunks; bytes that don't match their asset id; references to asset ids that were never sent
 
 ---
 
@@ -815,7 +916,8 @@ Useful diagnostics:
 - whether a TURN relay is in use
 - reconnect attempts
 - last protocol error
-- current session revision
+- structured snapshot revision (last sent / last applied)
+- background revision and asset transfer state (assets sent, cached, failed, bytes; counts and ids only, never image content)
 - connected seat count
 
 Integrate with the existing DM's Toolbox diagnostics panel where appropriate.
@@ -879,7 +981,7 @@ Exit: every Battle Map change that players should see produces a new snapshot th
 - `projectPlayerSafeState({ state, persistentMeasurements })` is a pure allowlist projection: schema/version, map size (no image), map transform, grid, and per token only id, position, size, rotation, name (only where its label is shown) and conditions; plus persistent measurements. Every value is coerced to a primitive, so a field added to the Battle Map later is not shared unless it is added to the projection.
 - One change detector: after every rendered frame, every `setDirty()` and every `save()`, the seam recomputes the projection and, only if its content differs from the last one, increases `revision` and signals `onChange({ revision })`. Editor-only changes (selection, drag, the DM's pan/zoom, HP, fog, aura, vision cone, token images) never move the revision.
 - `window.BattleMapLiveShare` exposes `getPlayerSafeState()` (content plus revision) and `onShareableStateChanged(fn)` for later milestones. Nothing is sent anywhere yet.
-- Revisions restart at each page load; Milestone 2 pairs them with its session when it rejects stale snapshots.
+- Revisions restart at each page load; Milestone 2 pairs them with its session when it rejects stale snapshots. *(As built in Milestone 2: each player's receiver is scoped to one connection to one host page load; this is the structured snapshot revision, see §14 Revisions.)*
 
 ## Milestone 2 — Remote Structured Rendering
 
@@ -891,32 +993,87 @@ No patch/event protocol.
 
 Exit: a player watches the DM manipulate tokens and measurements in near real time.
 
-**Status: implemented (2.3.25), validated by automated tests on localhost; a real-device check over the deployed relay is still to do.**
+**Status: complete (2.3.25), validated in production.** Beyond the automated tests on localhost, a real-device check over the deployed relay confirmed it: the host Battle Map sends structured state, the player renders it read-only, snapshots arrive and apply correctly, direct WebRTC works, and the TURN fallback works when needed.
 
 - Host: `battlemap.html?liveshare=1` adds a development panel (`js/battlemap-live-share.js`); without the parameter the page is unchanged. It uses only `window.BattleMapLiveShare` (the Milestone 1 seam): Live Share never reads Battle Map state and never reshapes the snapshot. Room and peer handling is `js/modules/live-share/host-session.js`, shared with `liveshare-dev.html`.
 - Message: `{v:0, type:'battlemap-snapshot', payload:<seam snapshot>}`, at most 240 KB (`protocol.js`).
 - Sending (`snapshot-sender.js`): the current snapshot as soon as a player's channel opens; then, on the seam's change signal, at most one send per 100 ms, reading the seam at send time (latest state wins; the last state of a burst is always sent; never inside the Battle Map's redraw). While a channel has more than 64 KB buffered the player is only marked pending, and gets the then-current snapshot on `bufferedamountlow`.
 - Player (`liveshare-dev.html`): `battlemap-snapshot.js` validates each payload and copies only allowlisted fields; a snapshot is applied only if its revision is newer than the last one applied (the seam's revision; a receiver lives for one connection to one host page load). `battlemap-view.js` draws it as SVG in the Battle Map's world coordinates, fitted to the map surface and content (the DM's pan/zoom is not shared). On disconnect the last map stays, marked disconnected.
-- Not shared yet: map and token images (Milestone 3), fog (Milestone 4), HP.
+- Not shared yet: ~~map and token images (Milestone 3), fog (Milestone 4)~~ the player-visible background with fog, and custom token images (both revised Milestone 3); HP.
 
-## Milestone 3 — Asset Transfer
+## ~~Milestone 3 — Asset Transfer~~ (superseded)
 
-- map image transfer
-- token image transfer: data URLs and locally stored images, plus external images the host browser can fetch and read (same-origin or CORS-enabled)
-- a decided fallback policy for external token images the host cannot read (§15, §30)
-- chunking of large binary data, with size limits
-- temporary player-side asset reconstruction and cleanup
+> **Superseded after Milestone 2 production validation (2026-09-29)** by the revised Milestone 3 below. Kept for history. The reasons are listed in §32.
 
-Exit: a player joining the room sees the current map and every token image the host can transfer, without contacting any other host, and external images the host cannot read are handled by the chosen fallback policy.
+- ~~map image transfer~~
+- ~~token image transfer: data URLs and locally stored images, plus external images the host browser can fetch and read (same-origin or CORS-enabled)~~
+- ~~a decided fallback policy for external token images the host cannot read (§15, §30)~~
+- ~~chunking of large binary data, with size limits~~
+- ~~temporary player-side asset reconstruction and cleanup~~
 
-## Milestone 4 — Fog Synchronization
+~~Exit: a player joining the room sees the current map and every token image the host can transfer, without contacting any other host, and external images the host cannot read are handled by the chosen fallback policy.~~
 
-- trusted-player fog model (§13.2)
-- fog transferred and rendered on its own channel
-- throttled fog snapshots
-- documentation that makes no claim the underlying map is hidden from the player's device
+## ~~Milestone 4 — Fog Synchronization~~ (superseded)
 
-Exit: fog changes appear for players within an acceptable delay.
+> **Superseded after Milestone 2 production validation (2026-09-29)** by the revised Milestone 4 below. Kept for history.
+
+- ~~trusted-player fog model (§13.2)~~
+- ~~fog transferred and rendered on its own channel~~
+- ~~throttled fog snapshots~~
+- ~~documentation that makes no claim the underlying map is hidden from the player's device~~
+
+~~Exit: fog changes appear for players within an acceptable delay.~~
+
+## Milestone 3 (revised) — Player-Visible Background & Asset Transfer
+
+- host-side composition of the player-visible background: map + fog (painted cover and reveal, fog shapes), in map image space (§15.2)
+- a background revision and asset id, separate from the structured snapshot revision
+- WebP/PNG encoding, with settings chosen from real battle-map benchmarks
+- chunked DataChannel transfer with metadata first, size limits and validation
+- content-derived asset ids, a session-scoped player asset cache and deduplication: an asset the player holds is never re-sent (§15.4)
+- progressive display: structured map first, background and token art fill in as they arrive (§15.5)
+- selective custom token image transfer: user-uploaded art, Character Manager portraits/tokens and other explicitly attached images only; one transfer per distinct image (§15.3)
+- fallback to the structured token marker and name whenever an image is unavailable or fails
+- a deliberate extension of the Milestone 1 allowlist with exactly two references, `background: { assetId, revision }` and token `assetId: null | id` (§13.1); networking still consumes only the seam's output and never reaches into canonical Battle Map state
+- no fog editing optimization yet: frequent fog edits simply recomposite and resend the whole background, throttled (Milestone 4 improves this)
+
+Not in scope: a vision or visibility system (§13.4), dirty-region/tiled/delta backgrounds, persistent asset caching, product room UX.
+
+Exit:
+
+- the player sees the actual map background,
+- the current fog/reveal state is baked into what the player receives,
+- the unobscured source map is not sent to the player,
+- structured tokens remain independently rendered and updated on top of the background,
+- custom token assets transfer only when required,
+- repeated assets are not retransmitted,
+- ordinary token movement does not trigger background retransmission,
+- a real-device test succeeds.
+
+**Status: implemented (2.3.26), validated by automated tests on localhost; the real-device exit test is still to do.**
+
+- Battle Map side (`js/modules/battle-map-share-assets.js`, wired into `battlemap.html` at the seam's three funnels, and only created in Live Share mode, `?liveshare=1`: an ordinary Battle Map composes, encodes and hashes nothing): its own change detector keys only on the background inputs (map image identity and size, fog on/off, a fog-bitmap version bumped wherever the bitmap's pixels change, fog shapes). Token moves, grid, map transform, the DM's view and the structured revision never trigger it. Rebuilds are debounced (250 ms after the last change, at most 1 s apart). A composite whose inputs changed while it was encoding is discarded and rebuilt, so nothing the DM has just covered is published. A failure (an unreadable map, or too large even when scaled down) publishes no background rather than a stale one. While a saved fog bitmap is still decoding, nothing is published; a saved fog bitmap that cannot be decoded fills the fog completely (fail closed) instead of leaving it cleared.
+- Composition mirrors the DM's fog (painted bitmap, then cover shapes, then reveal shapes cutting through both). Every pixel with any fog alpha becomes opaque fog, so soft edges and see-through colours never let the map show through. It is done in map image space and placed by the map transform, so moving or scaling the map needs no new bytes.
+- Encoding: WebP at quality 0.85, falling back to PNG where the browser cannot encode WebP. Benchmark (`scripts/bench-live-share-background.mjs`, Chromium): a 3072×2048 painted map is 488 KiB (PNG 11.2 MiB) in 0.38 s; a 70%-fogged version 119 KiB; a flat 3000×2000 dungeon 23 KiB (PNG 136 KiB). Limits: 8192 px per side and 16.7 M pixels (larger maps are composed at a reduced scale), 16 MiB per background (retried smaller up to three times), 512 px and 1 MiB per token image.
+- Asset ids are the hex SHA-256 of the encoded bytes. Background revision: +1 whenever the published background asset changes (identical pixels keep the revision).
+- Custom art: `data:` and `blob:` images (uploads and Character Manager tokens) are re-encoded (which also drops metadata) and transferred. Same-origin URLs (built-in presets) are not. Other origins are read with CORS; anything unreadable keeps the marker. Players never fetch token URLs.
+- Protocol (`asset-protocol.js`): player → host `asset-request {assetIds}`; host → player `asset-meta`, then binary chunk frames (1-byte type, 32-byte id, uint32 index, ≤16 KiB payload), and `asset-abort {superseded|unavailable|limit}`. Everything is validated: ids, kind, MIME allowlist, byte length, dimensions, chunk count and index, exact chunk lengths, image signature and hash.
+- Possession: the player's session cache (`asset-cache.js`) requests only ids it neither holds nor is receiving, at most 64 outstanding at a time (the rest follow as answers arrive), accepts metadata only for ids it asked for, and makes object URLs only from verified bytes. Only unfinished attempts count towards its retry limit, so a background that comes back later (the same fog state: identical bytes, the same id) is requested and shown again. It keeps the previous background up only while the new one is loading, never once the new one has failed, revokes replaced backgrounds, and releases everything on Leave or session end. Nothing is persisted.
+- Priority on the one existing data channel (`asset-sender.js`): chunks are sent only while the channel holds less than 40 KiB, so it never reaches the snapshot sender's 64 KiB "busy" level; snapshots go out at once and queue behind at most ~56 KiB. Transfers resume on `bufferedamountlow` (16 KiB) with a 100 ms timer fallback, one transfer per player at a time. A replaced background is aborted as `superseded`. Each player gets at most 3 full sends of an asset while it stays on the host; the count is dropped when the asset leaves (a replaced background), so its later return is served.
+- Not yet: efficient continuous fog painting (a long stroke publishes only after it settles, or at the 1 s maximum wait, and any composite made stale by further strokes is discarded), tiled or dirty-region backgrounds (Milestone 4), persistent caching.
+
+## Milestone 4 (revised) — Live Fog/Visibility Performance & Advanced Synchronization
+
+Scope may include, driven by measurements from Milestone 3:
+
+- efficient response to frequent fog edits (continuous brush painting, shape dragging),
+- recomposition scheduling so fog work does not stall the DM's Battle Map,
+- background transfer throttling,
+- dirty-region or tile updates, **only if profiling justifies them**; they are not pre-committed,
+- integration points for a future visibility mask (§13.4), without building a vision system,
+- fog-specific UX and performance hardening.
+
+Exit: frequent fog edits reach players within an acceptable delay without overloading the DM's browser or the data channel, as measured on real maps and devices.
 
 ## Milestone 5 — Product Room UX
 
@@ -943,7 +1100,7 @@ The first meaningful player-originated interaction, with the host validating, ra
 
 - player reconnect with seat reclaim
 - host refresh grace period and room resumption
-- snapshot, fog and asset resync
+- snapshot, ~~fog~~ background and asset resync
 - stale credential handling
 - clean session teardown
 
@@ -951,7 +1108,7 @@ Exit: common mobile/browser disconnects recover without restarting the room.
 
 ## Milestone 8 — Production Networking Hardening
 
-- TURN integration and credential handling
+- ~~TURN integration and credential handling~~ (done early, in Milestone 0: §21); remaining TURN work is rate limiting `/turn-credentials` and monitoring TURN usage
 - abuse and rate limiting at the relay and the host
 - payload limits
 - browser/network compatibility testing (§25)
@@ -962,7 +1119,7 @@ Exit: typical home, mobile and remote-table setups connect consistently.
 
 ## Milestone 9 — Experimental Release
 
-Ship behind an experimental flag with documentation (including the fog trust model and a privacy explanation) and a troubleshooting guide. Use it at real tables and collect failure reports before expanding scope.
+Ship behind an experimental flag with documentation (including the ~~fog trust model~~ composited-background fog privacy model (§13.2) and a privacy explanation) and a troubleshooting guide. Use it at real tables and collect failure reports before expanding scope.
 
 ## Milestone 10 — Stable V1
 
@@ -977,7 +1134,10 @@ Promote to supported functionality only after real session use demonstrates acce
 - player-safe projection: allowlisted fields present, excluded fields absent
 - share-state seam: every shareable change is signaled; non-shareable changes need not be
 - protocol validation and malformed message rejection
-- revision ordering (stale snapshots ignored)
+- structured snapshot revision ordering (stale and duplicate snapshots ignored)
+- background revision independent of the snapshot revision (token moves never change it; fog changes always do)
+- background composition: hidden areas opaque; no original-map pixels under fog in the encoded output
+- asset ids, chunk reassembly and validation, session cache and deduplication
 - seat transitions (claim, kick, reset, disable)
 - password admission and throttling
 - room locking
@@ -997,8 +1157,9 @@ The existing Playwright harness can run the DM and several players as separate b
 - reconnect
 - host refresh
 - session end
-- asset transfer
-- snapshot and fog synchronization
+- asset transfer (background and custom token images; repeated assets not re-sent)
+- progressive rendering (structured map shown before any asset arrives; failed assets fall back to markers)
+- snapshot and fog synchronization (fog changes arrive as new backgrounds)
 - player pings
 
 ## Adversarial Tests
@@ -1012,6 +1173,7 @@ Treat every player client as untrusted:
 - giant messages
 - rapid repeated messages
 - out-of-order revisions
+- malformed, oversized or mismatched asset chunks
 
 ## Environment Tests (manual)
 
@@ -1033,7 +1195,7 @@ After read-only sharing is proven stable, each evaluated individually rather tha
 - player cursor indicators
 - optional map-follow mode
 - co-DM role
-- asset caching
+- asset caching beyond one session (session-scoped caching is part of Milestone 3)
 - incremental synchronization, if profiling justifies it
 
 ---
@@ -1099,21 +1261,23 @@ Before any product UX is built, the early milestones should answer:
 - Does the signaling architecture work?
 - Can direct WebRTC connections succeed in representative environments?
 - Are connection failures diagnosable (signaling vs ICE/connectivity)?
-- Does the player-safe state and rendering model work: does a player see the DM's Battle Map (structure, assets, fog) in near real time, and does the projection provably exclude structured secrets?
+- Does the player-safe state and rendering model work: does a player see the DM's Battle Map (structure, then the player-visible background with fog and custom token art) in near real time, and does the projection provably exclude structured secrets?
 - Does the feature still look viable once TURN requirements are understood?
+
+*Answered so far: Milestones 0–2 showed that the signaling architecture works, that direct connections succeed and failures are diagnosable, that TURN (added in Milestone 0) closes the gap on networks where direct connections fail, and that structured rendering works in production. Assets and fog are Milestone 3–4 questions.*
 
 STUN-only connection failures are not automatically a failed product experiment if the evidence indicates the remaining gap is TURN traversal rather than a flaw in the application architecture. If the answers show an architectural problem, the roadmap is reconsidered before investing in room UX.
 
 ## Stable V1
 
-Battle Map Live Share is stable when, after TURN and network hardening (Milestone 8), it shows acceptable real-world reliability, and:
+Battle Map Live Share is stable when, after network hardening (Milestone 8), it shows acceptable real-world reliability, and:
 
 - the DM can create a room in a few clicks,
 - players can join from one URL without accounts,
 - predefined seats work, and seat claims cannot race or overwrite each other,
 - optional password protection works,
 - the DM can lock the room and kick/reset seats,
-- players see the correct map state, map and token assets, and fog,
+- players see the correct map state, ~~map and token assets, and fog~~ the player-visible background (map with fog baked in) and custom token art,
 - structured hidden information is never transmitted,
 - player pings work,
 - players reconnect after ordinary temporary disconnects,
@@ -1131,11 +1295,15 @@ Intentionally unresolved until the relevant milestone:
 
 - ~~**Signaling provider**~~ — decided in Milestone 0: Cloudflare Workers + Durable Objects (one Durable Object per room), with a local Node relay speaking the same protocol for development and tests.
 - ~~**TURN provider and credential mechanism**~~ — decided in Milestone 0 (earlier than planned, because a real mobile-data path needed it): Cloudflare Realtime TURN. The relay Worker's `/turn-credentials` route mints 4-hour credentials from a TURN key held in Wrangler secrets. Rate limiting that route remains Milestone 8 work.
-- **Fog encoding/compression** — image format, resolution, whether painted fog and fog shapes are combined or sent separately (Milestone 4).
-- **Asset caching strategy** — whether and how to hash/cache assets across reconnects (after Milestone 3).
-- **External token-image fallback** — what happens for an external token image the host browser cannot fetch or read because of CORS: require the DM to import/store it locally before sharing, show players a placeholder, allow direct third-party loading only as an explicit privacy tradeoff, or another approach (Milestone 3).
+- ~~**Fog encoding/compression** — image format, resolution, whether painted fog and fog shapes are combined or sent separately (Milestone 4).~~ Superseded on 2026-09-29: fog is baked into the player-visible background, so painted fog and fog shapes are always combined, and the question becomes background encoding (next item).
+- ~~**Background encoding and limits**~~ — decided in Milestone 3 from the benchmark: WebP quality 0.85 with PNG fallback; 8192 px per side, 16.7 M pixels, 16 MiB; recomposition debounced at 250 ms with a 1 s maximum wait. Still to tune with real maps and devices (Milestone 4).
+- ~~**Asset caching strategy** — whether and how to hash/cache assets across reconnects (after Milestone 3).~~ Partly decided on 2026-09-29: content-derived asset ids and a session-scoped player cache with deduplication (Milestone 3, §15.4). Still open: the hash and id format, and whether anything should ever persist beyond a session (not planned).
+- **External token-image fallback** — what happens for an external token image the host browser cannot fetch or read because of CORS: require the DM to import/store it locally before sharing, show players a placeholder, allow direct third-party loading only as an explicit privacy tradeoff, or another approach (Milestone 3). *Default since 2026-09-29: players never fetch external URLs, and such a token falls back to its structured marker and name (§15.3). Still open: whether to also offer the DM an "import locally" action.*
+- ~~**What counts as a custom token image**~~ — decided in Milestone 3: `data:`/`blob:` images (uploads, Character Manager tokens) are custom; same-origin URLs (built-in presets) are generic; other origins are transferred only if CORS lets the host read them.
+- ~~**Asset transfer on the data channel**~~ — decided in Milestone 3: one channel, with chunks sent only within a 40 KiB buffer budget below the snapshot sender's 64 KiB busy level, so snapshots are never held back by assets.
+- **Auras and vision indicators in the projection** — adding aura and presentation-only vision fields to the player-safe allowlist as structured overlays (§13.4): when, and in what form.
 - **Snapshot throttle interval** — 100 ms in Milestone 2 (`SNAPSHOT_INTERVAL_MS`), to be tuned with real use.
-- **Payload and asset size limits** — maximum map image, token image and message sizes (Milestones 3 and 8).
+- **Payload and asset size limits** — maximum ~~map image,~~ background composite, custom token image and message sizes (Milestones 3 and 8). The structured-message limit is already 240 KB (Milestone 2).
 - **Seat-session credential generation** — the library and format used to create the random opaque tokens (Milestone 5).
 - ~~**Share-state seam mechanism**~~ — decided in Milestone 1: change detection by value. The seam recomputes the allowlisted projection at three existing funnels (each rendered frame, `setDirty()`, `save()`) and signals only when the player-visible content differs, instead of adding a notifier call to each of the ~40 mutation sites.
 - **Host grace period and room lifetime** — durations for host-refresh recovery and room expiry (Milestone 7).
@@ -1149,3 +1317,76 @@ Live Share should not change the identity of The DM's Toolbox.
 > **A local-first tabletop toolkit with an optional lightweight live tactical sharing layer.**
 
 Battle Map (and later Initiative Tracker) Live Share lets players see — and minimally interact with — tactical state the DM is already managing. It does not turn The DM's Toolbox into a centralized cloud VTT, and it does not move campaign data off the DM's device.
+
+---
+
+# 32. Superseded Design — Original Asset/Fog Approach
+
+**Superseded after Milestone 2 production validation (2026-09-29).** The sections below are the original text of §13.2, §15 and §16, kept unchanged for history. The superseded Milestones 3 and 4 remain in §24, struck through. The current design is in §13.2, §13.4, §15, §16 and the revised Milestones 3 and 4.
+
+Why it was replaced by the host-composited player-visible background:
+
+- **A simpler player asset model.** The player gets one background raster plus optional custom token images, instead of a map asset and a fog overlay kept in step with each other.
+- **Stronger fog privacy.** The player no longer holds the unobscured map; hidden terrain is not intentionally transmitted as part of the Live Share view (§13.2).
+- **Less duplication.** Map and fog are no longer transferred as two separate assets and recombined on every player.
+- **Dynamic overlays stay cheap and independent.** Tokens, names, conditions, auras and measurements remain small structured state, so moving them never touches the raster.
+
+## 32.1 Original §13.2 — Fog of war (trusted-player model)
+
+For the initial implementation:
+
+- the complete map image may be transferred to the player,
+- fog is transferred separately and drawn over the map in the player client,
+- a technically motivated player may be able to inspect the underlying transferred image.
+
+This is a deliberate tradeoff. Fog in Live Share hides the map from normal viewing at the table; it is **not** adversarial information security, and the documentation must not claim it is.
+
+The alternative — sending only pre-composited revealed regions of the map, and re-sending as fog is revealed — is out of scope because of its complexity and bandwidth cost.
+
+## 32.2 Original §15 — Asset Transfer
+
+Images used by the Battle Map exist in the DM's browser, so players need them transferred.
+
+Assets that may need host-to-player transfer:
+
+- the map image,
+- locally stored token images,
+- token images represented as data URLs,
+- externally referenced token images.
+
+Privacy goal: **player browsers should not independently fetch arbitrary external token URLs** when the host can transfer the asset instead. Fetching them directly would make each player's browser contact third-party hosts.
+
+What the host can transfer depends on where the image comes from:
+
+- **Data URLs and locally stored images** can be transferred directly.
+- **Same-origin or CORS-enabled external images** can potentially be fetched by the host browser and relayed.
+- **Arbitrary third-party images** may block the host browser from fetching or reading the image data, because host-side fetching and repackaging of external URLs is subject to browser CORS rules.
+
+So the host cannot guarantee to transfer every external token image. The fallback for an external image the host cannot read is an open decision for Milestone 3 (§30). Possible policies include requiring the DM to import/store the image locally before sharing, showing players a placeholder, allowing direct third-party loading only as an explicit privacy tradeoff, or another approach chosen during implementation.
+
+Transfer approach:
+
+- transfer assets over the WebRTC DataChannel,
+- send metadata before the data,
+- split large files into chunks,
+- enforce size limits,
+- reconstruct each asset as a Blob on the player client,
+- render from temporary object URLs,
+- discard temporary assets when the session ends.
+
+The signaling relay never receives or stores assets.
+
+A later asset-hash/cache system could avoid re-sending unchanged assets (for example after a reconnect). It is not required for the earliest milestones.
+
+## 32.3 Original §16 — Fog Synchronization
+
+Fog is synchronized separately from the structured snapshot, because painted fog is pixel data, not small objects.
+
+Conceptual model:
+
+- **Structured snapshot** — grid, tokens, conditions, measurements and other small structured state (§14).
+- **Fog snapshot** — a compressed/rendered representation of the current fog (painted fog and fog shapes combined, or sent side by side), sent on its own channel, throttled, and not emitted for each individual brush event.
+
+V1 does not require an incremental fog-event protocol. The fog snapshot follows the trusted-player model (§13.2).
+
+The exact fog encoding and compression is an open decision (§30).

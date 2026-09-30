@@ -27,7 +27,8 @@
   if (root.BattleMapShareState) return;
 
   const SCHEMA = 'dmtoolbox.battlemap.player-safe';
-  const VERSION = 1;
+  // 2: Milestone 3 added `background` and token `assetId` (references to player-safe assets).
+  const VERSION = 2;
 
   // Milestone 1 limits, so a malformed or huge Battle Map can't produce an unbounded snapshot.
   const MAX_TOKENS = 500;
@@ -40,8 +41,17 @@
   const text = (v) => (typeof v === 'string' ? v.slice(0, MAX_TEXT) : null);
   const color = (v, fallback) => (typeof v === 'string' && /^#[0-9a-f]{3,8}$/i.test(v) ? v : fallback);
   const isId = (v) => typeof v === 'string' && v.length > 0 && v.length <= 100;
+  // A content-derived asset id (SHA-256 of the encoded bytes, battle-map-share-assets.js).
+  const assetId = (v) => (typeof v === 'string' && /^[0-9a-f]{64}$/.test(v) ? v : null);
 
-  function projectToken(t) {
+  // Milestone 3: only references. The asset bytes are prepared on this side of the seam and fetched
+  // by id; the map image, fog and token image sources never enter the snapshot.
+  function projectBackground(bg) {
+    if (!bg || !assetId(bg.assetId) || !Number.isSafeInteger(bg.revision) || bg.revision < 1) return null;
+    return { assetId: bg.assetId, revision: bg.revision };
+  }
+
+  function projectToken(t, tokenAssetId) {
     // Name only where the DM shows the token's label (§13.1); HP, max HP, image, aura, vision
     // cone, selection and anything else on the token are not player-safe in Milestone 1.
     const name = t.showLabel && typeof t.name === 'string' && t.name.trim() ? text(t.name) : null;
@@ -57,6 +67,7 @@
       rot: num(t.rot),
       name,
       conditions,
+      assetId: assetId(tokenAssetId(t)),
     };
   }
 
@@ -74,7 +85,9 @@
 
   /**
    * The player-safe content of the Battle Map, without a revision. `source` is
-   * `{ state, persistentMeasurements }` from battlemap.html. Returns a new object every call.
+   * `{ state, persistentMeasurements, assets }` from battlemap.html, where `assets` (Milestone 3,
+   * optional) is `{ background(), tokenAssetId(token) }` from BattleMapShareAssets. Returns a new
+   * object every call.
    */
   function projectPlayerSafeState(source) {
     const state = (source && source.state) || {};
@@ -83,12 +96,16 @@
     const grid = state.grid || {};
     const tokens = Array.isArray(state.tokens) ? state.tokens : [];
     const measurements = Array.isArray(source && source.persistentMeasurements) ? source.persistentMeasurements : [];
+    const assets = (source && source.assets) || {};
+    const tokenAssetId = typeof assets.tokenAssetId === 'function' ? assets.tokenAssetId : () => null;
 
     return {
       schema: SCHEMA,
       version: VERSION,
       // The map image's natural size (image space), not the image itself: map assets arrive in Milestone 3.
       map: { width: num(map.w), height: num(map.h) },
+      // The player-visible background (map with fog baked in), by reference; null without a map.
+      background: projectBackground(typeof assets.background === 'function' ? assets.background() : null),
       // Image space -> world space. The DM's own pan/zoom (state.view) is theirs alone.
       mapTransform: { scale: num(mapTransform.scale, 1), x: num(mapTransform.x), y: num(mapTransform.y) },
       grid: {
@@ -104,7 +121,7 @@
       tokens: tokens
         .filter((t) => t && isId(t.id))
         .slice(0, MAX_TOKENS)
-        .map(projectToken),
+        .map((t) => projectToken(t, tokenAssetId)),
       measurements: measurements
         .filter((m) => m && isId(m.id) && MEASUREMENT_TYPES.has(m.type))
         .slice(0, MAX_MEASUREMENTS)

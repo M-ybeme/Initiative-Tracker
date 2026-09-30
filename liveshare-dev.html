@@ -25,7 +25,7 @@
   <main class="container py-4" style="max-width: 1100px;">
     <!-- Live Share Milestones 0-2: networking proof of concept and remote Battle Map rendering. Not linked from the site navigation. -->
     <div class="alert alert-warning" role="note">
-      <strong>Development prototype.</strong> Live Share test page (Milestones 0–2). This is not a
+      <strong>Development prototype.</strong> Live Share test page (Milestones 0–3). This is not a
       production room: anyone with the link can connect and see what the host shares.
     </div>
 
@@ -72,7 +72,7 @@
           <span id="ls-map-status" class="small text-body-secondary" role="status" data-testid="map-status"></span>
         </div>
         <svg id="ls-map" class="ls-map" data-testid="player-map" role="img" aria-label="The host's Battle Map" xmlns="http://www.w3.org/2000/svg"></svg>
-        <p class="small text-body-secondary mt-2 mb-0">Map and token images are not shared yet; tokens show as markers.</p>
+        <p class="small text-body-secondary mt-2 mb-0"><span id="ls-map-assets" data-testid="map-assets"></span> Tokens without custom art show as markers.</p>
       </div>
     </section>
 

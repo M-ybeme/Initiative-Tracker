@@ -17,16 +17,18 @@
  * A player that connects gets the current snapshot at once, outside the throttle.
  *
  * Backpressure: before each send the channel's bufferedAmount is checked. Above
- * BUFFERED_LOW_WATER_BYTES the peer is only marked pending (a flag, not a queue); when the channel's
+ * SNAPSHOT_BUSY_BYTES the peer is only marked pending (a flag, not a queue); when the channel's
  * `drain` fires, it gets the snapshot current at that moment. Intermediate states are dropped, which
  * whole-state snapshots make harmless. So at most one snapshot per peer is ever waiting, as a flag.
  *
  * Diagnostics are counts and revisions only, never snapshot content.
  */
 import { encodeBattleMapSnapshot } from './protocol.js';
-import { BUFFERED_LOW_WATER_BYTES } from './peer-link.js';
 
 export const SNAPSHOT_INTERVAL_MS = 100;
+// Hold snapshots back above this. Asset chunks (Milestone 3) never fill the channel past 40 KiB plus
+// one 16 KiB chunk, so a snapshot is never held back because of an asset transfer (asset-sender.js).
+export const SNAPSHOT_BUSY_BYTES = 64 * 1024;
 
 /**
  * @param {object} options
@@ -40,7 +42,7 @@ export const SNAPSHOT_INTERVAL_MS = 100;
 export function createSnapshotSender({
   getSnapshot,
   intervalMs = SNAPSHOT_INTERVAL_MS,
-  busyBytes = BUFFERED_LOW_WATER_BYTES,
+  busyBytes = SNAPSHOT_BUSY_BYTES,
   now = () => Date.now(),
   setTimer = (fn, ms) => setTimeout(fn, ms),
   clearTimer = (t) => clearTimeout(t),

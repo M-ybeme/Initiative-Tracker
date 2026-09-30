@@ -2,8 +2,7 @@
 // throttling with latest-state-wins, the immediate first snapshot, and channel backpressure.
 // Time is a hand-driven clock, so every timing below is exact.
 import { describe, it, expect, beforeEach } from 'vitest';
-import { createSnapshotSender, SNAPSHOT_INTERVAL_MS } from '../../js/modules/live-share/snapshot-sender.js';
-import { BUFFERED_LOW_WATER_BYTES } from '../../js/modules/live-share/peer-link.js';
+import { createSnapshotSender, SNAPSHOT_INTERVAL_MS, SNAPSHOT_BUSY_BYTES } from '../../js/modules/live-share/snapshot-sender.js';
 
 // A clock and timer queue under the test's control.
 function fakeTime() {
@@ -175,7 +174,7 @@ describe('snapshot sender', () => {
   it('holds back while a channel is busy, as a flag, and sends only the latest state when it drains', () => {
     const link = fakeLink();
     sender.addPeer('p1', link);
-    link.buffered = BUFFERED_LOW_WATER_BYTES + 1;
+    link.buffered = SNAPSHOT_BUSY_BYTES + 1;
     for (let i = 0; i < 50; i++) {
       seam.change();
       sender.notifyChanged();
@@ -197,7 +196,7 @@ describe('snapshot sender', () => {
     const fast = fakeLink();
     sender.addPeer('slow', slow);
     sender.addPeer('fast', fast);
-    slow.buffered = BUFFERED_LOW_WATER_BYTES * 4;
+    slow.buffered = SNAPSHOT_BUSY_BYTES * 4;
     seam.change();
     sender.notifyChanged();
     time.advance(SNAPSHOT_INTERVAL_MS);
@@ -207,7 +206,7 @@ describe('snapshot sender', () => {
 
   it('a player that is busy when it joins gets the map once its channel drains', () => {
     const link = fakeLink();
-    link.buffered = BUFFERED_LOW_WATER_BYTES + 1;
+    link.buffered = SNAPSHOT_BUSY_BYTES + 1;
     sender.addPeer('p1', link);
     expect(link.sent).toEqual([]);
     link.drain();

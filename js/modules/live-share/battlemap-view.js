@@ -1,8 +1,8 @@
 /**
  * Live Share Milestone 2: the player's read-only view of a Battle Map snapshot.
  *
- * renderBattleMapSnapshot(svg, snapshot) replaces the SVG's contents with a drawing of one validated
- * snapshot (battlemap-snapshot.js). It is a pure function of the snapshot: it never mutates it, keeps
+ * renderBattleMapSnapshot(svg, snapshot, assets) replaces the SVG's contents with a drawing of one
+ * validated snapshot (battlemap-snapshot.js). It is a pure function of the snapshot: it never mutates it, keeps
  * no state between calls, and has no editing, selection or handles. Text (token names, conditions)
  * is only ever set through textContent; colors are the snapshot's already-validated hex values.
  *
@@ -10,11 +10,14 @@
  * and fog on top (compare battlemap.html renderMapLayer / renderTokenLayer / drawGrid /
  * renderPersistentMeasurements):
  *   map        the image's natural size in image space; the map transform places it in the world at
- *              (mapTransform.x, mapTransform.y), scaled by mapTransform.scale. Drawn as a neutral
- *              surface until map assets arrive (Milestone 3).
+ *              (mapTransform.x, mapTransform.y), scaled by mapTransform.scale. A neutral surface is
+ *              drawn there; the player-visible background (Milestone 3: map with fog baked in, made
+ *              on the host in map image space) covers it when it has arrived. A background encoded
+ *              at a reduced resolution is still stretched to the map's full size.
  *   grid       world-space lines every grid.size from (offsetX, offsetY), a major line every 5 cells.
  *   tokens     (x, y) is the top-left corner, w × h the size, rotated by `rot` radians about the
- *              centre. Drawn as an ellipse marker with a notch marking the image's top edge.
+ *              centre. Drawn with its custom art when that has arrived (Milestone 3), otherwise as an
+ *              ellipse marker with a notch marking the image's top edge.
  *   labels     name and conditions sit unrotated above the token, as on the DM's map.
  *   measure    line; cone (90°, apex at x1,y1); circle (radius = length + half a cell, like the DM's).
  *              Their distance labels are derived here from the geometry and the grid's units per cell.
@@ -26,6 +29,8 @@
  */
 
 const SVG_NS = 'http://www.w3.org/2000/svg';
+// Images are only ever drawn from object URLs the player made itself from verified bytes.
+const safeUrl = (url) => (typeof url === 'string' && url.startsWith('blob:') ? url : null);
 export const MAX_GRID_LINES = 400; // per axis; beyond this only major lines are drawn, then none
 const DEFAULT_CELL = 50;
 
@@ -116,7 +121,7 @@ function renderGrid(doc, grid, box) {
   return g;
 }
 
-function renderToken(doc, t) {
+function renderToken(doc, t, artUrl) {
   const cx = r2(t.x + t.w / 2);
   const cy = r2(t.y + t.h / 2);
   const g = el(doc, 'g', { class: 'ls-token', 'data-token-id': t.id });
@@ -125,11 +130,18 @@ function renderToken(doc, t) {
   const deg = r2((t.rot * 180) / Math.PI);
   const body = el(doc, 'g', { class: 'ls-token-body', transform: `translate(${cx} ${cy}) rotate(${deg})` });
   const hue = tokenHue(t.id);
-  body.append(
-    el(doc, 'ellipse', { rx: r2(t.w / 2), ry: r2(t.h / 2), fill: `hsl(${hue} 45% 38%)`, stroke: `hsl(${hue} 70% 75%)`, 'stroke-width': 2, 'vector-effect': 'non-scaling-stroke' }),
-    // The image's top edge, so rotation is visible without the image.
-    el(doc, 'path', { class: 'ls-token-notch', d: `M ${r2(-t.w * 0.12)} ${r2(-t.h / 2 + t.h * 0.2)} L 0 ${r2(-t.h / 2)} L ${r2(t.w * 0.12)} ${r2(-t.h / 2 + t.h * 0.2)} Z`, fill: `hsl(${hue} 70% 85%)` })
-  );
+  if (artUrl) {
+    // The token's own art, drawn like the DM's map draws it: the full w x h box, rotated.
+    g.setAttribute('data-art', 'image');
+    body.append(el(doc, 'image', { class: 'ls-token-art', href: artUrl, x: r2(-t.w / 2), y: r2(-t.h / 2), width: r2(t.w), height: r2(t.h), preserveAspectRatio: 'none' }));
+  } else {
+    g.setAttribute('data-art', 'marker');
+    body.append(
+      el(doc, 'ellipse', { rx: r2(t.w / 2), ry: r2(t.h / 2), fill: `hsl(${hue} 45% 38%)`, stroke: `hsl(${hue} 70% 75%)`, 'stroke-width': 2, 'vector-effect': 'non-scaling-stroke' }),
+      // The image's top edge, so rotation is visible without the image.
+      el(doc, 'path', { class: 'ls-token-notch', d: `M ${r2(-t.w * 0.12)} ${r2(-t.h / 2 + t.h * 0.2)} L 0 ${r2(-t.h / 2)} L ${r2(t.w * 0.12)} ${r2(-t.h / 2 + t.h * 0.2)} Z`, fill: `hsl(${hue} 70% 85%)` })
+    );
+  }
   g.append(body);
 
   // Name and conditions above the token, unrotated (as on the DM's map).
@@ -184,8 +196,13 @@ function renderMeasurement(doc, m, grid) {
   return g;
 }
 
-/** Replace `svg`'s contents with a read-only drawing of `snapshot`. Returns the viewBox used. */
-export function renderBattleMapSnapshot(svg, snapshot) {
+/**
+ * Replace `svg`'s contents with a read-only drawing of `snapshot`. Returns the viewBox used.
+ * `assets` (Milestone 3, optional): `background` { url, assetId } to draw as Layer 1, and
+ * `tokenUrl(assetId)` for custom token art. Anything missing falls back to the placeholders.
+ */
+export function renderBattleMapSnapshot(svg, snapshot, assets = {}) {
+  const tokenUrl = typeof assets.tokenUrl === 'function' ? assets.tokenUrl : () => null;
   const doc = svg.ownerDocument;
   const box = computeViewBox(snapshot);
   svg.setAttribute('viewBox', `${box.x} ${box.y} ${box.w} ${box.h}`);
@@ -200,11 +217,16 @@ export function renderBattleMapSnapshot(svg, snapshot) {
   if (map.width > 0 && map.height > 0) {
     // The map image's place in the world; the image itself arrives with asset transfer (Milestone 3).
     layers.push(el(doc, 'rect', { class: 'ls-map-surface', x: r2(mt.x), y: r2(mt.y), width: r2(map.width * mt.scale), height: r2(map.height * mt.scale), fill: '#1b2530', stroke: '#3a4a5c', 'stroke-width': 1, 'stroke-dasharray': '6 4', 'vector-effect': 'non-scaling-stroke' }));
+    // Layer 1: the player-visible background, in map image space, placed by the map transform.
+    const bgUrl = safeUrl(assets.background && assets.background.url);
+    if (bgUrl) {
+      layers.push(el(doc, 'image', { class: 'ls-background-image', href: bgUrl, 'data-asset-id': assets.background.assetId || '', x: r2(mt.x), y: r2(mt.y), width: r2(map.width * mt.scale), height: r2(map.height * mt.scale), preserveAspectRatio: 'none' }));
+    }
   }
   layers.push(renderGrid(doc, snapshot.grid, area));
 
   const tokens = el(doc, 'g', { class: 'ls-tokens' });
-  for (const t of snapshot.tokens) tokens.append(renderToken(doc, t));
+  for (const t of snapshot.tokens) tokens.append(renderToken(doc, t, t.assetId ? safeUrl(tokenUrl(t.assetId)) : null));
   // Persistent measurements draw above tokens, as on the DM's map.
   const measurements = el(doc, 'g', { class: 'ls-measurements' });
   for (const m of snapshot.measurements) measurements.append(renderMeasurement(doc, m, snapshot.grid));

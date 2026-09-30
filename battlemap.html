@@ -22,6 +22,7 @@
   <script src="/js/modules/srd-content-filter.js"></script>
   <script src="/js/indexed-db-storage.js"></script>
   <script src="/js/modules/battle-map-share-state.js"></script>
+  <script src="/js/modules/battle-map-share-assets.js"></script>
   <!-- Live Share Milestone 2 host (development only: inert unless the page is opened with ?liveshare=1) -->
   <script type="module" src="/js/battlemap-live-share.js"></script>
 
@@ -947,16 +948,58 @@
   // request one), after every setDirty() (changes made while the tab is hidden, when frames pause)
   // and on every save() (edits that commit without either); the revision only moves when the
   // projected content changes, so the extra checks cost nothing but a comparison.
-  // Nothing here sends anything anywhere; Live Share will subscribe in a later milestone.
+  // Nothing here sends anything anywhere; Live Share (js/battlemap-live-share.js) subscribes to it.
+  //
+  // Milestone 3 (js/modules/battle-map-share-assets.js): the raster side of the same seam. It composes
+  // the player-visible background (map + fog, hidden areas opaque) and encodes custom token art, and
+  // hands out only encoded bytes by content-derived id. It is checked at the same three funnels; its
+  // own change detector reacts only to the background inputs (map image, fog on/off, fog bitmap
+  // version, fog shapes) and to token image sources, never to the structured revision.
+  //
+  // Only in Live Share mode (?liveshare=1, like js/battlemap-live-share.js): without it the Battle Map
+  // composes, encodes and hashes nothing, and the projection simply has no asset references.
+  let fogPixelsVersion = 0; // bumped wherever the fog bitmap's pixels change
+  function fogPixelsChanged(){ fogPixelsVersion++; }
+  let fogBitmapLoads = 0; // saved fog bitmaps still decoding: until then the fog is not what was saved
+  const liveShareMode = new URLSearchParams(location.search).get('liveshare') === '1';
+  const shareAssets = liveShareMode && window.BattleMapShareAssets
+    ? window.BattleMapShareAssets.createShareAssets({
+        getInputs: () => ({
+          map: { image: state.map.img, width: state.map.w, height: state.map.h },
+          fogEnabled: fogState.enabled,
+          fogCanvas: fog,
+          fogShapes,
+          fogVersion: fogPixelsVersion,
+          fogReady: fogBitmapLoads === 0,
+          tokens: state.tokens,
+        }),
+        onChange: () => shareState && shareState.schedule(),
+        createCanvas: (w, h) => Object.assign(document.createElement('canvas'), { width: w, height: h }),
+        loadImage: (src, { crossOrigin } = {}) => new Promise((res, rej) => {
+          const img = new Image();
+          if (crossOrigin) img.crossOrigin = crossOrigin;
+          img.onload = () => res(img);
+          img.onerror = rej;
+          img.src = src;
+        }),
+        subtle: window.crypto && window.crypto.subtle,
+        pageOrigin: location.origin,
+        onError: (err) => console.warn('Battle Map share-assets update failed', err),
+      })
+    : null;
   const shareState = window.BattleMapShareState
     ? window.BattleMapShareState.createShareStateSeam({
-        getSource: () => ({ state, persistentMeasurements }),
+        getSource: () => ({ state, persistentMeasurements, assets: shareAssets }),
         onError: (err) => console.warn('Battle Map share-state check failed', err),
       })
     : null;
   window.BattleMapLiveShare = Object.freeze({
     getPlayerSafeState: () => (shareState ? shareState.getPlayerSafeState() : null),
     onShareableStateChanged: (fn) => (shareState ? shareState.onChange(fn) : () => {}),
+    // Milestone 3: player-safe assets by content-derived id ({assetId, kind, mime, width, height, bytes}).
+    getAsset: (assetId) => (shareAssets ? shareAssets.getAsset(assetId) : null),
+    hasAsset: (assetId) => !!shareAssets && shareAssets.hasAsset(assetId),
+    getAssetDiagnostics: () => (shareAssets ? shareAssets.diagnostics() : null),
   });
 
   // --- Dirty flag tracking for unsaved changes
@@ -964,6 +1007,7 @@
   const unsavedIndicator = document.getElementById('unsavedIndicator');
 
   function setDirty() {
+    if (shareAssets) shareAssets.check();
     if (shareState) shareState.schedule();
     if (!isDirty) {
       isDirty = true;
@@ -1007,7 +1051,7 @@
       old.width = fog.width; old.height = fog.height;
       old.getContext('2d').drawImage(fog,0,0);
       fog.width = W; fog.height = H;
-      fctx.clearRect(0,0,fog.width,fog.height);
+      fctx.clearRect(0,0,fog.width,fog.height); fogPixelsChanged();
       fctx.drawImage(old,0,0);
     }
   }
@@ -1029,6 +1073,7 @@
 
   async function save(){
     // Some edits commit straight through save() without a render or setDirty() (placing a token).
+    if (shareAssets) shareAssets.check();
     if (shareState) shareState.schedule();
     // Always capture the fog canvas if it exists, regardless of enabled flag
     const fogData = (fog.width > 1 && fog.height > 1) ? tryCanvasToDataURL(fog) : null;
@@ -1259,7 +1304,23 @@
     try { return cnv.toDataURL('image/webp', 0.85); } catch { try { return cnv.toDataURL('image/png'); } catch { return null; } }
   }
   function drawDataUrlToCanvas(url, cnv){
-    return new Promise((resolve)=>{ const img=new Image(); img.onload=()=>{ const ct=cnv.getContext('2d'); ct.clearRect(0,0,cnv.width,cnv.height); ct.drawImage(img,0,0); resolve(); }; img.src=url; });
+    if (cnv === fog) fogBitmapLoads++;
+    return new Promise((resolve)=>{
+      const img=new Image();
+      const ct=cnv.getContext('2d');
+      const done=()=>{ if (cnv === fog) { fogBitmapLoads--; fogPixelsChanged(); } resolve(); };
+      img.onload=()=>{ ct.clearRect(0,0,cnv.width,cnv.height); ct.drawImage(img,0,0); done(); };
+      // Fail closed: a saved fog bitmap that can't be decoded covers the whole map rather than
+      // leaving it uncovered (the DM can reveal again; players must never see it all by accident).
+      img.onerror=()=>{
+        console.warn('Saved fog could not be loaded; the map is fully covered.');
+        ct.globalCompositeOperation='source-over';
+        ct.fillStyle='rgba(0,0,0,1)';
+        ct.fillRect(0,0,cnv.width,cnv.height);
+        done();
+      };
+      img.src=url;
+    });
   }
 
   // Event-driven rendering system - main entry point
@@ -1274,6 +1335,7 @@
     dirty.map = dirty.fog = dirty.tokens = dirty.grid = dirty.ui = false;
 
     // Player-visible state may have changed with this frame (never throws; see shareState above).
+    if (shareAssets) shareAssets.check();
     if (shareState) shareState.check();
   }
 
@@ -2721,7 +2783,7 @@
     // reset map transform when new image loads
     state.mapTransform = { scale:1, x:0, y:0 };
     mapScaleInput.value = 100; mapOffsetXInput.value = 0; mapOffsetYInput.value = 0;
-    fctx.clearRect(0,0,fog.width,fog.height);
+    fctx.clearRect(0,0,fog.width,fog.height); fogPixelsChanged();
     fitMap(); save();
   });
   document.getElementById('gridSize').addEventListener('input', (e)=>{ state.grid.size = clamp(parseFloat(e.target.value)||50, 4, 256); dirty.grid = dirty.map = true; requestRender(); setDirty(); });
@@ -2785,7 +2847,7 @@
   document.getElementById('fogClear').addEventListener('click', ()=>{
     const hasContent = (fog.width > 1 && fog.height > 1) || fogShapes.length > 0;
     if (hasContent && !confirm('Clear all fog paint and all fog shapes? This cannot be undone.')) return;
-    fctx.clearRect(0,0,fog.width,fog.height);
+    fctx.clearRect(0,0,fog.width,fog.height); fogPixelsChanged();
     fogShapes.length = 0;
     dirty.fog = true;
     requestRender();
@@ -2951,7 +3013,7 @@
       }
 
       // fog bitmap
-      fctx.clearRect(0,0,fog.width,fog.height);
+      fctx.clearRect(0,0,fog.width,fog.height); fogPixelsChanged();
       if (data.fog) {
         await drawDataUrlToCanvas(data.fog, fog);
       } else {
@@ -3014,7 +3076,7 @@
     fogShapes.length = 0;
     persistentMeasurements.length = 0;
     setFogUI(false);
-    fctx.clearRect(0,0,fog.width,fog.height);
+    fctx.clearRect(0,0,fog.width,fog.height); fogPixelsChanged();
 
     updateTokenList();
   });
@@ -3030,6 +3092,7 @@
       fctx.fillStyle = 'rgba(0,0,0,1)';
       fctx.beginPath(); fctx.arc(ix, iy, r, 0, Math.PI*2); fctx.fill();
     }
+    fogPixelsChanged();
     // Mark fog layer dirty so the canvas redraws immediately after each stroke
     dirty.fog = true;
     requestRender();
