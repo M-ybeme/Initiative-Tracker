@@ -4,7 +4,11 @@
  * Without `#room=...` the page is a host: it creates a room on the relay, and for every player
  * that joins it opens a WebRTC data channel and sends "hello". With `#room=...` the page is a
  * player: it joins that room, answers the host's offer and shows the message it receives.
- * No Battle Map integration and no admission model yet (planning doc §11, §24).
+ *
+ * Milestone 2: the Battle Map can host too (battlemap.html?liveshare=1, js/battlemap-live-share.js),
+ * and its join links open this page as a player. The player then draws each Battle Map snapshot it
+ * receives, read-only, keeping only the newest revision (battlemap-snapshot.js, battlemap-view.js).
+ * No admission model yet (planning doc §11, §24).
  *
  * Development query parameters (kept in join links, so host and player agree):
  *   ?relay=ws://host:port   use this relay instead of the default
@@ -17,11 +21,14 @@
  *   ?iceTimeoutMs=20000     how long a peer may take to connect before it is reported as failed
  */
 import { resolveRelayUrl } from './modules/live-share/config.js';
-import { generateRoomId, buildJoinUrl, readRoomIdFromHash } from './modules/live-share/room-id.js';
+import { buildJoinUrl, readRoomIdFromHash } from './modules/live-share/room-id.js';
 import { SignalingClient } from './modules/live-share/signaling-client.js';
 import { PeerLink } from './modules/live-share/peer-link.js';
+import { HostSession } from './modules/live-share/host-session.js';
 import { resolveIceServers } from './modules/live-share/ice-config.js';
 import { encodeHello, parseChannelMessage } from './modules/live-share/protocol.js';
+import { createSnapshotReceiver } from './modules/live-share/battlemap-snapshot.js';
+import { renderBattleMapSnapshot } from './modules/live-share/battlemap-view.js';
 
 const $ = (id) => document.getElementById(id);
 const params = new URLSearchParams(location.search);
@@ -52,14 +59,19 @@ function clampInt(value, min, max, fallback) {
   return Number.isFinite(n) ? Math.min(max, Math.max(min, n)) : fallback;
 }
 
-// Fetch this connection's ICE servers and show whether the TURN fallback is available.
-async function prepareIceServers() {
-  const { iceServers, turn } = await resolveIceServers({ relayUrl });
+// Show whether the TURN fallback is available for the connection being prepared.
+function showTurn(turn) {
   diag.turn = turn;
   const note = $('ls-turn-note');
   note.textContent = turn.message;
   note.classList.toggle('d-none', turn.status === 'available');
   renderDiagnostics();
+}
+
+// Fetch this connection's ICE servers (the host's HostSession does the same for each player).
+async function prepareIceServers() {
+  const { iceServers, turn } = await resolveIceServers({ relayUrl });
+  showTurn(turn);
   return iceServers;
 }
 
@@ -100,7 +112,8 @@ function initHost() {
   diag.roomRegistered = false;
   diag.playersOnRelay = 0;
   $('ls-host').classList.remove('d-none');
-  const peers = new Map(); // peerId -> { link, status }
+  const rows = new Map(); // peerId -> { status }
+  let session = null;
   let joinUrl = null;
 
   const setStatus = (text) => {
@@ -110,7 +123,7 @@ function initHost() {
   const renderPeers = () => {
     const list = $('ls-peers');
     list.replaceChildren();
-    if (peers.size === 0) {
+    if (rows.size === 0) {
       const empty = document.createElement('li');
       empty.className = 'list-group-item text-body-secondary';
       empty.textContent = 'No players connected.';
@@ -118,7 +131,7 @@ function initHost() {
       return;
     }
     let n = 0;
-    for (const [peerId, entry] of peers) {
+    for (const [peerId, entry] of rows) {
       const item = document.createElement('li');
       item.className = 'list-group-item d-flex justify-content-between';
       item.dataset.peerId = peerId;
@@ -132,35 +145,15 @@ function initHost() {
     }
   };
 
-  const dropPeer = (peerId) => {
-    const entry = peers.get(peerId);
-    if (!entry) return;
-    if (entry.link) entry.link.close();
-    peers.delete(peerId);
-    delete diag.peers[peerId];
-    diag.playersOnRelay = peers.size;
-    renderPeers();
-    renderDiagnostics();
-  };
-
-  const addPeer = async (peerId) => {
-    const entry = { link: null, status: 'Preparing connection…' };
-    peers.set(peerId, entry);
-    diag.playersOnRelay = peers.size;
-    renderPeers();
-    // Fresh TURN credentials for each player. The player sends nothing until the host's offer, so
-    // nothing is missed while this runs.
-    const iceServers = await prepareIceServers();
-    const session = signaling;
-    if (peers.get(peerId) !== entry || !session || session.state !== 'ready') return; // left or ended meanwhile
-    const link = new PeerLink({ role: 'host', sendSignal: (data) => session.sendSignal(data, peerId), iceServers, ...linkOptions });
-    entry.link = link;
-    entry.status = 'Connecting…';
+  const onPeerLink = ({ peerId, link }) => {
+    const entry = rows.get(peerId);
     const update = (status) => {
       entry.status = status;
       renderPeers();
     };
+    update('Connecting…');
     link.on('diagnostics', ({ snapshot }) => {
+      if (!rows.has(peerId)) return;
       diag.peers[peerId] = snapshot;
       renderDiagnostics();
     });
@@ -180,15 +173,11 @@ function initHost() {
     link.on('close', () => {
       if (!link.failure) update('Disconnected');
     });
-    renderPeers();
-    link.start();
   };
 
   const endSession = () => {
-    if (!signaling) return;
-    // Close the relay first so players get "host ended the session" rather than a bare channel close.
-    signaling.close();
-    for (const peerId of [...peers.keys()]) dropPeer(peerId);
+    if (!session || !session.active) return;
+    session.end();
     setStatus('Session ended');
     $('ls-end').disabled = $('ls-copy').disabled = $('ls-reveal').disabled = true;
     $('ls-link').classList.add('d-none');
@@ -197,36 +186,43 @@ function initHost() {
 
   $('ls-start').addEventListener('click', () => {
     $('ls-start').disabled = true;
-    const roomId = generateRoomId();
-    joinUrl = buildJoinUrl(location.href, roomId);
-    $('ls-link').textContent = joinUrl;
     diag.signalingError = null;
     diag.peers = {};
     diag.roomRegistered = false;
 
-    signaling = new SignalingClient({ relayUrl, roomId, role: 'host' });
-    trackSignaling(signaling);
-    setStatus('Connecting to relay…');
-    signaling.on('ready', () => {
+    session = new HostSession({ relayUrl, linkOptions });
+    session.on('ready', () => {
       diag.roomRegistered = true;
       setStatus('Room open — waiting for players');
       $('ls-end').disabled = $('ls-copy').disabled = $('ls-reveal').disabled = false;
     });
-    signaling.on('peer-joined', ({ peerId }) => addPeer(peerId));
-    signaling.on('peer-left', ({ peerId }) => dropPeer(peerId));
-    signaling.on('signal', ({ from, data }) => {
-      const entry = peers.get(from);
-      if (entry && entry.link) entry.link.handleSignal(data);
+    session.on('peer-joined', ({ peerId }) => {
+      rows.set(peerId, { status: 'Preparing connection…' });
+      diag.playersOnRelay = rows.size;
+      renderPeers();
     });
-    signaling.on('closed', ({ error }) => {
+    session.on('turn', ({ turn }) => showTurn(turn));
+    session.on('peer-link', onPeerLink);
+    session.on('peer-left', ({ peerId }) => {
+      rows.delete(peerId);
+      delete diag.peers[peerId];
+      diag.playersOnRelay = rows.size;
+      renderPeers();
+      renderDiagnostics();
+    });
+    session.on('closed', ({ error }) => {
       if (error) {
         setStatus(`Signaling failure: ${error.message}`);
-        for (const peerId of [...peers.keys()]) dropPeer(peerId);
         $('ls-end').disabled = $('ls-copy').disabled = $('ls-reveal').disabled = true;
         $('ls-start').disabled = false;
       }
     });
-    signaling.connect();
+    const roomId = session.start();
+    signaling = session.signaling;
+    trackSignaling(signaling);
+    joinUrl = buildJoinUrl(location.href, roomId);
+    $('ls-link').textContent = joinUrl;
+    setStatus('Connecting to relay…');
     renderDiagnostics();
   });
 
@@ -257,9 +253,30 @@ async function initPlayer(roomId) {
     $('ls-player-status').textContent = text;
   };
 
+  // The Battle Map, if the host is sharing one: newest revision wins, older ones are ignored.
+  const receiver = createSnapshotReceiver({
+    onApply: (snapshot) => {
+      renderBattleMapSnapshot($('ls-map'), snapshot);
+      $('ls-map-section').classList.remove('d-none');
+      setMapStatus(`Live — revision ${snapshot.revision}`);
+    },
+  });
+  diag.snapshots = receiver.stats();
+  const setMapStatus = (text) => {
+    $('ls-map-status').textContent = text;
+  };
+  // A lost connection keeps the last map on screen, marked as no longer live.
+  const markMapDisconnected = () => {
+    if (receiver.lastAppliedRevision > 0) {
+      setMapStatus(`Disconnected — showing the last map received (revision ${receiver.lastAppliedRevision})`);
+      $('ls-map-section').classList.add('ls-map-disconnected');
+    }
+  };
+
   const leave = (status) => {
     if (ended) return;
     ended = true;
+    markMapDisconnected();
     if (link) link.close();
     if (signaling) signaling.close();
     $('ls-leave').disabled = true;
@@ -293,12 +310,18 @@ async function initPlayer(roomId) {
       const parsed = parseChannelMessage(data);
       if (!parsed.ok) {
         diag.lastProtocolError = parsed.error;
+        if (parsed.type === 'battlemap-snapshot') receiver.reject(parsed.error);
+        diag.snapshots = receiver.stats();
         renderDiagnostics();
         return;
       }
       if (parsed.message.type === 'hello') {
         $('ls-received').textContent = parsed.message.text;
         diag.lastReceived = parsed.message.text;
+        renderDiagnostics();
+      } else if (parsed.message.type === 'battlemap-snapshot') {
+        receiver.receive(parsed.message.snapshot);
+        diag.snapshots = receiver.stats();
         renderDiagnostics();
       }
     });
@@ -308,6 +331,7 @@ async function initPlayer(roomId) {
       // When the host ends the session the data channel can close a moment before the relay's
       // "host left" arrives; keep listening briefly so the player is told the real reason.
       setStatus('Disconnected from the host.');
+      markMapDisconnected();
       setTimeout(() => leave(), 2000);
     });
     link.start();

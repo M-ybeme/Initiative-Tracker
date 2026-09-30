@@ -18,13 +18,18 @@
  *
  * Diagnostics contain connection states and candidate *types* only, never IP addresses.
  *
- * Events: open, message {data}, close, failed {kind, message}, diagnostics {snapshot}
+ * Backpressure: bufferedAmount() is how many bytes the channel has queued but not yet sent, and
+ * `drain` fires when that falls to BUFFERED_LOW_WATER_BYTES, so a sender can hold back while the
+ * channel is busy and resume when it clears (snapshot-sender.js).
+ *
+ * Events: open, message {data}, drain, close, failed {kind, message}, diagnostics {snapshot}
  */
 import { DEFAULT_ICE_SERVERS } from './config.js';
 import { hasTurnServer } from './ice-config.js';
 import { describeSignal, candidateSignal, parseSignalData } from './protocol.js';
 
 export const DATA_CHANNEL_LABEL = 'live-share';
+export const BUFFERED_LOW_WATER_BYTES = 64 * 1024;
 
 export class PeerLink {
   constructor({
@@ -88,6 +93,11 @@ export class PeerLink {
   on(type, fn) {
     if (!this.listeners.has(type)) this.listeners.set(type, new Set());
     this.listeners.get(type).add(fn);
+  }
+
+  off(type, fn) {
+    const set = this.listeners.get(type);
+    if (set) set.delete(fn);
   }
 
   emit(type, detail) {
@@ -199,6 +209,8 @@ export class PeerLink {
       this.emit('open');
     };
     channel.onmessage = (event) => this.emit('message', { data: event.data });
+    channel.bufferedAmountLowThreshold = BUFFERED_LOW_WATER_BYTES;
+    channel.onbufferedamountlow = () => this.emit('drain');
     channel.onclose = () => {
       this.emitDiagnostics();
       if (!this.closed) {
@@ -208,10 +220,21 @@ export class PeerLink {
     };
   }
 
+  /** Send text if the channel is open. Returns whether it was handed to the channel; never throws. */
   send(text) {
     if (!this.channel || this.channel.readyState !== 'open') return false;
-    this.channel.send(text);
-    return true;
+    try {
+      this.channel.send(text);
+      return true;
+    } catch {
+      // The channel closed between the check and the send, or the message was too large for it.
+      return false;
+    }
+  }
+
+  /** Bytes queued on the data channel but not yet sent (0 without an open channel). */
+  bufferedAmount() {
+    return this.channel && this.channel.readyState === 'open' ? this.channel.bufferedAmount || 0 : 0;
   }
 
   onConnectTimeout() {

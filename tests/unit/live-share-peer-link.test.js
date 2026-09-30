@@ -2,7 +2,7 @@
 // with a scripted stand-in for RTCPeerConnection. The real WebRTC path is covered end to end by
 // tests/e2e/live-share-networking.spec.js.
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { PeerLink } from '../../js/modules/live-share/peer-link.js';
+import { PeerLink, BUFFERED_LOW_WATER_BYTES } from '../../js/modules/live-share/peer-link.js';
 
 class FakeChannel {
   constructor(label) {
@@ -429,5 +429,49 @@ describe('PeerLink selected candidate pair and TURN use', () => {
     const link = new PeerLink({ role: 'host', sendSignal: () => true, RTCPeerConnectionImpl: FakePC, iceServers: [TURN] });
     expect(FakePC.last.config).toEqual({ iceServers: [TURN], iceTransportPolicy: 'all' });
     link.close();
+  });
+});
+
+describe('PeerLink sending and backpressure (Milestone 2)', () => {
+  async function openHost() {
+    const { link, pc } = makeLink('host');
+    await link.start();
+    pc.channel.open();
+    return { link, channel: pc.channel };
+  }
+
+  it('sends only on an open channel', async () => {
+    const { link, pc } = makeLink('host');
+    await link.start();
+    expect(link.send('early')).toBe(false);
+    pc.channel.open();
+    expect(link.send('now')).toBe(true);
+    expect(pc.channel.sent).toEqual(['now']);
+    link.close();
+  });
+
+  it('reports a send the channel refuses as not sent, instead of throwing', async () => {
+    const { link, channel } = await openHost();
+    channel.send = () => {
+      throw new Error('OperationError: message too large');
+    };
+    expect(link.send('x')).toBe(false);
+    link.close();
+  });
+
+  it('exposes the buffered amount and emits drain when the channel falls to the low-water mark', async () => {
+    const { link, channel } = await openHost();
+    expect(channel.bufferedAmountLowThreshold).toBe(BUFFERED_LOW_WATER_BYTES);
+    channel.bufferedAmount = 300000;
+    expect(link.bufferedAmount()).toBe(300000);
+    const drained = vi.fn();
+    link.on('drain', drained);
+    channel.onbufferedamountlow();
+    expect(drained).toHaveBeenCalledTimes(1);
+    link.off('drain', drained);
+    channel.onbufferedamountlow();
+    expect(drained).toHaveBeenCalledTimes(1);
+    link.close();
+    expect(link.bufferedAmount()).toBe(0);
   });
 });

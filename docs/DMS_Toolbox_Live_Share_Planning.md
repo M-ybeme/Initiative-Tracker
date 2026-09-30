@@ -9,7 +9,7 @@
 **Authority:** The DM's browser owns all session, seat, admission and game state  
 **Synchronization (V1):** Throttled whole-state player-safe snapshots  
 **Product philosophy:** Temporary shared tactical state without moving persistent campaign data into centralized cloud storage.
-**Progress:** Milestone 0 complete and validated in production (2.3.22–2.3.23, 2026-09-28); Milestone 1 (share-state seam) complete in 2.3.24.
+**Progress:** Milestone 0 complete and validated in production (2.3.22–2.3.23, 2026-09-28); Milestone 1 (share-state seam) complete in 2.3.24; Milestone 2 (remote structured rendering) implemented in 2.3.25.
 
 **Revision note:** This plan was revised after an architecture review against the current codebase. Compared with the first draft, seats, passwords and room admission moved from the signaling service to the DM's browser; synchronization starts as whole snapshots instead of snapshots plus patches; a Battle Map state boundary and the player-safe projection are now the first Battle Map milestone; fog is explicitly a trusted-player feature; and the roadmap proves networking and remote rendering before building room UX.
 
@@ -891,6 +891,14 @@ No patch/event protocol.
 
 Exit: a player watches the DM manipulate tokens and measurements in near real time.
 
+**Status: implemented (2.3.25), validated by automated tests on localhost; a real-device check over the deployed relay is still to do.**
+
+- Host: `battlemap.html?liveshare=1` adds a development panel (`js/battlemap-live-share.js`); without the parameter the page is unchanged. It uses only `window.BattleMapLiveShare` (the Milestone 1 seam): Live Share never reads Battle Map state and never reshapes the snapshot. Room and peer handling is `js/modules/live-share/host-session.js`, shared with `liveshare-dev.html`.
+- Message: `{v:0, type:'battlemap-snapshot', payload:<seam snapshot>}`, at most 240 KB (`protocol.js`).
+- Sending (`snapshot-sender.js`): the current snapshot as soon as a player's channel opens; then, on the seam's change signal, at most one send per 100 ms, reading the seam at send time (latest state wins; the last state of a burst is always sent; never inside the Battle Map's redraw). While a channel has more than 64 KB buffered the player is only marked pending, and gets the then-current snapshot on `bufferedamountlow`.
+- Player (`liveshare-dev.html`): `battlemap-snapshot.js` validates each payload and copies only allowlisted fields; a snapshot is applied only if its revision is newer than the last one applied (the seam's revision; a receiver lives for one connection to one host page load). `battlemap-view.js` draws it as SVG in the Battle Map's world coordinates, fitted to the map surface and content (the DM's pan/zoom is not shared). On disconnect the last map stays, marked disconnected.
+- Not shared yet: map and token images (Milestone 3), fog (Milestone 4), HP.
+
 ## Milestone 3 — Asset Transfer
 
 - map image transfer
@@ -1126,7 +1134,7 @@ Intentionally unresolved until the relevant milestone:
 - **Fog encoding/compression** — image format, resolution, whether painted fog and fog shapes are combined or sent separately (Milestone 4).
 - **Asset caching strategy** — whether and how to hash/cache assets across reconnects (after Milestone 3).
 - **External token-image fallback** — what happens for an external token image the host browser cannot fetch or read because of CORS: require the DM to import/store it locally before sharing, show players a placeholder, allow direct third-party loading only as an explicit privacy tradeoff, or another approach (Milestone 3).
-- **Snapshot throttle interval** — the exact interval, starting from a value to be tuned with real use (Milestone 2).
+- **Snapshot throttle interval** — 100 ms in Milestone 2 (`SNAPSHOT_INTERVAL_MS`), to be tuned with real use.
 - **Payload and asset size limits** — maximum map image, token image and message sizes (Milestones 3 and 8).
 - **Seat-session credential generation** — the library and format used to create the random opaque tokens (Milestone 5).
 - ~~**Share-state seam mechanism**~~ — decided in Milestone 1: change detection by value. The seam recomputes the allowlisted projection at three existing funnels (each rendered frame, `setDirty()`, `save()`) and signals only when the player-visible content differs, instead of adding a notifier call to each of the ~40 mutation sites.

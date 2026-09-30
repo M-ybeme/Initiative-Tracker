@@ -1,0 +1,162 @@
+// Live Share Milestone 2: the player's read-only Battle Map view
+// (js/modules/live-share/battlemap-view.js), rendered into a happy-dom SVG.
+import { describe, it, expect, beforeEach } from 'vitest';
+import { renderBattleMapSnapshot, computeViewBox, tokenHue, MAX_GRID_LINES } from '../../js/modules/live-share/battlemap-view.js';
+
+function snapshot(overrides = {}) {
+  return {
+    schema: 'dmtoolbox.battlemap.player-safe',
+    version: 1,
+    revision: 12,
+    map: { width: 0, height: 0 },
+    mapTransform: { scale: 1, x: 0, y: 0 },
+    grid: { size: 50, unitsPerCell: 5, color: '#6aa5ff', alpha: 0.35, show: true, offsetX: 10, offsetY: 20 },
+    tokens: [
+      { id: 't_goblin', x: 100, y: 200, w: 50, h: 50, rot: Math.PI / 2, name: 'Goblin Boss', conditions: ['Prone', 'Poisoned'] },
+      { id: 't_hidden_name', x: 300, y: 250, w: 100, h: 100, rot: 0, name: null, conditions: [] },
+    ],
+    measurements: [
+      { id: 'pm-line', type: 'line', x1: 0, y1: 0, x2: 150, y2: 0, color: '#8bd3ff' },
+      { id: 'pm-cone', type: 'cone', x1: 400, y1: 100, x2: 500, y2: 100, color: '#ff8800' },
+      { id: 'pm-circle', type: 'circle', x1: 200, y1: 400, x2: 200, y2: 450, color: '#00ff00' },
+    ],
+    ...overrides,
+  };
+}
+
+function deepFreeze(o) {
+  Object.values(o).forEach((v) => v && typeof v === 'object' && deepFreeze(v));
+  return Object.freeze(o);
+}
+
+let svg;
+beforeEach(() => {
+  document.body.innerHTML = '';
+  svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+  document.body.append(svg);
+});
+
+const nums = (s) => (s.match(/-?\d+(\.\d+)?/g) || []).map(Number);
+
+describe('Battle Map player view', () => {
+  it('draws each token at its world position, size and rotation, with a stable identity', () => {
+    renderBattleMapSnapshot(svg, snapshot());
+    const tokens = [...svg.querySelectorAll('.ls-token')];
+    expect(tokens.map((g) => g.getAttribute('data-token-id'))).toEqual(['t_goblin', 't_hidden_name']);
+    // Centre = top-left + half the size; rotation in degrees about the centre.
+    expect(nums(tokens[0].querySelector('.ls-token-body').getAttribute('transform'))).toEqual([125, 225, 90]);
+    expect(nums(tokens[1].querySelector('.ls-token-body').getAttribute('transform'))).toEqual([350, 300, 0]);
+    const ellipse = tokens[1].querySelector('ellipse');
+    expect([ellipse.getAttribute('rx'), ellipse.getAttribute('ry')]).toEqual(['50', '50']);
+    // The same id always gets the same marker color.
+    expect(tokenHue('t_goblin')).toBe(tokenHue('t_goblin'));
+    expect(tokens[0].querySelector('ellipse').getAttribute('fill')).toBe(`hsl(${tokenHue('t_goblin')} 45% 38%)`);
+  });
+
+  it('shows names and conditions only where the snapshot has them, above the token and unrotated', () => {
+    renderBattleMapSnapshot(svg, snapshot());
+    const [goblin, other] = svg.querySelectorAll('.ls-token');
+    expect(goblin.querySelector('.ls-token-name').textContent).toBe('Goblin Boss');
+    expect(goblin.querySelector('.ls-token-conditions').textContent).toBe('Prone, Poisoned');
+    expect(goblin.querySelector('.ls-token-labels').getAttribute('transform')).toBe('translate(125 225)');
+    expect(other.querySelector('.ls-token-name')).toBeNull();
+    expect(other.querySelector('.ls-token-conditions')).toBeNull();
+  });
+
+  it('renders names and conditions as text, never as markup', () => {
+    const hostile = snapshot({
+      tokens: [{ id: '"><script>alert(1)</script>', x: 0, y: 0, w: 50, h: 50, rot: 0, name: '<img src=x onerror=alert(1)>', conditions: ['<b>Prone</b>'] }],
+    });
+    renderBattleMapSnapshot(svg, hostile);
+    expect(svg.querySelector('img, script, b')).toBeNull();
+    expect(svg.querySelector('.ls-token-name').textContent).toBe('<img src=x onerror=alert(1)>');
+    expect(svg.querySelector('.ls-token-conditions').textContent).toBe('<b>Prone</b>');
+    expect(svg.querySelector('.ls-token').getAttribute('data-token-id')).toBe('"><script>alert(1)</script>');
+  });
+
+  it('draws grid lines on the grid: every cell from the offset, and a major line every 5 cells', () => {
+    renderBattleMapSnapshot(svg, snapshot());
+    const grid = svg.querySelector('.ls-grid');
+    expect(grid.getAttribute('stroke')).toBe('#6aa5ff');
+    expect(grid.getAttribute('stroke-opacity')).toBe('0.35');
+    const vertical = (cls) => [...grid.querySelectorAll(cls)].filter((l) => l.getAttribute('x1') === l.getAttribute('x2')).map((l) => Number(l.getAttribute('x1')));
+    const horizontal = (cls) => [...grid.querySelectorAll(cls)].filter((l) => l.getAttribute('y1') === l.getAttribute('y2')).map((l) => Number(l.getAttribute('y1')));
+    expect(vertical('.ls-grid-minor').length).toBeGreaterThan(5);
+    for (const x of vertical('.ls-grid-minor')) expect((((x - 10) % 50) + 50) % 50).toBe(0);
+    for (const y of horizontal('.ls-grid-minor')) expect((((y - 20) % 50) + 50) % 50).toBe(0);
+    for (const x of vertical('.ls-grid-major')) expect((((x - 10) % 250) + 250) % 250).toBe(0);
+  });
+
+  it('draws no grid when it is hidden, and caps the number of lines for a tiny cell size', () => {
+    renderBattleMapSnapshot(svg, snapshot({ grid: { ...snapshot().grid, show: false } }));
+    expect(svg.querySelectorAll('.ls-grid line')).toHaveLength(0);
+
+    const huge = snapshot({ map: { width: 100000, height: 100000 }, grid: { ...snapshot().grid, size: 4 } });
+    renderBattleMapSnapshot(svg, huge);
+    const lines = svg.querySelectorAll('.ls-grid line').length;
+    expect(lines).toBeLessThanOrEqual(MAX_GRID_LINES * 4);
+
+    renderBattleMapSnapshot(svg, snapshot({ grid: { ...snapshot().grid, size: 0 } }));
+    expect(svg.querySelectorAll('.ls-grid line')).toHaveLength(0);
+  });
+
+  it('draws measurements with the DM map geometry and a distance label from the grid', () => {
+    renderBattleMapSnapshot(svg, snapshot());
+    const byId = (id) => svg.querySelector(`[data-measurement-id="${id}"]`);
+    const line = byId('pm-line');
+    expect(line.getAttribute('data-type')).toBe('line');
+    expect(line.getAttribute('stroke')).toBe('#8bd3ff');
+    expect(['x1', 'y1', 'x2', 'y2'].map((a) => line.querySelector('line').getAttribute(a))).toEqual(['0', '0', '150', '0']);
+    expect(line.querySelector('.ls-measurement-label').textContent).toBe('15 ft'); // 3 cells × 5 ft
+
+    // Cone: 90°, apex at (x1, y1), pointing at (x2, y2).
+    const cone = byId('pm-cone');
+    expect(cone.querySelector('path').getAttribute('d')).toBe('M 400 100 L 470.71 29.29 A 100 100 0 0 1 470.71 170.71 Z');
+    expect(cone.querySelector('.ls-measurement-label').textContent).toBe('10 ft cone');
+
+    // Circle: radius is the length plus half a cell, as on the DM's map.
+    const circle = byId('pm-circle');
+    expect(circle.querySelector('circle').getAttribute('r')).toBe('75');
+    expect(circle.querySelector('.ls-measurement-label').textContent).toBe('8 ft radius'); // (1 + 0.5) cells × 5 ft = 7.5
+  });
+
+  it('marks the map surface where the map image will go, without any image', () => {
+    renderBattleMapSnapshot(svg, snapshot({ map: { width: 1000, height: 600 }, mapTransform: { scale: 1.5, x: -20, y: 10 } }));
+    const surface = svg.querySelector('.ls-map-surface');
+    expect(['x', 'y', 'width', 'height'].map((a) => surface.getAttribute(a))).toEqual(['-20', '10', '1500', '900']);
+    expect(svg.querySelector('image, foreignObject')).toBeNull();
+  });
+
+  it('fits the view to the map surface and all content', () => {
+    const s = snapshot({ map: { width: 1000, height: 600 }, mapTransform: { scale: 1.5, x: -20, y: 10 } });
+    const box = computeViewBox(s);
+    expect(box.x).toBeLessThanOrEqual(-20);
+    expect(box.y).toBeLessThanOrEqual(0);
+    expect(box.x + box.w).toBeGreaterThanOrEqual(1480);
+    expect(box.y + box.h).toBeGreaterThanOrEqual(910);
+    renderBattleMapSnapshot(svg, s);
+    expect(svg.getAttribute('viewBox')).toBe(`${box.x} ${box.y} ${box.w} ${box.h}`);
+    // With nothing on the map, a default area.
+    expect(computeViewBox(snapshot({ tokens: [], measurements: [] }))).toEqual({ x: 0, y: 0, w: 800, h: 500 });
+  });
+
+  it('does not mutate the snapshot it draws', () => {
+    const s = deepFreeze(snapshot());
+    const copy = JSON.parse(JSON.stringify(s));
+    expect(() => renderBattleMapSnapshot(svg, s)).not.toThrow();
+    expect(s).toEqual(copy);
+  });
+
+  it('replaces the previous drawing entirely on each snapshot', () => {
+    renderBattleMapSnapshot(svg, snapshot());
+    renderBattleMapSnapshot(svg, snapshot({ revision: 13, tokens: [], measurements: [] }));
+    expect(svg.querySelectorAll('.ls-token')).toHaveLength(0);
+    expect(svg.querySelectorAll('.ls-measurement')).toHaveLength(0);
+    expect(svg.getAttribute('data-revision')).toBe('13');
+  });
+
+  it('has no interactive or editing elements', () => {
+    renderBattleMapSnapshot(svg, snapshot());
+    expect(svg.querySelector('a, button, input, foreignObject, [onclick], [tabindex]')).toBeNull();
+  });
+});

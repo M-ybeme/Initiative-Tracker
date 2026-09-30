@@ -34,6 +34,12 @@ Browser side (`js/modules/live-share/`): `signaling-client.js` (relay WebSocket)
 TURN credentials and builds each connection's ICE servers). The prototype page is
 `liveshare-dev.html` with `js/live-share-dev.js`. It isn't linked from the site navigation.
 
+Milestone 2 (2.3.25) adds a second host: `battlemap.html?liveshare=1` (`js/battlemap-live-share.js`)
+shares the Battle Map, and its join links open `liveshare-dev.html` as the player, which draws the
+map read-only. It uses the same relay and query parameters (`?relay=`, `?forceRelay=1`,
+`?iceTimeoutMs=`), and the data channel carries `{v:0, type:'battlemap-snapshot', payload}` messages
+(see the planning document, Milestone 2).
+
 ## How Milestone 0 works
 
 1. The host opens `liveshare-dev.html` and clicks **Start room**. The browser generates a 128-bit

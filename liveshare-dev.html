@@ -15,14 +15,18 @@
     .ls-message { font-size: 2rem; font-weight: 600; min-height: 3rem; }
     .ls-diag { font-size: .8rem; max-height: 24rem; overflow: auto; white-space: pre-wrap; word-break: break-word; }
     .ls-link { word-break: break-all; }
+    /* Milestone 2: the read-only Battle Map drawn from the host's snapshots (js/modules/live-share/battlemap-view.js). */
+    .ls-map { display: block; width: 100%; height: min(70vh, 640px); background: #091018; border-radius: .375rem; font-family: system-ui, sans-serif; }
+    .ls-map-disconnected .ls-map { opacity: .55; filter: grayscale(.6); }
+    .ls-map-disconnected #ls-map-status { color: var(--bs-warning); }
   </style>
 </head>
 <body>
-  <main class="container py-4" style="max-width: 820px;">
-    <!-- Live Share Milestone 0: networking proof of concept. Not linked from the site navigation. -->
+  <main class="container py-4" style="max-width: 1100px;">
+    <!-- Live Share Milestones 0-2: networking proof of concept and remote Battle Map rendering. Not linked from the site navigation. -->
     <div class="alert alert-warning" role="note">
-      <strong>Development prototype.</strong> Live Share networking test (Milestone 0). This is not a
-      production room: anyone with the link can connect, and it only sends a test message.
+      <strong>Development prototype.</strong> Live Share test page (Milestones 0–2). This is not a
+      production room: anyone with the link can connect and see what the host shares.
     </div>
 
     <h1 class="h3 mb-3"><i class="bi bi-broadcast"></i> Live Share — networking test</h1>
@@ -57,6 +61,18 @@
         <p class="mb-1 text-body-secondary">Message from host:</p>
         <p id="ls-received" class="ls-message" data-testid="received-message"></p>
         <button id="ls-leave" class="btn btn-outline-danger" data-testid="leave-session">Leave</button>
+      </div>
+    </section>
+
+    <!-- Player: the host's Battle Map, read-only (shown once the first snapshot arrives) -->
+    <section id="ls-map-section" class="card mb-3 d-none" data-testid="map-section">
+      <div class="card-body">
+        <div class="d-flex justify-content-between align-items-center mb-2">
+          <h2 class="h5 mb-0">Battle Map</h2>
+          <span id="ls-map-status" class="small text-body-secondary" role="status" data-testid="map-status"></span>
+        </div>
+        <svg id="ls-map" class="ls-map" data-testid="player-map" role="img" aria-label="The host's Battle Map" xmlns="http://www.w3.org/2000/svg"></svg>
+        <p class="small text-body-secondary mt-2 mb-0">Map and token images are not shared yet; tokens show as markers.</p>
       </div>
     </section>
 

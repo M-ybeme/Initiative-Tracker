@@ -16,11 +16,27 @@ The DM's Toolbox has evolved through focused feature releases. Minor versions (2
 - **1.9.x**: Battle map measurement tools, persistent fog shapes, and generator integration across NPC/Tavern/Shop systems
 - **1.8.x**: Spell database expansion to 432+ spells, inventory management, loot generator overhaul, and character token generation
 
-**Current version: 2.3.24 (September 2026)**
+**Current version: 2.3.25 (September 2026)**
 
 ---
 
 ## [Unreleased]
+
+---
+
+## [2.3.25] - 2026-09-29
+**Live Share remote structured rendering (Live Share Milestone 2)**
+
+### Live Share
+- **The Battle Map can share itself (development prototype).** Opening the Battle Map with `?liveshare=1` adds a small Live Share panel: **Start room** creates a room and a join link that opens the Live Share test page as a player. Without that parameter the Battle Map is unchanged and opens no connections. Still a development prototype: anyone with the link can watch, and there are no seats or passwords yet (Milestone 5)
+- **Players see the map live.** The DM's browser sends the Milestone 1 player-safe snapshot, unchanged, over the WebRTC data channel as one `battlemap-snapshot` message: at once when a player connects, then whenever something players can see changes (one centralized signal, not each edit). Sends are throttled to one per 100 ms, always carry the latest state (the last state of a burst is always sent), never happen inside the Battle Map's redraw, and hold back while a player's channel is busy (keeping one pending flag, never a queue)
+- **Read-only player view.** The player draws the grid, tokens (as markers at their position, size and rotation), public names, conditions and persistent measurements with distance labels, fitted to the screen. There are no editing controls. Map and token images, fog and HP are not shared yet (images come with Milestone 3, fog with Milestone 4). If the connection drops, the last map stays on screen, marked as disconnected
+- **Untrusted input.** The player validates every snapshot (schema, version, revision, types, finite in-range numbers, list and text sizes), copies only the allowlisted fields, draws text as text only, and applies a snapshot only if its revision is newer than the last one: late or repeated snapshots are ignored, never replayed. Messages up to 240 KB (a full 500-token table fits)
+- Diagnostics show snapshot counts and revisions (sent, received, applied, ignored as stale, rejected, pending, throttled), never map content
+
+### Internal / Tests
+- The prototype's host flow is now a shared `HostSession` module used by both the test page and the Battle Map; the Milestone 0 behavior and its tests are unchanged
+- Unit tests for snapshot validation (including the contract that every seam snapshot, up to the projection's limits, is accepted unchanged), the revision gate, throttling and backpressure (hand-driven clock), the renderer (geometry, text safety, no mutation) and PeerLink sending; an integration test runs the seam, host session, sender and receiver through the local relay; a browser spec drives the real Battle Map with a player in a separate context (initial snapshot, token drag, condition, measurement, a burst of rotate/resize/drag/grid edits, a replayed stale snapshot, malformed and hostile snapshots, disconnect)
 
 ---
 

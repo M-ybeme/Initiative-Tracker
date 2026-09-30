@@ -5,11 +5,19 @@
  * is untrusted (planning doc §22): it is size-checked, parsed and validated against a known
  * shape before use, and unknown types are rejected. Text is only ever rendered with textContent.
  *
- * Milestone 0 has one data-channel message, `hello`. Later milestones add their types here.
+ * Data-channel messages (host -> player):
+ *   hello               Milestone 0 test message
+ *   battlemap-snapshot  Milestone 2: the Battle Map's whole player-safe state (battlemap-snapshot.js).
+ *                       Whole snapshots only, never patches; the player keeps the newest revision.
  */
+import { validateBattleMapSnapshot } from './battlemap-snapshot.js';
 
 export const PROTOCOL_VERSION = 0;
-export const MAX_CHANNEL_MESSAGE_BYTES = 16 * 1024;
+// Largest data-channel message either side accepts. A Battle Map snapshot is usually a few KB (a
+// token is ~150 bytes), but the projection allows up to 500 tokens and 500 measurements, so the
+// limit sits just under the 256 KiB SCTP message size Chrome, Firefox and Safari all accept. The
+// host refuses to send anything larger (encodeBattleMapSnapshot) and the player rejects it unread.
+export const MAX_CHANNEL_MESSAGE_BYTES = 240 * 1024;
 export const MAX_HELLO_TEXT_LENGTH = 200;
 const MAX_SDP_LENGTH = 12 * 1024;
 const MAX_CANDIDATE_LENGTH = 1024;
@@ -94,6 +102,20 @@ export function encodeHello(text = 'hello') {
   return JSON.stringify({ v: PROTOCOL_VERSION, type: 'hello', text: String(text).slice(0, MAX_HELLO_TEXT_LENGTH) });
 }
 
+/**
+ * The `battlemap-snapshot` message for a snapshot from the Battle Map seam, sent as is. Returns
+ * `{ ok: true, text }`, or `{ ok: false, error }` when it would be too large to send.
+ */
+export function encodeBattleMapSnapshot(snapshot) {
+  const text = JSON.stringify({ v: PROTOCOL_VERSION, type: 'battlemap-snapshot', payload: snapshot });
+  if (byteLength(text) > MAX_CHANNEL_MESSAGE_BYTES) return { ok: false, error: 'snapshot too large to send' };
+  return { ok: true, text };
+}
+
+/**
+ * Parse and validate one data-channel message. Returns `{ ok: true, message }` or
+ * `{ ok: false, error, type? }`; `type` is set when a message of a known type failed validation.
+ */
 export function parseChannelMessage(raw) {
   const parsed = parseJson(raw, MAX_CHANNEL_MESSAGE_BYTES);
   if (!parsed.ok) return parsed;
@@ -103,6 +125,11 @@ export function parseChannelMessage(raw) {
   if (msg.type === 'hello') {
     if (typeof msg.text !== 'string' || msg.text.length > MAX_HELLO_TEXT_LENGTH) return { ok: false, error: 'bad hello text' };
     return { ok: true, message: { type: 'hello', text: msg.text } };
+  }
+  if (msg.type === 'battlemap-snapshot') {
+    const checked = validateBattleMapSnapshot(msg.payload);
+    if (!checked.ok) return { ok: false, type: 'battlemap-snapshot', error: `bad battlemap-snapshot: ${checked.error}` };
+    return { ok: true, message: { type: 'battlemap-snapshot', snapshot: checked.snapshot } };
   }
   return { ok: false, error: 'unknown message type' };
 }
