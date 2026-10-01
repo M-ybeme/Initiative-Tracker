@@ -1,7 +1,9 @@
 const DM_TOOLBOX_BUILD = {
   name: "The DM's Toolbox",
-  version: "2.3.27",
+  version: "2.3.28",
   recentChanges: [
+    "Fix: on the Battle Map, turning Measure off with its button while Persistent is on no longer leaves a stray measurement ending at the button",
+    "Fix: right-clicking a Battle Map token no longer moves it (an off-grid token used to snap to the grid) or marks the map unsaved, and its menu opens reliably",
     "New: the Battle Map has a Save button next to the Fog / Measure tabs; it lights up when there are unsaved changes, and Save, Ctrl+S and Save Session all do the same save",
     "New (Live Share test mode): players see only the Battle Map as you last saved it; edits stay private until you save, and a token can be hidden from players with Visible to Players in its right-click menu",
     "Fix: Battle Map changes that are stored automatically (placing a token, loading a map, importing) are kept as a separate draft and no longer overwrite your last saved map; after a reload you get the draft back, still marked unsaved",

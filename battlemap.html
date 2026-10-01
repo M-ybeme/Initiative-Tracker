@@ -2267,6 +2267,11 @@
 
   let isPointerDown = false, pointerId = null, last = { x:0, y:0 };
   let mouseScreen = { x:0, y:0 };
+  // The pointer of a measurement gesture that began on the map (null: none). Measure mode
+  // (state.ui.measuring) can stay on between gestures; only the release of this pointer ends a
+  // gesture and may store a persistent measurement, never a pointerup elsewhere on the page (such as
+  // the click on the Measure button that turns the mode off).
+  let measureGesture = null;
 
     // Pinch zoom state
   const activePointers = new Map();
@@ -2282,6 +2287,11 @@
   }
 
   uiLayer.addEventListener('pointerdown', (e)=>{
+    // A right-click (or another secondary button) only opens the context menu (see 'contextmenu'):
+    // it must not start a drag (which would snap a token and mark the map unsaved), a measurement or
+    // fog paint. The primary button (left mouse button, a touch, a pen tip) and the middle mouse
+    // button (pan) go on as before.
+    if (e.button !== 0 && !(e.button === 1 && e.pointerType === 'mouse')) return;
     uiLayer.setPointerCapture(e.pointerId);
 
     // Track all active pointers for pinch
@@ -2301,10 +2311,11 @@
       const sy = (centerClientY - rect.top) * DPR;
       pinchCenter = screenToWorld(sx, sy);
 
-      // Cancel any token drag / pan in progress
+      // Cancel any token drag / pan / measurement gesture in progress
       state.ui.dragMode = 'none';
       state.ui.dragId = null;
       fogState.painting = false;
+      measureGesture = null;
 
       // Do NOT start normal single-pointer behavior when pinch begins
       isPointerDown = false;
@@ -2326,6 +2337,7 @@
     if (state.ui.measureToggle || state.ui.measuring) {
       state.ui.measuring = true;
       state.ui.measureStart = wpt;
+      measureGesture = e.pointerId;
       return;
     }
 
@@ -2639,6 +2651,8 @@
     window.addEventListener('pointerup', (e)=>{
     // Remove from activePointers (for pinch tracking)
     activePointers.delete(e.pointerId);
+    const endsMeasureGesture = measureGesture !== null && e.pointerId === measureGesture;
+    if (endsMeasureGesture) measureGesture = null;
     if (activePointers.size < 2) {
       pinchStartDistance = null;
       pinchStartScale = null;
@@ -2658,6 +2672,9 @@
     }
 
     if(state.ui.measuring){
+      // A pointerup that does not end a measurement gesture begun on the map (a click on the
+      // Measure or Persistent button, the Save button, the sidebar...) changes nothing.
+      if(!endsMeasureGesture) return;
       // If persistent measure mode is on, create a persistent measurement
       if(state.ui.persistentMeasureMode && state.ui.measureStart){
         const rect = uiLayer.getBoundingClientRect();
@@ -2733,6 +2750,8 @@
     if (fogState.painting) {
       fogState.painting = false;
     }
+    // A cancelled measurement gesture stores nothing.
+    if (measureGesture === e.pointerId) measureGesture = null;
 
     state.ui.dragMode = 'none';
     state.ui.dragId = null;
@@ -2766,6 +2785,7 @@
     if (state.ui.measuring) {
       state.ui.measuring = false;
       state.ui.measureStart = null;
+      measureGesture = null;
       // If measure toggle is on, turn it off
       if (state.ui.measureToggle) {
         state.ui.measureToggle = false;
@@ -2782,8 +2802,13 @@
 
     const token = hitToken(wpt.x, wpt.y);
     if (!token) { hideMenu(); return; }
+    // The menu's token becomes the only selection, so Delete and the other keys act on it alone
+    // (a fog shape or measurement selected before stays out of it).
     state.tokens.forEach(t=> t.selected = false);
+    fogShapes.forEach(s=> s.selected = false);
+    persistentMeasurements.forEach(m=> m.selected = false);
     token.selected = true; updateTokenList();
+    dirty.ui = true; renderFogShapes();
     showMenu(e.clientX, e.clientY);
   });
   document.addEventListener('click', (e)=>{ if (!ctxMenu.contains(e.target)) hideMenu(); });
@@ -3206,7 +3231,8 @@
     e.currentTarget.classList.toggle('active', state.ui.measureToggle);
     e.currentTarget.setAttribute('aria-pressed', String(state.ui.measureToggle));
     state.ui.measuring = state.ui.measureToggle;
-    if(!state.ui.measureToggle){ state.ui.measureStart = null; }
+    // Turning Measure off cancels an unfinished measurement gesture (it is not stored).
+    if(!state.ui.measureToggle){ state.ui.measureStart = null; measureGesture = null; }
   });
   const persistentMeasureToggleBtn = document.getElementById('persistentMeasureToggle');
   persistentMeasureToggleBtn.addEventListener('click', (e)=>{

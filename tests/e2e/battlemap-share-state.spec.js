@@ -84,8 +84,9 @@ test.describe('Battle Map share-state seam with save-gated publication', () => {
     await expect(page.locator('#hpModal')).toBeHidden();
     await save(page);
     const afterHp = await snapshot(page);
-    // (The click snapped the token to the grid: that position change is what this save published.)
-    expect(afterHp.tokens[0].x % 50).toBe(0);
+    // Nothing players can see changed (the right-click that opened the menu no longer moves the
+    // token either, 2.3.28): the published state is exactly what was placed.
+    expect(afterHp).toEqual(placed);
     expect(JSON.stringify(afterHp)).not.toMatch(/"hp"|maxHp|"12"|"20"/);
     await save(page); // saving again with nothing new publishes nothing new
     expect((await snapshot(page)).revision).toBe(afterHp.revision);

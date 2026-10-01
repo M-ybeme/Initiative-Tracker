@@ -12,9 +12,11 @@
 **Progress:** Milestone 0 complete and validated in production (2.3.22–2.3.23, 2026-09-28); Milestone 1 (share-state seam) complete in 2.3.24; Milestone 2 (remote structured rendering) complete and validated in production in 2.3.25. Milestone 3 (player-visible background and asset transfer) implemented in 2.3.26, validated locally; a real-device check is still to do. Its asset and fog design was revised on 2026-09-29 (see below).
 **2.3.27 (Battle Map staged publishing):** Live Share publishes only the Battle Map's last explicit save, never the working state; drafts are stored separately and stay private; tokens can be hidden from players (Visible to Players); after a reload the saved record, not the restored draft, is published; the published map's assets stay available until the next save is published. This is the Battle Map's policy (it has an explicit save workflow), not a property of the generic Live Share modules.
 
-**Backlog (Battle Map, found during the 2.3.27 review; not yet fixed):**
-- Pre-existing: with Measure and Persistent both on, clicking the Measure button to turn measuring off also creates a persistent measurement ending at the button (the window-level pointerup finalizes it).
-- Pre-existing: a right-click press on a token starts a token drag, so a token that is off the grid (e.g. after a grid size change) snaps, the map is marked unsaved, and the context menu misses the token.
+**Backlog (Battle Map, found during the 2.3.27 and 2.3.28 reviews; not yet fixed):**
+- Pre-existing: a touch long-press (and Ctrl+click on a Mac, which is a primary-button press) starts a token drag before its menu opens, so on release an off-grid token snaps and the map is marked unsaved (the 2.3.28 right-click fix does not cover a primary-button press).
+- Pre-existing: pressing Alt during a left-drag of a token leaves the drag active after release; the next pointerup anywhere (e.g. a tab click) snaps the token and marks the map unsaved.
+- Pre-existing: the middle mouse button pans only outside Measure / Brush / calibration modes; in those modes a middle-drag measures, paints fog or picks a grid point.
+- Docs: docs/BATTLEMAP.md describes a right-click menu on persistent measurements (Rename / Delete) that the code does not have.
 - Pre-existing: Reset clears only the localStorage copy of the map (not IndexedDB or the draft) and does not mark the map unsaved.
 - Cleanup: `check()`/debounce in battle-map-share-assets.js and `schedule()` in battle-map-share-state.js have no production caller since 2.3.27 (documented as such); delete them with their unit tests.
 - Cleanup: the Save button's tooltip wording is written both by battlemap.html and js/battlemap-live-share.js; make the page the only writer.

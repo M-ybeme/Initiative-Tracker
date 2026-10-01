@@ -16,11 +16,26 @@ The DM's Toolbox has evolved through focused feature releases. Minor versions (2
 - **1.9.x**: Battle map measurement tools, persistent fog shapes, and generator integration across NPC/Tavern/Shop systems
 - **1.8.x**: Spell database expansion to 432+ spells, inventory management, loot generator overhaul, and character token generation
 
-**Current version: 2.3.27 (September 2026)**
+**Current version: 2.3.28 (September 2026)**
 
 ---
 
 ## [Unreleased]
+
+---
+
+## [2.3.28] - 2026-09-30
+**Battle Map interaction fixes**
+
+### Battle Map
+- **Fixed Persistent Measure creating a stray measurement when Measure mode was turned off through the UI.** With Measure and Persistent on, clicking the Measure button to turn measuring off stored an extra persistent measurement from the last measurement's start to the button (and marked the map unsaved). Any release of the mouse anywhere on the page could finish a measurement; now only the release of a measurement gesture that began on the map does. Clicking the Measure or Persistent buttons, the tabs, the Save button, the sidebar or the context menu never creates a measurement. Turning Measure off, right-clicking to leave measuring, a two-finger pinch or a cancelled pointer discard an unfinished measurement instead of storing it. Measuring on the map works as before
+- **Fixed right-clicking an off-grid token moving/snapping the token before opening its context menu.** A right-click started a token drag: on release the token snapped to the grid (moving an off-grid token, for example after a grid size change, away from the cursor so its menu could fail to open) and the map was marked unsaved, even for a token already on the grid. A right-click (or another secondary button) now only opens the context menu: it changes nothing on the map, and the menu's token becomes the only selection (so Delete removes just that token). The left mouse button, touch, a pen tip and the middle mouse button work as before
+
+### Live Share
+- **Fix (shipped after 2.3.27 in commit bd1ba05): a background replaced while it was being sent is no longer asked for again too early.** When the fog changed during a background transfer, the player could ask again for the replaced background before the update naming its successor arrived; the host could only answer that it no longer had it. The player now waits for the newer update. Nothing changed in what players see; the extra request is gone (it made a Live Share test fail on CI, depending on timer resolution)
+
+### Internal / Tests
+- Browser tests for both fixes on the real Battle Map in Live Share mode: Measure / Persistent / tab / Save / sidebar clicks, a press that starts off the map and ends over it, a cancelled pointer and Measure turned off mid-gesture store nothing; genuine gestures store exactly one measurement each; Alt+drag quick measure stores exactly one measurement; right-clicks on and off the grid and next to another (hidden) token open the right menu and change nothing (position, size, rotation, unsaved state, draft, Live Share publication); a fog shape or measurement selected before a right-click is not deleted with the token; a right-button drag moves nothing; left-drag still moves and snaps; the middle button still pans; real touch input (drag and measurement) still works. Each guard was checked by removing it and confirming its test fails
 
 ---
 
