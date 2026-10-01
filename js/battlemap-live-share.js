@@ -9,6 +9,11 @@
  * sends the seam's snapshot unchanged, so only what projectPlayerSafeState() allowlists can leave
  * the page. Sending is throttled, backpressure-aware and latest-state-wins (snapshot-sender.js).
  *
+ * What the seam reports is the Battle Map's PUBLISHED state: the last successful save (2.3.27,
+ * js/modules/battle-map-publication.js). That is a Battle Map policy; nothing here knows about
+ * saving. This file sends whatever the seam says players may see, whenever it says that changed,
+ * as any Live Share surface would (a future Initiative Tracker surface signals on every change).
+ *
  * Milestone 3: players ask for the assets a snapshot references (the player-visible background,
  * custom token art) and the asset sender answers from seam.getAsset(id): bytes the Battle Map side
  * already prepared, never the map image, fog or token image sources (asset-sender.js).
@@ -85,9 +90,28 @@ function initLiveShareHost(seam) {
     if (!running) ui.link.hidden = true;
   };
 
+  // The save button says what saving does while players are watching.
+  const markSaveButton = (active) => {
+    const btn = document.getElementById('saveMapBtn');
+    if (!btn) return;
+    btn.dataset.liveShare = active ? 'active' : '';
+    const saveLabel = active ? 'Save changes and update players' : 'Save map';
+    btn.title = `${btn.dataset.state === 'dirty' ? 'Unsaved changes. ' : ''}${saveLabel} (Ctrl+S)`;
+    btn.setAttribute('aria-label', btn.title);
+  };
+
   const start = () => {
     if (!relayUrl) return setStatus('No Live Share relay is configured for this site.');
     if (typeof RTCPeerConnection === 'undefined') return setStatus('This browser does not support WebRTC.');
+    // Players only ever see a saved map; a map that was never saved has nothing to share yet.
+    const problem = seam.savedMapProblem ? seam.savedMapProblem() : null;
+    if (problem === 'unreadable') {
+      return setStatus('The saved map could not be loaded (its image is unreadable), so there is nothing safe to share. Load the map image again and save.');
+    }
+    if (problem === 'loading') return setStatus('The saved map is still loading. Try again in a moment.');
+    if (seam.hasPublishedState && !seam.hasPublishedState()) {
+      return setStatus('Save the map first (Save button or Ctrl+S): players only see saved maps.');
+    }
     ui.start.disabled = true;
     diag.signalingError = null;
     diag.peers = {};
@@ -99,6 +123,7 @@ function initLiveShareHost(seam) {
     session.on('ready', () => {
       setStatus('Room open — waiting for players');
       setButtons(true);
+      markSaveButton(true);
     });
     session.on('turn', ({ turn }) => {
       diag.turn = turn;
@@ -148,6 +173,7 @@ function initLiveShareHost(seam) {
       diag.signalingError = error;
       setStatus(`Signaling failure: ${error.message}`);
       setButtons(false);
+      markSaveButton(false);
       renderDiagnostics();
     });
     const roomId = session.start();
@@ -163,6 +189,7 @@ function initLiveShareHost(seam) {
     assetSender.dispose();
     setStatus('Session ended');
     setButtons(false);
+    markSaveButton(false);
     renderDiagnostics();
   };
 
@@ -215,7 +242,7 @@ function buildPanel() {
   title.textContent = 'Live Share — development prototype';
   const note = document.createElement('div');
   note.style.cssText = 'color:#fbbf24;font-size:12px;margin-bottom:6px';
-  note.textContent = 'Anyone with the link can watch this map. Players get the map as you show it to them, with fog baked in, and custom token art; never the uncovered map, HP or DM-only data.';
+  note.textContent = 'Anyone with the link can watch this map. Players see your last SAVED map (Save or Ctrl+S updates them), with fog baked in; hidden tokens, the uncovered map, HP and DM-only data are never sent.';
   const status = document.createElement('div');
   status.dataset.testid = 'host-status';
   status.textContent = 'Not started';

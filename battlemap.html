@@ -23,6 +23,7 @@
   <script src="/js/indexed-db-storage.js"></script>
   <script src="/js/modules/battle-map-share-state.js"></script>
   <script src="/js/modules/battle-map-share-assets.js"></script>
+  <script src="/js/modules/battle-map-publication.js"></script>
   <!-- Live Share Milestone 2 host (development only: inert unless the page is opened with ?liveshare=1) -->
   <script type="module" src="/js/battlemap-live-share.js"></script>
 
@@ -90,7 +91,16 @@
     .bar span { font-size:12px; color: var(--muted); }
     .bar .active { outline: 2px solid var(--accent); }
     .mode-tabs-bar { flex-direction: column; align-items: stretch; gap: 6px; }
-    .mode-tab-buttons { display: flex; gap: 4px; }
+    .mode-tab-buttons { display: flex; gap: 4px; align-items: flex-end; }
+    /* Save button + unsaved indicator (2.3.27), at the right end of the Fog / Measure tabs. */
+    .save-map-btn { margin-left: auto; display: inline-flex; align-items: center; gap: 6px; padding: 5px 12px; min-height: 32px; background: #1a2233; border: 1px solid var(--line); border-radius: 8px; color: var(--muted); font-size: 13px; cursor: pointer; }
+    .save-map-btn .save-label { display: none; }
+    .save-map-btn[data-state="dirty"] { color: #111; background: #fbbf24; border-color: #fbbf24; animation: savePulse 1.6s ease-in-out infinite; }
+    .save-map-btn[data-state="dirty"] .save-label, .save-map-btn[data-state="saving"] .save-label, .save-map-btn[data-state="saved"] .save-label { display: inline; }
+    .save-map-btn[data-state="saving"] { opacity: .75; cursor: progress; }
+    .save-map-btn[data-state="saved"] { color: #fff; background: #1f7a45; border-color: #1f7a45; }
+    @keyframes savePulse { 0%, 100% { box-shadow: 0 0 0 0 rgba(251,191,36,.55); } 50% { box-shadow: 0 0 0 5px rgba(251,191,36,0); } }
+    @media (prefers-reduced-motion: reduce) { .save-map-btn[data-state="dirty"] { animation: none; } }
     .mode-tab { padding: 5px 14px; background: #1a2233; border: 1px solid var(--line); border-radius: 8px 8px 0 0; color: var(--muted); cursor: pointer; font-size: 13px; transition: background 0.15s, color 0.15s; }
     .mode-tab.active { background: var(--accent); color: #fff; border-color: var(--accent); outline: none; }
     .mode-tab-panel { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; padding: 6px 4px 2px; border-top: 1px solid var(--line); }
@@ -542,6 +552,9 @@
         <div class="mode-tab-buttons" role="tablist">
           <button id="tabFog" class="mode-tab active" role="tab" aria-selected="true" aria-controls="fogControlsPanel">🌫 Fog</button>
           <button id="tabMeasure" class="mode-tab" role="tab" aria-selected="false" aria-controls="measureControlsPanel">📐 Measure</button>
+          <button id="saveMapBtn" class="save-map-btn" type="button" data-state="clean" data-testid="save-map" title="Save map (Ctrl+S)" aria-label="Save map">
+            <i class="bi bi-floppy" aria-hidden="true"></i><span class="save-label">Save</span>
+          </button>
         </div>
         <div id="fogControlsPanel" class="mode-tab-panel" role="tabpanel" aria-labelledby="tabFog">
           <button id="toggleFog">Fog: Off</button>
@@ -598,6 +611,7 @@
         <div id="ctxMenu" class="context-menu">
           <button data-cmd="rename">✏️ Rename</button>
           <button data-cmd="toggleLabel">🏷️ Label</button>
+          <button data-cmd="toggleVisible" role="menuitemcheckbox" aria-checked="true" data-testid="ctx-visible">☑ Visible to Players</button>
           <button data-cmd="setHp">❤️ HP</button>
           <button data-cmd="addStatus">🔶 Status</button>
           <button data-cmd="setAura">⭕ Aura</button>
@@ -930,6 +944,9 @@
       fogShapeDragId: null    // NEW: dragging fog shape
     }
   };
+  // What load() fills in for fields a stored map lacks.
+  const DEFAULT_GRID = Object.freeze({ ...state.grid });
+  const DEFAULT_MAP_TRANSFORM = Object.freeze({ ...state.mapTransform });
 
   // --- Fog of War layer (image-space bitmap, aligns with map image)
   const fog = document.createElement('canvas');
@@ -943,18 +960,15 @@
   const persistentMeasurements = /** @type{PersistentMeasurement[]} */([]);
 
   // --- Live Share share-state seam (Milestone 1; js/modules/battle-map-share-state.js)
-  // One read-only boundary over the state above: an allowlisted player-safe projection plus one
-  // "player-visible state changed" signal. It is checked after every rendered frame (visible changes
-  // request one), after every setDirty() (changes made while the tab is hidden, when frames pause)
-  // and on every save() (edits that commit without either); the revision only moves when the
-  // projected content changes, so the extra checks cost nothing but a comparison.
+  // One read-only boundary over the published (saved) state: an allowlisted player-safe projection
+  // plus one "player-visible state changed" signal. Since 2.3.27 it is checked only when the
+  // publisher commits a save; the revision moves only when the projected content changes.
   // Nothing here sends anything anywhere; Live Share (js/battlemap-live-share.js) subscribes to it.
   //
   // Milestone 3 (js/modules/battle-map-share-assets.js): the raster side of the same seam. It composes
   // the player-visible background (map + fog, hidden areas opaque) and encodes custom token art, and
-  // hands out only encoded bytes by content-derived id. It is checked at the same three funnels; its
-  // own change detector reacts only to the background inputs (map image, fog on/off, fog bitmap
-  // version, fog shapes) and to token image sources, never to the structured revision.
+  // hands out only encoded bytes by content-derived id. Its inputs are those of the save being
+  // published; the publisher flush()es it, then retain()s what it committed.
   //
   // Only in Live Share mode (?liveshare=1, like js/battlemap-live-share.js): without it the Battle Map
   // composes, encodes and hashes nothing, and the projection simply has no asset references.
@@ -962,18 +976,19 @@
   function fogPixelsChanged(){ fogPixelsVersion++; }
   let fogBitmapLoads = 0; // saved fog bitmaps still decoding: until then the fog is not what was saved
   const liveShareMode = new URLSearchParams(location.search).get('liveshare') === '1';
+  //
+  // 2.3.27: Live Share publishes the last SAVED Battle Map, never the working state
+  // (js/modules/battle-map-publication.js). Edits, redraws and setDirty() only change the DM's own
+  // view; a successful Save (button or Ctrl+S) captures the saved state and publishes it. This is
+  // the Battle Map's policy, not Live Share's: surfaces without a save workflow (the planned
+  // Initiative Tracker) publish as their state changes.
+  const NO_BACKGROUND_INPUTS = { map: { image: null, width: 0, height: 0 }, fogEnabled: false, fogCanvas: null, fogShapes: [], fogVersion: 0, tokens: [] };
   const shareAssets = liveShareMode && window.BattleMapShareAssets
     ? window.BattleMapShareAssets.createShareAssets({
-        getInputs: () => ({
-          map: { image: state.map.img, width: state.map.w, height: state.map.h },
-          fogEnabled: fogState.enabled,
-          fogCanvas: fog,
-          fogShapes,
-          fogVersion: fogPixelsVersion,
-          fogReady: fogBitmapLoads === 0,
-          tokens: state.tokens,
-        }),
-        onChange: () => shareState && shareState.schedule(),
+        // Only ever the inputs of the last save (captureBackgroundInputs), never the draft.
+        getInputs: () => (publisher && publisher.backgroundInputs()) || NO_BACKGROUND_INPUTS,
+        // Custom token art finished preparing: the published state picks it up.
+        onChange: () => publisher && publisher.refresh(),
         createCanvas: (w, h) => Object.assign(document.createElement('canvas'), { width: w, height: h }),
         loadImage: (src, { crossOrigin } = {}) => new Promise((res, rej) => {
           const img = new Image();
@@ -987,14 +1002,58 @@
         onError: (err) => console.warn('Battle Map share-assets update failed', err),
       })
     : null;
-  const shareState = window.BattleMapShareState
+  const publisher = window.BattleMapPublication
+    ? window.BattleMapPublication.createPublisher({ assets: shareAssets, onPublished: () => shareState && shareState.check() })
+    : null;
+  const shareState = window.BattleMapShareState && publisher
     ? window.BattleMapShareState.createShareStateSeam({
-        getSource: () => ({ state, persistentMeasurements, assets: shareAssets }),
+        // The published (last saved) state; its revision moves only when a save publishes a change.
+        getSource: () => publisher.source() || { state: {}, persistentMeasurements: [] },
         onError: (err) => console.warn('Battle Map share-state check failed', err),
       })
     : null;
+  // Save time: a detached copy of everything players could see, taken with the saved payload.
+  let fogCopy = null;
+  let fogCopyVersion = -1;
+  function captureBackgroundInputs() {
+    if (!fogCopy || fogCopyVersion !== fogPixelsVersion || fogCopy.width !== fog.width || fogCopy.height !== fog.height) {
+      // A new canvas each time the fog changed: a published copy is never drawn on again.
+      fogCopy = document.createElement('canvas');
+      fogCopy.width = fog.width;
+      fogCopy.height = fog.height;
+      fogCopy.getContext('2d').drawImage(fog, 0, 0);
+      fogCopyVersion = fogPixelsVersion;
+    }
+    return {
+      map: { image: state.map.img, width: state.map.w, height: state.map.h },
+      fogEnabled: fogState.enabled,
+      fogCanvas: fogCopy,
+      fogShapes: fogShapes.map(s => ({ ...s })),
+      fogVersion: fogPixelsVersion,
+      fogReady: fogBitmapLoads === 0,
+      // Art is prepared only for tokens players may see.
+      tokens: state.tokens.filter(t => t && t.visibleToPlayers !== false).map(t => ({ imgSrc: t.imgSrc })),
+    };
+  }
+  function capturePublication() {
+    return {
+      structured: window.BattleMapPublication.captureStructured(state, persistentMeasurements),
+      backgroundInputs: shareAssets ? captureBackgroundInputs() : null,
+    };
+  }
+  function publishSaved(publication) {
+    if (!publisher) return Promise.resolve(false);
+    return publisher.publish(publication).catch((err) => {
+      console.warn('Battle Map publication failed', err);
+      return false;
+    });
+  }
   window.BattleMapLiveShare = Object.freeze({
-    getPlayerSafeState: () => (shareState ? shareState.getPlayerSafeState() : null),
+    // Null until a saved state exists: an unsaved draft is never published.
+    getPlayerSafeState: () => (shareState && publisher.hasPublished() ? shareState.getPlayerSafeState() : null),
+    hasPublishedState: () => !!publisher && publisher.hasPublished(),
+    // Why there is no published state although a saved map exists: 'loading' | 'unreadable' | null.
+    savedMapProblem: () => (publisher && publisher.hasPublished() ? null : savedMapProblem),
     onShareableStateChanged: (fn) => (shareState ? shareState.onChange(fn) : () => {}),
     // Milestone 3: player-safe assets by content-derived id ({assetId, kind, mime, width, height, bytes}).
     getAsset: (assetId) => (shareAssets ? shareAssets.getAsset(assetId) : null),
@@ -1003,18 +1062,39 @@
   });
 
   // --- Dirty flag tracking for unsaved changes
+  // Marking the map dirty only changes the DM's own state: nothing is published until a save.
   let isDirty = false;
+  let dirtyGeneration = 0; // bumped by every edit, so a save knows if edits arrived while it ran
+  let saveInFlight = false; // a save is writing right now (see save())
   const unsavedIndicator = document.getElementById('unsavedIndicator');
+  const saveMapBtn = document.getElementById('saveMapBtn');
+  let saveFlashTimer = null;
+
+  // The save button is the save control and the unsaved-changes indicator:
+  // clean (subdued), dirty (highlighted, pulsing), saving (in progress), saved (brief confirmation).
+  function setSaveButton(stateName) {
+    if (!saveMapBtn) return;
+    clearTimeout(saveFlashTimer);
+    saveMapBtn.dataset.state = stateName;
+    saveMapBtn.disabled = stateName === 'saving';
+    const label = saveMapBtn.querySelector('.save-label');
+    if (label) label.textContent = stateName === 'saving' ? 'Saving…' : stateName === 'saved' ? 'Saved' : 'Save';
+    const sharing = saveMapBtn.dataset.liveShare === 'active';
+    const action = sharing ? 'Save changes and update players' : 'Save map';
+    saveMapBtn.title = `${stateName === 'dirty' ? 'Unsaved changes. ' : ''}${action} (Ctrl+S)`;
+    saveMapBtn.setAttribute('aria-label', saveMapBtn.title);
+    if (stateName === 'saved') saveFlashTimer = setTimeout(() => setSaveButton(isDirty ? 'dirty' : 'clean'), 1500);
+  }
 
   function setDirty() {
-    if (shareAssets) shareAssets.check();
-    if (shareState) shareState.schedule();
+    dirtyGeneration++;
     if (!isDirty) {
       isDirty = true;
       if (unsavedIndicator) {
         unsavedIndicator.style.display = 'inline-block';
       }
     }
+    if (!saveInFlight) setSaveButton('dirty');
   }
 
   function clearDirty() {
@@ -1070,11 +1150,114 @@
 
   const STORAGE_KEY = 'dmtoolbox.battlemap.mvp.v3';
   const USE_INDEXED_DB = IndexedDBStorage && IndexedDBStorage.isSupported();
+  // Two records (IndexedDB, with a localStorage copy): the map as last explicitly saved (what Live
+  // Share publishes), and the autosaved working draft (private, still unsaved). A draft never
+  // replaces the saved record. Each save gets an id and a draft records the save it continues
+  // from, so a draft left behind by a later save is recognized as stale and ignored.
+  // Maps stored before 2.3.27 are in the saved record and have no id ('legacy').
+  const SAVED_RECORD = { idb: 'current-session', ls: STORAGE_KEY };
+  const DRAFT_RECORD = { idb: 'current-draft', ls: STORAGE_KEY + '.draft' };
+  const saveIdOf = (rec) => (rec ? rec.saveId || 'legacy' : null);
+  let currentSaveId = null; // the saved record the working state continues from (null: never saved)
+  let savesCompleted = 0; // successful saves in this page (a newer save outranks the stored one)
+  // Why Live Share has nothing to publish yet, while the saved record is being read back.
+  let savedMapProblem = null; // null | 'loading' | 'unreadable'
+  // Map replacements: restoring the stored map (load), Import, loading a map image. Each replaces
+  // the map image and fog asynchronously (the fog canvas is blank while its bitmap decodes), so:
+  //  - they run one after another, so a slower earlier one can't finish last and leave one map's
+  //    fog on another map;
+  //  - saves and drafts wait until none is pending, so a map is never stored without its image or
+  //    with blank fog (a later reload would publish that).
+  // A replacement must never await a save or draft (it would wait for itself).
+  let mapReplacement = Promise.resolve();
+  function replacingMap(start){
+    const work = mapReplacement.then(start);
+    mapReplacement = work.catch(() => {});
+    return work;
+  }
+  async function mapSettled(){
+    let last;
+    do {
+      last = mapReplacement;
+      await last;
+    } while (last !== mapReplacement);
+  }
 
-  async function save(){
-    // Some edits commit straight through save() without a render or setDirty() (placing a token).
-    if (shareAssets) shareAssets.check();
-    if (shareState) shareState.schedule();
+  // The one explicit save: the Save button, Ctrl+S and "Save Session" all call this.
+  //   persist -> on success: clear the unsaved state and publish exactly what was saved to Live Share
+  //           -> on failure: stay unsaved, tell the DM, publish nothing (players keep the last save)
+  // One save runs at a time. A save asked for while one runs is queued and starts right after it,
+  // capturing the map as it is then (so edits made meanwhile are saved too); further requests while
+  // it waits join it.
+  let saveChain = Promise.resolve();
+  let queuedSave = null;
+  function save(){
+    if (queuedSave) return queuedSave;
+    const next = saveChain.then(() => {
+      queuedSave = null;
+      return runSave();
+    });
+    queuedSave = next;
+    saveChain = next.catch(() => {});
+    return next;
+  }
+
+  async function runSave(){
+    saveInFlight = true;
+    try {
+      setSaveButton('saving');
+      await mapSettled();
+      const generation = dirtyGeneration;
+      // Captured together, at one moment: what is persisted is what players will get.
+      const payload = buildSavePayload(false);
+      payload.saveId = `s_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`;
+      const publication = publisher ? capturePublication() : null;
+      const ok = await persistBattleMap(payload, SAVED_RECORD);
+      if (!ok) {
+        setSaveButton('dirty');
+        const message = 'The Battle Map could not be saved. Your changes are still here; players still see the last saved map.';
+        if (window.showUserError) window.showUserError(message, { severity: 'error' });
+        else console.error(message);
+        return false;
+      }
+      currentSaveId = payload.saveId;
+      savesCompleted++;
+      savedMapProblem = null;
+      if (generation === dirtyGeneration) {
+        clearDirty();
+        discardDraft(); // everything in it is saved now
+      } else {
+        writeDraft(); // edits made while saving stay unsaved: their draft continues from this save
+      }
+      setSaveButton(isDirty ? 'dirty' : 'saved');
+      if (publication) publishSaved(publication);
+      return true;
+    } finally {
+      saveInFlight = false;
+    }
+  }
+
+  // Actions that have always stored the map straight away (placing a token, loading a map, fog
+  // on/off, clearing fog, adding a fog shape, importing) still do, as a draft: stored in the draft
+  // record so nothing is lost, but still unsaved (the Save button stays highlighted), never
+  // published to players, and never in place of the last saved map.
+  async function persistDraft(){
+    setDirty();
+    await writeDraft();
+  }
+  async function writeDraft(){
+    await mapSettled();
+    return persistBattleMap(buildSavePayload(true), DRAFT_RECORD);
+  }
+  function discardDraft(){
+    try { localStorage.removeItem(DRAFT_RECORD.ls); } catch {}
+    if (USE_INDEXED_DB) {
+      IndexedDBStorage.deleteBattleMap(DRAFT_RECORD.idb)
+        .catch(err => console.warn('The saved Battle Map draft could not be removed; it is ignored on reload.', err));
+    }
+  }
+
+  function buildSavePayload(draft){
     // Always capture the fog canvas if it exists, regardless of enabled flag
     const fogData = (fog.width > 1 && fog.height > 1) ? tryCanvasToDataURL(fog) : null;
 
@@ -1096,6 +1279,7 @@
         hp: t.hp,
         maxHp: t.maxHp,
         showLabel: t.showLabel,
+        visibleToPlayers: t.visibleToPlayers !== false,
         statusConditions: t.statusConditions,
         aura: t.aura,
         visionCone: t.visionCone
@@ -1133,18 +1317,28 @@
         selected: !!m.selected
       }))
     };
+    // A draft: on reload it is restored as the working map, still unsaved, while Live Share
+    // publishes the saved record it continues from.
+    if (draft) {
+      payload.unsavedDraft = true;
+      payload.baseSaveId = currentSaveId;
+    }
+    return payload;
+  }
 
+  // The canonical storage write of one record (IndexedDB, localStorage as fallback). Returns whether
+  // it succeeded.
+  async function persistBattleMap(payload, record){
     if (USE_INDEXED_DB) {
       try {
-        await IndexedDBStorage.saveBattleMap(payload);
+        await IndexedDBStorage.saveBattleMap(payload, record.idb);
         // Also save to localStorage as backup (if size allows)
         try {
-          localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
+          localStorage.setItem(record.ls, JSON.stringify(payload));
         } catch (e) {
           console.log('ℹ localStorage backup skipped (quota exceeded, but IndexedDB save succeeded)');
         }
-        clearDirty(); // Clear unsaved changes indicator
-        return;
+        return true;
       } catch (error) {
         console.error('❌ IndexedDB save failed, trying localStorage fallback:', error);
       }
@@ -1152,49 +1346,141 @@
 
     // Fallback to localStorage
     try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
-      clearDirty(); // Clear unsaved changes indicator
-    } catch {}
+      localStorage.setItem(record.ls, JSON.stringify(payload));
+      return true;
+    } catch (error) {
+      console.error('❌ Battle Map save failed:', error);
+      return false;
+    }
   }
-  async function load(){
-    let data = null;
+  // The initial publication after a reload, from the saved record as stored (with the defaults
+  // load() fills in, and the map size of the decoded image). Superseded by any save made meanwhile. If the saved map image can't be
+  // decoded, nothing is published: Live Share stays closed and says why.
+  async function publishSavedRecord(rec, decodeImage){
+    const savesBefore = savesCompleted;
+    savedMapProblem = 'loading';
+    let image = null;
+    let fogCanvas = null;
+    try {
+      if (shareAssets && rec.map?.imgSrc) image = await decodeImage(rec.map.imgSrc);
+    } catch {
+      if (savesCompleted === savesBefore) savedMapProblem = 'unreadable';
+      return;
+    }
+    // The size load() gives the map: the decoded image's, else the stored one.
+    const w = image ? image.naturalWidth : (rec.map && rec.map.w) || 0;
+    const h = image ? image.naturalHeight : (rec.map && rec.map.h) || 0;
+    if (shareAssets) {
+      fogCanvas = document.createElement('canvas');
+      fogCanvas.width = image ? w : 1;
+      fogCanvas.height = image ? h : 1;
+      if (rec.fog && image) await drawDataUrlToCanvas(rec.fog, fogCanvas); // fails closed (covered)
+    }
+    const tokens = (rec.tokens || []).filter(Boolean).map(t => ({ ...t, rot: typeof t.rot === 'number' ? t.rot : 0 }));
+    const shapes = (rec.fogShapes || []).map(sh => ({ ...sh, rot: sh.rot || 0, color: sh.color || '#000000' }));
+    const measurements = (rec.persistentMeasurements || []).map(m => ({ ...m, color: m.color || '#8bd3ff' }));
+    const publication = {
+      structured: window.BattleMapPublication.captureStructured({
+        map: { w, h },
+        mapTransform: { ...DEFAULT_MAP_TRANSFORM, ...(rec.mapTransform || {}) },
+        grid: { ...DEFAULT_GRID, ...(rec.grid || {}) },
+        tokens,
+      }, measurements),
+      backgroundInputs: shareAssets ? {
+        map: { image, width: image ? w : 0, height: image ? h : 0 },
+        fogEnabled: rec.fogState ? !!rec.fogState.enabled : false,
+        fogCanvas,
+        fogShapes: shapes,
+        fogVersion: 'saved-record', // never equal to a live fog version: its own background
+        fogReady: true,
+        tokens: tokens.filter(t => t.visibleToPlayers !== false).map(t => ({ imgSrc: t.imgSrc })),
+      } : null,
+    };
+    if (savesCompleted !== savesBefore) return; // the DM saved meanwhile: that save is newer
+    await publishSaved(publication);
+    if (savesCompleted === savesBefore) savedMapProblem = null;
+  }
 
+  function reportMapImageError(){
+    const message = 'The Battle Map image could not be loaded from storage. Load the map image again and save; until then Live Share cannot share this map.';
+    if (window.showUserError) window.showUserError(message, { severity: 'error' });
+    else console.error(message);
+  }
+
+  // Reads one record: IndexedDB first, its localStorage copy if IndexedDB has none or fails.
+  async function readRecord(record){
     if (USE_INDEXED_DB) {
       try {
-        data = await IndexedDBStorage.loadBattleMap();
-        if (data) {
-          console.log('✓ Loaded battle map from IndexedDB');
-        } else {
+        const data = await IndexedDBStorage.loadBattleMap(record.idb);
+        if (data) return data;
+        if (record === SAVED_RECORD) {
           // Try migration from localStorage
-          console.log('🔄 Checking for localStorage data to migrate...');
           const raw = localStorage.getItem(STORAGE_KEY);
           if (raw) {
-            data = JSON.parse(raw);
+            const migrated = JSON.parse(raw);
             console.log('🔄 Migrating battle map from localStorage to IndexedDB...');
-            await IndexedDBStorage.saveBattleMap(data);
+            await IndexedDBStorage.saveBattleMap(migrated, SAVED_RECORD.idb);
             console.log('✓ Migration successful! Battle map is now in IndexedDB');
             localStorage.setItem(STORAGE_KEY + '_migrated', 'true');
+            return migrated;
           }
         }
       } catch (error) {
         console.error('❌ IndexedDB load failed, trying localStorage fallback:', error);
-        // Fall through to localStorage fallback below
       }
     }
-
-    // Fallback to localStorage if IndexedDB didn't work
-    if (!data) {
-      const raw = localStorage.getItem(STORAGE_KEY);
-      if (!raw) return;
-      try {
-        data = JSON.parse(raw);
-      } catch (e) {
-        console.warn('❌ localStorage load failed', e);
-        return;
-      }
+    try {
+      const raw = localStorage.getItem(record.ls);
+      return raw ? JSON.parse(raw) : null;
+    } catch (e) {
+      console.warn('❌ localStorage load failed', e);
+      return null;
     }
+  }
 
+  function load(){
+    return replacingMap(restoreStoredMap);
+  }
+
+  // Resolves once the working map's image and fog have been decoded (or failed to).
+  async function restoreStoredMap(){
+    let saved = await readRecord(SAVED_RECORD);
+    let draft = await readRecord(DRAFT_RECORD);
+    // Fail closed: a draft found in the saved record (written by a 2.3.27 pre-release) is a draft
+    // continuing nothing saved, so it is restored for the DM but never published.
+    if (saved && saved.unsavedDraft) {
+      draft = draft || saved;
+      saved = null;
+    }
+    // A draft continues one save; if a later save replaced that one, the draft is left over.
+    if (draft && (draft.baseSaveId ?? null) !== saveIdOf(saved)) draft = null;
+    currentSaveId = saveIdOf(saved);
+
+    // The working map: the draft if there is one (still unsaved), else the saved map.
+    const data = draft || saved;
     if (!data) return;
+    if (draft) setDirty();
+
+    // Each map image is decoded once, shared by the working map and the saved record's publication.
+    const decodedImages = new Map();
+    const decodeImage = (src) => {
+      if (!decodedImages.has(src)) {
+        const decoding = loadImage(src);
+        decoding.catch(() => reportMapImageError());
+        decodedImages.set(src, decoding);
+      }
+      return decodedImages.get(src);
+    };
+    // Players get the saved record, never the working map: built from the stored payload alone, so
+    // neither a draft nor edits made while images decode can be published as saved.
+    if (saved && publisher) {
+      publishSavedRecord(saved, decodeImage).catch(err => {
+        console.warn('The saved Battle Map could not be read for Live Share', err);
+        savedMapProblem = 'unreadable';
+      });
+    }
+
+    let decoded = Promise.resolve(); // the working map's image and fog
 
     try {
       Object.assign(state.grid, data.grid || {});
@@ -1207,6 +1493,7 @@
         selected: !!t.selected,
         rot: typeof t.rot === 'number' ? t.rot : 0
       }));
+      updateTokenList(); // the sidebar lists the restored tokens (it stayed empty until an edit)
 
       // Restore fog settings if present (backward-compatible)
       if (data.fogState) {
@@ -1261,7 +1548,7 @@
       }
 
       if (data.map?.imgSrc) {
-        loadImage(data.map.imgSrc).then(img => {
+        decoded = decodeImage(data.map.imgSrc).then(img => {
           state.map = {
             imgSrc: data.map.imgSrc,
             img,
@@ -1270,7 +1557,7 @@
           };
           ensureFogSize();
           if (data.fog) {
-            drawDataUrlToCanvas(data.fog, fog).then(() => {
+            return drawDataUrlToCanvas(data.fog, fog).then(() => {
               dirty.map = dirty.fog = dirty.tokens = dirty.grid = true;
               requestRender();
             });
@@ -1281,6 +1568,9 @@
             requestRender();
           }
           // IMPORTANT: do NOT call fitMap(); keep saved view/pan/zoom
+        }, () => {
+          // Reported by decodeImage; the working map keeps its tokens and fog shapes.
+          renderFogShapes();
         });
       } else {
         // No map, but render fog shapes if present
@@ -1294,6 +1584,7 @@
           requestRender();
         });
       });
+      await decoded; // (token images are not waited for: what is stored is their source)
     } catch (e) {
       console.warn('❌ Load failed', e);
     }
@@ -1334,9 +1625,6 @@
 
     dirty.map = dirty.fog = dirty.tokens = dirty.grid = dirty.ui = false;
 
-    // Player-visible state may have changed with this frame (never throws; see shareState above).
-    if (shareAssets) shareAssets.check();
-    if (shareState) shareState.check();
   }
 
   // Render map image and grid on the map layer
@@ -1445,13 +1733,17 @@
         const cy = t.y + t.h/2;
         tokenCtx.translate(cx, cy);
         if (t.rot) tokenCtx.rotate(t.rot);
+        // Hidden from players (DM-only look): dimmed, still easy to see and work with.
+        if (t.visibleToPlayers === false) tokenCtx.globalAlpha = 0.55;
         tokenCtx.drawImage(t.img, -t.w/2, -t.h/2, t.w, t.h);
+        tokenCtx.globalAlpha = 1;
         if(t.selected){
           tokenCtx.lineWidth = 2/state.view.scale;
           tokenCtx.strokeStyle = 'rgba(255,255,255,0.9)';
           tokenCtx.strokeRect(-t.w/2, -t.h/2, t.w, t.h);
         }
         tokenCtx.restore();
+        if (t.visibleToPlayers === false) drawHiddenBadge(t);
       }
     }
 
@@ -1518,6 +1810,29 @@
     }
 
     tokenCtx.setTransform(1,0,0,1,0,0);
+  }
+
+  // DM-only badge on a token hidden from players: a crossed-out eye at its top-right corner,
+  // unrotated and a constant size on screen. Players never see it: the token is not sent at all.
+  function drawHiddenBadge(t){
+    const r = 9 / state.view.scale;
+    const bx = t.x + t.w - r * 0.6;
+    const by = t.y + r * 0.6;
+    tokenCtx.save();
+    tokenCtx.fillStyle = 'rgba(15,22,32,0.92)';
+    tokenCtx.strokeStyle = '#fbbf24';
+    tokenCtx.lineWidth = 1.5 / state.view.scale;
+    tokenCtx.beginPath(); tokenCtx.arc(bx, by, r, 0, Math.PI * 2); tokenCtx.fill(); tokenCtx.stroke();
+    // eye
+    tokenCtx.beginPath();
+    tokenCtx.ellipse(bx, by, r * 0.62, r * 0.36, 0, 0, Math.PI * 2);
+    tokenCtx.stroke();
+    tokenCtx.beginPath(); tokenCtx.arc(bx, by, r * 0.16, 0, Math.PI * 2); tokenCtx.fillStyle = '#fbbf24'; tokenCtx.fill();
+    // slash
+    tokenCtx.beginPath();
+    tokenCtx.moveTo(bx - r * 0.62, by + r * 0.62); tokenCtx.lineTo(bx + r * 0.62, by - r * 0.62);
+    tokenCtx.stroke();
+    tokenCtx.restore();
   }
 
   // Render persistent measurements (shapes only, no text unless selected)
@@ -2473,6 +2788,14 @@
   });
   document.addEventListener('click', (e)=>{ if (!ctxMenu.contains(e.target)) hideMenu(); });
   function showMenu(x,y){
+    // Show the selected token's "Visible to Players" state in the menu.
+    const selected = state.tokens.find(t => t.selected);
+    const visibleItem = ctxMenu.querySelector('[data-cmd="toggleVisible"]');
+    if (visibleItem && selected) {
+      const visible = selected.visibleToPlayers !== false;
+      visibleItem.textContent = visible ? '☑ Visible to Players' : '☐ Visible to Players (hidden)';
+      visibleItem.setAttribute('aria-checked', String(visible));
+    }
     ctxMenu.style.display='block';
 
     // Get menu dimensions
@@ -2658,6 +2981,10 @@
     } else if (cmd==='toggleLabel'){
       t.showLabel = !t.showLabel;
       dirty.tokens=true; requestRender(); setDirty();
+    } else if (cmd==='toggleVisible'){
+      // Players are affected only when the map is saved: until then this is the DM's draft.
+      t.visibleToPlayers = t.visibleToPlayers === false;
+      dirty.tokens=true; requestRender(); setDirty();
     } else if (cmd==='setHp'){
       activeModalToken = t;
       document.getElementById('hpCurrent').value = t.hp || 0;
@@ -2774,8 +3101,11 @@
     }
   });
 
-  document.getElementById('mapFile').addEventListener('change', async (e)=>{
+  document.getElementById('mapFile').addEventListener('change', (e)=>{
     const file = e.target.files?.[0]; if(!file) return;
+    replacingMap(() => loadMapFile(file));
+  });
+  async function loadMapFile(file){
     const dataUrl = await fileToDataUrl(file);
     const img = await loadImage(dataUrl);
     state.map = { imgSrc:dataUrl, img, w: img.naturalWidth, h: img.naturalHeight };
@@ -2784,8 +3114,8 @@
     state.mapTransform = { scale:1, x:0, y:0 };
     mapScaleInput.value = 100; mapOffsetXInput.value = 0; mapOffsetYInput.value = 0;
     fctx.clearRect(0,0,fog.width,fog.height); fogPixelsChanged();
-    fitMap(); save();
-  });
+    fitMap(); persistDraft(); // not awaited: the draft waits for this replacement to finish
+  }
   document.getElementById('gridSize').addEventListener('input', (e)=>{ state.grid.size = clamp(parseFloat(e.target.value)||50, 4, 256); dirty.grid = dirty.map = true; requestRender(); setDirty(); });
   document.getElementById('unitsPerCell').addEventListener('input', (e)=>{ state.grid.unitsPerCell = Math.max(1, parseFloat(e.target.value)||5); setDirty(); });
   document.getElementById('gridColor').addEventListener('input', (e)=>{ state.grid.color = e.target.value; dirty.grid = dirty.map = true; requestRender(); setDirty(); });
@@ -2827,7 +3157,7 @@
   document.getElementById('clearMap').addEventListener('click', ()=>{
     state.map = { imgSrc:'', img:null, w:0, h:0 };
     ensureFogSize();
-    save();
+    persistDraft();
   });
 
   // Token actions
@@ -2839,7 +3169,7 @@
     fogState.enabled = !fogState.enabled;
     setFogUI(fogState.enabled);
     if (fogState.enabled) ensureFogSize();
-    save();
+    persistDraft();
   });
   document.getElementById('fogReveal').addEventListener('click', ()=>{ fogState.mode='reveal'; setFogUI(true); });
   document.getElementById('fogCover').addEventListener('click', ()=>{ fogState.mode='cover'; setFogUI(true); });
@@ -2851,7 +3181,7 @@
     fogShapes.length = 0;
     dirty.fog = true;
     requestRender();
-    save();
+    persistDraft();
   });
 
   // Fog shape controls
@@ -2913,6 +3243,9 @@
         x: t.x, y: t.y, w: t.w, h: t.h, rot: t.rot,
         selected: !!t.selected, hp: t.hp, maxHp: t.maxHp,
         showLabel: t.showLabel, statusConditions: t.statusConditions,
+        // Always explicit: a hidden token must stay hidden through Export / Import (a missing
+        // value, as in files exported before 2.3.27, means visible).
+        visibleToPlayers: t.visibleToPlayers !== false,
         aura: t.aura, visionCone: t.visionCone
       })),
       fog: fogData,
@@ -2935,8 +3268,11 @@
     const a = document.createElement('a'); a.href = url; a.download = `battlemap_${new Date().toISOString()}.json`;
     document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
   });
-  document.getElementById('importJsonFile').addEventListener('change', async (e)=>{
+  document.getElementById('importJsonFile').addEventListener('change', (e)=>{
     const file = e.target.files?.[0]; if(!file) return;
+    replacingMap(() => importJsonFile(file));
+  });
+  async function importJsonFile(file){
     try {
       const text = await file.text();
       const data = JSON.parse(text);
@@ -3026,17 +3362,23 @@
         t.img = await loadImage(t.imgSrc);
       }));
 
-      save();
+      // Redraw everything imported (previously only the fog layer was redrawn, so the imported map
+      // and tokens appeared only after the next pan or edit).
+      dirty.map = dirty.fog = dirty.tokens = dirty.grid = true;
+      requestRender();
+      updateTokenList();
+      persistDraft(); // not awaited: the draft waits for this replacement to finish
     } catch(err) {
       console.warn(err);
       alert('Import failed: invalid or incompatible file.');
     }
-  });
+  }
 
-  // Save Session button
+  // Save Session button, and the save button by the Fog / Measure tabs: the same save as Ctrl+S
   document.getElementById('saveSession').addEventListener('click', ()=>{
     save();
   });
+  saveMapBtn.addEventListener('click', ()=>{ save(); });
 
   // Keyboard shortcut: Ctrl+S to save
   window.addEventListener('keydown', (e)=>{
@@ -3285,7 +3627,7 @@
     };
     state.tokens.forEach(t=> t.selected=false);
     state.tokens.push(token);
-    updateTokenList(); save();
+    updateTokenList(); persistDraft();
   }
 
   function deleteSelected(){
@@ -3378,7 +3720,7 @@
       state.tokens.forEach(t=> t.selected = false);
       fogShapes.push(shape);
       renderFogShapes();
-      save();
+      persistDraft();
     }
   }
 
@@ -3503,7 +3845,7 @@
                   // Don't deselect existing tokens - just add the new one
                   state.tokens.push(newToken);
                   updateTokenList();
-                  save();
+                  persistDraft();
 
                   imported++;
                   if (imported === data.tokens.length) {

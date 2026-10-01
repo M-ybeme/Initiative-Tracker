@@ -13,9 +13,15 @@
  *                                 shapes cutting through both), masked opaque, in map image space.
  *                                 Scaled down if the map is larger than the Milestone 3 limits.
  *   classifyTokenImage(src)       which token images are custom art worth transferring
- *   createShareAssets(...)        keeps the current background and token assets up to date:
- *                                 a background-change detector (not the structured revision), a
- *                                 debounced rebuild, the background revision, and getAsset(id).
+ *   createShareAssets(...)        prepares the background and token assets for given inputs and
+ *                                 serves them by id: flush() builds for the current inputs, the
+ *                                 background revision, retain() for the published state, getAsset(id).
+ *
+ * 2.3.27 publication path: the Battle Map's inputs are the last SAVED state
+ * (battle-map-publication.js), so the only production entry is flush(), called by the publisher when
+ * a save is published; the publisher then commits and calls retain() with the asset ids that
+ * published state references. check() and its debounce (DEBOUNCE_MS, MAX_WAIT_MS) date from when the
+ * inputs were the live working state; nothing in production calls check() any more.
  *
  * Classic script like battle-map-share-state.js: publishes globalThis.BattleMapShareAssets. No DOM
  * access: canvases, image loading and Web Crypto are passed in.
@@ -40,6 +46,9 @@
   // where the browser cannot encode WebP (toBlob then returns PNG).
   const WEBP_QUALITY = 0.85;
   const DEBOUNCE_MS = 250; // after the last background change
+  // flush() also waits for custom token art being prepared, but no longer than this: art that is
+  // slow to load (another site) must not hold back a save's publication; it follows when ready.
+  const TOKEN_WAIT_MS = 3000;
   const MAX_WAIT_MS = 1000; // at most this long during continuous changes
 
   const ASSET_ID = /^[0-9a-f]{64}$/;
@@ -162,8 +171,13 @@
  *                   fogReady (false while a saved fog bitmap is still decoding), tokens }
    *   onChange()    the background reference or a token asset id changed (the seam should re-check)
    *   loadImage(src, { crossOrigin })  -> Promise<image>
-   * check() is cheap and may be called every frame: it compares a small key of the background
-   * inputs (map image identity and size, fog enabled, fog bitmap version, fog shapes), never pixels.
+   * flush() builds for the current inputs at once and resolves when that background (or its
+   * failure) is in: the Battle Map's publisher calls it when a save is published, then retain()s
+   * what it committed. Assets are released only when neither current nor retained, so the published
+   * state's background and art stay retrievable while a newer save is being prepared.
+   * check() compares a small key of the background inputs (map image identity and size, fog
+   * enabled, fog bitmap version, fog shapes), never pixels, and rebuilds after a debounce; it is
+   * cheap enough to call every frame, but since 2.3.27 the Battle Map does not call it.
    */
   function createShareAssets({
     getInputs,
@@ -188,6 +202,9 @@
     };
 
     const assets = new Map(); // assetId -> { assetId, kind, mime, width, height, bytes }
+    // Asset ids the published (committed) state references. Preparing a newer save never removes
+    // them: they stay retrievable until that save is published and retain() moves on.
+    let retained = new Set();
     let background = null; // { assetId, revision }
     let backgroundRevision = 0;
     let appliedKey = null; // key of the published background
@@ -196,6 +213,9 @@
     let timer = null;
     let building = false;
     const bg = { status: 'none', reason: null, encodeMs: null, bytes: null, mime: null, width: null, height: null, rebuilds: 0, discardedStale: 0 };
+
+    const flushWaiters = []; // flush() calls waiting for the background of the current inputs
+    const settleFlushes = () => flushWaiters.splice(0).forEach((resolve) => resolve());
 
     const tokenSources = new Map(); // imgSrc -> { status: 'pending'|'ready'|'none'|'failed', assetId }
     let tokenQueue = Promise.resolve();
@@ -220,6 +240,15 @@
       timer = setTimer(build, wait);
     }
 
+    // Drops every asset that is neither current (the background and token art being prepared) nor
+    // retained by the published state.
+    function prune() {
+      const keep = new Set(retained);
+      if (background) keep.add(background.assetId);
+      tokenSources.forEach((e) => e.assetId && keep.add(e.assetId));
+      assets.forEach((a, id) => !keep.has(id) && assets.delete(id));
+    }
+
     function setBackground(next) {
       const changed = (background && background.assetId) !== (next && next.assetId);
       background = next;
@@ -237,16 +266,17 @@
       } catch (err) {
         building = false;
         onError(err);
+        settleFlushes();
         return;
       }
       const key = backgroundKey(input);
       scheduledKey = null;
       try {
         if (key === 'none' || key === 'fog-loading') {
-          assets.forEach((a, id) => a.kind === 'background' && assets.delete(id));
           Object.assign(bg, { status: key === 'none' ? 'none' : 'waiting-for-fog', reason: null, bytes: null, mime: null, width: null, height: null });
           appliedKey = key;
           setBackground(null);
+          prune();
           return;
         }
         bg.status = 'encoding';
@@ -274,22 +304,62 @@
         Object.assign(bg, { status: 'ready', reason: null, encodeMs: now() - started, bytes: result.bytes.length, mime: result.mime, width: result.width, height: result.height });
         appliedKey = key;
         if (background && background.assetId === assetId) return;
-        assets.forEach((a, id) => a.kind === 'background' && assets.delete(id));
         assets.set(assetId, { assetId, kind: 'background', mime: result.mime, width: result.width, height: result.height, bytes: result.bytes });
         backgroundRevision += 1;
         setBackground({ assetId, revision: backgroundRevision });
+        prune();
       } catch (err) {
         // No stale background may stand in for the current fog: players fall back to the placeholder.
         Object.assign(bg, { status: 'failed', reason: err && err.reason ? err.reason : 'unreadable', bytes: null, mime: null, width: null, height: null });
         appliedKey = key;
-        assets.forEach((a, id) => a.kind === 'background' && assets.delete(id));
         setBackground(null);
+        prune();
         onError(err);
       } finally {
         building = false;
-        // Changes made while this build ran.
-        check();
+        if (flushWaiters.length) {
+          // A flush is waiting: build again at once if the inputs moved on, else it is done.
+          let current = appliedKey;
+          try {
+            current = backgroundKey(getInputs());
+          } catch {}
+          if (current !== appliedKey) build();
+          else settleFlushes();
+        } else {
+          // Changes made while this build ran.
+          check();
+        }
       }
+    }
+
+    /**
+     * Build the background for the current inputs now; resolves once it is published or failed and
+     * the token art those inputs need is prepared (or TOKEN_WAIT_MS has passed).
+     */
+    function flush() {
+      const background = new Promise((resolve) => {
+        flushWaiters.push(resolve);
+        let input;
+        try {
+          input = getInputs();
+          checkTokens(input.tokens);
+        } catch (err) {
+          onError(err);
+          settleFlushes();
+          return;
+        }
+        if (timer !== null) {
+          clearTimer(timer);
+          timer = null;
+          dirtySince = null;
+          scheduledKey = null;
+        }
+        if (building) return; // the running build finishes the flush
+        if (backgroundKey(input) === appliedKey) settleFlushes();
+        else build();
+      });
+      const tokens = tokenQueue; // includes whatever checkTokens() just queued
+      return background.then(() => Promise.race([tokens, new Promise((resolve) => setTimer(resolve, TOKEN_WAIT_MS))]));
     }
 
     function prepareToken(src, kind) {
@@ -344,10 +414,7 @@
           removed = true;
         }
       }
-      if (removed) {
-        const live = new Set([...tokenSources.values()].map((e) => e.assetId).filter(Boolean));
-        assets.forEach((a, id) => a.kind === 'token' && !live.has(id) && assets.delete(id));
-      }
+      if (removed) prune();
     }
 
     function check() {
@@ -382,8 +449,14 @@
 
     return {
       check,
+      flush,
       getAsset,
       hasAsset: (assetId) => assets.has(assetId),
+      /** The published state now references exactly these asset ids; others may be released. */
+      retain(ids) {
+        retained = new Set((ids || []).filter(Boolean));
+        prune();
+      },
       /** For the projection: the current background reference, or null. */
       background: () => (background ? { ...background } : null),
       /** For the projection: the asset id for this token's image, or null. */

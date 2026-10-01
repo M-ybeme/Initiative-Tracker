@@ -8,6 +8,7 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { createHash } from 'node:crypto';
 import '../../js/modules/battle-map-share-assets.js';
 import '../../js/modules/battle-map-share-state.js';
+import '../../js/modules/battle-map-publication.js';
 import { ASSET_LIMITS } from '../../js/modules/live-share/asset-protocol.js';
 
 const { LIMITS, maskFogPixels, backgroundScale, classifyTokenImage, createShareAssets, sha256Hex } = globalThis.BattleMapShareAssets;
@@ -551,5 +552,142 @@ describe('the player-safe projection with assets (Milestone 3 allowlist extensio
     for (const id of ['https://third.party/x.png', 'data:image/png;base64,ART', { id: HEX }, 42, HEX + 'a']) {
       expect(projectPlayerSafeState(source({ background: () => null, tokenAssetId: () => id })).tokens[0].assetId).toBeNull();
     }
+  });
+});
+
+describe('flush (2.3.27: a save builds its background at once)', () => {
+  beforeEach(() => setup());
+
+  it('builds for the current inputs immediately, without the debounce, and resolves when done', async () => {
+    loadMap();
+    let done = false;
+    const flushed = assets.flush().then(() => (done = true));
+    await settle();
+    await settle();
+    await flushed;
+    expect(done).toBe(true);
+    expect(assets.background()).toMatchObject({ revision: 1 });
+    expect(time.pending()).toBeLessThanOrEqual(1); // no debounce timer was needed (only the token wait)
+  });
+
+  it('does not re-encode when the inputs are unchanged', async () => {
+    loadMap();
+    await assets.flush();
+    const encodes = world.encodes;
+    await assets.flush();
+    expect(world.encodes).toBe(encodes);
+  });
+
+  it('builds for the newest inputs when they change while a flush is building', async () => {
+    loadMap();
+    const first = assets.flush();
+    paintFog('changed-during-build');
+    const second = assets.flush();
+    await Promise.all([first, second]);
+    const id = assets.background().assetId;
+    // The published background is the one for the newest inputs.
+    const fresh = makeWorld();
+    const t2 = fakeTime();
+    const b = createShareAssets({
+      getInputs: () => ({ map: battle.map, fogEnabled: true, fogCanvas: battle.fog, fogShapes: [], fogVersion: 0, tokens: [] }),
+      createCanvas: fresh.createCanvas,
+      loadImage: async () => ({}),
+      subtle,
+      pageOrigin: ORIGIN,
+      now: t2.now,
+      setTimer: t2.setTimer,
+      clearTimer: t2.clearTimer,
+    });
+    await b.flush();
+    expect(id).toBe(b.background().assetId);
+  });
+
+  it('waits for the custom token art the inputs need', async () => {
+    loadMap();
+    battle.tokens = [{ id: 't1', imgSrc: 'data:image/png;base64,ART' }];
+    await assets.flush();
+    expect(assets.tokenAssetId(battle.tokens[0])).toMatch(/^[0-9a-f]{64}$/);
+  });
+});
+
+describe('asset lifetime across publications (2.3.27)', () => {
+  // Wired as the Battle Map wires them: the preparer composes the inputs of the save being
+  // published, and the publisher commits, then retains what the published state references.
+  const ART_A = 'data:image/png;base64,ART-A';
+  const ART_B = 'data:image/png;base64,ART-B';
+  let a;
+  let publisher;
+  let releaseArtB;
+
+  beforeEach(() => {
+    setup();
+    const held = new Promise((resolve) => (releaseArtB = resolve));
+    const loadImage = async (src) => {
+      if (src === ART_B) await held; // B's custom art is slow: B's publication waits for it
+      return { naturalWidth: 64, naturalHeight: 64, content: src };
+    };
+    a = createShareAssets({
+      getInputs: () => publisher.backgroundInputs() || { map: { image: null, width: 0, height: 0 }, fogEnabled: false, tokens: [] },
+      onChange: () => publisher.refresh(),
+      createCanvas: world.createCanvas,
+      loadImage,
+      subtle,
+      pageOrigin: ORIGIN,
+      now: time.now,
+      setTimer: time.setTimer,
+      clearTimer: time.clearTimer,
+    });
+    publisher = globalThis.BattleMapPublication.createPublisher({ assets: a });
+  });
+
+  const save = (mapContent, art) => ({
+    structured: { state: { map: { w: 800, h: 600 }, tokens: [{ id: 't1', imgSrc: art, x: 0, y: 0, w: 50, h: 50 }] }, persistentMeasurements: [] },
+    backgroundInputs: { map: { image: { content: mapContent }, width: 800, height: 600 }, fogEnabled: false, fogCanvas: null, fogShapes: [], fogVersion: 0, fogReady: true, tokens: [{ imgSrc: art }] },
+  });
+  const published = () => {
+    const src = publisher.source();
+    return { background: src.assets.background().assetId, art: src.assets.tokenAssetId(src.state.tokens[0]) };
+  };
+
+  it("keeps the published state's background and art retrievable until a newer publication commits", async () => {
+    expect(await publisher.publish(save('map-A', ART_A))).toBe(true);
+    const A = published();
+    expect(A.background).toMatch(/^[0-9a-f]{64}$/);
+    expect(A.art).toMatch(/^[0-9a-f]{64}$/);
+
+    // B is being prepared: its background is built, its art is still loading.
+    const publishingB = publisher.publish(save('map-B', ART_B));
+    for (let i = 0; i < 10; i++) await settle();
+    expect(a.background().assetId).not.toBe(A.background); // B's background exists already
+    // A is still what players get, and everything it references can still be served.
+    expect(published()).toEqual(A);
+    expect(a.getAsset(A.background)).toMatchObject({ kind: 'background' });
+    expect(a.getAsset(A.art)).toMatchObject({ kind: 'token' });
+
+    releaseArtB();
+    expect(await publishingB).toBe(true);
+    const B = published();
+    expect(B.background).not.toBe(A.background);
+    expect(a.getAsset(B.background)).toMatchObject({ kind: 'background' });
+    expect(a.getAsset(B.art)).toMatchObject({ kind: 'token' });
+    // B is committed: A's assets are released (no history of old backgrounds is kept).
+    expect(a.getAsset(A.background)).toBeNull();
+    expect(a.getAsset(A.art)).toBeNull();
+  });
+
+  it('keeps only the published and the in-preparation assets over many saves', async () => {
+    for (const n of [1, 2, 3, 4]) expect(await publisher.publish(save(`map-${n}`, ART_A))).toBe(true);
+    const kinds = a.diagnostics();
+    expect(kinds.tokens.assets).toBe(1);
+    expect(a.getAsset(published().background)).not.toBeNull();
+    // Of the four backgrounds built, only the published one is still stored.
+    let stored = 0;
+    for (const n of [1, 2, 3, 4]) {
+      const inputs = save(`map-${n}`, ART_A).backgroundInputs; // the same inputs (image identity) each call
+      const probe = createShareAssets({ getInputs: () => inputs, createCanvas: makeWorld().createCanvas, loadImage: async () => ({}), subtle, pageOrigin: ORIGIN, now: time.now, setTimer: time.setTimer, clearTimer: time.clearTimer });
+      await probe.flush();
+      if (a.hasAsset(probe.background().assetId)) stored += 1;
+    }
+    expect(stored).toBe(1);
   });
 });

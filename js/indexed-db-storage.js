@@ -215,9 +215,10 @@ const IndexedDBStorage = window.IndexedDBStorage = (function() {
   }
 
   /**
-   * Save a battle map session to IndexedDB
+   * Save a battle map session to IndexedDB. `id` is the record: 'current-session' (the explicitly
+   * saved map) or 'current-draft' (the Battle Map's autosaved, still unsaved working copy).
    */
-  async function saveBattleMap(battleMapData) {
+  async function saveBattleMap(battleMapData, id = 'current-session') {
     return new Promise(async (resolve, reject) => {
       if (!db) {
         try {
@@ -231,9 +232,8 @@ const IndexedDBStorage = window.IndexedDBStorage = (function() {
       const transaction = db.transaction([BATTLEMAPS_STORE], 'readwrite');
       const store = transaction.objectStore(BATTLEMAPS_STORE);
 
-      // Use a fixed ID since we only store one battle map session
       const mapSession = {
-        id: 'current-session',
+        id,
         data: battleMapData,
         lastUpdated: new Date().toISOString()
       };
@@ -258,9 +258,9 @@ const IndexedDBStorage = window.IndexedDBStorage = (function() {
   }
 
   /**
-   * Load battle map session from IndexedDB
+   * Load a battle map session from IndexedDB ('current-session' unless another record is named)
    */
-  async function loadBattleMap() {
+  async function loadBattleMap(id = 'current-session') {
     return new Promise(async (resolve, reject) => {
       if (!db) {
         try {
@@ -273,7 +273,7 @@ const IndexedDBStorage = window.IndexedDBStorage = (function() {
 
       const transaction = db.transaction([BATTLEMAPS_STORE], 'readonly');
       const store = transaction.objectStore(BATTLEMAPS_STORE);
-      const request = store.get('current-session');
+      const request = store.get(id);
 
       request.onsuccess = () => {
         const session = request.result;
@@ -293,6 +293,20 @@ const IndexedDBStorage = window.IndexedDBStorage = (function() {
     });
   }
 
+  /**
+   * Delete a battle map record from IndexedDB (resolves when it is gone, or was never there)
+   */
+  async function deleteBattleMap(id) {
+    if (!db) await initDB();
+    return new Promise((resolve, reject) => {
+      const transaction = db.transaction([BATTLEMAPS_STORE], 'readwrite');
+      transaction.objectStore(BATTLEMAPS_STORE).delete(id);
+      transaction.oncomplete = () => resolve();
+      transaction.onerror = () => reject(transaction.error);
+      transaction.onabort = () => reject(transaction.error);
+    });
+  }
+
   // Public API
   return {
     init: initDB,
@@ -300,6 +314,7 @@ const IndexedDBStorage = window.IndexedDBStorage = (function() {
     loadCharacters,
     saveBattleMap,
     loadBattleMap,
+    deleteBattleMap,
     migrateFromLocalStorage,
     isSupported,
     getStorageInfo

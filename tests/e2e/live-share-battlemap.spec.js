@@ -45,11 +45,19 @@ async function openAccordion(page, target, probe) {
   }
 }
 
+// 2.3.27: players see the last saved map, so each DM step here ends with a save (Ctrl+S).
+async function save(page) {
+  await page.keyboard.press('Control+s');
+  await expect(page.getByTestId('save-map')).not.toHaveAttribute('data-state', /dirty|saving/);
+}
+
 async function addPresetToken(page, label) {
   await openAccordion(page, '#accTokens', '#tokenPreset');
   const before = (await hostSnapshot(page)).tokens.length;
   await page.locator('#tokenPreset').selectOption({ label });
   await page.locator('#addPreset').click();
+  await expect(page.getByTestId('save-map')).toHaveAttribute('data-state', 'dirty'); // placed (after its image loads)
+  await save(page);
   await expect.poll(async () => (await hostSnapshot(page)).tokens.length).toBe(before + 1);
 }
 
@@ -153,8 +161,10 @@ async function startSharing(browser) {
   const host = await hostContext.newPage();
   const hostErrors = watchErrors(host);
   await host.goto(HOST_PAGE);
-  await host.waitForFunction(() => window.BattleMapLiveShare && window.BattleMapLiveShare.getPlayerSafeState());
+  await host.waitForFunction(() => window.BattleMapLiveShare);
   await expect(host.getByTestId('host-status')).toHaveText('Not started');
+  await save(host); // players only ever see a saved map
+  await host.waitForFunction(() => window.BattleMapLiveShare.getPlayerSafeState());
   return { hostContext, host, hostErrors };
 }
 
@@ -185,6 +195,7 @@ test.describe('Live Share remote structured rendering (Milestone 2)', () => {
     await host.locator('#hpMax').fill('23');
     await host.locator('#hpSaveBtn').click();
     await expect(host.locator('#hpModal')).toBeHidden();
+    await save(host);
     await expect.poll(async () => (await hostSnapshot(host)).tokens[0].name).toBe('Fighter');
     const before = await hostSnapshot(host);
 
@@ -207,6 +218,7 @@ test.describe('Live Share remote structured rendering (Milestone 2)', () => {
     // 7-8: the DM drags the token (up and left, clear of the Live Share panel); the player follows.
     const moved = { x: at.x - 160, y: at.y - 60 };
     await drag(host, at, moved);
+    await save(host);
     await expect.poll(async () => (await hostSnapshot(host)).revision).toBeGreaterThan(before.revision);
     expected = await expectConverged(host, player);
     expect(expected.tokens[0].cx).not.toBe(before.tokens[0].x + before.tokens[0].w / 2);
@@ -215,6 +227,7 @@ test.describe('Live Share remote structured rendering (Milestone 2)', () => {
     await tokenMenu(host, moved, 'addStatus');
     await host.locator('#statusCheckboxes input[value="Prone"]').check();
     await host.locator('#statusSaveBtn').click();
+    await save(host);
     await expect(player.locator('.ls-token-conditions')).toHaveText('Prone');
 
     // A persistent measurement.
@@ -225,6 +238,7 @@ test.describe('Live Share remote structured rendering (Milestone 2)', () => {
     await drag(host, measureFrom, { x: measureFrom.x + 250, y: measureFrom.y }, 5);
     await host.locator('#measureToggle').click();
     await host.locator('#persistentMeasureToggle').click();
+    await save(host);
     // (Turning the toggle off can add a second measurement from the same start: existing Battle Map
     // behavior. The player only has to match whatever the host has.)
     await expect.poll(async () => (await hostSnapshot(host)).measurements.length).toBeGreaterThan(0);
@@ -242,7 +256,9 @@ test.describe('Live Share remote structured rendering (Milestone 2)', () => {
       y: measureFrom.y + (t.y + t.h / 2 - m0.y1) / worldPerPx,
     });
 
-    // 9-10: a burst of rapid edits: rotate, resize, drag, grid size. The player converges on the last one.
+    // 9-10: a burst of edits (rotate, resize, drag, grid size), then ONE save: players get the final
+    // state as one new revision, never the intermediate drafts.
+    await expect.poll(async () => (await diagnostics(host)).snapshots.lastSnapshotSentRevision).toBe((await hostSnapshot(host)).revision);
     const sentBeforeBurst = (await diagnostics(host)).snapshots.snapshotsSent;
     const revisionBeforeBurst = (await hostSnapshot(host)).revision;
     const token = onScreen((await hostSnapshot(host)).tokens[0]);
@@ -253,20 +269,35 @@ test.describe('Live Share remote structured rendering (Milestone 2)', () => {
     await drag(host, grown, { x: grown.x - 150, y: grown.y + 40 }, 40);
     await openAccordion(host, '#accMap', '#gridSize');
     await host.locator('#gridSize').fill('64');
+    expect((await hostSnapshot(host)).revision).toBe(revisionBeforeBurst); // nothing published yet
+    await save(host);
+    await expect.poll(async () => (await hostSnapshot(host)).grid.size).toBe(64);
     const final = await hostSnapshot(host);
     expect(final.grid.size).toBe(64);
     expect(final.tokens[0].rot).toBeCloseTo((5 * Math.PI) / 12, 5);
     expected = await expectConverged(host, player);
     expect(expected.revision).toBe(final.revision);
     expect((await playerModel(player)).grid.size).toBe(64);
-    // Throttled: far fewer snapshots than revisions during the burst, and change signals were folded.
-    // (The host panel refreshes its diagnostics twice a second.)
+    // One save, one revision, one snapshot. (The host panel refreshes its diagnostics twice a second.)
     await expect.poll(async () => (await diagnostics(host)).snapshots.lastSnapshotSentRevision).toBe(final.revision);
-    const afterBurst = (await diagnostics(host)).snapshots;
-    const burstRevisions = final.revision - revisionBeforeBurst;
-    expect(burstRevisions).toBeGreaterThan(10);
-    expect(afterBurst.snapshotsSent - sentBeforeBurst).toBeLessThan(burstRevisions);
-    expect(afterBurst.lastSnapshotSentRevision).toBe(final.revision);
+    let afterBurst = (await diagnostics(host)).snapshots;
+    expect(final.revision).toBe(revisionBeforeBurst + 1);
+    expect(afterBurst.snapshotsSent - sentBeforeBurst).toBe(1);
+
+    // Rapid saves, each after an edit: the player converges on the last one. (Out of the grid-size
+    // field first: the Battle Map ignores its hotkeys while you type in a field.)
+    await host.evaluate(() => document.activeElement && document.activeElement.blur());
+    for (let i = 0; i < 5; i++) {
+      await host.keyboard.press('r');
+      await host.keyboard.press('Control+s');
+    }
+    await expect(host.getByTestId('save-map')).not.toHaveAttribute('data-state', /dirty|saving/);
+    await expect.poll(async () => (await hostSnapshot(host)).tokens[0].rot).toBeCloseTo((10 * Math.PI) / 12, 5);
+    const latest = await hostSnapshot(host);
+    expected = await expectConverged(host, player);
+    expect(expected.revision).toBe(latest.revision);
+    await expect.poll(async () => (await diagnostics(host)).snapshots.lastSnapshotSentRevision).toBe(latest.revision);
+    afterBurst = (await diagnostics(host)).snapshots;
     expect(afterBurst.pendingSnapshot).toBe(false);
 
     // Nothing private ever left the host page: no HP, images, editor state or fog.
@@ -291,22 +322,22 @@ test.describe('Live Share remote structured rendering (Milestone 2)', () => {
       window.__lsChannels[0].send(window.__lsOld);
       return JSON.parse(window.__lsOld).payload.revision;
     });
-    expect(stale).toBeLessThan(final.revision);
+    expect(stale).toBeLessThan(latest.revision);
     await expect.poll(async () => (await diagnostics(player)).snapshots.snapshotsIgnoredStale).toBe(1);
     expect(await playerModel(player)).toEqual(playerBefore);
     // The latest revision again (a duplicate) is ignored too.
-    expect(await host.evaluate(() => JSON.parse(window.__lsLatest).payload.revision)).toBe(final.revision);
+    expect(await host.evaluate(() => JSON.parse(window.__lsLatest).payload.revision)).toBe(latest.revision);
     await host.evaluate(() => window.__lsChannels[0].send(window.__lsLatest));
     await expect.poll(async () => (await diagnostics(player)).snapshots.snapshotsIgnoredStale).toBe(2);
     expect(await playerModel(player)).toEqual(playerBefore);
-    await expect(player.getByTestId('map-status')).toHaveText(`Live — revision ${final.revision}`);
+    await expect(player.getByTestId('map-status')).toHaveText(`Live — revision ${latest.revision}`);
     const playerDiag = (await diagnostics(player)).snapshots;
-    expect(playerDiag).toMatchObject({ lastSnapshotAppliedRevision: final.revision, lastSnapshotReceivedRevision: final.revision, snapshotsRejectedInvalid: 0 });
+    expect(playerDiag).toMatchObject({ lastSnapshotAppliedRevision: latest.revision, lastSnapshotReceivedRevision: latest.revision, snapshotsRejectedInvalid: 0 });
     expect(JSON.stringify(await diagnostics(player))).not.toContain('Fighter');
 
     // The DM ends the session: the player keeps the last map, marked disconnected.
     await host.getByTestId('end-session').click();
-    await expect(player.getByTestId('map-status')).toHaveText(`Disconnected — showing the last map received (revision ${final.revision})`);
+    await expect(player.getByTestId('map-status')).toHaveText(`Disconnected — showing the last map received (revision ${latest.revision})`);
     expect(await playerModel(player)).toEqual(playerBefore);
 
     expect(hostErrors).toEqual([]);
@@ -362,7 +393,7 @@ test.describe('Live Share remote structured rendering (Milestone 2)', () => {
       };
     });
     await page.goto('/battlemap');
-    await page.waitForFunction(() => window.BattleMapLiveShare && window.BattleMapLiveShare.getPlayerSafeState());
+    await page.waitForFunction(() => window.BattleMapLiveShare);
     await expect(page.locator('#bm-live-share')).toHaveCount(0);
     expect(await page.evaluate(() => window.__peerConnections)).toBe(0);
   });

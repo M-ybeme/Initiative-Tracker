@@ -251,12 +251,28 @@ The Battle Map is a tactical combat visualization tool with support for fog-of-w
 
 ## Session Management
 
-### Manual Save System (v1.8.0)
+### Manual Save System (v1.8.0; Save button, drafts and Live Share publishing v2.3.27)
 
 **Save Controls:**
+- **Save** button next to the Fog / Measure tabs (v2.3.27)
 - "Save Session" button in Session accordion
 - Ctrl+S keyboard shortcut
+- All three run the same save; saves never overlap (one asked for during another runs right after it)
 - Manual saves prevent performance issues
+
+**Save button states (v2.3.27):** the button is also the unsaved-changes indicator
+- **Clean** (subdued): everything is saved
+- **Unsaved** (highlighted, pulsing): there are changes since the last save. Every edit counts: token moves, adds, deletes, labels, conditions, fog painting, fog shapes, grid, measurements, Visible to Players
+- **Saving…** while writing, then **Saved** briefly
+- A save that fails (for example, storage full) keeps the map unsaved and tells you; nothing is lost from the page
+- A save asked for while a map is still loading (right after a reload, an Import or loading a map image) waits until its image and fog have loaded, so the map is never stored without them
+- The older "Unsaved Changes" badge in the Session section follows the same state
+
+**Saved map vs draft (v2.3.27):**
+- The **saved map** is what you last saved explicitly. It is what a reload publishes to Live Share players.
+- A **draft** is stored automatically by actions that have always stored the map straight away: placing a token, loading a map, fog on/off, clearing fog, adding a fog shape, importing, tokens sent from the Character Manager. It keeps your work, but it is still unsaved, and it never replaces the saved map.
+- After a reload, a draft is restored as your working map, still marked unsaved; Save makes it the saved map. A draft left over from before a later save is ignored.
+- Maps stored by versions before 2.3.27 load as saved maps.
 
 **What Gets Saved:**
 - Map state (image, scale, position)
@@ -267,8 +283,21 @@ The Battle Map is a tactical combat visualization tool with support for fog-of-w
 - Grid settings (size, offset, color, alpha)
 
 **Storage:**
-- IndexedDB for large data (map images, fog canvas)
+- IndexedDB for large data (map images, fog canvas), with a localStorage copy
+- Two records: the saved map (`current-session`, localStorage `dmtoolbox.battlemap.mvp.v3`) and the draft (`current-draft`, localStorage `dmtoolbox.battlemap.mvp.v3.draft`)
 - Session persistence across page reloads
+
+**Visible to Players (v2.3.27):**
+- A token's right-click menu has **Visible to Players** (checked by default). A hidden token stays on your map, dimmed with a crossed-eye badge, and is left out of everything Live Share sends, its art included
+- The setting is saved with the map and kept by **Export JSON / Import** (exports always include it; files exported before 2.3.27 have none, and their tokens are visible)
+
+**Live Share publishes only the saved map (v2.3.27, `battlemap.html?liveshare=1`):**
+- Players see the Battle Map as last saved, never your working state. Edits stay private until you save; one save publishes them together (tokens, fog and background in step). The Save button's tooltip says "Save changes and update players" while a room is open
+- A failed save publishes nothing: players keep the last saved map
+- A player who joins while you have unsaved changes gets the last saved map
+- A map that was never saved can't be shared until it is saved
+- After a reload, players get the saved map even if a draft is restored for you. While the saved map is still loading, or if its image can't be read, **Start room** says so and opens nothing
+- The images of the published map stay available to joining players until a newer save has been published
 
 **Auto-Save Removal:**
 - Eliminated from grid adjustments (size, offset, color, alpha)
@@ -309,6 +338,7 @@ The Battle Map is a tactical combat visualization tool with support for fog-of-w
 4. **v1.9.0** - Multi-shape measurements (line, cone, circle) and aura fixes
 5. **v1.10.6** - Performance optimization with layered canvas and persistent measurements
 6. **v2.1.7** - UX overhaul: mode tabs toolbar, Bootstrap modals, fog brush cursor, sidebar stabilization, slimmed controls
+7. **v2.3.27** - Save button, private drafts, Visible to Players, and Live Share publishing only saved maps
 
 ---
 

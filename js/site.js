@@ -1,7 +1,11 @@
 const DM_TOOLBOX_BUILD = {
   name: "The DM's Toolbox",
-  version: "2.3.26",
+  version: "2.3.27",
   recentChanges: [
+    "New: the Battle Map has a Save button next to the Fog / Measure tabs; it lights up when there are unsaved changes, and Save, Ctrl+S and Save Session all do the same save",
+    "New (Live Share test mode): players see only the Battle Map as you last saved it; edits stay private until you save, and a token can be hidden from players with Visible to Players in its right-click menu",
+    "Fix: Battle Map changes that are stored automatically (placing a token, loading a map, importing) are kept as a separate draft and no longer overwrite your last saved map; after a reload you get the draft back, still marked unsaved",
+    "Fix: an imported Battle Map now shows its map and tokens at once instead of after the next pan or edit, and the token list shows a reloaded map's tokens",
     "Fix: a Battle Map whose saved fog layer can't be loaded now covers the whole map instead of silently clearing the fog, and importing such a map no longer stops part-way",
     "New (Live Share test mode, battlemap.html?liveshare=1): players now see the real map with your fog baked in, plus uploaded and Character Manager token art; the uncovered map, fog data, token image sources and HP are never sent, and the ordinary Battle Map does no extra work",
     "Fix: choosing an option on the Character Sheet's New Character screen while it is still opening no longer leaves the screen stuck open over the sheet",

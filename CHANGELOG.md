@@ -16,11 +16,38 @@ The DM's Toolbox has evolved through focused feature releases. Minor versions (2
 - **1.9.x**: Battle map measurement tools, persistent fog shapes, and generator integration across NPC/Tavern/Shop systems
 - **1.8.x**: Spell database expansion to 432+ spells, inventory management, loot generator overhaul, and character token generation
 
-**Current version: 2.3.26 (September 2026)**
+**Current version: 2.3.27 (September 2026)**
 
 ---
 
 ## [Unreleased]
+
+---
+
+## [2.3.27] - 2026-09-30
+**Battle Map staged publishing: Live Share players see only the saved map**
+
+### Battle Map
+- **Save button.** A Save button next to the Fog / Measure tabs is both the save control and the unsaved-changes indicator: subdued when everything is saved, highlighted (pulsing) with unsaved changes, "Saving…" while writing, "Saved" briefly after. The Save button, Ctrl+S and Save Session run one and the same save; saves never overlap (a save asked for during one runs right after it). A save that fails leaves the map unsaved and says so
+- **Private drafts.** Actions that have always stored the map straight away (placing a token, loading a map, fog on/off, clearing fog, adding a fog shape, importing, tokens sent from the Character Manager) now store a separate *draft*: it is kept, but stays unsaved and never replaces the last saved map. After a reload the draft is restored as your working map, still marked unsaved; Save makes it the saved map. Maps stored by earlier versions load as saved maps
+- **Visible to Players.** A token's right-click menu has **Visible to Players**. A hidden token stays on the DM's map, dimmed with a crossed-eye badge, and is left out of everything sent to players, its art included. The setting is saved, and Export / Import keeps it (files exported earlier have no setting: their tokens are visible)
+- **Fix: Export JSON kept no Visible to Players setting**, so importing an export and saving would have shown hidden tokens to players (found in review before release)
+- **Fix: importing a map now redraws it at once**; previously only the fog was redrawn, so the imported map and tokens appeared only after the next pan or edit
+- **Fix: the token list now shows a reloaded map's tokens**; it stayed empty until the next edit
+- **A saved map image that can't be loaded** is reported to the DM instead of failing silently
+- **Fix: saving while a map is still loading no longer stores it without its image or fog.** Right after a reload, an Import or loading a map image, the map image and fog are decoded in the background, and the fog layer is blank until then. A save (or an automatic draft) made in that moment used to store the map without its image or with no fog, and since players get the saved map, the next reload could have shown them the whole map. Saves and drafts now wait until the map has finished loading ("Saving…" shows meanwhile)
+
+### Live Share
+- **Players see only saved maps.** What Live Share sends is the Battle Map as last saved, never the working state: token moves, new tokens, fog and visibility changes stay private until the DM saves, and one save publishes them together, background and tokens in step. A failed save publishes nothing. A player who joins while the DM has unsaved changes gets the last saved map. A map that was never saved can't be shared until it is
+- **After a reload, the saved map is what is shared**, built from the saved record itself: neither a restored draft nor edits made while the map image is still loading can be published as saved. While the saved map is loading, or if its image can't be read, starting a room says so and opens nothing (fails closed)
+- **Images stay available until the next save is published.** The background and token art of the published map are kept until a newer save has been published, so a player joining while a save is being prepared still gets every image; older ones are released then
+- This is the Battle Map's policy: the generic Live Share modules send whatever a surface publishes, so surfaces without a save workflow can publish as they change
+
+### Internal / Tests
+- `js/modules/battle-map-publication.js`: the publisher (capture at save time, build the background for exactly those inputs, then commit structured state and assets together; newest save wins). Asset preparation is driven only by publication (`flush()`, then `retain()` of what was committed); the earlier per-frame `check()` / `schedule()` paths are no longer called by the Battle Map
+- Storage: the explicit save and the draft are separate records (IndexedDB `current-session` / `current-draft`, localStorage `dmtoolbox.battlemap.mvp.v3` / `…v3.draft`); each save has an id and a draft records the save it continues, so a stale draft is ignored
+- Unit tests for the publisher, save-time capture and asset lifetime across publications; browser specs for staged publishing (drafts private, one save publishes, failed save, late joiner, never-saved map), every kind of unsaved edit on the ordinary Battle Map, Visible to Players (including the art), Export / Import of the setting on a fresh page, a delayed map decode with an edit during it, save / draft / reload / save, an unreadable saved map image, saves and drafts made while the map and fog are still decoding (after a reload and after an Import; checked on the published background, pixel by pixel), and which stored draft is restored (stale, continuing a 2.3.26 save, pre-release). Each of those regressions was checked by breaking its guard on purpose and confirming the test fails
+- Browser tests: opening a sidebar panel now waits for the accordion animation (a panel still collapsing counted as visible, which made a test click a button as it disappeared), and the "unsaved" badge assertion now checks the badge itself
 
 ---
 

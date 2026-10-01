@@ -117,9 +117,11 @@
         offsetX: num(grid.offsetX),
         offsetY: num(grid.offsetY),
       },
-      // Milestone 1: every placed token is visible (there is no hidden-token feature yet, §13.1).
+      // A token the DM hid from players (visibleToPlayers === false, 2.3.27) is left out entirely:
+      // not sent as hidden, simply absent, so nothing about it (id, position, name, art) crosses.
+      // Missing means visible, so maps saved before the setting existed are unchanged.
       tokens: tokens
-        .filter((t) => t && isId(t.id))
+        .filter((t) => t && isId(t.id) && t.visibleToPlayers !== false)
         .slice(0, MAX_TOKENS)
         .map((t) => projectToken(t, tokenAssetId)),
       measurements: measurements
@@ -133,7 +135,9 @@
    * The change detector. `getSource()` returns the live `{ state, persistentMeasurements }`.
    *   check()            recompute; if the player-visible content changed, revision += 1 and
    *                      listeners get { revision }. Returns whether it changed. Never throws.
-   *   schedule()         check() once, in a microtask, however many times it is called before then
+   *   schedule()         check() once, in a microtask, however many times it is called before then.
+   *                      Unused by the Battle Map since 2.3.27: its source is the published (saved)
+   *                      state, which changes only on publish, and the publisher calls check() then.
    *   getPlayerSafeState()  a fresh snapshot { ...content, revision } after an up-to-date check()
    *   onChange(fn)       subscribe; returns an unsubscribe function
    *   revision           the current revision (0 until the first check)
