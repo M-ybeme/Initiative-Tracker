@@ -281,6 +281,52 @@ describe('player asset cache', () => {
     expect(requests).toHaveLength(4); // refused by the host: not asked again
   });
 
+  it('does not ask again for a superseded background until a newer snapshot references it', async () => {
+    const old = await makeAsset(20000, { seed: 1 });
+    const replacement = await makeAsset(20000, { seed: 2 });
+    cache.sync(snap(old.assetId));
+    cache.handleMeta(metaOf(old));
+    cache.handleChunk(chunksOf(old)[0]);
+    // The host replaced it mid-transfer; the snapshot naming the replacement has not arrived yet.
+    cache.handleAbort({ assetId: old.assetId, reason: 'superseded' });
+    await Promise.resolve();
+    await Promise.resolve();
+    expect(requests).toEqual([[old.assetId]]); // not asked again: it could only be "unavailable"
+    expect(cache.status(old.assetId)).toBe('loading');
+    cache.sync(snap(replacement.assetId));
+    expect(requests).toEqual([[old.assetId], [replacement.assetId]]);
+    // A newer snapshot referencing the same id again (the same fog back): asked for afresh.
+    cache.sync(snap(old.assetId));
+    expect(requests).toEqual([[old.assetId], [replacement.assetId], [old.assetId]]);
+    await deliver(old);
+    expect(cache.status(old.assetId)).toBe('ready');
+    expect(cache.stats()).toMatchObject({ aborted: 1, failed: 0 });
+  });
+
+  // Characterizes the accounting (it held before the superseded fix too): `aborted` counts aborted requests.
+  it('counts each aborted request once: a repeated abort, a snapshot moving on, or dispose add nothing', async () => {
+    const a = await makeAsset(20000, { seed: 1 });
+    const b = await makeAsset(20000, { seed: 2 });
+    // A newer snapshot moves on first (local supersession), then the host's abort arrives.
+    cache.sync(snap(a.assetId));
+    cache.handleMeta(metaOf(a));
+    cache.sync(snap(b.assetId));
+    cache.handleAbort({ assetId: a.assetId, reason: 'superseded' });
+    cache.handleAbort({ assetId: a.assetId, reason: 'superseded' }); // a duplicate: nothing outstanding
+    expect(cache.stats().aborted).toBe(1);
+    // The host's abort first, then the snapshot moves on, then cleanup.
+    cache.handleAbort({ assetId: b.assetId, reason: 'superseded' });
+    cache.sync(snap(null));
+    cache.handleAbort({ assetId: b.assetId, reason: 'unavailable' });
+    expect(cache.stats().aborted).toBe(2);
+    // A transfer still running when the cache is disposed: an abort arriving afterwards adds nothing.
+    cache.sync(snap(a.assetId));
+    cache.handleMeta(metaOf(a));
+    cache.dispose();
+    cache.handleAbort({ assetId: a.assetId, reason: 'superseded' });
+    expect(cache.stats().aborted).toBe(2);
+  });
+
   it('keeps showing the previous background until the new one is here, then revokes it', async () => {
     const first = await makeAsset(20000, { seed: 1 });
     const second = await makeAsset(20000, { seed: 2 });

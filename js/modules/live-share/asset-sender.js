@@ -18,6 +18,9 @@
  * Latest background wins: before each chunk the sender checks the asset still exists on the host.
  * A background that was replaced (fog changed) is aborted as `superseded`; the player then asks for
  * the new one, which the next snapshot references. Unknown ids are answered `unavailable`.
+ * The player does not ask for a superseded asset again until it applies a newer snapshot, so an
+ * asset may leave the host only together with a change of the shared state (a new revision, which
+ * the snapshot sender then sends on the same ordered channel, after the abort).
  *
  * Loop guard: a player gets at most MAX_SENDS_PER_ASSET complete sends of an asset while that asset
  * stays on the host. Once it leaves (a background replaced by another), its count is forgotten, so

@@ -219,8 +219,8 @@ function player(roomId, { MemoryPC }) {
   };
 }
 
-async function share({ size, bytesPerMs } = {}) {
-  const webrtc = createMemoryWebRTC({ bytesPerMs });
+async function share({ size, bytesPerMs, oneMessagePerTask = false } = {}) {
+  const webrtc = createMemoryWebRTC({ bytesPerMs, oneMessagePerTask });
   const map = battleMap({ size });
   await until(() => map.assets.background() && map.assets.tokenAssetId(map.state.tokens[0]));
   const h = host(map.api, webrtc);
@@ -324,8 +324,16 @@ describe('Live Share Milestone 3 asset transfer through the local relay', () => 
     h.session.end();
   });
 
-  it('latest background wins: a background replaced mid-transfer is aborted and the newest one is shown', { timeout: 30000 }, async () => {
-    const { map, h, p } = await share({ size: (text) => (text.includes('MAP') ? 1024 * 1024 : 20000), bytesPerMs: 1024 });
+  // The host's "superseded" abort and the snapshot naming the new background reach the player in
+  // one task or in separate tasks depending on timer resolution (coarse on Windows, fine on CI's
+  // Linux); the second case forces separate tasks.
+  // Either way exactly one transfer is aborted: the player does not ask again for the replaced
+  // background before the newer snapshot arrives (that request could only be answered "unavailable").
+  it.each([
+    ['delivered as the timers allow', false],
+    ['delivered in separate tasks', true],
+  ])('latest background wins: a background replaced mid-transfer is aborted and the newest one is shown (abort and new snapshot %s)', { timeout: 30000 }, async (_label, oneMessagePerTask) => {
+    const { map, h, p } = await share({ size: (text) => (text.includes('MAP') ? 1024 * 1024 : 20000), bytesPerMs: 1024, oneMessagePerTask });
     await until(() => p.assets.stats().activeTransfers > 0 && p.latest().background.revision === 1, 10000);
     map.edit((s) => {
       s.fog.content = 'FOG-BITMAP-v9';
@@ -333,7 +341,7 @@ describe('Live Share Milestone 3 asset transfer through the local relay', () => 
     });
     const latestBg = await until(() => map.assets.background().revision === 2 && map.assets.background(), 10000);
     await until(() => p.view().background && p.view().background.assetId === latestBg.assetId && p.view().background.current, 10000);
-    expect(h.assetSender.diagnostics().superseded).toBe(1);
+    expect(h.assetSender.diagnostics()).toMatchObject({ superseded: 1, unavailable: 0 });
     expect(p.assets.stats()).toMatchObject({ aborted: 1, failed: 0 });
     p.close();
     h.session.end();

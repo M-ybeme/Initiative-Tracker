@@ -5,8 +5,12 @@
 // `createMemoryWebRTC({ bytesPerMs })` optionally models a link of limited bandwidth: sent messages
 // queue up (bufferedAmount grows), drain at that rate in order, and `bufferedamountlow` fires when
 // the queue falls to bufferedAmountLowThreshold, as in a browser. Without it, delivery is immediate.
+// With `oneMessagePerTask` (on a rate-limited link; without one every message already arrives in a
+// task of its own), a drain delivers at most one message, dropping the rest of its budget, so
+// consecutive messages always arrive in separate tasks (as with fine-grained timers): an ordering
+// that otherwise depends on the platform's timer resolution happens every time.
 
-export function createMemoryWebRTC({ bytesPerMs = null } = {}) {
+export function createMemoryWebRTC({ bytesPerMs = null, oneMessagePerTask = false } = {}) {
   const offers = new Map(); // offer id -> player PC
   let nextOffer = 1;
 
@@ -54,6 +58,7 @@ export function createMemoryWebRTC({ bytesPerMs = null } = {}) {
         if (head.left === 0) {
           this.queue.shift();
           this.deliver(head.data);
+          if (oneMessagePerTask) budget = 0;
         }
         if (before > this.bufferedAmountLowThreshold && this.bufferedAmount <= this.bufferedAmountLowThreshold && this.onbufferedamountlow) this.onbufferedamountlow();
       }

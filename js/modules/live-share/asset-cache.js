@@ -9,10 +9,17 @@
  * and is referenced again later (the same fog state back: identical bytes, the same id) is simply
  * requested again: only unfinished attempts count towards the retry limit, never deliveries.
  *
+ * A background the host aborts as `superseded` (replaced while it was being sent) is not asked for
+ * again until a newer snapshot references it: the snapshot that replaced it is on its way, and
+ * asking before it arrives would only be answered `unavailable`. A newer snapshot reflects the
+ * host's current state, so if it references the same id again (identical fog back), it is asked
+ * for afresh.
+ *
  * At most MAX_REQUEST_IDS ids are outstanding (asked for, not yet answered) at a time, one
  * asset-request's worth, which also keeps the host's queue bounded. The rest stay eligible: the
  * cache syncs again against the latest snapshot whenever an answer comes in (asset ready, failed
- * or aborted), until everything referenced has arrived, failed or is on its way.
+ * or aborted), until everything referenced has arrived, failed, is on its way, or was superseded
+ * (waiting for a newer snapshot).
  *
  * Reassembly is untrusted input handling: metadata is accepted only for an id this player asked
  * for; chunks only for a transfer in progress, at a valid index, of exactly the expected length; a
@@ -45,6 +52,7 @@ export function createAssetCache({
   const transfers = new Map(); // assetId -> { meta, buffer, got: Uint8Array, gotCount }
   const verifying = new Set(); // every chunk in, signature and hash being checked
   const failed = new Map(); // assetId -> reason
+  const superseded = new Set(); // replaced on the host: not asked for again until a newer snapshot
   let displayedBackground = null; // { assetId, url, width, height } of the map it was drawn for
   let latest = null; // the last snapshot synced, so the rest can be requested as answers come in
   let disposed = false;
@@ -111,8 +119,10 @@ export function createAssetCache({
      */
     sync(snapshot, { internal = false } = {}) {
       if (disposed) return [];
-      if (!internal) latest = snapshot;
-      else if (snapshot !== latest) return []; // a newer snapshot has taken over
+      if (!internal) {
+        latest = snapshot;
+        superseded.clear(); // a newer snapshot: whatever it references is current on the host
+      } else if (snapshot !== latest) return []; // a newer snapshot has taken over
       const ids = referencedIds(snapshot);
       if (!internal) {
         // An id no longer referenced (e.g. a background replaced mid-transfer) starts afresh if it
@@ -127,7 +137,7 @@ export function createAssetCache({
           if (!internal) stats.deduplicated += 1;
           continue;
         }
-        if (transfers.has(id) || verifying.has(id) || waiting.has(id) || failed.has(id)) continue;
+        if (transfers.has(id) || verifying.has(id) || waiting.has(id) || failed.has(id) || superseded.has(id)) continue;
         if ((tries.get(id) || 0) >= MAX_REQUESTS_PER_ASSET) {
           failed.set(id, 'not delivered');
           stats.failed += 1;
@@ -222,12 +232,17 @@ export function createAssetCache({
       transfers.delete(assetId);
       waiting.delete(assetId);
       if (reason === 'limit') return fail(assetId, 'refused by host');
-      // Superseded or unavailable: forgotten. If the latest snapshot still references it, it is
-      // asked for again, at most MAX_REQUESTS_PER_ASSET unfinished attempts in a row.
+      // Superseded: replaced on the host; asked for again only if a newer snapshot references it.
+      // Unavailable: forgotten; if the latest snapshot still references it, it is asked for again,
+      // at most MAX_REQUESTS_PER_ASSET unfinished attempts in a row.
+      if (reason === 'superseded') superseded.add(assetId);
       resync();
     },
 
-    /** 'ready', 'failed', or 'loading' (asked for, arriving, being verified, or waiting for its turn). */
+    /**
+     * 'ready', 'failed', or 'loading' (asked for, arriving, being verified, waiting for its turn, or
+     * superseded and waiting for a newer snapshot).
+     */
     status(assetId) {
       if (cache.has(assetId)) return 'ready';
       if (failed.has(assetId)) return 'failed';
@@ -295,6 +310,7 @@ export function createAssetCache({
       transfers.clear();
       verifying.clear();
       waiting.clear();
+      superseded.clear();
       displayedBackground = null;
       latest = null;
       stats.cached = 0;
