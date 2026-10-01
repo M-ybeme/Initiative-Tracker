@@ -68,6 +68,26 @@ export async function blockTurnCredentials(page) {
   await page.route('**/turn-credentials', (route) => route.abort('connectionrefused'));
 }
 
+// For a page simulating a browser whose WebRTC is blocked (relay-only ICE with no TURN server: it
+// gathers no candidates): remove the STUN servers from its peer connections. Relay-only ICE can't use
+// a STUN candidate anyway, but Chromium still waits for its STUN requests before reporting gathering
+// complete, which is the signal the "WebRTC blocked" diagnosis needs. Where the public STUN servers
+// don't answer (GitHub Actions runners), gathering then stays open far longer than the test allows.
+// Without STUN servers the simulated browser gathers nothing and completes at once, wherever it runs.
+export async function dropStunServers(page) {
+  await page.addInitScript(() => {
+    const PC = window.RTCPeerConnection;
+    const withoutStun = (config = {}) => ({
+      ...config,
+      iceServers: (config.iceServers || []).map((s) => ({ ...s, urls: [].concat(s.urls).filter((u) => !/^stuns?:/i.test(u)) })).filter((s) => s.urls.length),
+    });
+    window.RTCPeerConnection = function RTCPeerConnection(config, ...rest) {
+      return new PC(withoutStun(config), ...rest);
+    };
+    window.RTCPeerConnection.prototype = PC.prototype;
+  });
+}
+
 // The selected candidate pair is read from getStats() just after the connection comes up, so poll.
 export async function selectedPath(page, peerKey = null) {
   let snapshot = null;

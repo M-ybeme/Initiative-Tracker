@@ -3,7 +3,7 @@
 // RTCDataChannel. No network access beyond localhost is needed: with no reachable STUN server the
 // browsers still connect over their host candidates.
 import { test, expect } from '@playwright/test';
-import { PAGE, startHost, diagnostics, expectCandidatePathComplete, blockTurnCredentials, selectedPath } from '../helpers/live-share.js';
+import { PAGE, startHost, diagnostics, expectCandidatePathComplete, blockTurnCredentials, dropStunServers, selectedPath } from '../helpers/live-share.js';
 
 // Chromium hides local IPs behind mDNS names by default; two contexts on one machine can then fail
 // to resolve each other's candidates. Real deployments are unaffected (they use STUN candidates).
@@ -116,12 +116,14 @@ test.describe('Live Share networking (Milestone 0)', () => {
     const playerContext = await browser.newContext();
     const player = await playerContext.newPage();
     await blockTurnCredentials(player); // relay-only with no TURN server: nothing to gather
+    await dropStunServers(player); // and no wait for public STUN servers (see the helper)
     await player.goto(host.joinUrl.replace('#room=', '&forceRelay=1&iceTimeoutMs=15000#room='));
 
     // Reported as soon as gathering ends, well before the 15 s connection timeout.
     await expect(player.getByTestId('player-status')).toContainText('WebRTC blocked in this browser', { timeout: 5000 });
     const playerLink = (await diagnostics(player)).peers.host;
     expect(playerLink.failure.kind).toBe('no-candidates');
+    expect(playerLink.failure.message).toContain('gathered no network candidates');
     expect(playerLink.stage).toBe('answered');
     expect(playerLink.candidates).toMatchObject({ localGenerated: 0, localSent: 0, localGatheringComplete: true });
     await expect(player.getByTestId('received-message')).toHaveText('');
@@ -139,6 +141,7 @@ test.describe('Live Share networking (Milestone 0)', () => {
     const hostContext = await browser.newContext();
     const host = await hostContext.newPage();
     await blockTurnCredentials(host); // relay-only with no TURN server: the host gathers nothing
+    await dropStunServers(host); // and no wait for public STUN servers (see the helper)
     await host.goto(`${PAGE}&forceRelay=1`);
     await host.getByTestId('start-room').click();
     await expect(host.getByTestId('host-status')).toHaveText('Room open — waiting for players');
@@ -151,10 +154,17 @@ test.describe('Live Share networking (Milestone 0)', () => {
     await expect(player.getByTestId('player-status')).toContainText('Connection failure (ICE)', { timeout: 15000 });
     await expect(player.getByTestId('player-status')).toContainText('received no network candidates from the host');
     const playerLink = (await diagnostics(player)).peers.host;
+    // The player's own browser works: it generated candidates; it is the host that sent none.
     expect(playerLink.stage).toBe('answered');
+    expect(playerLink.failure.kind).toBe('ice');
     expect(playerLink.candidates.remoteReceived).toBe(0);
     expect(playerLink.candidates.localGenerated).toBeGreaterThan(0);
+    // The host diagnoses itself: its browser gathered nothing.
     await expect(host.getByTestId('host-status')).toContainText('WebRTC blocked in this browser');
+    // (The player's row is gone once it leaves; the host keeps the last failure for its diagnosis.)
+    const hostFailure = (await diagnostics(host)).lastPeerFailure;
+    expect(hostFailure.kind).toBe('no-candidates');
+    expect(hostFailure.message).toContain('gathered no network candidates');
 
     await hostContext.close();
     await playerContext.close();
