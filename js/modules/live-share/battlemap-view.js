@@ -16,8 +16,10 @@
  *              at a reduced resolution is still stretched to the map's full size.
  *   grid       world-space lines every grid.size from (offsetX, offsetY), a major line every 5 cells.
  *   tokens     (x, y) is the top-left corner, w × h the size, rotated by `rot` radians about the
- *              centre. Drawn with its custom art when that has arrived (Milestone 3), otherwise as an
- *              ellipse marker with a notch marking the image's top edge.
+ *              centre. Drawn with its custom art when that has arrived (Milestone 3), else with its
+ *              built-in image when it names a preset this player knows (2.3.30), otherwise as an
+ *              ellipse marker with a notch marking the image's top edge, colored from its id (stable
+ *              across snapshots and reconnects).
  *   labels     name and conditions sit unrotated above the token, as on the DM's map.
  *   overlays   (Milestone 4) a token's aura and vision cone, drawn beneath every token as on the DM's
  *              map. Aura: a circle about the token's centre of (radius + 0.5) cells, the extra half
@@ -28,15 +30,20 @@
  *   measure    line; cone (90°, apex at x1,y1); circle (radius = length + half a cell, like the DM's).
  *              Their distance labels are derived here from the geometry and the grid's units per cell.
  *
- * Viewport: the snapshot deliberately carries no pan/zoom (the DM's view is the DM's own), so the
- * player's view fits the SVG viewBox to the map surface and everything on it. The background and grid
- * extend a viewBox beyond it on every side, so letterboxing on a wider or taller screen still shows
- * the grid rather than an edge.
+ * Viewport: the snapshot deliberately carries no pan/zoom (the DM's view is the DM's own). By default
+ * the player's view fits the SVG viewBox to the map surface and everything on it; since 2.3.30 the
+ * player can pan and zoom it locally (player-view.js), which only ever changes this viewBox, never
+ * the snapshot. The background and grid extend a view beyond it on every side, so letterboxing on a
+ * wider or taller screen still shows the grid rather than an edge.
  */
 
 const SVG_NS = 'http://www.w3.org/2000/svg';
-// Images are only ever drawn from object URLs the player made itself from verified bytes.
+// Images are only ever drawn from object URLs the player made itself from verified bytes, or (2.3.30)
+// from the player's own built-in token images, resolved from a known preset id
+// (battle-map-token-presets.js): a same-origin path of exactly this shape, never a URL from the wire.
 const safeUrl = (url) => (typeof url === 'string' && url.startsWith('blob:') ? url : null);
+const PRESET_PATH = /^\/images\/(?:playerTokens|enemyTokens)\/[A-Za-z]+Token\.png$/;
+const safePresetUrl = (url) => (typeof url === 'string' && PRESET_PATH.test(url) ? url : null);
 export const MAX_GRID_LINES = 400; // per axis; beyond this only major lines are drawn, then none
 const DEFAULT_CELL = 50;
 
@@ -127,7 +134,7 @@ function renderGrid(doc, grid, box) {
   return g;
 }
 
-function renderToken(doc, t, artUrl) {
+function renderToken(doc, t, artUrl, presetUrl) {
   const cx = r2(t.x + t.w / 2);
   const cy = r2(t.y + t.h / 2);
   const g = el(doc, 'g', { class: 'ls-token', 'data-token-id': t.id });
@@ -136,10 +143,11 @@ function renderToken(doc, t, artUrl) {
   const deg = r2((t.rot * 180) / Math.PI);
   const body = el(doc, 'g', { class: 'ls-token-body', transform: `translate(${cx} ${cy}) rotate(${deg})` });
   const hue = tokenHue(t.id);
-  if (artUrl) {
+  const imageUrl = artUrl || presetUrl;
+  if (imageUrl) {
     // The token's own art, drawn like the DM's map draws it: the full w x h box, rotated.
-    g.setAttribute('data-art', 'image');
-    body.append(el(doc, 'image', { class: 'ls-token-art', href: artUrl, x: r2(-t.w / 2), y: r2(-t.h / 2), width: r2(t.w), height: r2(t.h), preserveAspectRatio: 'none' }));
+    g.setAttribute('data-art', artUrl ? 'image' : 'preset');
+    body.append(el(doc, 'image', { class: 'ls-token-art', href: imageUrl, x: r2(-t.w / 2), y: r2(-t.h / 2), width: r2(t.w), height: r2(t.h), preserveAspectRatio: 'none' }));
   } else {
     g.setAttribute('data-art', 'marker');
     body.append(
@@ -241,22 +249,40 @@ function renderMeasurement(doc, m, grid) {
   return g;
 }
 
+// The world area the backdrop and grid cover for a view: the view and one view-size beyond it on
+// every side (letterboxing on a wider or taller screen), and at least the same around the fitted view.
+function coverArea(view, fit) {
+  const x0 = Math.min(view.x - view.w, fit.x - fit.w);
+  const y0 = Math.min(view.y - view.h, fit.y - fit.h);
+  const x1 = Math.max(view.x + 2 * view.w, fit.x + 2 * fit.w);
+  const y1 = Math.max(view.y + 2 * view.h, fit.y + 2 * fit.h);
+  return { x: x0, y: y0, w: x1 - x0, h: y1 - y0 };
+}
+
+const backdrop = (doc, area) => el(doc, 'rect', { class: 'ls-background', x: r2(area.x), y: r2(area.y), width: r2(area.w), height: r2(area.h), fill: '#091018' });
+const setViewBox = (svg, box) => svg.setAttribute('viewBox', `${r2(box.x)} ${r2(box.y)} ${r2(box.w)} ${r2(box.h)}`);
+
 /**
  * Replace `svg`'s contents with a read-only drawing of `snapshot`. Returns the viewBox used.
- * `assets` (Milestone 3, optional): `background` { url, assetId } to draw as Layer 1, and
- * `tokenUrl(assetId)` for custom token art. Anything missing falls back to the placeholders.
+ * `assets` (optional): `background` { url, assetId } to draw as Layer 1 (Milestone 3),
+ * `tokenUrl(assetId)` for custom token art, and `presetUrl(presetId)` for built-in token images
+ * (2.3.30). Anything missing falls back to the placeholders.
+ * `view` (2.3.30, optional): the player's own pan/zoom, a world rectangle { x, y, w, h } to show
+ * instead of the fitted one. It is the player's alone and never part of the snapshot.
  */
-export function renderBattleMapSnapshot(svg, snapshot, assets = {}) {
+export function renderBattleMapSnapshot(svg, snapshot, assets = {}, view = null) {
   const tokenUrl = typeof assets.tokenUrl === 'function' ? assets.tokenUrl : () => null;
+  const presetUrl = typeof assets.presetUrl === 'function' ? assets.presetUrl : () => null;
   const doc = svg.ownerDocument;
-  const box = computeViewBox(snapshot);
-  svg.setAttribute('viewBox', `${box.x} ${box.y} ${box.w} ${box.h}`);
+  const fit = computeViewBox(snapshot);
+  const box = view || fit;
+  setViewBox(svg, box);
   svg.setAttribute('preserveAspectRatio', 'xMidYMid meet');
   svg.setAttribute('data-revision', String(snapshot.revision));
+  svg.setAttribute('data-view', view ? 'player' : 'fit');
 
-  const area = { x: box.x - box.w, y: box.y - box.h, w: box.w * 3, h: box.h * 3 };
-  const background = el(doc, 'rect', { class: 'ls-background', x: area.x, y: area.y, width: area.w, height: area.h, fill: '#091018' });
-  const layers = [background];
+  const area = coverArea(box, fit);
+  const layers = [backdrop(doc, area)];
 
   const { map, mapTransform: mt } = snapshot;
   if (map.width > 0 && map.height > 0) {
@@ -277,12 +303,32 @@ export function renderBattleMapSnapshot(svg, snapshot, assets = {}) {
     if (o) overlays.append(o);
   }
   const tokens = el(doc, 'g', { class: 'ls-tokens' });
-  for (const t of snapshot.tokens) tokens.append(renderToken(doc, t, t.assetId ? safeUrl(tokenUrl(t.assetId)) : null));
+  for (const t of snapshot.tokens) {
+    tokens.append(renderToken(doc, t, t.assetId ? safeUrl(tokenUrl(t.assetId)) : null, t.presetId ? safePresetUrl(presetUrl(t.presetId)) : null));
+  }
   // Persistent measurements draw above tokens, as on the DM's map.
   const measurements = el(doc, 'g', { class: 'ls-measurements' });
   for (const m of snapshot.measurements) measurements.append(renderMeasurement(doc, m, snapshot.grid));
   layers.push(overlays, tokens, measurements);
 
   svg.replaceChildren(...layers);
+  return box;
+}
+
+/**
+ * Show another part of an already drawn snapshot (the player panned or zoomed, or pressed Fit):
+ * only the viewBox changes, and the backdrop and grid are redrawn to cover it. Nothing else is
+ * touched, so token art and the background image are not reloaded. `view` null means fitted.
+ */
+export function setPlayerView(svg, snapshot, view) {
+  const fit = computeViewBox(snapshot);
+  const box = view || fit;
+  setViewBox(svg, box);
+  svg.setAttribute('data-view', view ? 'player' : 'fit');
+  const area = coverArea(box, fit);
+  const oldBackdrop = svg.querySelector(':scope > .ls-background');
+  const oldGrid = svg.querySelector(':scope > .ls-grid');
+  if (oldBackdrop) oldBackdrop.replaceWith(backdrop(svg.ownerDocument, area));
+  if (oldGrid) oldGrid.replaceWith(renderGrid(svg.ownerDocument, snapshot.grid, area));
   return box;
 }

@@ -306,6 +306,11 @@ The Battle Map is a tactical combat visualization tool with support for fog-of-w
 - A token hidden with Visible to Players sends no aura or vision cone either
 - The vision cone is a visual indicator for players too: it does not hide or reveal anything and has nothing to do with the fog
 
+**What else players see (v2.3.30):**
+- Tokens with a built-in Player or Enemy image show that image; Live Share names it by a short id, never by its address. Uploaded and Character Manager art is sent as before. Other images show as a colored marker
+- The grid in your saved color, opacity, cell size and offset (or none, if Show Grid is off). It is drawn on top of the player's map image, so unlike yours it also shows over fogged areas
+- Players can pan and zoom their own view (drag, mouse wheel, pinch; Fit resets it). It never changes your map or view
+
 **Auto-Save Removal:**
 - Eliminated from grid adjustments (size, offset, color, alpha)
 - Removed from token/shape dragging
@@ -347,6 +352,7 @@ The Battle Map is a tactical combat visualization tool with support for fog-of-w
 6. **v2.1.7** - UX overhaul: mode tabs toolbar, Bootstrap modals, fog brush cursor, sidebar stabilization, slimmed controls
 7. **v2.3.27** - Save button, private drafts, Visible to Players, and Live Share publishing only saved maps
 8. **v2.3.29** - Live Share players see saved auras and vision cones
+9. **v2.3.30** - Live Share players see built-in token images and can pan and zoom the map themselves
 
 ---
 

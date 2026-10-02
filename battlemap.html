@@ -21,6 +21,7 @@
   <script src="/js/generated/srd-allowlist.js"></script>
   <script src="/js/modules/srd-content-filter.js"></script>
   <script src="/js/indexed-db-storage.js"></script>
+  <script src="/js/modules/battle-map-token-presets.js"></script>
   <script src="/js/modules/battle-map-share-state.js"></script>
   <script src="/js/modules/battle-map-share-assets.js"></script>
   <script src="/js/modules/battle-map-publication.js"></script>
@@ -798,41 +799,10 @@
 
 <script>
 (function(){
-  // --- Built-in manifest; /images/tokenManifest.json (if present) overrides.
-  const DEFAULT_MANIFEST = {
-    players: [
-      { name: 'Artificer',    src: '/images/playerTokens/PlayerArtificerToken.png' },
-      { name: 'Barbarian',    src: '/images/playerTokens/PlayerBarbarianToken.png' },
-      { name: 'Bard',         src: '/images/playerTokens/PlayerBardToken.png' },
-      { name: 'Blood Hunter', src: '/images/playerTokens/PlayerBloodHunterToken.png' },
-      { name: 'Cleric',       src: '/images/playerTokens/PlayerClericToken.png' },
-      { name: 'Druid',        src: '/images/playerTokens/PlayerDruidToken.png' },
-      { name: 'Fighter',      src: '/images/playerTokens/PlayerFighterToken.png' },
-      { name: 'Monk',         src: '/images/playerTokens/PlayerMonkToken.png' },
-      { name: 'Paladin',      src: '/images/playerTokens/PlayerPaladinToken.png' },
-      { name: 'Ranger',       src: '/images/playerTokens/PlayerRangerToken.png' },
-      { name: 'Rogue',        src: '/images/playerTokens/PlayerRogueToken.png' },
-      { name: 'Sorcerer',     src: '/images/playerTokens/PlayerSorcererToken.png' },
-      { name: 'Warlock',      src: '/images/playerTokens/PlayerWarlockToken.png' },
-      { name: 'Wizard',       src: '/images/playerTokens/PlayerWizardToken.png' }
-    ],
-    enemies: [
-      { name: 'Aberration',   src: '/images/enemyTokens/EnemyAberationToken.png' },
-      { name: 'Beast',        src: '/images/enemyTokens/EnemyBeastToken.png' },
-      { name: 'Celestial',    src: '/images/enemyTokens/EnemyCelestialToken.png' },
-      { name: 'Construct',    src: '/images/enemyTokens/EnemyConstructToken.png' },
-      { name: 'Dragon',       src: '/images/enemyTokens/EnemyDragonToken.png' },
-      { name: 'Elemental',    src: '/images/enemyTokens/EnemyElementalToken.png' },
-      { name: 'Fey',          src: '/images/enemyTokens/EnemyFeyToken.png' },
-      { name: 'Fiend',        src: '/images/enemyTokens/EnemyFiendToken.png' },
-      { name: 'Giant',        src: '/images/enemyTokens/EnemyGiantToken.png' },
-      { name: 'Humanoid',     src: '/images/enemyTokens/EnemyHumanoidToken.png' },
-      { name: 'Monstrosity',  src: '/images/enemyTokens/EnemyMonstrosityToken.png' },
-      { name: 'Ooze',         src: '/images/enemyTokens/EnemyOozeToken.png' },
-      { name: 'Plant',        src: '/images/enemyTokens/EnemyPlantToken.png' },
-      { name: 'Undead',       src: '/images/enemyTokens/EnemyUndeadToken.png' }
-    ]
-  };
+  // --- Built-in token presets: one list (js/modules/battle-map-token-presets.js), also used by Live
+  // Share to name a token's built-in image by a stable id instead of a URL.
+  const presetsIn = (group) => window.BattleMapTokenPresets.PRESETS.filter(p => p.group === group).map(p => ({ name: p.name, src: p.src }));
+  const DEFAULT_MANIFEST = { players: presetsIn('players'), enemies: presetsIn('enemies') };
 
   async function loadTokenManifest(){
     return Promise.resolve(DEFAULT_MANIFEST);

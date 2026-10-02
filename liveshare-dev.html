@@ -16,7 +16,8 @@
     .ls-diag { font-size: .8rem; max-height: 24rem; overflow: auto; white-space: pre-wrap; word-break: break-word; }
     .ls-link { word-break: break-all; }
     /* Milestone 2: the read-only Battle Map drawn from the host's snapshots (js/modules/live-share/battlemap-view.js). */
-    .ls-map { display: block; width: 100%; height: min(70vh, 640px); background: #091018; border-radius: .375rem; font-family: system-ui, sans-serif; }
+    .ls-map { display: block; width: 100%; height: min(70vh, 640px); background: #091018; border-radius: .375rem; font-family: system-ui, sans-serif; cursor: grab; touch-action: none; user-select: none; -webkit-user-select: none; }
+    .ls-map:active { cursor: grabbing; }
     .ls-map-disconnected .ls-map { opacity: .55; filter: grayscale(.6); }
     .ls-map-disconnected #ls-map-status { color: var(--bs-warning); }
   </style>
@@ -69,10 +70,13 @@
       <div class="card-body">
         <div class="d-flex justify-content-between align-items-center mb-2">
           <h2 class="h5 mb-0">Battle Map</h2>
-          <span id="ls-map-status" class="small text-body-secondary" role="status" data-testid="map-status"></span>
+          <span class="d-flex align-items-center gap-2">
+            <span id="ls-map-status" class="small text-body-secondary" role="status" data-testid="map-status"></span>
+            <button id="ls-map-fit" type="button" class="btn btn-sm btn-outline-light" data-testid="map-fit" title="Show the whole map again">Fit</button>
+          </span>
         </div>
         <svg id="ls-map" class="ls-map" data-testid="player-map" role="img" aria-label="The host's Battle Map" xmlns="http://www.w3.org/2000/svg"></svg>
-        <p class="small text-body-secondary mt-2 mb-0"><span id="ls-map-assets" data-testid="map-assets"></span> Tokens without custom art show as markers.</p>
+        <p class="small text-body-secondary mt-2 mb-0"><span id="ls-map-assets" data-testid="map-assets"></span> Drag to pan, scroll or pinch to zoom (only on your screen). Tokens without an image show as markers.</p>
       </div>
     </section>
 

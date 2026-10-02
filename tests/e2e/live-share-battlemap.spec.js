@@ -88,14 +88,16 @@ function playerModel(player) {
       revision: Number(svg.getAttribute('data-revision')),
       tokens: [...svg.querySelectorAll('.ls-token')].map((g) => {
         const [cx, cy, deg] = nums(g.querySelector('.ls-token-body').getAttribute('transform'));
+        // A marker's ellipse, or (2.3.30) a built-in image drawn in the same w x h box.
         const ellipse = g.querySelector('ellipse');
+        const art = g.querySelector('.ls-token-art');
         return {
           id: g.getAttribute('data-token-id'),
           cx,
           cy,
           deg,
-          w: Number(ellipse.getAttribute('rx')) * 2,
-          h: Number(ellipse.getAttribute('ry')) * 2,
+          w: ellipse ? Number(ellipse.getAttribute('rx')) * 2 : Number(art.getAttribute('width')),
+          h: ellipse ? Number(ellipse.getAttribute('ry')) * 2 : Number(art.getAttribute('height')),
           name: g.querySelector('.ls-token-name')?.textContent ?? null,
           conditions: g.querySelector('.ls-token-conditions')?.textContent ?? '',
         };
@@ -144,7 +146,10 @@ async function expectConverged(host, player) {
         expected = expectedModel(await hostSnapshot(host));
         const model = await playerModel(player);
         got = { revision: model.revision, tokens: model.tokens, measurementIds: model.measurements.map((m) => m.id) };
-        return JSON.stringify(got) === JSON.stringify(expected);
+        // Sizes within 0.02: a marker draws w/2 rounded (x2), a built-in image w rounded (2.3.30).
+        const sizes = (m) => m.tokens.map((t) => [t.w, t.h]);
+        const rest = (m) => JSON.stringify({ ...m, tokens: m.tokens.map(({ w: _w, h: _h, ...t }) => t) });
+        return rest(got) === rest(expected) && sizes(got).length === sizes(expected).length && sizes(got).every((wh, i) => wh.every((v, j) => Math.abs(v - sizes(expected)[i][j]) <= 0.02));
       },
       { timeout: 10000, message: 'player converges on the host snapshot' }
     )
@@ -211,8 +216,10 @@ test.describe('Live Share remote structured rendering (Milestone 2)', () => {
     expect(model.grid).toMatchObject({ size: before.grid.size, offsetX: before.grid.offsetX });
     expect(model.grid.minorX.length).toBeGreaterThan(2);
     for (const x of model.grid.minorX) expect(Math.abs((x - before.grid.offsetX) % before.grid.size)).toBeLessThan(0.01);
-    // No images, no HP, no editor controls on the player.
-    await expect(player.locator('[data-testid="player-map"] image, [data-testid="player-map"] foreignObject')).toHaveCount(0);
+    // No HP or editor controls on the player, and no images but the Fighter's built-in one (2.3.30),
+    // loaded from the player's own site by its preset id.
+    await expect(player.locator('[data-testid="player-map"] foreignObject')).toHaveCount(0);
+    expect(await player.locator('[data-testid="player-map"] image').evaluateAll((els) => els.map((e) => e.getAttribute('href')))).toEqual(['/images/playerTokens/PlayerFighterToken.png']);
     await expect(player.getByTestId('player-map')).not.toContainText('17');
 
     // 7-8: the DM drags the token (up and left, clear of the Live Share panel); the player follows.
@@ -309,7 +316,7 @@ test.describe('Live Share remote structured rendering (Milestone 2)', () => {
       expect(msg).toMatchObject({ v: 0, type: 'battlemap-snapshot' });
       expect(Object.keys(msg.payload).sort()).toEqual(['background', 'grid', 'map', 'mapTransform', 'measurements', 'revision', 'schema', 'tokens', 'version']);
       for (const t of msg.payload.tokens) {
-        expect(Object.keys(t).sort()).toEqual(['assetId', 'aura', 'conditions', 'h', 'id', 'name', 'rot', 'visionCone', 'w', 'x', 'y']);
+        expect(Object.keys(t).sort()).toEqual(['assetId', 'aura', 'conditions', 'h', 'id', 'name', 'presetId', 'rot', 'visionCone', 'w', 'x', 'y']);
         expect([t.aura, t.visionCone]).toEqual([null, null]); // none set on this map (Milestone 4)
       }
       expect(text).not.toMatch(/"hp"|maxHp|imgSrc|data:image|\/images\/|"selected"|"view"|fog/i);
@@ -361,8 +368,8 @@ test.describe('Live Share remote structured rendering (Milestone 2)', () => {
       const base = JSON.parse(window.__lsSent[0]);
       const send = (msg) => window.__lsChannels[0].send(JSON.stringify(msg));
       send({ ...base, payload: { ...base.payload, revision: 1e9, schema: 'something.else' } });
-      send({ ...base, payload: { ...base.payload, revision: 1e9, version: 4 } }); // newer than this player
-      send({ ...base, payload: { ...base.payload, revision: 1e9, version: 2 } }); // a 2.3.28 host's
+      send({ ...base, payload: { ...base.payload, revision: 1e9, version: 5 } }); // newer than this player
+      send({ ...base, payload: { ...base.payload, revision: 1e9, version: 3 } }); // a 2.3.29 host's
       send({ ...base, payload: { ...base.payload, revision: 1e9, tokens: [{ ...base.payload.tokens[0], aura: { radius: 2, color: 'red;fill:url(https://evil.example/x)' } }] } });
       send({ ...base, payload: { ...base.payload, revision: '1000' } });
       send({ ...base, payload: { ...base.payload, revision: 1e9, tokens: [{ ...base.payload.tokens[0], x: 'NaN' }] } });

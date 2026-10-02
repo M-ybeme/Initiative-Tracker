@@ -2,6 +2,7 @@
 // (js/modules/battle-map-share-state.js). Expected snapshots are written out by hand; they are
 // not computed with the code under test.
 import { describe, it, expect, vi } from 'vitest';
+import '../../js/modules/battle-map-token-presets.js';
 import '../../js/modules/battle-map-share-state.js';
 
 const { projectPlayerSafeState, createShareStateSeam, SCHEMA, VERSION, MAX_OVERLAY_CELLS } = globalThis.BattleMapShareState;
@@ -68,21 +69,22 @@ function fixture() {
 
 // Version 2 since Milestone 3: `background` and token `assetId` are references to player-safe
 // assets. Without any prepared assets (as here) both are null. Version 3 since Milestone 4 (2.3.29):
-// each token's `aura` and `visionCone`, as primitives, or null.
+// each token's `aura` and `visionCone`, as primitives, or null. Version 4 since 2.3.30: each token's
+// `presetId`, the id of a built-in token image, or null (these tokens have custom / external art).
 const EXPECTED = {
   schema: 'dmtoolbox.battlemap.player-safe',
-  version: 3,
+  version: 4,
   map: { width: 1400, height: 900 },
   background: null,
   mapTransform: { scale: 1.5, x: -20, y: 10 },
   grid: { size: 70, unitsPerCell: 5, color: '#6aa5ff', alpha: 0.35, show: true, offsetX: 3, offsetY: 4 },
   tokens: [
     {
-      id: 't_goblin1', x: 210, y: 140, w: 70, h: 70, rot: 0.5, name: 'Goblin Boss', conditions: ['Poisoned', 'Prone'], assetId: null,
+      id: 't_goblin1', x: 210, y: 140, w: 70, h: 70, rot: 0.5, name: 'Goblin Boss', conditions: ['Poisoned', 'Prone'], assetId: null, presetId: null,
       aura: { radius: 2, color: '#ff0000' },
       visionCone: { range: 6, angle: 90, color: '#ffff88' },
     },
-    { id: 't_ranger', x: 350, y: 280, w: 70, h: 70, rot: 0, name: null, conditions: [], assetId: null, aura: null, visionCone: null },
+    { id: 't_ranger', x: 350, y: 280, w: 70, h: 70, rot: 0, name: null, conditions: [], assetId: null, presetId: null, aura: null, visionCone: null },
   ],
   measurements: [{ id: 'm_1', type: 'cone', x1: 10, y1: 20, x2: 110, y2: 60, color: '#ff8800' }],
 };
@@ -110,12 +112,12 @@ describe('player-safe projection: what is included', () => {
   it('is exactly the approved fields (hand-written expected snapshot)', () => {
     expect(projectPlayerSafeState(fixture())).toEqual(EXPECTED);
     expect(SCHEMA).toBe(EXPECTED.schema);
-    expect(VERSION).toBe(3);
+    expect(VERSION).toBe(4);
   });
 
   it('gives each token exactly the approved keys, in the same shape', () => {
     for (const token of projectPlayerSafeState(fixture()).tokens) {
-      expect(Object.keys(token).sort()).toEqual(['assetId', 'aura', 'conditions', 'h', 'id', 'name', 'rot', 'visionCone', 'w', 'x', 'y']);
+      expect(Object.keys(token).sort()).toEqual(['assetId', 'aura', 'conditions', 'h', 'id', 'name', 'presetId', 'rot', 'visionCone', 'w', 'x', 'y']);
     }
     const [goblin] = projectPlayerSafeState(fixture()).tokens;
     expect(Object.keys(goblin.aura).sort()).toEqual(['color', 'radius']);
@@ -146,7 +148,7 @@ describe('player-safe projection: what is included', () => {
   it('handles an empty Battle Map', () => {
     expect(projectPlayerSafeState({ state: { map: { imgSrc: '', img: null, w: 0, h: 0 }, mapTransform: { scale: 1, x: 0, y: 0 }, grid: {}, tokens: [] }, persistentMeasurements: [] })).toEqual({
       schema: 'dmtoolbox.battlemap.player-safe',
-      version: 3,
+      version: 4,
       map: { width: 0, height: 0 },
       background: null,
       mapTransform: { scale: 1, x: 0, y: 0 },
@@ -363,6 +365,76 @@ describe('player-safe projection: aura and vision cone (Milestone 4)', () => {
     for (const rot of [0, Math.PI / 2, Math.PI, (3 * Math.PI) / 2, 2 * Math.PI, -Math.PI / 2, 9 * Math.PI]) {
       expect(tokenWith({ rot }).rot).toBe(rot);
     }
+  });
+});
+
+describe('player-safe projection: built-in token images (2.3.30)', () => {
+  const { PRESETS, presetIdForSrc, presetSrc, isPresetIdFormat } = globalThis.BattleMapTokenPresets;
+  const withImage = (imgSrc, extra = {}) => {
+    const src = fixture();
+    Object.assign(src.state.tokens[0], { imgSrc }, extra);
+    return projectPlayerSafeState(src).tokens[0];
+  };
+
+  it('names a built-in image by its preset id, never by its path', () => {
+    const t = withImage('/images/playerTokens/PlayerBardToken.png');
+    expect(t.presetId).toBe('player-bard');
+    expect(t.assetId).toBeNull();
+    expect(JSON.stringify(projectPlayerSafeState({ state: { tokens: [{ id: 't', imgSrc: '/images/enemyTokens/EnemyDragonToken.png' }] } }))).not.toMatch(/images|\.png|Dragon/);
+  });
+
+  it('every preset has a unique, well-formed id and its own same-origin image path', () => {
+    expect(PRESETS).toHaveLength(28);
+    expect(new Set(PRESETS.map((p) => p.id)).size).toBe(PRESETS.length);
+    expect(new Set(PRESETS.map((p) => p.src)).size).toBe(PRESETS.length);
+    for (const p of PRESETS) {
+      expect(isPresetIdFormat(p.id), p.id).toBe(true);
+      expect(p.src).toMatch(/^\/images\/(playerTokens|enemyTokens)\/[A-Za-z]+Token\.png$/);
+      expect(presetIdForSrc(p.src)).toBe(p.id);
+      expect(presetSrc(p.id)).toBe(p.src);
+    }
+  });
+
+  it.each([
+    ['custom (data URL) art', DATA_URL],
+    ['a blob URL', 'blob:http://localhost/abc'],
+    ['an external URL', 'https://example.com/images/playerTokens/PlayerBardToken.png'],
+    ['a same-origin absolute URL', 'http://localhost/images/playerTokens/PlayerBardToken.png'],
+    ['an unlisted same-origin image', '/images/playerTokens/MyOwnToken.png'],
+    ['a path that only resembles a preset', '/images/playerTokens/PlayerBardToken.png?x=1'],
+    ['a relative path without the slash', 'images/playerTokens/PlayerBardToken.png'],
+    ['a traversal', '/images/playerTokens/../../secret.png'],
+    ['no image', undefined],
+    ['a non-string', { src: '/images/playerTokens/PlayerBardToken.png' }],
+  ])('%s has no preset id', (_label, imgSrc) => {
+    expect(withImage(imgSrc).presetId).toBeNull();
+  });
+
+  it('a hidden built-in token sends no preset id (nothing of it at all)', () => {
+    const src = fixture();
+    Object.assign(src.state.tokens[0], { imgSrc: '/images/enemyTokens/EnemyDragonToken.png', visibleToPlayers: false });
+    const p = projectPlayerSafeState(src);
+    expect(p.tokens.map((t) => t.id)).toEqual(['t_ranger']);
+    expect(JSON.stringify(p)).not.toMatch(/enemy-dragon|Dragon|t_goblin1/);
+  });
+
+  it('without the preset list loaded, every token is a marker (fails safe)', () => {
+    const presets = globalThis.BattleMapTokenPresets;
+    try {
+      Object.defineProperty(globalThis, 'BattleMapTokenPresets', { value: undefined, configurable: true, writable: true });
+      expect(withImage('/images/playerTokens/PlayerBardToken.png').presetId).toBeNull();
+    } finally {
+      Object.defineProperty(globalThis, 'BattleMapTokenPresets', { value: presets, configurable: true, writable: true });
+    }
+  });
+
+  it('changing a token to a built-in image is a player-visible change', () => {
+    const src = fixture();
+    const { seam } = seamOver(src);
+    seam.check();
+    src.state.tokens[1].imgSrc = '/images/playerTokens/PlayerRangerToken.png';
+    expect(seam.check()).toBe(true);
+    expect(seam.getPlayerSafeState().tokens[1].presetId).toBe('player-ranger');
   });
 });
 

@@ -33,7 +33,10 @@ import { encodeHello, parseChannelMessage, PROTOCOL_VERSION } from './modules/li
 import { encodeAssetRequest } from './modules/live-share/asset-protocol.js';
 import { createAssetCache } from './modules/live-share/asset-cache.js';
 import { createSnapshotReceiver } from './modules/live-share/battlemap-snapshot.js';
-import { renderBattleMapSnapshot } from './modules/live-share/battlemap-view.js';
+import { renderBattleMapSnapshot, setPlayerView, computeViewBox } from './modules/live-share/battlemap-view.js';
+import { createPlayerView } from './modules/live-share/player-view.js';
+// Built-in token images by preset id (2.3.30); published as globalThis.BattleMapTokenPresets.
+import './modules/battle-map-token-presets.js';
 
 const $ = (id) => document.getElementById(id);
 const params = new URLSearchParams(location.search);
@@ -247,6 +250,9 @@ function initHost() {
 
 // ---- Player -----------------------------------------------------------------------------------
 
+const sameMap = (a, b) =>
+  a.map.width === b.map.width && a.map.height === b.map.height && a.mapTransform.scale === b.mapTransform.scale && a.mapTransform.x === b.mapTransform.x && a.mapTransform.y === b.mapTransform.y;
+
 async function initPlayer(roomId) {
   diag.role = 'player';
   diag.roomFound = null;
@@ -264,11 +270,40 @@ async function initPlayer(roomId) {
     requestAssets: (ids) => link && link.send(encodeAssetRequest(PROTOCOL_VERSION, ids)),
     onReady: () => draw(),
   });
+  // The player's own pan / zoom (2.3.30). Local only: it changes which part of the map this screen
+  // shows, never the snapshot, and nothing about it is ever sent to the host.
+  let viewFrame = 0;
+  const camera = createPlayerView({
+    element: $('ls-map'),
+    getFit: () => (latest ? computeViewBox(latest) : null),
+    // Pointer moves can come faster than frames: redraw the view at most once per frame.
+    onView: () => {
+      if (viewFrame) return;
+      viewFrame = requestAnimationFrame(() => {
+        viewFrame = 0;
+        if (latest) setPlayerView($('ls-map'), latest, camera.view());
+        diag.view = camera.stats();
+      });
+    },
+    // A click or tap that did not pan: reserved for player pings (Milestone 6); for now it is only
+    // counted in the diagnostics.
+    onTap: () => {
+      diag.view = camera.stats();
+      renderDiagnostics();
+    },
+  });
+  $('ls-map-fit').addEventListener('click', () => {
+    camera.reset();
+    renderDiagnostics();
+  });
+  diag.view = camera.stats();
   // Structured state first; the background and token art fill in whenever they are here.
+  const presetUrl = (id) => globalThis.BattleMapTokenPresets.presetSrc(id);
   const draw = () => {
     if (!latest) return;
     const background = assets.backgroundFor(latest);
-    renderBattleMapSnapshot($('ls-map'), latest, { background, tokenUrl: (id) => assets.url(id) });
+    renderBattleMapSnapshot($('ls-map'), latest, { background, tokenUrl: (id) => assets.url(id), presetUrl }, camera.view());
+    diag.view = camera.stats();
     const status = latest.background ? assets.status(latest.background.assetId) : null;
     $('ls-map-assets').textContent = !latest.background
       ? 'No map image shared.'
@@ -284,6 +319,9 @@ async function initPlayer(roomId) {
   };
   const receiver = createSnapshotReceiver({
     onApply: (snapshot) => {
+      // A different map (another image size or map transform) starts fitted; any other update
+      // (tokens, overlays, grid, fog) keeps the player's pan and zoom.
+      if (latest && camera.view() && !sameMap(latest, snapshot)) camera.reset();
       latest = snapshot;
       assets.sync(snapshot);
       draw();

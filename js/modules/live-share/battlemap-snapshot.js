@@ -19,9 +19,10 @@
 
 // Must match BattleMapShareState.SCHEMA / VERSION (checked by the unit tests).
 export const SNAPSHOT_SCHEMA = 'dmtoolbox.battlemap.player-safe';
-// 2: Milestone 3 background and token asset references; 3: Milestone 4 token aura and vision cone.
+// 2: Milestone 3 background and token asset references; 3: Milestone 4 token aura and vision cone;
+// 4: 2.3.30 token preset id (a built-in token image, by id).
 // Only this version is accepted: an older or newer one is rejected, never read with this schema.
-export const SNAPSHOT_VERSION = 3;
+export const SNAPSHOT_VERSION = 4;
 
 // The Milestone 1 projection's own limits: it never produces more than this.
 export const MAX_TOKENS = 500;
@@ -42,6 +43,10 @@ const ASSET_ID = /^[0-9a-f]{64}$/;
 const HEX_COLOR = /^#[0-9a-f]{3,8}$/i;
 // Overlay colors are stricter: exactly what the projection produces, #rrggbb in lowercase.
 const OVERLAY_COLOR = /^#[0-9a-f]{6}$/;
+// A preset id's format (BattleMapTokenPresets): lowercase words joined by hyphens. Whether the id is
+// known is the renderer's question (an unknown one draws a marker); it is never a URL or path.
+const PRESET_ID = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
+export const MAX_PRESET_ID = 40;
 
 const isPlainObject = (v) => !!v && typeof v === 'object' && !Array.isArray(v);
 
@@ -111,6 +116,11 @@ function visionCone(v, what) {
     color: overlayColor(v.color, `${what}.color`),
   };
 }
+function presetId(v, what) {
+  if (v === null) return null;
+  if (typeof v !== 'string' || v.length > MAX_PRESET_ID || !PRESET_ID.test(v)) fail(`${what} is not a preset id`);
+  return v;
+}
 function list(v, max, what) {
   if (!Array.isArray(v)) fail(`${what} is not an array`);
   if (v.length > max) fail(`${what} has more than ${max} entries`);
@@ -130,6 +140,7 @@ function readToken(t, i) {
     name: t.name === null ? null : text(t.name, `${where}.name`),
     conditions: list(t.conditions, MAX_CONDITIONS, `${where}.conditions`).map((c, j) => text(c, `${where}.conditions[${j}]`)),
     assetId: assetRef(t.assetId, `${where}.assetId`),
+    presetId: presetId(t.presetId, `${where}.presetId`),
     aura: aura(t.aura, `${where}.aura`),
     visionCone: visionCone(t.visionCone, `${where}.visionCone`),
   };

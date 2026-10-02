@@ -62,7 +62,7 @@ test.describe('Battle Map share-state seam with save-gated publication', () => {
     const errors = watchErrors(page);
     await openMap(page);
     const empty = await snapshot(page);
-    expect(empty).toMatchObject({ schema: 'dmtoolbox.battlemap.player-safe', version: 3, background: null, tokens: [], measurements: [] });
+    expect(empty).toMatchObject({ schema: 'dmtoolbox.battlemap.player-safe', version: 4, background: null, tokens: [], measurements: [] });
 
     // Placing a token is a draft: nothing is published until Save.
     await addPresetToken(page, 'Fighter');
@@ -73,7 +73,7 @@ test.describe('Battle Map share-state seam with save-gated publication', () => {
     const placed = await snapshot(page);
     expect(placed.revision).toBe(empty.revision + 1);
     const [token] = placed.tokens;
-    expect(Object.keys(token).sort()).toEqual(['assetId', 'aura', 'conditions', 'h', 'id', 'name', 'rot', 'visionCone', 'w', 'x', 'y']);
+    expect(Object.keys(token).sort()).toEqual(['assetId', 'aura', 'conditions', 'h', 'id', 'name', 'presetId', 'rot', 'visionCone', 'w', 'x', 'y']);
     expect([token.aura, token.visionCone]).toEqual([null, null]); // a new preset token has neither
     expect(token).toMatchObject({ name: null, conditions: [], rot: 0, w: 50, h: 50 }); // label off by default
 

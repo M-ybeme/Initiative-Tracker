@@ -47,6 +47,8 @@ test.describe('Live Share player-visible background and assets (Milestone 3)', (
     const first = await hostSnapshot(host);
     expect(first.background).toEqual({ assetId: expect.stringMatching(/^[0-9a-f]{64}$/), revision: 1 });
     expect(first.tokens.map((t) => t.assetId)).toEqual([null, null]); // generic art; unreadable external art
+    // 2.3.30: the preset is named by its id; the external image is not, although its path is a preset's.
+    expect(first.tokens.map((t) => t.presetId)).toEqual(['player-bard', null]);
 
     // 3-6: the player joins: structured state first (markers, placeholder), then the background.
     const { playerContext, player, playerErrors } = await startAndJoin(browser, host);
@@ -54,7 +56,9 @@ test.describe('Live Share player-visible background and assets (Milestone 3)', (
     expect(await player.evaluate(() => window.__lsFirstRender)).toEqual({ tokens: 2, background: false });
     await expect(player.getByTestId('map-assets')).toHaveText('Map image shown.');
     expect(await player.locator('.ls-background-image').getAttribute('data-asset-id')).toBe(first.background.assetId);
-    await expect(player.locator('[data-token-id="t_generic"]')).toHaveAttribute('data-art', 'marker');
+    // 2.3.30: the built-in image, from the player's own site; the external image stays a marker.
+    await expect(player.locator('[data-token-id="t_generic"]')).toHaveAttribute('data-art', 'preset');
+    expect(await player.locator('[data-token-id="t_generic"] .ls-token-art').getAttribute('href')).toBe('/images/playerTokens/PlayerBardToken.png');
     await expect(player.locator('[data-token-id="t_external"]')).toHaveAttribute('data-art', 'marker'); // 17-18: fallback
 
     // Placement: the background covers the map's world rectangle, under the grid and tokens.
@@ -187,7 +191,7 @@ test.describe('Live Share player-visible background and assets (Milestone 3)', (
     await host.getByTestId('end-session').click();
     await expect(player.getByTestId('map-status')).toContainText('Disconnected', { timeout: 10000 });
     await expect.poll(() => player.evaluate(() => [...window.__lsUrls.created].filter((u) => !window.__lsUrls.revoked.has(u)).length)).toBe(0);
-    await expect(player.locator('.ls-background-image, .ls-token-art')).toHaveCount(0);
+    await expect(player.locator('.ls-background-image, [data-art="image"]')).toHaveCount(0);
     await expect(player.locator('.ls-token')).toHaveCount(4);
 
     // The only expected errors: the browser refusing the host's CORS read of the external token

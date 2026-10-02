@@ -2,6 +2,7 @@
 // (js/modules/live-share/protocol.js, battlemap-snapshot.js): validation of untrusted payloads, the
 // latest-state-wins revision gate, and the contract with the Milestone 1 projection.
 import { describe, it, expect, vi } from 'vitest';
+import '../../js/modules/battle-map-token-presets.js';
 import '../../js/modules/battle-map-share-state.js';
 import {
   validateBattleMapSnapshot,
@@ -14,6 +15,7 @@ import {
   MAX_TEXT,
   MAX_OVERLAY_CELLS,
   MAX_CONE_ANGLE,
+  MAX_PRESET_ID,
 } from '../../js/modules/live-share/battlemap-snapshot.js';
 import { encodeBattleMapSnapshot, parseChannelMessage, MAX_CHANNEL_MESSAGE_BYTES } from '../../js/modules/live-share/protocol.js';
 
@@ -23,18 +25,18 @@ const { projectPlayerSafeState, createShareStateSeam, SCHEMA, VERSION, MAX_OVERL
 function snapshot(overrides = {}) {
   return {
     schema: 'dmtoolbox.battlemap.player-safe',
-    version: 3,
+    version: 4,
     map: { width: 1400, height: 900 },
     background: { assetId: 'a'.repeat(64), revision: 3 },
     mapTransform: { scale: 1.5, x: -20, y: 10 },
     grid: { size: 70, unitsPerCell: 5, color: '#6aa5ff', alpha: 0.35, show: true, offsetX: 3, offsetY: 4 },
     tokens: [
       {
-        id: 't_goblin1', x: 210, y: 140, w: 70, h: 70, rot: 0.5, name: 'Goblin Boss', conditions: ['Prone', 'Poisoned'], assetId: 'b'.repeat(64),
+        id: 't_goblin1', x: 210, y: 140, w: 70, h: 70, rot: 0.5, name: 'Goblin Boss', conditions: ['Prone', 'Poisoned'], assetId: 'b'.repeat(64), presetId: null,
         aura: { radius: 2, color: '#ff0000' },
         visionCone: { range: 6, angle: 90, color: '#ffff88' },
       },
-      { id: 't_hero', x: 0, y: -35, w: 140, h: 140, rot: 0, name: null, conditions: [], assetId: null, aura: null, visionCone: null },
+      { id: 't_hero', x: 0, y: -35, w: 140, h: 140, rot: 0, name: null, conditions: [], assetId: null, presetId: 'player-bard', aura: null, visionCone: null },
     ],
     measurements: [{ id: 'pm-1', type: 'cone', x1: 10, y1: 20, x2: 150, y2: 20, color: '#ff8800' }],
     revision: 7,
@@ -54,6 +56,35 @@ describe('battlemap-snapshot validation', () => {
     expect(result.snapshot.tokens[0].conditions).not.toBe(input.tokens[0].conditions);
     expect(result.snapshot.tokens[0].aura).not.toBe(input.tokens[0].aura);
     expect(result.snapshot.tokens[0].visionCone).not.toBe(input.tokens[0].visionCone);
+  });
+
+  it('accepts a well-formed preset id it does not know (the renderer draws a marker for it)', () => {
+    const input = snapshot();
+    input.tokens[1].presetId = 'player-bard-v2';
+    const result = validateBattleMapSnapshot(input);
+    expect(result.ok).toBe(true);
+    expect(result.snapshot.tokens[1].presetId).toBe('player-bard-v2');
+  });
+
+  it('matches the preset id format of the preset list', () => {
+    const { PRESETS, MAX_ID, isPresetIdFormat } = globalThis.BattleMapTokenPresets;
+    expect(MAX_PRESET_ID).toBe(MAX_ID);
+    for (const p of PRESETS) {
+      const input = snapshot();
+      input.tokens[1].presetId = p.id;
+      expect(validateBattleMapSnapshot(input).ok, p.id).toBe(true);
+      expect(isPresetIdFormat(p.id)).toBe(true);
+    }
+  });
+
+  it('agrees with the preset list on which ids are well-formed (the two checks stay in step)', () => {
+    const { isPresetIdFormat } = globalThis.BattleMapTokenPresets;
+    const samples = ['player-bard', 'enemy-blood-hunter', 'a', 'x1-2y', 'a'.repeat(MAX_PRESET_ID), 'a'.repeat(MAX_PRESET_ID + 1), '', '-a', 'a-', 'a--b', 'A', 'a_b', 'a.b', 'a/b', 'a b', '../x', 'https://x', 'é'];
+    for (const id of samples) {
+      const input = snapshot();
+      input.tokens[1].presetId = id;
+      expect(validateBattleMapSnapshot(input).ok, JSON.stringify(id)).toBe(isPresetIdFormat(id));
+    }
   });
 
   it('matches the seam overlay limit', () => {
@@ -128,11 +159,13 @@ describe('battlemap-snapshot validation', () => {
     ['null', () => null],
     ['a wrong schema', () => snapshot({ schema: 'dmtoolbox.initiative' })],
     ['a missing schema', () => mutate((s) => delete s.schema)],
-    ['a newer version', () => snapshot({ version: 4 })],
+    ['a newer version', () => snapshot({ version: 5 })],
+    ['the 2.3.29 version (no preset ids)', () => snapshot({ version: 3 })],
+    ['a 2.3.29 snapshot as sent by a 2.3.29 host', () => mutate((s) => { s.version = 3; for (const t of s.tokens) delete t.presetId; })],
     ['the Milestone 3 version (no overlays)', () => snapshot({ version: 2 })],
     ['a Milestone 3 snapshot as sent by a 2.3.28 host', () => mutate((s) => { s.version = 2; for (const t of s.tokens) { delete t.aura; delete t.visionCone; } })],
     ['the Milestone 2 version', () => snapshot({ version: 1 })],
-    ['a string version', () => snapshot({ version: '3' })],
+    ['a string version', () => snapshot({ version: '4' })],
     ['a missing version', () => mutate((s) => delete s.version)],
     ['a missing background', () => mutate((s) => delete s.background)],
     ['a background without a revision', () => snapshot({ background: { assetId: 'a'.repeat(64) } })],
@@ -214,6 +247,19 @@ describe('battlemap-snapshot validation', () => {
     ['a numeric vision color', () => mutate((s) => (s.tokens[0].visionCone.color = 0xffff88))],
     ['an object vision color', () => mutate((s) => (s.tokens[0].visionCone.color = { toString: () => '#ffff88' }))],
     ['a missing vision color', () => mutate((s) => delete s.tokens[0].visionCone.color)],
+    // 2.3.30 preset ids: an id's format only, never a URL or a path.
+    ['a missing preset id (null is required for none)', () => mutate((s) => delete s.tokens[1].presetId)],
+    ['a preset id that is a URL', () => mutate((s) => (s.tokens[1].presetId = 'https://evil.example/x.png'))],
+    ['a preset id that is a path', () => mutate((s) => (s.tokens[1].presetId = '/images/playerTokens/PlayerBardToken.png'))],
+    ['a preset id with a traversal', () => mutate((s) => (s.tokens[1].presetId = '../secret'))],
+    ['a preset id with a dot', () => mutate((s) => (s.tokens[1].presetId = 'player.bard'))],
+    ['a preset id with uppercase', () => mutate((s) => (s.tokens[1].presetId = 'Player-Bard'))],
+    ['a preset id with spaces or markup', () => mutate((s) => (s.tokens[1].presetId = 'player bard"><img>'))],
+    ['an empty preset id', () => mutate((s) => (s.tokens[1].presetId = ''))],
+    ['a preset id with a leading hyphen', () => mutate((s) => (s.tokens[1].presetId = '-bard'))],
+    ['an overlong preset id', () => mutate((s) => (s.tokens[1].presetId = 'a'.repeat(MAX_PRESET_ID + 1)))],
+    ['a numeric preset id', () => mutate((s) => (s.tokens[1].presetId = 7))],
+    ['an object preset id', () => mutate((s) => (s.tokens[1].presetId = { id: 'player-bard' }))],
   ])('rejects %s', (_label, make) => {
     const result = validateBattleMapSnapshot(make());
     expect(result.ok).toBe(false);
@@ -285,7 +331,7 @@ describe('contract with the Milestone 1 projection', () => {
           rot: i * 0.1,
           hp: 5,
           maxHp: 9,
-          imgSrc: '/images/x.png',
+          imgSrc: i % 2 ? '/images/playerTokens/PlayerBloodHunterToken.png' : '/images/x.png',
           statusConditions: i % 3 === 0 ? ['Prone', text('Frightened')] : [],
           // Milestone 4 overlays on most tokens, including the largest the projection keeps.
           aura: i % 4 === 3 ? undefined : { radius: i === 0 ? 1e9 : 0.5 + (i % 6), color: i % 2 ? '#8BD3FF' : '#f80' },

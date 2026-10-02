@@ -129,7 +129,7 @@ describe('Live Share Battle Map sync through the local relay', () => {
     const { h, p } = await connect(map);
     const first = await until(() => p.latest());
     expect(first.revision).toBe(revision);
-    expect(first.tokens).toEqual([{ id: 't_ogre', x: 100, y: 100, w: 100, h: 100, rot: 0, name: 'Ogre', conditions: [], assetId: null, aura: null, visionCone: null }]);
+    expect(first.tokens).toEqual([{ id: 't_ogre', x: 100, y: 100, w: 100, h: 100, rot: 0, name: 'Ogre', conditions: [], assetId: null, presetId: null, aura: null, visionCone: null }]);
     expect(map.seam.revision).toBe(revision); // nothing changed to trigger it
     expect(h.sender.diagnostics()).toMatchObject({ snapshotsSent: 1, lastSnapshotSentRevision: revision });
     p.close();

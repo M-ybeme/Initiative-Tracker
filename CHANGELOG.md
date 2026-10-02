@@ -16,11 +16,28 @@ The DM's Toolbox has evolved through focused feature releases. Minor versions (2
 - **1.9.x**: Battle map measurement tools, persistent fog shapes, and generator integration across NPC/Tavern/Shop systems
 - **1.8.x**: Spell database expansion to 432+ spells, inventory management, loot generator overhaul, and character token generation
 
-**Current version: 2.3.29 (October 2026)**
+**Current version: 2.3.30 (October 2026)**
 
 ---
 
 ## [Unreleased]
+
+---
+
+## [2.3.30] - 2026-10-01
+**Live Share player view polish**
+
+### Live Share
+- **Players can pan and zoom the Battle Map on their own screen.** Drag to pan, scroll the mouse wheel to zoom about the pointer, or use one finger to pan and two to pinch-zoom on a touch screen. **Fit** shows the whole map again. Zoom stays between twice as far out and 8x closer than the fitted view, and the map can't be panned out of sight. This view is the player's alone: nothing is sent to the host, and the DM's map, view and unsaved state are untouched. Saved updates (tokens, overlays, grid, a new fog background) keep the player's view; only a different map (another image size or map transform) starts fitted again. A click or tap that doesn't drag is kept apart from panning, for player pings later
+- **Built-in token images are shown to players.** A token using one of the Battle Map's built-in Player or Enemy token images is drawn with that image on the player instead of a colored marker. The image is named by a short preset id (for example `player-bard`), and the player loads it from its own copy of the site: no URL or path is sent, an unknown id draws a marker, and anything that isn't an id is rejected. Custom art is still transferred as before, other images (including other images on the site, and external images the host can't read) still show as markers, and a hidden token still sends nothing
+- **Grid:** the player's grid uses the DM's saved grid color, opacity, cell size, offset and Show Grid setting, and changes only when the DM saves, without resending the map background. It already did this; browser tests now check it. The light-blue grid players see by default is the Battle Map's default grid color (#6aa5ff). One difference remains: the DM's grid is drawn under the fog, the player's on top of it, because the fog is part of the player's background image
+- Host and player must both be on 2.3.30: the Battle Map snapshot is now version 4, and other versions are refused rather than misread
+
+### Battle Map
+- The built-in token list now lives in one place (`js/modules/battle-map-token-presets.js`), shared with Live Share. The preset dropdown is unchanged
+
+### Internal / Tests
+- Tests cover preset ids in the projection (exact built-in paths only; data, blob, external, look-alike and unlisted paths get none; hidden tokens send none), the player's validation (ids only: URLs, paths, traversal, markup, wrong case or length rejected), the renderer (built-in image, custom art first, unknown id or a non-built-in path drawn as a marker, every registry preset accepted by the renderer's path check; a marker's color, derived from the token id since 2.3.25, stays the same across updates), the player view (geometry, zoom limits, pan bounds, tap vs. drag, wheel, pinch, one-finger pan), and in the browser: built-in, custom, unlisted and hidden tokens, hostile preset ids sent down the channel (no image requested for them), the grid style following saves with no background work, and pan/zoom staying local through saves, a new background, resizing, Fit and a new map
 
 ---
 

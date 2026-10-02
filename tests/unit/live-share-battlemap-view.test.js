@@ -1,7 +1,7 @@
 // Live Share Milestone 2: the player's read-only Battle Map view
 // (js/modules/live-share/battlemap-view.js), rendered into a happy-dom SVG.
 import { describe, it, expect, beforeEach } from 'vitest';
-import { renderBattleMapSnapshot, computeViewBox, tokenHue, MAX_GRID_LINES } from '../../js/modules/live-share/battlemap-view.js';
+import { renderBattleMapSnapshot, setPlayerView, computeViewBox, tokenHue, MAX_GRID_LINES } from '../../js/modules/live-share/battlemap-view.js';
 
 function snapshot(overrides = {}) {
   return {
@@ -333,5 +333,94 @@ describe('Battle Map player view: aura and vision cone (Milestone 4)', () => {
   it('does not mutate a snapshot with overlays', () => {
     const s = deepFreeze(withOverlays({ aura: { radius: 2, color: '#ff0000' }, visionCone: { range: 2, angle: 90, color: '#ffff88' } }));
     expect(() => renderBattleMapSnapshot(svg, s)).not.toThrow();
+  });
+});
+
+describe('Battle Map player view: built-in token images and the player view (2.3.30)', () => {
+  const PRESET = '/images/playerTokens/PlayerBardToken.png';
+  const presetUrl = (id) => ({ 'player-bard': PRESET, 'bad-one': 'https://evil.example/x.png', 'sneaky': '/images/playerTokens/../../secret.png' })[id] || null;
+  const tok = (over) => ({ id: 't', x: 100, y: 100, w: 50, h: 50, rot: 0, name: null, conditions: [], assetId: null, presetId: null, ...over });
+
+  it('draws a known preset id with its built-in image', () => {
+    renderBattleMapSnapshot(svg, snapshot({ tokens: [tok({ presetId: 'player-bard' })] }), { presetUrl });
+    const g = svg.querySelector('.ls-token');
+    expect(g.getAttribute('data-art')).toBe('preset');
+    const img = g.querySelector('.ls-token-art');
+    expect(['href', 'x', 'y', 'width', 'height'].map((a) => img.getAttribute(a))).toEqual([PRESET, '-25', '-25', '50', '50']);
+  });
+
+  it('every built-in preset in the registry passes the renderer path check (they stay in step)', async () => {
+    await import('../../js/modules/battle-map-token-presets.js');
+    const { PRESETS, presetSrc } = globalThis.BattleMapTokenPresets;
+    renderBattleMapSnapshot(svg, snapshot({ tokens: PRESETS.map((p, i) => tok({ id: `t${i}`, presetId: p.id })) }), { presetUrl: presetSrc });
+    const drawn = [...svg.querySelectorAll('.ls-token')];
+    expect(drawn).toHaveLength(PRESETS.length);
+    for (const [i, g] of drawn.entries()) {
+      expect(g.getAttribute('data-art'), PRESETS[i].id).toBe('preset');
+      expect(g.querySelector('.ls-token-art').getAttribute('href')).toBe(PRESETS[i].src);
+    }
+  });
+
+  it('custom art wins over a preset; an unknown preset id is a marker', () => {
+    renderBattleMapSnapshot(svg, snapshot({ tokens: [tok({ id: 'a', assetId: 'd'.repeat(64), presetId: 'player-bard' }), tok({ id: 'b', presetId: 'player-unknown' })] }), {
+      presetUrl,
+      tokenUrl: () => 'blob:http://localhost/art',
+    });
+    const [a, b] = svg.querySelectorAll('.ls-token');
+    expect(a.getAttribute('data-art')).toBe('image');
+    expect(a.querySelector('.ls-token-art').getAttribute('href')).toBe('blob:http://localhost/art');
+    expect(b.getAttribute('data-art')).toBe('marker');
+    expect(b.querySelector('image')).toBeNull();
+  });
+
+  it('never draws a preset resolver result that is not a built-in token path', () => {
+    for (const presetId of ['bad-one', 'sneaky']) {
+      renderBattleMapSnapshot(svg, snapshot({ tokens: [tok({ presetId })] }), { presetUrl });
+      expect(svg.querySelector('image')).toBeNull();
+      expect(svg.querySelector('.ls-token').getAttribute('data-art')).toBe('marker');
+    }
+    // Without a resolver at all: markers.
+    renderBattleMapSnapshot(svg, snapshot({ tokens: [tok({ presetId: 'player-bard' })] }));
+    expect(svg.querySelector('image')).toBeNull();
+  });
+
+  it('a token marker keeps its color across snapshots (derived from its id)', () => {
+    renderBattleMapSnapshot(svg, snapshot({ tokens: [tok({ id: 't_orc' })] }));
+    const first = svg.querySelector('ellipse').getAttribute('fill');
+    renderBattleMapSnapshot(svg, snapshot({ revision: 99, tokens: [tok({ id: 't_orc', x: 900 }), tok({ id: 't_x' })] }));
+    expect(svg.querySelector('[data-token-id="t_orc"] ellipse').getAttribute('fill')).toBe(first);
+  });
+
+  it('shows a player view instead of the fitted one when given, and marks which', () => {
+    const s = snapshot();
+    const fit = computeViewBox(s);
+    renderBattleMapSnapshot(svg, s);
+    expect(svg.getAttribute('data-view')).toBe('fit');
+    expect(svg.getAttribute('viewBox')).toBe(`${fit.x} ${fit.y} ${fit.w} ${fit.h}`);
+    renderBattleMapSnapshot(svg, s, {}, { x: 10, y: 20, w: 200, h: 100 });
+    expect(svg.getAttribute('data-view')).toBe('player');
+    expect(svg.getAttribute('viewBox')).toBe('10 20 200 100');
+  });
+
+  it('setPlayerView changes only the viewBox, backdrop and grid; tokens and images are kept as they are', () => {
+    const s = snapshot({ map: { width: 1000, height: 600 }, background: { assetId: 'b'.repeat(64), revision: 1 } });
+    renderBattleMapSnapshot(svg, s, { background: { url: 'blob:http://localhost/bg', assetId: 'b'.repeat(64) } });
+    const tokens = svg.querySelector('.ls-tokens');
+    const image = svg.querySelector('.ls-background-image');
+    const fitBox = svg.getAttribute('viewBox');
+    setPlayerView(svg, s, { x: -3000, y: -2000, w: 400, h: 300 });
+    expect(svg.getAttribute('viewBox')).toBe('-3000 -2000 400 300');
+    expect(svg.querySelector('.ls-tokens')).toBe(tokens);
+    expect(svg.querySelector('.ls-background-image')).toBe(image);
+    // The backdrop and grid now also cover the new view (and one view-size around it).
+    const bg = svg.querySelector('.ls-background');
+    expect(Number(bg.getAttribute('x'))).toBeLessThanOrEqual(-3400);
+    expect(Number(bg.getAttribute('y'))).toBeLessThanOrEqual(-2300);
+    const xs = [...svg.querySelectorAll('.ls-grid-minor')].map((l) => Number(l.getAttribute('x1')));
+    expect(Math.min(...xs)).toBeLessThanOrEqual(-3400);
+    expect(svg.querySelectorAll('.ls-background, .ls-grid')).toHaveLength(2);
+    setPlayerView(svg, s, null);
+    expect(svg.getAttribute('viewBox')).toBe(fitBox);
+    expect(svg.getAttribute('data-view')).toBe('fit');
   });
 });

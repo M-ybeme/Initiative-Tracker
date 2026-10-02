@@ -29,7 +29,8 @@
   const SCHEMA = 'dmtoolbox.battlemap.player-safe';
   // 2: Milestone 3 added `background` and token `assetId` (references to player-safe assets).
   // 3: Milestone 4 (2.3.29) added token `aura` and `visionCone` (presentation overlays).
-  const VERSION = 3;
+  // 4: 2.3.30 added token `presetId` (a built-in token image, by id; never a URL).
+  const VERSION = 4;
 
   // Milestone 1 limits, so a malformed or huge Battle Map can't produce an unbounded snapshot.
   const MAX_TOKENS = 500;
@@ -80,9 +81,17 @@
     return { range: Math.min(v.range, MAX_OVERLAY_CELLS), angle, color: overlayColor(v.color, '#ffff88') };
   }
 
+  // A built-in token image (battle-map-token-presets.js), by its stable id; null for anything else.
+  // Only an exact match of the stored path counts, so no other URL can turn into an id.
+  function projectPresetId(t) {
+    const presets = root.BattleMapTokenPresets;
+    return presets ? presets.presetIdForSrc(t.imgSrc) : null;
+  }
+
   function projectToken(t, tokenAssetId) {
-    // Name only where the DM shows the token's label (§13.1); HP, max HP, image, selection and
-    // anything else on the token are not player-safe. Aura and vision cone since Milestone 4.
+    // Name only where the DM shows the token's label (§13.1); HP, max HP, the image source,
+    // selection and anything else on the token are not player-safe. Aura and vision cone since
+    // Milestone 4; a built-in image's preset id (never its URL) since 2.3.30.
     const name = t.showLabel && typeof t.name === 'string' && t.name.trim() ? text(t.name) : null;
     const conditions = Array.isArray(t.statusConditions)
       ? t.statusConditions.filter((c) => typeof c === 'string' && c.length > 0).slice(0, MAX_CONDITIONS).map(text)
@@ -97,6 +106,7 @@
       name,
       conditions,
       assetId: assetId(tokenAssetId(t)),
+      presetId: projectPresetId(t),
       aura: projectAura(t.aura),
       visionCone: projectVisionCone(t.visionCone),
     };
@@ -149,8 +159,8 @@
         offsetY: num(grid.offsetY),
       },
       // A token the DM hid from players (visibleToPlayers === false, 2.3.27) is left out entirely:
-      // not sent as hidden, simply absent, so nothing about it (id, position, name, art, aura,
-      // vision cone) crosses. The filter runs before anything of the token is projected.
+      // not sent as hidden, simply absent, so nothing about it (id, position, name, art, preset id,
+      // aura, vision cone) crosses. The filter runs before anything of the token is projected.
       // Missing means visible, so maps saved before the setting existed are unchanged.
       tokens: tokens
         .filter((t) => t && isId(t.id) && t.visibleToPlayers !== false)

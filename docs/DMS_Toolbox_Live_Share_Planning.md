@@ -36,6 +36,16 @@ No Live Share behavior changed.
 - Hidden tokens send none of it. Overlay, rotation and grid saves never recompose or resend the background.
 - Not yet validated on real devices (Milestone 4's exit requires that).
 
+**2.3.30 (Live Share player view polish, 2026-10-01): more of Milestone 4 part A, found in the manual player check after 2.3.29 (§24).**
+- Built-in token images reach players by a stable preset id (`presetId`, snapshot version 4). The player resolves the id against its own built-in list, and no URL or path is ever sent (§13.1, §15.3).
+- Players can pan and zoom locally. That view is never published, and saves don't reset it (§11).
+- The grid already followed the DM's saved grid style; browser tests now cover it. The player draws it over the fog baked into the background, while the DM draws it under the fog. That difference stays, because drawing the grid under the fog would mean baking it into the background.
+
+**Backlog from the 2.3.30 review (player view; not yet fixed):**
+- Zoomed out to 0.5x on a large map, the player's backdrop and grid cover area can exceed `MAX_GRID_LINES`, so the minor grid lines drop. The grid is also rebuilt on every view frame. Base the cover area on the visible screen area and skip unchanged rebuilds.
+- "A different map resets the view" compares map size and map transform only. Two different maps of the same size keep the player's pan and zoom. Fix with a map identity or epoch in the snapshot the next time the projection changes.
+- A player on an older cached build (any snapshot version mismatch) sees an empty map with no message. Show "the host is on a different version — reload". This was already on the 2.3.29 list.
+
 **Next:** the rest of Milestone 4: performance profiling (part B), then optimization only on evidence (part C), and a real-device validation (§24).
 
 **Backlog (Battle Map, found during the 2.3.27 and 2.3.28 reviews; not yet fixed):**
@@ -553,6 +563,12 @@ The player enters a dedicated Live Share client showing:
 
 The normal Toolbox navigation does not replace the Live Share page; other Toolbox features open in a new tab.
 
+**Player view (2.3.30).** Each player can pan and zoom the Battle Map on their own screen: drag, mouse wheel, one-finger pan, pinch, and **Fit** to reset.
+- This *player view* is separate from the *map transform*: the map transform is the DM's, saved and published, and places the map in world space.
+- The player view is local. It is never sent, never changes the DM's map or view, and doesn't count as an edit.
+- Saved updates keep the player's view; a different map (another image size or map transform) starts fitted.
+- A press that moves less than 5 px is a tap, kept apart from a pan, for player pings (Milestone 6).
+
 ## Development prototypes (Milestones 0–4) vs product behavior (Milestone 5 onward)
 
 **Milestones 0–4 are engineering validation stages, not production room behavior.** They exist only to validate networking, the player-safe projection, remote rendering, asset transfer and fog, and (Milestone 4) presentation completeness and performance. During these milestones:
@@ -612,6 +628,7 @@ Initial player-safe structured state:
 - token IDs, positions, sizes, rotation
 - token presentation overlays (Milestone 4, 2.3.29): `aura` and `visionCone`, each `null` or a few validated primitives (§13.4)
 - ~~token image references (resolved through asset transfer, §15)~~ token asset ids: `null` for ordinary tokens, and an id only for tokens with custom art, resolved through asset transfer (§15.3)
+- token preset ids (2.3.30): `null`, or the id of one of the Battle Map's built-in token images (`js/modules/battle-map-token-presets.js`). The player draws its own copy of that image. Never a URL or path (§15.3)
 - the background reference: the player-visible background's asset id and background revision (§15.2)
 - public token names, where the token's label is shown
 - public conditions
@@ -830,6 +847,11 @@ DM Battle Map
 ## 15.3 Selective token images
 
 - **Ordinary tokens need no image.** Default and generic tokens keep the lightweight structured marker and label that players already see in Milestone 2, and their `assetId` is `null`. Not every token needs an asset.
+- **Built-in token images by id (2.3.30).** A token whose image is exactly one of the Battle Map's built-in Player/Enemy images is sent with that image's preset id (`presetId`, for example `player-bard`).
+  - The player validates the id's format (lowercase words joined by hyphens, at most 40 characters).
+  - It draws its own copy of the image only for an id in its built-in list, and an unknown id draws the marker. The renderer also only ever draws paths of the built-in shape.
+  - No URL or path is sent or accepted, so the id can't make the player fetch anything else.
+  - Other same-origin images stay markers.
 - **Custom art is transferred.** A token image is sent only when the token uses a meaningful custom asset: user-uploaded token art, a character portrait or token from the Character Manager, or another explicitly attached special image. How the host tells custom art from generic art is an implementation decision for Milestone 3 (§30).
 - **Shared images are sent once.** Tokens that use the same custom image share one asset id, and the image is transferred once and reused.
 - **Failure degrades gracefully.** If an image is unavailable, can't be read, or fails to transfer, the player shows the structured marker and name. A missing image never breaks the map.
@@ -1292,7 +1314,12 @@ See §5.4, §6, §13.3, §14 and §16. A follow-up fix (commit bd1ba05) hardened
 
 **Context.** Since 2.3.27 the Battle Map publishes only on explicit Save (§14, §16). Fog is no longer streamed while the DM paints, so the cost of composing, encoding and transferring a background is paid once per save. Milestone 4 measures that save-to-player path. It does not optimize live brush streaming, which no longer exists for the Battle Map.
 
-### A. Presentation completeness *(done in 2.3.29)*
+### A. Presentation completeness *(done in 2.3.29; player view polish in 2.3.30)*
+
+*2.3.30 follow-up from the manual player check:*
+- *Built-in token images by preset id (§15.3).*
+- *Player-local pan/zoom, kept separate from the published map transform.*
+- *The grid already matched the DM's saved style; it is now tested. It draws over the fog on the player and under it on the DM. That remaining difference is accepted, because drawing the grid under the fog would mean baking it into the background.*
 
 *Outcome: the inventory found only the aura and the vision cone. Both are public for tokens that are Visible to Players. There are no separate share controls, and fog never hides them. Wire form and validation: §13.4.*
 

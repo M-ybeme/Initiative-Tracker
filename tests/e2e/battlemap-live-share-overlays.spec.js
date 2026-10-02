@@ -100,7 +100,7 @@ test.describe('Live Share aura and vision cone presentation (2.3.29)', () => {
       ],
     });
     const A = await hostSnapshot(host);
-    expect(A.version).toBe(3);
+    expect(A.version).toBe(4);
     expect(A.tokens[0]).toMatchObject({ aura: { radius: 2, color: '#ff0000' }, visionCone: { range: 6, angle: 90, color: '#ffff88' } });
     expect(A.tokens[1]).toMatchObject({ aura: null, visionCone: null });
     expect(A.background.assetId).toMatch(/^[0-9a-f]{64}$/);
@@ -222,7 +222,7 @@ test.describe('Live Share aura and vision cone presentation (2.3.29)', () => {
 
     // Every snapshot sent carried only the allowlisted overlay fields, as primitives.
     for (const m of await sentSnapshots(host)) {
-      expect(m.payload.version).toBe(3);
+      expect(m.payload.version).toBe(4);
       for (const t of m.payload.tokens) {
         if (t.aura) expect(Object.keys(t.aura).sort()).toEqual(['color', 'radius']);
         if (t.visionCone) expect(Object.keys(t.visionCone).sort()).toEqual(['angle', 'color', 'range']);
