@@ -1,6 +1,6 @@
 const DM_TOOLBOX_BUILD = {
   name: "The DM's Toolbox",
-  version: "2.3.30",
+  version: "2.3.31",
   recentChanges: [
     "New (Live Share test mode): players can drag to pan and scroll or pinch to zoom the shared Battle Map on their own screen (Fit shows it all again), and built-in Battle Map tokens show their real image instead of a colored marker",
     "New (Live Share test mode): players now see the auras and vision cones of the tokens they can see, as you last saved them; changing one or turning a token does not resend the map",

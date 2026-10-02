@@ -46,7 +46,19 @@ No Live Share behavior changed.
 - "A different map resets the view" compares map size and map transform only. Two different maps of the same size keep the player's pan and zoom. Fix with a map identity or epoch in the snapshot the next time the projection changes.
 - A player on an older cached build (any snapshot version mismatch) sees an empty map with no message. Show "the host is on a different version — reload". This was already on the 2.3.29 list.
 
-**Next:** the rest of Milestone 4: performance profiling (part B), then optimization only on evidence (part C), and a real-device validation (§24).
+**Milestone 4 part B, profiling (2.3.31, 2026-10-01, measured on 2.3.30; no product behavior change):** measured on the real pages over loopback WebRTC (direct and TURN). Full report: [live-share-m4-profiling.md](live-share-m4-profiling.md).
+- Live Share's pipeline fits the whole-background design:
+  - composition 23–139 ms on the main thread;
+  - WebP encoding and hashing asynchronous;
+  - typical backgrounds 40 KiB–1.2 MiB, the largest 3.6 MiB;
+  - structured saves about 0.6–40 KB.
+- The main-thread threshold is crossed on every save, by the Battle Map's own persistence: a synchronous `toDataURL` of the fog canvas. It takes 0.23 s on an ordinary map and up to 1.9 s on a large one, and publication waits for it.
+- Pending the real-device check: keep whole-background transfer. A small part C pass on the fog persistence is proposed, not implemented.
+
+**Next:**
+- the real-device check (instructions in the report);
+- then decide on the proposed part C fix to fog persistence;
+- then close Milestone 4 (§24).
 
 **Backlog (Battle Map, found during the 2.3.27 and 2.3.28 reviews; not yet fixed):**
 - Pre-existing: a touch long-press (and Ctrl+click on a Mac, which is a primary-button press) starts a token drag before its menu opens, so on release an off-grid token snaps and the map is marked unsaved (the 2.3.28 right-click fix does not cover a primary-button press).
@@ -1368,6 +1380,25 @@ Representative cases:
 - a TURN or mobile path where practical.
 
 Existing diagnostics (encode time, bytes, counts) and `scripts/bench-live-share-background.mjs` are the starting point. Results are recorded in this document or a linked report.
+
+**Results (2026-10-01, on 2.3.30): [live-share-m4-profiling.md](live-share-m4-profiling.md).**
+
+The harness is `tests/perf/` with `playwright.perf.config.js`, outside the normal test run. It drives the real pages and times each phase from Save to player-visible. It ran on loopback WebRTC, direct and TURN; the real-device check is still to come.
+
+| Criterion | Observed | Result |
+|---|---|---|
+| direct Save → visible, about 5 s | loopback 0.47–3.6 s. Estimated on real links 0.5–2.2 s for typical maps, 4–6.3 s for about 3.5 MiB backgrounds below about 20 Mbit/s | pass (typical), investigate large maps on the device |
+| TURN/mobile, about 10 s | loopback TURN 0.45–3.5 s; real mobile not yet measured | pending the real-device check |
+| main thread, about 200 ms | 0.23–1.9 s on every save, from the Battle Map's fog persistence (`toDataURL`). Live Share's own synchronous work is at most 142 ms | **crossed**; bottleneck identified |
+| typical background, about 2 MiB | 40 KiB–1.22 MiB (typical); 3.5 MiB (harsh grain / large) | pass |
+| near 16 MiB | at most 3.56 MiB | pass |
+| snapshots held back by assets | not reproducible on loopback; pacing design plus an existing browser test | pass, confirm on the device |
+
+**Provisional conclusion:**
+- Whole-background transfer stays, and no Live Share protocol or architecture change is justified.
+- The one bottleneck found is Battle Map persistence, which serializes the whole fog canvas synchronously on every save.
+- A scoped part C fix is proposed in the report: reuse the serialized fog while unchanged, and serialize asynchronously otherwise. It has to be scoped separately before it is implemented.
+- Milestone 4 stays open until the real-device check is in.
 
 ### C. Optimization only on evidence
 

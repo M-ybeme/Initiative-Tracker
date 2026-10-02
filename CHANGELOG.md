@@ -16,11 +16,31 @@ The DM's Toolbox has evolved through focused feature releases. Minor versions (2
 - **1.9.x**: Battle map measurement tools, persistent fog shapes, and generator integration across NPC/Tavern/Shop systems
 - **1.8.x**: Spell database expansion to 432+ spells, inventory management, loot generator overhaul, and character token generation
 
-**Current version: 2.3.30 (October 2026)**
+**Current version: 2.3.31 (October 2026)**
 
 ---
 
 ## [Unreleased]
+
+---
+
+## [2.3.31] - 2026-10-01
+**Live Share performance profiling (Milestone 4B)**
+
+No change to how the app behaves: this release adds a profiling harness and its results.
+
+### Live Share
+- **Profiled the Battle Map Save → player-visible path** on the real pages over real WebRTC (direct and through TURN), for an ordinary dungeon map, painted and high-detail maps, a heavily fogged map, a large map at the size limits, custom token art, and a map with 200 tokens and 60 measurements. Results: `docs/live-share-m4-profiling.md`
+- **Findings:**
+  - Live Share's own work is fast: map composition takes 25–140 ms, and WebP encoding and hashing run off the main thread.
+  - Typical backgrounds are 40 KiB–1.2 MiB, with the largest at 3.6 MiB of the 16 MiB cap.
+  - Token, aura, vision cone, rotation and grid saves send a snapshot of about 0.6–40 KB and never resend the background.
+  - Whole-background transfer stays; no protocol change is needed.
+- **One bottleneck found, in the Battle Map itself:** every save PNG-encodes the whole fog layer synchronously to store it. The DM's page freezes for about 0.23 s on an ordinary map and up to about 1.9 s on a very large one, and Live Share publishing waits for it. A targeted fix is proposed (reuse the stored fog when it hasn't changed, encode it without blocking otherwise), not yet made
+- Still to do for Milestone 4: a real-device check on a real network (step-by-step instructions are in the report)
+
+### Internal / Tests
+- `tests/perf/live-share-save-profile.perf.js` with `playwright.perf.config.js` (`npx playwright test --config playwright.perf.config.js`): a profiling harness outside the normal test run. It times each phase from Save to the player showing the new background (persistence, composition, encoding, hashing, snapshot, transfer, verification, image load), the host's long tasks and frame gaps, saves that don't change the background, and the first save after a reload. Results go to `perf-results/` (git-ignored)
 
 ---
 
