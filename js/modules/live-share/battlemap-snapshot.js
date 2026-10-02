@@ -19,7 +19,9 @@
 
 // Must match BattleMapShareState.SCHEMA / VERSION (checked by the unit tests).
 export const SNAPSHOT_SCHEMA = 'dmtoolbox.battlemap.player-safe';
-export const SNAPSHOT_VERSION = 2; // 2: Milestone 3 background and token asset references
+// 2: Milestone 3 background and token asset references; 3: Milestone 4 token aura and vision cone.
+// Only this version is accepted: an older or newer one is rejected, never read with this schema.
+export const SNAPSHOT_VERSION = 3;
 
 // The Milestone 1 projection's own limits: it never produces more than this.
 export const MAX_TOKENS = 500;
@@ -30,10 +32,16 @@ const MAX_ID = 100;
 // World coordinates and sizes in pixels. Far beyond any real map, small enough that geometry stays
 // well-behaved; the projection only ever produces finite numbers.
 export const MAX_COORD = 1e7;
+// Milestone 4 overlays (BattleMapShareState.MAX_OVERLAY_CELLS): aura radius and vision range in grid
+// cells, cone angle in degrees, in (0, 360].
+export const MAX_OVERLAY_CELLS = 1000;
+export const MAX_CONE_ANGLE = 360;
 
 const MEASUREMENT_TYPES = new Set(['line', 'cone', 'circle']);
 const ASSET_ID = /^[0-9a-f]{64}$/;
 const HEX_COLOR = /^#[0-9a-f]{3,8}$/i;
+// Overlay colors are stricter: exactly what the projection produces, #rrggbb in lowercase.
+const OVERLAY_COLOR = /^#[0-9a-f]{6}$/;
 
 const isPlainObject = (v) => !!v && typeof v === 'object' && !Array.isArray(v);
 
@@ -79,6 +87,30 @@ function background(v) {
   if (v.assetId === null) fail('background.assetId is missing');
   return { assetId: assetRef(v.assetId, 'background.assetId'), revision: v.revision };
 }
+// A positive, finite number no greater than `max` (an overlay radius, range or angle).
+function positive(v, max, what) {
+  if (typeof v !== 'number' || !Number.isFinite(v) || v <= 0 || v > max) fail(`${what} is not a number in (0, ${max}]`);
+  return v;
+}
+function overlayColor(v, what) {
+  if (typeof v !== 'string' || !OVERLAY_COLOR.test(v)) fail(`${what} is not a #rrggbb color`);
+  return v;
+}
+// Milestone 4: null (no overlay) or an object; only the listed primitives are copied.
+function aura(v, what) {
+  if (v === null) return null;
+  obj(v, what);
+  return { radius: positive(v.radius, MAX_OVERLAY_CELLS, `${what}.radius`), color: overlayColor(v.color, `${what}.color`) };
+}
+function visionCone(v, what) {
+  if (v === null) return null;
+  obj(v, what);
+  return {
+    range: positive(v.range, MAX_OVERLAY_CELLS, `${what}.range`),
+    angle: positive(v.angle, MAX_CONE_ANGLE, `${what}.angle`),
+    color: overlayColor(v.color, `${what}.color`),
+  };
+}
 function list(v, max, what) {
   if (!Array.isArray(v)) fail(`${what} is not an array`);
   if (v.length > max) fail(`${what} has more than ${max} entries`);
@@ -98,6 +130,8 @@ function readToken(t, i) {
     name: t.name === null ? null : text(t.name, `${where}.name`),
     conditions: list(t.conditions, MAX_CONDITIONS, `${where}.conditions`).map((c, j) => text(c, `${where}.conditions[${j}]`)),
     assetId: assetRef(t.assetId, `${where}.assetId`),
+    aura: aura(t.aura, `${where}.aura`),
+    visionCone: visionCone(t.visionCone, `${where}.visionCone`),
   };
 }
 

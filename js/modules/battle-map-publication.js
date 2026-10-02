@@ -36,6 +36,8 @@
   if (root.BattleMapPublication) return;
 
   const copyConditions = (c) => (Array.isArray(c) ? c.slice() : c);
+  // Milestone 4 overlays: a shallow copy, so a later edit of the token's aura can't reach what was saved.
+  const copyOverlay = (o) => (o && typeof o === 'object' && !Array.isArray(o) ? { ...o } : o);
 
   /** A detached copy of what the projection reads (plus imgSrc for custom-art lookup, never sent). */
   function captureStructured(state, persistentMeasurements) {
@@ -56,6 +58,8 @@
           h: t.h,
           rot: t.rot,
           statusConditions: copyConditions(t.statusConditions),
+          aura: copyOverlay(t.aura),
+          visionCone: copyOverlay(t.visionCone),
           imgSrc: t.imgSrc,
         })),
       },

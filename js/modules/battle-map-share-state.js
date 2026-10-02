@@ -28,7 +28,8 @@
 
   const SCHEMA = 'dmtoolbox.battlemap.player-safe';
   // 2: Milestone 3 added `background` and token `assetId` (references to player-safe assets).
-  const VERSION = 2;
+  // 3: Milestone 4 (2.3.29) added token `aura` and `visionCone` (presentation overlays).
+  const VERSION = 3;
 
   // Milestone 1 limits, so a malformed or huge Battle Map can't produce an unbounded snapshot.
   const MAX_TOKENS = 500;
@@ -36,10 +37,21 @@
   const MAX_CONDITIONS = 32;
   const MAX_TEXT = 200;
   const MEASUREMENT_TYPES = new Set(['line', 'cone', 'circle']);
+  // Milestone 4 overlays: aura radius and vision range in grid cells, cone angle in degrees.
+  const MAX_OVERLAY_CELLS = 1000;
+  const MAX_CONE_ANGLE = 360;
 
   const num = (v, fallback = 0) => (typeof v === 'number' && Number.isFinite(v) ? v : fallback);
   const text = (v) => (typeof v === 'string' ? v.slice(0, MAX_TEXT) : null);
   const color = (v, fallback) => (typeof v === 'string' && /^#[0-9a-f]{3,8}$/i.test(v) ? v : fallback);
+  // Overlay colors: strictly #rrggbb (what the Battle Map's color picker stores), lowercase on the
+  // wire; #rgb is expanded. Anything else gets the overlay's default, as the DM's map draws it.
+  const overlayColor = (v, fallback) => {
+    if (typeof v !== 'string') return fallback;
+    if (/^#[0-9a-f]{6}$/i.test(v)) return v.toLowerCase();
+    if (/^#[0-9a-f]{3}$/i.test(v)) return `#${v[1]}${v[1]}${v[2]}${v[2]}${v[3]}${v[3]}`.toLowerCase();
+    return fallback;
+  };
   const isId = (v) => typeof v === 'string' && v.length > 0 && v.length <= 100;
   // A content-derived asset id (SHA-256 of the encoded bytes, battle-map-share-assets.js).
   const assetId = (v) => (typeof v === 'string' && /^[0-9a-f]{64}$/.test(v) ? v : null);
@@ -51,9 +63,26 @@
     return { assetId: bg.assetId, revision: bg.revision };
   }
 
+  // Milestone 4 presentation overlays, with the DM renderer's semantics (battlemap.html
+  // renderTokenLayer): drawn only when the radius / range is a positive number, so anything else is
+  // absent (null). An over-large one is capped; a missing, zero or invalid angle draws as 90° (the DM
+  // map's default; a negative angle, possible only in data stored before the 2.3.29 dialog clamp, also
+  // becomes 90°),
+  // and more than 360° is a full circle. Only primitives are copied, never the token's objects.
+  function projectAura(a) {
+    if (!a || typeof a !== 'object' || !(num(a.radius) > 0)) return null;
+    return { radius: Math.min(a.radius, MAX_OVERLAY_CELLS), color: overlayColor(a.color, '#8bd3ff') };
+  }
+
+  function projectVisionCone(v) {
+    if (!v || typeof v !== 'object' || !(num(v.range) > 0)) return null;
+    const angle = num(v.angle) > 0 ? Math.min(v.angle, MAX_CONE_ANGLE) : 90;
+    return { range: Math.min(v.range, MAX_OVERLAY_CELLS), angle, color: overlayColor(v.color, '#ffff88') };
+  }
+
   function projectToken(t, tokenAssetId) {
-    // Name only where the DM shows the token's label (§13.1); HP, max HP, image, aura, vision
-    // cone, selection and anything else on the token are not player-safe in Milestone 1.
+    // Name only where the DM shows the token's label (§13.1); HP, max HP, image, selection and
+    // anything else on the token are not player-safe. Aura and vision cone since Milestone 4.
     const name = t.showLabel && typeof t.name === 'string' && t.name.trim() ? text(t.name) : null;
     const conditions = Array.isArray(t.statusConditions)
       ? t.statusConditions.filter((c) => typeof c === 'string' && c.length > 0).slice(0, MAX_CONDITIONS).map(text)
@@ -68,6 +97,8 @@
       name,
       conditions,
       assetId: assetId(tokenAssetId(t)),
+      aura: projectAura(t.aura),
+      visionCone: projectVisionCone(t.visionCone),
     };
   }
 
@@ -118,7 +149,8 @@
         offsetY: num(grid.offsetY),
       },
       // A token the DM hid from players (visibleToPlayers === false, 2.3.27) is left out entirely:
-      // not sent as hidden, simply absent, so nothing about it (id, position, name, art) crosses.
+      // not sent as hidden, simply absent, so nothing about it (id, position, name, art, aura,
+      // vision cone) crosses. The filter runs before anything of the token is projected.
       // Missing means visible, so maps saved before the setting existed are unchanged.
       tokens: tokens
         .filter((t) => t && isId(t.id) && t.visibleToPlayers !== false)
@@ -199,5 +231,5 @@
     };
   }
 
-  root.BattleMapShareState = Object.freeze({ SCHEMA, VERSION, projectPlayerSafeState, createShareStateSeam });
+  root.BattleMapShareState = Object.freeze({ SCHEMA, VERSION, MAX_OVERLAY_CELLS, MAX_CONE_ANGLE, projectPlayerSafeState, createShareStateSeam });
 })(globalThis);

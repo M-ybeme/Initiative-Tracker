@@ -4,7 +4,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import '../../js/modules/battle-map-share-state.js';
 
-const { projectPlayerSafeState, createShareStateSeam, SCHEMA, VERSION } = globalThis.BattleMapShareState;
+const { projectPlayerSafeState, createShareStateSeam, SCHEMA, VERSION, MAX_OVERLAY_CELLS } = globalThis.BattleMapShareState;
 
 const DATA_URL = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==';
 
@@ -67,17 +67,22 @@ function fixture() {
 }
 
 // Version 2 since Milestone 3: `background` and token `assetId` are references to player-safe
-// assets. Without any prepared assets (as here) both are null.
+// assets. Without any prepared assets (as here) both are null. Version 3 since Milestone 4 (2.3.29):
+// each token's `aura` and `visionCone`, as primitives, or null.
 const EXPECTED = {
   schema: 'dmtoolbox.battlemap.player-safe',
-  version: 2,
+  version: 3,
   map: { width: 1400, height: 900 },
   background: null,
   mapTransform: { scale: 1.5, x: -20, y: 10 },
   grid: { size: 70, unitsPerCell: 5, color: '#6aa5ff', alpha: 0.35, show: true, offsetX: 3, offsetY: 4 },
   tokens: [
-    { id: 't_goblin1', x: 210, y: 140, w: 70, h: 70, rot: 0.5, name: 'Goblin Boss', conditions: ['Poisoned', 'Prone'], assetId: null },
-    { id: 't_ranger', x: 350, y: 280, w: 70, h: 70, rot: 0, name: null, conditions: [], assetId: null },
+    {
+      id: 't_goblin1', x: 210, y: 140, w: 70, h: 70, rot: 0.5, name: 'Goblin Boss', conditions: ['Poisoned', 'Prone'], assetId: null,
+      aura: { radius: 2, color: '#ff0000' },
+      visionCone: { range: 6, angle: 90, color: '#ffff88' },
+    },
+    { id: 't_ranger', x: 350, y: 280, w: 70, h: 70, rot: 0, name: null, conditions: [], assetId: null, aura: null, visionCone: null },
   ],
   measurements: [{ id: 'm_1', type: 'cone', x1: 10, y1: 20, x2: 110, y2: 60, color: '#ff8800' }],
 };
@@ -105,13 +110,16 @@ describe('player-safe projection: what is included', () => {
   it('is exactly the approved fields (hand-written expected snapshot)', () => {
     expect(projectPlayerSafeState(fixture())).toEqual(EXPECTED);
     expect(SCHEMA).toBe(EXPECTED.schema);
-    expect(VERSION).toBe(2);
+    expect(VERSION).toBe(3);
   });
 
   it('gives each token exactly the approved keys, in the same shape', () => {
     for (const token of projectPlayerSafeState(fixture()).tokens) {
-      expect(Object.keys(token).sort()).toEqual(['assetId', 'conditions', 'h', 'id', 'name', 'rot', 'w', 'x', 'y']);
+      expect(Object.keys(token).sort()).toEqual(['assetId', 'aura', 'conditions', 'h', 'id', 'name', 'rot', 'visionCone', 'w', 'x', 'y']);
     }
+    const [goblin] = projectPlayerSafeState(fixture()).tokens;
+    expect(Object.keys(goblin.aura).sort()).toEqual(['color', 'radius']);
+    expect(Object.keys(goblin.visionCone).sort()).toEqual(['angle', 'color', 'range']);
   });
 
   it('has exactly the approved top-level and nested keys', () => {
@@ -138,7 +146,7 @@ describe('player-safe projection: what is included', () => {
   it('handles an empty Battle Map', () => {
     expect(projectPlayerSafeState({ state: { map: { imgSrc: '', img: null, w: 0, h: 0 }, mapTransform: { scale: 1, x: 0, y: 0 }, grid: {}, tokens: [] }, persistentMeasurements: [] })).toEqual({
       schema: 'dmtoolbox.battlemap.player-safe',
-      version: 2,
+      version: 3,
       map: { width: 0, height: 0 },
       background: null,
       mapTransform: { scale: 1, x: 0, y: 0 },
@@ -193,11 +201,6 @@ describe('player-safe projection: what is excluded', () => {
     expect(json()).not.toMatch(/data:|https?:\/\/|base64/);
   });
 
-  it('has no aura or vision cone (not in the Milestone 1 allowlist)', () => {
-    const keys = allKeys(projected());
-    expect(keys.has('aura')).toBe(false);
-    expect(keys.has('visionCone')).toBe(false);
-  });
 
   it('has no browser-storage metadata', () => {
     expect(json()).not.toMatch(/dmtoolbox\.battlemap\.mvp|localStorage|indexedDB/i);
@@ -224,7 +227,7 @@ describe('player-safe projection: what is excluded', () => {
     src.state.grid.color = 'url(javascript:alert(1))';
     src.persistentMeasurements[0].color = { evil: true };
     const p = projectPlayerSafeState(src);
-    expect(p.tokens[0]).toEqual({ id: 't_goblin1', x: 0, y: 140, w: 70, h: 70, rot: 0, name: null, conditions: ['Prone'], assetId: null });
+    expect(p.tokens[0]).toEqual({ ...EXPECTED.tokens[0], x: 0, rot: 0, name: null, conditions: ['Prone'] });
     expect(p.grid.color).toBe('#6aa5ff');
     expect(p.measurements[0].color).toBe('#8bd3ff');
   });
@@ -236,6 +239,130 @@ describe('player-safe projection: what is excluded', () => {
     const p = projectPlayerSafeState(src);
     expect(p.tokens.map((t) => t.id)).toEqual(['t_goblin1', 't_ranger']);
     expect(p.measurements.map((m) => m.id)).toEqual(['m_1']);
+  });
+});
+
+describe('player-safe projection: aura and vision cone (Milestone 4)', () => {
+  const tokenWith = (fields) => {
+    const src = fixture();
+    Object.assign(src.state.tokens[0], fields);
+    return projectPlayerSafeState(src).tokens[0];
+  };
+
+  it('projects the canonical fields as they are (cells, degrees, #rrggbb)', () => {
+    const t = tokenWith({ aura: { radius: 2.5, color: '#8bd3ff' }, visionCone: { range: 12, angle: 60, color: '#ffff88' } });
+    expect(t.aura).toEqual({ radius: 2.5, color: '#8bd3ff' });
+    expect(t.visionCone).toEqual({ range: 12, angle: 60, color: '#ffff88' });
+  });
+
+  it('missing, removed or disabled overlays are null (legacy maps have none)', () => {
+    for (const absent of [undefined, null, {}, { radius: 0, color: '#ff0000' }, { radius: -2, color: '#ff0000' }]) {
+      expect(tokenWith({ aura: absent }).aura).toBeNull();
+    }
+    for (const absent of [undefined, null, {}, { range: 0, angle: 90, color: '#ff0000' }, { range: -6, angle: 90, color: '#ff0000' }]) {
+      expect(tokenWith({ visionCone: absent }).visionCone).toBeNull();
+    }
+    const legacy = fixture();
+    delete legacy.state.tokens[0].aura;
+    delete legacy.state.tokens[0].visionCone;
+    expect(projectPlayerSafeState(legacy).tokens[0]).toEqual({ ...EXPECTED.tokens[0], aura: null, visionCone: null });
+  });
+
+  it.each([
+    ['NaN', NaN],
+    ['Infinity', Infinity],
+    ['-Infinity', -Infinity],
+    ['a numeric string', '5'],
+    ['an object', { value: 5 }],
+    ['an array', [5]],
+    ['a boolean', true],
+  ])('a radius or range that is %s means no overlay', (_label, bad) => {
+    expect(tokenWith({ aura: { radius: bad, color: '#ff0000' } }).aura).toBeNull();
+    expect(tokenWith({ visionCone: { range: bad, angle: 90, color: '#ff0000' } }).visionCone).toBeNull();
+  });
+
+  it('caps an absurdly large radius or range', () => {
+    expect(tokenWith({ aura: { radius: 1e12, color: '#ff0000' } }).aura.radius).toBe(MAX_OVERLAY_CELLS);
+    expect(tokenWith({ visionCone: { range: 1e12, angle: 90, color: '#ff0000' } }).visionCone.range).toBe(MAX_OVERLAY_CELLS);
+    expect(MAX_OVERLAY_CELLS).toBe(1000);
+  });
+
+  it.each([
+    ['missing', undefined, 90],
+    ['zero (the DM map draws 90)', 0, 90],
+    ['negative (the DM canvas draws a backward wedge; players get the default)', -45, 90],
+    ['NaN', NaN, 90],
+    ['Infinity', Infinity, 90],
+    ['a string', '45', 90],
+    ['an object', { deg: 45 }, 90],
+    ['over 360 (a full circle)', 720, 360],
+    ['exactly 360', 360, 360],
+    ['small but positive', 0.5, 0.5],
+  ])('a vision angle that is %s is coerced to a drawable angle', (_label, angle, expected) => {
+    expect(tokenWith({ visionCone: { range: 6, angle, color: '#ff0000' } }).visionCone.angle).toBe(expected);
+  });
+
+  it('accepts only #rrggbb colors (#rgb expanded, lowercased); anything else becomes the default', () => {
+    const aura = (color) => tokenWith({ aura: { radius: 1, color } }).aura.color;
+    const cone = (color) => tokenWith({ visionCone: { range: 1, angle: 90, color } }).visionCone.color;
+    expect(aura('#AbCdEf')).toBe('#abcdef');
+    expect(aura('#f80')).toBe('#ff8800');
+    for (const bad of [undefined, '', 'red', 'rgb(255,0,0)', '#12345', '#1234567', '#12345678', '#ggg000', ' #ff0000', '#ff0000;background:url(x)', 'url(javascript:alert(1))', '"><script>alert(1)</script>', { evil: 1 }, ['#ff0000'], 16711680]) {
+      expect(aura(bad), String(bad)).toBe('#8bd3ff');
+      expect(cone(bad), String(bad)).toBe('#ffff88');
+    }
+  });
+
+  it('copies only radius / range / angle / color: nothing else on the overlay objects crosses', () => {
+    const t = tokenWith({
+      aura: { radius: 2, color: '#ff0000', label: 'Spirit Guardians (DM: concentration ends round 3)', owner: { hp: 7 } },
+      visionCone: { range: 6, angle: 90, color: '#ffff88', note: 'truesight', __secret: true },
+    });
+    expect(t.aura).toEqual({ radius: 2, color: '#ff0000' });
+    expect(t.visionCone).toEqual({ range: 6, angle: 90, color: '#ffff88' });
+    expect(JSON.stringify(t)).not.toMatch(/Spirit|concentration|owner|truesight|secret/);
+  });
+
+  it('an overlay that is not a plain object is null', () => {
+    for (const bad of ['radius:5', 5, true, () => ({ radius: 5 }), [2, '#ff0000']]) {
+      expect(tokenWith({ aura: bad }).aura).toBeNull();
+      expect(tokenWith({ visionCone: bad }).visionCone).toBeNull();
+    }
+  });
+
+  it('a hidden token contributes nothing, its overlays included', () => {
+    const src = fixture();
+    src.state.tokens[0].visibleToPlayers = false;
+    src.state.tokens[0].aura = { radius: 4, color: '#abcdef' };
+    src.state.tokens[0].visionCone = { range: 7, angle: 33, color: '#fedcba' };
+    const p = projectPlayerSafeState(src);
+    expect(p.tokens.map((t) => t.id)).toEqual(['t_ranger']);
+    expect(p.tokens[0].aura).toBeNull();
+    expect(p.tokens[0].visionCone).toBeNull();
+    expect(JSON.stringify(p)).not.toMatch(/abcdef|fedcba|t_goblin1|"radius":4|"range":7|"angle":33/);
+  });
+
+  it('overlay objects are detached copies in both directions', () => {
+    const src = fixture();
+    const p = projectPlayerSafeState(src);
+    expect(p.tokens[0].aura).not.toBe(src.state.tokens[0].aura);
+    expect(p.tokens[0].visionCone).not.toBe(src.state.tokens[0].visionCone);
+    p.tokens[0].aura.radius = 99;
+    p.tokens[0].visionCone.color = '#000000';
+    expect(src.state.tokens[0].aura).toEqual({ radius: 2, color: '#ff0000' });
+    expect(src.state.tokens[0].visionCone.color).toBe('#ffff88');
+
+    const snap = createShareStateSeam({ getSource: () => src }).getPlayerSafeState();
+    src.state.tokens[0].aura.radius = 8;
+    src.state.tokens[0].visionCone.angle = 10;
+    expect(snap.tokens[0].aura.radius).toBe(2);
+    expect(snap.tokens[0].visionCone.angle).toBe(90);
+  });
+
+  it('rotation is unchanged (the cone points along it); un-normalized values stay as the Battle Map has them', () => {
+    for (const rot of [0, Math.PI / 2, Math.PI, (3 * Math.PI) / 2, 2 * Math.PI, -Math.PI / 2, 9 * Math.PI]) {
+      expect(tokenWith({ rot }).rot).toBe(rot);
+    }
   });
 });
 
@@ -302,6 +429,14 @@ describe('share-state seam: revision and change signal', () => {
     ['loading a different map size', (s) => { s.state.map.w = 2000; }],
     ['adding a persistent measurement', (s) => { s.persistentMeasurements.push({ id: 'm_2', type: 'line', x1: 0, y1: 0, x2: 5, y2: 5, color: '#ffffff' }); }],
     ['moving a persistent measurement', (s) => { s.persistentMeasurements[0].x2 = 300; }],
+    ['changing an aura radius', (s) => { s.state.tokens[0].aura.radius = 5; }],
+    ['changing an aura color', (s) => { s.state.tokens[0].aura.color = '#00ff00'; }],
+    ['adding an aura', (s) => { s.state.tokens[1].aura = { radius: 1, color: '#123456' }; }],
+    ['removing an aura', (s) => { delete s.state.tokens[0].aura; }],
+    ['changing a vision range', (s) => { s.state.tokens[0].visionCone.range = 12; }],
+    ['changing a vision angle', (s) => { s.state.tokens[0].visionCone.angle = 60; }],
+    ['changing a vision color', (s) => { s.state.tokens[0].visionCone.color = '#ff00ff'; }],
+    ['removing a vision cone', (s) => { delete s.state.tokens[0].visionCone; }],
   ])('player-visible change: %s -> revision +1 and one signal', (_label, change) => {
     const src = fixture();
     const { seam, events } = seamOver(src);
@@ -321,7 +456,6 @@ describe('share-state seam: revision and change signal', () => {
     ['renaming a token whose label is hidden', (s) => { s.state.tokens[1].name = 'Aria the Bold'; }],
     ['changing a token image', (s) => { s.state.tokens[0].imgSrc = 'data:image/png;base64,AAAA'; s.state.tokens[0].img = null; }],
     ['a token image finishing loading', (s) => { s.state.tokens[1].img = { fakeImage: true }; }],
-    ['changing an aura or vision cone', (s) => { s.state.tokens[0].aura.radius = 5; s.state.tokens[0].visionCone.range = 12; }],
     ['editing fog', (s) => { s.fogShapes.push({ id: 'f_2' }); }],
     ['selecting a measurement', (s) => { s.persistentMeasurements[0].selected = false; }],
     ['editing an unknown field', (s) => { s.state.tokens[0].dmNotes = 'changed'; }],

@@ -308,8 +308,11 @@ test.describe('Live Share remote structured rendering (Milestone 2)', () => {
       expect(Object.keys(msg).sort()).toEqual(['payload', 'type', 'v']);
       expect(msg).toMatchObject({ v: 0, type: 'battlemap-snapshot' });
       expect(Object.keys(msg.payload).sort()).toEqual(['background', 'grid', 'map', 'mapTransform', 'measurements', 'revision', 'schema', 'tokens', 'version']);
-      for (const t of msg.payload.tokens) expect(Object.keys(t).sort()).toEqual(['assetId', 'conditions', 'h', 'id', 'name', 'rot', 'w', 'x', 'y']);
-      expect(text).not.toMatch(/"hp"|maxHp|imgSrc|data:image|\/images\/|"selected"|"view"|fog|aura|visionCone/i);
+      for (const t of msg.payload.tokens) {
+        expect(Object.keys(t).sort()).toEqual(['assetId', 'aura', 'conditions', 'h', 'id', 'name', 'rot', 'visionCone', 'w', 'x', 'y']);
+        expect([t.aura, t.visionCone]).toEqual([null, null]); // none set on this map (Milestone 4)
+      }
+      expect(text).not.toMatch(/"hp"|maxHp|imgSrc|data:image|\/images\/|"selected"|"view"|fog/i);
     }
 
     // 11-12: an old snapshot arrives late (replayed on the real channel): the player ignores it.
@@ -358,12 +361,14 @@ test.describe('Live Share remote structured rendering (Milestone 2)', () => {
       const base = JSON.parse(window.__lsSent[0]);
       const send = (msg) => window.__lsChannels[0].send(JSON.stringify(msg));
       send({ ...base, payload: { ...base.payload, revision: 1e9, schema: 'something.else' } });
-      send({ ...base, payload: { ...base.payload, revision: 1e9, version: 3 } });
+      send({ ...base, payload: { ...base.payload, revision: 1e9, version: 4 } }); // newer than this player
+      send({ ...base, payload: { ...base.payload, revision: 1e9, version: 2 } }); // a 2.3.28 host's
+      send({ ...base, payload: { ...base.payload, revision: 1e9, tokens: [{ ...base.payload.tokens[0], aura: { radius: 2, color: 'red;fill:url(https://evil.example/x)' } }] } });
       send({ ...base, payload: { ...base.payload, revision: '1000' } });
       send({ ...base, payload: { ...base.payload, revision: 1e9, tokens: [{ ...base.payload.tokens[0], x: 'NaN' }] } });
       send({ ...base, payload: { ...base.payload, revision: 1e9, tokens: Array(501).fill(base.payload.tokens[0]) } });
     });
-    await expect.poll(async () => (await diagnostics(player)).snapshots.snapshotsRejectedInvalid).toBe(5);
+    await expect.poll(async () => (await diagnostics(player)).snapshots.snapshotsRejectedInvalid).toBe(7);
     expect(await playerModel(player)).toEqual(good);
 
     // A newer snapshot whose name is markup: drawn as text, no element is created from it.

@@ -247,3 +247,83 @@ describe('save-gated publication', () => {
     expect(snapshot().background).toBeNull();
   });
 });
+
+describe('aura and vision cone publication (Milestone 4)', () => {
+  const withOverlays = () => {
+    const w = working();
+    w.state.tokens[0].aura = { radius: 2, color: '#ff0000' };
+    w.state.tokens[0].visionCone = { range: 6, angle: 90, color: '#ffff88' };
+    w.state.tokens[2].aura = { radius: 9, color: '#abcdef' }; // the hidden spy
+    w.state.tokens[2].visionCone = { range: 11, angle: 45, color: '#fedcba' };
+    return w;
+  };
+
+  it('captureStructured takes detached copies of the overlays', () => {
+    const w = withOverlays();
+    const captured = captureStructured(w.state, w.persistentMeasurements);
+    expect(captured.state.tokens[0].aura).not.toBe(w.state.tokens[0].aura);
+    expect(captured.state.tokens[0].visionCone).not.toBe(w.state.tokens[0].visionCone);
+    w.state.tokens[0].aura.radius = 5;
+    w.state.tokens[0].aura.color = '#00ff00';
+    w.state.tokens[0].visionCone.angle = 30;
+    delete w.state.tokens[0].visionCone;
+    expect(captured.state.tokens[0].aura).toEqual({ radius: 2, color: '#ff0000' });
+    expect(captured.state.tokens[0].visionCone).toEqual({ range: 6, angle: 90, color: '#ffff88' });
+    // Tokens without overlays capture none.
+    expect(captured.state.tokens[1].aura).toBeUndefined();
+    expect(captured.state.tokens[1].visionCone).toBeUndefined();
+  });
+
+  it('overlay and rotation edits stay private until saved; the save publishes them with the same background', async () => {
+    const w = withOverlays();
+    const assets = fakeAssets();
+    assets.bg = { assetId: HEX('1'), revision: 4 };
+    const { publisher, seam, signals, snapshot } = wire(assets);
+    publisher.publish({ structured: captureStructured(w.state, w.persistentMeasurements), backgroundInputs: { fog: 'A' } });
+    await assets.finish();
+    const A = snapshot();
+    expect(A.tokens[0]).toMatchObject({ rot: 0, aura: { radius: 2, color: '#ff0000' }, visionCone: { range: 6, angle: 90, color: '#ffff88' } });
+
+    // Unsaved: radius, color, range, angle, cone color, rotation, an aura added to the hero.
+    w.state.tokens[0].aura.radius = 4;
+    w.state.tokens[0].aura.color = '#00ff00';
+    w.state.tokens[0].visionCone.range = 12;
+    w.state.tokens[0].visionCone.angle = 60;
+    w.state.tokens[0].visionCone.color = '#ff00ff';
+    w.state.tokens[0].rot = Math.PI / 2;
+    w.state.tokens[1].aura = { radius: 1, color: '#123456' };
+    for (let i = 0; i < 5; i++) seam.check();
+    expect(snapshot()).toEqual(A);
+    expect(signals).toEqual([A.revision]);
+
+    // Save: one new revision with all of them; the background reference is unchanged.
+    publisher.publish({ structured: captureStructured(w.state, w.persistentMeasurements), backgroundInputs: { fog: 'A' } });
+    await assets.finish();
+    const B = snapshot();
+    expect(B.revision).toBe(A.revision + 1);
+    expect(signals).toEqual([A.revision, B.revision]);
+    expect(B.tokens[0]).toMatchObject({ rot: Math.PI / 2, aura: { radius: 4, color: '#00ff00' }, visionCone: { range: 12, angle: 60, color: '#ff00ff' } });
+    expect(B.tokens[1].aura).toEqual({ radius: 1, color: '#123456' });
+    expect(B.background).toEqual(A.background);
+    expect(B.background).toEqual({ assetId: HEX('1'), revision: 4 });
+  });
+
+  it('a hidden token publishes no overlay information; showing it and saving brings the overlays back', async () => {
+    const w = withOverlays();
+    const { publisher, snapshot } = wire();
+    await publisher.publish({ structured: captureStructured(w.state, w.persistentMeasurements) });
+    const hidden = snapshot();
+    expect(hidden.tokens.map((t) => t.id)).toEqual(['t_bard', 't_hero']);
+    expect(JSON.stringify(hidden)).not.toMatch(/t_spy|abcdef|fedcba|"radius":9|"range":11|"angle":45/);
+
+    w.state.tokens[2].visibleToPlayers = true; // not saved yet
+    expect(snapshot()).toEqual(hidden);
+    await publisher.publish({ structured: captureStructured(w.state, w.persistentMeasurements) });
+    const shown = snapshot().tokens.find((t) => t.id === 't_spy');
+    expect(shown).toMatchObject({ aura: { radius: 9, color: '#abcdef' }, visionCone: { range: 11, angle: 45, color: '#fedcba' } });
+
+    w.state.tokens[2].visibleToPlayers = false;
+    await publisher.publish({ structured: captureStructured(w.state, w.persistentMeasurements) });
+    expect(JSON.stringify(snapshot())).not.toMatch(/t_spy|abcdef|fedcba/);
+  });
+});

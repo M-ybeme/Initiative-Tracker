@@ -2969,7 +2969,9 @@
     else {
       activeModalToken.visionCone = {
         range: r,
-        angle: parseFloat(document.getElementById('visionAngle').value) || 90,
+        // The input's min/max (10-360) are not enforced on .value: clamp, so a negative angle (drawn
+        // as a backward wedge) or one over a full circle is never stored. Empty or 0 is the 90 default.
+        angle: Math.min(360, Math.max(10, parseFloat(document.getElementById('visionAngle').value) || 90)),
         color: document.getElementById('visionColor').value
       };
     }

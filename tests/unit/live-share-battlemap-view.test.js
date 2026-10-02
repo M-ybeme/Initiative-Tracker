@@ -171,7 +171,7 @@ describe('Battle Map player view: assets (Milestone 3)', () => {
     const img = svg.querySelector('.ls-background-image');
     expect(['href', 'x', 'y', 'width', 'height', 'preserveAspectRatio'].map((a) => img.getAttribute(a))).toEqual(['blob:http://localhost/bg', '-20', '10', '1500', '900', 'none']);
     const order = [...svg.children].map((n) => n.getAttribute('class'));
-    expect(order).toEqual(['ls-background', 'ls-map-surface', 'ls-background-image', 'ls-grid', 'ls-tokens', 'ls-measurements']);
+    expect(order).toEqual(['ls-background', 'ls-map-surface', 'ls-background-image', 'ls-grid', 'ls-overlays', 'ls-tokens', 'ls-measurements']);
   });
 
   it('keeps the neutral placeholder surface while the background is missing', () => {
@@ -207,5 +207,131 @@ describe('Battle Map player view: assets (Milestone 3)', () => {
     expect(waiting.getAttribute('data-art')).toBe('marker');
     expect(plain.getAttribute('data-art')).toBe('marker');
     expect(plain.querySelector('ellipse')).not.toBeNull();
+  });
+});
+
+describe('Battle Map player view: aura and vision cone (Milestone 4)', () => {
+  // Centre (125, 225); grid 50 per cell.
+  const token = (over = {}) => ({ id: 't_seer', x: 100, y: 200, w: 50, h: 50, rot: 0, name: null, conditions: [], assetId: null, aura: null, visionCone: null, ...over });
+  const withOverlays = (over = {}, snap = {}) => snapshot({ tokens: [token(over)], measurements: [], ...snap });
+  const near = (actual, expected) => actual.forEach((v, i) => expect(v).toBeCloseTo(expected[i], 1));
+  // Path "M cx cy L start A r r 0 0 1 mid A r r 0 0 1 end Z" -> its points and radius.
+  const cone = () => {
+    const n = nums(svg.querySelector('.ls-vision-cone').getAttribute('d'));
+    return { apex: n.slice(0, 2), start: n.slice(2, 4), r: n[4], mid: n.slice(9, 11), end: n.slice(16, 18), flags: [n[6], n[7], n[8], n[13], n[14], n[15]] };
+  };
+
+  it('draws the aura centred on the token, (radius + 0.5) cells, as the DM map does', () => {
+    renderBattleMapSnapshot(svg, withOverlays({ aura: { radius: 2, color: '#ff0000' } }));
+    const c = svg.querySelector('.ls-aura');
+    expect(['cx', 'cy', 'r'].map((a) => Number(c.getAttribute(a)))).toEqual([125, 225, 125]);
+    expect([c.getAttribute('fill'), c.getAttribute('stroke'), c.getAttribute('fill-opacity'), c.getAttribute('stroke-opacity')]).toEqual(['#ff0000', '#ff0000', '0.2', '0.6']);
+    expect(c.closest('.ls-token-overlays').getAttribute('data-token-id')).toBe('t_seer');
+  });
+
+  it('scales the aura and cone with the grid size, in world units', () => {
+    renderBattleMapSnapshot(svg, withOverlays({ aura: { radius: 2, color: '#ff0000' }, visionCone: { range: 3, angle: 90, color: '#ffff88' } }, { grid: { ...snapshot().grid, size: 100 } }));
+    expect(Number(svg.querySelector('.ls-aura').getAttribute('r'))).toBe(250);
+    expect(cone().r).toBe(300);
+    near(cone().mid, [125 + 300, 225]);
+  });
+
+  it('follows the token position (non-origin, negative coordinates)', () => {
+    renderBattleMapSnapshot(svg, withOverlays({ x: -475, y: 1230, aura: { radius: 1, color: '#ff0000' }, visionCone: { range: 2, angle: 60, color: '#ffff88' } }));
+    const c = svg.querySelector('.ls-aura');
+    expect([Number(c.getAttribute('cx')), Number(c.getAttribute('cy'))]).toEqual([-450, 1255]);
+    near(cone().apex, [-450, 1255]);
+    near(cone().mid, [-450 + 100, 1255]);
+  });
+
+  it('draws the vision cone from the token centre, range cells long, angle degrees wide, about the rotation', () => {
+    renderBattleMapSnapshot(svg, withOverlays({ rot: Math.PI / 2, visionCone: { range: 6, angle: 90, color: '#ffff88' } }));
+    const { apex, start, mid, end, r, flags } = cone();
+    near(apex, [125, 225]);
+    expect(r).toBe(300);
+    const d = 300 * Math.SQRT1_2;
+    near(start, [125 + d, 225 + d]); // rot - 45°
+    near(mid, [125, 525]); // straight along the rotation (+y on screen)
+    near(end, [125 - d, 225 + d]); // rot + 45°
+    expect(flags).toEqual([0, 0, 1, 0, 0, 1]); // two clockwise arcs, each at most 180°
+    const p = svg.querySelector('.ls-vision-cone');
+    expect([p.getAttribute('fill'), p.getAttribute('stroke'), p.getAttribute('fill-opacity'), p.getAttribute('stroke-opacity')]).toEqual(['#ffff88', '#ffff88', '0.15', '0.4']);
+  });
+
+  it('rotation 0 points along +x, as on the DM canvas', () => {
+    renderBattleMapSnapshot(svg, withOverlays({ visionCone: { range: 2, angle: 30, color: '#ffff88' } }));
+    near(cone().mid, [225, 225]);
+  });
+
+  it.each([
+    ['0 and 2π', 0, 2 * Math.PI],
+    ['0 and -2π', 0, -2 * Math.PI],
+    ['0 and 6π (legacy unnormalized)', 0, 6 * Math.PI],
+    ['3π/2 and -π/2', (3 * Math.PI) / 2, -Math.PI / 2],
+    ['π and -π', Math.PI, -Math.PI],
+    ['π/2 and 5π/2', Math.PI / 2, (5 * Math.PI) / 2],
+  ])('equivalent rotations (%s) draw the same cone', (_label, a, b) => {
+    renderBattleMapSnapshot(svg, withOverlays({ rot: a, visionCone: { range: 4, angle: 75, color: '#ffff88' } }));
+    const first = cone();
+    renderBattleMapSnapshot(svg, withOverlays({ rot: b, visionCone: { range: 4, angle: 75, color: '#ffff88' } }));
+    const second = cone();
+    for (const k of ['apex', 'start', 'mid', 'end']) near(second[k], first[k]);
+  });
+
+  it.each([
+    [0, [225, 225]],
+    [90, [125, 325]],
+    [180, [25, 225]],
+    [270, [125, 125]],
+    [360, [225, 225]],
+  ])('the cone points along a %s° rotation, and turns with the token', (deg, mid) => {
+    const rot = (deg * Math.PI) / 180;
+    renderBattleMapSnapshot(svg, withOverlays({ rot, visionCone: { range: 2, angle: 90, color: '#ffff88' } }));
+    near(cone().mid, mid);
+    // The token body turns by the same rotation.
+    expect(nums(svg.querySelector('.ls-token-body').getAttribute('transform'))[2]).toBeCloseTo(deg, 1);
+  });
+
+  it('a 360° cone is a whole circle (start and end meet opposite the midpoint)', () => {
+    renderBattleMapSnapshot(svg, withOverlays({ visionCone: { range: 2, angle: 360, color: '#ffff88' } }));
+    const { start, mid, end } = cone();
+    near(start, [25, 225]);
+    near(end, [25, 225]);
+    near(mid, [225, 225]);
+  });
+
+  it('draws overlays beneath every token (as on the DM map), and never as interactive content', () => {
+    renderBattleMapSnapshot(svg, withOverlays({ aura: { radius: 1, color: '#ff0000' }, visionCone: { range: 2, angle: 90, color: '#ffff88' } }));
+    const order = [...svg.children].map((n) => n.getAttribute('class'));
+    expect(order.slice(-3)).toEqual(['ls-overlays', 'ls-tokens', 'ls-measurements']);
+    expect(svg.querySelector('.ls-overlays').getAttribute('pointer-events')).toBe('none');
+    // Aura below the cone within a token's overlays, as the DM draws them.
+    expect([...svg.querySelector('.ls-token-overlays').children].map((n) => n.getAttribute('class'))).toEqual(['ls-aura', 'ls-vision-cone']);
+    expect(svg.querySelector('.ls-overlays [style], .ls-overlays a, .ls-overlays foreignObject, .ls-overlays [onclick]')).toBeNull();
+  });
+
+  it('draws nothing for a token without overlays, or when the grid has no size', () => {
+    renderBattleMapSnapshot(svg, withOverlays());
+    expect(svg.querySelector('.ls-overlays').childNodes).toHaveLength(0);
+    renderBattleMapSnapshot(svg, withOverlays({ aura: { radius: 2, color: '#ff0000' } }, { grid: { ...snapshot().grid, size: 0 } }));
+    expect(svg.querySelector('.ls-aura')).toBeNull();
+  });
+
+  it('removes the overlays of a token the next snapshot no longer has', () => {
+    renderBattleMapSnapshot(svg, withOverlays({ aura: { radius: 2, color: '#ff0000' }, visionCone: { range: 2, angle: 90, color: '#ffff88' } }));
+    expect(svg.querySelectorAll('.ls-token-overlays')).toHaveLength(1);
+    renderBattleMapSnapshot(svg, snapshot({ revision: 13, tokens: [], measurements: [] }));
+    expect(svg.querySelectorAll('.ls-token-overlays, .ls-aura, .ls-vision-cone')).toHaveLength(0);
+  });
+
+  it('overlays do not change how the view is framed', () => {
+    const plain = withOverlays();
+    const big = withOverlays({ aura: { radius: 1000, color: '#ff0000' }, visionCone: { range: 1000, angle: 360, color: '#ffff88' } });
+    expect(computeViewBox(big)).toEqual(computeViewBox(plain));
+  });
+
+  it('does not mutate a snapshot with overlays', () => {
+    const s = deepFreeze(withOverlays({ aura: { radius: 2, color: '#ff0000' }, visionCone: { range: 2, angle: 90, color: '#ffff88' } }));
+    expect(() => renderBattleMapSnapshot(svg, s)).not.toThrow();
   });
 });

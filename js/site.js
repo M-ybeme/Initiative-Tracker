@@ -1,7 +1,8 @@
 const DM_TOOLBOX_BUILD = {
   name: "The DM's Toolbox",
-  version: "2.3.28",
+  version: "2.3.29",
   recentChanges: [
+    "New (Live Share test mode): players now see the auras and vision cones of the tokens they can see, as you last saved them; changing one or turning a token does not resend the map",
     "Fix: on the Battle Map, turning Measure off with its button while Persistent is on no longer leaves a stray measurement ending at the button",
     "Fix: right-clicking a Battle Map token no longer moves it (an off-grid token used to snap to the grid) or marks the map unsaved, and its menu opens reliably",
     "New: the Battle Map has a Save button next to the Fog / Measure tabs; it lights up when there are unsaved changes, and Save, Ctrl+S and Save Session all do the same save",

@@ -16,11 +16,29 @@ The DM's Toolbox has evolved through focused feature releases. Minor versions (2
 - **1.9.x**: Battle map measurement tools, persistent fog shapes, and generator integration across NPC/Tavern/Shop systems
 - **1.8.x**: Spell database expansion to 432+ spells, inventory management, loot generator overhaul, and character token generation
 
-**Current version: 2.3.28 (September 2026)**
+**Current version: 2.3.29 (October 2026)**
 
 ---
 
 ## [Unreleased]
+
+---
+
+## [2.3.29] - 2026-10-01
+**Live Share presentation overlays**
+
+### Live Share
+- **Players now see the auras of tokens they can see, as saved.** A token's aura (Set Aura: radius in cells and color) is drawn on the player's map like on yours: a circle of the radius plus half a cell around the token, in its color, under the tokens. It follows the token and the grid size
+- **Players now see vision cones, as saved.** A token's vision cone (Set Vision: range in cells, angle and color) is drawn from the token's centre, pointing the way the token is turned, and turns with it. It is an indicator only: it does not decide what players can see, does not touch the fog and does not hide or reveal anything
+- **Auras and vision cones are sent as small structured values, never as part of the map image.** Changing one, or turning a token, and saving sends a new structured update; the fogged map background is not composed again or resent (its id and revision stay the same)
+- **A token hidden from players (Visible to Players off) sends nothing of its aura or vision cone**, just as it sends nothing else. Hiding or showing a token takes its overlays away or brings them back on the next save
+- **Battle Map Save still decides what players see.** Changing an aura or vision cone marks the map unsaved; players keep the last saved overlays until you save
+- **Fixed: the Vision dialog could store a negative angle**, which your map drew as a backward wedge (players would have seen a normal 90° cone). The angle is now kept within the dialog's 10–360° range: below 10 becomes 10, above 360 becomes 360, and empty or 0 is still the 90° default
+- Only exact `#rrggbb` colors, finite in-range sizes (up to 1000 cells) and angles (up to 360°) are sent, and the player checks them again before drawing. A player and host must both be on 2.3.29: the player refuses map updates in the older format rather than misreading them
+
+### Internal / Tests
+- The Battle Map's player-safe snapshot is now version 3: each token has `aura` (`null` or `{ radius, color }`) and `visionCone` (`null` or `{ range, angle, color }`). Tests cover the projection (primitives only, detached copies, coercion of bad values, hidden tokens), the player's validation (NaN, Infinity, negative, huge, wrong types, CSS or markup in colors, extra properties), the player's drawing (geometry, rotation, grid scale, layer order), and in the browser: saving vs. unsaved edits for auras, vision cones, rotation and grid size, Visible to Players (custom art included), the background not being rebuilt or resent, a reload with a draft, and different player screen shapes
+- A typical 12-token snapshot grows from about 2.1 KB to 2.4 KB (about 3.2 KB if every token has both overlays)
 
 ---
 

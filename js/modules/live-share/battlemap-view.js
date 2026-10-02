@@ -19,6 +19,12 @@
  *              centre. Drawn with its custom art when that has arrived (Milestone 3), otherwise as an
  *              ellipse marker with a notch marking the image's top edge.
  *   labels     name and conditions sit unrotated above the token, as on the DM's map.
+ *   overlays   (Milestone 4) a token's aura and vision cone, drawn beneath every token as on the DM's
+ *              map. Aura: a circle about the token's centre of (radius + 0.5) cells, the extra half
+ *              cell being the token's own. Vision cone: a wedge from the centre, `range` cells long and
+ *              `angle` degrees wide, centred on the token's rotation (radians; 0 points along +x).
+ *              Both are grid-relative world geometry, so they follow grid size and the token. They are
+ *              presentation only: they never take part in the view's framing or hit-testing.
  *   measure    line; cone (90°, apex at x1,y1); circle (radius = length + half a cell, like the DM's).
  *              Their distance labels are derived here from the geometry and the grid's units per cell.
  *
@@ -163,6 +169,45 @@ function renderToken(doc, t, artUrl) {
   return g;
 }
 
+// An SVG arc of at most 180° from the current point to angle a1 on the circle (radians; increasing
+// angles run clockwise on screen, as on the canvas).
+const arcTo = (cx, cy, r, a1) => `A ${r2(r)} ${r2(r)} 0 0 1 ${r2(cx + r * Math.cos(a1))} ${r2(cy + r * Math.sin(a1))}`;
+
+/**
+ * The vision cone wedge as path data: apex at the centre, `angle` degrees (0, 360] wide about `rot`
+ * radians, `radius` world units long. Drawn as two arcs of half the angle each, so a full 360° cone
+ * is a whole circle (with the edge from the centre, as the DM's canvas draws it).
+ */
+function visionConePath(cx, cy, radius, rot, angleDeg) {
+  const half = (Math.min(angleDeg, 360) * Math.PI) / 360;
+  const start = rot - half;
+  return [
+    `M ${r2(cx)} ${r2(cy)}`,
+    `L ${r2(cx + radius * Math.cos(start))} ${r2(cy + radius * Math.sin(start))}`,
+    arcTo(cx, cy, radius, rot),
+    arcTo(cx, cy, radius, rot + half),
+    'Z',
+  ].join(' ');
+}
+
+// A token's aura and vision cone, or null when it has neither (or the grid has no size).
+function renderTokenOverlays(doc, t, grid) {
+  if ((!t.aura && !t.visionCone) || !(grid.size > 0)) return null;
+  const cx = t.x + t.w / 2;
+  const cy = t.y + t.h / 2;
+  const g = el(doc, 'g', { class: 'ls-token-overlays', 'data-token-id': t.id });
+  const stroke = { 'stroke-width': 2, 'vector-effect': 'non-scaling-stroke' };
+  // Colors are the snapshot's validated #rrggbb values, set as attributes (never as CSS text).
+  if (t.aura) {
+    g.append(el(doc, 'circle', { ...stroke, class: 'ls-aura', cx: r2(cx), cy: r2(cy), r: r2((t.aura.radius + 0.5) * grid.size), fill: t.aura.color, 'fill-opacity': 0.2, stroke: t.aura.color, 'stroke-opacity': 0.6 }));
+  }
+  if (t.visionCone) {
+    const v = t.visionCone;
+    g.append(el(doc, 'path', { ...stroke, class: 'ls-vision-cone', d: visionConePath(cx, cy, v.range * grid.size, t.rot, v.angle), fill: v.color, 'fill-opacity': 0.15, stroke: v.color, 'stroke-opacity': 0.4 }));
+  }
+  return g;
+}
+
 function measurementLabel(m, grid) {
   if (!(grid.size > 0)) return null;
   const cells = Math.hypot(m.x2 - m.x1, m.y2 - m.y1) / grid.size;
@@ -225,12 +270,18 @@ export function renderBattleMapSnapshot(svg, snapshot, assets = {}) {
   }
   layers.push(renderGrid(doc, snapshot.grid, area));
 
+  // Auras and vision cones under every token, as on the DM's map; never interactive.
+  const overlays = el(doc, 'g', { class: 'ls-overlays', 'pointer-events': 'none' });
+  for (const t of snapshot.tokens) {
+    const o = renderTokenOverlays(doc, t, snapshot.grid);
+    if (o) overlays.append(o);
+  }
   const tokens = el(doc, 'g', { class: 'ls-tokens' });
   for (const t of snapshot.tokens) tokens.append(renderToken(doc, t, t.assetId ? safeUrl(tokenUrl(t.assetId)) : null));
   // Persistent measurements draw above tokens, as on the DM's map.
   const measurements = el(doc, 'g', { class: 'ls-measurements' });
   for (const m of snapshot.measurements) measurements.append(renderMeasurement(doc, m, snapshot.grid));
-  layers.push(tokens, measurements);
+  layers.push(overlays, tokens, measurements);
 
   svg.replaceChildren(...layers);
   return box;

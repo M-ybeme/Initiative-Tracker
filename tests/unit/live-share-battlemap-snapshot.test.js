@@ -12,23 +12,29 @@ import {
   MAX_MEASUREMENTS,
   MAX_CONDITIONS,
   MAX_TEXT,
+  MAX_OVERLAY_CELLS,
+  MAX_CONE_ANGLE,
 } from '../../js/modules/live-share/battlemap-snapshot.js';
 import { encodeBattleMapSnapshot, parseChannelMessage, MAX_CHANNEL_MESSAGE_BYTES } from '../../js/modules/live-share/protocol.js';
 
-const { projectPlayerSafeState, createShareStateSeam, SCHEMA, VERSION } = globalThis.BattleMapShareState;
+const { projectPlayerSafeState, createShareStateSeam, SCHEMA, VERSION, MAX_OVERLAY_CELLS: SEAM_MAX_OVERLAY_CELLS, MAX_CONE_ANGLE: SEAM_MAX_CONE_ANGLE } = globalThis.BattleMapShareState;
 
 // Written out by hand, in the shape the Milestone 1 projection produces.
 function snapshot(overrides = {}) {
   return {
     schema: 'dmtoolbox.battlemap.player-safe',
-    version: 2,
+    version: 3,
     map: { width: 1400, height: 900 },
     background: { assetId: 'a'.repeat(64), revision: 3 },
     mapTransform: { scale: 1.5, x: -20, y: 10 },
     grid: { size: 70, unitsPerCell: 5, color: '#6aa5ff', alpha: 0.35, show: true, offsetX: 3, offsetY: 4 },
     tokens: [
-      { id: 't_goblin1', x: 210, y: 140, w: 70, h: 70, rot: 0.5, name: 'Goblin Boss', conditions: ['Prone', 'Poisoned'], assetId: 'b'.repeat(64) },
-      { id: 't_hero', x: 0, y: -35, w: 140, h: 140, rot: 0, name: null, conditions: [], assetId: null },
+      {
+        id: 't_goblin1', x: 210, y: 140, w: 70, h: 70, rot: 0.5, name: 'Goblin Boss', conditions: ['Prone', 'Poisoned'], assetId: 'b'.repeat(64),
+        aura: { radius: 2, color: '#ff0000' },
+        visionCone: { range: 6, angle: 90, color: '#ffff88' },
+      },
+      { id: 't_hero', x: 0, y: -35, w: 140, h: 140, rot: 0, name: null, conditions: [], assetId: null, aura: null, visionCone: null },
     ],
     measurements: [{ id: 'pm-1', type: 'cone', x1: 10, y1: 20, x2: 150, y2: 20, color: '#ff8800' }],
     revision: 7,
@@ -46,6 +52,24 @@ describe('battlemap-snapshot validation', () => {
     expect(result.snapshot).not.toBe(input);
     expect(result.snapshot.tokens[0]).not.toBe(input.tokens[0]);
     expect(result.snapshot.tokens[0].conditions).not.toBe(input.tokens[0].conditions);
+    expect(result.snapshot.tokens[0].aura).not.toBe(input.tokens[0].aura);
+    expect(result.snapshot.tokens[0].visionCone).not.toBe(input.tokens[0].visionCone);
+  });
+
+  it('matches the seam overlay limit', () => {
+    expect(MAX_OVERLAY_CELLS).toBe(SEAM_MAX_OVERLAY_CELLS);
+    expect(MAX_CONE_ANGLE).toBe(SEAM_MAX_CONE_ANGLE);
+    expect(MAX_CONE_ANGLE).toBe(360);
+  });
+
+  it('accepts overlays at their limits', () => {
+    const input = snapshot();
+    input.tokens[0].aura = { radius: MAX_OVERLAY_CELLS, color: '#000000' };
+    input.tokens[0].visionCone = { range: 0.001, angle: MAX_CONE_ANGLE, color: '#ffffff' };
+    input.tokens[1].visionCone = { range: MAX_OVERLAY_CELLS, angle: 0.5, color: '#0a0b0c' };
+    const result = validateBattleMapSnapshot(input);
+    expect(result.ok).toBe(true);
+    expect(result.snapshot).toEqual(input);
   });
 
   it('matches the Milestone 1 seam schema and version', () => {
@@ -63,10 +87,16 @@ describe('battlemap-snapshot validation', () => {
     input.tokens[0].imgSrc = '/images/goblin.png';
     input.tokens[0].selected = true;
     input.measurements[0].selected = true;
+    input.tokens[0].aura.label = 'concentration';
+    input.tokens[0].aura.style = 'fill:url(javascript:alert(1))';
+    input.tokens[0].visionCone.onclick = 'alert(1)';
+    input.tokens[0].visionCone.secret = { hp: 3 };
     const result = validateBattleMapSnapshot(input);
     expect(result.ok).toBe(true);
     expect(result.snapshot).toEqual(snapshot());
-    expect(JSON.stringify(result.snapshot)).not.toMatch(/hp|secret|imgSrc|data:|dmNote|view|selected|images/i);
+    expect(Object.keys(result.snapshot.tokens[0].aura)).toEqual(['radius', 'color']);
+    expect(Object.keys(result.snapshot.tokens[0].visionCone)).toEqual(['range', 'angle', 'color']);
+    expect(JSON.stringify(result.snapshot)).not.toMatch(/hp|secret|imgSrc|data:|dmNote|view|selected|images|concentration|javascript|onclick|style/i);
   });
 
   it('does not carry a __proto__ key from the wire into the copy or pollute prototypes', () => {
@@ -98,9 +128,12 @@ describe('battlemap-snapshot validation', () => {
     ['null', () => null],
     ['a wrong schema', () => snapshot({ schema: 'dmtoolbox.initiative' })],
     ['a missing schema', () => mutate((s) => delete s.schema)],
-    ['a newer version', () => snapshot({ version: 3 })],
+    ['a newer version', () => snapshot({ version: 4 })],
+    ['the Milestone 3 version (no overlays)', () => snapshot({ version: 2 })],
+    ['a Milestone 3 snapshot as sent by a 2.3.28 host', () => mutate((s) => { s.version = 2; for (const t of s.tokens) { delete t.aura; delete t.visionCone; } })],
     ['the Milestone 2 version', () => snapshot({ version: 1 })],
-    ['a string version', () => snapshot({ version: '2' })],
+    ['a string version', () => snapshot({ version: '3' })],
+    ['a missing version', () => mutate((s) => delete s.version)],
     ['a missing background', () => mutate((s) => delete s.background)],
     ['a background without a revision', () => snapshot({ background: { assetId: 'a'.repeat(64) } })],
     ['a background with a null asset id', () => snapshot({ background: { assetId: null, revision: 1 } })],
@@ -140,6 +173,47 @@ describe('battlemap-snapshot validation', () => {
     ['too many measurements', () => snapshot({ measurements: Array(MAX_MEASUREMENTS + 1).fill(snapshot().measurements[0]) })],
     ['an unknown measurement type', () => mutate((s) => (s.measurements[0].type = 'polygon'))],
     ['a measurement color that is not hex', () => mutate((s) => (s.measurements[0].color = 'red;background:url(x)'))],
+    // Milestone 4 overlays.
+    ['a missing aura (null is required for none)', () => mutate((s) => delete s.tokens[1].aura)],
+    ['a missing vision cone (null is required for none)', () => mutate((s) => delete s.tokens[1].visionCone)],
+    ['an aura that is a string', () => mutate((s) => (s.tokens[0].aura = 'radius:2'))],
+    ['an aura that is an array', () => mutate((s) => (s.tokens[0].aura = [2, '#ff0000']))],
+    ['a vision cone that is a number', () => mutate((s) => (s.tokens[0].visionCone = 6))],
+    ['a vision cone that is an array', () => mutate((s) => (s.tokens[0].visionCone = [{ range: 6, angle: 90, color: '#ffff88' }]))],
+    ['an aura radius of NaN', () => mutate((s) => (s.tokens[0].aura.radius = NaN))],
+    ['an aura radius of Infinity', () => mutate((s) => (s.tokens[0].aura.radius = Infinity))],
+    ['a negative aura radius', () => mutate((s) => (s.tokens[0].aura.radius = -2))],
+    ['a zero aura radius (none is null)', () => mutate((s) => (s.tokens[0].aura.radius = 0))],
+    ['an absurdly large aura radius', () => mutate((s) => (s.tokens[0].aura.radius = 1e9))],
+    ['an aura radius just over the limit', () => mutate((s) => (s.tokens[0].aura.radius = MAX_OVERLAY_CELLS + 0.001))],
+    ['a string aura radius', () => mutate((s) => (s.tokens[0].aura.radius = '2'))],
+    ['an object aura radius', () => mutate((s) => (s.tokens[0].aura.radius = { valueOf: () => 2 }))],
+    ['an array aura radius', () => mutate((s) => (s.tokens[0].aura.radius = [2]))],
+    ['a missing aura radius', () => mutate((s) => delete s.tokens[0].aura.radius)],
+    ['a vision range of NaN', () => mutate((s) => (s.tokens[0].visionCone.range = NaN))],
+    ['a vision range of -Infinity', () => mutate((s) => (s.tokens[0].visionCone.range = -Infinity))],
+    ['a negative vision range', () => mutate((s) => (s.tokens[0].visionCone.range = -6))],
+    ['an absurdly large vision range', () => mutate((s) => (s.tokens[0].visionCone.range = 1e300))],
+    ['a string vision range', () => mutate((s) => (s.tokens[0].visionCone.range = '6'))],
+    ['a vision angle of zero', () => mutate((s) => (s.tokens[0].visionCone.angle = 0))],
+    ['a negative vision angle', () => mutate((s) => (s.tokens[0].visionCone.angle = -90))],
+    ['a vision angle over 360', () => mutate((s) => (s.tokens[0].visionCone.angle = 361))],
+    ['a vision angle of NaN', () => mutate((s) => (s.tokens[0].visionCone.angle = NaN))],
+    ['a vision angle of Infinity', () => mutate((s) => (s.tokens[0].visionCone.angle = Infinity))],
+    ['a string vision angle', () => mutate((s) => (s.tokens[0].visionCone.angle = '90'))],
+    ['a missing vision angle', () => mutate((s) => delete s.tokens[0].visionCone.angle)],
+    ['an aura color that is a name', () => mutate((s) => (s.tokens[0].aura.color = 'red'))],
+    ['an aura color with CSS after it', () => mutate((s) => (s.tokens[0].aura.color = '#ff0000;background:url(https://evil.example/x)'))],
+    ['an aura color that is a url()', () => mutate((s) => (s.tokens[0].aura.color = 'url(#evil)'))],
+    ['an aura color with markup', () => mutate((s) => (s.tokens[0].aura.color = '"/><script>alert(1)</script>'))],
+    ['an uppercase aura color', () => mutate((s) => (s.tokens[0].aura.color = '#FF0000'))],
+    ['a short (#rgb) aura color', () => mutate((s) => (s.tokens[0].aura.color = '#f00'))],
+    ['an aura color with alpha', () => mutate((s) => (s.tokens[0].aura.color = '#ff000080'))],
+    ['an rgb() vision color', () => mutate((s) => (s.tokens[0].visionCone.color = 'rgb(255,255,0)'))],
+    ['a vision color with a newline', () => mutate((s) => (s.tokens[0].visionCone.color = '#ffff88\n'))],
+    ['a numeric vision color', () => mutate((s) => (s.tokens[0].visionCone.color = 0xffff88))],
+    ['an object vision color', () => mutate((s) => (s.tokens[0].visionCone.color = { toString: () => '#ffff88' }))],
+    ['a missing vision color', () => mutate((s) => delete s.tokens[0].visionCone.color)],
   ])('rejects %s', (_label, make) => {
     const result = validateBattleMapSnapshot(make());
     expect(result.ok).toBe(false);
@@ -213,6 +287,9 @@ describe('contract with the Milestone 1 projection', () => {
           maxHp: 9,
           imgSrc: '/images/x.png',
           statusConditions: i % 3 === 0 ? ['Prone', text('Frightened')] : [],
+          // Milestone 4 overlays on most tokens, including the largest the projection keeps.
+          aura: i % 4 === 3 ? undefined : { radius: i === 0 ? 1e9 : 0.5 + (i % 6), color: i % 2 ? '#8BD3FF' : '#f80' },
+          visionCone: i % 5 === 4 ? undefined : { range: 12 + (i % 3), angle: i === 1 ? 999 : 30 + (i % 300), color: '#ffff88' },
         })),
       },
       persistentMeasurements: Array.from({ length: measurementCount }, (_, i) => ({
@@ -244,6 +321,25 @@ describe('contract with the Milestone 1 projection', () => {
   it('the projection with the default (empty) Battle Map state is accepted', () => {
     const snap = { ...projectPlayerSafeState({ state: {}, persistentMeasurements: [] }), revision: 1 };
     expect(validateBattleMapSnapshot(snap).ok).toBe(true);
+  });
+
+  it('malformed legacy vision angles (stored before the 2.3.29 dialog clamp, or hand-edited) still project to a valid angle', () => {
+    const angles = [-45, -720, 0, NaN, Infinity, -Infinity, 361, 720, 1e308, '45', null, undefined, { deg: 45 }];
+    const src = source(angles.length, 0);
+    angles.forEach((angle, i) => (src.state.tokens[i].visionCone = { range: 6, angle, color: '#ffff88' }));
+    const snap = createShareStateSeam({ getSource: () => src }).getPlayerSafeState();
+    const result = validateBattleMapSnapshot(snap);
+    expect(result.ok).toBe(true);
+    expect(result.snapshot.tokens.map((t) => t.visionCone.angle)).toEqual([90, 90, 90, 90, 90, 90, 360, 360, 360, 90, 90, 90, 90]);
+  });
+
+  it('a projected token with a hidden flag never reaches the validator: overlays come only from visible tokens', () => {
+    const src = source(4, 0);
+    src.state.tokens[2].visibleToPlayers = false;
+    const snap = createShareStateSeam({ getSource: () => src }).getPlayerSafeState();
+    const result = validateBattleMapSnapshot(snap);
+    expect(result.ok).toBe(true);
+    expect(result.snapshot.tokens.map((t) => t.id)).toEqual(['t_0', 't_1', 't_3']);
   });
 
   it('a full 500-token, 500-measurement table fits in one message', () => {
@@ -294,6 +390,6 @@ describe('snapshot receiver: latest state wins', () => {
   it('diagnostics never contain snapshot content', () => {
     const receiver = createSnapshotReceiver({ onApply: () => {} });
     receiver.receive(at(1));
-    expect(JSON.stringify(receiver.stats())).not.toMatch(/Goblin|Prone|t_goblin1|#ff8800/);
+    expect(JSON.stringify(receiver.stats())).not.toMatch(/Goblin|Prone|t_goblin1|#ff8800|#ff0000|#ffff88|radius|visionCone/);
   });
 });

@@ -59,9 +59,9 @@ The Battle Map is a tactical combat visualization tool with support for fog-of-w
 - Visual range indicators
 
 **Vision Cones:**
-- Directional vision arcs
+- Directional vision arcs, pointing the way the token is turned (R rotates the selected token)
 - Adjustable angle and range
-- Line-of-sight visualization
+- An indicator only: it does not calculate line of sight or decide what anyone can see
 
 **Context Menu:**
 - Compact 9-item menu
@@ -288,7 +288,7 @@ The Battle Map is a tactical combat visualization tool with support for fog-of-w
 - Session persistence across page reloads
 
 **Visible to Players (v2.3.27):**
-- A token's right-click menu has **Visible to Players** (checked by default). A hidden token stays on your map, dimmed with a crossed-eye badge, and is left out of everything Live Share sends, its art included
+- A token's right-click menu has **Visible to Players** (checked by default). A hidden token stays on your map, dimmed with a crossed-eye badge, and is left out of everything Live Share sends, its art, aura and vision cone included
 - The setting is saved with the map and kept by **Export JSON / Import** (exports always include it; files exported before 2.3.27 have none, and their tokens are visible)
 
 **Live Share publishes only the saved map (v2.3.27, `battlemap.html?liveshare=1`):**
@@ -298,6 +298,13 @@ The Battle Map is a tactical combat visualization tool with support for fog-of-w
 - A map that was never saved can't be shared until it is saved
 - After a reload, players get the saved map even if a draft is restored for you. While the saved map is still loading, or if its image can't be read, **Start room** says so and opens nothing
 - The images of the published map stay available to joining players until a newer save has been published
+
+**Auras and vision cones for Live Share players (v2.3.29):**
+- Players see the aura and vision cone of every token they can see, drawn like yours: the aura as a circle of its radius plus half a cell around the token, the cone from the token's centre along its rotation, both in their colors and under the tokens
+- They follow Save like everything else: a changed aura, vision cone, rotation or grid size reaches players when you save
+- They are sent as a few numbers and a `#rrggbb` color per token, never as part of the map image, so changing them does not resend the map background
+- A token hidden with Visible to Players sends no aura or vision cone either
+- The vision cone is a visual indicator for players too: it does not hide or reveal anything and has nothing to do with the fog
 
 **Auto-Save Removal:**
 - Eliminated from grid adjustments (size, offset, color, alpha)
@@ -339,6 +346,7 @@ The Battle Map is a tactical combat visualization tool with support for fog-of-w
 5. **v1.10.6** - Performance optimization with layered canvas and persistent measurements
 6. **v2.1.7** - UX overhaul: mode tabs toolbar, Bootstrap modals, fog brush cursor, sidebar stabilization, slimmed controls
 7. **v2.3.27** - Save button, private drafts, Visible to Players, and Live Share publishing only saved maps
+8. **v2.3.29** - Live Share players see saved auras and vision cones
 
 ---
 
