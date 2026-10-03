@@ -432,6 +432,114 @@ The boundary's own "assets only from the active instance" check survives its mut
   - the real-path large-background re-check.
 - **The profiling harness** (`tests/perf/`, outside CI) uses the same topology.
 
+### 6.3 Admission model and player protocol v1 (5B.1, 2026-10-03; foundation, not wired)
+
+Milestone 5B is built in three reviewable stages:
+- **5B.1:** the admission model and the protocol-v1 foundation. Pure modules and unit tests.
+- **5B.2:** host enforcement on real peers, and multi-player relay and concurrency.
+- **5B.3:** the real player join flow, end to end.
+
+**Nothing below is in the product path yet:** the session page and the player page still speak v0 to one player, with no admission step.
+
+**Modules** (`js/modules/live-share/`):
+- `admission.js`: the room/admission model;
+- `admission-throttle.js`: a bounded attempt limiter;
+- `protocol-v1.js`: the v1 codec and the surface validator registry;
+- `admission-gate.js`: the pre-admission send policy.
+
+**The model** (one per session, in the session page's memory only; nothing persisted, host refresh is Milestone 7):
+- **Seats:**
+  - A seat is `{ id, name, enabled, claim }`; `claim` is `{ peerId, credential, connected }` or null.
+  - Seat ids (`s1`, `s2`…) are stable and not secret; they are never authentication.
+  - Names are 1–40 characters. At most 32 seats: a generous table, and a bound on memory and on the admission-state message.
+  - **States**, derived, not stored:
+    - `available`: enabled, no claim;
+    - `claimed`: a connected player holds it;
+    - `claimed-disconnected`: the player's connection closed; the credential still holds it;
+    - `disabled`: never claimed.
+- **Operations:**
+  - create, rename (the label only; the credential is unchanged), enable, disable, kick, reset;
+  - `peerDisconnected` (the seat stays claimed);
+  - `peerLeft` (a leave releases the seat);
+  - `endSession`.
+  - Anything that removes a player returns `{ disconnect: [{ peerId, reason }] }` for 5B.2 to enforce. `endSession`'s list covers the admitted peers; 5B.2 also sends `session-ended` to every unadmitted open link, which the model doesn't track.
+- **Decisions where the planning doc leaves the choice open** (for review):
+  - **Kick and reset** leave the seat in the same state: available, credential invalidated. They differ only in the reason the player is told (`kicked` / `seat-reset`). §8 leaves "the appropriate post-kick state" open.
+    - **A kick is not a ban:** the kicked player may join again at once, unless the DM also locks the room, sets a password or disables the seat.
+  - **Disabling a claimed seat** releases it like a reset (`seat-disabled`).
+  - **A player who leaves** releases its seat (`left`).
+  - **A peer holds one seat at a time** (`already-admitted`).
+  - **Reclaim, Milestone 5 rule** (decided after the 5B.1 review; a current-stage safety rule, not necessarily the final reconnect policy):
+    - **Only a `claimed-disconnected` seat can be reclaimed.** A seat whose player is still connected rejects a reclaim with `seat-unavailable`: nobody is disconnected, nothing about the seat changes, the credential isn't rotated and no failure is counted.
+      - Nothing in Milestone 5 needs a live seat taken over: there is no reconnecting client yet.
+      - Replacing a live connection, with liveness evidence and a grace period, is for Milestone 7 to decide.
+    - **Every successful reclaim rotates the credential:** the presented one is invalid at once, and the `join-result` carries a fresh random one, the only valid credential for that seat from then on.
+      - A copied credential works at most once, and an old one never comes back.
+      - It also suits Milestone 7's host-refresh plan, which keeps credential verifiers, not the credentials themselves.
+      - The cost: a player whose `join-result` is lost is stranded. That matters once a reconnecting client exists, and Milestone 7 must handle it (for example by accepting the previous credential until the new one is first used).
+
+**Credentials:**
+- 32 bytes from `crypto.getRandomValues`, base64url (43 characters): an opaque capability for one seat in one session.
+- Derived from nothing: not the seat id or name, the password, a counter or the time.
+- Live only while that seat's claim holds it: kick, reset, disable and session end invalidate it, and every successful reclaim replaces it. Another session (another model) doesn't know it.
+- Compared without an early exit.
+- Never in admission state, the DM seat list or diagnostics; only the admitted peer's `join-result` carries it.
+- `credentialValid` exists for tests only (the DM never holds credentials). It skips throttling, so peer input must never reach it; peers reclaim through `requestAdmission`.
+
+**Password:**
+- Optional and held by the session page only.
+- 1–128 UTF-16 code units, compared exactly: no trimming, case-folding or Unicode normalization.
+- Checked before any seat is claimed, so a wrong one claims nothing.
+- Changing or removing it affects new admissions only. It never appears in admission state or diagnostics.
+
+**Room lock:** separate from the password.
+- A locked room refuses new claims (`room-locked`), even with the right password; admitted players stay.
+- A valid credential still reclaims its disconnected seat (`rejoin-request`). The model supports this; a reconnecting client is Milestone 7.
+
+**Admission decision:** one synchronous function, `requestAdmission(peerId, request)`, so two requests can never both win a seat.
+- **Every request first:** the peer id is well formed → the peer is not throttled (its request and failure limits) → the request is well formed → the session is running.
+- **New claim:** room failure limit not tripped → not locked → password → seat exists → enabled → available → the peer holds no seat → claim, then a credential. This is the order in planning doc §7.
+  - The lock comes before the password, so a locked room answers `room-locked` to any password and is never a password oracle.
+- **Reclaim:** the peer holds no seat (`already-admitted`, checked first, so it reveals nothing about the credential) → the credential is that seat's, in this session (`invalid-credential`) → the seat is `claimed-disconnected` (else `seat-unavailable`, nothing changes) → re-admit with a new credential.
+  - No password is needed, and the room failure limit doesn't apply.
+- **The peer id** is an ephemeral transport id, never authentication.
+- **For 5B.2:** derive a peer's gate state from `admittedSeat(peerId)` at every send, asset chunks included, never from a cached flag. Kick, disable and a reclaim change it without notice.
+
+**Throttling** (fixed windows on a monotonic clock, no timers; a clock that went backwards ends a window rather than stretching it):
+- **Per peer:** 5 failures a minute, and 20 requests of any kind per 10 s. Failures are wrong passwords, invalid credentials and malformed requests.
+- **Room-wide:** 20 **wrong passwords** a minute, so rotating peer ids gets no more password guesses.
+  - Only wrong passwords count. Credential guesses against 256 bits are pointless, and counting them, or malformed spam, would let anyone with the room link block every join and reconnect.
+  - So a room without a password is never room-throttled.
+  - While the room limit is tripped, new claims wait. A sustained flood of wrong passwords keeps it tripped as long as the flood lasts: the cost of limiting guesses. Reclaims with a valid credential still get in.
+- **Effects:** a throttled request is refused before it is evaluated and changes nothing.
+- **Memory:** the limiter tracks at most 64 peers, forgetting the oldest window first; the room limit backs that up for wrong passwords.
+
+**Admission state** (to an unadmitted peer), `{ locked, passwordRequired, seats: [{ id, name, available }] }`:
+- enabled seats only;
+- never the password, a credential, a peer id, claim details or anything about surfaces.
+
+**Protocol v1:** JSON `{ v: 1, type, ...fields }` up to 240 KB, with an exact field list per type for the envelope; a surface payload is its validator's (the Battle Map's drops unknown fields, as for v0 players). Unknown or missing fields, unknown types, other versions and messages sent in the wrong direction are refused, with fixed error strings (never echoed input). Binary asset chunks are unchanged.
+- **host → player:**
+  - `admission-state`;
+  - `join-result { accepted: true, seat, credential } | { accepted: false, reason }`;
+  - `session-state { surfaces: [{ surface, available }] }`;
+  - `session-ended { reason }`;
+  - `surface-snapshot { surface, revision, payload }`;
+  - `asset-meta`, `asset-abort`, binary chunks.
+- **player → host:** `join-request { seatId, password? }`, `rejoin-request { seatId, credential }`, `leave`, `asset-request`.
+- **Rejection reasons:** `malformed-request`, `throttled`, `session-ended`, `room-locked`, `bad-password`, `unknown-seat`, `seat-disabled`, `seat-unavailable`, `already-admitted`, `invalid-credential`. A protocol-version mismatch has no reason code yet; 5B.2 decides how a mismatched peer is told.
+- **Session-end reasons:** `ended`, `kicked`, `seat-reset`, `seat-disabled`, `left`.
+- **`surface-snapshot`:**
+  - The surface name must be in `SURFACE_VALIDATORS`, which has only `battle-map`. `initiative` is refused until it gets a validator; there is no plugin mechanism.
+  - The revision is the envelope's, a positive integer.
+  - The Battle Map payload is today's player snapshot without its top-level revision, checked by the players' own `validateBattleMapSnapshot`.
+
+**Pre-admission send gate** (`admission-gate.js`):
+- **Unadmitted peers** may be sent only `admission-state`, `join-result` and `session-ended`. They may send only `join-request`, `rejoin-request` and `leave`.
+- **Admitted peers** may be sent `join-result`, `session-state`, `session-ended`, `surface-snapshot`, `asset-meta`, `asset-abort` and asset chunks. They may send `asset-request` and `leave`.
+- **Deny by default:** pings are unlisted until Milestone 6, and anything else nobody placed in the policy is refused for everyone.
+- **5B.2** routes every send through `maySend` and every received message through `mayAccept`.
+
 ## 7. Assets when the Battle Map isn't the WebRTC owner
 
 - **What's sent to the host:** only player-safe output, the same bytes players get today.
@@ -726,7 +834,10 @@ Refreshing the session host is the only refresh that threatens the room; a surfa
    - **Transitional until 5A.4:** the Milestone 0–4 Battle Map prototype host (`battlemap.html?liveshare=1`) ran its own room. 5A.4 removed it, with the duplicated per-player wiring.
 3. **5A.3, the boundary:** the BroadcastChannel boundary and the host publication store with atomic commit and host-side revisions. **Implemented on 2026-10-03** (§6.1), proven with a test publisher.
 4. **5A.4, the Battle Map adapter:** `battlemap-live-share.js` becomes the publisher adapter. Same player wire format; existing browser tests pass through the new helpers. **Implemented on 2026-10-03** (§6.2). **Milestone 5A is complete:** the session page owns the session, and closing or reloading the Battle Map leaves the room and the players' map intact.
-5. **5B:** admission and protocol v1.
+5. **5B:** admission and protocol v1, in three stages:
+   - **5B.1:** the admission model and protocol-v1 foundation. Implemented on 2026-10-03 (§6.3); not wired.
+   - **5B.2:** host enforcement on real peers, multi-player relay and concurrency.
+   - **5B.3:** the player join flow.
 6. **5C:** product UX.
 
 ## 15. Decisions still to make

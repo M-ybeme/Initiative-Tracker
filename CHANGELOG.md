@@ -16,9 +16,26 @@ The DM's Toolbox has evolved through focused feature releases. Minor versions (2
 - **1.9.x**: Battle map measurement tools, persistent fog shapes, and generator integration across NPC/Tavern/Shop systems
 - **1.8.x**: Spell database expansion to 432+ spells, inventory management, loot generator overhaul, and character token generation
 
-**Current version: 2.3.34 (October 2026)**
+**Current version: 2.3.35 (October 2026)**
 
 ---
+
+## [2.3.35] - 2026-10-03
+**Live Share admission model and protocol-v1 foundation (Milestone 5B.1)**
+
+### Internal (Live Share, not in the product path yet)
+- Milestone 5B.1, the foundation for joining a Live Share room. All new modules in `js/modules/live-share/`, used by nothing in the app yet; players still connect exactly as in 2.3.34:
+  - `admission.js`: the host's room and admission model:
+    - seats;
+    - optional password and room lock;
+    - random per-seat session credentials;
+    - one join decision at a time;
+    - the join screen's sanitized seat list.
+  - `admission-throttle.js`: bounded limits on failed and repeated join attempts.
+  - `protocol-v1.js`: the next player protocol (join messages, session messages and `surface-snapshot`, with a Battle Map-only validator registry).
+  - `admission-gate.js`: what a not-yet-admitted player may be sent (only join-related messages).
+- Unit tests for all of it, including the decision order, the lock-before-password rule, credential scope and rotation, the send policy, throttling and protocol strictness.
+- A saved seat credential reclaims only a disconnected seat (a seat whose player is still connected can't be taken over), and every successful reclaim issues a new credential.
 
 ## [2.3.34] - 2026-10-03
 **Battle Map on the Live Share session host (Milestone 5A.4; Milestone 5A complete)**

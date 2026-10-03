@@ -132,7 +132,19 @@ No Live Share behavior changed.
 - **Unchanged:** the player wire format (v0) and the relay (one player).
 - **Large transfers:** the transfer delay seen in 5A.1 / 5A.3 also shows on the real path (a token save during an 11.7 MB transfer reached the player after 3.7–5.6 s), with no data loss. It is deferred to Milestone 8.
 
-**Next:** Milestone 5B, admission and the room model (§24). The Safari hidden-tab check is pending.
+**Milestone 5B.1, the admission model and player protocol-v1 foundation (implemented 2026-10-03, released in 2.3.35; not yet in the product path):** details in [live-share-session-host-architecture.md](live-share-session-host-architecture.md) §6.3.
+- **The admission model:** the host-authoritative room model, in the session page's memory only.
+  - seats with stable ids and derived states;
+  - the password (exact, 1–128 characters) and the room lock;
+  - 256-bit random seat-session credentials, scoped to one seat and one session. In Milestone 5 a credential reclaims only a disconnected seat (a still-connected one answers `seat-unavailable`), and every successful reclaim rotates it. Taking over a live seat is left to Milestone 7's reconnect design;
+  - per-peer and room-wide admission throttling;
+  - one synchronous admission decision;
+  - a sanitized admission state.
+- **Player protocol v1:** a strict codec with fixed reason codes and `surface-snapshot { surface, revision, payload }`. A small validator registry (Battle Map only) reuses the players' Battle Map validator.
+- **A deny-by-default send policy:** an unadmitted peer may be sent only admission state, its join result and session-ended.
+- **The product is unchanged:** it still speaks v0 to one player with no admission step. 5B.2 wires this in.
+
+**Next:** Milestone 5B.2, host admission enforcement on real peers and multi-player relay / concurrency (§24). The Safari hidden-tab check is pending.
 
 **Backlog (Battle Map, found during the 2.3.27 and 2.3.28 reviews; not yet fixed):**
 - Pre-existing: a touch long-press (and Ctrl+click on a Mac, which is a primary-button press) starts a token drag before its menu opens, so on release an off-grid token snaps and the map is marked unsaved (the 2.3.28 right-click fix does not cover a primary-button press).
@@ -1670,7 +1682,10 @@ Only after the underlying networking has proven useful. *(Reconciled on 2026-10-
 
 *Exit:* the Milestone 4 behaviors all hold with the session owned by the session host page, and closing or reloading the Battle Map leaves the room and the players' map intact.
 
-**5B — Admission / room model**
+**5B — Admission / room model** (built in three stages:
+- **5B.1:** the admission model and protocol-v1 foundation. Implemented 2026-10-03, released in 2.3.35 (ADR §6.3); not wired.
+- **5B.2:** host enforcement and multi-player relay / concurrency.
+- **5B.3:** the player join flow.)
 - seats, optional password, room lock;
 - temporary seat credentials;
 - the join flow, with a mandatory admission gate;
@@ -1950,7 +1965,7 @@ Intentionally unresolved until the relevant milestone:
   - Any of these would be reconsidered only after an observed real-world problem.
 - **Snapshot throttle interval** — 100 ms in Milestone 2 (`SNAPSHOT_INTERVAL_MS`), to be tuned with real use.
 - **Payload and asset size limits** — maximum ~~map image,~~ background composite, custom token image and message sizes (Milestones 3 and 8). The structured-message limit is already 240 KB (Milestone 2). The background and token-image limits were set in Milestone 3: 16 MiB per background, and 512 px and 1 MiB per token image. Remaining work is relay- and host-side abuse limits (Milestone 8).
-- **Seat-session credential generation** — the library and format used to create the random opaque tokens (Milestone 5).
+- ~~**Seat-session credential generation**~~ — decided in 5B.1: 32 bytes from Web Crypto `getRandomValues`, base64url (43 characters), no dependency (ADR §6.3).
 - ~~**Share-state seam mechanism**~~ — decided in Milestone 1: change detection by value. The seam recomputes the allowlisted projection at three existing funnels (each rendered frame, `setDirty()`, `save()`) and signals only when the player-visible content differs, instead of adding a notifier call to each of the ~40 mutation sites. *Changed in 2.3.27: the seam's source is the Battle Map's published (saved) state, and it is checked when a save is published.*
 - **Host grace period and room lifetime** — durations for host-refresh recovery and room expiry (Milestone 7). From Milestone 5 the "host" is the session host page.
 - ~~**Who owns the Live Share session across Toolbox pages**~~ — decided on 2026-10-02 ([live-share-session-host-architecture.md](live-share-session-host-architecture.md)):
