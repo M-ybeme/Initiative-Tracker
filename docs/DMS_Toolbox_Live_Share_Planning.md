@@ -106,7 +106,23 @@ No Live Share behavior changed.
 - **No surface publishes to it yet** (5A.3). Players connect with the existing player page and wire format but see no map.
 - **Unchanged:** the Battle Map prototype host (`battlemap.html?liveshare=1`) keeps its own room until 5A.4. Closing or reloading the session page ends its room (recovery is Milestone 7).
 
-**Next:** Milestone 5A.3, the surface ↔ session host boundary and publication store (§24). The Safari hidden-tab check is pending.
+**Milestone 5A.3, the surface ↔ session host boundary (implemented 2026-10-03, released in 2.3.33; exercised only by a test publisher):** details in [live-share-session-host-architecture.md](live-share-session-host-architecture.md) §6.1.
+- **The boundary:**
+  - BroadcastChannel protocol `v: 1`: a control channel `dmtoolbox.live-share.control`, plus one data channel per surface type for asset bytes;
+  - every message validated, field by field;
+  - registration, a 5 s heartbeat with 150 s "not responding" (status only), and a version check;
+  - one active publisher per surface type: the latest registration, or a claim.
+- **The host publication store:**
+  - offer → only missing assets requested → each verified (metadata, length, signature, SHA-256) → atomic commit;
+  - structured state and assets commit together; pending state is never served;
+  - committed assets are kept until the replacement commits;
+  - cleared at session end.
+- **Host-assigned revisions:** per surface and by value. A reloaded tab offering the same map is not a new revision. The background revision moves only with the background.
+- **Serving players:** the session host page serves the committed Battle Map publication through the existing senders, sending each commit from its event (`sendNow()`). The player wire format is unchanged.
+- **Not yet:** the real Battle Map does not publish through it (5A.4).
+- **The Chrome transfer stall** from 5A.1 reproduces on this path. It is a transport stall below the senders, with no correctness impact: follow-up in ADR §9.
+
+**Next:** Milestone 5A.4, the Battle Map publisher adapter (§24). The Safari hidden-tab check is pending.
 
 **Backlog (Battle Map, found during the 2.3.27 and 2.3.28 reviews; not yet fixed):**
 - Pre-existing: a touch long-press (and Ctrl+click on a Mac, which is a primary-button press) starts a token drag before its menu opens, so on release an off-grid token snaps and the map is marked unsaved (the 2.3.28 right-click fix does not cover a primary-button press).
@@ -1635,6 +1651,7 @@ Only after the underlying networking has proven useful. *(Reconciled on 2026-10-
    - the duplicate-tab rule;
    - version check;
    - publication offer / need / asset / commit, with a host publication store and host-assigned revisions.
+   - **Implemented on 2026-10-03** (ADR §6.1), proven with a test publisher; the real Battle Map is unchanged until step 4.
 4. **The Battle Map side:** `js/battlemap-live-share.js` becomes a thin publisher adapter.
    - The player wire format is unchanged.
    - The existing browser tests move to "session host + Battle Map" helpers.

@@ -13,10 +13,14 @@
  *   - Generic session machinery only, reused unchanged: HostSession / SignalingClient / PeerLink /
  *     ICE + TURN, SnapshotSender, AssetSender, protocol.js. Players connect with the existing player
  *     page and wire format.
- *   - No surface publications yet: nothing here receives Battle Map state. Until the surface boundary
- *     (5A.3) exists, the senders have nothing to send (no snapshot, no assets), so a connected player
- *     sees no map. When it does, a committed publication will call sender.sendNow() (outcome B of the
- *     5A.1 hidden-tab spike).
+ *   - Surface publications (5A.3): Toolbox pages publish player-safe state to this page over the
+ *     surface boundary (session-host-boundary.js, BroadcastChannel). The host publication store
+ *     (publication-store.js) keeps each surface's committed publication and its assets, assigns the
+ *     revisions players see, and serves players from there: the snapshot sender reads the committed
+ *     Battle Map snapshot, the asset sender its assets. A commit is sent from the commit event itself
+ *     (sender.sendNow(), outcome B of the 5A.1 hidden-tab spike). The player wire format is unchanged,
+ *     so the Battle Map is the only surface players can be sent. Nothing in the product publishes here
+ *     yet: the real Battle Map still uses its prototype host until 5A.4.
  *   - No seats, password, admission, lock/kick/reset (5B / 5C), no recovery: closing or reloading this
  *     page ends the room (Milestone 7 adds host-refresh recovery).
  *   - Transitional: the Milestone 0–4 Battle Map prototype host (battlemap.html?liveshare=1,
@@ -33,6 +37,9 @@ import { createSnapshotSender } from './modules/live-share/snapshot-sender.js';
 import { createAssetSender } from './modules/live-share/asset-sender.js';
 import { parseChannelMessage, PROTOCOL_VERSION } from './modules/live-share/protocol.js';
 import { claimSessionHost } from './modules/live-share/session-host-lock.js';
+import { createPublicationStore } from './modules/live-share/publication-store.js';
+import { createSessionHostBoundary } from './modules/live-share/session-host-boundary.js';
+import { battleMapSurface, BATTLE_MAP_SURFACE } from './modules/live-share/battlemap-publication.js';
 
 // The fixed window name surfaces will use to open or focus this page (ADR §5.1).
 export const SESSION_HOST_WINDOW = 'dmtoolbox-live-share';
@@ -46,8 +53,13 @@ const linkOptions = {
 };
 
 // States, counts and revisions only: no room id or link, no IP addresses, no content.
-const diag = { owner: 'claiming', signaling: 'idle', signalingError: null, turn: null, peers: {}, snapshots: null, assets: null, lastProtocolError: null };
+const diag = { owner: 'claiming', signaling: 'idle', signalingError: null, turn: null, peers: {}, snapshots: null, assets: null, boundary: null, lastProtocolError: null };
 const peers = new Map(); // peerId -> status text
+const openPeers = new Set(); // peers whose data channel is open: the player count surfaces see
+// The committed publications players are served from. Only the Battle Map reaches players while the
+// player wire format is the Milestone 0-4 one (5B adds per-surface routing).
+const store = createPublicationStore({ surfaces: [battleMapSurface] });
+let boundary = null; // only while this tab owns the session host lock
 let ownership = 'claiming'; // claiming | owner | busy | unsupported
 let session = null;
 let sender = null;
@@ -58,8 +70,57 @@ function renderDiagnostics() {
   diag.owner = ownership;
   diag.snapshots = sender ? sender.diagnostics() : null;
   diag.assets = assetSender ? assetSender.diagnostics() : null;
+  diag.boundary = boundary ? boundary.diagnostics() : null;
   $('ls-diag').textContent = JSON.stringify(diag, null, 2);
+  renderSurfaces();
 }
+
+// ---- Shared pages (surfaces) ------------------------------------------------------------------
+const SURFACE_NAMES = { 'battle-map': 'Battle Map', initiative: 'Initiative Tracker' };
+function describeSurface(s) {
+  if (!s.compatible) return 'a different version of the Toolbox: reload that tab';
+  if (s.liveness === 'closed') return 'closed';
+  if (s.liveness === 'not-responding') return 'not responding';
+  return s.active ? 'open, publishing' : 'open in another tab (not publishing)';
+}
+function renderSurfaces() {
+  const list = $('ls-surfaces');
+  const surfaces = boundary ? boundary.surfaces() : [];
+  const stored = diag.boundary ? diag.boundary.store : {};
+  list.replaceChildren();
+  if (surfaces.length === 0) {
+    list.append(item('No Toolbox page is connected to this session.'));
+    return;
+  }
+  for (const s of surfaces) {
+    const committed = stored[s.surface] && stored[s.surface].committed;
+    const li = item(`${SURFACE_NAMES[s.surface] || s.surface}: ${describeSurface(s)}${s.active && committed ? ` · players see revision ${committed.revision}` : ''}`);
+    li.dataset.testid = 'surface';
+    li.dataset.surface = s.surface;
+    li.dataset.state = s.compatible ? (s.active ? 'active' : 'inactive') : 'incompatible';
+    li.dataset.liveness = s.liveness;
+    list.append(li);
+  }
+}
+function startBoundary() {
+  if (boundary) return;
+  boundary = createSessionHostBoundary({
+    store,
+    supported: { [BATTLE_MAP_SURFACE]: battleMapSurface.versions },
+    // A commit is a real event: send it now rather than on a timer a hidden tab may delay. A new
+    // background also ends any transfer of the one it replaced.
+    onCommitted: (surface) => {
+      if (surface !== BATTLE_MAP_SURFACE || !sender) return;
+      sender.sendNow();
+      assetSender.assetsChanged();
+    },
+    onChange: renderDiagnostics,
+  });
+  boundary.start();
+  setInterval(() => boundary.checkLiveness(), 5000);
+}
+// Surfaces may offer only while a room is open; ending the session clears every publication.
+const reportSession = () => boundary && boundary.setSession({ running: !!(session && session.active && diag.signaling === 'ready'), players: openPeers.size });
 const setStatus = (text) => {
   $('ls-host-status').textContent = text;
 };
@@ -96,6 +157,7 @@ function showOwnership(state, takeover = false) {
   box.classList.remove('d-none', 'alert-info', 'alert-warning', 'alert-danger');
   if (state === 'owner') {
     window.name = SESSION_HOST_WINDOW;
+    startBoundary(); // only the owner answers surfaces: a waiting tab must not
     box.classList.add('alert-info');
     box.textContent = takeover
       ? 'The other Live Share tab closed: this tab now keeps Live Share running. Start a session when you are ready.'
@@ -120,18 +182,26 @@ function start() {
   diag.signalingError = null;
   diag.peers = {};
   peers.clear();
+  openPeers.clear();
   renderPeers();
-  // Nothing is published here until the surface boundary exists (5A.3): no snapshot, no assets.
-  sender = createSnapshotSender({ getSnapshot: () => null });
-  assetSender = createAssetSender({ protocolVersion: PROTOCOL_VERSION, getAsset: () => null, hasAsset: () => false });
+  // Players are served the committed Battle Map publication and its assets from the host store.
+  store.clear();
+  sender = createSnapshotSender({ getSnapshot: () => store.snapshot(BATTLE_MAP_SURFACE) });
+  assetSender = createAssetSender({
+    protocolVersion: PROTOCOL_VERSION,
+    getAsset: (id) => store.getAsset(BATTLE_MAP_SURFACE, id),
+    hasAsset: (id) => store.hasAsset(BATTLE_MAP_SURFACE, id),
+  });
   session = new HostSession({ relayUrl, linkOptions });
   session.on('state', ({ state }) => {
     diag.signaling = state;
+    reportSession();
     renderDiagnostics();
   });
   session.on('ready', () => {
     setStatus('Room open — waiting for players');
     setRunning(true);
+    reportSession(); // surfaces announce themselves again; the active ones offer their state
   });
   session.on('turn', ({ turn }) => {
     diag.turn = turn;
@@ -157,13 +227,17 @@ function start() {
     link.on('open', () => {
       assetSender.addPeer(peerId, link);
       sender.addPeer(peerId, link);
+      openPeers.add(peerId);
       setPeer(peerId, 'Connected');
+      reportSession();
       renderDiagnostics();
     });
     link.on('failed', (failure) => setPeer(peerId, `Connection failure (${failure.kind}): ${failure.message}`));
     link.on('close', () => {
       if (sender) sender.removePeer(peerId);
       if (assetSender) assetSender.removePeer(peerId);
+      openPeers.delete(peerId);
+      reportSession();
       if (!link.failure) setPeer(peerId, 'Disconnected');
     });
   });
@@ -171,7 +245,9 @@ function start() {
     if (sender) sender.removePeer(peerId);
     if (assetSender) assetSender.removePeer(peerId);
     peers.delete(peerId);
+    openPeers.delete(peerId);
     delete diag.peers[peerId];
+    reportSession();
     renderPeers();
     renderDiagnostics();
   });
@@ -180,6 +256,8 @@ function start() {
     diag.signalingError = error;
     setStatus(`Signaling failure: ${error.message}`);
     disposeSenders();
+    openPeers.clear();
+    reportSession(); // the session is over: every publication is cleared
     setRunning(false);
     renderDiagnostics();
   });
@@ -200,7 +278,9 @@ function end() {
   session.end(); // the relay tells every player "the host ended the session", then links close
   disposeSenders();
   peers.clear();
+  openPeers.clear();
   diag.peers = {};
+  reportSession(); // the session is over: every publication is cleared
   renderPeers();
   setStatus('Session ended');
   setRunning(false);
@@ -242,7 +322,10 @@ $('ls-copy').addEventListener('click', async () => {
 });
 $('ls-copy-diag').addEventListener('click', () => navigator.clipboard.writeText(JSON.stringify(diag, null, 2)).catch(() => {}));
 // Milestone 5: leaving or reloading this page ends the room (recovery is Milestone 7).
-window.addEventListener('pagehide', end);
+window.addEventListener('pagehide', () => {
+  end();
+  if (boundary) boundary.close(); // surfaces learn Live Share stopped
+});
 // Counters change with every send; a small refresh keeps the panel current.
 setInterval(renderDiagnostics, 1000);
 

@@ -1,6 +1,6 @@
 # Live Share: session ownership across Toolbox pages (architecture decision)
 
-*Decided 2026-10-02, before Milestone 5. Documentation only: nothing here is implemented yet. This record governs Milestones 5 and 7 and the future Initiative Tracker surface. Linked from `DMS_Toolbox_Live_Share_Planning.md` §4, §5, §24 and §27.*
+*Decided 2026-10-02, before Milestone 5. This record governs Milestones 5 and 7 and the future Initiative Tracker surface. Linked from `DMS_Toolbox_Live_Share_Planning.md` §4, §5, §24 and §27. Implemented so far: the session host page (5A.2) and the surface boundary with the host publication store (5A.3, §6.1). The Battle Map still uses its prototype host until 5A.4.*
 
 ## 1. The problem
 
@@ -197,8 +197,8 @@ Every message is validated against its type's schema; unknown types and versions
 - Same-origin doesn't mean well-formed: an old cached tab, a bug or an injected script could post anything.
 
 **Surface → host:**
-- `surface-hello { surface: 'battle-map' | 'initiative', instanceId, surfaceVersion, hasPublication }`, on load and in answer to `host-hello`.
-- `surface-heartbeat`: about every 5 s while visible. Throttled to about once a minute when hidden, so the timeout is long and only affects status.
+- `surface-hello { surface: 'battle-map' | 'initiative', surfaceVersion, hasPublication }`, on load and in answer to `host-hello`. The instance id travels in the envelope's `from`.
+- `surface-heartbeat`: about every 5 s. Browsers throttle it in hidden tabs, to about once a minute, so the timeout is long and only affects status.
 - `publication-offer { publicationSeq, structured, assets: [{ assetId, kind, mime, width, height, byteLength }] }`
   - `structured` is the player-safe snapshot content, without a revision.
   - `publicationSeq` increases per instance.
@@ -237,6 +237,133 @@ Every message is validated against its type's schema; unknown types and versions
 **Version skew:**
 - `surfaceVersion` and the boundary `v` must match what the host understands.
 - On a mismatch the host ignores the surface and tells the DM to reload that tab; a cached old Battle Map never feeds a new host malformed state.
+
+### 6.1 As implemented in 5A.3 (2026-10-03)
+
+**Modules** (all in `js/modules/live-share/`):
+- `surface-boundary.js`: the protocol. Constants, envelope, and the checks of every message in both directions.
+- `session-host-boundary.js`: the host side. Registry, roles, liveness and session gating; it relays the store's answers.
+- `publication-store.js`: the host publication store. Offer, need, asset, atomic commit, host revisions, asset retention.
+- `battlemap-publication.js`: the Battle Map's boundary format. Validation reuses the players' `validateBattleMapSnapshot`; also the conversion to the player wire snapshot.
+- `surface-publisher.js`: the surface side, for the 5A.4 Battle Map adapter. In 5A.3 only the test publisher uses it (`tests/fixtures/live-share-test-publisher.*`, which works only on localhost).
+- `live-share.html` / `js/live-share-host.js` run the host side only while the tab owns the Web Lock. A waiting tab never answers surfaces.
+
+**Protocol:**
+- **Version and channels:** boundary protocol `v: 1`, marker `ch: 'dmtoolbox.live-share'`. The control channel is `dmtoolbox.live-share.control`; each surface type has a data channel, `dmtoolbox.live-share.surface.<surface>`.
+- **Surface types:** `battle-map`, and `initiative` reserved. An Initiative Tracker may register, but the host supports no version of it, so it can't publish.
+- **Messages:** as listed above, with these additions:
+  - `surface-claim {}`, the "publish from this tab" request. The protocol only: no UI before 5A.4.
+  - `surface-role` carries a `reason`: `registered`, `claimed`, `promoted`, `superseded` or `incompatible`.
+  - `publication-committed` carries the host `revision`.
+  - Rejection reasons are a fixed set: `no-session`, `inactive`, `incompatible`, `stale`, `invalid`, `limit`, `asset-invalid`, `superseded`. Never raw error text.
+- **Checks on every message:**
+  - The envelope: marker, version, type, sender id format, and the recipient (`to: 'host'` for surface messages; host messages are either broadcast or addressed to one instance).
+  - Exactly the fields of the message's type: an unknown field refuses the message. Asset bytes go only on a data channel, as an `ArrayBuffer`.
+  - Instance ids identify, they don't authenticate.
+
+**Registration and roles:** one active publisher per surface type. Other tabs stay registered but inactive, and their offers are refused (`inactive`). The host decides with one rule (`takesRole` in `session-host-boundary.js`), checked in this order whenever a tab says hello, whether a new registration or a re-hello:
+1. **An active tab that stopped responding** (or is gone) yields to any responding tab.
+2. **An active tab with nothing to publish** yields to a tab that has something. An empty tab (still loading, or without a map) never freezes players on old content.
+3. **A tab with nothing to publish never takes the role** from a tab that has something.
+4. **A manual claim** ("publish from this tab": the `surface-claim` message; the Battle Map's button is 5A.4):
+   - It remains authoritative while the claimed tab has a publication to offer. It outranks ordinary registration recency: neither a newly opened tab nor a re-announcing one takes the role from it.
+   - An empty claimed tab does not block a publication-bearing tab from becoming active (rule 2). When the claimed tab later has something, its next hello takes the role back.
+   - A claim stays with its tab until another tab is claimed. Losing and regaining liveness doesn't erase it: a claimed tab that was replaced while not responding takes the role back with its next publication.
+5. **Otherwise, the most recent registration wins:**
+   - A newly registered tab takes the role, and every older tab loses any "held back" standing.
+   - A re-hello changes nothing, except for a tab **held back** at registration only for being empty. That tab takes the role once it has something, but only while it is still newer than the active tab (an order check, not just the flag).
+
+**What triggers a hello:**
+- A tab says hello on load and in answer to `host-hello`.
+- A tab that is not the publisher but has something to publish also says hello once, at its next `publish()`, when it hasn't yet told the host. A tab that just lost the role re-arms that: at most one hello per role lost, never one per publish, and heartbeats never trigger it.
+- So a publisher that stopped responding while an empty tab was promoted recovers with its next publication, without waiting for a `host-hello`.
+
+**Within one host's lifetime only:**
+- A new host (a host page reload, or a waiting tab taking over the Web Lock) starts with an empty registry, so the last tab to answer its `host-hello` wins, as for newly opened tabs.
+- Keeping the DM's chosen tab across a host restart, for example with a "was active" hint in `surface-hello`, is a follow-up for 5A.4 / Milestone 7.
+
+**Takeover on bye or silence:** when the active tab says bye or stops responding, the most recently registered other compatible tab that is still responding takes over, preferring one with something to publish. A deactivated tab's pending offer is dropped.
+
+**Registry bound:**
+- At most 32 records. A new registration evicts, in order: a closed tab, then a not-responding one, then the oldest open inactive one. Never the active publisher.
+- An evicted tab that is still open is ignored (its messages are refused as unregistered) until it says hello again: at the next `host-hello`, or when it has something new to announce.
+- There is deliberately no host → surface "please say hello again" request. One would need rate limiting against spoofed ids.
+
+**Liveness (status only):**
+- A heartbeat about every 5 s; any message counts as a sign of life.
+- After 150 s of silence an instance is "not responding". After a bye it is "closed". A later message brings it back (for example a bfcache restore).
+- Either way, only its pending offer is dropped. The committed publication and its assets stay: players keep them and late joiners get them.
+
+**Session gating:**
+- Offers are taken only while a room is open (`no-session` otherwise). An offer refused for that reason doesn't count against the tab's `publicationSeq`.
+- Opening the room broadcasts `host-hello { sessionActive: true }`. Surfaces announce themselves again, and the active one offers its current state once.
+- Ending the session clears the store, revisions included: a new session is a new room with new players.
+- Surfaces get `session-status { running, players }`, a count only.
+
+**Offers and the store:**
+- **Validation:**
+  - `structured` is the player snapshot content without revisions: no top-level `revision`, and the background as `{ assetId }` only.
+  - The host checks it with the players' own validator. It also refuses any revision field and any field beyond the allowlist (refused, not dropped), and content too large to send.
+  - The asset list must name exactly the assets the content references, each with the right kind, within the Milestone 3 per-kind limits.
+  - The total token art of one publication must stay within 64 MiB, a host memory bound. Each token image is at most 1 MiB as before.
+- **Assets:**
+  - Only missing ids are requested.
+  - An asset is taken only:
+    - for the pending offer's seq, from its instance, on its surface's data channel;
+    - for an id still missing, with exactly the offered metadata and byte length;
+    - with the claimed PNG/WebP signature, and a SHA-256 equal to the id.
+  - Wrong bytes reject the pending offer. Stale or unrequested ones are ignored.
+  - A hash that finishes after its offer was superseded is discarded.
+- **Commit:**
+  - Once every referenced asset is held, one assignment replaces the committed publication: content, revisions and asset references together.
+  - Pending state is never served: the senders read only the committed snapshot and committed assets.
+- **Retention:** committed assets stay until the replacement commits. Then anything neither the committed nor the pending publication references is released. A newer offer supersedes an unfinished one (latest wins), and keeps any assets it shares with it.
+- **Revisions:**
+  - **Snapshot revision:** per surface, +1 only when the committed content changes by value. An identical re-offer, including one from a reloaded tab, commits nothing new.
+  - **Background revision:** +1 only when the committed background asset changes. A token-only save keeps it.
+  - Both only rise within a session: A → B → A is three revisions.
+
+**Serving players:**
+- The host page's `SnapshotSender` reads the committed Battle Map snapshot from the store. A commit calls `sendNow()` from the commit event (outcome B), so a hidden host's timers aren't on the path.
+- The `AssetSender` reads `getAsset` / `hasAsset` from the store, and is told `assetsChanged()` on commit, so a replaced background's transfer ends `superseded`.
+- The player wire format is the unchanged Milestone 0–4 one, so the Battle Map is the only surface players can be sent until protocol v1 (5B).
+
+**Tests:** `tests/unit/live-share-publication-store.test.js` and `tests/unit/live-share-surface-boundary.test.js`, with an in-memory BroadcastChannel; and `tests/e2e/live-share-surface-boundary.spec.js`, with real browsers, the real host page and the real player page.
+
+**Mutation checks:** each invariant was broken on purpose and a test failed:
+- offers from an inactive tab;
+- commit before the assets;
+- a surface revision trusted;
+- a new revision for identical content;
+- the background revision bumped on every commit;
+- assets released on offer instead of commit;
+- no SHA-256 check;
+- no byte-length check;
+- a late superseded asset accepted;
+- an asset for another seq;
+- a stale seq accepted;
+- a heartbeat timeout or bye clearing the publication;
+- a re-hello stealing the role;
+- unknown fields dropped instead of refused;
+- an asset accepted on another surface's channel;
+- any boundary version or recipient accepted;
+- the host page using the timer path instead of `sendNow()`;
+- after the review: a hash still running at session end committing into the cleared store;
+- surfaces counting each other's messages as protocol errors;
+- after the second review, the role rule, each change caught by a named test:
+  - no hello after a lost role: the silence → return case;
+  - a hello on every publish of an inactive tab;
+  - stale "held back" standing kept after a newer registration: the A / B / C case;
+  - no order check on a held-back takeover: the ordering case;
+  - an empty tab taking the role from one with something;
+  - an empty active tab freezing sharing;
+  - a claim not outranking recency;
+  - a claimed tab unable to take the role back;
+  - a re-hello stealing the role;
+  - a claim not recorded;
+- registry eviction preferring open tabs over closed ones, or evicting the active publisher.
+
+The boundary's own "assets only from the active instance" check survives its mutation, because the store's instance check (itself mutation-tested) refuses the same bytes. It is kept as a second guard.
 
 ## 7. Assets when the Battle Map isn't the WebRTC owner
 
@@ -341,6 +468,21 @@ interactions    ping (Milestone 6)
 - The newer structured snapshot left the owner after 77 ms but reached the player 4.3 s later, behind that slow transfer.
 - It happened in every Chrome run with the owner in front, and never when it was hidden, nor in Firefox.
 - It is below the thresholds and not part of the hidden-tab question. **Re-check it once assets flow through the real session host page** (5A.3 / 5A.4), which is normally *not* the front tab. In 5A.2 no assets reach that page yet, so it couldn't be re-checked there.
+- **Re-checked in 5A.3 (2026-10-03)**, on the real path: test publisher → BroadcastChannel → real session host page → production `AssetSender` → real player page. This was in Playwright Chromium with every page visible; the spec is `live-share-surface-boundary.spec.js`, the 16 MiB test.
+  - **It reproduces in every run,** and it is not the boundary:
+    - publish → the player's committed snapshot took 0.1–0.4 s for a 16 MiB background, copy and hash included;
+    - the host sent a structured save made during the transfer within the commit event (sent revision checked in the same panel update).
+  - **The stall:**
+    - A few dozen milliseconds into the transfer, after about 100 chunks (1.6 MB), the data channel delivered **nothing** to the player for about 4 s.
+    - Meanwhile the host's `bufferedAmount` sat near 49 KiB without draining, and the asset sender's 100 ms fallback timer fired 38 times, the same count as in 5A.1.
+    - Then it resumed at full speed (chunks 200–900 in 0.5 s).
+    - The save's snapshot, on the same ordered channel, arrived with that burst: 3.9–5.9 s after the save, against about 4.3 s in 5A.1.
+  - **What it is:** a transport-level stall below both senders, not starvation by them. That it is an SCTP retransmission timeout after the opening burst on loopback is inferred, not proven.
+  - **Not a correctness problem:** every byte arrives and verifies, and the latest state wins.
+  - **Not fixed in 5A.3** (no optimization without a correctness blocker). It is a follow-up for 5A.4, where the real Battle Map exercises this path, or Milestone 8, networking hardening. Options to evaluate:
+    - pacing a transfer's first chunks;
+    - a separate channel for structured state;
+    - confirming the cause with a non-loopback network or installed Chrome.
 
 ### What the numbers mean
 
@@ -365,13 +507,13 @@ The architecture is unchanged. One narrow sending change in the session host:
      - a throttle timer that is already late (a hidden tab) is cancelled, and the event flushes instead.
      It returns nothing. A flush follows the sender's usual rules, so it doesn't mean bytes went out: with no players nothing is sent, a busy channel is only marked pending, and a revision a player already has isn't resent. `diagnostics()` shows what was actually sent.
    - `notifyChanged()` is unchanged, for callers that signal from a render (the Battle Map prototype).
-   - Its first production caller is the 5A.3 commit handler, since nothing publishes to the host before then.
+   - Its first production caller is the 5A.3 commit handler (`js/live-share-host.js`, on every commit that changes what players see).
    - Timers stay only for coalescing a burst into its trailing send.
    - This removes Firefox's 0.5 s and Chrome's scheduling dependence for ordinary saves.
    - Keep the existing rule that sends never run inside a surface's render. The host has no render loop, so the rule holds by construction.
 2. **The asset sender:** no change. It was event-driven already (`bufferedamountlow`), and its fallback timer was never needed while hidden.
 3. **Trailing coalesced sends** may still take about 1 s in a hidden host. That is acceptable, because the latest state always wins. Revisit only if the Initiative Tracker's immediate publishing shows a need.
-4. **Re-check the Chrome visible-owner transfer anomaly** (¹) once assets flow through the real host page (5A.3 / 5A.4).
+4. **Re-check the Chrome visible-owner transfer anomaly** (¹) once assets flow through the real host page (5A.3 / 5A.4). *Done in 5A.3: it reproduces, as a transport stall below the senders, with no correctness impact. It remains a follow-up (¹).*
 
 Not needed: a keep-visible requirement (C) or the iframe shell (D). DM hosting from a phone or tablet stays a separate, known limitation.
 
@@ -505,7 +647,7 @@ Refreshing the session host is the only refresh that threatens the room; a surfa
    - the window name `dmtoolbox-live-share`.
    - No surface data reaches it yet, so players connect but see no map.
    - **Transitional:** the Milestone 0–4 Battle Map prototype host (`battlemap.html?liveshare=1`) still runs its own room until 5A.4. Until then the two duplicate about 60 lines of per-player wiring, and that duplication goes when the prototype becomes a publisher.
-3. **5A.3, the boundary:** the BroadcastChannel boundary and the host publication store with atomic commit and host-side revisions.
+3. **5A.3, the boundary:** the BroadcastChannel boundary and the host publication store with atomic commit and host-side revisions. **Implemented on 2026-10-03** (§6.1), and exercised with a test publisher only. The real Battle Map does not use it yet.
 4. **5A.4, the Battle Map adapter:** `battlemap-live-share.js` becomes the publisher adapter. Same player wire format; existing browser tests pass through the new helpers.
 5. **5B:** admission and protocol v1.
 6. **5C:** product UX.
@@ -520,7 +662,7 @@ Refreshing the session host is the only refresh that threatens the room; a surfa
 
 **During 5A, not blocking it:**
 - ~~the page name and URL of the session host~~ (decided in 5A.2: `live-share.html`, `/live-share`), and the product player page (still open; players use `liveshare-dev.html` until 5B/5C);
-- the duplicate-tab rule: recommended, latest registration wins plus an explicit "publish from this tab";
+- ~~the duplicate-tab rule~~ (decided and implemented in 5A.3, §6.1: the latest registration wins, except that an empty tab never displaces one with a publication, and a manual claim holds while the claimed tab has a publication. The claim protocol exists; the Battle Map's "Publish from this tab" button is 5A.4);
 - whether the Battle Map's `?liveshare=1` flag disappears in 5A (the host page replaces it) or stays as a development convenience.
   Either way, asset preparation follows whether a session is running (§14), not the URL flag.
 

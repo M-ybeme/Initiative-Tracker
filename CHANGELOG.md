@@ -16,9 +16,32 @@ The DM's Toolbox has evolved through focused feature releases. Minor versions (2
 - **1.9.x**: Battle map measurement tools, persistent fog shapes, and generator integration across NPC/Tavern/Shop systems
 - **1.8.x**: Spell database expansion to 432+ spells, inventory management, loot generator overhaul, and character token generation
 
-**Current version: 2.3.32 (October 2026)**
+**Current version: 2.3.33 (October 2026)**
 
 ---
+
+## [2.3.33] - 2026-10-03
+**Live Share surface boundary and publication store (Milestone 5A.3)**
+
+### Live Share (in development, not yet part of the product flow)
+- **Toolbox pages can now publish to the Live Share session page** (`live-share.html`) over a same-origin channel. Nothing in the app uses this yet: the Battle Map keeps its own Live Share test mode until the next step.
+  - The session page keeps the last published map and its images itself, so players keep the map, and new players still get it, after the publishing page closes.
+  - A publication reaches players only once all its images have arrived and checked out, never half-updated. A page reloaded with the same map doesn't count as a change for players.
+  - With two tabs of the same page, only one publishes: normally the most recently opened. A tab with nothing to share never takes over from one that has a map, so players are never left on an old map. A tab from an older version of the Toolbox is shown as needing a reload and can't publish.
+  - The session page lists which pages are connected, and whether each is publishing, closed or not responding.
+  - Players still use the existing player page, and see exactly what they did before.
+
+### Internal / Tests
+- New modules in `js/modules/live-share/`: `surface-boundary.js` (the protocol), `session-host-boundary.js` (the host side), `publication-store.js` (the host publication store), `battlemap-publication.js` (the Battle Map's publication format, checked with the players' own validator) and `surface-publisher.js` (the publishing side)
+- How it works, in short:
+  - **The boundary:** surface pages talk to the session page over a same-origin BroadcastChannel protocol (`v: 1`), one control channel plus one data channel per page type for image bytes. Every message is checked field by field.
+  - **The session page's publication store:** a publication commits all at once, only after every image has arrived and passed its checks (metadata, size, image type, SHA-256). The images players already have stay until the replacement commits.
+  - **Revisions:** the session page assigns the revisions players see. They rise only when the content changes, and the background revision only with the background.
+  - **Which tab publishes:** a tab with nothing to share never displaces one that has a map, and a manual claim holds while the claimed tab has something to publish. Otherwise the most recent tab wins.
+  - **Liveness** is shown as status only, and never removes what players see. The list of registered tabs is bounded.
+- Unit tests for the protocol, the store (validation, asset checks, atomic commit, revisions, retention, races) and the host side (registration, roles and claims, liveness, registry eviction, session gating, serving players), with mutation checks
+- Browser tests with a test-only publisher page (`tests/fixtures/live-share-test-publisher.*`, localhost only): a publication reaching a real player, the publisher closing, a late player, two publisher tabs, an outdated tab, malformed messages, and a near-16 MiB background
+- Known, not fixed: the near-16 MiB check confirmed the transfer stall seen in the hidden-tab spike, a few seconds where nothing reaches the player while a large image is sent. It is a delay, with no data lost. It is deferred to Milestone 5A.4 / 8 (live-share-session-host-architecture.md §9)
 
 ## [2.3.32] - 2026-10-03
 **Live Share session host foundation (Milestone 5A.2)**
