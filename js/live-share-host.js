@@ -1,12 +1,12 @@
 /**
- * Live Share session host page (live-share.html), Milestone 5A.2.
+ * Live Share session host page (live-share.html), Milestones 5A.2-5A.4.
  *
  * This tab owns the Live Share session: the room on the relay, the signaling socket, one PeerLink
  * (RTCPeerConnection + data channel) per player, the snapshot and asset senders, and the session's
  * lifetime (docs/live-share-session-host-architecture.md §5). Toolbox pages that share something (the
- * Battle Map now, the Initiative Tracker later) will publish to it from their own tabs.
+ * Battle Map now, the Initiative Tracker later) publish to it from their own tabs.
  *
- * What 5A.2 is, and is not:
+ * What it is, and is not:
  *   - Ownership: one session host per browser profile, an exclusive Web Lock (session-host-lock.js).
  *     A second host page shows that Live Share is already running and starts nothing. Without Web
  *     Locks the page fails closed and cannot host.
@@ -19,15 +19,12 @@
  *     revisions players see, and serves players from there: the snapshot sender reads the committed
  *     Battle Map snapshot, the asset sender its assets. A commit is sent from the commit event itself
  *     (sender.sendNow(), outcome B of the 5A.1 hidden-tab spike). The player wire format is unchanged,
- *     so the Battle Map is the only surface players can be sent. Nothing in the product publishes here
- *     yet: the real Battle Map still uses its prototype host until 5A.4.
+ *     so the Battle Map is the only surface players can be sent. Since 5A.4 the Battle Map publishes
+ *     its saved map here (js/battlemap-live-share.js); it owns no room or connection of its own.
  *   - No seats, password, admission, lock/kick/reset (5B / 5C), no recovery: closing or reloading this
  *     page ends the room (Milestone 7 adds host-refresh recovery).
- *   - Transitional: the Milestone 0–4 Battle Map prototype host (battlemap.html?liveshare=1,
- *     js/battlemap-live-share.js) still exists and still shares the map in its own room. It becomes a
- *     thin publisher to this page in 5A.4. The two are separate rooms; don't run both for one table.
  *
- * Development query parameters (carried into the join link, as on the Battle Map prototype):
+ * Development query parameters (carried into the join link):
  *   ?relay=ws://host:port  ?forceRelay=1  ?iceTimeoutMs=20000
  */
 import { resolveRelayUrl } from './modules/live-share/config.js';
@@ -36,13 +33,11 @@ import { HostSession } from './modules/live-share/host-session.js';
 import { createSnapshotSender } from './modules/live-share/snapshot-sender.js';
 import { createAssetSender } from './modules/live-share/asset-sender.js';
 import { parseChannelMessage, PROTOCOL_VERSION } from './modules/live-share/protocol.js';
-import { claimSessionHost } from './modules/live-share/session-host-lock.js';
+import { claimSessionHost, SESSION_HOST_WINDOW } from './modules/live-share/session-host-lock.js';
 import { createPublicationStore } from './modules/live-share/publication-store.js';
 import { createSessionHostBoundary } from './modules/live-share/session-host-boundary.js';
 import { battleMapSurface, BATTLE_MAP_SURFACE } from './modules/live-share/battlemap-publication.js';
 
-// The fixed window name surfaces will use to open or focus this page (ADR §5.1).
-export const SESSION_HOST_WINDOW = 'dmtoolbox-live-share';
 
 const params = new URLSearchParams(location.search);
 const $ = (id) => document.getElementById(id);
@@ -336,6 +331,14 @@ if (!relayUrl) {
 }
 renderPeers();
 setRunning(false);
+// Read-only inspection: the committed snapshot players are sent now (player-safe, the current wire
+// payload), or null. For diagnostics and the browser tests; it exposes nothing players don't get.
+window.LiveShareSessionHost = Object.freeze({
+  committedSnapshot: (surface = BATTLE_MAP_SURFACE) => {
+    const snapshot = store.snapshot(surface);
+    return snapshot ? structuredClone(snapshot) : null;
+  },
+});
 claimSessionHost({
   onOwned: ({ takeover }) => showOwnership('owner', takeover),
   onBusy: () => showOwnership('busy'),

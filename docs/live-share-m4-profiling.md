@@ -19,7 +19,7 @@
 
 **Harness:** `tests/perf/live-share-save-profile.perf.js`, run with `npx playwright test --config playwright.perf.config.js`.
 - It is not part of the normal test run. Results go to `perf-results/live-share-profile/*.json`, which is git-ignored.
-- It drives the real pages. The DM uses `battlemap.html?liveshare=1` with real Ctrl+S saves and real fog brush strokes. A player uses `liveshare-dev.html` in a separate browser context.
+- It drives the real pages. The DM uses `battlemap.html?liveshare=1` with real Ctrl+S saves and real fog brush strokes. A player uses `liveshare-dev.html` in a separate browser context. *(Since Milestone 5A.4 the harness uses the product topology instead: the Live Share session page owns the room, and the Battle Map, without a flag, publishes to it. The measurements below were taken before that change.)*
 - They connect over real WebRTC through the local signaling relay:
   - **direct:** ICE "all"; the pair chosen was host/host or srflx/srflx, never relay;
   - **loopback TURN:** `?forceRelay=1` with the test suite's loopback TURN server, and `usingTurnRelay: true` was verified in the player's diagnostics.
@@ -221,7 +221,7 @@ The procedure that was prepared for the check is kept below.
 
 Use 2.3.30 on the live site with a map you really play on. If you can, also use one large or high-detail map, 4000 px or more on a side.
 
-**Setup**
+**Setup** (as run for Milestone 4, on 2.3.30. *Since Milestone 5A.4, open `live-share.html` instead, start the room and read **Diagnostics** there, and keep the Battle Map, without `?liveshare=1`, open in another tab of the same browser. To force TURN, add `?forceRelay=1` to the Live Share page. The prepared background's size and encoding are in the Battle Map's own seam, `BattleMapLiveShare.getAssetDiagnostics()`.*)
 1. On the DM's computer, open `https://dnddmtoolbox.netlify.app/battlemap?liveshare=1`, load the map and save it. Start the room. Then open the Live Share panel's **Diagnostics**.
 2. On the phone, open the join link.
    - **Run 1 (direct):** the phone on the same Wi-Fi as the DM.

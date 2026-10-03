@@ -16,9 +16,40 @@ The DM's Toolbox has evolved through focused feature releases. Minor versions (2
 - **1.9.x**: Battle map measurement tools, persistent fog shapes, and generator integration across NPC/Tavern/Shop systems
 - **1.8.x**: Spell database expansion to 432+ spells, inventory management, loot generator overhaul, and character token generation
 
-**Current version: 2.3.33 (October 2026)**
+**Current version: 2.3.34 (October 2026)**
 
 ---
+
+## [2.3.34] - 2026-10-03
+**Battle Map on the Live Share session host (Milestone 5A.4; Milestone 5A complete)**
+
+### Live Share (in development, not yet part of the product flow)
+- **The Battle Map now shares through the Live Share session page** (`live-share.html`) instead of running its own room. Open the session page, start Live Share there, and keep using the Battle Map in another tab; players join from the session page's link, as before.
+  - Players still see only your last saved map (Save, Ctrl+S or Save Session). Unsaved edits, failed saves and your working draft stay private.
+  - A map saved before you start Live Share is shared as soon as it starts; you don't need to save again.
+  - Closing or reloading the Battle Map no longer ends the session. Players keep the map, and new players still get it. Reopening the Battle Map doesn't resend anything that didn't change.
+  - Without a Live Share session, the Battle Map prepares nothing for it (no background composition, encoding or hashing). It only keeps a lightweight listener for a session page.
+  - A small Live Share panel on the Battle Map, shown once a session page is open, says whether this tab is sharing, how many players there are and whether players have your last save. It has **Open Live Share** and, with two Battle Map tabs, **Publish from this tab**. A tab that isn't publishing saves normally without updating players.
+  - Players use the same player page and see exactly what they did before.
+
+### Internal / Tests
+- `js/battlemap-live-share.js` is now a thin publisher on the 5A.3 surface boundary. The Battle Map's room, connection, sender and join-link code is removed.
+- Asset preparation is switched on and off by the Battle Map's new `setLiveShareActive` hook rather than `?liveshare=1`, which now only shows the Live Share panel early, for development.
+- Only a publication made with its assets during the current session is offered (`isLiveShareReady` / `onLiveShareReady` on the seam). A map published before the session started, or one whose saved image turns out unreadable when prepared, is never shared.
+- Small additions:
+  - `getAssetMeta` on the seam (and the unused `hasAsset` removed);
+  - an optional `hasPublication` callback and `lastOffered` status in the surface publisher;
+  - an inactive tab now re-announces its publication only while a session runs;
+  - the session host window name moved to `session-host-lock.js`;
+  - a read-only `window.LiveShareSessionHost.committedSnapshot()` on the session page, for diagnostics and tests.
+- The Battle Map Live Share browser tests and the profiling harness now run the product topology (session page + Battle Map + player).
+- New `live-share-battlemap-session.spec.js`:
+  - the full Milestone 5A exit path;
+  - sharing a map saved before the session;
+  - the save boundary across reloads;
+  - two tabs with a claim;
+  - session end and restart;
+  - a near-limit background on the real path. That re-check found the known transfer delay (a save made during an 11.7 MB transfer reached the player after 3.7–5.6 s), with no data lost; it is deferred to Milestone 8.
 
 ## [2.3.33] - 2026-10-03
 **Live Share surface boundary and publication store (Milestone 5A.3)**

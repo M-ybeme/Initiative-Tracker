@@ -1,11 +1,11 @@
 // 2.3.27: Battle Map Live Share publishes only saved maps, and a token can be hidden from players.
-// The DM edits the real Battle Map (battlemap.html?liveshare=1); players (liveshare-dev.html, separate
+// The DM edits the real Battle Map, which publishes to the Live Share session page; players (liveshare-dev.html, separate
 // contexts, local relay) must see nothing of an unsaved draft: not token moves, new tokens, fog or
 // visibility changes. One Save (button or Ctrl+S) publishes the saved state; a failed save publishes
 // nothing; a player joining while the DM has unsaved edits gets the last saved map. A token hidden
 // from players is absent from everything sent, its art included.
 import { test, expect } from '@playwright/test';
-import { watchErrors, recordPlayerTraffic, hostSnapshot, sentText, sentMetas, makeMap, makeTokenPng, save, importMap, screenOf, openHost, openPanel, tokenMenu, addPresetToken } from '../helpers/battlemap-live-share.js';
+import { watchErrors, recordPlayerTraffic, hostSnapshot, sentText, sentMetas, makeMap, makeTokenPng, save, importMap, screenOf, openHost, openPanel, tokenMenu, addPresetToken, startRoom as startRoomOn, sessionOf } from '../helpers/battlemap-live-share.js';
 
 test.use({ launchOptions: { args: ['--disable-features=WebRtcHideLocalIpsWithMdns'] } });
 
@@ -122,10 +122,8 @@ test.describe('Battle Map staged Live Share publishing (2.3.27)', () => {
     await expect.poll(async () => (await hostSnapshot(host)).tokens[1].assetId, { timeout: 10000 }).toMatch(/^[0-9a-f]{64}$/);
 
     // 3-4: a player joins and sees A.
-    await host.getByTestId('start-room').click();
-    await expect(host.getByTestId('host-status')).toHaveText('Room open — waiting for players');
+    const joinUrl = await startRoomOn(sessionOf(host)); // the session page's room (open since openHost)
     await expect(host.getByTestId('save-map')).toHaveAttribute('title', /update players/);
-    const joinUrl = await host.getByTestId('join-link').textContent();
     const p1 = await joinPlayer(browser, joinUrl);
     const viewA = await expectShowing(p1.player, host);
     await expect(p1.player.locator('[data-token-id="t_hero"]')).toHaveAttribute('data-art', 'image', { timeout: 10000 });
@@ -188,7 +186,7 @@ test.describe('Battle Map staged Live Share publishing (2.3.27)', () => {
     await tokenMenu(host, heroCenter, 'toggleVisible');
     await expect(host.getByTestId('save-map')).toHaveAttribute('data-state', 'dirty');
     await p1.player.getByTestId('leave-session').click();
-    await expect(host.getByTestId('peer-list')).toContainText('No players connected.');
+    await expect(sessionOf(host).getByTestId('peer-list')).toContainText('No players connected.');
     const p2 = await joinPlayer(browser, joinUrl);
     const joinedView = await expectShowing(p2.player, host);
     expect(joinedView.revision).toBe(B.revision);
@@ -255,20 +253,20 @@ test.describe('Battle Map staged Live Share publishing (2.3.27)', () => {
     await p2.context.close();
   });
 
-  test('a map that was never saved cannot be shared until it is saved', async ({ browser }) => {
+  test('a map that was never saved is not shared until it is saved', async ({ browser }) => {
     const { hostContext, host, hostErrors } = await openHost(browser);
     expect(await hostSnapshot(host)).toBeNull();
     await addPresetToken(host, 'Fighter');
     await expect(host.getByTestId('save-map')).toHaveAttribute('data-state', 'dirty');
-    await host.getByTestId('start-room').click();
-    await expect(host.getByTestId('host-status')).toHaveText('Save the map first (Save button or Ctrl+S): players only see saved maps.');
-    await expect(host.getByTestId('join-link')).toBeHidden();
+    await expect(host.getByTestId('bm-live-share-publication')).toHaveText('Players see nothing yet: save the map (Save button or Ctrl+S).');
+    // A player can join the session, but gets no map: there is no saved one.
+    const p = await joinPlayer(browser, await startRoomOn(sessionOf(host)));
+    await p.player.waitForTimeout(1000);
+    await expect(p.player.getByTestId('map-section')).toBeHidden();
+    expect(await hostSnapshot(host)).toBeNull();
     await save(host);
-    await host.getByTestId('start-room').click();
-    await expect(host.getByTestId('host-status')).toHaveText('Room open — waiting for players');
-    const joinUrl = await host.getByTestId('join-link').textContent();
-    const p = await joinPlayer(browser, joinUrl);
     await expect(p.player.locator('.ls-token')).toHaveCount(1, { timeout: 15000 });
+    await expect(host.getByTestId('bm-live-share-publication')).toHaveText('Players have your last saved map.');
     expect(hostErrors).toEqual([]);
     expect(p.errors).toEqual([]);
     await hostContext.close();
@@ -277,7 +275,7 @@ test.describe('Battle Map staged Live Share publishing (2.3.27)', () => {
 
   test('the save button shows every kind of unsaved edit, on the ordinary Battle Map too', async ({ browser }) => {
     test.setTimeout(120000);
-    const { hostContext, host, hostErrors } = await openHost(browser, '/battlemap'); // no Live Share
+    const { hostContext, host, hostErrors } = await openHost(browser, '/battlemap', { session: false }); // no Live Share
     await importMap(host, await makeMap(host), { tokens: [{ id: 't_a', name: 'A', imgSrc: '/images/playerTokens/PlayerBardToken.png', x: 100, y: 100, w: 50, h: 50, rot: 0 }] });
     await expect(host.getByTestId('save-map')).toHaveAttribute('title', 'Save map (Ctrl+S)');
     const saves = [
@@ -345,8 +343,9 @@ test.describe('Battle Map staged Live Share publishing (2.3.27)', () => {
     });
     await edit('visibility', async () => tokenMenu(host, await tokenAt('t_a'), 'toggleVisible'));
 
-    // No Live Share without ?liveshare=1: no connections, no prepared assets.
-    expect(await host.evaluate(() => window.BattleMapLiveShare.getAssetDiagnostics())).toBeNull();
+    // No Live Share session: no panel, no prepared assets.
+    expect(await host.evaluate(() => window.BattleMapLiveShare.getAssetDiagnostics())).toMatchObject({ background: { status: 'none', rebuilds: 0 }, tokens: { prepared: 0, assets: 0 } });
+    await expect(host.locator('#bm-live-share')).toHaveCount(0);
     expect(hostErrors).toEqual([]);
     await hostContext.close();
   });

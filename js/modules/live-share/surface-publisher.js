@@ -4,21 +4,24 @@
  * uses this to publish its player-safe state to the session host page; it never touches signaling,
  * WebRTC, seats or credentials.
  *
- * Production module, used in 5A.3 only by the test publisher (tests/fixtures/live-share-test-publisher
- * .html). The Battle Map's publisher adapter (5A.4) will use it in place of today's prototype host.
+ * Production module: the Battle Map's publisher (js/battlemap-live-share.js) uses it, as does the
+ * boundary's test publisher (tests/fixtures/live-share-test-publisher.*).
  *
  *   createSurfacePublisher({ surface, surfaceVersion, getPublication, getAsset, onStatus })
  *     getPublication()   the surface's current player-safe publication, { structured, assets: [{ assetId,
  *                        kind, mime, width, height, byteLength }] }, or null. Revisionless: the host
  *                        assigns the revisions players see.
  *     getAsset(id)       { bytes } (Uint8Array or ArrayBuffer) of an asset that publication references
+ *     hasPublication()   optional: whether the surface has something to publish, even if it is not
+ *                        ready to offer yet (default: getPublication() is not null). It is what the
+ *                        host's role rule hears in surface-hello.
  *     start()            open the channels, say hello, heartbeat every HEARTBEAT_MS
  *     publish()          offer the current publication now (after a save); only the active tab of a
  *                        running session offers, anything else waits for its turn
  *     claim()            "publish from this tab": ask to become the active publisher
  *     close()            say bye and stop (also on pagehide; a bfcache restore says hello again)
- *     status()           { instanceId, active, roleReason, running, players, lastCommitted, lastRejected,
- *                          protocolErrors }
+ *     status()           { instanceId, active, roleReason, running, players, lastOffered, lastCommitted,
+ *                          lastRejected, protocolErrors }
  *
  * When it offers: on publish(), and once whenever it becomes the active publisher of a running session
  * (after its hello, a host-hello, or a takeover), so a host that (re)started gets the current state
@@ -38,6 +41,7 @@ export function createSurfacePublisher({
   surfaceVersion,
   getPublication,
   getAsset,
+  hasPublication = null,
   onStatus = () => {},
   openChannel = (name) => new globalThis.BroadcastChannel(name),
   instanceId = newInstanceId(),
@@ -53,7 +57,7 @@ export function createSurfacePublisher({
   let offered = null; // { publicationSeq, assets: Map(id -> meta) } of the latest offer
   let offeredThisTurn = false; // offered since becoming active / the last host-hello
   let announcedPublication = false; // hasPublication as last told to the host
-  const state = { instanceId, active: false, roleReason: null, running: false, players: 0, lastCommitted: null, lastRejected: null, protocolErrors: 0 };
+  const state = { instanceId, active: false, roleReason: null, running: false, players: 0, lastOffered: null, lastCommitted: null, lastRejected: null, protocolErrors: 0 };
 
   const send = (channel, type, fields) => {
     if (!channel) return;
@@ -64,15 +68,16 @@ export function createSurfacePublisher({
     }
   };
   const status = () => onStatus({ ...state });
-  const hello = () => {
-    let hasPublication = false;
+  const has = () => {
     try {
-      hasPublication = !!getPublication();
+      return hasPublication ? !!hasPublication() : !!getPublication();
     } catch {
-      hasPublication = false;
+      return false;
     }
-    announcedPublication = hasPublication;
-    send(control, 'surface-hello', { surface, surfaceVersion, hasPublication });
+  };
+  const hello = () => {
+    announcedPublication = has();
+    send(control, 'surface-hello', { surface, surfaceVersion, hasPublication: announcedPublication });
   };
 
   function offer() {
@@ -84,13 +89,14 @@ export function createSurfacePublisher({
     }
     // Not the publisher, but now has something: tell the host, which may give it the role.
     if (!state.active) {
-      if (publication && !announcedPublication) hello();
+      if (state.running && !announcedPublication && has()) hello();
       return false;
     }
     if (!publication) return false;
     seq += 1;
     offered = { publicationSeq: seq, assets: new Map(publication.assets.map((a) => [a.assetId, a])) };
     offeredThisTurn = true;
+    state.lastOffered = { publicationSeq: seq };
     send(control, 'publication-offer', { publicationSeq: seq, structured: publication.structured, assets: publication.assets });
     return true;
   }
@@ -174,7 +180,9 @@ export function createSurfacePublisher({
 
     /** Offer the current publication now. Returns whether an offer was sent. */
     publish() {
-      return offer();
+      const sent = offer();
+      status();
+      return sent;
     },
 
     claim() {

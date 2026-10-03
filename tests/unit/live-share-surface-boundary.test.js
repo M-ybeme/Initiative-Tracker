@@ -363,6 +363,54 @@ describe('session host boundary: registration and roles', () => {
     expect(a.status().protocolErrors).toBe(1); // a malformed host message still is
   });
 
+  it('a surface can say it has something to publish before it is ready to offer it (hasPublication), and reports its last offer', async () => {
+    t.host.start();
+    t.host.setSession({ running: true, players: 0 });
+    const ready = { now: false };
+    const pub = publication(battleMapContent());
+    const s = createSurfacePublisher({
+      surface: BM,
+      surfaceVersion: BATTLE_MAP_SURFACE_VERSION,
+      getPublication: () => (ready.now ? pub : null), // e.g. the Battle Map still preparing its assets
+      hasPublication: () => true, // but it has a saved map
+      getAsset: () => null,
+      openChannel: t.bus.open,
+      setRepeat: () => 1,
+      clearRepeat: () => {},
+      win: null,
+    });
+    s.start();
+    await t.bus.settle();
+    expect(t.roleOf(s.status().instanceId)).toMatchObject({ active: true, hasPublication: true });
+    expect(s.status().lastOffered).toBeNull(); // nothing to offer yet
+    expect(t.store.snapshot(BM)).toBeNull();
+    ready.now = true;
+    expect(s.publish()).toBe(true);
+    await t.bus.settle();
+    expect(s.status()).toMatchObject({ lastOffered: { publicationSeq: 1 }, lastCommitted: { publicationSeq: 1, revision: 1 } });
+  });
+
+  it('an inactive tab re-announces that it has a publication only while a session runs', async () => {
+    t.host.start();
+    const a = t.surface({ pub: publication(battleMapContent()) });
+    a.start();
+    await t.bus.settle();
+    const b = t.surface(); // newer but empty: held back, a has a map
+    b.start();
+    await t.bus.settle();
+    expect(b.status().active).toBe(false);
+    const hellos = () => t.bus.log.filter((e) => e.msg.type === 'surface-hello' && e.msg.from === b.status().instanceId).length;
+    const before = hellos();
+    b.set(publication(battleMapContent({ tokens: [] })));
+    b.publish(); // no session: nothing to announce yet
+    await t.bus.settle();
+    expect(hellos()).toBe(before);
+    t.host.setSession({ running: true, players: 0 }); // host-hello: every tab says hello, with its state
+    await t.bus.settle();
+    expect(hellos()).toBe(before + 1);
+    expect(t.roleOf(b.status().instanceId)).toMatchObject({ hasPublication: true });
+  });
+
   it('rapid competing registrations end with exactly one active publisher, the last one', async () => {
     t.host.start();
     const many = Array.from({ length: 6 }, () => t.surface());

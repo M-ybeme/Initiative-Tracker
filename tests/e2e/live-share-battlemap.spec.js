@@ -1,54 +1,22 @@
-// Live Share Milestone 2: the DM edits the real Battle Map (battlemap.html?liveshare=1) and a player
-// in a separate browser context (liveshare-dev.html) renders the structured state it receives over
-// a real RTCDataChannel, through the local relay (port 8788, started by playwright.config.js).
+// Live Share Milestone 2: the DM edits the real Battle Map and a player in a separate browser context
+// (liveshare-dev.html) renders the structured state it receives over a real RTCDataChannel, through
+// the local relay (port 8788, started by playwright.config.js). Since 5A.4 the topology is the
+// product's: the Live Share session page (live-share.html) owns the room and the connections, and the
+// Battle Map publishes its saved map to it (tests/helpers/battlemap-live-share.js).
 //
-// The player's drawing is compared with the host's own player-safe snapshot
-// (window.BattleMapLiveShare.getPlayerSafeState(), the Milestone 1 seam), so "converged" means the
-// same revision and the same geometry, names and conditions. No images are asserted: map and token
-// assets arrive in Milestone 3.
+// The player's drawing is compared with what the session page sends players (its committed snapshot,
+// with the revisions it assigns), so "converged" means the same revision and the same geometry, names
+// and conditions. No images are asserted: map and token assets arrive in Milestone 3.
 import { test, expect } from '@playwright/test';
-import { RELAY } from '../helpers/live-share.js';
+import { openHost, startAndJoin, sessionOf, hostSnapshot, diagnostics, save } from '../helpers/battlemap-live-share.js';
 
 test.use({ launchOptions: { args: ['--disable-features=WebRtcHideLocalIpsWithMdns'] } });
-
-const HOST_PAGE = `/battlemap?liveshare=1&relay=${RELAY}`;
-
-function watchErrors(page) {
-  const errors = [];
-  page.on('pageerror', (e) => errors.push(`pageerror: ${e.message}`));
-  page.on('console', (m) => {
-    if (m.type() === 'error') errors.push(`console.error: ${m.text()}`);
-  });
-  return errors;
-}
-
-// Record every data-channel message the host sends (and the channel), so the test can check what
-// left the page and replay an old snapshot later, exactly as a delayed network message would arrive.
-function recordChannelSends() {
-  const send = RTCDataChannel.prototype.send;
-  window.__lsSent = [];
-  window.__lsChannels = [];
-  RTCDataChannel.prototype.send = function (data) {
-    if (!window.__lsChannels.includes(this)) window.__lsChannels.push(this);
-    window.__lsSent.push(data);
-    return send.call(this, data);
-  };
-}
-
-const hostSnapshot = (page) => page.evaluate(() => window.BattleMapLiveShare.getPlayerSafeState());
-const diagnostics = async (page) => JSON.parse(await page.getByTestId('diagnostics').textContent());
 
 async function openAccordion(page, target, probe) {
   if (!(await page.locator(probe).isVisible())) {
     await page.locator(`[data-bs-target="${target}"]`).click();
     await expect(page.locator(probe)).toBeVisible();
   }
-}
-
-// 2.3.27: players see the last saved map, so each DM step here ends with a save (Ctrl+S).
-async function save(page) {
-  await page.keyboard.press('Control+s');
-  await expect(page.getByTestId('save-map')).not.toHaveAttribute('data-state', /dirty|saving/);
 }
 
 async function addPresetToken(page, label) {
@@ -160,30 +128,18 @@ async function expectConverged(host, player) {
   return expected;
 }
 
+// The session page (room open) and the Battle Map, saved once: players only ever see a saved map.
 async function startSharing(browser) {
-  const hostContext = await browser.newContext();
-  await hostContext.addInitScript(recordChannelSends);
-  const host = await hostContext.newPage();
-  const hostErrors = watchErrors(host);
-  await host.goto(HOST_PAGE);
-  await host.waitForFunction(() => window.BattleMapLiveShare);
-  await expect(host.getByTestId('host-status')).toHaveText('Not started');
-  await save(host); // players only ever see a saved map
-  await host.waitForFunction(() => window.BattleMapLiveShare.getPlayerSafeState());
+  const { hostContext, host, hostErrors } = await openHost(browser);
+  await save(host);
+  await expect.poll(() => hostSnapshot(host), { timeout: 15000 }).not.toBeNull();
   return { hostContext, host, hostErrors };
 }
 
 async function joinAsPlayer(browser, host) {
-  await host.getByTestId('start-room').click();
-  await expect(host.getByTestId('host-status')).toHaveText('Room open — waiting for players');
-  const joinUrl = await host.getByTestId('join-link').textContent();
-  expect(joinUrl).toMatch(/\/liveshare-dev\?.*#room=[A-Za-z0-9_-]{22}$/);
-  const playerContext = await browser.newContext();
-  const player = await playerContext.newPage();
-  const playerErrors = watchErrors(player);
-  await player.goto(joinUrl);
-  await expect(player.getByTestId('player-status')).toHaveText('Connected to host', { timeout: 20000 });
-  return { playerContext, player, playerErrors };
+  const joined = await startAndJoin(browser, host);
+  expect(await sessionOf(host).getByTestId('join-link').textContent()).toMatch(/\/liveshare-dev\?.*#room=[A-Za-z0-9_-]{22}$/);
+  return joined;
 }
 
 test.describe('Live Share remote structured rendering (Milestone 2)', () => {
@@ -307,8 +263,8 @@ test.describe('Live Share remote structured rendering (Milestone 2)', () => {
     afterBurst = (await diagnostics(host)).snapshots;
     expect(afterBurst.pendingSnapshot).toBe(false);
 
-    // Nothing private ever left the host page: no HP, images, editor state or fog.
-    const sent = await host.evaluate(() => window.__lsSent);
+    // Nothing private ever left the session page: no HP, images, editor state or fog.
+    const sent = await sessionOf(host).evaluate(() => window.__lsSent);
     expect(sent.length).toBe(afterBurst.snapshotsSent);
     for (const text of sent) {
       const msg = JSON.parse(text);
@@ -324,11 +280,12 @@ test.describe('Live Share remote structured rendering (Milestone 2)', () => {
 
     // 11-12: an old snapshot arrives late (replayed on the real channel): the player ignores it.
     const playerBefore = await playerModel(player);
-    await host.evaluate(() => {
+    const session = sessionOf(host); // it owns the channel the old message is replayed on
+    await session.evaluate(() => {
       window.__lsOld = window.__lsSent[1];
       window.__lsLatest = window.__lsSent[window.__lsSent.length - 1];
     });
-    const stale = await host.evaluate(() => {
+    const stale = await session.evaluate(() => {
       window.__lsChannels[0].send(window.__lsOld);
       return JSON.parse(window.__lsOld).payload.revision;
     });
@@ -336,8 +293,8 @@ test.describe('Live Share remote structured rendering (Milestone 2)', () => {
     await expect.poll(async () => (await diagnostics(player)).snapshots.snapshotsIgnoredStale).toBe(1);
     expect(await playerModel(player)).toEqual(playerBefore);
     // The latest revision again (a duplicate) is ignored too.
-    expect(await host.evaluate(() => JSON.parse(window.__lsLatest).payload.revision)).toBe(latest.revision);
-    await host.evaluate(() => window.__lsChannels[0].send(window.__lsLatest));
+    expect(await session.evaluate(() => JSON.parse(window.__lsLatest).payload.revision)).toBe(latest.revision);
+    await session.evaluate(() => window.__lsChannels[0].send(window.__lsLatest));
     await expect.poll(async () => (await diagnostics(player)).snapshots.snapshotsIgnoredStale).toBe(2);
     expect(await playerModel(player)).toEqual(playerBefore);
     await expect(player.getByTestId('map-status')).toHaveText(`Live — revision ${latest.revision}`);
@@ -345,8 +302,8 @@ test.describe('Live Share remote structured rendering (Milestone 2)', () => {
     expect(playerDiag).toMatchObject({ lastSnapshotAppliedRevision: latest.revision, lastSnapshotReceivedRevision: latest.revision, snapshotsRejectedInvalid: 0 });
     expect(JSON.stringify(await diagnostics(player))).not.toContain('Fighter');
 
-    // The DM ends the session: the player keeps the last map, marked disconnected.
-    await host.getByTestId('end-session').click();
+    // The DM ends the session (on the session page): the player keeps the last map, marked disconnected.
+    await session.getByTestId('end-session').click();
     await expect(player.getByTestId('map-status')).toHaveText(`Disconnected — showing the last map received (revision ${latest.revision})`);
     expect(await playerModel(player)).toEqual(playerBefore);
 
@@ -363,8 +320,8 @@ test.describe('Live Share remote structured rendering (Milestone 2)', () => {
     await expectConverged(host, player);
     const good = await playerModel(player);
 
-    // Malformed: rejected and counted; the map stays as it was.
-    await host.evaluate(() => {
+    // Malformed: rejected and counted; the map stays as it was. (Sent from the session page's channel.)
+    await sessionOf(host).evaluate(() => {
       const base = JSON.parse(window.__lsSent[0]);
       const send = (msg) => window.__lsChannels[0].send(JSON.stringify(msg));
       send({ ...base, payload: { ...base.payload, revision: 1e9, schema: 'something.else' } });
@@ -379,7 +336,7 @@ test.describe('Live Share remote structured rendering (Milestone 2)', () => {
     expect(await playerModel(player)).toEqual(good);
 
     // A newer snapshot whose name is markup: drawn as text, no element is created from it.
-    await host.evaluate(() => {
+    await sessionOf(host).evaluate(() => {
       const base = JSON.parse(window.__lsSent[0]);
       const tokens = [{ ...base.payload.tokens[0], name: '<img src=x onerror="window.__pwned=1">', conditions: ['<b>bold</b>'] }];
       window.__lsChannels[0].send(JSON.stringify({ ...base, payload: { ...base.payload, revision: 1e6, tokens, extra: { hp: 5 } } }));
@@ -395,18 +352,41 @@ test.describe('Live Share remote structured rendering (Milestone 2)', () => {
     await playerContext.close();
   });
 
-  test('without ?liveshare=1 the Battle Map has no Live Share panel and opens no connections', async ({ page }) => {
-    await page.addInitScript(() => {
+  test('the Battle Map opens no connection of its own, and shows no Live Share panel without a session page', async ({ browser }) => {
+    const countConnections = () => {
       window.__peerConnections = 0;
       const PC = window.RTCPeerConnection;
       window.RTCPeerConnection = function (...args) {
         window.__peerConnections += 1;
         return new PC(...args);
       };
-    });
+    };
+    // Alone: no panel, no connection.
+    const alone = await browser.newContext();
+    await alone.addInitScript(countConnections);
+    const page = await alone.newPage();
     await page.goto('/battlemap');
     await page.waitForFunction(() => window.BattleMapLiveShare);
+    await page.waitForTimeout(500);
     await expect(page.locator('#bm-live-share')).toHaveCount(0);
     expect(await page.evaluate(() => window.__peerConnections)).toBe(0);
+    await alone.close();
+
+    // With a running session and a player: the panel appears, but every connection is the session
+    // page's; the Battle Map itself still creates none.
+    const { hostContext, host } = await startSharing(browser);
+    await hostContext.addInitScript(countConnections); // counting from the start of the page load
+    await host.reload();
+    await host.waitForFunction(() => window.BattleMapLiveShare);
+    const { playerContext, player } = await joinAsPlayer(browser, host);
+    await expect(player.getByTestId('map-section')).toBeVisible();
+    await expect(host.getByTestId('bm-live-share-status')).toHaveAttribute('data-state', 'active');
+    await save(host);
+    await host.waitForTimeout(500);
+    expect(await host.evaluate(() => window.__peerConnections)).toBe(0);
+    expect(await host.evaluate(() => typeof window.__lsChannels === 'undefined' || window.__lsChannels.length === 0)).toBe(true);
+    expect(await sessionOf(host).evaluate(() => window.__lsChannels.length)).toBe(1);
+    await hostContext.close();
+    await playerContext.close();
   });
 });

@@ -1,7 +1,8 @@
 const DM_TOOLBOX_BUILD = {
   name: "The DM's Toolbox",
-  version: "2.3.33",
+  version: "2.3.34",
   recentChanges: [
+    "New (Live Share, in development): the Battle Map now shares through the Live Share page instead of running its own room, so closing or reloading the Battle Map no longer ends the session; players still see only your last saved map, and a map saved before Live Share starts is shared right away",
     "New (Live Share, in development): Toolbox pages can now publish safely to the Live Share session page, which keeps what players see, checks every update and applies it all at once; this is groundwork, and the Battle Map moves onto it next",
     "New (Live Share, in development): a dedicated Live Share session page (live-share.html, not linked yet) that keeps the room and every player connection; only one tab per browser can host, and closing or reloading it ends the session",
     "New (Live Share test mode): players can drag to pan and scroll or pinch to zoom the shared Battle Map on their own screen (Fit shows it all again), and built-in Battle Map tokens show their real image instead of a colored marker",

@@ -1,5 +1,5 @@
 // Live Share Milestone 3: the player-visible background and custom token art, end to end, on the
-// real Battle Map (battlemap.html?liveshare=1) with a player in a separate context
+// real Battle Map (publishing to the Live Share session page, which owns the room) with a player in a separate context
 // (liveshare-dev.html), over a real RTCDataChannel through the local relay.
 //
 // The map is imported through the Battle Map's own "Import JSON" input: a generated map image with
@@ -24,6 +24,8 @@ import {
   openPanel,
   playerBackgroundPixels,
   near,
+  sessionOf,
+  openSessionPage,
 } from '../helpers/battlemap-live-share.js';
 
 test.use({ launchOptions: { args: ['--disable-features=WebRtcHideLocalIpsWithMdns'] } });
@@ -188,7 +190,7 @@ test.describe('Live Share player-visible background and assets (Milestone 3)', (
     // 19-20: the DM ends the session: every object URL is revoked; the structured map stays.
     const liveBefore = await player.evaluate(() => [...window.__lsUrls.created].filter((u) => !window.__lsUrls.revoked.has(u)).length);
     expect(liveBefore).toBeGreaterThanOrEqual(2); // background + token art
-    await host.getByTestId('end-session').click();
+    await sessionOf(host).getByTestId('end-session').click();
     await expect(player.getByTestId('map-status')).toContainText('Disconnected', { timeout: 10000 });
     await expect.poll(() => player.evaluate(() => [...window.__lsUrls.created].filter((u) => !window.__lsUrls.revoked.has(u)).length)).toBe(0);
     await expect(player.locator('.ls-background-image, [data-art="image"]')).toHaveCount(0);
@@ -212,16 +214,22 @@ test.describe('Live Share player-visible background and assets (Milestone 3)', (
     });
     await expect.poll(async () => (await hostSnapshot(host)).background, { timeout: 20000 }).not.toBeNull();
 
-    // As soon as the background's metadata goes out, rotate the token: a structured change made
-    // while the transfer runs.
+    // As soon as the session page sends the background's metadata, rotate the token on the Battle Map
+    // and save it: a structured change made while the transfer runs. (The two are separate tabs now:
+    // a test-only channel carries the cue, in about a millisecond.)
     await host.evaluate(() => {
+      const cue = new BroadcastChannel('test.cue');
+      cue.onmessage = () => {
+        window.dispatchEvent(new KeyboardEvent('keydown', { key: 'r' }));
+        window.dispatchEvent(new KeyboardEvent('keydown', { key: 's', ctrlKey: true })); // and save it
+      };
+    });
+    await sessionOf(host).evaluate(() => {
+      const cue = new BroadcastChannel('test.cue');
       window.__lsOnSend = (data) => {
         if (typeof data === 'string' && data.includes('"asset-meta"') && data.includes('"background"')) {
           window.__lsOnSend = null;
-          setTimeout(() => {
-            window.dispatchEvent(new KeyboardEvent('keydown', { key: 'r' }));
-            window.dispatchEvent(new KeyboardEvent('keydown', { key: 's', ctrlKey: true })); // and save it
-          }, 0);
+          cue.postMessage('rotate');
         }
       };
     });
@@ -274,7 +282,7 @@ test.describe('Live Share player-visible background and assets (Milestone 3)', (
     await playerContext.close();
   });
 
-  test('without ?liveshare=1 the Battle Map composes, encodes and hashes nothing', async ({ browser }) => {
+  test('without a Live Share session the Battle Map composes, encodes and hashes nothing; with one it does', async ({ browser }) => {
     test.setTimeout(90000);
     // Count every way the page could encode an image or hash one.
     const instrument = () => {
@@ -304,12 +312,16 @@ test.describe('Live Share player-visible background and assets (Milestone 3)', (
         return new PC(...a);
       };
     };
-    const run = async (url) => {
+    // withSession: the Live Share session page runs (room open) in the same profile. The counters are
+    // the Battle Map page's own.
+    const run = async (withSession) => {
       const context = await browser.newContext();
       await context.addInitScript(instrument);
+      if (withSession) await openSessionPage(context);
       const page = await context.newPage();
-      await page.goto(url);
+      await page.goto(withSession ? HOST_PAGE : '/battlemap');
       await page.waitForFunction(() => window.BattleMapLiveShare);
+      if (withSession) await expect(page.getByTestId('bm-live-share-status')).toHaveAttribute('data-state', 'active');
       // A map with fog and a custom (uploaded) token: everything that would be prepared for sharing.
       await importMap(page, await makeMap(page), { tokens: [{ id: 't_art', name: 'Art', imgSrc: `data:image/png;base64,${(await makeTokenPng(page)).toString('base64')}`, x: 100, y: 100, w: 50, h: 50, rot: 0 }] });
       await page.locator('#fogCover').click();
@@ -328,15 +340,20 @@ test.describe('Live Share player-visible background and assets (Milestone 3)', (
       return result;
     };
 
-    const plain = await run('/battlemap');
-    expect(plain).toMatchObject({ encodes: 0, digests: 0, peerConnections: 0, diagnostics: null, panel: false });
+    const plain = await run(false);
+    expect(plain).toMatchObject({ encodes: 0, digests: 0, peerConnections: 0, panel: false });
+    expect(plain.diagnostics.background).toMatchObject({ status: 'none', rebuilds: 0 });
+    expect(plain.diagnostics.tokens).toMatchObject({ prepared: 0, assets: 0, sources: 0 });
     expect(plain.snapshot.background).toBeNull();
     expect(plain.snapshot.tokens.map((t) => t.assetId)).toEqual([null]);
 
-    // Control: the same steps in Live Share mode do encode and hash, so the counters see the work.
-    const sharing = await run(HOST_PAGE);
+    // Control: the same steps with a session running do encode and hash, so the counters see the
+    // work. The Battle Map still opens no connection: the session page owns them.
+    const sharing = await run(true);
     expect(sharing.encodes).toBeGreaterThan(0);
     expect(sharing.digests).toBeGreaterThan(0);
+    expect(sharing.peerConnections).toBe(0);
+    expect(sharing.panel).toBe(true);
     expect(sharing.snapshot.background).not.toBeNull();
     expect(sharing.snapshot.tokens[0].assetId).toMatch(/^[0-9a-f]{64}$/);
   });

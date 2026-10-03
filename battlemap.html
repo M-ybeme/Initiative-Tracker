@@ -25,7 +25,8 @@
   <script src="/js/modules/battle-map-share-state.js"></script>
   <script src="/js/modules/battle-map-share-assets.js"></script>
   <script src="/js/modules/battle-map-publication.js"></script>
-  <!-- Live Share Milestone 2 host (development only: inert unless the page is opened with ?liveshare=1) -->
+  <!-- Live Share (Milestone 5A.4): the Battle Map publishes its saved player-safe map to the Live Share
+       session page (live-share.html), which owns the room. Inert until a session page is open. -->
   <script type="module" src="/js/battlemap-live-share.js"></script>
 
   <style>
@@ -933,19 +934,22 @@
   // One read-only boundary over the published (saved) state: an allowlisted player-safe projection
   // plus one "player-visible state changed" signal. Since 2.3.27 it is checked only when the
   // publisher commits a save; the revision moves only when the projected content changes.
-  // Nothing here sends anything anywhere; Live Share (js/battlemap-live-share.js) subscribes to it.
+  // Nothing here sends anything anywhere; Live Share (js/battlemap-live-share.js, the Battle Map's
+  // publisher to the Live Share session page) subscribes to it.
   //
   // Milestone 3 (js/modules/battle-map-share-assets.js): the raster side of the same seam. It composes
   // the player-visible background (map + fog, hidden areas opaque) and encodes custom token art, and
   // hands out only encoded bytes by content-derived id. Its inputs are those of the save being
   // published; the publisher flush()es it, then retain()s what it committed.
   //
-  // Only in Live Share mode (?liveshare=1, like js/battlemap-live-share.js): without it the Battle Map
-  // composes, encodes and hashes nothing, and the projection simply has no asset references.
+  // Only while a Live Share session is running (5A.4: the publisher says so through
+  // setLiveShareActive): otherwise the Battle Map composes, encodes and hashes nothing, and the
+  // projection simply has no asset references. When a session starts, the saved record is published
+  // again from storage with its assets, so a map saved before the session is shared without a new save.
   let fogPixelsVersion = 0; // bumped wherever the fog bitmap's pixels change
   function fogPixelsChanged(){ fogPixelsVersion++; }
   let fogBitmapLoads = 0; // saved fog bitmaps still decoding: until then the fog is not what was saved
-  const liveShareMode = new URLSearchParams(location.search).get('liveshare') === '1';
+  let liveShareActive = false;
   //
   // 2.3.27: Live Share publishes the last SAVED Battle Map, never the working state
   // (js/modules/battle-map-publication.js). Edits, redraws and setDirty() only change the DM's own
@@ -953,7 +957,7 @@
   // the Battle Map's policy, not Live Share's: surfaces without a save workflow (the planned
   // Initiative Tracker) publish as their state changes.
   const NO_BACKGROUND_INPUTS = { map: { image: null, width: 0, height: 0 }, fogEnabled: false, fogCanvas: null, fogShapes: [], fogVersion: 0, tokens: [] };
-  const shareAssets = liveShareMode && window.BattleMapShareAssets
+  const shareAssets = window.BattleMapShareAssets
     ? window.BattleMapShareAssets.createShareAssets({
         // Only ever the inputs of the last save (captureBackgroundInputs), never the draft.
         getInputs: () => (publisher && publisher.backgroundInputs()) || NO_BACKGROUND_INPUTS,
@@ -972,8 +976,16 @@
         onError: (err) => console.warn('Battle Map share-assets update failed', err),
       })
     : null;
+  // The publisher sees the assets only while Live Share runs: otherwise nothing is prepared (flush is a
+  // no-op) and a publication references no asset, never one prepared for an earlier session.
+  const liveShareAssets = shareAssets ? {
+    flush: () => (liveShareActive ? shareAssets.flush() : Promise.resolve()),
+    background: () => (liveShareActive ? shareAssets.background() : null),
+    tokenAssetId: (t) => (liveShareActive ? shareAssets.tokenAssetId(t) : null),
+    retain: (ids) => shareAssets.retain(ids),
+  } : null;
   const publisher = window.BattleMapPublication
-    ? window.BattleMapPublication.createPublisher({ assets: shareAssets, onPublished: () => shareState && shareState.check() })
+    ? window.BattleMapPublication.createPublisher({ assets: liveShareAssets, onPublished: () => shareState && shareState.check() })
     : null;
   const shareState = window.BattleMapShareState && publisher
     ? window.BattleMapShareState.createShareStateSeam({
@@ -1008,12 +1020,26 @@
   function capturePublication() {
     return {
       structured: window.BattleMapPublication.captureStructured(state, persistentMeasurements),
-      backgroundInputs: shareAssets ? captureBackgroundInputs() : null,
+      backgroundInputs: liveShareActive && shareAssets ? captureBackgroundInputs() : null,
+      liveShareGeneration,
     };
   }
+  // Live Share readiness: the published state was made WITH its assets during the current session
+  // (activation). Until then the publisher offers nothing, so a state published before the session (no
+  // assets) is never shared, nor one whose map turned out unreadable when prepared for the session.
+  let liveShareGeneration = 0; // bumped on every activation
+  let readyGeneration = -1; // generation of the published state, if it was made with assets
+  const readyListeners = new Set();
+  const liveShareReady = () => liveShareActive && readyGeneration === liveShareGeneration;
   function publishSaved(publication) {
     if (!publisher) return Promise.resolve(false);
-    return publisher.publish(publication).catch((err) => {
+    const generation = publication.backgroundInputs ? publication.liveShareGeneration : -1;
+    return publisher.publish(publication).then((committed) => {
+      if (!committed) return committed; // superseded by a newer save
+      readyGeneration = generation;
+      if (liveShareReady()) readyListeners.forEach((fn) => fn());
+      return committed;
+    }).catch((err) => {
       console.warn('Battle Map publication failed', err);
       return false;
     });
@@ -1023,13 +1049,45 @@
     getPlayerSafeState: () => (shareState && publisher.hasPublished() ? shareState.getPlayerSafeState() : null),
     hasPublishedState: () => !!publisher && publisher.hasPublished(),
     // Why there is no published state although a saved map exists: 'loading' | 'unreadable' | null.
-    savedMapProblem: () => (publisher && publisher.hasPublished() ? null : savedMapProblem),
+    // While Live Share runs, also until the saved state is ready for it (prepared with its assets).
+    savedMapProblem: () => (publisher && publisher.hasPublished() && (!liveShareActive || liveShareReady()) ? null : savedMapProblem),
     onShareableStateChanged: (fn) => (shareState ? shareState.onChange(fn) : () => {}),
     // Milestone 3: player-safe assets by content-derived id ({assetId, kind, mime, width, height, bytes}).
     getAsset: (assetId) => (shareAssets ? shareAssets.getAsset(assetId) : null),
-    hasAsset: (assetId) => !!shareAssets && shareAssets.hasAsset(assetId),
+    // Metadata only (no bytes) of a prepared asset: for the publisher's offers.
+    getAssetMeta: (assetId) => (shareAssets ? shareAssets.assetMeta(assetId) : null),
     getAssetDiagnostics: () => (shareAssets ? shareAssets.diagnostics() : null),
+    // 5A.4: whether a Live Share session is running. Turning it on publishes the saved record again
+    // from storage, now with its assets (resolves when that is done); turning it off stops all asset
+    // work. Called only by the Live Share publisher (js/battlemap-live-share.js).
+    setLiveShareActive: (active) => setLiveShareActive(active),
+    // Whether the published state is ready to share in this session (made with its assets since
+    // Live Share started), and a signal when it becomes so.
+    isLiveShareReady: () => liveShareReady(),
+    onLiveShareReady: (fn) => {
+      readyListeners.add(fn);
+      return () => readyListeners.delete(fn);
+    },
   });
+  let liveShareActivation = Promise.resolve();
+  function setLiveShareActive(active){
+    active = !!active;
+    if (active === liveShareActive) return liveShareActivation;
+    liveShareActive = active;
+    if (!active) return (liveShareActivation = Promise.resolve());
+    liveShareGeneration += 1;
+    liveShareActivation = (async () => {
+      const savesBefore = savesCompleted;
+      let saved = await readRecord(SAVED_RECORD);
+      if (saved && saved.unsavedDraft) saved = null; // a draft is never published
+      // A save made meanwhile publishes itself (with assets, since Live Share is on now).
+      if (!saved || savesCompleted !== savesBefore || !liveShareActive) return;
+      await publishSavedRecord(saved, loadImage);
+    })().catch((err) => {
+      console.warn('The saved Battle Map could not be prepared for Live Share', err);
+    });
+    return liveShareActivation;
+  }
 
   // --- Dirty flag tracking for unsaved changes
   // Marking the map dirty only changes the DM's own state: nothing is published until a save.
@@ -1200,7 +1258,10 @@
         writeDraft(); // edits made while saving stay unsaved: their draft continues from this save
       }
       setSaveButton(isDirty ? 'dirty' : 'saved');
-      if (publication) publishSaved(publication);
+      if (publication && liveShareActive && !publication.backgroundInputs) {
+        // Live Share started while this save ran: publish the record just saved, with its assets.
+        publishSavedRecord(payload, loadImage).catch((err) => console.warn('Battle Map publication failed', err));
+      } else if (publication) publishSaved(publication);
       return true;
     } finally {
       saveInFlight = false;
@@ -1331,8 +1392,10 @@
     savedMapProblem = 'loading';
     let image = null;
     let fogCanvas = null;
+    const withAssets = liveShareActive && !!shareAssets;
+    const generation = liveShareGeneration;
     try {
-      if (shareAssets && rec.map?.imgSrc) image = await decodeImage(rec.map.imgSrc);
+      if (withAssets && rec.map?.imgSrc) image = await decodeImage(rec.map.imgSrc);
     } catch {
       if (savesCompleted === savesBefore) savedMapProblem = 'unreadable';
       return;
@@ -1340,7 +1403,7 @@
     // The size load() gives the map: the decoded image's, else the stored one.
     const w = image ? image.naturalWidth : (rec.map && rec.map.w) || 0;
     const h = image ? image.naturalHeight : (rec.map && rec.map.h) || 0;
-    if (shareAssets) {
+    if (withAssets) {
       fogCanvas = document.createElement('canvas');
       fogCanvas.width = image ? w : 1;
       fogCanvas.height = image ? h : 1;
@@ -1356,7 +1419,7 @@
         grid: { ...DEFAULT_GRID, ...(rec.grid || {}) },
         tokens,
       }, measurements),
-      backgroundInputs: shareAssets ? {
+      backgroundInputs: withAssets ? {
         map: { image, width: image ? w : 0, height: image ? h : 0 },
         fogEnabled: rec.fogState ? !!rec.fogState.enabled : false,
         fogCanvas,
@@ -1365,8 +1428,11 @@
         fogReady: true,
         tokens: tokens.filter(t => t.visibleToPlayers !== false).map(t => ({ imgSrc: t.imgSrc })),
       } : null,
+      liveShareGeneration: generation,
     };
     if (savesCompleted !== savesBefore) return; // the DM saved meanwhile: that save is newer
+    // Live Share was switched on or off while decoding: the publication made for that change wins.
+    if (withAssets !== (liveShareActive && !!shareAssets)) return;
     await publishSaved(publication);
     if (savesCompleted === savesBefore) savedMapProblem = null;
   }

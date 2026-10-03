@@ -1,6 +1,7 @@
 // TEST ONLY (Live Share Milestone 5A.3): a stand-in Battle Map surface for the session host boundary
-// browser specs (tests/e2e/live-share-surface-boundary.spec.js). Not the Battle Map: the real Battle
-// Map keeps its prototype host until 5A.4.
+// browser specs (tests/e2e/live-share-surface-boundary.spec.js), able to send what the real Battle Map
+// never would (malformed messages, versions, exact asset sizes). The real Battle Map publishes through
+// the same client since 5A.4 (js/battlemap-live-share.js, tested in live-share-battlemap-session.spec.js).
 //
 // It uses the real production boundary client (surface-publisher.js), the real Battle Map projection
 // (BattleMapShareState.projectPlayerSafeState) and real PNG bytes from a canvas, so what crosses the

@@ -1,10 +1,10 @@
 // 2.3.30 (Live Share player view polish): built-in token images by preset id, the DM's saved grid
-// style, and the player's own pan / zoom. The DM edits the real Battle Map (battlemap.html?liveshare=1)
+// style, and the player's own pan / zoom. The DM edits the real Battle Map (publishing to the Live Share session page)
 // and players (liveshare-dev.html, separate contexts, local relay) must see built-in images without
 // any URL crossing, follow the saved grid style only after Save (without any background work), and
 // navigate locally without anything reaching the host.
 import { test, expect } from '@playwright/test';
-import { watchErrors, recordPlayerTraffic, hostSnapshot, sentText, sentMetas, makeMap, makeTokenPng, save, importMap, openHost, openPanel, screenOf } from '../helpers/battlemap-live-share.js';
+import { watchErrors, recordPlayerTraffic, hostSnapshot, sentText, sentMetas, makeMap, makeTokenPng, save, importMap, openHost, openPanel, screenOf, startRoom as startRoomOn, sessionOf } from '../helpers/battlemap-live-share.js';
 
 test.use({ launchOptions: { args: ['--disable-features=WebRtcHideLocalIpsWithMdns'] } });
 
@@ -15,11 +15,8 @@ const backgroundMetas = async (page) => (await sentMetas(page)).filter((m) => m.
 const rebuilds = (page) => page.evaluate(() => window.BattleMapLiveShare.getAssetDiagnostics().background.rebuilds);
 const MAP = '[data-testid="player-map"]';
 
-async function startRoom(host) {
-  await host.getByTestId('start-room').click();
-  await expect(host.getByTestId('host-status')).toHaveText('Room open — waiting for players');
-  return host.getByTestId('join-link').textContent();
-}
+// The room on the Battle Map's session page (already started by openHost); its join link.
+const startRoom = (host) => startRoomOn(sessionOf(host));
 
 // A player that also records its own data-channel sends and every request its page makes.
 async function joinPlayer(browser, joinUrl, contextOptions = {}) {
@@ -95,7 +92,7 @@ test.describe('Live Share player view polish (2.3.30)', () => {
     // F: hostile preset ids, sent straight down the channel. A well-formed unknown id draws a
     // marker; a URL or path is rejected with the whole snapshot. Nothing is fetched from them.
     const before = await revisionShown(p.player);
-    await host.evaluate(() => {
+    await sessionOf(host).evaluate(() => { // the session page owns the channel
       const base = JSON.parse(window.__lsSent.filter((m) => typeof m === 'string' && m.includes('battlemap-snapshot')).at(-1));
       const send = (msg) => window.__lsChannels[0].send(JSON.stringify(msg));
       const withPreset = (presetId, revision) => ({ ...base, payload: { ...base.payload, revision, tokens: base.payload.tokens.map((t, i) => (i === 0 ? { ...t, presetId } : t)) } });

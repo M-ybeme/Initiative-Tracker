@@ -1,8 +1,9 @@
 // Live Share Milestone 5A.2: the dedicated session host page (live-share.html,
 // js/live-share-host.js). It owns the room, the signaling socket and every player connection, and only
-// one such page per browser profile may host (an exclusive Web Lock). No surface publishes to it yet
-// (5A.3), so a connected player gets a working connection but no map. The Battle Map prototype host
-// (battlemap.html?liveshare=1) is untouched and tested by its own specs.
+// one such page per browser profile may host (an exclusive Web Lock). No Toolbox page is open in these
+// tests, so a connected player gets a working connection but no map. The surface boundary and the
+// Battle Map publishing to this page are tested in live-share-surface-boundary.spec.js and
+// live-share-battlemap-session.spec.js.
 import { test, expect } from '@playwright/test';
 import { RELAY } from '../helpers/live-share.js';
 

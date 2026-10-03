@@ -5,8 +5,8 @@
  * that joins it opens a WebRTC data channel and sends "hello". With `#room=...` the page is a
  * player: it joins that room, answers the host's offer and shows the message it receives.
  *
- * Milestone 2: the Battle Map can host too (battlemap.html?liveshare=1, js/battlemap-live-share.js),
- * and its join links open this page as a player. The player then draws each Battle Map snapshot it
+ * Milestone 2: the Live Share session page (live-share.html; until 5A.4 the Battle Map itself) shares
+ * the Battle Map, and its join links open this page as a player. The player then draws each Battle Map snapshot it
  * receives, read-only, keeping only the newest revision (battlemap-snapshot.js, battlemap-view.js).
  * Milestone 3: it then asks for the assets that snapshot references and it doesn't have yet (the
  * player-visible background, custom token art), fills them in as they arrive, and releases them all

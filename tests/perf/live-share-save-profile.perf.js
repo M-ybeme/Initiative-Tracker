@@ -1,8 +1,11 @@
 // Live Share Milestone 4B: profile the Battle Map Save -> player-visible path on the real pages.
 //
-// The DM edits the real Battle Map (battlemap.html?liveshare=1); a player (liveshare-dev.html) in a
-// separate browser context connects through the local relay over real WebRTC (direct host
-// candidates, or the loopback TURN server with ?forceRelay=1). Nothing in the app is changed for
+// The DM edits the real Battle Map, which publishes its saved map to the Live Share session page
+// (live-share.html, Milestone 5A.4: it owns the room and the connections) in the same browser profile;
+// a player (liveshare-dev.html) in a separate browser context connects to the session page through
+// the local relay over real WebRTC (direct host candidates, or the loopback TURN server with
+// ?forceRelay=1). Data-channel sends are therefore the session page's: the probes run in both DM
+// pages, and their events are merged (perfOf). Nothing in the app is changed for
 // this: test-only init scripts timestamp what the pages already do (canvas composition and toBlob,
 // SHA-256, IndexedDB save, every data-channel send / receive, the player's background <image> load)
 // and watch the host's main thread (Long Tasks API, requestAnimationFrame gaps).
@@ -252,14 +255,22 @@ function makeTokenArt(page, count) {
 
 // ---- Pages ------------------------------------------------------------------------------------
 
-const hostSnapshot = (page) => page.evaluate(() => window.BattleMapLiveShare.getPlayerSafeState());
+const sessions = new WeakMap(); // Battle Map page -> its session page
+// What players are sent: the session page's committed snapshot (the revisions it assigns).
+const hostSnapshot = (page) => sessions.get(page).evaluate(() => window.LiveShareSessionHost.committedSnapshot());
 
 async function openHost(browser, { forceRelay = false } = {}) {
   const context = await browser.newContext({ viewport: { width: 1400, height: 900 } });
   await context.addInitScript(hostProbe);
+  const session = await context.newPage();
+  await session.goto(`/live-share?relay=${RELAY}${forceRelay ? '&forceRelay=1' : ''}`);
+  await expect(session.getByTestId('owner-status')).toHaveAttribute('data-state', 'owner');
+  await session.getByTestId('start-room').click();
+  await expect(session.getByTestId('host-status')).toHaveText('Room open — waiting for players', { timeout: 30000 });
   const page = await context.newPage();
-  await page.goto(`/battlemap?liveshare=1&relay=${RELAY}${forceRelay ? '&forceRelay=1' : ''}`);
+  await page.goto(`/battlemap?relay=${RELAY}`);
   await page.waitForFunction(() => window.BattleMapLiveShare);
+  sessions.set(page, session);
   // Persistence timing: the save's IndexedDB write.
   await page.evaluate(() => {
     const s = window.IndexedDBStorage;
@@ -300,9 +311,7 @@ async function importCase(page, { map, fog, tokens = [], measurements = [], fogS
 }
 
 async function startAndJoin(browser, host, { forceRelay = false } = {}) {
-  await host.getByTestId('start-room').click();
-  await expect(host.getByTestId('host-status')).toHaveText('Room open — waiting for players');
-  const joinUrl = await host.getByTestId('join-link').textContent();
+  const joinUrl = await sessions.get(host).getByTestId('join-link').textContent(); // room open since openHost
   expect(joinUrl.includes('forceRelay=1')).toBe(forceRelay);
   const context = await browser.newContext({ viewport: { width: 1280, height: 900 } });
   await context.addInitScript(playerProbe);
@@ -318,8 +327,17 @@ async function connectionInfo(player) {
   return host ? { usingTurnRelay: host.usingTurnRelay, local: host.localCandidateType, remote: host.remoteCandidateType, protocol: host.transportProtocol } : null;
 }
 
-const clearPerf = (...pages) => Promise.all(pages.map((p) => p.evaluate(() => { window.__perf.events.length = 0; if (window.__perf.longtasks) window.__perf.longtasks.length = 0; if (window.__perf.gaps) window.__perf.gaps.length = 0; })));
-const perfOf = (page) => page.evaluate(() => window.__perf);
+// A Battle Map page's perf includes its session page's (merged by time): the sends happen there.
+// Long tasks and frame gaps are the Battle Map's (the DM's page); the session page's are listed apart.
+const clearPerf = (...pages) =>
+  Promise.all(pages.flatMap((p) => [p, sessions.get(p)].filter(Boolean)).map((p) => p.evaluate(() => { window.__perf.events.length = 0; if (window.__perf.longtasks) window.__perf.longtasks.length = 0; if (window.__perf.gaps) window.__perf.gaps.length = 0; })));
+const perfOf = async (page) => {
+  const own = await page.evaluate(() => window.__perf);
+  const session = sessions.get(page);
+  if (!session) return own;
+  const other = await session.evaluate(() => window.__perf);
+  return { ...own, events: [...own.events, ...other.events].sort((a, b) => a.t - b.t), sessionLongtasks: other.longtasks, sessionGaps: other.gaps };
+};
 
 async function screenOf(page, wx, wy) {
   const box = await page.locator('#uiLayer').boundingBox();
@@ -493,7 +511,7 @@ async function firstSavesAfterReload(host, player, tokenId) {
   const rows = [];
   for (let i = 0; i < 2; i++) {
     const before = await hostSnapshot(host);
-    await host.evaluate(() => { window.__perf.events.length = 0; window.__perf.longtasks.length = 0; window.__perf.gaps.length = 0; });
+    await clearPerf(host);
     await tokenDrag(host, await centreOf(host, tokenId), i % 2 ? -42 : 42, 0);
     await saveAndSettle(host);
     await expect.poll(async () => (await hostSnapshot(host)).revision, { timeout: 60000 }).toBe(before.revision + 1);

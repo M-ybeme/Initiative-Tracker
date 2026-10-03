@@ -291,13 +291,16 @@ The Battle Map is a tactical combat visualization tool with support for fog-of-w
 - A token's right-click menu has **Visible to Players** (checked by default). A hidden token stays on your map, dimmed with a crossed-eye badge, and is left out of everything Live Share sends, its art, aura and vision cone included
 - The setting is saved with the map and kept by **Export JSON / Import** (exports always include it; files exported before 2.3.27 have none, and their tokens are visible)
 
-**Live Share publishes only the saved map (v2.3.27, `battlemap.html?liveshare=1`):**
-- Players see the Battle Map as last saved, never your working state. Edits stay private until you save; one save publishes them together (tokens, fog and background in step). The Save button's tooltip says "Save changes and update players" while a room is open
+**Live Share publishes only the saved map (v2.3.27; through the Live Share session page since Milestone 5A.4):**
+- The room is run by the Live Share session page (`live-share.html`), not by the Battle Map: start Live Share there and keep the Battle Map open in another tab of the same browser. The Battle Map shows a small Live Share panel once a session page is open (with **Open Live Share**, and **Publish from this tab** when another Battle Map tab is the one sharing). Opening it with `?liveshare=1` only shows that panel early, for development
+- Players see the Battle Map as last saved, never your working state. Edits stay private until you save; one save publishes them together (tokens, fog and background in step). The Save button's tooltip says "Save changes and update players" while this tab is sharing
 - A failed save publishes nothing: players keep the last saved map
 - A player who joins while you have unsaved changes gets the last saved map
-- A map that was never saved can't be shared until it is saved
-- After a reload, players get the saved map even if a draft is restored for you. While the saved map is still loading, or if its image can't be read, **Start room** says so and opens nothing
-- The images of the published map stay available to joining players until a newer save has been published
+- A map that was never saved isn't shared until it is saved; one saved before Live Share started is shared as soon as it starts
+- After a reload, players get the saved map even if a draft is restored for you. While the saved map is still loading, or if its image can't be read, the Live Share panel says so and nothing new is shared
+- Closing or reloading the Battle Map doesn't end Live Share: players keep the last published map and new players still get it, images included
+- With two Battle Map tabs, one shares: a tab that isn't sharing saves normally without updating players
+- Without a Live Share session the Battle Map prepares nothing for it (no background composition, encoding or hashing)
 
 **Auras and vision cones for Live Share players (v2.3.29):**
 - Players see the aura and vision cone of every token they can see, drawn like yours: the aura as a circle of its radius plus half a cell around the token, the cone from the token's centre along its rotation, both in their colors and under the tokens

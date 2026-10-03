@@ -1,17 +1,25 @@
-// Shared helpers for the Battle Map Live Share browser specs (live-share-assets.spec.js,
-// battlemap-staged-publishing.spec.js): a Battle Map host (battlemap.html?liveshare=1) and a player
-// (liveshare-dev.html) in separate contexts through the local relay, with send logs, generated maps
-// and token art, the Battle Map's own JSON import, and its save (Ctrl+S).
+// Shared helpers for the Battle Map Live Share browser specs, in the production topology (Milestone
+// 5A.4): the Live Share session page (live-share.html, which owns the room and every connection) and
+// the Battle Map (which publishes its saved map to it over the surface boundary) in one browser
+// profile, and a player (liveshare-dev.html) in another, through the local relay. With send logs,
+// generated maps and token art, the Battle Map's own JSON import, and its save (Ctrl+S).
+//
+// The specs keep calling the Battle Map page `host`; the helpers below that concern the room, the
+// senders or what players are sent (startAndJoin, hostSnapshot, diagnostics, sentText, sentMetas) act
+// on its session page, found with sessionOf(host).
 import { expect } from '@playwright/test';
 import { RELAY } from './live-share.js';
 
-export const HOST_PAGE = `/battlemap?liveshare=1&relay=${RELAY}`;
+// The Battle Map as any DM opens it: no Live Share flag.
+export const HOST_PAGE = `/battlemap?relay=${RELAY}`;
+export const SESSION_PAGE = `/live-share?relay=${RELAY}`;
+const sessionPages = new WeakMap(); // Battle Map page -> its session page
+export const sessionOf = (page) => sessionPages.get(page) || null;
 export const VIEW_SCALE = 0.6;
 export const SECRET = { x: 500, y: 200, w: 100, h: 100 }; // under the cover shape below
 export const COVER = { x: 480, y: 180, w: 140, h: 140 };
 
-export function watchErrors(page) {
-  const errors = [];
+export function watchErrors(page, errors = []) {
   page.on('pageerror', (e) => errors.push(`pageerror: ${e.message}`));
   page.on('console', (m) => {
     if (m.type() === 'error') errors.push(`console.error: ${m.text()} (${m.location().url})`);
@@ -77,9 +85,22 @@ export function recordPlayerTraffic() {
   });
 }
 
-export const hostSnapshot = (page) => page.evaluate(() => window.BattleMapLiveShare.getPlayerSafeState());
-export const diagnostics = async (page) => JSON.parse(await page.getByTestId('diagnostics').textContent());
-export const sentText = (page) => page.evaluate(() => window.__lsSent.filter((m) => typeof m === 'string'));
+// What players are sent now: the session page's committed Battle Map snapshot (host-assigned
+// revisions), or null. For a page without a session page, the Battle Map's own saved projection.
+export const hostSnapshot = (page) =>
+  sessionOf(page) ? sessionOf(page).evaluate(() => window.LiveShareSessionHost.committedSnapshot()) : page.evaluate(() => window.BattleMapLiveShare.getPlayerSafeState());
+// The Battle Map's own saved projection (its local revisions), whatever was offered.
+export const battleMapSnapshot = (page) => page.evaluate(() => window.BattleMapLiveShare.getPlayerSafeState());
+const panelDiagnostics = async (page) => JSON.parse(await page.getByTestId('diagnostics').textContent());
+// A Battle Map page's diagnostics: its session page's (senders, boundary, store), plus the Battle Map's
+// own prepared assets. Any other page: its own panel.
+export const diagnostics = async (page) => {
+  const session = sessionOf(page);
+  if (!session) return panelDiagnostics(page);
+  return { ...(await panelDiagnostics(session)), preparedAssets: await page.evaluate(() => window.BattleMapLiveShare.getAssetDiagnostics()) };
+};
+// Everything the session page sent players (recordHostSends runs in every page of the DM's profile).
+export const sentText = (page) => (sessionOf(page) || page).evaluate(() => window.__lsSent.filter((m) => typeof m === 'string'));
 export const sentMetas = async (page) => (await sentText(page)).map((t) => JSON.parse(t)).filter((m) => m.type === 'asset-meta');
 
 // A generated map image, as a data URL: green left half, blue right half, and the secret.
@@ -158,8 +179,14 @@ export async function importMap(page, mapDataUrl, { tokens, fogShapes = [{ id: '
   await page.locator('#importJsonFile').setInputFiles({ name: 'map.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(data)) });
   await expect(page.getByTestId('save-map')).toHaveAttribute('data-state', 'dirty', { timeout: 15000 }); // imported (a draft)
   await save(page);
-  await expect.poll(async () => (await hostSnapshot(page))?.map.width, { timeout: 15000 }).toBeGreaterThan(0);
-  await expect.poll(async () => (await hostSnapshot(page)).tokens.length).toBe(tokens.filter((t) => t.visibleToPlayers !== false).length);
+  const visible = tokens.filter((t) => t.visibleToPlayers !== false).length;
+  // The Battle Map's own saved state; with a room open, also what the session page now sends players.
+  const snapshots = [battleMapSnapshot];
+  if (sessionOf(page) && (await sessionOf(page).getByTestId('end-session').isEnabled())) snapshots.push(hostSnapshot);
+  for (const snapshot of snapshots) {
+    await expect.poll(async () => (await snapshot(page))?.map.width, { timeout: 15000 }).toBeGreaterThan(0);
+    await expect.poll(async () => (await snapshot(page)).tokens.length).toBe(visible);
+  }
 }
 
 // Screen position (CSS px) of a world point, from the imported view (x 0, y 0, scale VIEW_SCALE).
@@ -184,10 +211,18 @@ export async function addPresetToken(page, label) {
   await page.locator('#addPreset').click();
 }
 
+// Starts the room on a session page (if it isn't running yet) and returns the join link.
+export async function startRoom(session) {
+  if (await session.getByTestId('start-room').isEnabled()) {
+    await session.getByTestId('start-room').click();
+    await expect(session.getByTestId('host-status')).toHaveText('Room open — waiting for players', { timeout: 15000 });
+  }
+  return session.getByTestId('join-link').textContent();
+}
+
+// The room on the Battle Map's session page (started if needed), and a player joining it.
 export async function startAndJoin(browser, host) {
-  await host.getByTestId('start-room').click();
-  await expect(host.getByTestId('host-status')).toHaveText('Room open — waiting for players');
-  const joinUrl = await host.getByTestId('join-link').textContent();
+  const joinUrl = await startRoom(sessionOf(host) || host);
   const playerContext = await browser.newContext();
   await playerContext.addInitScript(recordPlayerTraffic);
   const player = await playerContext.newPage();
@@ -197,15 +232,45 @@ export async function startAndJoin(browser, host) {
   return { playerContext, player, playerErrors };
 }
 
-export async function openHost(browser, page = HOST_PAGE) {
+// The DM's browser profile: the session page (room started unless start is false), then the Battle Map.
+// hostErrors collects the errors of both pages. session: false opens the Battle Map alone (no Live Share).
+export async function openHost(browser, page = HOST_PAGE, { start = true, session: withSession = true } = {}) {
   const hostContext = await browser.newContext();
   await hostContext.addInitScript(recordHostSends);
-  const host = await hostContext.newPage();
-  const hostErrors = watchErrors(host);
+  const hostErrors = [];
+  if (!withSession) {
+    const host = await hostContext.newPage();
+    watchErrors(host, hostErrors);
+    await host.goto(page);
+    await host.waitForFunction(() => window.BattleMapLiveShare);
+    return { hostContext, host, hostErrors, session: null };
+  }
+  const session = await openSessionPage(hostContext, hostErrors, { start });
+  const host = await openBattleMap(hostContext, session, hostErrors, page);
+  return { hostContext, host, hostErrors, session };
+}
+
+export async function openSessionPage(context, errors = [], { start = true } = {}) {
+  const session = await context.newPage();
+  watchErrors(session, errors);
+  await session.goto(SESSION_PAGE);
+  await expect(session.getByTestId('owner-status')).toHaveAttribute('data-state', 'owner');
+  if (start) await startRoom(session);
+  return session;
+}
+
+// Another Battle Map tab in the same profile, publishing to the same session page.
+export async function openBattleMap(context, session, errors = [], page = HOST_PAGE) {
+  const host = await context.newPage();
+  watchErrors(host, errors);
   await host.goto(page);
   await host.waitForFunction(() => window.BattleMapLiveShare);
-  return { hostContext, host, hostErrors };
+  sessionPages.set(host, session);
+  return host;
 }
+
+// The Battle Map's Live Share panel state ('not-running' | 'active' | 'inactive' | 'incompatible').
+export const liveShareState = (host) => host.getByTestId('bm-live-share-status');
 
 // Decode the background the player is showing and read pixels from it (in background pixels).
 export function playerBackgroundPixels(player, points) {

@@ -122,7 +122,17 @@ No Live Share behavior changed.
 - **Not yet:** the real Battle Map does not publish through it (5A.4).
 - **The Chrome transfer stall** from 5A.1 reproduces on this path. It is a transport stall below the senders, with no correctness impact: follow-up in ADR §9.
 
-**Next:** Milestone 5A.4, the Battle Map publisher adapter (§24). The Safari hidden-tab check is pending.
+**Milestone 5A.4, the Battle Map as a surface publisher (implemented 2026-10-03, released in 2.3.34; Milestone 5A complete):** details in [live-share-session-host-architecture.md](live-share-session-host-architecture.md) §6.2.
+- **Ownership:** the Battle Map no longer owns a room, a connection or a sender. `js/battlemap-live-share.js` is its publisher to the session page, over the 5A.3 boundary.
+- **Save-gated, as before:** only a successful Save publishes (Save button, Ctrl+S, Save Session). Unsaved edits, a failed save and the working draft never reach players.
+- **A map saved before a session starts** is shared when it starts, without saving again.
+- **Assets follow the session, not a URL flag:** without a running session the Battle Map composes, encodes and hashes nothing.
+- **Closing or reloading the Battle Map** leaves the room, the players and the published map intact. Reopening it offers the same saved map: no new revision, no asset copied again.
+- **Duplicate tabs:** two Battle Map tabs follow the 5A.3 role rule, and an inactive tab's save doesn't reach players. "Publish from this tab" claims the role and shares that tab's saved map.
+- **Unchanged:** the player wire format (v0) and the relay (one player).
+- **Large transfers:** the transfer delay seen in 5A.1 / 5A.3 also shows on the real path (a token save during an 11.7 MB transfer reached the player after 3.7–5.6 s), with no data loss. It is deferred to Milestone 8.
+
+**Next:** Milestone 5B, admission and the room model (§24). The Safari hidden-tab check is pending.
 
 **Backlog (Battle Map, found during the 2.3.27 and 2.3.28 reviews; not yet fixed):**
 - Pre-existing: a touch long-press (and Ctrl+click on a Mac, which is a primary-button press) starts a token drag before its menu opens, so on release an off-grid token snaps and the map is marked unsaved (the 2.3.28 right-click fix does not cover a primary-button press).
@@ -1656,6 +1666,7 @@ Only after the underlying networking has proven useful. *(Reconciled on 2026-10-
    - The player wire format is unchanged.
    - The existing browser tests move to "session host + Battle Map" helpers.
    - The Battle Map can close while players keep its last saved map.
+   - **Implemented on 2026-10-03** (ADR §6.2). **5A is complete:** every Milestone 4 behavior holds with the session owned by the session host page, and closing or reloading the Battle Map leaves the room and the players' map intact. The Safari hidden-host check is still pending.
 
 *Exit:* the Milestone 4 behaviors all hold with the session owned by the session host page, and closing or reloading the Battle Map leaves the room and the players' map intact.
 

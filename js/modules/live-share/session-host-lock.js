@@ -18,6 +18,8 @@
  * Holding the lock is only the right to start a room; it starts nothing by itself.
  */
 export const SESSION_HOST_LOCK = 'dmtoolbox.live-share.session-host';
+// The fixed window name of the session host page (ADR §5.1): surfaces open or focus it by this name.
+export const SESSION_HOST_WINDOW = 'dmtoolbox-live-share';
 
 export function claimSessionHost({
   onOwned = () => {},

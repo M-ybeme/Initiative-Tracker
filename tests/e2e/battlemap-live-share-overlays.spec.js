@@ -1,10 +1,10 @@
 // 2.3.29 (Live Share Milestone 4, presentation completeness): a token's aura and vision cone reach
 // players as structured overlays. The DM edits them through the real Battle Map dialogs
-// (battlemap.html?liveshare=1); players (liveshare-dev.html, separate contexts, local relay) see
+// (publishing to the Live Share session page); players (liveshare-dev.html, separate contexts, local relay) see
 // them only once saved, drawn with the DM map's geometry. Overlay, rotation and grid edits never
 // recompose or resend the background. A token hidden from players sends no overlay information.
 import { test, expect } from '@playwright/test';
-import { watchErrors, recordPlayerTraffic, hostSnapshot, sentText, sentMetas, makeMap, makeTokenPng, save, importMap, screenOf, openHost, openPanel, tokenMenu, addPresetToken } from '../helpers/battlemap-live-share.js';
+import { watchErrors, recordPlayerTraffic, hostSnapshot, sentText, sentMetas, makeMap, makeTokenPng, save, importMap, screenOf, openHost, openPanel, tokenMenu, addPresetToken, startRoom as startRoomOn, sessionOf } from '../helpers/battlemap-live-share.js';
 
 test.use({ launchOptions: { args: ['--disable-features=WebRtcHideLocalIpsWithMdns'] } });
 
@@ -14,11 +14,8 @@ const sentSnapshots = async (page) => (await sentText(page)).map((t) => JSON.par
 const backgroundMetas = async (page) => (await sentMetas(page)).filter((m) => m.asset.kind === 'background').length;
 const rebuilds = (page) => page.evaluate(() => window.BattleMapLiveShare.getAssetDiagnostics().background.rebuilds);
 
-async function startRoom(host) {
-  await host.getByTestId('start-room').click();
-  await expect(host.getByTestId('host-status')).toHaveText('Room open — waiting for players');
-  return host.getByTestId('join-link').textContent();
-}
+// The room on the Battle Map's session page (already started by openHost); its join link.
+const startRoom = (host) => startRoomOn(sessionOf(host));
 
 async function joinPlayer(browser, joinUrl, viewport) {
   const context = await browser.newContext(viewport ? { viewport } : {});

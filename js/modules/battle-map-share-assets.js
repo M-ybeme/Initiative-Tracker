@@ -447,10 +447,17 @@
       return a ? { assetId: a.assetId, kind: a.kind, mime: a.mime, width: a.width, height: a.height, bytes: a.bytes.slice() } : null;
     }
 
+    // An asset's metadata without copying its bytes (Live Share 5A.4: what an offer lists).
+    function assetMeta(assetId) {
+      const a = typeof assetId === 'string' && ASSET_ID.test(assetId) ? assets.get(assetId) : null;
+      return a ? { assetId: a.assetId, kind: a.kind, mime: a.mime, width: a.width, height: a.height, byteLength: a.bytes.length } : null;
+    }
+
     return {
       check,
       flush,
       getAsset,
+      assetMeta,
       hasAsset: (assetId) => assets.has(assetId),
       /** The published state now references exactly these asset ids; others may be released. */
       retain(ids) {

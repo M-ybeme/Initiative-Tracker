@@ -1,6 +1,6 @@
 # Live Share: session ownership across Toolbox pages (architecture decision)
 
-*Decided 2026-10-02, before Milestone 5. This record governs Milestones 5 and 7 and the future Initiative Tracker surface. Linked from `DMS_Toolbox_Live_Share_Planning.md` §4, §5, §24 and §27. Implemented so far: the session host page (5A.2) and the surface boundary with the host publication store (5A.3, §6.1). The Battle Map still uses its prototype host until 5A.4.*
+*Decided 2026-10-02, before Milestone 5. This record governs Milestones 5 and 7 and the future Initiative Tracker surface. Linked from `DMS_Toolbox_Live_Share_Planning.md` §4, §5, §24 and §27. Implemented: the session host page (5A.2), the surface boundary with the host publication store (5A.3, §6.1), and the Battle Map as a surface publisher (5A.4, §6.2). Milestone 5A is complete; Safari's hidden-host check is still pending (§9).*
 
 ## 1. The problem
 
@@ -176,7 +176,7 @@ The host keeps the per-surface rules intact:
 | A surface crashes or hangs (no `unregister`) | A heartbeat with a generous timeout eventually marks it "not responding". **Liveness only affects the DM-facing status, never the committed publication** | — |
 | Player disconnects | Its link closes and its seat shows "Disconnected" (seat stays claimed). No automatic re-admission | Reconnect with the seat credential |
 | Session host reloads | Today's behavior, made explicit: the host socket closes, the relay ends the room (`HOST_LEFT`), players are told the session ended | Grace period and resume (§10) |
-| Session host closes (End, tab closed, crash) | The session ends: players get session-ended, connections close, credentials are discarded, surfaces show "Live Share not running" and keep working locally. A `beforeunload` warning protects the host tab while players are connected | — |
+| Session host closes (End, tab closed, crash) | The session ends: players get session-ended, connections close, credentials are discarded, surfaces show "Live Share not running" and keep working locally. A `beforeunload` warning protects the host tab while players are connected. **As built (5A.4):** End and closing the tab are told to surfaces (`session-status { running: false }`); a **crash is not detected yet**: there is no host heartbeat, so a surface keeps showing "running" (and the Battle Map keeps preparing assets) until the next session page says otherwise. A host heartbeat with a surface-side timeout is a follow-up | — |
 
 ## 6. The surface ↔ session host boundary
 
@@ -245,7 +245,7 @@ Every message is validated against its type's schema; unknown types and versions
 - `session-host-boundary.js`: the host side. Registry, roles, liveness and session gating; it relays the store's answers.
 - `publication-store.js`: the host publication store. Offer, need, asset, atomic commit, host revisions, asset retention.
 - `battlemap-publication.js`: the Battle Map's boundary format. Validation reuses the players' `validateBattleMapSnapshot`; also the conversion to the player wire snapshot.
-- `surface-publisher.js`: the surface side, for the 5A.4 Battle Map adapter. In 5A.3 only the test publisher uses it (`tests/fixtures/live-share-test-publisher.*`, which works only on localhost).
+- `surface-publisher.js`: the surface side. The Battle Map uses it since 5A.4 (§6.2), and so does the boundary's test publisher (`tests/fixtures/live-share-test-publisher.*`, which works only on localhost).
 - `live-share.html` / `js/live-share-host.js` run the host side only while the tab owns the Web Lock. A waiting tab never answers surfaces.
 
 **Protocol:**
@@ -365,6 +365,73 @@ Every message is validated against its type's schema; unknown types and versions
 
 The boundary's own "assets only from the active instance" check survives its mutation, because the store's instance check (itself mutation-tested) refuses the same bytes. It is kept as a second guard.
 
+### 6.2 The Battle Map as a surface publisher (5A.4, 2026-10-03)
+
+**What changed:** `js/battlemap-live-share.js` is now the Battle Map's publisher adapter, built on `createSurfacePublisher`. The Battle Map no longer owns a room. It creates no `HostSession`, signaling socket, `RTCPeerConnection`, data channel, TURN request or sender, and it sends nothing to players. All of that is the session page's. The prototype's room code, panel and join link are gone from the Battle Map; nothing in the Battle Map imports a networking module.
+
+**What stays in the Battle Map:**
+- the Save gating (2.3.27);
+- the saved-record vs draft semantics;
+- the player-safe projection and hidden-token filtering;
+- the fog-baked background composite;
+- custom token art preparation;
+- the content-derived asset ids;
+- built-in token presets by id;
+- its own Live Share status.
+
+**The adapter:**
+- **Registration:** it registers as `battle-map` (surface version 1). It says it has a publication when there is a readable saved map (`hasPublishedState`), so the role rule (§6.1) sees a saved map even while its assets are still being prepared.
+- **Readiness:** it offers only a publication made with its assets during the current session (`isLiveShareReady`, signalled by `onLiveShareReady`). A state published before the session, without assets, is never offered, nor one whose saved image turns out unreadable when prepared; the panel says why.
+- **Offers:**
+  - It offers the saved projection, minus the Battle Map's local revisions (`fromProjection`), with the metadata of every asset it references.
+  - It never offers a publication whose assets it doesn't hold.
+  - It answers `publication-need` with bytes from the seam's `getAsset`.
+- **When it offers:**
+  - when a save publishes (the seam's change signal);
+  - when the session starts;
+  - when this tab becomes the publisher (after a takeover or a claim).
+- **Never:** the working draft, raw state, the original map, fog sources, hidden tokens, HP, or image URLs.
+
+**Assets follow the session, not a URL flag:**
+- **No session:** the Battle Map composes, encodes and hashes nothing, and its projection has no asset references.
+- **When the adapter hears a session is running** (`host-hello` / `session-status`), it calls `setLiveShareActive(true)`. The Battle Map then publishes its saved record again from storage, now with its assets, and the adapter offers it. A map saved before the session started is shared without a new save, and an unsaved draft is never part of it.
+- **When the session ends,** asset work stops. Saves keep working locally, and the next session prepares the current saved map again.
+- **Races:** a reload's own publication and a session-start publication can't overwrite each other; the one made for the current Live Share state wins.
+
+**UI** (minimal; the polished version is 5C):
+- **When it appears:** a small "Live Share" panel shows up once a session page is open in this browser (or with `?liveshare=1`, kept only as a development shortcut to show the panel before one is open). The Battle Map without Live Share looks and behaves as before.
+- **States:**
+  - not running;
+  - this tab shares its saved map (with the player count);
+  - another Battle Map tab is publishing, so saving here doesn't update players;
+  - a different version.
+- **Publication line:**
+  - nothing saved yet;
+  - the saved map is loading;
+  - the saved map is unreadable;
+  - preparing;
+  - sending;
+  - players updated;
+  - rejected, with the reason.
+- **Open Live Share:** focuses the session page through its window name (`dmtoolbox-live-share`) and never reloads it; if none is open in this window group, it opens one. The Web Lock still decides the owner.
+- **Publish from this tab:** shown on an inactive tab of a running session. It sends the claim; the claimed tab then offers its last saved map, never unsaved edits.
+
+**Lifetime:**
+- **Closing the Battle Map** sends a bye, which is status only. The room, the players and the committed publication with its assets stay on the session page, and late players are still served.
+- **A reload** registers a new instance, which offers the same saved map. The content is identical, so there is no new revision and no asset is copied again.
+
+**Tests:**
+- **The production topology:** `tests/helpers/battlemap-live-share.js` now opens the session page (room started), the Battle Map without a flag in the same profile, and the player. Specs keep calling the Battle Map page `host`; helpers about the room, the senders and what players are sent act on its session page. `hostSnapshot` reads the session page's committed snapshot through a read-only inspection accessor (`window.LiveShareSessionHost.committedSnapshot()`).
+- **The Battle Map specs** moved to that topology with minimal assertion churn; none still tests a Battle Map-owned room.
+- **`tests/e2e/live-share-battlemap-session.spec.js`** adds:
+  - the 5A exit test;
+  - a session started after the save;
+  - the save boundary across reloads;
+  - two Battle Map tabs with a claim;
+  - session end and restart;
+  - the real-path large-background re-check.
+- **The profiling harness** (`tests/perf/`, outside CI) uses the same topology.
+
 ## 7. Assets when the Battle Map isn't the WebRTC owner
 
 - **What's sent to the host:** only player-safe output, the same bytes players get today.
@@ -483,6 +550,16 @@ interactions    ping (Milestone 6)
     - pacing a transfer's first chunks;
     - a separate channel for structured state;
     - confirming the cause with a non-loopback network or installed Chrome.
+- **Re-checked on the real path in 5A.4 (2026-10-03):** Battle Map Save → surface publisher → BroadcastChannel → session page → production `AssetSender` → player. This was in Playwright Chromium, with an incompressible 4096 × 4096 map; the spec is `live-share-battlemap-session.spec.js`, the large-background test.
+  - **The run:**
+    - The background was 11.7 MB (715 chunks; the encoder kept it under the 16 MiB cap).
+    - The import and save reached the session page's commit in 7.4–8.5 s, almost all of it the Battle Map's own save and encoding.
+    - The transfer took 4.7–6.7 s, slowly throughout, with at most 0.45–0.87 s between chunks: no single 4 s gap. (Three runs.)
+  - **A token save made during the transfer:**
+    - committed and sent by the session page 0.6–0.8 s after the save;
+    - reached the player 3.7–5.6 s after the save, behind the queued transfer, as in 5A.1 and 5A.3.
+  - **Correctness:** every byte verified, the background id matched, and the latest revision was applied. Nothing was lost or applied out of order.
+  - **Verdict:** the same transport-level delay; delay only, no data loss or misordering, and the senders and the boundary behave correctly. **Deferred to Milestone 8** (networking hardening), with the options above. No 5A.4 change.
 
 ### What the numbers mean
 
@@ -646,9 +723,9 @@ Refreshing the session host is the only refresh that threatens the room; a surfa
    - `SnapshotSender.sendNow()`;
    - the window name `dmtoolbox-live-share`.
    - No surface data reaches it yet, so players connect but see no map.
-   - **Transitional:** the Milestone 0–4 Battle Map prototype host (`battlemap.html?liveshare=1`) still runs its own room until 5A.4. Until then the two duplicate about 60 lines of per-player wiring, and that duplication goes when the prototype becomes a publisher.
-3. **5A.3, the boundary:** the BroadcastChannel boundary and the host publication store with atomic commit and host-side revisions. **Implemented on 2026-10-03** (§6.1), and exercised with a test publisher only. The real Battle Map does not use it yet.
-4. **5A.4, the Battle Map adapter:** `battlemap-live-share.js` becomes the publisher adapter. Same player wire format; existing browser tests pass through the new helpers.
+   - **Transitional until 5A.4:** the Milestone 0–4 Battle Map prototype host (`battlemap.html?liveshare=1`) ran its own room. 5A.4 removed it, with the duplicated per-player wiring.
+3. **5A.3, the boundary:** the BroadcastChannel boundary and the host publication store with atomic commit and host-side revisions. **Implemented on 2026-10-03** (§6.1), proven with a test publisher.
+4. **5A.4, the Battle Map adapter:** `battlemap-live-share.js` becomes the publisher adapter. Same player wire format; existing browser tests pass through the new helpers. **Implemented on 2026-10-03** (§6.2). **Milestone 5A is complete:** the session page owns the session, and closing or reloading the Battle Map leaves the room and the players' map intact.
 5. **5B:** admission and protocol v1.
 6. **5C:** product UX.
 
@@ -662,9 +739,8 @@ Refreshing the session host is the only refresh that threatens the room; a surfa
 
 **During 5A, not blocking it:**
 - ~~the page name and URL of the session host~~ (decided in 5A.2: `live-share.html`, `/live-share`), and the product player page (still open; players use `liveshare-dev.html` until 5B/5C);
-- ~~the duplicate-tab rule~~ (decided and implemented in 5A.3, §6.1: the latest registration wins, except that an empty tab never displaces one with a publication, and a manual claim holds while the claimed tab has a publication. The claim protocol exists; the Battle Map's "Publish from this tab" button is 5A.4);
-- whether the Battle Map's `?liveshare=1` flag disappears in 5A (the host page replaces it) or stays as a development convenience.
-  Either way, asset preparation follows whether a session is running (§14), not the URL flag.
+- ~~the duplicate-tab rule~~ (decided and implemented in 5A.3, §6.1: the latest registration wins, except that an empty tab never displaces one with a publication, and a manual claim holds while the claimed tab has a publication. The Battle Map's "Publish from this tab" button came in 5A.4);
+- ~~whether the Battle Map's `?liveshare=1` flag disappears in 5A~~ (decided in 5A.4: it stays only as a development shortcut that shows the Battle Map's Live Share panel before a session page is open. Nothing in the product depends on it; asset preparation follows whether a session is running, §6.2).
 
 **Deferred, not needed for Milestone 5:**
 - how players see a closed Initiative Tracker (the tracker's design);

@@ -7,6 +7,10 @@ import fs from 'node:fs';
 import {
   watchErrors,
   recordPlayerTraffic,
+  // These specs are about the Battle Map's own saved record: they read its projection of what it
+  // publishes (battleMapSnapshot, its local seam). What players are sent is checked on the players
+  // and, where it matters across a reload, on the session page (hostSnapshot).
+  battleMapSnapshot,
   hostSnapshot,
   sentText,
   sentMetas,
@@ -19,21 +23,20 @@ import {
   tokenMenu,
   addPresetToken,
   SECRET,
+  startRoom as startRoomOn,
+  sessionOf,
 } from '../helpers/battlemap-live-share.js';
 
 test.use({ launchOptions: { args: ['--disable-features=WebRtcHideLocalIpsWithMdns'] } });
 
 const HEX = /^[0-9a-f]{64}$/;
 const DRAFT_KEY = 'dmtoolbox.battlemap.mvp.v3.draft';
-const ids = async (page) => (await hostSnapshot(page)).tokens.map((t) => t.id);
+const ids = async (page) => (await battleMapSnapshot(page)).tokens.map((t) => t.id);
 const tokenPills = (page) => page.evaluate(() => document.querySelectorAll('#tokenList .pill').length);
 const sentSnapshots = async (page) => (await sentText(page)).map((t) => JSON.parse(t)).filter((m) => m.type === 'battlemap-snapshot');
 
-async function startRoom(host) {
-  await host.getByTestId('start-room').click();
-  await expect(host.getByTestId('host-status')).toHaveText('Room open — waiting for players');
-  return host.getByTestId('join-link').textContent();
-}
+// The room on the Battle Map's session page (already started by openHost); its join link.
+const startRoom = (host) => startRoomOn(sessionOf(host));
 
 async function joinPlayer(browser, joinUrl) {
   const context = await browser.newContext();
@@ -123,8 +126,8 @@ test.describe('Battle Map saved record vs draft (2.3.27)', () => {
         { id: 't_spy', name: 'SecretSpy', imgSrc: spyArt, x: 300, y: 100, w: 50, h: 50, rot: 0, showLabel: true },
       ],
     });
-    await expect.poll(async () => (await hostSnapshot(host)).tokens.find((t) => t.id === 't_spy')?.assetId, { timeout: 10000 }).toMatch(HEX);
-    const spyAsset = (await hostSnapshot(host)).tokens.find((t) => t.id === 't_spy').assetId;
+    await expect.poll(async () => (await battleMapSnapshot(host)).tokens.find((t) => t.id === 't_spy')?.assetId, { timeout: 10000 }).toMatch(HEX);
+    const spyAsset = (await battleMapSnapshot(host)).tokens.find((t) => t.id === 't_spy').assetId;
 
     // 2-3: hide it and save.
     expect(await tokenMenu(host, { x: 325, y: 125 }, 'toggleVisible')).toContain('☑ Visible to Players');
@@ -147,9 +150,9 @@ test.describe('Battle Map saved record vs draft (2.3.27)', () => {
     await second.host.locator('#importJsonFile').setInputFiles({ name: 'export.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(exported)) });
     await expect(second.host.getByTestId('save-map')).toHaveAttribute('data-state', 'dirty', { timeout: 15000 });
     await save(second.host);
-    await expect.poll(async () => (await hostSnapshot(second.host))?.tokens.map((t) => t.id)).toEqual(['t_hero']);
-    await expect.poll(async () => (await hostSnapshot(second.host)).tokens[0].assetId, { timeout: 10000 }).toMatch(HEX);
-    const heroAsset = (await hostSnapshot(second.host)).tokens[0].assetId;
+    await expect.poll(async () => (await battleMapSnapshot(second.host))?.tokens.map((t) => t.id)).toEqual(['t_hero']);
+    await expect.poll(async () => (await battleMapSnapshot(second.host)).tokens[0].assetId, { timeout: 10000 }).toMatch(HEX);
+    const heroAsset = (await battleMapSnapshot(second.host)).tokens[0].assetId;
 
     // 8-9: a player joins; nothing of the spy is sent, its art included, while the hero's is.
     const p = await joinPlayer(browser, await startRoom(second.host));
@@ -181,7 +184,7 @@ test.describe('Battle Map saved record vs draft (2.3.27)', () => {
     const { hostContext, host, hostErrors } = await openHost(browser);
     const map = await makeMap(host);
     await importMap(host, map, { tokens: [{ id: 't_bard', name: 'Bard', imgSrc: '/images/playerTokens/PlayerBardToken.png', x: 100, y: 100, w: 50, h: 50, rot: 0 }] });
-    const A = await hostSnapshot(host);
+    const A = await battleMapSnapshot(host);
     expect(A.tokens.map((t) => t.id)).toEqual(['t_bard']);
 
     // After the reload the saved map image decodes only when the test says so.
@@ -211,14 +214,15 @@ test.describe('Battle Map saved record vs draft (2.3.27)', () => {
     await expect(host.getByTestId('save-map')).toHaveAttribute('data-state', 'dirty');
     await expect.poll(() => tokenPills(host)).toBe(2);
     await host.waitForTimeout(500);
-    expect(await hostSnapshot(host)).toBeNull(); // nothing published while the saved map loads
-    await host.getByTestId('start-room').click();
-    await expect(host.getByTestId('host-status')).toHaveText('The saved map is still loading. Try again in a moment.');
+    expect(await battleMapSnapshot(host)).toBeNull(); // nothing published while the saved map loads
+    await expect(host.getByTestId('bm-live-share-publication')).toHaveText('Your saved map is still loading…');
+    // The session page still has A, published before the reload: the reload changed nothing for players.
+    expect((await hostSnapshot(host)).tokens.map((t) => t.id)).toEqual(['t_bard']);
 
     // Decoding completes: players get exactly the saved state; the edit stays a private draft.
     await host.evaluate(() => window.__releaseMap());
-    await expect.poll(() => hostSnapshot(host), { timeout: 15000 }).not.toBeNull();
-    const published = await hostSnapshot(host);
+    await expect.poll(() => battleMapSnapshot(host), { timeout: 15000 }).not.toBeNull();
+    const published = await battleMapSnapshot(host);
     expect(published.tokens.map((t) => [t.id, t.x, t.y])).toEqual(A.tokens.map((t) => [t.id, t.x, t.y]));
     await expect(host.getByTestId('save-map')).toHaveAttribute('data-state', 'dirty');
     const p = await joinPlayer(browser, await startRoom(host));
@@ -226,7 +230,7 @@ test.describe('Battle Map saved record vs draft (2.3.27)', () => {
 
     // Saving publishes the edit.
     await save(host);
-    await expect.poll(async () => (await hostSnapshot(host)).tokens.length).toBe(2);
+    await expect.poll(async () => (await battleMapSnapshot(host)).tokens.length).toBe(2);
     await expect.poll(async () => (await p.tokenIds()).length, { timeout: 15000 }).toBe(2);
     expect(hostErrors).toEqual([]);
     expect(p.errors).toEqual([]);
@@ -238,7 +242,7 @@ test.describe('Battle Map saved record vs draft (2.3.27)', () => {
     test.setTimeout(90000);
     const { hostContext, host, hostErrors } = await openHost(browser);
     await importMap(host, await makeMap(host), { tokens: [{ id: 't_bard', name: 'Bard', imgSrc: '/images/playerTokens/PlayerBardToken.png', x: 100, y: 100, w: 50, h: 50, rot: 0 }] });
-    const A = await hostSnapshot(host);
+    const A = await battleMapSnapshot(host);
     expect(await host.evaluate((k) => localStorage.getItem(k), DRAFT_KEY)).toBeNull();
 
     // Draft B: placing a token stores a draft, in its own record.
@@ -256,7 +260,7 @@ test.describe('Battle Map saved record vs draft (2.3.27)', () => {
     await expect(host.locator('#unsavedIndicator')).not.toHaveCSS('display', 'none');
     await expect.poll(() => tokenPills(host)).toBe(2);
     const { revision: _r, ...contentA } = A;
-    const { revision: _r2, ...contentAfter } = await hostSnapshot(host);
+    const { revision: _r2, ...contentAfter } = await battleMapSnapshot(host);
     expect(contentAfter).toEqual(contentA);
 
     // Starting Live Share publishes A to a player.
@@ -266,7 +270,7 @@ test.describe('Battle Map saved record vs draft (2.3.27)', () => {
     // Save promotes B: published, stored as the saved record, and the draft is gone.
     await save(host);
     await expect.poll(async () => (await p.tokenIds()).length, { timeout: 15000 }).toBe(2);
-    const B = await hostSnapshot(host);
+    const B = await battleMapSnapshot(host);
     expect(B.tokens.length).toBe(2);
     await expect.poll(() => host.evaluate((k) => localStorage.getItem(k), DRAFT_KEY)).toBeNull();
 
@@ -275,7 +279,7 @@ test.describe('Battle Map saved record vs draft (2.3.27)', () => {
     await host.waitForFunction(() => window.BattleMapLiveShare && window.BattleMapLiveShare.getPlayerSafeState());
     await expect(host.getByTestId('save-map')).toHaveAttribute('data-state', 'clean');
     await expect(host.locator('#unsavedIndicator')).toHaveCSS('display', 'none');
-    expect((await hostSnapshot(host)).tokens.map((t) => t.id)).toEqual(B.tokens.map((t) => t.id));
+    expect((await battleMapSnapshot(host)).tokens.map((t) => t.id)).toEqual(B.tokens.map((t) => t.id));
     expect(await tokenPills(host)).toBe(2);
     expect(hostErrors).toEqual([]);
     expect(p.errors).toEqual([]);
@@ -302,13 +306,12 @@ test.describe('Battle Map saved record vs draft (2.3.27)', () => {
     await expect(host.getByText(/could not be loaded from storage/)).toBeVisible();
     await expect(host.getByTestId('save-map')).toHaveAttribute('data-state', 'dirty');
     await expect.poll(() => tokenPills(host)).toBe(2);
-    expect(await hostSnapshot(host)).toBeNull();
+    expect(await battleMapSnapshot(host)).toBeNull();
     expect(await host.evaluate(() => window.BattleMapLiveShare.hasPublishedState())).toBe(false);
 
-    // Live Share fails closed, with the reason.
-    await host.getByTestId('start-room').click();
-    await expect(host.getByTestId('host-status')).toHaveText(/could not be loaded \(its image is unreadable\)/);
-    await expect(host.getByTestId('join-link')).toBeHidden();
+    // Live Share fails closed, with the reason: nothing offered, nothing committed, nothing sent.
+    await expect(host.getByTestId('bm-live-share-publication')).toHaveText(/could not be loaded \(its image is unreadable\)/);
+    expect(await hostSnapshot(host)).toBeNull();
     expect(await sentText(host)).toEqual([]);
     expect(hostErrors.filter((e) => !/could not be loaded from storage|Failed to load resource/.test(e))).toEqual([]);
     await hostContext.close();
@@ -324,7 +327,7 @@ test.describe('Battle Map saved record vs draft (2.3.27)', () => {
       return c.toDataURL('image/png');
     });
     await importMap(host, map, { tokens: [{ id: 't_bard', name: 'Bard', imgSrc: '/images/playerTokens/PlayerBardToken.png', x: 100, y: 100, w: 50, h: 50, rot: 0 }], fogShapes: [], fog: fullFog });
-    await expect.poll(async () => (await hostSnapshot(host)).background?.assetId, { timeout: 15000 }).toMatch(HEX);
+    await expect.poll(async () => (await battleMapSnapshot(host)).background?.assetId, { timeout: 15000 }).toMatch(HEX);
     const covered = (px) => px[0] < 20 && px[1] < 20 && px[2] < 20 && px[3] === 255;
     expect(covered(await publishedBackgroundPixel(host, SECRET.x + 50, SECRET.y + 50))).toBe(true);
     await hostContext.addInitScript(holdStoredImages, map);
@@ -337,7 +340,7 @@ test.describe('Battle Map saved record vs draft (2.3.27)', () => {
     // A normal reload: the stored map is intact and players get it covered.
     const expectStoredIntact = async () => {
       await reload(false);
-      await expect.poll(async () => (await hostSnapshot(host))?.background?.assetId, { timeout: 15000 }).toMatch(HEX);
+      await expect.poll(async () => (await battleMapSnapshot(host))?.background?.assetId, { timeout: 15000 }).toMatch(HEX);
       const stored = await host.evaluate(() => JSON.parse(localStorage.getItem('dmtoolbox.battlemap.mvp.v3')));
       expect(stored.map.imgSrc).toBe(map);
       expect(covered(await publishedBackgroundPixel(host, SECRET.x + 50, SECRET.y + 50))).toBe(true);
@@ -376,16 +379,16 @@ test.describe('Battle Map saved record vs draft (2.3.27)', () => {
     expect(draft.map.imgSrc).toBe(map);
     expect(draft.tokens.length).toBe(2);
     await reload(false);
-    await expect.poll(async () => (await hostSnapshot(host))?.background?.assetId, { timeout: 15000 }).toMatch(HEX);
+    await expect.poll(async () => (await battleMapSnapshot(host))?.background?.assetId, { timeout: 15000 }).toMatch(HEX);
     await expect(host.getByTestId('save-map')).toHaveAttribute('data-state', 'dirty');
     await save(host); // the draft becomes the saved map: still covered
-    await expect.poll(async () => (await hostSnapshot(host)).tokens.length).toBe(2);
+    await expect.poll(async () => (await battleMapSnapshot(host)).tokens.length).toBe(2);
     expect(covered(await publishedBackgroundPixel(host, SECRET.x + 50, SECRET.y + 50))).toBe(true);
 
     // 4: Save right after an Import, while the imported map and fog are still decoding.
     await reload(true);
     await host.evaluate(() => window.__release('all'));
-    await expect.poll(async () => (await hostSnapshot(host))?.background?.assetId, { timeout: 15000 }).toMatch(HEX);
+    await expect.poll(async () => (await battleMapSnapshot(host))?.background?.assetId, { timeout: 15000 }).toMatch(HEX);
     await host.evaluate(() => window.__holdAgain());
     const imported = { map: { imgSrc: map }, fog: fullFog, fogState: { enabled: true, mode: 'cover', brush: 80 }, fogShapes: [], mapTransform: { scale: 1, x: 0, y: 0 }, grid: { size: 50 }, view: { x: 0, y: 0, scale: 0.6 }, tokens: [{ id: 't_imported', name: 'Imported', imgSrc: '/images/playerTokens/PlayerBardToken.png', x: 100, y: 100, w: 50, h: 50, rot: 0 }] };
     await openPanel(host, 'accSession');
@@ -396,7 +399,7 @@ test.describe('Battle Map saved record vs draft (2.3.27)', () => {
     await host.evaluate(() => window.__release('all'));
     await expect(host.getByTestId('save-map')).not.toHaveAttribute('data-state', /dirty|saving/, { timeout: 15000 });
     await expectStoredIntact();
-    expect((await hostSnapshot(host)).tokens.map((t) => t.id)).toEqual(['t_imported']);
+    expect((await battleMapSnapshot(host)).tokens.map((t) => t.id)).toEqual(['t_imported']);
 
     // 5: Two imports in quick succession, the first one's fog slow to decode: the second (with its
     // own fog, covering everything) is what ends up on screen and stored, never the first one's
@@ -405,7 +408,7 @@ test.describe('Battle Map saved record vs draft (2.3.27)', () => {
     const emptyFog = await host.evaluate(() => Object.assign(document.createElement('canvas'), { width: 640, height: 480 }).toDataURL('image/png'));
     await reload(true);
     await host.evaluate(() => window.__release('all'));
-    await expect.poll(async () => (await hostSnapshot(host))?.background?.assetId, { timeout: 15000 }).toMatch(HEX);
+    await expect.poll(async () => (await battleMapSnapshot(host))?.background?.assetId, { timeout: 15000 }).toMatch(HEX);
     await host.evaluate((src) => window.__holdOnly(src), emptyFog);
     const first = { ...imported, map: { imgSrc: otherMap }, fog: emptyFog, tokens: [{ ...imported.tokens[0], id: 't_first' }] };
     await host.locator('#importJsonFile').setInputFiles({ name: 'first.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(first)) });
@@ -417,7 +420,7 @@ test.describe('Battle Map saved record vs draft (2.3.27)', () => {
     await host.waitForTimeout(500);
     await save(host);
     await expectStoredIntact();
-    expect((await hostSnapshot(host)).tokens.map((t) => t.id)).toEqual(['t_imported']);
+    expect((await battleMapSnapshot(host)).tokens.map((t) => t.id)).toEqual(['t_imported']);
 
     expect(hostErrors).toEqual([]);
     await hostContext.close();
@@ -449,14 +452,14 @@ test.describe('Battle Map saved record vs draft (2.3.27)', () => {
     // A draft left from before a later save (its save id is not the saved record's): ignored.
     await seed({ saveId: 's_new', tokens: ['t_saved'] }, { baseSaveId: 's_old', tokens: ['t_saved', 't_stale'] });
     await reloaded();
-    await expect.poll(async () => (await hostSnapshot(host))?.tokens.map((t) => t.id)).toEqual(['t_saved']);
+    await expect.poll(async () => (await battleMapSnapshot(host))?.tokens.map((t) => t.id)).toEqual(['t_saved']);
     await expect(host.getByTestId('save-map')).toHaveAttribute('data-state', 'clean');
     expect(await tokenPills(host)).toBe(1);
 
     // A map saved by 2.3.26 (no save id) and a draft continuing it: the draft is restored, unsaved.
     await seed({ tokens: ['t_saved'] }, { baseSaveId: 'legacy', tokens: ['t_saved', 't_draft'] });
     await reloaded();
-    await expect.poll(async () => (await hostSnapshot(host))?.tokens.map((t) => t.id)).toEqual(['t_saved']);
+    await expect.poll(async () => (await battleMapSnapshot(host))?.tokens.map((t) => t.id)).toEqual(['t_saved']);
     await expect(host.getByTestId('save-map')).toHaveAttribute('data-state', 'dirty');
     expect(await tokenPills(host)).toBe(2);
 
@@ -466,7 +469,7 @@ test.describe('Battle Map saved record vs draft (2.3.27)', () => {
     await expect(host.getByTestId('save-map')).toHaveAttribute('data-state', 'dirty');
     expect(await tokenPills(host)).toBe(1);
     await host.waitForTimeout(500);
-    expect(await hostSnapshot(host)).toBeNull();
+    expect(await battleMapSnapshot(host)).toBeNull();
     expect(await host.evaluate(() => window.BattleMapLiveShare.hasPublishedState())).toBe(false);
 
     expect(hostErrors).toEqual([]);
