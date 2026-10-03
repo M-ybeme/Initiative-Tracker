@@ -1,13 +1,19 @@
 # Live Share Milestone 4B: Save → player-visible profiling
 
-*Measured 2026-10-01 on 2.3.30. No production code was changed for this pass. Real-device results are still to come (see "Real-device check" below). Linked from `DMS_Toolbox_Live_Share_Planning.md` §24, Milestone 4 part B.*
+*Measured 2026-10-01 on 2.3.30. No production code was changed for this pass. The real-device check in production followed the same day (see "Real-device check" below). Milestone 4 is complete. Linked from `DMS_Toolbox_Live_Share_Planning.md` §24, Milestone 4 part B.*
+
+**Final outcome:**
+- Whole-background transfer stays, and no Milestone 4 part C optimization pass is required.
+- Real-device production testing confirmed that Live Share updates appear promptly. No meaningful user-visible Save or sync delay was seen, on a desktop host and player or on a phone over 5G.
+- Profiling identified some cost inside the Battle Map's own Save path, but real-device production testing did not reveal a meaningful user-visible delay. No optimization is justified without an observable UX problem.
+- The synthetic measurements below are kept as they were taken.
 
 ## Summary
 
 - **Live Share's own pipeline fits the whole-background design.** On the host, composition runs on the main thread for 23–139 ms. WebP encoding (0.2–1.3 s) and hashing (under 20 ms) run asynchronously and cause no long tasks. Player validation plus apply takes under 45 ms. Typical backgrounds are 40 KiB–1.2 MiB. No case comes near the 16 MiB cap; the largest is 3.6 MiB.
-- **The one threshold crossed everywhere is main-thread blocking (about 200 ms).** The cause is not Live Share. Every Battle Map save serializes the whole fog canvas with a synchronous `canvas.toDataURL()` (PNG) for persistence. That blocks the DM's page for about 230 ms on a 2800×2000 map, about 430–480 ms at 4096×2730, and about 1.9 s at 8000×6000. It happens on every save, including saves that changed only tokens, and with Live Share off too. It also holds back the Live Share publication, which starts only after the save has been stored.
-- **Large maps project above the direct-connection latency threshold on slower uploads.** These are estimates, not measurements: a 3.5 MiB background over a 10 Mbit/s upload would take about 6 s from Save to visible. More than half of that is host preparation, and most of the preparation is the persistence step above. The real-device check has to confirm it.
-- **Decision (pending the real-device check):** keep whole-background transfer. No protocol or architecture change is justified. One concrete bottleneck was found, and the proposed fix is a small, scoped Milestone 4 part C change to the Battle Map's fog persistence (below). It was not implemented in this pass.
+- **The one synthetic threshold exceeded everywhere is main-thread blocking (about 200 ms).** The time is not spent in Live Share. Every Battle Map save serializes the whole fog canvas with a synchronous `canvas.toDataURL()` (PNG) for persistence. That blocks the DM's page for about 230 ms on a 2800×2000 map, about 430–480 ms at 4096×2730, and about 1.9 s at 8000×6000. It happens on every save, including saves that changed only tokens, and with Live Share off too. It also holds back the Live Share publication, which starts only after the save has been stored.
+- **Large maps project above the direct-connection latency threshold on slower uploads.** These are estimates, not measurements: a 3.5 MiB background over a 10 Mbit/s upload would take about 6 s from Save to visible. More than half of that is host preparation, and most of the preparation is the persistence step above. The real-device check found no meaningful delay in real use.
+- **Decision (final):** keep whole-background transfer. No protocol or architecture change is justified, and there is no part C pass. Profiling identified some cost inside the Battle Map's own Save path, but real-device production testing did not reveal a meaningful user-visible delay. No optimization is justified without an observable UX problem.
 
 ## Method
 
@@ -160,16 +166,18 @@ Save → visible ≈ host prep + bytes ÷ upload bandwidth. Player-side work is 
 
 | Criterion | Threshold | Observed | Result | Conclusion |
 |---|---|---|---|---|
-| Direct Save → player-visible, changed background | about 5 s | Measured, loopback: 0.47–3.6 s. Estimated, real link: 0.5–2.2 s for typical maps; 4–6.3 s for large/harsh maps below about 20 Mbit/s | **pass (typical) / investigate (large maps, real links)** | Confirm with the real-device check. The largest part on large maps is host persistence, not transfer |
-| TURN/mobile Save → player-visible | about 10 s | Measured, loopback TURN: 0.45–3.5 s (relay overhead under 0.1 s). Real mobile TURN: not yet measured. Estimated 9.3 s at 5 Mbit/s for a large map | **pending the real-device check** | Large maps on slow mobile uplinks are the risk case |
-| Main-thread blocking during a save | about 200 ms | **230 ms (ordinary map) – 1.9 s (large map), on every save.** Cause: Battle Map persistence (`toDataURL` of the fog canvas). Live Share's own synchronous work is at most 142 ms | **investigate: crossed** | A concrete bottleneck outside Live Share's protocol; proposed fix below |
+| Direct Save → player-visible, changed background | about 5 s | Measured, loopback: 0.47–3.6 s. Estimated, real link: 0.5–2.2 s for typical maps; 4–6.3 s for large/harsh maps below about 20 Mbit/s. Real devices: updates prompt | **pass** | |
+| Mobile Save → player-visible | about 10 s | Measured, loopback TURN: 0.45–3.5 s (relay overhead under 0.1 s). Real device: a phone on 5G, updates prompt, no meaningful delay | **pass** | |
+| Main-thread blocking during a save | about 200 ms | **Synthetic: 230 ms (ordinary map) – 1.9 s (large map), on every save**, inside Battle Map persistence (`toDataURL` of the fog canvas). Live Share's own synchronous work is at most 142 ms. Real devices: no meaningful user-visible delay | **above the synthetic threshold; no observable UX problem** | Not a Live Share cost; no optimization without an observable UX problem |
 | Typical saved background | about 2 MiB | 40 KiB–1.22 MiB for typical maps (A, B2, C, E, F). 3.5 MiB for the harsh grain and large cases (B, D) | **pass (typical)** | Re-check with the DM's real maps in the device test. Tune encoding (quality, scale) only if real maps are large |
 | Any background near the 16 MiB cap | 16 MiB | Largest 3.56 MiB (22% of the cap) | **pass** | |
-| Structured snapshots held back by asset transfer | about 56 KiB queued | Not reproducible on loopback (transfers end before the next save publishes). The pacing design and an existing browser test cover it | **pass (by design and test); confirm on a real link** | |
+| Structured snapshots held back by asset transfer | about 56 KiB queued | Not reproducible on loopback (transfers end before the next save publishes). The pacing design and an existing browser test cover it. No stale or stuck state on real devices | **pass** | |
 
 ## Bottlenecks and recommendation
 
-- **The bottleneck found:** Battle Map save persistence serializes the whole fog canvas synchronously (`buildSavePayload` → `tryCanvasToDataURL(fog)`, a PNG `toDataURL`).
+*Written before the real-device check and kept as it was. The final decision is above: real-device testing showed no meaningful user-visible delay, so none of the following is a planned task.*
+
+- **The cost measured** (synthetic; not observable as a delay on real devices): Battle Map save persistence serializes the whole fog canvas synchronously (`buildSavePayload` → `tryCanvasToDataURL(fog)`, a PNG `toDataURL`).
   - It runs on **every** save, including saves where the fog did not change, and on draft writes.
   - It blocks the DM's page for 0.23–1.9 s depending on map size.
   - It delays Live Share's publication by the same amount.
@@ -190,13 +198,26 @@ Save → visible ≈ host prep + bytes ÷ upload bandwidth. Player-side work is 
   Both stay inside the Battle Map's persistence code and change no Live Share protocol, publication rule or stored format.
 - **Not justified by these measurements:** tiles, deltas, dirty regions, more data channels, workers for composition, persistent asset caching, patch synchronization, or encoder setting changes. Revisit encoder quality or scale only if the real-device check shows large real maps over the latency thresholds after the persistence fix.
 
-**Conclusion so far (pending the real-device check):**
-- **A**, whole-background transfer remains appropriate. No Live Share protocol or architecture optimization is required.
-- One concrete **Battle Map** bottleneck (fog persistence) does justify a small, scoped part C pass.
+**Final conclusion (after the real-device check):**
+- **A. Whole-background transfer remains appropriate. No Milestone 4 part C optimization is required.**
+- Profiling identified some cost inside the Battle Map's own Save path, but real-device production testing did not reveal a meaningful user-visible delay. No optimization is justified without an observable UX problem. The idea for a fix above stays here for reference only.
 
-Milestone 4 stays open until the real-device check is in.
+*Earlier provisional text, kept for history: "One concrete Battle Map bottleneck (fog persistence) does justify a small, scoped part C pass. Milestone 4 stays open until the real-device check is in."*
 
 ## Real-device check (manual, on the live site)
+
+**Result (2026-10-01, production, 2.3.30): passed.**
+- Setup: a desktop host and player, and a phone player on 5G.
+- Live Share updates appeared promptly in real use.
+- Aura and vision cone presentation worked.
+- Built-in and custom token images behaved correctly.
+- Player pan/zoom worked.
+- Fog/background publication worked.
+- Save-gated publication behaved correctly.
+- No stale or stuck background was seen.
+- No meaningful user-visible Save or sync delay was seen.
+
+The procedure that was prepared for the check is kept below.
 
 Use 2.3.30 on the live site with a map you really play on. If you can, also use one large or high-detail map, 4000 px or more on a side.
 

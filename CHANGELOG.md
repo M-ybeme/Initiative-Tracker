@@ -22,6 +22,18 @@ The DM's Toolbox has evolved through focused feature releases. Minor versions (2
 
 ## [Unreleased]
 
+### Docs
+- Live Share Milestone 5A.1 hidden-tab spike (test-only harness in `tests/perf/hidden-host/`):
+  - In desktop Chrome and Firefox, a hidden session-host tab stayed connected and correct for 10+ minutes behind another tab, then minimized. Events stayed prompt and 16 MiB backgrounds transferred normally; only timers slowed, to about 1 s.
+  - The session-host architecture stands. Milestone 5A.3 will send committed publications straight from the BroadcastChannel event.
+  - Safari still needs a manual check on a Mac. Nothing changed in the app
+- Live Share session ownership decided before Milestone 5 (`docs/live-share-session-host-architecture.md`):
+  - browsers can't share WebRTC connections between tabs;
+  - from Milestone 5 a dedicated Live Share session page will own the room, seats, admission and every player connection;
+  - the Battle Map (and later the Initiative Tracker) publish their player-safe state to it, so players join once and closing the Battle Map no longer ends the room.
+  - The planning document's Milestone 5 is now 5A (session host foundation), 5B (admission) and 5C (product UX). Nothing changed in the app
+- Live Share Milestone 4 is complete. The real-device check in production passed: desktop host and player, and a phone on 5G, with prompt updates and no meaningful Save or sync delay. Whole-background transfer stays, with no part C optimization pass. Profiling found some cost inside the Battle Map's own Save path, but real-device testing showed no meaningful user-visible delay, so no optimization is planned without an observable UX problem. Next: Milestone 5, product room UX and admission
+
 ---
 
 ## [2.3.31] - 2026-10-01

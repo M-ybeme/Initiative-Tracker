@@ -9,11 +9,14 @@
 **Authority:** The DM's browser owns all session, seat, admission and game state  
 **Synchronization (V1):** Throttled whole-state player-safe snapshots of each surface's published state; the Battle Map publishes only on an explicit Save (§14)  
 **Product philosophy:** Temporary shared tactical state without moving persistent campaign data into centralized cloud storage.
-**Progress:** Milestones 0–3 are complete and validated in production:
+**Progress:** Milestones 0–4 are complete and validated in production:
 - Milestone 0, networking proof of concept: 2.3.22–2.3.23, validated 2026-09-28, direct and TURN.
 - Milestone 1, share-state seam: 2.3.24.
 - Milestone 2, remote structured rendering: 2.3.25, validated in production.
 - Milestone 3, player-visible background and asset transfer: 2.3.26, validated in production on 2026-09-30 together with 2.3.27 (§24). The production check covered the real player-visible background with fog baked into the transferred raster, custom token art, default tokens staying marker-only, staged publication, Visible to Players, and fog/background replacement, over direct WebRTC. TURN had already been validated in Milestones 0 and 2. Milestone 3's asset and fog design was revised on 2026-09-29 (see below).
+- Milestone 4, player presentation completeness and performance profiling: 2.3.29–2.3.31, validated in production on 2026-10-01 (§24).
+  - The real-device check used a desktop host and player, and a phone on 5G.
+  - Whole-background transfer was kept, and no part C optimization pass is required.
 
 **2.3.27 (Battle Map staged publishing, validated in production 2026-09-30):**
 - Live Share publishes only the Battle Map's last explicit save, never the working state.
@@ -34,7 +37,7 @@ No Live Share behavior changed.
 - Players see the saved aura and vision cone of every token they can see, drawn as structured overlays under the tokens.
 - The snapshot is version 3: each token carries `aura` and `visionCone`, as `null` or small validated primitives (§13.1, §13.4).
 - Hidden tokens send none of it. Overlay, rotation and grid saves never recompose or resend the background.
-- Not yet validated on real devices (Milestone 4's exit requires that).
+- ~~Not yet validated on real devices (Milestone 4's exit requires that).~~ Validated in production on 2026-10-01 together with 2.3.30 (Milestone 4 real-device check, §24).
 
 **2.3.30 (Live Share player view polish, 2026-10-01): more of Milestone 4 part A, found in the manual player check after 2.3.29 (§24).**
 - Built-in token images reach players by a stable preset id (`presetId`, snapshot version 4). The player resolves the id against its own built-in list, and no URL or path is ever sent (§13.1, §15.3).
@@ -52,13 +55,51 @@ No Live Share behavior changed.
   - WebP encoding and hashing asynchronous;
   - typical backgrounds 40 KiB–1.2 MiB, the largest 3.6 MiB;
   - structured saves about 0.6–40 KB.
-- The main-thread threshold is crossed on every save, by the Battle Map's own persistence: a synchronous `toDataURL` of the fog canvas. It takes 0.23 s on an ordinary map and up to 1.9 s on a large one, and publication waits for it.
-- Pending the real-device check: keep whole-background transfer. A small part C pass on the fog persistence is proposed, not implemented.
+- In the synthetic runs, the Battle Map's own save persistence (a synchronous `toDataURL` of the fog canvas) took 0.23–1.9 s depending on map size, and publication waits for it. Profiling identified some cost inside the Battle Map's own Save path, but real-device production testing did not reveal a meaningful user-visible delay. No optimization is justified without an observable UX problem.
+- ~~Pending the real-device check: keep whole-background transfer. A small part C pass on the fog persistence is proposed, not implemented.~~ Decided after the real-device check: whole-background transfer stays, and there is no part C pass.
 
-**Next:**
-- the real-device check (instructions in the report);
-- then decide on the proposed part C fix to fog persistence;
-- then close Milestone 4 (§24).
+**Milestone 4 complete (2026-10-01).** Real-device validation in production:
+- Setup: a desktop host and player, and a phone player on 5G.
+- Confirmed:
+  - Live Share updates appear promptly in real use;
+  - aura and vision cone presentation work;
+  - built-in and custom token images behave correctly;
+  - player pan/zoom works;
+  - fog/background publication works;
+  - Save-gated publication behaves correctly;
+  - no stale or stuck background was seen;
+  - no meaningful user-visible Save or sync delay was seen.
+- Profiling found no bottleneck in the Live Share pipeline, and justified none of these:
+  - tiled backgrounds;
+  - dirty-region transfer;
+  - deltas;
+  - more data channels;
+  - persistent asset caching;
+  - patch/event synchronization.
+- The whole-background architecture stays. No Milestone 4 part C optimization pass is required.
+- The measurements stay recorded in [live-share-m4-profiling.md](live-share-m4-profiling.md).
+
+**Session ownership decided before Milestone 5 (2026-10-02, documentation only):** full decision in [live-share-session-host-architecture.md](live-share-session-host-architecture.md).
+- **The constraint:** WebRTC connections belong to the page that created them. A probe in Chromium and Firefox confirmed that they cannot be passed to another tab or a worker.
+- **What M0–M4 did:** the Battle Map page owned the room and every player connection (`js/battlemap-live-share.js`).
+- **From Milestone 5:** a dedicated, visible **Live Share session host page** owns the room, the connections, seats, admission and the session's lifetime. The Battle Map, and later the Initiative Tracker, are **surface publishers** that send it their player-safe publications over same-origin messaging.
+- **One room, one join and one connection per player** carry every shared surface (§4, §5).
+
+**Milestone 5A.1, the hidden session-host spike (2026-10-02, test-only, no product change):** details in [live-share-session-host-architecture.md](live-share-session-host-architecture.md) §9.
+- **Setup:**
+  - a real hidden owner tab with the production `HostSession`, `PeerLink`, `SnapshotSender` and `AssetSender`;
+  - fed by a visible publisher over BroadcastChannel;
+  - serving the real player page.
+- **Results in desktop Chrome 154 and Firefox 157:**
+  - it stayed connected and correct for more than 10 minutes hidden behind another tab, then for 1 minute minimized;
+  - events (BroadcastChannel, relay, data channel, `bufferedamountlow`) stayed prompt;
+  - 16 MiB backgrounds moved as fast as when visible;
+  - player → host messages arrived in about 0 ms.
+- **What slowed:** only timers, to about 1 s. Structured publications took about 3 ms (Chrome) or about 0.5 s (Firefox), and coalesced follow-ups about 1 s.
+- **Outcome B:** the architecture stays. 5A.3 sends a committed publication directly from the BroadcastChannel event, with timers only for coalescing.
+- **Safari:** manual check on a Mac still required (the procedure is in the ADR).
+
+**Next:** Milestone 5A.2, the session host page (§24). The Safari hidden-tab check is pending.
 
 **Backlog (Battle Map, found during the 2.3.27 and 2.3.28 reviews; not yet fixed):**
 - Pre-existing: a touch long-press (and Ctrl+click on a Mac, which is a primary-button press) starts a token drag before its menu opens, so on release an off-grid token snaps and the map is marked unsaved (the 2.3.28 right-click fix does not cover a primary-button press).
@@ -94,14 +135,14 @@ Add a lightweight, temporary sharing layer to The DM's Toolbox so a Dungeon Mast
 
 The target experience (reached incrementally — see §24):
 
-1. The DM opens the Battle Map.
-2. The DM starts a Live Share session.
+1. The DM opens Live Share, from the Battle Map or directly. This is a dedicated session page that keeps the session running while the DM works in the Battle Map (and later the Initiative Tracker) (§4, §5).
+2. The DM starts a Live Share session there.
 3. The DM creates player seats by name and optionally sets a room password.
 4. The application generates a single share URL.
 5. Players open the URL, their browser connects to the DM's browser, and they see the room's seats.
 6. A player selects a seat, enters the password if one is set, and clicks **Join Room**.
 7. The DM's browser validates the request and admits (or refuses) the player.
-8. Admitted players see the Battle Map as the DM last saved it (§14), while the DM remains the authoritative host.
+8. Admitted players see the Battle Map as the DM last saved it (§14), and later the Initiative Tracker, over the same connection. The DM remains the authoritative host.
 9. The DM can lock the room, kick players, reset seats, and end the session.
 
 The feature must preserve the current local-first design of The DM's Toolbox.
@@ -134,6 +175,8 @@ The DM's browser is the canonical source of truth for:
 - player permissions,
 - kick and reset decisions,
 - which player holds which seat, including after a reconnect where practical.
+
+Within the DM's browser, the room, seats, password, lock and credentials belong to **one page**: the Live Share session host, from Milestone 5 (§5.1). Game state stays in its own pages (the Battle Map, later the Initiative Tracker). Those pages hand the session host only player-safe publications. *(In Milestones 0–4 the Battle Map page itself was the host.)*
 
 Players receive a filtered representation of host state and, in later versions, may request approved interactions. Player clients are never treated as authoritative. The signaling service is never authoritative for anything beyond its own relay bookkeeping.
 
@@ -247,12 +290,37 @@ The only server-side component is a small realtime signaling relay. It connects 
                      │  connection   │
                      │  setup only   │
 
-Player A  ◀──────────── DM Host ────────────▶  Player B
+Player A  ◀─────────── DM host page ──────────▶  Player B
                            │
                            │ WebRTC DataChannel
                            ▼
                         Player C
 ```
+
+**Inside the DM's browser (from Milestone 5):**
+
+```text
+ Battle Map tab            Initiative Tracker tab (future)
+   player-safe publication     player-safe publication
+   + player-safe assets        (no Save gate)
+        │                            │
+        └──── same-origin messaging (BroadcastChannel) ────┐
+                                                          ▼
+                                      Live Share session host tab
+                                      room · seats · admission · password · lock
+                                      credentials · peer connections · routing
+                                      current publication of each surface + its assets
+                                                          │  one WebRTC connection per player,
+                                                          ▼  every shared surface multiplexed
+                                                    Players A, B, C
+```
+
+- **One host page.** An `RTCPeerConnection` belongs to the page that created it and cannot be passed to another tab or a worker; this was checked in Chromium and Firefox. So exactly one page, the **session host**, owns the room and all player connections.
+- **Surfaces publish through it.** The Battle Map and the future Initiative Tracker never touch WebRTC.
+- **Closing a surface doesn't end the room:** its last publication stays with the host.
+- **Closing the session host ends the session,** until Milestone 7's host-refresh recovery.
+- **History:** in Milestones 0–4 the Battle Map page was the host itself (`js/battlemap-live-share.js`).
+- **Full decision, options and lifecycle:** [live-share-session-host-architecture.md](live-share-session-host-architecture.md).
 
 - The DM and the players use the existing static application hosted on Netlify. Normal hosting does not change.
 - The signaling relay exists only to let a joining browser find the room's host and to exchange WebRTC negotiation messages (offers, answers, ICE candidates).
@@ -264,7 +332,16 @@ Player A  ◀──────────── DM Host ───────�
 
 # 5. Core Components
 
-## 5.1 Live Share Session Manager (DM browser)
+## 5.1 Live Share Session Manager (DM browser: the session host page)
+
+*From Milestone 5:*
+- This is the dedicated **Live Share session host page**.
+  - The DM keeps it open while sharing.
+  - A Web Lock keeps it to one per browser profile.
+- It owns everything in this section and §5.2–§5.3, for every shared surface.
+- In Milestones 0–4, `js/battlemap-live-share.js` played this role inside the Battle Map page (prototype).
+- Details: [live-share-session-host-architecture.md](live-share-session-host-architecture.md).
+
 
 - create and end sessions
 - own the room's seats, password, lock state and permissions
@@ -273,6 +350,8 @@ Player A  ◀──────────── DM Host ───────�
 - ~~maintain the session revision counter~~
 - carry the seam's revisions to players without owning them: the structured snapshot revision and, from Milestone 3, the background revision both come from the Battle Map side (§5.4, §14)
 - drive snapshot sending and resync
+- hold each surface's current committed publication and its player-safe assets, so players and late joiners are served while that surface's page is closed (§15.4)
+- assign the per-surface revisions players see (a surface's own counters restart when its page reloads, §14)
 
 ## 5.2 Signaling Client
 
@@ -282,7 +361,7 @@ Player A  ◀──────────── DM Host ───────�
 - report signaling failures
 - support host and player re-registration after a reload where practical
 
-## 5.3 Peer Manager (DM browser)
+## 5.3 Peer Manager (DM browser: the session host page)
 
 - one peer connection per player
 - create/manage RTCDataChannels
@@ -290,7 +369,7 @@ Player A  ◀──────────── DM Host ───────�
 - close stale connections
 - enforce one active connection per seat in V1
 
-## 5.4 Battle Map Share-State Seam (DM browser)
+## 5.4 Battle Map Share-State Seam (DM browser: the Battle Map page)
 
 The single boundary between Battle Map internals and Live Share (see §6 and Milestone 1):
 
@@ -309,6 +388,8 @@ The single boundary between Battle Map internals and Live Share (see §6 and Mil
   This gate belongs to the Battle Map. The generic Live Share modules send whatever a surface publishes (§14).
 
 Live Share code talks only to this seam, never to Battle Map internals directly.
+
+*From Milestone 5, the seam stays in the Battle Map page. A thin Battle Map **publisher adapter** forwards its publications (structured state plus player-safe asset bytes) to the session host (§5.8). The original map, fog, drafts and hidden tokens never leave the page.*
 
 ## 5.5 Player-Safe Projection (DM browser)
 
@@ -336,6 +417,22 @@ This is the primary security/privacy boundary for structured data.
 - send permitted messages such as pings
 - reconnect after temporary connection loss
 - remain isolated from DM-only application state
+
+## 5.8 Surface Publishers and the Surface ↔ Session Host Boundary (DM browser, from Milestone 5)
+
+- **Surfaces:** the Battle Map, and later the Initiative Tracker. These are the only intended shared surfaces, not a plugin framework.
+- **The boundary:** each surface talks to the session host over same-origin `BroadcastChannel` messages:
+  - register / announce (surface type, instance id, version);
+  - offer a publication (player-safe structured state plus asset metadata);
+  - send only the assets the host asks for;
+  - report leaving.
+- **The host:**
+  - commits a publication atomically, only once all its assets have arrived and verified;
+  - keeps it until a newer one commits;
+  - validates every surface message like player input;
+  - tolerates closed, crashed, duplicate and outdated surface tabs.
+- **No seats, passwords or credentials ever cross this boundary.**
+- Message design, the duplicate-tab rule and liveness: [live-share-session-host-architecture.md](live-share-session-host-architecture.md) §6.
 
 ---
 
@@ -378,10 +475,10 @@ Consequences for the plan:
 
 ## Room Creation
 
-1. DM selects **Live Share**.
+1. DM selects **Live Share**: from Milestone 5 this opens, or focuses, the session host page.
 2. DM (optionally, from Milestone 5) adds seats and a password.
 3. DM selects **Start Session**.
-4. The DM's browser registers an ephemeral room with the signaling relay.
+4. The session host page registers an ephemeral room with the signaling relay.
 5. A high-entropy room invitation is generated.
 6. The application displays a share URL.
 7. The DM sends the URL to players.
@@ -427,7 +524,14 @@ When the DM selects **End Session**:
 - the room is removed from the signaling relay,
 - all seat-session credentials are discarded,
 - players discard their temporary assets,
-- the DM's local Battle Map remains unchanged.
+- the session host discards the publications and assets it held,
+- the DM's local Battle Map remains unchanged, and open surface pages keep working locally.
+
+**What ends a session (from Milestone 5):** only the session host: End Session, closing or reloading its tab, or a crash.
+- Closing or reloading a surface page (Battle Map, Initiative Tracker) does not end the room.
+  - Its last publication stays with the host, and players keep seeing it.
+  - Nothing new from it arrives until it reopens.
+- Recovering from a session host reload is Milestone 7 (§18).
 
 The relay also expires rooms on its own (§20), so a DM who closes the browser without ending the session does not leave a room behind.
 
@@ -575,6 +679,12 @@ The player enters a dedicated Live Share client showing:
 
 The normal Toolbox navigation does not replace the Live Share page; other Toolbox features open in a new tab.
 
+**Several shared surfaces (from the Initiative Tracker on).**
+- The player joins once. The one player page shows a panel or tab per surface the DM shares: the Battle Map first, the Initiative Tracker when it exists.
+- Each panel shows its own availability. For example: "The DM's map is not open right now — showing the last shared map".
+- A DM page opening or closing never navigates the player away, and never ends the room.
+- The Initiative Tracker's player UI is designed with the tracker (§27).
+
 **Player view (2.3.30).** Each player can pan and zoom the Battle Map on their own screen: drag, mouse wheel, one-finger pan, pinch, and **Fit** to reset.
 - This *player view* is separate from the *map transform*: the map transform is the DM's, saved and published, and places the map in world space.
 - The player view is local. It is never sent, never changes the DM's map or view, and doesn't count as an edit.
@@ -597,7 +707,16 @@ No temporary seat logic is added to these milestones just to imitate the later m
 
 # 12. DM User Experience
 
-The DM remains on the normal Battle Map. Live Share adds a compact session panel.
+*Revised for Milestone 5:*
+- Authoritative room controls live in **one place, the session host page**: seats, password, lock, players, kick/reset, join link, which surfaces are shared, diagnostics, End.
+- Each surface page (the Battle Map, later the Initiative Tracker) adds only:
+  - a compact Live Share indicator;
+  - an "Open Live Share" button that focuses the session host;
+  - its own publication controls (the Battle Map's Save and Visible to Players).
+- Convenience controls on a surface, if any are added, send commands to the session host. They never keep a second copy of room state.
+- The panel sketched below describes the session host page. *(Milestones 0–4: a development panel on the Battle Map page.)*
+
+~~The DM remains on the normal Battle Map. Live Share adds a compact session panel.~~
 
 ```text
 LIVE SHARE
@@ -770,6 +889,13 @@ INITIATIVE TRACKER (future, §27)
 
 Battle Map save gating is the Battle Map's policy. It must not move into the generic modules (`js/modules/live-share/*`), and the Initiative Tracker must stay free to publish immediately.
 
+**Path from Milestone 5.** A surface publishes to the session host. The host then:
+1. commits the publication once its assets are complete;
+2. assigns the surface's revision for players;
+3. sends the snapshot to every admitted player.
+
+Each surface keeps its own revision stream over the one connection; there is no global game revision. Save gating stays on the Battle Map side of that boundary (§5.8).
+
 The sending mechanics are the same for every surface:
 
 1. The surface's seam reports that its published, player-safe state changed.
@@ -795,6 +921,9 @@ Three different things are called "revision". No single counter controls all of 
 
 - **Structured snapshot revision** — `revision` in each `battlemap-snapshot` (Milestones 1–2). The share-state seam owns it, and it increases only when player-visible structured content changes. For the Battle Map that means when a Save publishes changed content (2.3.27). It restarts at 1 when the host's Battle Map page loads. A player's receiver lives for one connection to one host page load, and applies only revisions newer than the last one it applied.
 - **Background revision** — `background.revision` (Milestone 3). It is produced with the player-visible composite and increases only when that background changes, independently of the snapshot revision. A background change also changes the snapshot's background reference, so the snapshot revision moves then too; the reverse never happens (a saved token move does not touch the background revision).
+- **Who assigns revisions from Milestone 5.** The surface's own counters restart at 1 when its page loads. The session host therefore assigns the revisions players see: per surface, increasing only when the committed content changes (compared by value).
+  - A Battle Map reload with an unchanged map is not a new revision.
+  - The background revision is kept monotonic within the session in the same way.
 - **Room/session revision (future; none exists today)** — if host-refresh resumption (Milestone 7) needs players to tell a reloaded host page's revisions from the previous page's, that will be a separate session identifier or epoch paired with the revisions above, not a reuse of either counter.
 
 The structured Battle Map state is small (a table's worth of tokens and measurements), so whole snapshots are expected to be cheap. Incremental updates should be introduced only if profiling demonstrates a real need.
@@ -980,7 +1109,20 @@ Expected behavior:
 
 ## Host Refresh
 
-The DM's browser keeps enough ephemeral, session-scoped information in `sessionStorage` (room registration, seats, lock state, issued seat credentials) to attempt room resumption after a reload. Nothing from the session is kept in long-lived storage. The relay keeps the room registered for a short host grace period. If the host does not return within that period, the room ends.
+**From Milestone 5, "host" means the session host page**, not a surface. A Battle Map or Initiative Tracker reload is ordinary: the surface re-registers and offers its state again, and the room is unaffected.
+
+Session host refresh (Milestone 7):
+- **Storage:** the session host page keeps enough ephemeral, session-scoped information in its tab's `sessionStorage` to attempt room resumption after a reload:
+  - room registration and a host-resume secret;
+  - seats, lock state and the password verifier;
+  - issued seat credential verifiers;
+  - the active surface instance of each type.
+- Nothing from the session is kept in long-lived storage.
+- **The relay** keeps the room registered for a short host grace period; this is new relay behavior, since today a departing host ends the room at once. If the host does not return within that period, the room ends.
+- **Rebuilt rather than stored:**
+  - player connections: players reconnect with their credentials;
+  - publications and assets: open surfaces offer them again.
+- A surface that is closed during the host's refresh is unavailable until it reopens. Details: [live-share-session-host-architecture.md](live-share-session-host-architecture.md) §10.
 
 ---
 
@@ -994,6 +1136,13 @@ While a player is connected:
 - reconnect gracefully after a refresh when possible.
 
 The browser cannot and should not be forcibly prevented from leaving the page.
+
+**DM side (from Milestone 5):**
+- **The session host page:**
+  - warns before unload while players are connected;
+  - says plainly that it keeps Live Share running.
+- **Surface pages** navigate freely. Leaving or reloading the Battle Map never ends the session.
+- Surfaces open the session host in a fixed named window (`window.open(url, 'dmtoolbox-live-share')`), so "Open Live Share" focuses it instead of starting a second one.
 
 ---
 
@@ -1090,6 +1239,11 @@ These apply to product behavior (Milestone 5 onward). The development prototypes
 - the original unobscured map asset is never transmitted to players (§15.2)
 - tokens hidden with Visible to Players contribute nothing to what is transmitted: no structured fields, no asset ids, no custom art (§13.3)
 - the Battle Map's unsaved working state is never transmitted; only the last explicitly saved map is published (§14)
+- **(from Milestone 5) surface ↔ session host messaging is a privacy boundary too:**
+  - surfaces post only player-safe publications, player-safe asset bytes and routing metadata. Never drafts, the original map, fog sources, hidden tokens, HP or DM notes;
+  - other same-origin tabs can read BroadcastChannel traffic, so seats, passwords and credentials never go on it. They stay inside the session host page;
+  - the session host validates every surface message like untrusted input: schema, limits, asset hash and version.
+- one session host per browser profile (Web Lock); one room, one seat namespace and one connection per player for all shared surfaces (§4)
 
 ## Threat Scenarios to Test
 
@@ -1132,6 +1286,8 @@ Useful diagnostics:
 - structured snapshot revision (last sent / last applied)
 - background revision and asset transfer state (assets sent, cached, failed, bytes; counts and ids only, never image content)
 - connected seat count
+- (from Milestone 5) on the session host: open and active surface publishers per type, their versions, the last committed publication per surface, and the held asset count and bytes
+- (from Milestone 5) on each surface: whether a session is running, whether this tab is the active publisher, and the last publication committed by the host
 
 Integrate with the existing DM's Toolbox diagnostics panel where appropriate.
 
@@ -1141,7 +1297,7 @@ Integrate with the existing DM's Toolbox diagnostics panel where appropriate.
 
 The order is deliberately thin: prove the network, then prove remote rendering of real state, then build the product UX. Security of the player-safe projection starts in Milestone 1, not at the end.
 
-Milestones 0–4 are development prototypes: they have no seat/admission model, possession of the temporary development room link may be enough to receive prototype state, and they must not be exposed as production-ready public rooms (§11). Admission becomes mandatory with the product room UX in Milestone 5.
+Milestones 0–4 are development prototypes: they have no seat/admission model, possession of the temporary development room link may be enough to receive prototype state, and they must not be exposed as production-ready public rooms (§11). Admission becomes mandatory with the product room UX in Milestone 5 (5B). In Milestones 0–4 the Battle Map page hosted the room; from Milestone 5 the session host page does (§4, §5.1).
 
 ## Milestone 0 — Networking Proof of Concept
 
@@ -1320,7 +1476,13 @@ See §5.4, §6, §13.3, §14 and §16. A follow-up fix (commit bd1ba05) hardened
 
 ## Milestone 4 (redefined 2026-09-30) — Player Presentation Completeness & Performance Profiling
 
-**Status:** part A (presentation completeness) was done in 2.3.29 on 2026-10-01 and is not yet validated on real devices. Parts B (profiling) and C (optimization on evidence) are still open, so Milestone 4 is not complete.
+**Status: complete (2026-10-01).**
+- **Part A, presentation completeness:** 2.3.29 and 2.3.30.
+- **Part B, profiling:** 2.3.31. Report: [live-share-m4-profiling.md](live-share-m4-profiling.md).
+- **Real-device validation in production:** desktop host and player, and a phone on 5G.
+- **Part C, optimization on evidence:** not required. Whole-background transfer is kept.
+
+*Earlier status, kept for history: "part A … is not yet validated on real devices. Parts B and C are still open, so Milestone 4 is not complete."*
 
 **Objective.** Make the player's Battle Map show the presentation state the DM deliberately makes public, and measure the existing Milestone 3 background and asset pipeline on representative maps and devices before adding any optimization complexity.
 
@@ -1383,22 +1545,23 @@ Existing diagnostics (encode time, bytes, counts) and `scripts/bench-live-share-
 
 **Results (2026-10-01, on 2.3.30): [live-share-m4-profiling.md](live-share-m4-profiling.md).**
 
-The harness is `tests/perf/` with `playwright.perf.config.js`, outside the normal test run. It drives the real pages and times each phase from Save to player-visible. It ran on loopback WebRTC, direct and TURN; the real-device check is still to come.
+The harness is `tests/perf/` with `playwright.perf.config.js`, outside the normal test run. It drives the real pages and times each phase from Save to player-visible. It ran on loopback WebRTC, direct and TURN.
+
+The real-device check followed in production on 2026-10-01: a desktop host and player, and a phone on 5G. Updates appeared promptly, and no meaningful user-visible Save or sync delay was seen.
 
 | Criterion | Observed | Result |
 |---|---|---|
-| direct Save → visible, about 5 s | loopback 0.47–3.6 s. Estimated on real links 0.5–2.2 s for typical maps, 4–6.3 s for about 3.5 MiB backgrounds below about 20 Mbit/s | pass (typical), investigate large maps on the device |
-| TURN/mobile, about 10 s | loopback TURN 0.45–3.5 s; real mobile not yet measured | pending the real-device check |
-| main thread, about 200 ms | 0.23–1.9 s on every save, from the Battle Map's fog persistence (`toDataURL`). Live Share's own synchronous work is at most 142 ms | **crossed**; bottleneck identified |
+| direct Save → visible, about 5 s | loopback 0.47–3.6 s. Estimated on real links 0.5–2.2 s for typical maps, 4–6.3 s for about 3.5 MiB backgrounds below about 20 Mbit/s. Real devices: updates prompt, no meaningful delay seen | pass |
+| TURN/mobile, about 10 s | loopback TURN 0.45–3.5 s. Real device: a phone on 5G, updates prompt, no meaningful delay seen | pass |
+| main thread, about 200 ms | Synthetic: 0.23–1.9 s per save inside the Battle Map's own save persistence (fog `toDataURL`). Live Share's own synchronous work is at most 142 ms. Real devices: no meaningful user-visible delay | above the synthetic threshold, no observable UX problem; no optimization |
 | typical background, about 2 MiB | 40 KiB–1.22 MiB (typical); 3.5 MiB (harsh grain / large) | pass |
 | near 16 MiB | at most 3.56 MiB | pass |
-| snapshots held back by assets | not reproducible on loopback; pacing design plus an existing browser test | pass, confirm on the device |
+| snapshots held back by assets | not reproducible on loopback; pacing design plus an existing browser test; no stale or stuck state on real devices | pass |
 
-**Provisional conclusion:**
-- Whole-background transfer stays, and no Live Share protocol or architecture change is justified.
-- The one bottleneck found is Battle Map persistence, which serializes the whole fog canvas synchronously on every save.
-- A scoped part C fix is proposed in the report: reuse the serialized fog while unchanged, and serialize asynchronously otherwise. It has to be scoped separately before it is implemented.
-- Milestone 4 stays open until the real-device check is in.
+**Conclusion (final, after the real-device check):**
+- **A. Whole-background transfer remains appropriate. No Milestone 4 part C optimization is required.** No Live Share protocol or architecture change is justified.
+- Profiling identified some cost inside the Battle Map's own Save path, but real-device production testing did not reveal a meaningful user-visible delay. No optimization is justified without an observable UX problem.
+- The measurement and the idea for a fix are kept in the report in case a real UX problem ever shows up. They are not a planned task.
 
 ### C. Optimization only on evidence
 
@@ -1443,7 +1606,49 @@ Then, if the problem persists, consider structural changes (tiles, dirty regions
 
 ## Milestone 5 — Product Room UX
 
-Only after the underlying networking has proven useful.
+Only after the underlying networking has proven useful. *(Reconciled on 2026-10-02 with the session-ownership decision, [live-share-session-host-architecture.md](live-share-session-host-architecture.md). Milestone 5 starts by moving session ownership out of the Battle Map, so seats and admission are never built into a surface page.)*
+
+**5A — Session host foundation.** No change players can see.
+1. **Spike first:** does a hidden session host tab keep snapshot and asset sending working, in Chrome, Firefox and Safari, with the tab hidden for more than 5 minutes? The result decides between event-driven sending, a keep-visible warning, and the iframe-shell fallback (ADR §9).
+   - **Done, 2026-10-02, for Chrome and Firefox:** outcome B.
+     - A hidden host stays connected and correct.
+     - Only timers slow, to about 1 s, so 5A.3 sends committed publications from the event.
+   - Safari: manual check pending.
+2. **The session host page:**
+   - reuses `host-session.js`, the senders and the protocol unchanged;
+   - Web Lock: one per browser profile;
+   - the prototype's start, link and end functions.
+3. **The surface ↔ host boundary** (BroadcastChannel):
+   - registration and liveness;
+   - the duplicate-tab rule;
+   - version check;
+   - publication offer / need / asset / commit, with a host publication store and host-assigned revisions.
+4. **The Battle Map side:** `js/battlemap-live-share.js` becomes a thin publisher adapter.
+   - The player wire format is unchanged.
+   - The existing browser tests move to "session host + Battle Map" helpers.
+   - The Battle Map can close while players keep its last saved map.
+
+*Exit:* the Milestone 4 behaviors all hold with the session owned by the session host page, and closing or reloading the Battle Map leaves the room and the players' map intact.
+
+**5B — Admission / room model**
+- seats, optional password, room lock;
+- temporary seat credentials;
+- the join flow, with a mandatory admission gate;
+- player protocol v1:
+  - a generic envelope;
+  - session messages;
+  - `surface-snapshot { surface, revision, payload }`, with per-surface validators;
+- **relay:** raise `maxPeersPerRoom` from the Milestone 0 limit of 1, and scale the host's rate allowance. A generic change, with no game state.
+
+**5C — Product UX**
+- polished host controls on the session host page, and the player join UI;
+- kick, reset and disable;
+- connection status;
+- session end;
+- Battle Map indicator and "Open Live Share";
+- the `beforeunload` warning on the session host.
+
+Milestone 5's items, which 5B and 5C cover:
 
 - DM-created seats
 - optional password
@@ -1456,7 +1661,7 @@ Only after the underlying networking has proven useful.
 - polished join UI
 - connection status
 
-Exit: a nontechnical user can host and join a session without understanding WebRTC.
+Exit: a nontechnical user can host and join a session without understanding WebRTC, and the session belongs to the Live Share session host, not to any one Toolbox page.
 
 ## Milestone 6 — Player Ping
 
@@ -1465,7 +1670,8 @@ The first meaningful player-originated interaction, with the host validating, ra
 ## Milestone 7 — Reconnect / Recovery
 
 - player reconnect with seat reclaim
-- host refresh grace period and room resumption
+- **session host** refresh: a relay host grace period and resume token (generic); the session host's `sessionStorage` (room, seats, lock, password verifier, credential verifiers, active surfaces); publications rebuilt from the surfaces still open (§18, ADR §10)
+- surface reloads need nothing here: they already work from 5A
 - snapshot, ~~fog~~ background and asset resync
 - stale credential handling
 - clean session teardown
@@ -1588,15 +1794,17 @@ After read-only sharing is proven stable, each evaluated individually rather tha
 
 The Initiative Tracker is the only planned second Live Share surface. It is not designed or implemented now.
 
-When it is, it should reuse:
+When it is, it joins the existing Live Share session rather than starting its own:
 
-- the same room,
-- the same WebRTC connections,
-- the same seat model,
-- the same host-authoritative, player-safe-projection approach,
-- the same whole-snapshot synchronization.
+- **It doesn't own a WebRTC session.** It is a surface publisher. It publishes through the Live Share session host page (§5.1, §5.8), which already owns the room, the seats and every player's connection.
+- **Players join once.** The session host multiplexes the Battle Map and the Initiative Tracker over each player's existing connection, under the same seats, password, lock and credentials. There is no second room, link, admission or TURN connection.
+- **It has its own player-safe projection,** applied before anything leaves the tracker page, with its own schema, validator and revision stream.
+- **It reuses the same host-authoritative, whole-snapshot synchronization.**
+- *(Wording before 2026-10-02: "reuse the same room, the same WebRTC connections". That meant the session's connections, not the tracker page owning or sharing `RTCPeerConnection` objects, which browsers do not allow.)*
 
-It does **not** reuse the Battle Map's save gating. The Initiative Tracker has no explicit Save workflow, so it publishes its player-safe state as soon as its authoritative tracking state changes (§14). Save-gated publication is a Battle Map policy, not a Live Share one.
+It does **not** reuse the Battle Map's save gating. The Initiative Tracker has no explicit Save workflow, so it publishes its player-safe state to the session host as soon as its authoritative tracking state changes (§14). Save-gated publication is a Battle Map policy, not a Live Share one.
+
+What players see while the tracker page is closed (its last state, marked not live, or the panel hidden) is decided with the tracker's design. Live Share only provides the generic surface availability (ADR §11). Nothing here is implemented now.
 
 The player view is a filtered, read-only projection initially.
 
@@ -1661,7 +1869,8 @@ STUN-only connection failures are not automatically a failed product experiment 
 
 Battle Map Live Share is stable when, after network hardening (Milestone 8), it shows acceptable real-world reliability, and:
 
-- the DM can create a room in a few clicks,
+- the DM can create a room in a few clicks, on one Live Share session page that clearly keeps the session running,
+- closing or reloading the Battle Map page does not end the room or blank the players' map,
 - players can join from one URL without accounts,
 - predefined seats work, and seat claims cannot race or overwrite each other,
 - optional password protection works,
@@ -1688,7 +1897,7 @@ Intentionally unresolved until the relevant milestone:
 - ~~**TURN provider and credential mechanism**~~ — decided in Milestone 0 (earlier than planned, because a real mobile-data path needed it): Cloudflare Realtime TURN. The relay Worker's `/turn-credentials` route mints 4-hour credentials from a TURN key held in Wrangler secrets. Rate limiting that route remains Milestone 8 work.
 - ~~**Fog encoding/compression** — image format, resolution, whether painted fog and fog shapes are combined or sent separately (Milestone 4).~~ Superseded on 2026-09-29: fog is baked into the player-visible background, so painted fog and fog shapes are always combined, and the question becomes background encoding (next item).
 - ~~**Background encoding and limits**~~ — decided in Milestone 3 from the benchmark: WebP quality 0.85 with PNG fallback; 8192 px per side, 16.7 M pixels, 16 MiB. ~~recomposition debounced at 250 ms with a 1 s maximum wait. Still to tune with real maps and devices (Milestone 4).~~ Since 2.3.27 the Battle Map composites once per published save, so the debounce no longer applies. The settings are revisited only if Milestone 4 profiling shows a need.
-- ~~**Asset caching strategy** — whether and how to hash/cache assets across reconnects (after Milestone 3).~~ Partly decided on 2026-09-29: content-derived asset ids and a session-scoped player cache with deduplication (Milestone 3, §15.4). ~~Still open: the hash and id format~~ Decided in Milestone 3: the id is the hex SHA-256 of the encoded bytes. **Persistence beyond a session stays deferred** unless Milestone 4 measurements justify revisiting it.
+- ~~**Asset caching strategy** — whether and how to hash/cache assets across reconnects (after Milestone 3).~~ Partly decided on 2026-09-29: content-derived asset ids and a session-scoped player cache with deduplication (Milestone 3, §15.4). ~~Still open: the hash and id format~~ Decided in Milestone 3: the id is the hex SHA-256 of the encoded bytes. **Persistence beyond a session stays deferred** unless Milestone 4 measurements justify revisiting it. *(They didn't: Milestone 4 found no need, 2026-10-01.)*
 - **External token-image fallback** — what happens for an external token image the host browser cannot fetch or read because of CORS: require the DM to import/store it locally before sharing, show players a placeholder, allow direct third-party loading only as an explicit privacy tradeoff, or another approach (Milestone 3). *Default since 2026-09-29: players never fetch external URLs, and such a token falls back to its structured marker and name (§15.3). Still open: whether to also offer the DM an "import locally" action.*
 - ~~**What counts as a custom token image**~~ — decided in Milestone 3: `data:`/`blob:` images (uploads, Character Manager tokens) are custom; same-origin URLs (built-in presets) are generic; other origins are transferred only if CORS lets the host read them.
 - ~~**Asset transfer on the data channel**~~ — decided in Milestone 3: one channel, with chunks sent only within a 40 KiB buffer budget below the snapshot sender's 64 KiB busy level, so snapshots are never held back by assets.
@@ -1696,12 +1905,28 @@ Intentionally unresolved until the relevant milestone:
 - ~~**Token visibility**~~ — decided and implemented in 2.3.27: a per-token `visibleToPlayers` flag. `false` omits the token and everything about it; a missing flag means visible; Export/Import keeps it (§13.3).
 - ~~**Battle Map publication policy**~~ — decided in 2.3.27: the Battle Map publishes only its last explicit save. The draft is a separate private record, and a reload publishes the saved record. The policy is the Battle Map's; generic Live Share and the future Initiative Tracker are not save-gated (§14).
 - ~~**Published-asset lifetime**~~ — decided in 2.3.27: the host keeps the assets of the published state until a newer publication commits, then releases those no longer referenced. There is no history of old backgrounds (§15.4).
-- **Tiled, dirty-region or delta backgrounds; multiple asset channels; patch/event synchronization** — not planned. Each is considered only if Milestone 4 profiling crosses its decision criteria (§24). Whole-background transfer stays while it remains acceptable.
+- ~~**Tiled, dirty-region or delta backgrounds; multiple asset channels; patch/event synchronization** — not planned. Each is considered only if Milestone 4 profiling crosses its decision criteria (§24).~~ Decided in Milestone 4 (2026-10-01): none of these.
+  - Profiling and the real-device check found no Live Share bottleneck, so whole-background transfer is kept.
+  - Any of these would be reconsidered only after an observed real-world problem.
 - **Snapshot throttle interval** — 100 ms in Milestone 2 (`SNAPSHOT_INTERVAL_MS`), to be tuned with real use.
 - **Payload and asset size limits** — maximum ~~map image,~~ background composite, custom token image and message sizes (Milestones 3 and 8). The structured-message limit is already 240 KB (Milestone 2). The background and token-image limits were set in Milestone 3: 16 MiB per background, and 512 px and 1 MiB per token image. Remaining work is relay- and host-side abuse limits (Milestone 8).
 - **Seat-session credential generation** — the library and format used to create the random opaque tokens (Milestone 5).
 - ~~**Share-state seam mechanism**~~ — decided in Milestone 1: change detection by value. The seam recomputes the allowlisted projection at three existing funnels (each rendered frame, `setDirty()`, `save()`) and signals only when the player-visible content differs, instead of adding a notifier call to each of the ~40 mutation sites. *Changed in 2.3.27: the seam's source is the Battle Map's published (saved) state, and it is checked when a save is published.*
-- **Host grace period and room lifetime** — durations for host-refresh recovery and room expiry (Milestone 7).
+- **Host grace period and room lifetime** — durations for host-refresh recovery and room expiry (Milestone 7). From Milestone 5 the "host" is the session host page.
+- ~~**Who owns the Live Share session across Toolbox pages**~~ — decided on 2026-10-02 ([live-share-session-host-architecture.md](live-share-session-host-architecture.md)):
+  - a dedicated, visible session host page owns the room, the connections, admission and the session's lifetime;
+  - the Battle Map and the Initiative Tracker are surface publishers over same-origin messaging.
+  - Rejected:
+    - the Battle Map as permanent owner;
+    - per-surface rooms;
+    - an iframe shell (kept as the fallback).
+- ~~**Hidden session host tab behavior** — **must be settled first in Milestone 5A, by a spike** (ADR §9). It decides between event-driven sending, a keep-visible warning, and the iframe-shell fallback.~~
+  - Settled on 2026-10-02 for desktop Chrome and Firefox: outcome B, with the architecture unchanged. Committed publications are sent from the BroadcastChannel event, with timers only for coalescing.
+  - **Safari still needs its manual check** (ADR §9).
+- **Session host page name and URL, and the product player page** — Milestone 5A/5C.
+- **Duplicate surface tabs** — recommended: the most recent registration is the active publisher, plus an explicit "publish from this tab" (Milestone 5A).
+- **Persisting a closed surface's publication across a session host refresh** — default no (Milestone 7).
+- **What players see when the Initiative Tracker page is closed** — decided with the tracker's design (§27).
 
 ---
 

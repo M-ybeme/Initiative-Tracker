@@ -1,0 +1,14 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>TEST ONLY — hidden session-owner spike (Live Share M5A.1)</title>
+</head>
+<body>
+  <h1>TEST ONLY: Live Share session-owner spike</h1>
+  <p>Not a product page. Owns a real HostSession, SnapshotSender and AssetSender, takes publications from the
+     publisher tab over BroadcastChannel, and reports what it sees to the spike's local collector.</p>
+  <pre id="state"></pre>
+  <script type="module" src="./owner.js"></script>
+</body>
+</html>

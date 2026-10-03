@@ -1,0 +1,517 @@
+# Live Share: session ownership across Toolbox pages (architecture decision)
+
+*Decided 2026-10-02, before Milestone 5. Documentation only: nothing here is implemented yet. This record governs Milestones 5 and 7 and the future Initiative Tracker surface. Linked from `DMS_Toolbox_Live_Share_Planning.md` §4, §5, §24 and §27.*
+
+## 1. The problem
+
+**The product goal** (planning doc §1, §27): one Live Share room, joined once per player, used by the Battle Map and later the Initiative Tracker. That means:
+- one room, one seat/admission model and one password/lock state;
+- one temporary credential per admitted seat;
+- one WebRTC connection per player.
+
+**What makes this hard:**
+- The Battle Map (`battlemap.html`) and the Initiative Tracker (`initiative.html`) are separate pages, often in separate tabs or windows.
+- An `RTCPeerConnection` and its data channels belong to the page (browsing context) that created them.
+- Two pages cannot both drive one connection.
+- Milestone 5 is about to build the long-lived session owner (seats, password, admission, lock, kick/reset, credentials, connection status, session end). Building it into `battlemap.html` would make the Battle Map the permanent owner of Live Share by accident.
+
+## 2. How Milestones 0–4 actually own things (as built)
+
+Traced from the call paths, not the file names:
+
+- **One module does all of it.** `js/battlemap-live-share.js` runs inside `battlemap.html?liveshare=1` and composes:
+  - the room: `HostSession`, which wraps `SignalingClient` and one `PeerLink` per player;
+  - the snapshot sender and the asset sender;
+  - the player message handling;
+  - the development panel (Start / Copy link / End / peer list / diagnostics);
+  - the session's life: `pagehide` ends it.
+- **What it reads from the Battle Map.** Only the seam, `window.BattleMapLiveShare`:
+  - `getPlayerSafeState`, `onShareableStateChanged`;
+  - `getAsset` / `hasAsset`;
+  - `hasPublishedState`, `savedMapProblem`;
+  - `getAssetDiagnostics`.
+- **Where the published assets live.** Only in the Battle Map page's memory: `BattleMapShareAssets.createShareAssets`, retained by `BattleMapPublication`.
+- **Revisions are per page load.**
+  - The structured snapshot revision (`createShareStateSeam`) starts at 1 when `battlemap.html` loads.
+  - So does the background revision (`createShareAssets`).
+  - The player accepts only revisions newer than its last.
+- **The relay** (`relay/room-core.mjs`, the same code locally and on Cloudflare):
+  - one host socket per room; a second host is refused with `HOST_EXISTS`;
+  - when the host's socket closes, every peer is closed with `HOST_LEFT`, so the room ends at once;
+  - `maxPeersPerRoom: 1`, the Milestone 0 limit, still in force.
+- **The player** (`liveshare-dev.html` + `js/live-share-dev.js`):
+  - one page, which is both the Milestone 0 "hello" host (no `#room`) and the player (`#room=…`);
+  - it routes `battlemap-snapshot` and `asset-*` messages;
+  - it keeps nothing in `sessionStorage` or `localStorage`.
+- **Nothing in Live Share uses `sessionStorage`**, so a reload of either side ends the session.
+
+Classification:
+
+| Code | A: generic Live Share infrastructure | B: Battle Map-specific | C: tied to `battlemap.html` only because it was a prototype |
+|---|---|---|---|
+| `relay/*` (room core, Node relay, Worker, TURN credentials) | A (`maxPeersPerRoom: 1` is a Milestone 0 limit) | | |
+| `live-share/signaling-client.js`, `peer-link.js`, `ice-config.js`, `room-id.js`, `config.js` | A | | |
+| `live-share/host-session.js` (room + one link per player) | A | | |
+| `live-share/snapshot-sender.js` | A (throttle, backpressure, latest wins) | imports `encodeBattleMapSnapshot` | |
+| `live-share/protocol.js` | A (envelope, size limit) | routes `battlemap-snapshot` to its validator | |
+| `live-share/asset-protocol.js`, `asset-sender.js`, `asset-cache.js` | A (ids, chunks, pacing, cache) | asset kinds and limits (`background`, `token`) | |
+| `battle-map-share-state.js`, `battle-map-publication.js`, `battle-map-share-assets.js`, `battle-map-token-presets.js` | | B (projection, save gating, composition) | |
+| `live-share/battlemap-snapshot.js`, `battlemap-view.js`, `player-view.js` | | B (player side of the Battle Map) | |
+| `js/battlemap-live-share.js` | | B: the seam bridge (about 10 lines) | **C: the whole session owner (room, peers, senders, panel, lifetime)** |
+| `js/live-share-dev.js` / `liveshare-dev.html` | | | player: prototype page; host mode: Milestone 0 harness, to retire |
+
+So the generic layers are already generic. What is in the wrong place is the composition: session ownership lives in one Battle Map file. Moving it is a relocation of about 300 lines, not a rewrite.
+
+## 3. The browser constraint, checked
+
+A probe (2026-10-02, Playwright, Chromium 143 and Firefox 144):
+
+| Question | Chromium | Firefox |
+|---|---|---|
+| `structuredClone(RTCPeerConnection)` / `BroadcastChannel.postMessage(pc)` | DataCloneError | DataCloneError |
+| transfer an `RTCDataChannel` | DataCloneError | DataCloneError |
+| `RTCPeerConnection` in a dedicated worker / a shared worker | no / no | no / no |
+| BroadcastChannel transfer list | none (always copies) | none (always copies) |
+| 16 MiB `ArrayBuffer` through BroadcastChannel (copy) | 43 ms | 44 ms |
+| Web Locks (`navigator.locks`) | yes | yes |
+
+- Playwright's Windows WebKit build has no WebRTC, so Safari wasn't probed.
+- The WebRTC spec exposes `RTCPeerConnection` to `Window` only. Transferable data channels are a spec extension, which these engines refused.
+- Service workers have no WebRTC.
+- The design therefore assumes no worker of any kind can own a connection.
+
+**Consequence.** "The same WebRTC connections" can only mean this: **one browsing context owns the room and all player connections, and every shared Toolbox surface publishes through it.** No page manipulates another page's connection objects.
+
+## 4. Options considered
+
+**Option A: the Battle Map stays the session owner, and the Initiative Tracker talks to it over BroadcastChannel.**
+- *For:* least change from today.
+- *Against:*
+  - The Battle Map becomes a special root page. Closing it, or reloading it after a crash, ends all sharing, Initiative Tracker included.
+  - The Initiative Tracker can't share unless a Battle Map tab is open.
+  - Milestone 5's seats, password and admission would be built into the wrong owner, and moving them later is exactly the extraction this decision avoids.
+  - Every Battle Map reload already ends the room today (`pagehide` → `end()`), so a Battle Map crash costs the whole table its connection.
+- It also doesn't escape the hidden-tab issue (§9): when the DM works in the Initiative Tracker, the Battle Map owner is the hidden tab.
+- **Rejected.**
+
+**Option B: each surface hosts its own room and connections.**
+- *Cost:*
+  - two rooms and two join links per player (or a player page juggling two rooms);
+  - two seat tables, which kick, reset and lock must keep in step;
+  - two passwords and two credentials per seat;
+  - two WebRTC and TURN connections per player, doubling TURN use;
+  - reconnect handled twice;
+  - per-surface seats that can disagree ("Caleb" admitted to the map but not the tracker).
+- It directly contradicts "players join once" and "one seat model".
+- **Rejected.**
+
+**Option C: a dedicated Live Share session host page.**
+- A same-origin, visible page owns the room, signaling, peer connections, data channels, seats, admission, password, lock, credentials, kick/reset, status, session life and protocol routing.
+- The Battle Map and the Initiative Tracker are **surface publishers** that talk to it over same-origin messaging.
+- *For:*
+  - the session's life is independent of any one surface;
+  - one obvious owner for the DM to keep open;
+  - it matches the existing layering: the generic modules move with the owner, and the surfaces keep their seams.
+- *Costs:*
+  - one more tab;
+  - published assets must be copied to the host;
+  - new failure modes: surface liveness, duplicate surface tabs, version skew between tabs;
+  - the session host is often a hidden tab.
+
+**Option D, also considered: one "Live Share shell" page that hosts the Battle Map and the Initiative Tracker in same-origin iframes.**
+- *For:* one browsing-context tree, direct calls, no copies, and the shell stays visible.
+- *Against:*
+  - the surfaces would have to work inside an iframe (navigation, Bootstrap modals, keyboard shortcuts, the Battle Map's full-window canvas sizing);
+  - the DM couldn't use separate windows or monitors for the map and the tracker;
+  - a large UX change.
+- **Not chosen for V1.** It stays the fallback if §9's hidden-tab spike shows a hidden host tab can't keep sessions alive. *(The spike, 2026-10-02, showed that a hidden host does keep sessions alive in desktop Chrome and Firefox; Safari is pending, §9.)*
+
+## 5. Decision
+
+**Option C. A dedicated, visible Live Share session host page owns the session; Toolbox surfaces publish to it.**
+
+### 5.1 What the session host is
+
+- **A normal, visible Toolbox page:** `live-share.html` (the final name is a Milestone 5 detail). The DM starts Live Share there and keeps the tab open while the session runs. Its header says plainly that this page keeps Live Share running, and that closing it ends the session for everyone.
+- **How it's opened:**
+  - from a "Live Share" entry in a surface: Battle Map, later the Initiative Tracker;
+  - or directly.
+  - Surfaces open it with `window.open(url, 'dmtoolbox-live-share')`, a fixed window name, so a second click focuses the same tab instead of opening another.
+  - The host links to the surfaces with fixed window names too (`dmtoolbox-battle-map`, `dmtoolbox-initiative`).
+- **Only one per browser profile:** it takes an exclusive Web Lock (`navigator.locks`, for example `dmtoolbox.live-share.session-host`). A second host tab finds the lock held and shows "Live Share is already running in another tab" instead of starting a second room.
+- **What lives only in its memory:**
+  - the room's signaling socket and every `RTCPeerConnection` / data channel;
+  - the seat table, password verifier, lock state and issued credentials (Milestone 5);
+  - the current committed publication of each surface, with its assets;
+  - the registry of open surfaces;
+  - per-player send state.
+- **What goes in `sessionStorage`:** nothing in Milestone 5. Milestone 7 adds what host-refresh recovery needs (§10).
+- **What never goes to the relay or any server:** seats, passwords, credentials, game state, assets. Unchanged (§2.4, §20).
+
+### 5.2 Invariant: one room, one connection
+
+For one DM Live Share session:
+1. exactly one browser-side session owner: the session host page, made exclusive by the Web Lock;
+2. exactly one logical room on the relay, with one host socket (the relay already refuses a second host, `HOST_EXISTS`);
+3. one seat/admission namespace (seats, password, lock, credentials), owned by the session host;
+4. one active peer connection per connected player, created by the session host;
+5. every enabled shared surface is multiplexed over that one connection;
+6. a surface never creates signaling or WebRTC objects, and never sees seats, passwords or credentials.
+
+The host keeps the per-surface rules intact:
+- each surface has its own player-safe projection, schema, validator and revision stream;
+- the Battle Map stays save-gated, and the Initiative Tracker will publish immediately;
+- there is no global "game revision".
+
+### 5.3 Lifecycle
+
+| Event | Milestone 5 behavior | Milestone 7 and later |
+|---|---|---|
+| DM opens the session host and starts a room | Takes the lock. Registers the room on the relay. Shows the join link and seats. Asks any open surfaces to announce themselves | — |
+| A surface opens (or was already open) | Registers with the host: surface type, instance id, protocol version. If it has a published state it offers it (the Battle Map offers its last save; publishSavedRecord exists already) | — |
+| Battle Map Save | Builds the publication on the Battle Map side (as today). Offers it to the host, which takes it only once all its assets have arrived, then sends it to players | — |
+| Battle Map closes | It sends `unregister` on `pagehide`. The host marks the surface "not open" for the DM. **The committed publication and its assets stay**: players keep the map, late joiners still get the map and its assets, and nothing new arrives until it reopens | — |
+| Battle Map reloads | Unregisters, then registers again and offers its saved state. The host compares by content, so an unchanged map is not a new revision and no assets move | — |
+| Initiative Tracker opens or closes (future) | The same generic availability rule. How players see a closed tracker is the tracker's decision, made when it is designed (§12) | — |
+| A surface crashes or hangs (no `unregister`) | A heartbeat with a generous timeout eventually marks it "not responding". **Liveness only affects the DM-facing status, never the committed publication** | — |
+| Player disconnects | Its link closes and its seat shows "Disconnected" (seat stays claimed). No automatic re-admission | Reconnect with the seat credential |
+| Session host reloads | Today's behavior, made explicit: the host socket closes, the relay ends the room (`HOST_LEFT`), players are told the session ended | Grace period and resume (§10) |
+| Session host closes (End, tab closed, crash) | The session ends: players get session-ended, connections close, credentials are discarded, surfaces show "Live Share not running" and keep working locally. A `beforeunload` warning protects the host tab while players are connected | — |
+
+## 6. The surface ↔ session host boundary
+
+**Transport:** `BroadcastChannel`, same-origin, between same-profile tabs.
+- One **control channel** (`dmtoolbox.live-share.control`) carries registration, discovery, liveness and publication negotiation.
+- Each surface type has a **data channel** (for example `dmtoolbox.live-share.surface.battle-map`) for asset bytes, so 16 MiB backgrounds are copied only to the host and to other tabs of the same surface, never to the Initiative Tracker.
+- BroadcastChannel copies (no transfer list); measured at about 44 ms for 16 MiB, and paid only for assets the host doesn't hold yet.
+- It has no delivery acknowledgement or disconnect event, so the protocol adds acknowledgements and liveness.
+
+**Envelope:**
+
+```text
+{ ch: 'dmtoolbox.live-share', v: <boundary protocol version>, type, from: <instanceId | 'host'>, to?: <instanceId>, ...payload }
+```
+
+Every message is validated against its type's schema; unknown types and versions are ignored.
+- The host validates surface messages as strictly as players validate host messages: the same `validateBattleMapSnapshot`, asset metadata, size limits and hash check.
+- Same-origin doesn't mean well-formed: an old cached tab, a bug or an injected script could post anything.
+
+**Surface → host:**
+- `surface-hello { surface: 'battle-map' | 'initiative', instanceId, surfaceVersion, hasPublication }`, on load and in answer to `host-hello`.
+- `surface-heartbeat`: about every 5 s while visible. Throttled to about once a minute when hidden, so the timeout is long and only affects status.
+- `publication-offer { publicationSeq, structured, assets: [{ assetId, kind, mime, width, height, byteLength }] }`
+  - `structured` is the player-safe snapshot content, without a revision.
+  - `publicationSeq` increases per instance.
+- `publication-asset { publicationSeq, assetId, meta, bytes: ArrayBuffer }`, on the surface data channel, answering `publication-need`.
+- `surface-bye`, on `pagehide`.
+
+**Host → surface:**
+- `host-hello { sessionActive }`: on start and reload, so every open surface announces itself again.
+- `publication-need { publicationSeq, assetIds }`: the content-addressed ids the host doesn't already hold.
+- `publication-committed { publicationSeq }` / `publication-rejected { publicationSeq, reason }`, so the surface can show "players updated" or the problem.
+- `surface-role { active: true | false }`: the duplicate-tab rule below.
+- `session-status { running, players: <count only> }`, for the surface's small status indicator.
+- Never seats, names, passwords or credentials.
+
+**Committing a publication**, which keeps 2.3.27's "structured state and background together" rule across pages:
+1. The surface offers the structured state and its asset list.
+2. The host requests the missing assets; usually none for a token-only save.
+3. When every asset has arrived and verified (SHA-256 equals its id, limits respected), the host commits atomically:
+   - it replaces that surface's current publication;
+   - it assigns the next **host-side** revision for the surface;
+   - it releases assets no longer referenced;
+   - it sends the snapshot to admitted players.
+4. A newer offer from the same instance supersedes an unfinished older one (latest saved state wins).
+5. An offer whose instance leaves before completing is dropped; the committed publication is untouched.
+
+**Revisions:**
+- The surface's own counters start at 1 on every page load, so the host must not forward them.
+- It keeps a per-surface session revision that rises only when the committed content changes (compared by value, like the seam today).
+- For the Battle Map it also keeps the background revision monotonic within the session.
+
+**Duplicate surface tabs** (two Battle Map tabs):
+- One instance per surface type is the **active publisher**: the most recently registered one, or the one where the DM presses "Publish from this tab".
+- The others get `surface-role { active: false }`, show "Live Share is using another Battle Map tab", and their offers are ignored.
+- Both edit the same stored map anyway, since the Battle Map persists to one IndexedDB record.
+
+**Version skew:**
+- `surfaceVersion` and the boundary `v` must match what the host understands.
+- On a mismatch the host ignores the surface and tells the DM to reload that tab; a cached old Battle Map never feeds a new host malformed state.
+
+## 7. Assets when the Battle Map isn't the WebRTC owner
+
+- **What's sent to the host:** only player-safe output, the same bytes players get today.
+  - The Battle Map still composes the player-visible background (map + fog baked in) and prepares custom token art on its own side (§15).
+  - The original map image, the fog canvas and token image sources never leave the Battle Map.
+- **What the host holds:** a **publication asset store** keeping exactly the assets referenced by each surface's current committed publication, plus any pending offer's. That is about one background of at most 16 MiB plus token art of at most 1 MiB each, per surface.
+- **Retention rule, preserved:** assets stay until the replacing publication commits.
+- **No history, no persistence:** in memory only, discarded when the session ends.
+- **The players' side is unchanged:** players request assets from the host and the host answers from its store, so the existing asset protocol, pacing and limits apply unchanged.
+- **The Battle Map may close after publishing;** players and late joiners keep getting its last published map and assets from the host.
+- **Copy cost:** BroadcastChannel copies; a new background costs one copy into the host (about 44 ms for 16 MiB) plus the host's hash check. Unchanged assets are never sent again, since ids are content-derived.
+- **Only one place keeps it, deliberately:** while it's open, the Battle Map keeps its own publication store as it does today (it still drives composition and dedup). Its copy and the host's are the same bytes. The Battle Map needs no separate asset-store abstraction beyond its existing `getAsset(id)`.
+
+## 8. One connection, several surfaces: the player protocol
+
+What the player receives over its one data channel is routed by **type** and, for surface traffic, by **surface**. The generic layer knows no D&D semantics.
+
+```text
+session-level   admission-state, join-result, session-state { surfaces: [{ surface, available }] }, session-ended
+surface-level   surface-snapshot { surface: 'battle-map', revision, payload }   → that surface's validator + renderer
+assets          asset-request / asset-meta / chunks / asset-abort   (content-addressed ids; kinds per surface)
+interactions    ping (Milestone 6)
+```
+
+- Each surface registers `{ surface, validate(payload), onSnapshot }` with the player's router. Validators stay explicit schemas (the Battle Map keeps its versioned `dmtoolbox.battlemap.player-safe` payload).
+- Revisions are per surface: the Battle Map has its snapshot and background revisions; the Initiative Tracker will have its own stream.
+- **Wire change:** the move from today's `{ v: 0, type: 'battlemap-snapshot', payload }` to a `surface-snapshot` envelope is one protocol version bump.
+  - It comes with Milestone 5B's admission messages, since the player page changes then anyway.
+  - Milestone 5A keeps today's wire format, so moving the session owner changes nothing players see.
+
+## 9. Hidden-tab behavior (Milestone 5A.1 spike, 2026-10-02)
+
+**Result: outcome B, a narrow event-driven adjustment.**
+- The dedicated session host stands, in desktop Chrome and Firefox.
+- A hidden owner tab stayed connected and correct for more than 10 minutes behind another tab, and then for 1 minute minimized.
+- Every event arrived promptly. Only the snapshot sender's timers were throttled.
+- **Safari: manual validation required** (below). The spike could not run it here.
+
+### What was tested
+
+- **Harness:** `tests/perf/hidden-host/` (test only; `node tests/perf/hidden-host/run-spike.mjs --browser chrome|firefox`).
+- **The future topology, with the real modules:**
+  - a visible **publisher** tab (Battle Map-like; the real `projectPlayerSafeState`);
+  - BroadcastChannel to a **hidden owner** tab, which runs the real `HostSession`, `SignalingClient`, `PeerLink`, `SnapshotSender` and `AssetSender`;
+  - WebRTC to the real `liveshare-dev.html` **player** page, with the local relay for signaling.
+- **Measurements:**
+  - structured publications (5–10 per phase);
+  - a burst of 3 (latest wins);
+  - 5 player → owner messages;
+  - a 16 MiB background, publisher → owner → player (hash-checked);
+  - a newer structured publication sent while that background was in flight.
+- **Phases:** owner visible; owner just hidden; owner hidden for 1, 5 and 10 minutes; window minimized for 1 minute after that.
+
+**How the owner was genuinely hidden.** Playwright couldn't be used for the owner: it keeps pages focused and visible, and its Chromium launch disables background throttling.
+- Tabs opened through Chrome's CDP stayed "visible" too, which was checked.
+- So the owner and publisher ran in the **installed** Chrome 154 and Firefox 157, with throwaway profiles and **no** automation or remote-debugging protocol.
+- Tabs were opened the way the OS opens a link: a URL handed to the running browser.
+- The owner was hidden by a newer tab in front of it, as when the DM switches to the Battle Map, and later by minimizing the window.
+- **Proof that it was hidden:**
+  - the owner's own `document.visibilityState` and `visibilitychange` events;
+  - a **control tab** with no WebRTC beside it, which reported `hidden` and throttled timers;
+  - the owner's own timers dropping to about 1 s.
+- **One environment setting, not a throttling setting:** each browser's native "window covered by other windows" detection was turned off (Chrome `--disable-features=CalculateNativeWinOcclusion`, Firefox `widget.windows.window_occlusion_tracking.enabled=false`).
+  - On this automated desktop it misjudged windows: a front tab reported hidden, and later tabs never hid. This was checked by experiment.
+  - Tab switching and minimizing still hide pages exactly as for a user.
+  - Timer throttling and background-tab policies stayed at the browser defaults.
+
+### Results (medians, with ranges, in ms)
+
+**Chrome 154:**
+
+| Owner | Structured publish → player applied | BroadcastChannel (16 MiB) | 16 MiB save → visible | Newer structured state during the 16 MiB transfer | Player → owner | Owner timer (100 ms asked) | Connection |
+|---|---|---|---|---|---|---|---|
+| visible | 3 (3–6) | 28 | 4790 ¹ | 4292 (snapshot sent after 77; delivery delayed with the transfer ¹) | 0 | ~95 | connected/open |
+| hidden, just | 3 (3–18) | 27 | 534 | 622 (all of it the sender's throttle timer) | 0 | ~1000 | connected/open |
+| hidden 1 min | 3 (3–3) | — | — | — | 0 | ~1000 | connected/open |
+| hidden 5 min (10 publications) | 3 (3–3) | 38 | 480 | 808 (throttle timer 805) | 0 | ~1000 | connected/open |
+| hidden 10 min | 3 (3–4) | 28 | 536 | 127 (timer 123) | 0 | ~1000 | connected/open |
+| minimized 1 min | 3 (2–3) | 27 | 471 | 591 (timer 587) | 0 | ~1000 | connected/open |
+
+**Firefox 157** (visible baseline from a separate run with the owner as the first tab):
+
+| Owner | Structured publish → player applied | BroadcastChannel (16 MiB) | 16 MiB save → visible | Newer structured state during the 16 MiB transfer | Player → owner | Owner timer (100 ms asked) | Connection |
+|---|---|---|---|---|---|---|---|
+| visible | 2 (2–5) | 43 | 440 | 89 (timer 60) | 0 | ~100 | connected/open |
+| hidden, just | 497 (489–608) | 40 | 600 | 998 (timer 995) | 0 | ~1000 | connected/open |
+| hidden 1 min | 499 (142–516) | — | — | — | 0 | ~1000 | connected/open |
+| hidden 5 min (10 publications) | 490 (481–702) | 39 | 689 | 977 (timer 974) | 0 | ~1000 | connected/open |
+| hidden 10 min | 500 (483–684) | 42 | 681 | 983 (timer 980) | 0 | ~1000 | connected/open |
+| minimized 1 min | 499 (441–501) | 39 | 745 | 998 (timer 993) | 0 | ~1000 | connected/open |
+
+**In every phase of both browsers:**
+- BroadcastChannel delivery of structured publications took 0–2 ms.
+- Bursts of 3 always ended on the latest state, in order.
+- Asset hashes matched.
+- No freeze, discard or `pagehide` was seen.
+- The peer connection and data channel stayed `connected/open` throughout.
+
+¹ **Chrome, owner visible only:**
+- The 16 MiB transfer took 4.6 s instead of about 0.4 s. The asset sender's 100 ms fallback timer fired 38 times, so `bufferedamountlow` arrived late.
+- The newer structured snapshot left the owner after 77 ms but reached the player 4.3 s later, behind that slow transfer.
+- It happened in every Chrome run with the owner in front, and never when it was hidden, nor in Firefox.
+- It is below the thresholds and not part of the hidden-tab question. **Re-check it in 5A.2** with the real session host page, which is normally *not* the front tab.
+
+### What the numbers mean
+
+- **Events are not the problem.** BroadcastChannel, the relay socket, data-channel messages and `bufferedamountlow` all kept arriving promptly in hidden owners, at 5 and 10 minutes too.
+  - The 16 MiB background moved as fast as when visible (0.3–0.4 s on loopback), with no fallback timers needed.
+  - Player → owner messages arrived in about 0 ms, which is what admission, pings and reconnect will rely on.
+- **Timers are, mildly.** Hidden tabs ran a 100 ms timer about every 1 s.
+  - The snapshot sender sends a publication after a quiet spell on a 0 ms timer. Chrome still ran that promptly (3 ms); **Firefox delayed it to about 0.5 s.**
+  - A publication arriving within 100 ms of the previous send waits for the 100 ms throttle timer, which became **0.6–1.0 s** in both browsers.
+  - That was all the delay of the "newer state during a transfer" case: in every hidden run, its extra wait beyond the timer was 0–2 ms, so the asset never starved it.
+- **Chrome's stricter throttling of long-hidden tabs didn't reach the owner.** Its timer still ran about every 1 s after 10 minutes. The WebRTC-free control tab stopped reporting after 5–10 minutes, which is consistent with that throttling applying to ordinary tabs only. This last point is inferred from missing reports.
+- **Nothing failed the UX:** at worst a publication reached players about 1 s later. Even so, that delay is avoidable, which is what outcome B is for.
+
+### Consequence for 5A.2 / 5A.3 (outcome B)
+
+The architecture is unchanged. One narrow sending change in the session host:
+
+1. **When the host commits a publication** (the BroadcastChannel `publication-offer` handler, 5A.3), send the snapshot **in that event handler** if nothing was sent in the last 100 ms. That is a synchronous leading-edge send; `SnapshotSender` gets a `sendNow()`, or an option for this.
+   - Timers stay only for coalescing a burst into its trailing send.
+   - This removes Firefox's 0.5 s and Chrome's scheduling dependence for ordinary saves.
+   - Keep the existing rule that sends never run inside a surface's render. The host has no render loop, so the rule holds by construction.
+2. **The asset sender:** no change. It was event-driven already (`bufferedamountlow`), and its fallback timer was never needed while hidden.
+3. **Trailing coalesced sends** may still take about 1 s in a hidden host. That is acceptable, because the latest state always wins. Revisit only if the Initiative Tracker's immediate publishing shows a need.
+4. **Re-check the Chrome visible-owner transfer anomaly** (¹) once the real host page exists.
+
+Not needed: a keep-visible requirement (C) or the iframe shell (D). DM hosting from a phone or tablet stays a separate, known limitation.
+
+### Mutation checks (the harness is not false-green)
+
+Test-only fault switches in the owner fixture (`?fault=`), each run quickly in Chrome with 20 s step limits:
+
+| Fault | Result |
+|---|---|
+| BroadcastChannel delivery stopped (`no-bc`) | 21 failures (every publication timed out at the owner) |
+| SnapshotSender never sending a newer revision (`no-flush`) | 20 failures (the player never applied the newer revisions) |
+| AssetSender stalled (`stall-assets`) | 3 failures (no first chunk) |
+| Structured state starved behind the asset (`starve`) | 3 failures (+2.0–4.0 s beyond its sender timer) |
+| Data channel closed (`close-dc`) | 25 failures (everything after the close) |
+
+A clean run reports 0 failures.
+
+### Safari: manual validation required
+
+- Playwright's Windows WebKit build has no WebRTC, so nothing here says anything about Safari.
+- The same harness has a manual mode for a Mac: it starts the relay, page server, collector and player itself, and prints instructions.
+
+**On a Mac, with Safari as the browser under test:**
+1. `npm ci` and `npx playwright install chromium` in the repository (the player is Playwright Chromium).
+2. Run `node tests/perf/hidden-host/run-spike.mjs --manual`. It prints each URL to open, in order:
+   1. the first publisher, in a new Safari window;
+   2. the control tab;
+   3. the owner (session host), each in a new tab of that window, so the owner becomes the front tab;
+   4. later, a second publisher in a new tab, which hides the owner.
+   It then says when to minimize the window (Cmd+M). It runs the same phases: visible, hidden 0 / 1 / 5 / 10 minutes, minimized. That takes about 13 minutes; keep the Mac awake.
+3. If the Mac can't run Node, skip it: the procedure needs the local servers.
+4. **Send back:**
+   - the console output;
+   - `perf-results/hidden-host/manual.json`, which includes the Safari version from the owner's user agent, every phase's numbers and the failure list.
+   - Note whether Safari showed anything unusual: a tab reload, a "this webpage is using significant energy" banner, or a disconnect.
+
+**Until then,** the hidden-host decision holds for desktop Chrome and Firefox and is **conditional for Safari.** 5A.2 can proceed. A Safari result showing a frozen or discarded hidden owner would reopen the C/D question for Safari only.
+
+## 10. Milestone 7 implications (host refresh)
+
+Refreshing the session host is the only refresh that threatens the room; a surface reload is ordinary in Milestone 5. Recovery has to restore:
+
+| State | Where it comes from after a host reload |
+|---|---|
+| Room id and a host-resume secret | Host tab `sessionStorage`. The relay needs a **host grace period and resume** (generic, no game state); today a host leaving ends the room at once |
+| Seats, lock, password verifier, issued credential verifiers, active surface instance per type | Host tab `sessionStorage` (ephemeral and tab-scoped; never `localStorage`) |
+| Player connections | Rebuilt: players reconnect through the relay and present their seat credentials (the §18 player flow) |
+| Current publications and assets | Rebuilt from open surfaces: the host broadcasts `host-hello`, surfaces offer again, and only missing assets move |
+| A publication whose surface is closed during the refresh | **Not recoverable in V1:** that surface shows "not available" until it reopens. Persisting publications in IndexedDB is an open decision, not in Milestone 5 or 7 by default |
+
+## 11. Player and DM UX across surfaces
+
+**Player:**
+- One page, one join. The Battle Map is the primary panel.
+- When the tracker exists it appears as a second panel or tab, only while the DM shares it.
+- Each panel shows its own availability ("The DM's map is not open right now — showing the last shared map"); the room stays up regardless.
+- DM tabs opening or closing never navigates the player.
+
+**DM, on the session host page:**
+- seats (add, rename, enable / disable), password, lock;
+- connected players, kick, reset;
+- join link;
+- which surfaces are shared, with per-surface enable / disable;
+- session diagnostics;
+- End Session.
+
+**DM, on each surface page:**
+- a small Live Share indicator (not running / running · N players / "this tab is not the publisher");
+- an "Open Live Share" button that focuses the session host;
+- surface-specific controls:
+  - the Battle Map: Save gating, Visible to Players, Save button text;
+  - later the tracker's sharing options.
+- Surfaces may show read-only status, and send *commands* to the host (for example "publish from this tab"). They never keep their own copy of seats or room state.
+
+## 12. Security and privacy boundary
+
+- **What a surface sends the host:** only what its player-safe projection produces, plus player-safe assets and routing metadata. That is the same data players receive, so the host widens nothing.
+- **What it never sends:** drafts, the original map, fog sources, hidden tokens, HP, DM notes or any other application state. The Initiative Tracker will need its own projection before it publishes anything.
+- **What other same-origin tabs can see:** anything on the BroadcastChannel. That is acceptable only because that content is player-safe already.
+  - **Seats, passwords and credentials never go on a BroadcastChannel.** They live only inside the session host page.
+- **The host checks surface messages as untrusted input:** schema, size limits, asset hash and version.
+- **The host is a router and session authority, not a store of DM state.** It never asks a surface for raw state.
+
+## 13. Adversarial review of the design
+
+| Scenario | Behavior | Where |
+|---|---|---|
+| Battle Map closes while players are connected | Committed publication and assets stay; players keep the map; late joiners are served from the host | Milestone 5A |
+| Initiative Tracker opens after the room exists | Registers; its offer becomes a new surface stream; players get `session-state` with a new available surface | Generic in 5A; the tracker itself is future |
+| Battle Map reloads | Re-registers, offers its saved state; a by-value compare means no new revision; assets dedupe by id | 5A |
+| Two Battle Map tabs | One active publisher (latest registration, or explicit "publish from this tab"); the other is told it's inactive | 5A |
+| Two tabs both claim "battle-map", one an old cached build | The version check rejects the old one, and the DM is told to reload it | 5A |
+| An older offer arrives after a newer one | Per-instance `publicationSeq`; older or superseded offers are dropped | 5A |
+| A surface disappears mid-publication | The pending offer is dropped; the committed publication is unchanged | 5A |
+| A 16 MiB background over BroadcastChannel | One copy to the host (about 44 ms); per-surface data channels keep it away from other surfaces; size limits enforced before hashing | 5A |
+| A late player joins while the Battle Map is closed | Served the committed snapshot and assets from the host store | 5A |
+| Session host refreshes | Milestone 5: the session ends, clearly, for everyone. Milestone 7: grace period and resume | 5A (explicit end) / 7 |
+| Session host closed by accident | `beforeunload` warning while players are connected; otherwise the session ends | 5C (warning) |
+| A surface tab crashes | No `bye`; the heartbeat timeout marks it "not responding"; the publication is kept | 5A |
+| Stale BroadcastChannel publishers | Instance ids plus heartbeats; a silent instance loses its "active" role only for status, never data | 5A |
+| A malformed or hostile same-origin message | Validated like player input; unknown types ignored; never forwarded unvalidated | 5A |
+| Surface or host version mismatch | Boundary `v` and `surfaceVersion` checked; mismatched tabs are ignored and named to the DM | 5A |
+| Two session-host tabs | The Web Lock lets only one run; the second shows "already running in another tab" | 5A |
+| Hidden host tab throttled or frozen | **Measured (§9):** desktop Chrome and Firefox keep a hidden host connected and responsive (10+ minutes hidden, then minimized); only timers slow to about 1 s. Remedy: event-driven leading-edge sends. Safari: manual check pending | 5A.1 done (Chrome/Firefox); 5A.3 sending change |
+| Player behind TURN when the Battle Map closes | Unaffected: the connection belongs to the host | — |
+| More than one player | The relay's `maxPeersPerRoom: 1` must rise (a generic relay change) along with host-side rate limits | 5B |
+
+## 14. Migration path from the prototype (least churn)
+
+| Current | Becomes |
+|---|---|
+| `relay/*` | Unchanged in 5A. 5B: raise `maxPeersPerRoom` and scale the host's rate allowance. 7: host grace and resume |
+| `signaling-client.js`, `peer-link.js`, `ice-config.js`, `room-id.js`, `config.js`, `host-session.js` | Reused as is, by the session host page |
+| `snapshot-sender.js` | Reused; the encoder is injected per surface instead of importing `encodeBattleMapSnapshot`. Throttle reviewed after the §9 spike |
+| `asset-sender.js` | Reused; `getAsset/hasAsset` come from the host's publication store instead of the Battle Map seam |
+| `protocol.js` | 5A: unchanged. 5B: generic envelope plus a surface validator registry (protocol v1) |
+| `asset-protocol.js`, `asset-cache.js` | Reused (kinds stay per surface) |
+| `js/battlemap-live-share.js` | **Split:** session ownership (room, peers, senders, panel, lifetime) moves into the new session-host page module; what stays is a thin Battle Map **publisher adapter** (seam → BroadcastChannel offers, status indicator, "Open Live Share") |
+| `battle-map-share-state.js`, `-publication.js`, `-share-assets.js`, `-token-presets.js` | Unchanged (Battle Map side). The local save never waits for the host; the host's commit acknowledgement is only shown as status |
+| `battlemap.html` wiring (`?liveshare=1` gate) | **What changes:** today the Battle Map prepares player-safe assets (composition, encoding, hashing) only when opened with `?liveshare=1`. From 5A it prepares them while a session host is running (`host-hello` / `session-status`), and stops when the session ends. A plain Battle Map without Live Share still does no extra work. **When a session starts after the DM saved,** the adapter builds the publication from the saved record on `host-hello` (the `publishSavedRecord` path exists already) |
+| `battlemap-snapshot.js`, `battlemap-view.js`, `player-view.js` | Unchanged; registered with the player's surface router in 5B |
+| `js/live-share-dev.js` / `liveshare-dev.html` | Player part becomes the product player page in 5B/5C. Host "hello" mode stays only as long as the networking tests need it, then retires |
+| Browser tests that start rooms from `battlemap?liveshare=1` | 5A moves the helpers to "open the session host + open the Battle Map". Expected churn: the helpers in `tests/helpers/battlemap-live-share.js`, not the assertions |
+
+**Sequence:**
+1. **5A.1, the hidden-tab spike** (§9). Done for Chrome and Firefox; outcome B. Safari: manual check pending.
+2. **5A.2, the session host page:** reuses the generic modules; Web Lock; same panel functions as the prototype.
+3. **5A.3, the boundary:** the BroadcastChannel boundary and the host publication store with atomic commit and host-side revisions.
+4. **5A.4, the Battle Map adapter:** `battlemap-live-share.js` becomes the publisher adapter. Same player wire format; existing browser tests pass through the new helpers.
+5. **5B:** admission and protocol v1.
+6. **5C:** product UX.
+
+## 15. Decisions still to make
+
+**Before 5A starts:**
+- ~~**The hidden-tab spike result (§9).** It picks event-driven sending, a warning, or the Option D fallback. It's the only open question that could change the architecture.~~
+  - Settled for desktop Chrome and Firefox (2026-10-02): outcome B, with the architecture unchanged.
+  - Sending becomes event-driven at commit in 5A.3.
+- **Safari's hidden-tab result:** a manual check on a Mac (§9). It doesn't block 5A.2, but a frozen or discarded hidden owner in Safari would reopen C/D for Safari.
+
+**During 5A, not blocking it:**
+- the page name and URL of the session host and of the product player page;
+- the duplicate-tab rule: recommended, latest registration wins plus an explicit "publish from this tab";
+- whether the Battle Map's `?liveshare=1` flag disappears in 5A (the host page replaces it) or stays as a development convenience.
+  Either way, asset preparation follows whether a session is running (§14), not the URL flag.
+
+**Deferred, not needed for Milestone 5:**
+- how players see a closed Initiative Tracker (the tracker's design);
+- persisting publications across a host refresh (Milestone 7, default no);
+- DM hosting on mobile.

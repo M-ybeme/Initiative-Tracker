@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>TEST ONLY — control tab (Live Share M5A.1 spike)</title>
+</head>
+<body>
+  <h1>TEST ONLY: control tab</h1>
+  <p>Not a product page. No WebRTC. It sits behind the front tab next to the session owner and reports its own
+     visibility and how often a 100 ms timer really fires, proving the browser has backgrounded that tab group.</p>
+  <script>
+    (() => {
+      const params = new URLSearchParams(location.search);
+      const collector = params.get('collector');
+      const W = () => performance.timeOrigin + performance.now();
+      const report = (type, data = {}) =>
+        fetch(`${collector}/event`, { method: 'POST', body: JSON.stringify({ source: 'control', type, t: W(), visibility: document.visibilityState, ...data }) }).catch(() => {});
+      document.addEventListener('visibilitychange', () => report('lifecycle-visibilitychange'));
+      let last = W();
+      let windowStart = last;
+      let gaps = [];
+      setInterval(() => {
+        const now = W();
+        gaps.push(now - last);
+        last = now;
+        if (now - windowStart >= 10000) {
+          const s = [...gaps].sort((a, b) => a - b);
+          report('timer-window', { count: s.length, medianGapMs: Math.round(s[Math.floor(s.length / 2)]), maxGapMs: Math.round(s[s.length - 1]) });
+          gaps = [];
+          windowStart = now;
+        }
+      }, 100);
+      report('loaded');
+    })();
+  </script>
+</body>
+</html>
