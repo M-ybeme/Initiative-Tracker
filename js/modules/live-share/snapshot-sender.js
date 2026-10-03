@@ -16,6 +16,16 @@
  *
  * A player that connects gets the current snapshot at once, outside the throttle.
  *
+ * Event-driven sends (Milestone 5A.2, the hidden-tab spike's outcome B; docs/live-share-session-
+ * host-architecture.md §9): sendNow() is for a caller that learns of a published change from an event
+ * outside any render, such as the Live Share session host committing a surface's publication. If the
+ * throttle allows (nothing sent in the last interval), it sends at once, in that event, instead of
+ * waiting for a timer: a hidden tab runs timers about once a second, and Firefox delayed even a 0 ms
+ * timer by ~0.5 s. Within the interval it coalesces exactly like notifyChanged(). A send whose timer is
+ * already late (throttled past the interval) is released by the next sendNow() rather than waiting
+ * for that timer. Same whole snapshot, same latest-wins and backpressure rules; only the scheduling
+ * differs. notifyChanged() keeps its timer-only behavior for callers that signal from a render.
+ *
  * Backpressure: before each send the channel's bufferedAmount is checked. Above
  * SNAPSHOT_BUSY_BYTES the peer is only marked pending (a flag, not a queue); when the channel's
  * `drain` fires, it gets the snapshot current at that moment. Intermediate states are dropped, which
@@ -122,6 +132,23 @@ export function createSnapshotSender({
       if (!peer) return;
       peers.delete(id);
       peer.offDrain();
+    },
+
+    /**
+     * Player-visible state changed, learned from an event outside any render (see the header).
+     * If nothing was flushed in the last interval, flush now, in this call: every player is sent the
+     * current snapshot, under the usual rules (a busy channel is only marked pending; a revision a
+     * player already has is not resent; with no players nothing is sent). Otherwise coalesce into the
+     * scheduled send, exactly like notifyChanged(). Returns nothing: whether bytes went out is the
+     * senders' and channels' business, visible in diagnostics().
+     */
+    sendNow() {
+      if (now() - lastFlushAt < intervalMs) {
+        this.notifyChanged();
+        return;
+      }
+      if (timer !== null) clearTimer(timer); // a throttled timer that is already late: flush instead
+      flush();
     },
 
     /** Player-visible state changed. Schedules one throttled send of whatever is current then. */

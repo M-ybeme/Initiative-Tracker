@@ -16,11 +16,24 @@ The DM's Toolbox has evolved through focused feature releases. Minor versions (2
 - **1.9.x**: Battle map measurement tools, persistent fog shapes, and generator integration across NPC/Tavern/Shop systems
 - **1.8.x**: Spell database expansion to 432+ spells, inventory management, loot generator overhaul, and character token generation
 
-**Current version: 2.3.31 (October 2026)**
+**Current version: 2.3.32 (October 2026)**
 
 ---
 
-## [Unreleased]
+## [2.3.32] - 2026-10-03
+**Live Share session host foundation (Milestone 5A.2)**
+
+### Live Share (in development, not yet part of the product flow)
+- **New Live Share session page** (`live-share.html`, not linked from the site yet). This tab owns the Live Share room and every player connection.
+  - Only one session page per browser can host at a time: a second tab says Live Share is already running and starts nothing. Browsers without the Web Locks API can't host.
+  - Closing or reloading the page ends the session.
+  - Players connect with the existing player page. No Toolbox page shares through it yet, so they see no map; the Battle Map's own Live Share test mode is unchanged.
+- The snapshot sender can now send a published change straight from the event that announced it (`sendNow()`), instead of waiting for a timer that a background tab may delay. Nothing uses it yet; the session page will when pages start publishing to it
+
+### Internal / Tests
+- `js/modules/live-share/session-host-lock.js`: the exclusive Web Lock `dmtoolbox.live-share.session-host`, with unit tests against a fake lock manager
+- `tests/e2e/live-share-session-host.spec.js`: hosting a room, a player connecting over WebRTC, End and restart, one host per browser profile with takeover when the owner closes, close/reload ending the room, and failing closed without Web Locks. The ownership tests call `start()` past the disabled button to prove its own guard refuses
+- `SnapshotSender.sendNow()` unit tests: immediate flush, coalescing, a late throttle timer released by the event, backpressure, and no return value
 
 ### Docs
 - Live Share Milestone 5A.1 hidden-tab spike (test-only harness in `tests/perf/hidden-host/`):

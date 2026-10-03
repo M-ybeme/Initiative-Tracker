@@ -1,7 +1,8 @@
 const DM_TOOLBOX_BUILD = {
   name: "The DM's Toolbox",
-  version: "2.3.31",
+  version: "2.3.32",
   recentChanges: [
+    "New (Live Share, in development): a dedicated Live Share session page (live-share.html, not linked yet) that keeps the room and every player connection; only one tab per browser can host, and closing or reloading it ends the session",
     "New (Live Share test mode): players can drag to pan and scroll or pinch to zoom the shared Battle Map on their own screen (Fit shows it all again), and built-in Battle Map tokens show their real image instead of a colored marker",
     "New (Live Share test mode): players now see the auras and vision cones of the tokens they can see, as you last saved them; changing one or turning a token does not resend the map",
     "Fix: on the Battle Map, turning Measure off with its button while Persistent is on no longer leaves a stray measurement ending at the button",

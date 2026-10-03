@@ -99,7 +99,14 @@ No Live Share behavior changed.
 - **Outcome B:** the architecture stays. 5A.3 sends a committed publication directly from the BroadcastChannel event, with timers only for coalescing.
 - **Safari:** manual check on a Mac still required (the procedure is in the ADR).
 
-**Next:** Milestone 5A.2, the session host page (§24). The Safari hidden-tab check is pending.
+**Milestone 5A.2, the session host page (implemented 2026-10-02; not yet a product flow):**
+- **The page:** `live-share.html` (`/live-share`, module `js/live-share-host.js`). It owns the room, the signaling socket, every player's peer connection, the senders and the session's lifetime, reusing the generic modules unchanged.
+- **One per browser profile:** an exclusive Web Lock (`js/modules/live-share/session-host-lock.js`). A second tab says Live Share is already running and starts nothing; it takes over if the owner closes. Without Web Locks the page cannot host.
+- **Outcome B's scheduling change:** `SnapshotSender.sendNow()` sends a published change from the event when the throttle allows, rather than waiting for a timer a hidden tab may delay. Nothing calls it in production until 5A.3.
+- **No surface publishes to it yet** (5A.3). Players connect with the existing player page and wire format but see no map.
+- **Unchanged:** the Battle Map prototype host (`battlemap.html?liveshare=1`) keeps its own room until 5A.4. Closing or reloading the session page ends its room (recovery is Milestone 7).
+
+**Next:** Milestone 5A.3, the surface ↔ session host boundary and publication store (§24). The Safari hidden-tab check is pending.
 
 **Backlog (Battle Map, found during the 2.3.27 and 2.3.28 reviews; not yet fixed):**
 - Pre-existing: a touch long-press (and Ctrl+click on a Mac, which is a primary-button press) starts a token drag before its menu opens, so on release an off-grid token snaps and the map is marked unsaved (the 2.3.28 right-click fix does not cover a primary-button press).
@@ -1618,6 +1625,11 @@ Only after the underlying networking has proven useful. *(Reconciled on 2026-10-
    - reuses `host-session.js`, the senders and the protocol unchanged;
    - Web Lock: one per browser profile;
    - the prototype's start, link and end functions.
+   - **Implemented on 2026-10-02:**
+     - `live-share.html` + `js/live-share-host.js`, with `session-host-lock.js`;
+     - `SnapshotSender.sendNow()`, outcome B's event-driven send, which 5A.3's commit handler will call;
+     - no surface data yet;
+     - the Battle Map prototype host is unchanged until 5A.4.
 3. **The surface ↔ host boundary** (BroadcastChannel):
    - registration and liveness;
    - the duplicate-tab rule;

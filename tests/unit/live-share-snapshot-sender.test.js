@@ -277,3 +277,109 @@ describe('snapshot sender', () => {
     for (const value of Object.values(diag)) expect(['number', 'boolean']).toContain(typeof value);
   });
 });
+
+describe('snapshot sender: event-driven sends (sendNow, Milestone 5A.2)', () => {
+  it('sends at once, inside the event, after a quiet spell (no timer involved)', () => {
+    const link = fakeLink();
+    sender.addPeer('p1', link);
+    time.advance(500);
+    seam.change();
+    sender.sendNow();
+    expect(link.revisions()).toEqual([1, 2]); // flushed in the call
+    expect(time.pending()).toBe(0);
+  });
+
+  it('within the interval it coalesces into one trailing send of the latest state', () => {
+    const link = fakeLink();
+    sender.addPeer('p1', link);
+    time.advance(500);
+    seam.change();
+    sender.sendNow(); // sent: 2
+    time.advance(10);
+    seam.change();
+    sender.sendNow(); // too soon: scheduled, not sent
+    expect(link.revisions()).toEqual([1, 2]);
+    seam.change();
+    sender.sendNow(); // still the same single schedule
+    expect(time.pending()).toBe(1);
+    expect(link.revisions()).toEqual([1, 2]);
+    time.advance(SNAPSHOT_INTERVAL_MS);
+    expect(link.revisions()).toEqual([1, 2, 4]); // the latest state, once
+  });
+
+  it('a throttled timer that is already late does not hold the snapshot: the next event sends it', () => {
+    // A hidden tab: the clock moves on but timers have not run (they fire about once a second).
+    let clock = 1000;
+    const timers = [];
+    const throttled = createSnapshotSender({
+      getSnapshot: () => seam.getPlayerSafeState(),
+      now: () => clock,
+      setTimer: (fn, ms) => timers.push({ fn, ms }) && timers.length,
+      clearTimer: (id) => (timers[id - 1] = null),
+    });
+    const link = fakeLink();
+    throttled.addPeer('p1', link);
+    clock += 500;
+    seam.change();
+    throttled.sendNow(); // sent: 2
+    clock += 10;
+    seam.change();
+    throttled.sendNow(); // too soon: a 100 ms timer is scheduled...
+    expect(timers.filter(Boolean)).toHaveLength(1);
+    clock += 140; // ...and 140 ms later it still hasn't run
+    seam.change();
+    throttled.sendNow(); // the event releases the latest state itself
+    expect(link.revisions()).toEqual([1, 2, 4]);
+    expect(timers.filter(Boolean)).toHaveLength(0); // the late timer was cancelled: no second send
+  });
+
+  it('keeps backpressure: a busy channel only marks the player pending; the drain sends the latest', () => {
+    const link = fakeLink();
+    sender.addPeer('p1', link);
+    time.advance(500);
+    link.buffered = SNAPSHOT_BUSY_BYTES + 1;
+    seam.change();
+    sender.sendNow(); // it flushes, but the busy player is only marked pending: nothing is sent
+    expect(link.revisions()).toEqual([1]);
+    expect(time.pending()).toBe(0); // flushed in the call, not scheduled
+    expect(sender.diagnostics()).toMatchObject({ pendingSnapshot: true, snapshotSendThrottled: 1 });
+    seam.change();
+    link.drain();
+    expect(link.revisions()).toEqual([1, 3]); // latest wins
+  });
+
+  it('does not flood: a stream of events sends at most once per interval, ending on the final state', () => {
+    const link = fakeLink();
+    sender.addPeer('p1', link);
+    time.advance(1000);
+    for (let i = 0; i < 50; i++) {
+      seam.change();
+      sender.sendNow();
+      time.advance(10);
+    }
+    time.advance(SNAPSHOT_INTERVAL_MS);
+    const sends = link.revisions().length - 1;
+    expect(sends).toBeLessThanOrEqual(Math.ceil((50 * 10) / SNAPSHOT_INTERVAL_MS) + 1);
+    expect(link.revisions().at(-1)).toBe(seam.revision);
+    expect(new Set(link.revisions()).size).toBe(link.revisions().length); // never the same revision twice
+  });
+
+  it('returns nothing, and with no players a flush sends nothing', () => {
+    time.advance(500);
+    seam.change();
+    expect(sender.sendNow()).toBeUndefined();
+    expect(sender.diagnostics()).toMatchObject({ snapshotsSent: 0, peers: 0, sendScheduled: false });
+    expect(seam.reads).toBe(0); // with no players the seam is not even read
+  });
+
+  it('notifyChanged keeps its timer-only behavior (the Battle Map prototype signals from a render)', () => {
+    const link = fakeLink();
+    sender.addPeer('p1', link);
+    time.advance(500);
+    seam.change();
+    sender.notifyChanged();
+    expect(link.revisions()).toEqual([1]);
+    time.advance(0);
+    expect(link.revisions()).toEqual([1, 2]);
+  });
+});

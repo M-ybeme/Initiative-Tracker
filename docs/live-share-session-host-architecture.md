@@ -132,7 +132,7 @@ A probe (2026-10-02, Playwright, Chromium 143 and Firefox 144):
 
 ### 5.1 What the session host is
 
-- **A normal, visible Toolbox page:** `live-share.html` (the final name is a Milestone 5 detail). The DM starts Live Share there and keeps the tab open while the session runs. Its header says plainly that this page keeps Live Share running, and that closing it ends the session for everyone.
+- **A normal, visible Toolbox page:** `live-share.html` (served as `/live-share`; decided and built in 5A.2, with its module `js/live-share-host.js`). The DM starts Live Share there and keeps the tab open while the session runs. Its header says plainly that this page keeps Live Share running, and that closing it ends the session for everyone.
 - **How it's opened:**
   - from a "Live Share" entry in a surface: Battle Map, later the Initiative Tracker;
   - or directly.
@@ -340,7 +340,7 @@ interactions    ping (Milestone 6)
 - The 16 MiB transfer took 4.6 s instead of about 0.4 s. The asset sender's 100 ms fallback timer fired 38 times, so `bufferedamountlow` arrived late.
 - The newer structured snapshot left the owner after 77 ms but reached the player 4.3 s later, behind that slow transfer.
 - It happened in every Chrome run with the owner in front, and never when it was hidden, nor in Firefox.
-- It is below the thresholds and not part of the hidden-tab question. **Re-check it in 5A.2** with the real session host page, which is normally *not* the front tab.
+- It is below the thresholds and not part of the hidden-tab question. **Re-check it once assets flow through the real session host page** (5A.3 / 5A.4), which is normally *not* the front tab. In 5A.2 no assets reach that page yet, so it couldn't be re-checked there.
 
 ### What the numbers mean
 
@@ -358,13 +358,20 @@ interactions    ping (Milestone 6)
 
 The architecture is unchanged. One narrow sending change in the session host:
 
-1. **When the host commits a publication** (the BroadcastChannel `publication-offer` handler, 5A.3), send the snapshot **in that event handler** if nothing was sent in the last 100 ms. That is a synchronous leading-edge send; `SnapshotSender` gets a `sendNow()`, or an option for this.
+1. **When the host commits a publication** (the BroadcastChannel `publication-offer` handler, 5A.3), send the snapshot **in that event handler** if nothing was sent in the last 100 ms. That is a synchronous leading-edge send.
+   - **Implemented in 5A.2 as `SnapshotSender.sendNow()`:**
+     - it sends at once when the throttle allows;
+     - otherwise it coalesces into the trailing timer, exactly like `notifyChanged()`;
+     - a throttle timer that is already late (a hidden tab) is cancelled, and the event flushes instead.
+     It returns nothing. A flush follows the sender's usual rules, so it doesn't mean bytes went out: with no players nothing is sent, a busy channel is only marked pending, and a revision a player already has isn't resent. `diagnostics()` shows what was actually sent.
+   - `notifyChanged()` is unchanged, for callers that signal from a render (the Battle Map prototype).
+   - Its first production caller is the 5A.3 commit handler, since nothing publishes to the host before then.
    - Timers stay only for coalescing a burst into its trailing send.
    - This removes Firefox's 0.5 s and Chrome's scheduling dependence for ordinary saves.
    - Keep the existing rule that sends never run inside a surface's render. The host has no render loop, so the rule holds by construction.
 2. **The asset sender:** no change. It was event-driven already (`bufferedamountlow`), and its fallback timer was never needed while hidden.
 3. **Trailing coalesced sends** may still take about 1 s in a hidden host. That is acceptable, because the latest state always wins. Revisit only if the Initiative Tracker's immediate publishing shows a need.
-4. **Re-check the Chrome visible-owner transfer anomaly** (¹) once the real host page exists.
+4. **Re-check the Chrome visible-owner transfer anomaly** (¹) once assets flow through the real host page (5A.3 / 5A.4).
 
 Not needed: a keep-visible requirement (C) or the iframe shell (D). DM hosting from a phone or tablet stays a separate, known limitation.
 
@@ -491,7 +498,13 @@ Refreshing the session host is the only refresh that threatens the room; a surfa
 
 **Sequence:**
 1. **5A.1, the hidden-tab spike** (§9). Done for Chrome and Firefox; outcome B. Safari: manual check pending.
-2. **5A.2, the session host page:** reuses the generic modules; Web Lock; same panel functions as the prototype.
+2. **5A.2, the session host page:** reuses the generic modules; Web Lock; same panel functions as the prototype. **Implemented on 2026-10-02:**
+   - `live-share.html` + `js/live-share-host.js`;
+   - `js/modules/live-share/session-host-lock.js`: Web Lock `dmtoolbox.live-share.session-host`. A second tab waits and takes over only when the owner closes. Without Web Locks the page fails closed;
+   - `SnapshotSender.sendNow()`;
+   - the window name `dmtoolbox-live-share`.
+   - No surface data reaches it yet, so players connect but see no map.
+   - **Transitional:** the Milestone 0–4 Battle Map prototype host (`battlemap.html?liveshare=1`) still runs its own room until 5A.4. Until then the two duplicate about 60 lines of per-player wiring, and that duplication goes when the prototype becomes a publisher.
 3. **5A.3, the boundary:** the BroadcastChannel boundary and the host publication store with atomic commit and host-side revisions.
 4. **5A.4, the Battle Map adapter:** `battlemap-live-share.js` becomes the publisher adapter. Same player wire format; existing browser tests pass through the new helpers.
 5. **5B:** admission and protocol v1.
@@ -506,7 +519,7 @@ Refreshing the session host is the only refresh that threatens the room; a surfa
 - **Safari's hidden-tab result:** a manual check on a Mac (§9). It doesn't block 5A.2, but a frozen or discarded hidden owner in Safari would reopen C/D for Safari.
 
 **During 5A, not blocking it:**
-- the page name and URL of the session host and of the product player page;
+- ~~the page name and URL of the session host~~ (decided in 5A.2: `live-share.html`, `/live-share`), and the product player page (still open; players use `liveshare-dev.html` until 5B/5C);
 - the duplicate-tab rule: recommended, latest registration wins plus an explicit "publish from this tab";
 - whether the Battle Map's `?liveshare=1` flag disappears in 5A (the host page replaces it) or stays as a development convenience.
   Either way, asset preparation follows whether a session is running (§14), not the URL flag.
