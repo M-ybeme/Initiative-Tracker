@@ -4,13 +4,12 @@
 // them only once saved, drawn with the DM map's geometry. Overlay, rotation and grid edits never
 // recompose or resend the background. A token hidden from players sends no overlay information.
 import { test, expect } from '@playwright/test';
-import { watchErrors, recordPlayerTraffic, hostSnapshot, sentText, sentMetas, makeMap, makeTokenPng, save, importMap, screenOf, openHost, openPanel, tokenMenu, addPresetToken, startRoom as startRoomOn, sessionOf } from '../helpers/battlemap-live-share.js';
+import { watchErrors, recordPlayerTraffic, hostSnapshot, sentText, sentMetas, makeMap, makeTokenPng, save, importMap, screenOf, openHost, openPanel, tokenMenu, addPresetToken, startRoom as startRoomOn, sessionOf, joinSeat, sentSnapshots } from '../helpers/battlemap-live-share.js';
 
 test.use({ launchOptions: { args: ['--disable-features=WebRtcHideLocalIpsWithMdns'] } });
 
 const DRAFT_KEY = 'dmtoolbox.battlemap.mvp.v3.draft';
 const PRESET = '/images/playerTokens/PlayerBardToken.png';
-const sentSnapshots = async (page) => (await sentText(page)).map((t) => JSON.parse(t)).filter((m) => m.type === 'battlemap-snapshot');
 const backgroundMetas = async (page) => (await sentMetas(page)).filter((m) => m.asset.kind === 'background').length;
 const rebuilds = (page) => page.evaluate(() => window.BattleMapLiveShare.getAssetDiagnostics().background.rebuilds);
 
@@ -24,6 +23,7 @@ async function joinPlayer(browser, joinUrl, viewport) {
   const errors = watchErrors(player);
   await player.goto(joinUrl);
   await expect(player.getByTestId('player-status')).toHaveText('Connected to host', { timeout: 20000 });
+  await joinSeat(player, joinUrl); // 5B.2: the map arrives only after joining a seat
   return { context, player, errors };
 }
 
@@ -143,7 +143,7 @@ test.describe('Live Share aura and vision cone presentation (2.3.29)', () => {
     expect(B.tokens[0].aura).toEqual({ radius: 4, color: '#00ff00' });
     view = await playerOverlays(p.player, 't_seer');
     expect(view.aura).toEqual({ cx: 125, cy: 125, r: 225, color: '#00ff00' });
-    expect((await sentSnapshots(host)).slice(snapshotsBefore).map((m) => m.payload.revision)).toEqual([B.revision]);
+    expect((await sentSnapshots(host)).slice(snapshotsBefore).map((m) => m.revision)).toEqual([B.revision]);
     await expectSameBackground('aura save');
 
     // B. Vision cone: range, angle and color.

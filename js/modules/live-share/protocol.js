@@ -5,14 +5,21 @@
  * is untrusted (planning doc §22): it is size-checked, parsed and validated against a known
  * shape before use, and unknown types are rejected. Text is only ever rendered with textContent.
  *
- * Data-channel messages (host -> player):
- *   hello               Milestone 0 test message
- *   battlemap-snapshot  Milestone 2: the Battle Map's whole player-safe state (battlemap-snapshot.js).
- *                       Whole snapshots only, never patches; the player keeps the newest revision.
- *   asset-meta, asset-abort, binary asset chunks
- *                       Milestone 3: player-visible assets, sent only on request (asset-protocol.js)
- * and player -> host:
- *   asset-request       Milestone 3: the asset ids a player is missing
+ * Data-channel protocol v0 (PROTOCOL_VERSION 0) is no longer the Live Share player protocol. Since
+ * Milestone 5B.2 every message between the session host and its players, game and admission alike, is
+ * protocol v1 (protocol-v1.js); the session host refuses v0, and the player page accepts only the v0
+ * `hello` below. What remains here:
+ *   hello               Milestone 0 test message, still sent by the networking harness's host
+ *                       (liveshare-dev.html without #room) and shown by the player page. The only live
+ *                       v0 path.
+ *   battlemap-snapshot, asset-meta, asset-abort, asset-request
+ *                       the Milestone 2-4 v0 Battle Map messages. encodeBattleMapSnapshot and their
+ *                       parseChannelMessage branches (and its binary-chunk branch; v1 reads the same
+ *                       chunk frames from asset-protocol.js) are kept only because older tests use them;
+ *                       nothing in production sends or accepts them. Do not restore them to the player
+ *                       path. They go, with `hello`, once the networking harness moves to the session host.
+ * The relay frame and WebRTC signal parsers and MAX_CHANNEL_MESSAGE_BYTES below are not v0-specific and
+ * stay in use.
  */
 import { validateBattleMapSnapshot } from './battlemap-snapshot.js';
 import { parseAssetChunk, validateAssetRequest, validateAssetMeta, validateAssetAbort } from './asset-protocol.js';
@@ -21,7 +28,7 @@ export const PROTOCOL_VERSION = 0;
 // Largest data-channel message either side accepts. A Battle Map snapshot is usually a few KB (a
 // token is ~150 bytes), but the projection allows up to 500 tokens and 500 measurements, so the
 // limit sits just under the 256 KiB SCTP message size Chrome, Firefox and Safari all accept. The
-// host refuses to send anything larger (encodeBattleMapSnapshot) and the player rejects it unread.
+// host refuses to send anything larger (protocol-v1.js encode) and the player rejects it unread.
 export const MAX_CHANNEL_MESSAGE_BYTES = 240 * 1024;
 export const MAX_HELLO_TEXT_LENGTH = 200;
 const MAX_SDP_LENGTH = 12 * 1024;

@@ -33,11 +33,14 @@ export const ROOM_ID_PATTERN = /^[A-Za-z0-9_-]{22,64}$/;
 export const RELAY_LIMITS = Object.freeze({
   // An SDP offer with a data channel is ~1-3 KB; 16 KB leaves room without allowing bulk data.
   maxMessageBytes: 16 * 1024,
-  // Milestone 0 is one host and one player. The host's one socket carries the signaling for every
-  // player, so larger rooms need the host's rate allowance to scale with them; that arrives with
-  // the multi-player session model, not before.
-  maxPeersPerRoom: 1,
-  // Token bucket per connection: bursts of trickled ICE candidates are fine, floods are not.
+  // Milestone 5B.2: up to 8 player connections per room, a tabletop group with room to spare. The
+  // host sends every player its own copy of the map and assets (a 16 MiB background is 128 MiB of
+  // upload for 8), so this stays small. It counts connections, not admitted players: whether a
+  // connection may see anything is the session host's admission decision, never the relay's.
+  maxPeersPerRoom: 8,
+  // Token bucket per connection: bursts of trickled ICE candidates are fine, floods are not. The
+  // host's one socket carries the signaling of every player, so its bucket is this times
+  // maxPeersPerRoom (8 players connecting at once must not get the host ejected).
   rateBurst: 60,
   rateRefillPerSecond: 20,
 });
@@ -157,13 +160,14 @@ export class RelayRoom {
   }
 
   track(conn, role, peerId) {
-    this.info.set(conn, { role, peerId, tokens: this.limits.rateBurst, refilledAt: this.now() });
+    const scale = role === 'host' ? Math.max(1, this.limits.maxPeersPerRoom) : 1;
+    this.info.set(conn, { role, peerId, scale, tokens: this.limits.rateBurst * scale, refilledAt: this.now() });
   }
 
   takeToken(info) {
     const now = this.now();
-    const refill = ((now - info.refilledAt) / 1000) * this.limits.rateRefillPerSecond;
-    info.tokens = Math.min(this.limits.rateBurst, info.tokens + refill);
+    const refill = ((now - info.refilledAt) / 1000) * this.limits.rateRefillPerSecond * info.scale;
+    info.tokens = Math.min(this.limits.rateBurst * info.scale, info.tokens + refill);
     info.refilledAt = now;
     if (info.tokens < 1) return false;
     info.tokens -= 1;

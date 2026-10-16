@@ -10,13 +10,15 @@ DM's browser to each player's browser over WebRTC. Browsers cannot find each oth
 small **signaling relay** passes the WebRTC setup messages (offer, answer, ICE candidates) between them.
 Once the data channel opens, all traffic goes browser-to-browser; the relay never sees session content.
 
-The relay is deliberately generic: it knows rooms, one host per room, and peers (one per room in
-Milestone 0). It knows nothing about
-seats, passwords, the Battle Map or any game state.
+The relay is deliberately generic: it knows rooms, one host per room, and peers (up to 8 per room
+since Milestone 5B.2). It knows nothing about seats, passwords, the Battle Map or any game state:
+admission is the Live Share session page's decision, after the data channel opens.
 
 > **Development prototype.** Milestone 0 has no admission model: anyone holding a room link can
 > connect to that room's host and receive the prototype's test message. This is not Stable V1
 > admission behavior (seats, passwords and DM-side admission arrive in Milestone 5, planning doc §11).
+> Since Milestone 5B.2 the Live Share session page (`live-share.html`) enforces seats, password and
+> lock on every player connection; this Milestone 0 page's own host mode still does not.
 
 ## Layout
 
@@ -80,11 +82,12 @@ receive (`protocol.js`). Over the data channel, Milestone 0 has one message: `{v
 Fatal problems close the socket with a code the client turns into a signaling error:
 `4400` bad request, `4404` no host in the room, `4409` room already has a host, `4410` host left,
 `4413` message too large, `4429` rate limited, `4503` room full. Limits: 16 KB per frame, a
-per-connection token bucket (60 burst, 20 per second), and **one player per room**: Milestone 0 is
-one host and one player, so a second player is refused with `4503` (shown as "The room is full")
-while the first pair carries on. The host's one socket carries the signaling for every player, so
-rooms for more players need the host's rate allowance to scale with them; that comes with the
-multi-player session model, not before.
+per-connection token bucket (60 burst, 20 per second), and **8 player connections per room**
+(Milestone 5B.2; it was 1 in Milestones 0–5B.1): a ninth is refused with `4503` (shown as "The room
+is full") while the others carry on. The host's one socket carries the signaling for every player,
+so its token bucket is 8 times a player's (480 burst, 160 per second). The relay counts
+connections, not players: a connection that never joins a seat still holds a place until it
+closes.
 
 ### Diagnostics
 
@@ -360,8 +363,8 @@ traffic volume and timing (see [Signaling and TURN are separate](#signaling-and-
 ## Manual remote-network test (Milestone 0 exit)
 
 The page must be on a public origin (the Netlify site) so a device on another network can open it,
-which means `PRODUCTION_RELAY_URL` is set and the site deployed (see above). Each room takes one player,
-so every scenario starts a new room.
+which means `PRODUCTION_RELAY_URL` is set and the site deployed (see above). Each room took one player
+in Milestone 0, so every scenario started a new room.
 
 1. **Baseline, same Wi-Fi:** desktop opens `https://dnddmtoolbox.netlify.app/liveshare-dev`, clicks
    **Start room**, **Copy join link**. Send the link to a phone on the same Wi-Fi and open it. Expect

@@ -144,7 +144,18 @@ No Live Share behavior changed.
 - **A deny-by-default send policy:** an unadmitted peer may be sent only admission state, its join result and session-ended.
 - **The product is unchanged:** it still speaks v0 to one player with no admission step. 5B.2 wires this in.
 
-**Next:** Milestone 5B.2, host admission enforcement on real peers and multi-player relay / concurrency (§24). The Safari hidden-tab check is pending.
+**Milestone 5B.2, admission enforced on real peers and multi-player rooms (implemented 2026-10-09, released in 2.3.36):** details in [live-share-session-host-architecture.md](live-share-session-host-architecture.md) §6.4.
+- **One admission model per session**, owned by the session page (`session-players.js`), in memory only.
+- **A connection is not a player:** a new link is unadmitted and receives only the sanitized admission state.
+  - The map, its assets and asset ids reach a player only after it joins a seat.
+  - Enforced twice: the senders only know admitted peers, and every send passes the admission gate.
+- **Players speak protocol v1:** join / rejoin / leave, `surface-snapshot`, and asset requests only once admitted. v0 is refused by the host.
+- **Real seat behavior:** the same-seat race has one winner. A wrong password or a lock claims nothing. Leave releases the seat; a dropped connection keeps it claimed-disconnected. Kick, reset and disable remove only that player.
+- **Rooms of 8 players** on the relay, with the host's signaling allowance scaled; per-player sender state, so one slow or hostile player affects no other.
+- **Functional seat, password and lock controls** on the session page, and minimal join controls on the player page. The product join and room-management UX is 5B.3.
+- **No reconnect, credential storage, grace timer or pings** (Milestones 7 and 6).
+
+**Next:** Milestone 5B.3, the product join and room-management UX (§24). The Safari hidden-tab check is pending.
 
 **Backlog (Battle Map, found during the 2.3.27 and 2.3.28 reviews; not yet fixed):**
 - Pre-existing: a touch long-press (and Ctrl+click on a Mac, which is a primary-button press) starts a token drag before its menu opens, so on release an off-grid token snaps and the map is marked unsaved (the 2.3.28 right-click fix does not cover a primary-button press).
@@ -1684,7 +1695,7 @@ Only after the underlying networking has proven useful. *(Reconciled on 2026-10-
 
 **5B — Admission / room model** (built in three stages:
 - **5B.1:** the admission model and protocol-v1 foundation. Implemented 2026-10-03, released in 2.3.35 (ADR §6.3); not wired.
-- **5B.2:** host enforcement and multi-player relay / concurrency.
+- **5B.2:** host enforcement and multi-player relay / concurrency. Implemented 2026-10-09 (ADR §6.4).
 - **5B.3:** the player join flow.)
 - seats, optional password, room lock;
 - temporary seat credentials;
@@ -1693,7 +1704,7 @@ Only after the underlying networking has proven useful. *(Reconciled on 2026-10-
   - a generic envelope;
   - session messages;
   - `surface-snapshot { surface, revision, payload }`, with per-surface validators;
-- **relay:** raise `maxPeersPerRoom` from the Milestone 0 limit of 1, and scale the host's rate allowance. A generic change, with no game state.
+- **relay:** raise `maxPeersPerRoom` from the Milestone 0 limit of 1, and scale the host's rate allowance. A generic change, with no game state. (Done in 5B.2: 8 players.)
 
 **5C — Product UX**
 - polished host controls on the session host page, and the player join UI;

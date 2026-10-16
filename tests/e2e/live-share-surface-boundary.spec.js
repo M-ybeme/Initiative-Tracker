@@ -5,6 +5,7 @@
 // unchanged Milestone 0-4 wire format. The real Battle Map is not involved: it moves to this path in 5A.4.
 import { test, expect } from '@playwright/test';
 import { RELAY } from '../helpers/live-share.js';
+import { startRoom as startRoomOn, joinSeat } from '../helpers/battlemap-live-share.js';
 
 test.use({ launchOptions: { args: ['--disable-features=WebRtcHideLocalIpsWithMdns'] } });
 
@@ -30,11 +31,7 @@ async function openHost(context) {
   return { page, errors };
 }
 
-async function startRoom(host) {
-  await host.getByTestId('start-room').click();
-  await expect(host.getByTestId('host-status')).toHaveText('Room open — waiting for players', { timeout: 15000 });
-  return host.getByTestId('join-link').textContent();
-}
+const startRoom = (host) => startRoomOn(host);
 
 // A publisher tab in the host's browser profile (BroadcastChannel is per profile).
 async function openPublisher(context, options = {}) {
@@ -52,6 +49,7 @@ async function joinPlayer(browser, joinUrl) {
   const errors = watchErrors(player);
   await player.goto(joinUrl);
   await expect(player.getByTestId('player-status')).toHaveText('Connected to host', { timeout: 20000 });
+  await joinSeat(player, joinUrl); // 5B.2: the map arrives only after joining a seat
   return { context, player, errors };
 }
 

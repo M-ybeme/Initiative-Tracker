@@ -5,11 +5,10 @@
 // nothing; a player joining while the DM has unsaved edits gets the last saved map. A token hidden
 // from players is absent from everything sent, its art included.
 import { test, expect } from '@playwright/test';
-import { watchErrors, recordPlayerTraffic, hostSnapshot, sentText, sentMetas, makeMap, makeTokenPng, save, importMap, screenOf, openHost, openPanel, tokenMenu, addPresetToken, startRoom as startRoomOn, sessionOf } from '../helpers/battlemap-live-share.js';
+import { watchErrors, recordPlayerTraffic, hostSnapshot, sentText, sentMetas, makeMap, makeTokenPng, save, importMap, screenOf, openHost, openPanel, tokenMenu, addPresetToken, startRoom as startRoomOn, sessionOf, joinSeat, sentSnapshots } from '../helpers/battlemap-live-share.js';
 
 test.use({ launchOptions: { args: ['--disable-features=WebRtcHideLocalIpsWithMdns'] } });
 
-const sentSnapshots = async (page) => (await sentText(page)).map((t) => JSON.parse(t)).filter((m) => m.type === 'battlemap-snapshot');
 const saveState = (page) => page.getByTestId('save-map').getAttribute('data-state');
 
 // What a player shows: its revision, token ids and positions, and background asset id.
@@ -36,6 +35,7 @@ async function joinPlayer(browser, joinUrl) {
   const errors = watchErrors(player);
   await player.goto(joinUrl);
   await expect(player.getByTestId('player-status')).toHaveText('Connected to host', { timeout: 20000 });
+  await joinSeat(player, joinUrl); // 5B.2: the map arrives only after joining a seat
   return { context, player, errors };
 }
 
@@ -177,7 +177,7 @@ test.describe('Battle Map staged Live Share publishing (2.3.27)', () => {
     expect(viewB.background).toBe(B.background.assetId);
     await expect(p1.player.locator('[data-token-id="t_hero"]')).toHaveCount(0);
     const newSnapshots = (await sentSnapshots(host)).slice(snapshotsBefore);
-    expect(newSnapshots.map((m) => m.payload.revision)).toEqual([B.revision]); // no intermediate drafts
+    expect(newSnapshots.map((m) => m.revision)).toEqual([B.revision]); // no intermediate drafts
     const bJson = JSON.stringify(newSnapshots[0]);
     expect(bJson).not.toMatch(/t_hero|t_spy|SecretSpy|"Hero"|visibleToPlayers|"visible"/);
 

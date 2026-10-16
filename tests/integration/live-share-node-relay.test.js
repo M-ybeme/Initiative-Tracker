@@ -212,16 +212,18 @@ describe('Live Share Node relay', () => {
     host.close();
   });
 
-  it('takes one player per room: a second gets ROOM_FULL and the first pair keeps working', async () => {
+  it('takes 8 players per room (5B.2): a ninth gets ROOM_FULL and the others keep working', async () => {
     const roomId = generateRoomId();
     const host = await connected(roomId, 'host');
     const joined = next(host, 'peer-joined');
     const player = await connected(roomId, 'peer');
     const { peerId } = await joined;
+    const others = [];
+    for (let i = 0; i < 7; i++) others.push(await connected(roomId, 'peer'));
 
-    const second = client(roomId, 'peer');
-    const refused = next(second, 'closed');
-    second.connect();
+    const ninth = client(roomId, 'peer');
+    const refused = next(ninth, 'closed');
+    ninth.connect();
     const { error, code } = await refused;
     expect(code).toBe(4503);
     expect(error.code).toBe('room-full');
@@ -235,8 +237,10 @@ describe('Live Share Node relay', () => {
     player.sendSignal(answer);
     expect(await gotAnswer).toEqual({ from: peerId, data: answer });
 
+    for (const other of others) expect(other.state).toBe('ready');
     host.close();
     player.close();
+    for (const other of others) other.close();
   });
 
   it('closes a client that sends malformed JSON, and tells the host it left', async () => {

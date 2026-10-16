@@ -3,7 +3,7 @@
 // RTCDataChannel. No network access beyond localhost is needed: with no reachable STUN server the
 // browsers still connect over their host candidates.
 import { test, expect } from '@playwright/test';
-import { PAGE, startHost, diagnostics, expectCandidatePathComplete, blockTurnCredentials, dropStunServers, selectedPath } from '../helpers/live-share.js';
+import { PAGE, RELAY, startHost, diagnostics, expectCandidatePathComplete, blockTurnCredentials, dropStunServers, selectedPath } from '../helpers/live-share.js';
 
 // Chromium hides local IPs behind mDNS names by default; two contexts on one machine can then fail
 // to resolve each other's candidates. Real deployments are unaffected (they use STUN candidates).
@@ -74,12 +74,28 @@ test.describe('Live Share networking (Milestone 0)', () => {
     await playerContext.close();
   });
 
-  test('a room takes one player: a second is told the room is full and the first stays connected', async ({ browser }) => {
+  test('a room takes 8 players (5B.2): a ninth is told the room is full and the first stays connected', async ({ browser }) => {
     const host = await startHost(browser);
     const playerContext = await browser.newContext();
     const player = await playerContext.newPage();
     await player.goto(host.joinUrl);
     await expect(player.getByTestId('received-message')).toHaveText('hello', { timeout: 20000 });
+    // Seven more relay connections fill the room (bare signaling sockets: the relay counts
+    // connections, and what a connection may see is the session host's business, not the relay's).
+    const roomId = host.joinUrl.split('#room=')[1];
+    const opened = await player.evaluate(
+      ({ relay, roomId }) =>
+        Promise.all(
+          Array.from({ length: 7 }, () => new Promise((resolve) => {
+            const ws = new WebSocket(`${relay}/rooms/${roomId}?role=peer`);
+            (window.__fillers ||= []).push(ws);
+            ws.onmessage = (e) => resolve(JSON.parse(e.data).type);
+            ws.onclose = () => resolve('closed');
+          }))
+        ),
+      { relay: RELAY, roomId }
+    );
+    expect(opened).toEqual(Array(7).fill('welcome'));
 
     const second = await playerContext.newPage();
     await second.goto(host.joinUrl);
@@ -88,7 +104,7 @@ test.describe('Live Share networking (Milestone 0)', () => {
 
     await expect(player.getByTestId('player-status')).toHaveText('Connected to host');
     expect((await diagnostics(player)).peers.host).toMatchObject({ dataChannelState: 'open', failure: null });
-    await expect(host.page.getByTestId('peer-list').locator('li')).toHaveCount(1);
+    await expect(host.page.getByTestId('peer-list').locator('li')).toHaveCount(8);
     await expect(host.page.getByTestId('peer-list')).toContainText('Connected — sent "hello"');
 
     await host.context.close();

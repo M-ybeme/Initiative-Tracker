@@ -25,6 +25,8 @@ import {
   SECRET,
   startRoom as startRoomOn,
   sessionOf,
+  joinSeat,
+  sentSnapshots,
 } from '../helpers/battlemap-live-share.js';
 
 test.use({ launchOptions: { args: ['--disable-features=WebRtcHideLocalIpsWithMdns'] } });
@@ -33,7 +35,6 @@ const HEX = /^[0-9a-f]{64}$/;
 const DRAFT_KEY = 'dmtoolbox.battlemap.mvp.v3.draft';
 const ids = async (page) => (await battleMapSnapshot(page)).tokens.map((t) => t.id);
 const tokenPills = (page) => page.evaluate(() => document.querySelectorAll('#tokenList .pill').length);
-const sentSnapshots = async (page) => (await sentText(page)).map((t) => JSON.parse(t)).filter((m) => m.type === 'battlemap-snapshot');
 
 // The room on the Battle Map's session page (already started by openHost); its join link.
 const startRoom = (host) => startRoomOn(sessionOf(host));
@@ -45,6 +46,7 @@ async function joinPlayer(browser, joinUrl) {
   const errors = watchErrors(player);
   await player.goto(joinUrl);
   await expect(player.getByTestId('player-status')).toHaveText('Connected to host', { timeout: 20000 });
+  await joinSeat(player, joinUrl); // 5B.2: the map arrives only after joining a seat
   const tokenIds = () => player.evaluate(() => [...document.querySelectorAll('[data-testid="player-map"] .ls-token')].map((g) => g.getAttribute('data-token-id')));
   return { context, player, errors, tokenIds };
 }

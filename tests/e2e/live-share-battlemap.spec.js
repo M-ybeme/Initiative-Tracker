@@ -263,14 +263,22 @@ test.describe('Live Share remote structured rendering (Milestone 2)', () => {
     afterBurst = (await diagnostics(host)).snapshots;
     expect(afterBurst.pendingSnapshot).toBe(false);
 
-    // Nothing private ever left the session page: no HP, images, editor state or fog.
+    // Nothing private ever left the session page: no HP, images, editor state or fog. Before its first
+    // snapshot (protocol v1 surface-snapshot) this player was sent only admission messages (the state
+    // when it connected, again when the seat was added, then its join result), and after it only
+    // snapshots.
     const sent = await sessionOf(host).evaluate(() => window.__lsSent);
-    expect(sent.length).toBe(afterBurst.snapshotsSent);
-    for (const text of sent) {
+    const types = sent.map((text) => JSON.parse(text).type);
+    const first = types.indexOf('surface-snapshot');
+    expect(types.slice(0, first)).toEqual(['admission-state', 'admission-state', 'join-result']);
+    expect(types.slice(first).every((t) => t === 'surface-snapshot')).toBe(true);
+    const snapshotTexts = sent.slice(first);
+    expect(snapshotTexts.length).toBe(afterBurst.snapshotsSent);
+    for (const text of snapshotTexts) {
       const msg = JSON.parse(text);
-      expect(Object.keys(msg).sort()).toEqual(['payload', 'type', 'v']);
-      expect(msg).toMatchObject({ v: 0, type: 'battlemap-snapshot' });
-      expect(Object.keys(msg.payload).sort()).toEqual(['background', 'grid', 'map', 'mapTransform', 'measurements', 'revision', 'schema', 'tokens', 'version']);
+      expect(Object.keys(msg).sort()).toEqual(['payload', 'revision', 'surface', 'type', 'v']);
+      expect(msg).toMatchObject({ v: 1, type: 'surface-snapshot', surface: 'battle-map' });
+      expect(Object.keys(msg.payload).sort()).toEqual(['background', 'grid', 'map', 'mapTransform', 'measurements', 'schema', 'tokens', 'version']);
       for (const t of msg.payload.tokens) {
         expect(Object.keys(t).sort()).toEqual(['assetId', 'aura', 'conditions', 'h', 'id', 'name', 'presetId', 'rot', 'visionCone', 'w', 'x', 'y']);
         expect([t.aura, t.visionCone]).toEqual([null, null]); // none set on this map (Milestone 4)
@@ -282,18 +290,19 @@ test.describe('Live Share remote structured rendering (Milestone 2)', () => {
     const playerBefore = await playerModel(player);
     const session = sessionOf(host); // it owns the channel the old message is replayed on
     await session.evaluate(() => {
-      window.__lsOld = window.__lsSent[1];
-      window.__lsLatest = window.__lsSent[window.__lsSent.length - 1];
+      const snapshots = window.__lsSent.filter((t) => t.includes('"surface-snapshot"'));
+      window.__lsOld = snapshots[1];
+      window.__lsLatest = snapshots[snapshots.length - 1];
     });
     const stale = await session.evaluate(() => {
       window.__lsChannels[0].send(window.__lsOld);
-      return JSON.parse(window.__lsOld).payload.revision;
+      return JSON.parse(window.__lsOld).revision;
     });
     expect(stale).toBeLessThan(latest.revision);
     await expect.poll(async () => (await diagnostics(player)).snapshots.snapshotsIgnoredStale).toBe(1);
     expect(await playerModel(player)).toEqual(playerBefore);
     // The latest revision again (a duplicate) is ignored too.
-    expect(await session.evaluate(() => JSON.parse(window.__lsLatest).payload.revision)).toBe(latest.revision);
+    expect(await session.evaluate(() => JSON.parse(window.__lsLatest).revision)).toBe(latest.revision);
     await session.evaluate(() => window.__lsChannels[0].send(window.__lsLatest));
     await expect.poll(async () => (await diagnostics(player)).snapshots.snapshotsIgnoredStale).toBe(2);
     expect(await playerModel(player)).toEqual(playerBefore);
@@ -322,24 +331,24 @@ test.describe('Live Share remote structured rendering (Milestone 2)', () => {
 
     // Malformed: rejected and counted; the map stays as it was. (Sent from the session page's channel.)
     await sessionOf(host).evaluate(() => {
-      const base = JSON.parse(window.__lsSent[0]);
+      const base = JSON.parse(window.__lsSent.find((t) => t.includes('"surface-snapshot"')));
       const send = (msg) => window.__lsChannels[0].send(JSON.stringify(msg));
-      send({ ...base, payload: { ...base.payload, revision: 1e9, schema: 'something.else' } });
-      send({ ...base, payload: { ...base.payload, revision: 1e9, version: 5 } }); // newer than this player
-      send({ ...base, payload: { ...base.payload, revision: 1e9, version: 3 } }); // a 2.3.29 host's
-      send({ ...base, payload: { ...base.payload, revision: 1e9, tokens: [{ ...base.payload.tokens[0], aura: { radius: 2, color: 'red;fill:url(https://evil.example/x)' } }] } });
-      send({ ...base, payload: { ...base.payload, revision: '1000' } });
-      send({ ...base, payload: { ...base.payload, revision: 1e9, tokens: [{ ...base.payload.tokens[0], x: 'NaN' }] } });
-      send({ ...base, payload: { ...base.payload, revision: 1e9, tokens: Array(501).fill(base.payload.tokens[0]) } });
+      send({ ...base, revision: 1e9, payload: { ...base.payload, schema: 'something.else' } });
+      send({ ...base, revision: 1e9, payload: { ...base.payload, version: 5 } }); // newer than this player
+      send({ ...base, revision: 1e9, payload: { ...base.payload, version: 3 } }); // a 2.3.29 host's
+      send({ ...base, revision: 1e9, payload: { ...base.payload, tokens: [{ ...base.payload.tokens[0], aura: { radius: 2, color: 'red;fill:url(https://evil.example/x)' } }] } });
+      send({ ...base, revision: '1000' });
+      send({ ...base, revision: 1e9, payload: { ...base.payload, tokens: [{ ...base.payload.tokens[0], x: 'NaN' }] } });
+      send({ ...base, revision: 1e9, payload: { ...base.payload, tokens: Array(501).fill(base.payload.tokens[0]) } });
     });
     await expect.poll(async () => (await diagnostics(player)).snapshots.snapshotsRejectedInvalid).toBe(7);
     expect(await playerModel(player)).toEqual(good);
 
     // A newer snapshot whose name is markup: drawn as text, no element is created from it.
     await sessionOf(host).evaluate(() => {
-      const base = JSON.parse(window.__lsSent[0]);
+      const base = JSON.parse(window.__lsSent.find((t) => t.includes('"surface-snapshot"')));
       const tokens = [{ ...base.payload.tokens[0], name: '<img src=x onerror="window.__pwned=1">', conditions: ['<b>bold</b>'] }];
-      window.__lsChannels[0].send(JSON.stringify({ ...base, payload: { ...base.payload, revision: 1e6, tokens, extra: { hp: 5 } } }));
+      window.__lsChannels[0].send(JSON.stringify({ ...base, revision: 1e6, payload: { ...base.payload, tokens, extra: { hp: 5 } } }));
     });
     await expect(player.locator('.ls-token-name')).toHaveText('<img src=x onerror="window.__pwned=1">');
     await expect(player.locator('.ls-token-conditions')).toHaveText('<b>bold</b>');

@@ -6,6 +6,7 @@
 // live-share-battlemap-session.spec.js.
 import { test, expect } from '@playwright/test';
 import { RELAY } from '../helpers/live-share.js';
+import { startRoom as startRoomOn, joinSeat } from '../helpers/battlemap-live-share.js';
 
 test.use({ launchOptions: { args: ['--disable-features=WebRtcHideLocalIpsWithMdns'] } });
 
@@ -51,9 +52,7 @@ async function openHostPage(context) {
 
 async function startRoom(host) {
   await expect(host.getByTestId('owner-status')).toHaveAttribute('data-state', 'owner');
-  await host.getByTestId('start-room').click();
-  await expect(host.getByTestId('host-status')).toHaveText('Room open — waiting for players', { timeout: 15000 });
-  return host.getByTestId('join-link').textContent();
+  return startRoomOn(host);
 }
 
 async function joinPlayer(browser, joinUrl) {
@@ -62,6 +61,7 @@ async function joinPlayer(browser, joinUrl) {
   const errors = watchErrors(player);
   await player.goto(joinUrl);
   await expect(player.getByTestId('player-status')).toHaveText('Connected to host', { timeout: 20000 });
+  await joinSeat(player, joinUrl); // 5B.2: the map arrives only after joining a seat
   return { context, player, errors };
 }
 
@@ -85,7 +85,8 @@ test.describe('Live Share session host page (5A.2)', () => {
     await expect(host.getByTestId('start-room')).toBeDisabled();
 
     const p = await joinPlayer(browser, joinUrl);
-    await expect(host.getByTestId('peer')).toHaveText('Player 1: Connected');
+    await expect(host.getByTestId('peer')).toHaveText(/^Connection 1: Connected · joined as Seat \d+$/);
+    await expect(host.getByTestId('player-count')).toHaveText('1 joined · 0 connected, not joined');
     await expect.poll(async () => Object.values((await diagnostics(host)).peers)[0]?.dataChannelState).toBe('open');
     // No surface publishes yet: the player is connected but receives no map.
     await p.player.waitForTimeout(1000);
@@ -159,7 +160,9 @@ test.describe('Live Share session host page (5A.2)', () => {
     const p2 = await joinPlayer(browser, await startRoom(host.page));
     await host.page.close();
     await expect(p2.player.getByTestId('player-status')).toHaveText('The host ended the session.', { timeout: 10000 });
-    expect((await diagnostics(p2.player)).signalingError).toMatchObject({ code: 'host-left' });
+    // Told by the host's session-ended (5B.2), or by the relay's "host left" if the page closed first.
+    const told = await diagnostics(p2.player);
+    expect(told.sessionEnded === 'ended' || (told.signalingError && told.signalingError.code === 'host-left')).toBe(true);
 
     expect(host.errors).toEqual([]);
     expect(p1.errors).toEqual([]);

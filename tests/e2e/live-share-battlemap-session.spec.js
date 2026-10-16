@@ -25,6 +25,7 @@ import {
   liveShareState,
   watchErrors,
   recordPlayerTraffic,
+  joinSeat,
 } from '../helpers/battlemap-live-share.js';
 
 test.use({ launchOptions: { args: ['--disable-features=WebRtcHideLocalIpsWithMdns'] } });
@@ -53,6 +54,7 @@ async function joinPlayer(browser, joinUrl) {
   const errors = watchErrors(player);
   await player.goto(joinUrl);
   await expect(player.getByTestId('player-status')).toHaveText('Connected to host', { timeout: 20000 });
+  await joinSeat(player, joinUrl); // 5B.2: the map arrives only after joining a seat
   return { context, player, errors };
 }
 
@@ -355,7 +357,7 @@ test.describe('Live Share: the Battle Map publishes to the session page (5A.4)',
         pc.addEventListener('datachannel', (e) =>
           e.channel.addEventListener('message', (m) => {
             if (typeof m.data !== 'string') window.__arrivals.push({ t: Date.now(), chunk: m.data.byteLength });
-            else if (m.data.includes('"battlemap-snapshot"')) window.__arrivals.push({ t: Date.now(), revision: JSON.parse(m.data).payload.revision });
+            else if (m.data.includes('"surface-snapshot"')) window.__arrivals.push({ t: Date.now(), revision: JSON.parse(m.data).revision });
           })
         );
         return pc;
@@ -363,8 +365,10 @@ test.describe('Live Share: the Battle Map publishes to the session page (5A.4)',
     });
     const player = await context.newPage();
     const playerErrors = watchErrors(player);
-    await player.goto(await startRoom(session));
+    const joinUrl = await startRoom(session);
+    await player.goto(joinUrl);
     await expect(player.getByTestId('player-status')).toHaveText('Connected to host', { timeout: 20000 });
+    await joinSeat(player, joinUrl);
 
     const t0 = Date.now();
     await importMap(host, await makeMap(host, { width: 4096, height: 4096, noise: true }), { tokens: [BARD], fogShapes: [] });

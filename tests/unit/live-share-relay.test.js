@@ -68,16 +68,23 @@ describe('relay room: registration and join', () => {
     expect(room.isEmpty).toBe(true);
   });
 
-  it('Milestone 0 rooms take one player: a second is refused with ROOM_FULL and the first pair is unaffected', () => {
-    expect(RELAY_LIMITS.maxPeersPerRoom).toBe(1);
+  it('rooms take 8 players (5B.2): a ninth is refused with ROOM_FULL and the others are unaffected', () => {
+    expect(RELAY_LIMITS.maxPeersPerRoom).toBe(8);
     const { room, host, peer } = hostAndPeer(); // default limits, as both relays use them
+    const others = Array.from({ length: 7 }, () => fakeConn());
+    for (const conn of others) expect(room.join(conn, 'peer')).toBe(true);
+    expect(room.peers.size).toBe(8);
     const hostFrames = host.sent.length;
 
-    const second = fakeConn();
-    expect(room.join(second, 'peer')).toBe(false);
-    expect(second.closed).toEqual({ code: CLOSE.ROOM_FULL, reason: 'room is full' });
-    expect(second.sent).toEqual([]);
+    const ninth = fakeConn();
+    expect(room.join(ninth, 'peer')).toBe(false);
+    expect(ninth.closed).toEqual({ code: CLOSE.ROOM_FULL, reason: 'room is full' });
+    expect(ninth.sent).toEqual([]);
     expect(host.sent.length).toBe(hostFrames); // the host never hears about the refused player
+    for (const conn of others) expect(conn.closed).toBeNull();
+    // A place frees up when one leaves.
+    room.leave(others[0]);
+    expect(room.join(fakeConn(), 'peer')).toBe(true);
 
     expect(host.closed).toBeNull();
     expect(peer.closed).toBeNull();
@@ -167,6 +174,34 @@ describe('relay room: validation and limits', () => {
     const huge = JSON.stringify({ type: 'signal', data: { pad: 'x'.repeat(RELAY_LIMITS.maxMessageBytes) } });
     room.receive(peer, huge);
     expect(peer.closed.code).toBe(CLOSE.TOO_LARGE);
+  });
+
+  it("the host's bucket scales with the room size; a player's does not", () => {
+    let now = 0;
+    const room = new RelayRoom({ now: () => now, limits: { ...RELAY_LIMITS, rateBurst: 3, rateRefillPerSecond: 1, maxPeersPerRoom: 4 } });
+    const host = fakeConn();
+    const peer = fakeConn();
+    room.join(host, 'host');
+    room.join(peer, 'peer');
+    const to = peer.sent[0].peerId;
+    const fromHost = JSON.stringify({ type: 'signal', to, data: candidate });
+    for (let i = 0; i < 12; i++) room.receive(host, fromHost); // 3 x 4
+    expect(host.closed).toBeNull();
+    now = 1000; // 4 tokens back for the host (1/s x 4)
+    for (let i = 0; i < 4; i++) room.receive(host, fromHost);
+    expect(host.closed).toBeNull();
+    room.receive(host, fromHost);
+    expect(host.closed.code).toBe(CLOSE.RATE_LIMITED);
+    const fromPeer = JSON.stringify({ type: 'signal', data: candidate });
+    const room2 = new RelayRoom({ now: () => now, limits: { ...RELAY_LIMITS, rateBurst: 3, rateRefillPerSecond: 1, maxPeersPerRoom: 4 } });
+    const h2 = fakeConn();
+    const p2 = fakeConn();
+    room2.join(h2, 'host');
+    room2.join(p2, 'peer');
+    for (let i = 0; i < 3; i++) room2.receive(p2, fromPeer);
+    expect(p2.closed).toBeNull();
+    room2.receive(p2, fromPeer);
+    expect(p2.closed.code).toBe(CLOSE.RATE_LIMITED);
   });
 
   it('rate-limits a flood and refills over time', () => {

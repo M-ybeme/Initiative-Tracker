@@ -59,6 +59,15 @@
       <div class="card-body">
         <h2 class="h5">Player</h2>
         <p class="mb-2">Status: <span id="ls-player-status" data-testid="player-status">Connecting…</span></p>
+        <p class="mb-2">Seat: <span id="ls-join-status" data-testid="join-status">Not joined</span></p>
+        <!-- Joining (Milestone 5B.2: a working preview; the product join screen is 5B.3) -->
+        <div id="ls-join" class="mb-3 d-none" data-testid="join-panel">
+          <p id="ls-join-note" class="small text-body-secondary mb-2" data-testid="join-note"></p>
+          <div id="ls-join-password-row" class="mb-2 d-none">
+            <input id="ls-join-password" type="password" class="form-control form-control-sm" style="max-width: 16rem;" maxlength="128" autocomplete="off" placeholder="Room password" aria-label="Room password" data-testid="join-password" />
+          </div>
+          <div id="ls-join-seats" class="d-flex flex-wrap gap-2" data-testid="join-seats"></div>
+        </div>
         <p class="mb-1 text-body-secondary">Message from host:</p>
         <p id="ls-received" class="ls-message" data-testid="received-message"></p>
         <button id="ls-leave" class="btn btn-outline-danger" data-testid="leave-session">Leave</button>

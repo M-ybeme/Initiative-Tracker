@@ -63,7 +63,7 @@ function fakeLink() {
       for (const fn of listeners.get('drain') || []) fn();
     },
     revisions() {
-      return this.sent.map((m) => m.payload.revision);
+      return this.sent.map((m) => m.revision);
     },
   };
 }
@@ -105,7 +105,8 @@ describe('snapshot sender', () => {
   it('sends the current snapshot to a player the moment its channel opens, unthrottled', () => {
     const link = fakeLink();
     sender.addPeer('p1', link);
-    expect(link.sent).toEqual([{ v: 0, type: 'battlemap-snapshot', payload: seam.getPlayerSafeState() }]);
+    const { revision, ...payload } = seam.getPlayerSafeState();
+    expect(link.sent).toEqual([{ v: 1, type: 'surface-snapshot', surface: 'battle-map', revision, payload }]);
     // A second player joining right after still gets it at once.
     const link2 = fakeLink();
     sender.addPeer('p2', link2);

@@ -11,7 +11,14 @@
  * Milestone 3: it then asks for the assets that snapshot references and it doesn't have yet (the
  * player-visible background, custom token art), fills them in as they arrive, and releases them all
  * when the session ends (asset-cache.js). The structured map never waits for them.
- * No admission model yet (planning doc §11, §24).
+ * Milestone 5B.2: the player speaks protocol v1 (protocol-v1.js). Once connected it is shown the
+ * host's admission state (seats, lock, whether a password is needed), joins a seat, and only then is
+ * sent the map (surface-snapshot) and may ask for assets. The seat credential the host returns is not
+ * kept or stored: there is no automatic reconnect yet (Milestone 7). The join
+ * controls here are a working preview; the product join screen is 5B.3.
+ * Legacy, development only: the Milestone 0 host below still sends a v0 "hello" (the networking
+ * harness); the player accepts that one message and nothing else of v0. It goes when that harness moves
+ * to the session host.
  *
  * Development query parameters (kept in join links, so host and player agree):
  *   ?relay=ws://host:port   use this relay instead of the default
@@ -29,7 +36,8 @@ import { SignalingClient } from './modules/live-share/signaling-client.js';
 import { PeerLink } from './modules/live-share/peer-link.js';
 import { HostSession } from './modules/live-share/host-session.js';
 import { resolveIceServers } from './modules/live-share/ice-config.js';
-import { encodeHello, parseChannelMessage, PROTOCOL_VERSION } from './modules/live-share/protocol.js';
+import { encodeHello, parseChannelMessage } from './modules/live-share/protocol.js';
+import { PROTOCOL_V1, parseHostMessage, encode } from './modules/live-share/protocol-v1.js';
 import { encodeAssetRequest } from './modules/live-share/asset-protocol.js';
 import { createAssetCache } from './modules/live-share/asset-cache.js';
 import { createSnapshotReceiver } from './modules/live-share/battlemap-snapshot.js';
@@ -250,6 +258,27 @@ function initHost() {
 
 // ---- Player -----------------------------------------------------------------------------------
 
+// What a refused join and an ended session mean to the player (fixed codes from the host).
+const JOIN_REFUSED = {
+  'bad-password': 'Wrong password.',
+  'room-locked': 'The room is locked: no new players can join right now.',
+  'seat-unavailable': 'That seat is taken. Pick another.',
+  'seat-disabled': 'That seat is not open.',
+  'unknown-seat': 'That seat no longer exists.',
+  throttled: 'Too many attempts. Wait a minute and try again.',
+  'session-ended': 'The session has ended.',
+  'already-admitted': 'You have already joined.',
+  'invalid-credential': 'Your seat could not be restored.',
+  'malformed-request': 'The join request was not accepted.',
+};
+const SESSION_ENDED = {
+  ended: 'The host ended the session.',
+  kicked: 'The DM removed you from the session.',
+  'seat-reset': 'The DM reset your seat.',
+  'seat-disabled': 'The DM closed your seat.',
+  left: 'You left the session.',
+};
+
 const sameMap = (a, b) =>
   a.map.width === b.map.width && a.map.height === b.map.height && a.mapTransform.scale === b.mapTransform.scale && a.mapTransform.x === b.mapTransform.x && a.mapTransform.y === b.mapTransform.y;
 
@@ -259,15 +288,59 @@ async function initPlayer(roomId) {
   $('ls-player').classList.remove('d-none');
   let link = null;
   let ended = false;
+  // This player's seat once admitted. The join-result's credential is not kept: without an automatic
+  // reconnect nothing would use it (Milestone 7 decides whether and where a player keeps it).
+  let seat = null;
+  let joining = false;
+  diag.admission = 'not joined';
 
   const setStatus = (text) => {
     $('ls-player-status').textContent = text;
+  };
+  const setJoinStatus = (text) => {
+    $('ls-join-status').textContent = text;
+  };
+  const sendV1 = (type, fields) => {
+    const encoded = encode(type, fields);
+    return !!(encoded.ok && link && link.send(encoded.text));
+  };
+
+  // The host's admission state: one button per enabled seat, a password field if one is needed.
+  let lastAdmission = null;
+  const renderJoin = (state) => {
+    lastAdmission = state;
+    $('ls-join').classList.toggle('d-none', !!seat || ended);
+    $('ls-join-password-row').classList.toggle('d-none', !state.passwordRequired);
+    $('ls-join-note').textContent = state.locked
+      ? 'The room is locked: no new players can join right now.'
+      : state.seats.length === 0
+        ? 'The DM has not opened any seats yet.'
+        : 'Pick your seat to join.';
+    const list = $('ls-join-seats');
+    list.replaceChildren();
+    for (const s of state.seats) {
+      const b = document.createElement('button');
+      b.className = 'btn btn-sm btn-outline-light';
+      b.textContent = s.available ? s.name : `${s.name} (taken)`;
+      b.dataset.testid = 'join-seat';
+      b.dataset.seatId = s.id;
+      b.disabled = !s.available || state.locked || joining;
+      b.addEventListener('click', () => {
+        if (joining || seat) return;
+        const password = $('ls-join-password').value;
+        joining = true;
+        if (!sendV1('join-request', { seatId: s.id, ...(state.passwordRequired && password ? { password } : {}) })) joining = false;
+        setJoinStatus(joining ? 'Joining…' : 'Not joined');
+        renderJoin(lastAdmission);
+      });
+      list.append(b);
+    }
   };
 
   // The Battle Map, if the host is sharing one: newest revision wins, older ones are ignored.
   let latest = null;
   const assets = createAssetCache({
-    requestAssets: (ids) => link && link.send(encodeAssetRequest(PROTOCOL_VERSION, ids)),
+    requestAssets: (ids) => link && seat && link.send(encodeAssetRequest(PROTOCOL_V1, ids)),
     onReady: () => draw(),
   });
   // The player's own pan / zoom (2.3.30). Local only: it changes which part of the map this screen
@@ -345,6 +418,7 @@ async function initPlayer(roomId) {
   const leave = (status) => {
     if (ended) return;
     ended = true;
+    $('ls-join').classList.add('d-none');
     markMapDisconnected();
     // The session is over: every received image is released; the structured map stays.
     assets.dispose();
@@ -356,7 +430,16 @@ async function initPlayer(roomId) {
     renderDiagnostics();
   };
 
-  $('ls-leave').addEventListener('click', () => leave('You left the session.'));
+  // Leave tells the host first, so the seat is released (not kept for a reconnect); the host answers
+  // session-ended 'left', or the page leaves anyway after a second. Closing or reloading the page is
+  // not a leave: the seat stays claimed-disconnected on the host.
+  $('ls-leave').addEventListener('click', () => {
+    if (seat && sendV1('leave', {})) {
+      $('ls-leave').disabled = true;
+      setStatus('Leaving…');
+      setTimeout(() => leave('You left the session.'), 1000);
+    } else leave('You left the session.');
+  });
   window.addEventListener('pagehide', () => leave());
 
   // TURN credentials first: once the relay says "welcome" the host's offer follows at once, so the
@@ -379,29 +462,55 @@ async function initPlayer(roomId) {
     });
     link.on('open', () => setStatus('Connected to host'));
     link.on('message', ({ data }) => {
-      const parsed = parseChannelMessage(data);
+      if (ended) return;
+      const parsed = parseHostMessage(data);
       if (!parsed.ok) {
+        // Legacy, development only: the Milestone 0 host's v0 "hello" (no game state).
+        const legacy = typeof data === 'string' ? parseChannelMessage(data) : null;
+        if (legacy && legacy.ok && legacy.message.type === 'hello') {
+          $('ls-received').textContent = legacy.message.text;
+          diag.lastReceived = legacy.message.text;
+          renderDiagnostics();
+          return;
+        }
         diag.lastProtocolError = parsed.error;
-        if (parsed.type === 'battlemap-snapshot') receiver.reject(parsed.error);
+        if (parsed.type === 'surface-snapshot') receiver.reject(parsed.error);
         diag.snapshots = receiver.stats();
         if (parsed.type && parsed.type.startsWith('asset-')) diag.assetProtocolErrors = (diag.assetProtocolErrors || 0) + 1;
         renderDiagnostics();
         return;
       }
-      if (parsed.message.type === 'hello') {
-        $('ls-received').textContent = parsed.message.text;
-        diag.lastReceived = parsed.message.text;
+      const { message } = parsed;
+      if (message.type === 'admission-state') {
+        if (!seat) renderJoin(message);
+      } else if (message.type === 'join-result') {
+        joining = false;
+        if (message.accepted) {
+          seat = message.seat;
+          diag.admission = 'joined';
+          setJoinStatus(`Joined as ${seat.name}`);
+          $('ls-join').classList.add('d-none');
+        } else {
+          diag.admission = `refused: ${message.reason}`;
+          setJoinStatus(JOIN_REFUSED[message.reason]);
+          if (lastAdmission) renderJoin(lastAdmission);
+        }
         renderDiagnostics();
-      } else if (parsed.message.type === 'battlemap-snapshot') {
-        receiver.receive(parsed.message.snapshot);
+      } else if (message.type === 'session-ended') {
+        diag.sessionEnded = message.reason;
+        setJoinStatus('Not joined');
+        leave(SESSION_ENDED[message.reason]);
+      } else if (message.type === 'surface-snapshot') {
+        if (message.surface !== 'battle-map') return;
+        receiver.receive(message.snapshot);
         diag.snapshots = receiver.stats();
         renderDiagnostics();
-      } else if (parsed.message.type === 'asset-meta') {
-        assets.handleMeta(parsed.message.asset);
-      } else if (parsed.message.type === 'asset-chunk') {
-        assets.handleChunk(parsed.message);
-      } else if (parsed.message.type === 'asset-abort') {
-        assets.handleAbort(parsed.message);
+      } else if (message.type === 'asset-meta') {
+        assets.handleMeta(message.asset);
+      } else if (message.type === 'asset-chunk') {
+        assets.handleChunk(message);
+      } else if (message.type === 'asset-abort') {
+        assets.handleAbort(message);
         diag.assets = assets.stats();
       }
     });

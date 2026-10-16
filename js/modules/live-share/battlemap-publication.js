@@ -25,7 +25,7 @@
  *   battleMapSurface            the host publication store's description of this surface.
  */
 import { validateBattleMapSnapshot, SNAPSHOT_SCHEMA, SNAPSHOT_VERSION } from './battlemap-snapshot.js';
-import { encodeBattleMapSnapshot } from './protocol.js';
+import { encodeSurfaceSnapshot } from './protocol-v1.js';
 
 export const BATTLE_MAP_SURFACE = 'battle-map';
 // The Battle Map's boundary format: content of snapshot schema version 4, revisionless. Bump it with
@@ -95,8 +95,9 @@ export function validateBattleMapPublication(structured) {
     if (extra) return { ok: false, error: `unexpected field ${extra}` };
 
     const content = toContent(checked.snapshot);
-    // The largest snapshot this content can become must still fit one channel message.
-    if (!encodeBattleMapSnapshot(toBattleMapSnapshot(content, { revision: Number.MAX_SAFE_INTEGER, backgroundRevision: Number.MAX_SAFE_INTEGER })).ok) {
+    // The largest snapshot this content can become must still fit one channel message, as players are
+    // sent it (a protocol-v1 surface-snapshot, 5B.2).
+    if (!encodeSurfaceSnapshot('battle-map', toBattleMapSnapshot(content, { revision: Number.MAX_SAFE_INTEGER, backgroundRevision: Number.MAX_SAFE_INTEGER })).ok) {
       return { ok: false, error: 'structured is too large to send to players' };
     }
     const refs = new Map();

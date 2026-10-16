@@ -171,7 +171,7 @@ test.describe('Live Share player-visible background and assets (Milestone 3)', (
     const metas = await sentMetas(host);
     expect(metas.map((m) => m.asset.mime)).toEqual(metas.map(() => 'image/webp'));
     // Only content-derived ids in the structured snapshots.
-    const snapshots = texts.map((t) => JSON.parse(t)).filter((m) => m.type === 'battlemap-snapshot');
+    const snapshots = texts.map((t) => JSON.parse(t)).filter((m) => m.type === 'surface-snapshot');
     for (const s of snapshots) {
       if (s.payload.background) expect(Object.keys(s.payload.background).sort()).toEqual(['assetId', 'revision']);
       for (const t of s.payload.tokens) expect(t.assetId === null || /^[0-9a-f]{64}$/.test(t.assetId)).toBe(true);
@@ -242,7 +242,7 @@ test.describe('Live Share player-visible background and assets (Milestone 3)', (
     expect(chunks.length).toBeGreaterThan(100); // many 16 KiB chunks
     const lastChunk = chunks[chunks.length - 1];
     // A snapshot for the rotation arrived between the first and the last chunk.
-    const during = log.slice(meta, lastChunk).filter((m) => m.type === 'battlemap-snapshot');
+    const during = log.slice(meta, lastChunk).filter((m) => m.type === 'surface-snapshot');
     expect(during.length).toBeGreaterThan(0);
     await expect.poll(async () => Number(await player.getByTestId('player-map').getAttribute('data-revision'))).toBe((await hostSnapshot(host)).revision);
     const playerDiag = await diagnostics(player);

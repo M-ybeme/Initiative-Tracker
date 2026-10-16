@@ -20,7 +20,7 @@ import { createAssetSender } from '../../js/modules/live-share/asset-sender.js';
 import { createSnapshotReceiver } from '../../js/modules/live-share/battlemap-snapshot.js';
 import { createAssetCache } from '../../js/modules/live-share/asset-cache.js';
 import { encodeAssetRequest } from '../../js/modules/live-share/asset-protocol.js';
-import { parseChannelMessage, PROTOCOL_VERSION } from '../../js/modules/live-share/protocol.js';
+import { PROTOCOL_V1, parsePlayerMessage, parseHostMessage } from '../../js/modules/live-share/protocol-v1.js';
 import { createMemoryWebRTC, until } from '../helpers/memory-webrtc.js';
 
 const { createShareStateSeam } = globalThis.BattleMapShareState;
@@ -132,7 +132,7 @@ function battleMap({ size } = {}) {
 // The host page (js/battlemap-live-share.js), talking only to `api`.
 function host(api, { MemoryPC }) {
   const snapshots = createSnapshotSender({ getSnapshot: () => api.getPlayerSafeState(), intervalMs: 30 });
-  const assetSender = createAssetSender({ protocolVersion: PROTOCOL_VERSION, getAsset: api.getAsset, hasAsset: api.hasAsset });
+  const assetSender = createAssetSender({ protocolVersion: PROTOCOL_V1, getAsset: api.getAsset, hasAsset: api.hasAsset });
   api.onShareableStateChanged(() => {
     snapshots.notifyChanged();
     assetSender.assetsChanged();
@@ -147,7 +147,7 @@ function host(api, { MemoryPC }) {
   session.on('peer-link', ({ peerId, link }) => {
     links.push(link);
     link.on('message', ({ data }) => {
-      const parsed = parseChannelMessage(data);
+      const parsed = parsePlayerMessage(data);
       if (parsed.ok && parsed.message.type === 'asset-request') assetSender.request(peerId, parsed.message.assetIds);
     });
     link.on('open', () => {
@@ -169,7 +169,7 @@ function player(roomId, { MemoryPC }) {
   const applied = [];
   const urls = { created: [], revoked: [] };
   const assets = createAssetCache({
-    requestAssets: (ids) => link.send(encodeAssetRequest(PROTOCOL_VERSION, ids)),
+    requestAssets: (ids) => link.send(encodeAssetRequest(PROTOCOL_V1, ids)),
     createObjectURL: () => {
       const u = `blob:player/${urls.created.length + 1}`;
       urls.created.push(u);
@@ -189,10 +189,10 @@ function player(roomId, { MemoryPC }) {
   signaling.on('ready', () => {
     link = new PeerLink({ role: 'player', sendSignal: (d) => signaling.sendSignal(d), RTCPeerConnectionImpl: MemoryPC, connectTimeoutMs: 3000 });
     link.on('message', ({ data }) => {
-      const parsed = parseChannelMessage(data);
+      const parsed = parseHostMessage(data);
       if (!parsed.ok) return;
       const m = parsed.message;
-      if (m.type === 'battlemap-snapshot') receiver.receive(m.snapshot);
+      if (m.type === 'surface-snapshot') receiver.receive(m.snapshot);
       else if (m.type === 'asset-meta') assets.handleMeta(m.asset);
       else if (m.type === 'asset-chunk') assets.handleChunk(m);
       else if (m.type === 'asset-abort') assets.handleAbort(m);
@@ -265,7 +265,7 @@ describe('Live Share Milestone 3 asset transfer through the local relay', () => 
     map.edit((s) => (s.tokens[0].x = 400));
     await until(() => p.latest().tokens[0].x === 400);
     const traffic = h.sent().slice(before);
-    expect(traffic.every((d) => typeof d === 'string' && d.includes('"battlemap-snapshot"'))).toBe(true);
+    expect(traffic.every((d) => typeof d === 'string' && d.includes('"surface-snapshot"'))).toBe(true);
     expect(h.metas()).toHaveLength(metas);
     expect(p.latest().background).toEqual(bg);
     p.close();

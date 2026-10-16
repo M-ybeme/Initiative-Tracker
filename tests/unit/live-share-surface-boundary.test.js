@@ -23,7 +23,7 @@ import { createPublicationStore } from '../../js/modules/live-share/publication-
 import { battleMapSurface, BATTLE_MAP_SURFACE_VERSION } from '../../js/modules/live-share/battlemap-publication.js';
 import { createSnapshotSender } from '../../js/modules/live-share/snapshot-sender.js';
 import { createAssetSender } from '../../js/modules/live-share/asset-sender.js';
-import { parseChannelMessage, PROTOCOL_VERSION } from '../../js/modules/live-share/protocol.js';
+import { PROTOCOL_V1, parseHostMessage as parsePlayerWire } from '../../js/modules/live-share/protocol-v1.js';
 
 const BM = 'battle-map';
 const ID1 = 'a'.repeat(32);
@@ -142,9 +142,9 @@ function fakeLink() {
     off(event) {
       handlers.delete(event);
     },
-    snapshots: () => sent.filter((d) => typeof d === 'string').map(parseChannelMessage).filter((p) => p.ok && p.message.type === 'battlemap-snapshot').map((p) => p.message.snapshot),
+    snapshots: () => sent.filter((d) => typeof d === 'string').map(parsePlayerWire).filter((p) => p.ok && p.message.type === 'surface-snapshot').map((p) => p.message.snapshot),
     binary: () => sent.filter((d) => typeof d !== 'string'),
-    metas: () => sent.filter((d) => typeof d === 'string').map(parseChannelMessage).filter((p) => p.ok && p.message.type === 'asset-meta').map((p) => p.message.asset),
+    metas: () => sent.filter((d) => typeof d === 'string').map(parsePlayerWire).filter((p) => p.ok && p.message.type === 'asset-meta').map((p) => p.message.asset),
   };
 }
 
@@ -155,7 +155,7 @@ function setup({ supported = { [BM]: [BATTLE_MAP_SURFACE_VERSION] } } = {}) {
   const committed = [];
   // The host page's wiring (js/live-share-host.js): senders read the store, a commit sends now.
   const sender = createSnapshotSender({ getSnapshot: () => store.snapshot(BM), now: () => clock, setTimer: () => 1, clearTimer: () => {} });
-  const assetSender = createAssetSender({ protocolVersion: PROTOCOL_VERSION, getAsset: (id) => store.getAsset(BM, id), hasAsset: (id) => store.hasAsset(BM, id), setTimer: () => 1, clearTimer: () => {} });
+  const assetSender = createAssetSender({ protocolVersion: PROTOCOL_V1, getAsset: (id) => store.getAsset(BM, id), hasAsset: (id) => store.hasAsset(BM, id), setTimer: () => 1, clearTimer: () => {} });
   const host = createSessionHostBoundary({
     store,
     supported,
@@ -822,8 +822,8 @@ describe('host → players from the publication store', () => {
     // Sent synchronously by sendNow() from the commit (the test's timer never fires).
     expect(link.snapshots()).toMatchObject([{ revision: 1, background: { assetId: bg1.meta.assetId, revision: 1 } }]);
     const wire = JSON.parse(link.sent[0]);
-    expect(Object.keys(wire).sort()).toEqual(['payload', 'type', 'v']);
-    expect(wire).toMatchObject({ v: 0, type: 'battlemap-snapshot' });
+    expect(Object.keys(wire).sort()).toEqual(['payload', 'revision', 'surface', 'type', 'v']);
+    expect(wire).toMatchObject({ v: 1, type: 'surface-snapshot', surface: 'battle-map', revision: 1 });
 
     s.close();
     await t.bus.settle();

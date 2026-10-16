@@ -7,6 +7,10 @@
 // The specs keep calling the Battle Map page `host`; the helpers below that concern the room, the
 // senders or what players are sent (startAndJoin, hostSnapshot, diagnostics, sentText, sentMetas) act
 // on its session page, found with sessionOf(host).
+//
+// Milestone 5B.2: a connected player sees nothing until it joins a seat. joinSeat(player, joinUrl)
+// adds a seat on that room's session page and joins it from the player page, as a DM and a player
+// would; startRoom remembers which session page each join link belongs to.
 import { expect } from '@playwright/test';
 import { RELAY } from './live-share.js';
 
@@ -64,11 +68,13 @@ export function recordPlayerTraffic() {
   const PC = window.RTCPeerConnection;
   window.RTCPeerConnection = function (...args) {
     const pc = new PC(...args);
+    // The player's channel is kept for tests that send the host raw protocol messages.
+    pc.addEventListener('datachannel', (e) => (window.__lsPlayerChannel = e.channel));
     pc.addEventListener('datachannel', (e) =>
       e.channel.addEventListener('message', (m) => {
         if (typeof m.data === 'string') {
           const msg = JSON.parse(m.data);
-          window.__lsLog.push({ type: msg.type, revision: msg.payload && msg.payload.revision, kind: msg.asset && msg.asset.kind, assetId: msg.asset ? msg.asset.assetId : msg.assetId });
+          window.__lsLog.push({ type: msg.type, revision: msg.revision, kind: msg.asset && msg.asset.kind, assetId: msg.asset ? msg.asset.assetId : msg.assetId, reason: msg.reason, accepted: msg.accepted });
         } else window.__lsLog.push({ type: 'chunk' });
       })
     );
@@ -102,6 +108,8 @@ export const diagnostics = async (page) => {
 // Everything the session page sent players (recordHostSends runs in every page of the DM's profile).
 export const sentText = (page) => (sessionOf(page) || page).evaluate(() => window.__lsSent.filter((m) => typeof m === 'string'));
 export const sentMetas = async (page) => (await sentText(page)).map((t) => JSON.parse(t)).filter((m) => m.type === 'asset-meta');
+// The Battle Map snapshots players were sent (protocol v1 surface-snapshot messages, as sent).
+export const sentSnapshots = async (page) => (await sentText(page)).map((t) => JSON.parse(t)).filter((m) => m.type === 'surface-snapshot');
 
 // A generated map image, as a data URL: green left half, blue right half, and the secret.
 export function makeMap(page, { width = 800, height = 600, noise = false } = {}) {
@@ -212,12 +220,46 @@ export async function addPresetToken(page, label) {
 }
 
 // Starts the room on a session page (if it isn't running yet) and returns the join link.
+const roomSessions = new Map(); // join link -> its session page
 export async function startRoom(session) {
   if (await session.getByTestId('start-room').isEnabled()) {
     await session.getByTestId('start-room').click();
     await expect(session.getByTestId('host-status')).toHaveText('Room open — waiting for players', { timeout: 15000 });
   }
-  return session.getByTestId('join-link').textContent();
+  const joinUrl = await session.getByTestId('join-link').textContent();
+  roomSessions.set(joinUrl, session);
+  return joinUrl;
+}
+
+// ---- Seats and joining (5B.2) ----------------------------------------------------------------------
+const escapeRe = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+// The DM adds a seat on the session page; returns its id.
+export async function addSeat(session, name) {
+  await session.getByTestId('seat-name').fill(name);
+  await session.getByTestId('add-seat').click();
+  const row = session.getByTestId('seat').filter({ has: session.getByTestId('seat-label').filter({ hasText: new RegExp(`^${escapeRe(name)}: `) }) });
+  await expect(row).toHaveCount(1);
+  return row.getAttribute('data-seat-id');
+}
+// The DM's controls for a seat on the session page ('rename' | 'enable' | 'disable' | 'kick' | 'reset').
+export const seatButton = (session, seatId, action) => session.locator(`[data-testid="seat"][data-seat-id="${seatId}"] button[data-action="${action}"]`);
+// The player picks a seat by name (with a password if given) and waits for the host's answer.
+export async function chooseSeat(player, name, { password } = {}) {
+  if (password !== undefined) await player.getByTestId('join-password').fill(password);
+  const button = player.getByTestId('join-seat').filter({ hasText: new RegExp(`^${escapeRe(name)}$`) });
+  await expect(button).toBeEnabled({ timeout: 15000 });
+  await button.click();
+  await expect(player.getByTestId('join-status')).not.toHaveText('Joining…', { timeout: 15000 });
+  return player.getByTestId('join-status').textContent();
+}
+let seatCount = 0;
+// A player connected to the room behind joinUrl joins a new seat (added on that room's session page).
+export async function joinSeat(player, joinUrl, { name = `Seat ${++seatCount}`, password } = {}) {
+  const session = roomSessions.get(joinUrl);
+  if (!session) throw new Error('joinSeat: start the room with startRoom() first');
+  await addSeat(session, name);
+  await expect(chooseSeat(player, name, { password })).resolves.toBe(`Joined as ${name}`);
+  return name;
 }
 
 // The room on the Battle Map's session page (started if needed), and a player joining it.
@@ -229,6 +271,7 @@ export async function startAndJoin(browser, host) {
   const playerErrors = watchErrors(player);
   await player.goto(joinUrl);
   await expect(player.getByTestId('player-status')).toHaveText('Connected to host', { timeout: 20000 });
+  await joinSeat(player, joinUrl);
   return { playerContext, player, playerErrors };
 }
 

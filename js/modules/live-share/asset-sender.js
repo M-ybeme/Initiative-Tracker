@@ -25,6 +25,10 @@
  * Loop guard: a player gets at most MAX_SENDS_PER_ASSET complete sends of an asset while that asset
  * stays on the host. Once it leaves (a background replaced by another), its count is forgotten, so
  * the same content coming back later (identical fog, identical bytes, the same id) is served again.
+ *
+ * Milestone 5B.2: every send names its message type (link.send(data, 'asset-meta' | 'asset-abort' |
+ * 'asset-chunk')) so the session host's per-peer admission gate can refuse it, and the session host
+ * adds a peer here only once it is admitted. getAsset / hasAsset serve committed assets only.
  */
 import { encodeAssetMeta, encodeAssetAbort, encodeAssetChunk, chunkCountFor, isAssetId, CHUNK_BYTES } from './asset-protocol.js';
 
@@ -57,7 +61,7 @@ export function createAssetSender({
   };
 
   function abort(peer, assetId, reason) {
-    peer.link.send(encodeAssetAbort(protocolVersion, assetId, reason));
+    peer.link.send(encodeAssetAbort(protocolVersion, assetId, reason), 'asset-abort');
   }
 
   function pump(peer) {
@@ -76,7 +80,7 @@ export function createAssetSender({
           abort(peer, assetId, 'unavailable');
           continue;
         }
-        if (!peer.link.send(encodeAssetMeta(protocolVersion, asset))) return;
+        if (!peer.link.send(encodeAssetMeta(protocolVersion, asset), 'asset-meta')) return;
         peer.active = { asset, next: 0, count: chunkCountFor(asset.bytes.length) };
       }
       const { asset } = peer.active;
@@ -92,7 +96,7 @@ export function createAssetSender({
         peer.timer = setTimer(() => pump(peer), RESUME_POLL_MS);
         return;
       }
-      if (!peer.link.send(encodeAssetChunk(asset.assetId, peer.active.next, asset.bytes))) return;
+      if (!peer.link.send(encodeAssetChunk(asset.assetId, peer.active.next, asset.bytes), 'asset-chunk')) return;
       stats.bytesSent += Math.min(asset.bytes.length - peer.active.next * CHUNK_BYTES, CHUNK_BYTES);
       peer.active.next += 1;
       if (peer.active.next === peer.active.count) {
@@ -168,7 +172,7 @@ export function createAssetSender({
         if (peer.active) active += 1;
         queued += peer.queue.length;
       }
-      return { ...stats, activeTransfers: active, queued };
+      return { ...stats, peers: peers.size, activeTransfers: active, queued };
     },
   };
 }

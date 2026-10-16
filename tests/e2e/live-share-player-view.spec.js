@@ -4,13 +4,12 @@
 // any URL crossing, follow the saved grid style only after Save (without any background work), and
 // navigate locally without anything reaching the host.
 import { test, expect } from '@playwright/test';
-import { watchErrors, recordPlayerTraffic, hostSnapshot, sentText, sentMetas, makeMap, makeTokenPng, save, importMap, openHost, openPanel, screenOf, startRoom as startRoomOn, sessionOf } from '../helpers/battlemap-live-share.js';
+import { watchErrors, recordPlayerTraffic, hostSnapshot, sentText, sentMetas, makeMap, makeTokenPng, save, importMap, openHost, openPanel, screenOf, startRoom as startRoomOn, sessionOf, joinSeat, sentSnapshots } from '../helpers/battlemap-live-share.js';
 
 test.use({ launchOptions: { args: ['--disable-features=WebRtcHideLocalIpsWithMdns'] } });
 
 const BARD = '/images/playerTokens/PlayerBardToken.png';
 const DRAGON = '/images/enemyTokens/EnemyDragonToken.png';
-const sentSnapshots = async (page) => (await sentText(page)).map((t) => JSON.parse(t)).filter((m) => m.type === 'battlemap-snapshot');
 const backgroundMetas = async (page) => (await sentMetas(page)).filter((m) => m.asset.kind === 'background').length;
 const rebuilds = (page) => page.evaluate(() => window.BattleMapLiveShare.getAssetDiagnostics().background.rebuilds);
 const MAP = '[data-testid="player-map"]';
@@ -36,6 +35,7 @@ async function joinPlayer(browser, joinUrl, contextOptions = {}) {
   player.on('request', (r) => requests.push({ url: r.url(), type: r.resourceType() }));
   await player.goto(joinUrl);
   await expect(player.getByTestId('player-status')).toHaveText('Connected to host', { timeout: 20000 });
+  await joinSeat(player, joinUrl); // 5B.2: the map arrives only after joining a seat
   return { context, player, errors, requests };
 }
 
@@ -93,9 +93,9 @@ test.describe('Live Share player view polish (2.3.30)', () => {
     // marker; a URL or path is rejected with the whole snapshot. Nothing is fetched from them.
     const before = await revisionShown(p.player);
     await sessionOf(host).evaluate(() => { // the session page owns the channel
-      const base = JSON.parse(window.__lsSent.filter((m) => typeof m === 'string' && m.includes('battlemap-snapshot')).at(-1));
+      const base = JSON.parse(window.__lsSent.filter((m) => typeof m === 'string' && m.includes('"surface-snapshot"')).at(-1));
       const send = (msg) => window.__lsChannels[0].send(JSON.stringify(msg));
-      const withPreset = (presetId, revision) => ({ ...base, payload: { ...base.payload, revision, tokens: base.payload.tokens.map((t, i) => (i === 0 ? { ...t, presetId } : t)) } });
+      const withPreset = (presetId, revision) => ({ ...base, revision, payload: { ...base.payload, tokens: base.payload.tokens.map((t, i) => (i === 0 ? { ...t, presetId } : t)) } });
       send(withPreset('https://evil.example/x.png', 1e8));
       send(withPreset('/images/playerTokens/../../secret.png', 1e8));
       send(withPreset('evil-example-com', 1e8)); // well-formed but unknown: accepted, drawn as a marker
@@ -328,10 +328,11 @@ test.describe('Live Share player view polish (2.3.30)', () => {
     await importMap(host, await makeMap(host, { width: 1200, height: 500 }), { tokens: [{ id: 't_bard', name: 'Bard', imgSrc: BARD, x: 100, y: 100, w: 50, h: 50, rot: 0 }] });
     await expect.poll(() => viewMode(player), { timeout: 15000 }).toBe('fit');
 
-    // Everything the player ever sent was an asset request: no view state in any form.
+    // Everything the player ever sent was its join request, then asset requests: no view state in any form.
     const sent = await player.evaluate(() => window.__playerSent);
-    expect(sent.length).toBeGreaterThan(0);
-    for (const m of sent) expect(JSON.parse(m).type).toBe('asset-request');
+    expect(sent.length).toBeGreaterThan(1);
+    expect(JSON.parse(sent[0])).toEqual({ seatId: expect.any(String), v: 1, type: 'join-request' });
+    for (const m of sent.slice(1)) expect(JSON.parse(m).type).toBe('asset-request');
     expect(sent.join('')).not.toMatch(/view|zoom|viewBox|tap|pan/i);
     expect(hostErrors).toEqual([]);
     expect(p.errors).toEqual([]);

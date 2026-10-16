@@ -16,7 +16,7 @@ import { PeerLink } from '../../js/modules/live-share/peer-link.js';
 import { HostSession } from '../../js/modules/live-share/host-session.js';
 import { createSnapshotSender } from '../../js/modules/live-share/snapshot-sender.js';
 import { createSnapshotReceiver } from '../../js/modules/live-share/battlemap-snapshot.js';
-import { parseChannelMessage } from '../../js/modules/live-share/protocol.js';
+import { parseHostMessage } from '../../js/modules/live-share/protocol-v1.js';
 import { createMemoryWebRTC, until } from '../helpers/memory-webrtc.js';
 
 const { createShareStateSeam } = globalThis.BattleMapShareState;
@@ -90,9 +90,9 @@ function player(roomId) {
     link = new PeerLink({ role: 'player', sendSignal: (d) => signaling.sendSignal(d), RTCPeerConnectionImpl: MemoryPC, connectTimeoutMs: 3000 });
     link.on('message', ({ data }) => {
       raw.push(data);
-      const parsed = parseChannelMessage(data);
-      if (!parsed.ok) return parsed.type === 'battlemap-snapshot' && receiver.reject(parsed.error);
-      if (parsed.message.type === 'battlemap-snapshot') receiver.receive(parsed.message.snapshot);
+      const parsed = parseHostMessage(data);
+      if (!parsed.ok) return parsed.type === 'surface-snapshot' && receiver.reject(parsed.error);
+      if (parsed.message.type === 'surface-snapshot') receiver.receive(parsed.message.snapshot);
     });
     link.start();
   });
@@ -217,7 +217,8 @@ describe('Live Share Battle Map sync through the local relay', () => {
     expect(p.raw.length).toBeGreaterThan(0);
     for (const text of p.raw) {
       expect(text).not.toMatch(/SECRETMAP|imgSrc|ogre\.png|"hp"|maxHp|"selected"|"view"|showLabel|statusConditions/);
-      expect(JSON.parse(text).payload).toEqual(p.applied.find((s) => s.revision === JSON.parse(text).payload.revision));
+      const { revision, payload } = JSON.parse(text);
+      expect({ ...payload, revision }).toEqual(p.applied.find((s) => s.revision === revision));
     }
     p.close();
     h.session.end();

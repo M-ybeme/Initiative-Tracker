@@ -16,9 +16,24 @@ The DM's Toolbox has evolved through focused feature releases. Minor versions (2
 - **1.9.x**: Battle map measurement tools, persistent fog shapes, and generator integration across NPC/Tavern/Shop systems
 - **1.8.x**: Spell database expansion to 432+ spells, inventory management, loot generator overhaul, and character token generation
 
-**Current version: 2.3.35 (October 2026)**
+**Current version: 2.3.36 (October 2026)**
 
 ---
+
+## [2.3.36] - 2026-10-09
+**Live Share admission on real players and rooms for up to 8 (Milestone 5B.2)**
+
+### Live Share (in development, not yet part of the product flow)
+- Milestone 5B.2: joining a seat is now required to see anything. A player who opens the join link is connected but sees only the seats, whether a password is needed and whether the room is locked; the map and its images are sent only after they join a seat.
+- The Live Share page has working (not final) controls to add, rename, disable, kick and reset seats, set or remove a password, and lock the room. Players have simple join buttons. A locked room or a wrong password lets no one new in; players already in stay.
+- Up to 8 players can be connected to a room at once, each on their own seat, all seeing the same saved map. A slow or misbehaving player does not hold up or disturb the others.
+- Leaving frees the player's seat; a dropped connection keeps the seat reserved (no one else can take it). Kick, reset and disable remove only that player, who is told why. Ending the session tells every connected player and forgets all seats and the password.
+- Players and the Live Share page now speak protocol v1 (`surface-snapshot`, join and session messages). The Live Share page refuses older (v0) messages.
+
+### Internal
+- `js/modules/live-share/session-players.js`: the session's players and its one admission model; every message to a player passes the admission gate, and the map senders only know joined players.
+- Relay: 8 players per room, with the host's signaling allowance scaled to match.
+- Unit tests for the session players, and browser tests with several real players: no map or asset reaches a player before it joins, the same-seat race, password / lock / throttling and seat reclaim, hostile clients, disconnect and kick isolation, session end and a large background to two players.
 
 ## [2.3.35] - 2026-10-03
 **Live Share admission model and protocol-v1 foundation (Milestone 5B.1)**

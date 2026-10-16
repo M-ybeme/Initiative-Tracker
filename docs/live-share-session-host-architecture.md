@@ -439,7 +439,7 @@ Milestone 5B is built in three reviewable stages:
 - **5B.2:** host enforcement on real peers, and multi-player relay and concurrency.
 - **5B.3:** the real player join flow, end to end.
 
-**Nothing below is in the product path yet:** the session page and the player page still speak v0 to one player, with no admission step.
+**As built in 5B.1, nothing below was in the product path.** 5B.2 wired it to real peers: see §6.4.
 
 **Modules** (`js/modules/live-share/`):
 - `admission.js`: the room/admission model;
@@ -539,6 +539,120 @@ Milestone 5B is built in three reviewable stages:
 - **Admitted peers** may be sent `join-result`, `session-state`, `session-ended`, `surface-snapshot`, `asset-meta`, `asset-abort` and asset chunks. They may send `asset-request` and `leave`.
 - **Deny by default:** pings are unlisted until Milestone 6, and anything else nobody placed in the policy is refused for everyone.
 - **5B.2** routes every send through `maySend` and every received message through `mayAccept`.
+
+### 6.4 Admission enforced on real peers (5B.2, 2026-10-09)
+
+5B.2 makes the 5B.1 model the security boundary of the real session. **A WebRTC connection is not authorization:** a player sees the map only after joining a seat.
+
+**Modules:**
+- `js/modules/live-share/session-players.js` (new): the session's players. One instance per started session, created by the session page (`js/live-share-host.js`), which owns it. Never the Battle Map, the relay, the player or a PeerLink.
+- `js/live-share-host.js`: wires it to HostSession links, the publication store's commits and the seat controls.
+- `js/live-share-dev.js` / `liveshare-dev.html`: the player speaks protocol v1 and has minimal join controls.
+- `snapshot-sender.js`: sends v1 `surface-snapshot`. Both senders name every message's type on send, so a gate can judge it.
+- `relay/room-core.mjs`: rooms of 8.
+
+**Lifecycle:**
+- Session start creates a fresh admission model.
+- Session end (End, page close or reload, a relay failure):
+  - tells every open link `session-ended { reason: 'ended' }`, admitted or not;
+  - discards every seat, credential, the password and the throttle state;
+  - stops the senders.
+  - **Ordering:** the connections are torn down (relay, then links) only after every player link has closed, which a player does on receiving `session-ended`, or after `CLOSE_GRACE_MS` (1 s) for one that doesn't. Closing them in the same call could drop a `session-ended` still queued on a channel, or let the relay's "host left" reach a player first. A page that is going away (close or reload) tears down at once, and players learn it from the relay.
+- A new session is a new model, so no credential crosses sessions. Nothing is persisted: no localStorage, IndexedDB or sessionStorage (host refresh is Milestone 7).
+
+**Per-peer state** (`peerId → { link, closing, closeTimer, lastAdmissionText }`):
+- Transport state is the link's.
+- Admission state is **derived from the model at every use** (`admittedSeat(peerId)`), never cached. Kick, reset, disable and leave change it without anyone updating a flag.
+- At most `MAX_PLAYER_LINKS` (8, the relay's room size; a unit test checks they agree). The host enforces it too, so a misconfigured relay can't make it keep more.
+
+**A new connection** (its data channel opens):
+- It is registered unadmitted and sent the sanitized admission state, nothing else.
+- It is not added to the snapshot or asset sender. That is the structural barrier: a sender can only send to a peer it knows.
+
+**Outbound, one decision point:**
+- Every message to a player goes through `send(peer, type, data)`, which asks `maySend(state, type)`.
+- The senders never get the link. They get a gated stand-in whose `send(data, type)` goes through the same function. A send with no or an unknown type is refused (deny by default).
+- So the map, its assets and aborts reach a peer only if it is in a sender (added on admission, removed at once on kick, reset, disable, leave or disconnect) **and** the gate agrees at that moment.
+  - Mutation checks confirm each layer that can fail alone is caught by a test.
+  - The gate inside `send()` is the second line and isn't independently observable: with membership intact, nothing asks it out of turn. `sendsBlocked` stays 0 and is asserted.
+
+**Inbound:**
+- At most 100 messages per peer per 10 s; the rest are dropped unread.
+- Everything else is parsed as protocol v1 (`parsePlayerMessage`). v0, binary, malformed, unknown, wrong-direction or oversized messages are counted with a fixed error string and ignored, never echoed.
+- A valid message is acted on only if `mayAccept(state, type)`:
+  - **unadmitted:** `join-request`, `rejoin-request`, `leave`;
+  - **admitted:** `asset-request`, `leave`.
+  - Anything else is ignored without an answer: an admitted peer's second join or a reclaim of another seat; an unadmitted peer's asset request, so asset ids are never a pre-admission oracle.
+- A peer being removed (`closing`) is ignored entirely.
+
+**Join and reclaim:** `requestAdmission` decides, unchanged. The host only carries out the result:
+- **On success:** `join-result` with that peer's own credential, then the peer is added to both senders. The snapshot sender sends the current committed publication at once, behind the join result on the same ordered channel.
+  - The store is the source: the Battle Map isn't asked to republish, and may be closed.
+  - Waiting peers get the new admission state.
+- **On refusal:** `join-result { accepted: false, reason }`. The peer stays connected and unadmitted; nothing else changes.
+- **Reclaim** follows the Milestone 5 rule: disconnected seats only, with the credential rotated. A player keeps no credential and doesn't reconnect by itself (Milestone 7); the path exists at protocol level and is tested.
+
+**Leave versus losing the connection:**
+- **`leave` (admitted):**
+  - `peerLeft` releases the seat;
+  - the player is told `session-ended 'left'` and its link closes;
+  - waiting peers see the seat available again.
+- **An unexpected close** (link close or relay `peer-left`): `peerDisconnected`.
+  - The seat stays `claimed-disconnected` and nobody else can claim it.
+  - Its credential stays valid for a reclaim.
+  - No timer, grace period or automatic reconnect (Milestone 7).
+  - The player page's close or reload is this case, not a leave.
+
+**DM actions:**
+- The seat controls on the session page (create, rename, enable, disable, kick, reset, password, lock) call the model.
+- Every peer in its `disconnect` list is:
+  - removed from the senders at once;
+  - sent `session-ended` with the model's reason;
+  - closed after `CLOSE_GRACE_MS` (1 s). The player closes on the message; the timer covers one that doesn't.
+- Waiting peers get the new admission state whenever it changes: seats, availability, lock, password required.
+- The controls are functional, not the product design (5B.3).
+
+**Relay:**
+- 8 player connections per room, a tabletop group with room to spare.
+- The host sends each player its own copy of the map and assets (a 16 MiB background is 128 MiB of upload for 8), so the bound stays small.
+- The host's token bucket is scaled by the room size: 8 players connecting at once must not get the host ejected for signaling them.
+- The relay counts connections and knows nothing about seats, passwords or admission.
+
+**Isolation:**
+- One snapshot sender and one asset sender per session, with independent per-peer state: a backpressure flag, an asset queue, a transfer and a send count each.
+- A slow player's buffered channel holds back only its own sends (tested).
+- One peer's malformed traffic, failed joins or disconnect touch no other peer, except through legitimately shared seat and room state:
+  - a seat it took;
+  - the room-wide wrong-password limit.
+
+**Player count:** the Battle Map's "shares its saved map with N players" and the session page's count are admitted players only; connected-but-not-joined links are shown apart.
+
+**v0 disposition:**
+- The session host speaks only v1 and accepts only v1, so a v0 message can't reach the senders or the model.
+- The player page accepts v1, plus one legacy message: the Milestone 0 networking harness's v0 `hello`, which carries no game state. That harness (`liveshare-dev.html` without `#room`) is development-only and retires when the networking specs move to the session host.
+- An old v0 player page connecting to a v1 host sees only "Connected to host" and nothing else. There is no version-mismatch reason code (decided here: not needed while the player page is served with the host).
+
+**Known limits (deliberately not solved in 5B.2):**
+- **Room slots:** anyone with the room link can hold up to the 8 relay slots with connections that never join, and a removed player's relay socket keeps its slot until its page closes.
+  - The room link is the capability, as before; the relay is not authoritative.
+  - An idle-unadmitted timeout or a host-requested relay eviction belongs with the product UX (5B.3) or hardening (Milestone 8).
+- **Room-wide password limit:** a sustained wrong-password flood keeps new claims waiting for its minute, while valid reclaims still get in (5B.1 trade-off, now shown on real peers).
+- **Large transfers:** the 5A.1 transport delay applies per player: a save during a large background transfer still arrives; each player's transfer is independent. Deferred to Milestone 8.
+
+**Tests:**
+- `tests/unit/live-share-session-players.test.js` (24): the real model, gate, protocol and senders with fake links.
+- `tests/e2e/live-share-admission.spec.js` (9): real players over WebRTC through the local relay:
+  - no pre-admission leakage;
+  - three players plus a late joiner with the Battle Map closed;
+  - the same-seat race;
+  - password, throttle, lock and reclaim;
+  - hostile clients before and after admission;
+  - disconnect and kick isolation;
+  - session end;
+  - leave;
+  - a large background to two players.
+- The existing Battle Map browser specs join a seat through the shared helpers.
+- 20 deliberate breakages were each caught by a test.
 
 ## 7. Assets when the Battle Map isn't the WebRTC owner
 
@@ -804,7 +918,7 @@ Refreshing the session host is the only refresh that threatens the room; a surfa
 | Two session-host tabs | The Web Lock lets only one run; the second shows "already running in another tab" | 5A |
 | Hidden host tab throttled or frozen | **Measured (§9):** desktop Chrome and Firefox keep a hidden host connected and responsive (10+ minutes hidden, then minimized); only timers slow to about 1 s. Remedy: event-driven leading-edge sends. Safari: manual check pending | 5A.1 done (Chrome/Firefox); 5A.3 sending change |
 | Player behind TURN when the Battle Map closes | Unaffected: the connection belongs to the host | — |
-| More than one player | The relay's `maxPeersPerRoom: 1` must rise (a generic relay change) along with host-side rate limits | 5B |
+| More than one player | Done in 5B.2: `maxPeersPerRoom: 8`, the host's relay bucket scaled with it, per-peer sender state on the host (§6.4) | 5B.2 |
 
 ## 14. Migration path from the prototype (least churn)
 
@@ -836,8 +950,8 @@ Refreshing the session host is the only refresh that threatens the room; a surfa
 4. **5A.4, the Battle Map adapter:** `battlemap-live-share.js` becomes the publisher adapter. Same player wire format; existing browser tests pass through the new helpers. **Implemented on 2026-10-03** (§6.2). **Milestone 5A is complete:** the session page owns the session, and closing or reloading the Battle Map leaves the room and the players' map intact.
 5. **5B:** admission and protocol v1, in three stages:
    - **5B.1:** the admission model and protocol-v1 foundation. Implemented on 2026-10-03 (§6.3); not wired.
-   - **5B.2:** host enforcement on real peers, multi-player relay and concurrency.
-   - **5B.3:** the player join flow.
+   - **5B.2:** host enforcement on real peers, multi-player relay and concurrency. Implemented on 2026-10-09 (§6.4): admission is enforced, players speak v1, rooms take 8.
+   - **5B.3:** the player join flow (the product join and room-management UX).
 6. **5C:** product UX.
 
 ## 15. Decisions still to make

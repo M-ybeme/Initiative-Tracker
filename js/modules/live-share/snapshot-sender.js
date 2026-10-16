@@ -32,8 +32,12 @@
  * whole-state snapshots make harmless. So at most one snapshot per peer is ever waiting, as a flag.
  *
  * Diagnostics are counts and revisions only, never snapshot content.
+ *
+ * Milestone 5B.2: snapshots go out as protocol-v1 `surface-snapshot` messages (protocol-v1.js), and
+ * every send names its message type (link.send(text, 'surface-snapshot')) so the session host's
+ * per-peer admission gate can refuse it. The session host adds a peer here only once it is admitted.
  */
-import { encodeBattleMapSnapshot } from './protocol.js';
+import { encodeSurfaceSnapshot } from './protocol-v1.js';
 
 export const SNAPSHOT_INTERVAL_MS = 100;
 // Hold snapshots back above this. Asset chunks (Milestone 3) never fill the channel past 40 KiB plus
@@ -43,6 +47,7 @@ export const SNAPSHOT_BUSY_BYTES = 64 * 1024;
 /**
  * @param {object} options
  * @param {() => object|null} options.getSnapshot  the seam's current player-safe snapshot (with revision)
+ * @param {(snapshot: object) => {ok: boolean, text?: string}} [options.encode]  the wire message
  * @param {number} [options.intervalMs]
  * @param {number} [options.busyBytes]            hold sends while more than this is buffered
  * @param {() => number} [options.now]
@@ -51,6 +56,7 @@ export const SNAPSHOT_BUSY_BYTES = 64 * 1024;
  */
 export function createSnapshotSender({
   getSnapshot,
+  encode = (snapshot) => encodeSurfaceSnapshot('battle-map', snapshot),
   intervalMs = SNAPSHOT_INTERVAL_MS,
   busyBytes = SNAPSHOT_BUSY_BYTES,
   now = () => Date.now(),
@@ -79,7 +85,7 @@ export function createSnapshotSender({
       return null;
     }
     if (!snapshot) return null;
-    const encoded = encodeBattleMapSnapshot(snapshot);
+    const encoded = encode(snapshot);
     if (!encoded.ok) {
       stats.snapshotsTooLarge += 1;
       return null;
@@ -98,7 +104,7 @@ export function createSnapshotSender({
       return;
     }
     peer.pending = false;
-    if (peer.link.send(message.text)) {
+    if (peer.link.send(message.text, 'surface-snapshot')) {
       peer.lastSentRevision = message.revision;
       stats.snapshotsSent += 1;
       stats.lastSnapshotSentRevision = message.revision;
