@@ -445,9 +445,31 @@ describe('session players: bounds and policy', () => {
     players.committed();
     // The snapshot sender still believes p1 is a recipient: it tried, and the gate refused.
     expect(players.diagnostics()).toMatchObject({ snapshots: { peers: 1 }, assets: { peers: 1 }, sendsBlocked: 1 });
-    link.receive({ v: 1, type: 'asset-request', assetIds: [ASSET_ID] }); // and nothing else gets through either
     expect(link.sent.length).toBe(sent);
     expect(link.sent.filter((m) => m.type === 'surface-snapshot').map((m) => m.revision)).toEqual([3]);
+  });
+
+  it('the send gate holds on its own for an asset transfer already under way', () => {
+    // A 3-chunk asset; the transfer starts while p1 is admitted and pauses on backpressure after its
+    // metadata. Then only the model stops admitting p1: the asset sender still holds p1 and its
+    // transfer, and resumes it when the channel drains.
+    const real = createAdmissionModel({ now: time.now });
+    let revoked = false;
+    const admission = { ...real, admittedSeat: (id) => (revoked && id === 'p1' ? null : real.admittedSeat(id)) };
+    setup({ admission });
+    asset = { ...asset, bytes: new Uint8Array(40 * 1024) };
+    const a = players.createSeat('A');
+    const link = connect('p1');
+    link.receive(join(a));
+    link.buffered = 1024 * 1024; // the channel is busy: the transfer waits after its metadata
+    link.receive({ v: 1, type: 'asset-request', assetIds: [ASSET_ID] });
+    expect(link.types().slice(-1)).toEqual(['asset-meta']);
+    expect(players.diagnostics().assets).toMatchObject({ peers: 1, activeTransfers: 1 });
+    revoked = true;
+    link.buffered = 0;
+    time.advance(500); // the transfer resumes and tries its next chunk
+    expect(link.types().filter((t) => t === 'chunk')).toEqual([]);
+    expect(players.diagnostics()).toMatchObject({ assets: { peers: 1, activeTransfers: 1 }, sendsBlocked: 1 });
   });
 
   it('the senders know exactly the admitted peers, so the gate never has to refuse a send', () => {

@@ -383,15 +383,31 @@ test.describe('Live Share admission on real peers (5B.2)', () => {
     const a = await joinedPlayer(browser, joinUrl, 'Aria');
     const b = await joinedPlayer(browser, joinUrl, 'Brom');
     const waiting = await connectPlayer(browser, joinUrl);
+    // What the Battle Map hears about the session from here on (the session page's status broadcasts).
+    await host.evaluate(() => {
+      window.__statuses = [];
+      new BroadcastChannel('dmtoolbox.live-share.control').onmessage = (e) => {
+        const m = e.data;
+        if (m && m.type === 'session-status') window.__statuses.push(m.running ?? (m.payload && m.payload.running));
+      };
+    });
     await session.getByTestId('end-session').click();
     // The host's own protocol-v1 session-ended reached every link, joined or not: read from what each
     // player's channel received (the relay's "host left" shows the same text, so the text proves nothing).
     const ended = async (p) => (await playerLog(p.player)).filter((m) => m.type === 'session-ended').map((m) => m.reason);
     for (const p of [a, b, waiting]) await expect.poll(() => ended(p), { timeout: 10000 }).toEqual(['ended']);
     for (const p of [a, b, waiting]) await expect(p.player.getByTestId('player-status')).toHaveText('The host ended the session.', { timeout: 10000 });
+    // The teardown finished by itself, triggered by the players closing their links (not by the 1 s
+    // grace, and not by a later Start, which would force it).
+    await expect.poll(async () => (await diagnostics(session)).signaling, { timeout: 10000 }).toBe('closed');
+    expect((await diagnostics(session)).lastTeardown).toBe('players-closed');
     await expect(session.getByTestId('seat-list')).toHaveText('Seats exist while a session runs.');
     await expect(session.getByTestId('add-seat')).toBeDisabled();
     await expect(host.getByTestId('bm-live-share-status')).toHaveAttribute('data-state', 'not-running');
+    // From End on, the session was never reported as running (no running:true, players:0 blip).
+    const statuses = await host.evaluate(() => window.__statuses);
+    expect(statuses.length).toBeGreaterThan(0);
+    expect(statuses.every((running) => running === false)).toBe(true);
     // The Battle Map still saves locally.
     await importMap(host, mapUrl, { tokens: [{ ...BARD, x: 600 }] });
     await expect.poll(async () => (await battleMapSnapshot(host)).tokens.map((t) => t.x)).toEqual([600]);
@@ -404,6 +420,42 @@ test.describe('Live Share admission on real peers (5B.2)', () => {
     for (const p of [a, b, waiting]) expect(p.errors).toEqual([]);
     await hostContext.close();
     for (const p of [a, b, waiting]) await p.context.close();
+  });
+
+  test('End session with a player that never closes: it is told, and the teardown still finishes after the close grace', async ({ browser }) => {
+    const { hostContext, session, hostErrors, joinUrl } = await dmWithMap(browser);
+    // A player that ignores session-ended: closing its channel, peer connection or relay socket does
+    // nothing, so only the host's CLOSE_GRACE_MS fallback can end its link.
+    // (Before recordPlayerTraffic, which replaces the RTCPeerConnection constructor.)
+    const context = await browser.newContext();
+    await context.addInitScript(() => {
+      for (const C of [RTCDataChannel, RTCPeerConnection, WebSocket]) C.prototype.close = function () {};
+    });
+    await context.addInitScript(recordPlayerTraffic);
+    const stubborn = await context.newPage();
+    const stubbornErrors = watchErrors(stubborn);
+    await stubborn.goto(joinUrl);
+    await expect(stubborn.getByTestId('player-status')).toHaveText('Connected to host', { timeout: 20000 });
+    await joinSeat(stubborn, joinUrl, { name: 'Stubborn' });
+    const polite = await joinedPlayer(browser, joinUrl, 'Polite');
+
+    await session.getByTestId('end-session').click();
+    await expect(session.getByTestId('host-status')).toHaveText('Session ended'); // shown at once
+    const ended = async (page) => (await playerLog(page)).filter((m) => m.type === 'session-ended').map((m) => m.reason);
+    for (const page of [stubborn, polite.player]) await expect.poll(() => ended(page), { timeout: 10000 }).toEqual(['ended']);
+    // No Start: the teardown completes on its own, through the grace fallback (the stubborn link never
+    // closes, so the last-link trigger can't fire).
+    await expect.poll(async () => (await diagnostics(session)).signaling, { timeout: 10000 }).toBe('closed');
+    expect((await diagnostics(session)).lastTeardown).toBe('grace');
+    // The host closed the stubborn player's channel itself.
+    await expect.poll(() => stubborn.evaluate(() => window.__lsPlayerChannel.readyState), { timeout: 10000 }).toBe('closed');
+
+    expect(hostErrors).toEqual([]);
+    expect(stubbornErrors).toEqual([]);
+    expect(polite.errors).toEqual([]);
+    await hostContext.close();
+    await context.close();
+    await polite.context.close();
   });
 
   test('a player who leaves releases its seat; the host closes its connection', async ({ browser }) => {

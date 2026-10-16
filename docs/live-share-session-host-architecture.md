@@ -432,7 +432,7 @@ The boundary's own "assets only from the active instance" check survives its mut
   - the real-path large-background re-check.
 - **The profiling harness** (`tests/perf/`, outside CI) uses the same topology.
 
-### 6.3 Admission model and player protocol v1 (5B.1, 2026-10-03; foundation, not wired)
+### 6.3 Admission model and player protocol v1 (5B.1, 2026-10-03; the foundation, wired to real peers in 5B.2: §6.4)
 
 Milestone 5B is built in three reviewable stages:
 - **5B.1:** the admission model and the protocol-v1 foundation. Pure modules and unit tests.
@@ -553,11 +553,19 @@ Milestone 5B is built in three reviewable stages:
 
 **Lifecycle:**
 - Session start creates a fresh admission model.
-- Session end (End, page close or reload, a relay failure):
-  - tells every open link `session-ended { reason: 'ended' }`, admitted or not;
-  - discards every seat, credential, the password and the throttle state;
-  - stops the senders.
-  - **Ordering:** the connections are torn down (relay, then links) only after every player link has closed, which a player does on receiving `session-ended`, or after `CLOSE_GRACE_MS` (1 s) for one that doesn't. Closing them in the same call could drop a `session-ended` still queued on a channel, or let the relay's "host left" reach a player first. A page that is going away (close or reload) tears down at once, and players learn it from the relay.
+- **The DM ends the session (End):**
+  - every open link is sent `session-ended { reason: 'ended' }`, admitted or not;
+  - every seat, credential, the password and the throttle state are discarded;
+  - the senders stop, and the page shows the session ended at once.
+  - **Ordering:** the connections are torn down (relay, then links) only after every player link has closed, which a player does on receiving `session-ended`, or after `CLOSE_GRACE_MS` (1 s) for one that doesn't. Closing them in the same call could drop a `session-ended` still queued on a channel, or let the relay's "host left" reach a player first.
+  - The diagnostics record which trigger finished the teardown (`lastTeardown`: `players-closed`, `grace`, `immediate`, `restart`). Browser tests cover the first two without a later Start, which would force it.
+  - Until it finishes, nothing reports the session as running, a relay error changes nothing, and a peer arriving at the old room isn't listed (its link is refused and closed, counted in `linksRefused`).
+  - Pressing Start meanwhile finishes the old teardown first.
+- **The session page closes or reloads:** the same, except the teardown can't wait. It happens at once, so `session-ended` may not get out; players learn it from the relay's "host left".
+- **The relay connection fails:** no `session-ended` can be sent.
+  - HostSession drops every player link as part of handling the failure, before the page hears of it, so by the time the session's players are ended there is no link left to send on.
+  - Players learn of it from their link closing, and their page keeps the last map, marked disconnected.
+  - The model is discarded as for End.
 - A new session is a new model, so no credential crosses sessions. Nothing is persisted: no localStorage, IndexedDB or sessionStorage (host refresh is Milestone 7).
 
 **Per-peer state** (`peerId → { link, closing, closeTimer, lastAdmissionText }`):
@@ -573,8 +581,9 @@ Milestone 5B is built in three reviewable stages:
 - Every message to a player goes through `send(peer, type, data)`, which asks `maySend(state, type)`.
 - The senders never get the link. They get a gated stand-in whose `send(data, type)` goes through the same function. A send with no or an unknown type is refused (deny by default).
 - So the map, its assets and aborts reach a peer only if it is in a sender (added on admission, removed at once on kick, reset, disable, leave or disconnect) **and** the gate agrees at that moment.
-  - Mutation checks confirm each layer that can fail alone is caught by a test.
-  - The gate inside `send()` is the second line and isn't independently observable: with membership intact, nothing asks it out of turn. `sendsBlocked` stays 0 and is asserted.
+  - Mutation checks confirm each layer is caught by a test on its own.
+  - In production, membership is the first layer and the send-time gate the second, so the gate never has to refuse: `sendsBlocked` stays 0 and is asserted.
+  - The gate is still tested on its own. Unit tests keep a player in the senders while a wrapped model stops admitting it. The gate then refuses both the next structured snapshot and the next chunk of an asset transfer already under way (`sendsBlocked` rises, nothing is sent).
 
 **Inbound:**
 - At most 100 messages per peer per 10 s; the rest are dropped unread.
@@ -949,8 +958,8 @@ Refreshing the session host is the only refresh that threatens the room; a surfa
 3. **5A.3, the boundary:** the BroadcastChannel boundary and the host publication store with atomic commit and host-side revisions. **Implemented on 2026-10-03** (§6.1), proven with a test publisher.
 4. **5A.4, the Battle Map adapter:** `battlemap-live-share.js` becomes the publisher adapter. Same player wire format; existing browser tests pass through the new helpers. **Implemented on 2026-10-03** (§6.2). **Milestone 5A is complete:** the session page owns the session, and closing or reloading the Battle Map leaves the room and the players' map intact.
 5. **5B:** admission and protocol v1, in three stages:
-   - **5B.1:** the admission model and protocol-v1 foundation. Implemented on 2026-10-03 (§6.3); not wired.
-   - **5B.2:** host enforcement on real peers, multi-player relay and concurrency. Implemented on 2026-10-09 (§6.4): admission is enforced, players speak v1, rooms take 8.
+   - **5B.1:** the admission model and protocol-v1 foundation. Implemented on 2026-10-03 (§6.3), released in 2.3.35; in production since 5B.2.
+   - **5B.2:** host enforcement on real peers, multi-player relay and concurrency. Implemented and released in 2.3.36 (2026-10-16; §6.4): admission is enforced, players speak v1, rooms take 8.
    - **5B.3:** the player join flow (the product join and room-management UX).
 6. **5C:** product UX.
 

@@ -48,7 +48,7 @@ const linkOptions = {
 };
 
 // States, counts and revisions only: no room id or link, no IP addresses, no content.
-const diag = { owner: 'claiming', signaling: 'idle', signalingError: null, turn: null, peers: {}, players: null, snapshots: null, assets: null, boundary: null };
+const diag = { owner: 'claiming', signaling: 'idle', signalingError: null, turn: null, peers: {}, players: null, snapshots: null, assets: null, boundary: null, lastTeardown: null };
 const peers = new Map(); // peerId -> connection status text (every player on the relay)
 // The committed publications players are served from (only the Battle Map has a player validator).
 const store = createPublicationStore({ surfaces: [battleMapSurface] });
@@ -242,7 +242,7 @@ function showOwnership(state, takeover = false) {
 
 // ---- Session ----------------------------------------------------------------------------------
 function start() {
-  finishEnding(); // a session still waiting for its players to have session-ended goes now
+  finishEnding('restart'); // a session still waiting for its players to have session-ended goes now
   if (ownership !== 'owner' || (session && session.active)) return;
   if (!relayUrl) return setStatus('No Live Share relay is configured for this site.');
   if (typeof RTCPeerConnection === 'undefined') return setStatus('This browser does not support WebRTC.');
@@ -279,6 +279,9 @@ function start() {
     diag.turn = turn;
   });
   session.on('peer-joined', ({ peerId }) => {
+    // A peer reaching a session that is ending is not shown (its link is still wired below, so it is
+    // refused and closed, and counted in linksRefused).
+    if (ending) return;
     peers.set(peerId, 'Preparing connection…');
     renderPeers();
   });
@@ -302,7 +305,7 @@ function start() {
     link.on('close', () => {
       sessionPlayers.detach(peerId); // an admitted player's seat stays claimed-disconnected
       openLinks.delete(link);
-      if (ending && openLinks.size === 0) finishEnding(); // every player has closed: session-ended arrived
+      if (ending && openLinks.size === 0) finishEnding('players-closed'); // every player closed: session-ended arrived
       if (!link.failure) setPeer(peerId, 'Disconnected');
     });
   });
@@ -315,7 +318,8 @@ function start() {
     renderDiagnostics();
   });
   session.on('closed', ({ error }) => {
-    if (!error) return;
+    // A relay error while an ended session waits for its players changes nothing: it is already over.
+    if (!error || ending) return;
     diag.signalingError = error;
     setStatus(`Signaling failure: ${error.message}`);
     if (players) players.end();
@@ -339,12 +343,14 @@ function start() {
 // going away (pagehide) can't wait: { now: true } tears down at once, and players learn it from the relay.
 function end({ now = false } = {}) {
   if (!session || !session.active || ending) {
-    if (now) finishEnding();
+    if (now) finishEnding('immediate');
     return;
   }
+  // Ending first, so nothing reported while the players are told (players.end() reports a change)
+  // shows the session as still running.
+  ending = { session, timer: setTimeout(() => finishEnding('grace'), CLOSE_GRACE_MS) };
   if (players) players.end();
-  ending = { session, timer: setTimeout(finishEnding, CLOSE_GRACE_MS) };
-  if (now || openLinks.size === 0) finishEnding();
+  if (now || openLinks.size === 0) finishEnding(now ? 'immediate' : 'players-closed');
   peers.clear();
   diag.peers = {};
   reportSession(); // the session is over: every publication is cleared
@@ -354,13 +360,18 @@ function end({ now = false } = {}) {
   renderDiagnostics();
 }
 
-function finishEnding() {
+// How an ended session's teardown finished, kept in the diagnostics: 'players-closed' (every player
+// link closed, or there were none), 'grace' (CLOSE_GRACE_MS passed), 'immediate' (the page is going
+// away) or 'restart' (Start was pressed during the wait).
+function finishEnding(via) {
   if (!ending) return;
   clearTimeout(ending.timer);
   const ended = ending.session;
   ending = null;
   openLinks.clear();
+  diag.lastTeardown = via;
   ended.end();
+  renderDiagnostics();
 }
 
 // The player page, in the same form (clean or .html) as this page, keeping the development

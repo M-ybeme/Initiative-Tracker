@@ -20,7 +20,15 @@ The DM's Toolbox has evolved through focused feature releases. Minor versions (2
 
 ---
 
-## [2.3.36] - 2026-10-09
+## [Unreleased]
+
+### Live Share (in development, not yet part of the product flow)
+- Ending a session no longer briefly reports it as still running to the Battle Map, a relay hiccup while it closes no longer replaces "Session ended" with a signaling error, and a player arriving just as it ends is no longer listed on the Live Share page.
+
+### Internal
+- Browser tests prove the session teardown finishes by itself, both when players close their connections and, for a player that never does, after the 1 s grace (the Live Share diagnostics now record which). A unit test proves the send gate alone also stops an asset transfer already under way. Docs: relay-failure behavior and the send gate's test coverage corrected; 2.3.36 dated to its release day.
+
+## [2.3.36] - 2026-10-16
 **Live Share admission on real players and rooms for up to 8 (Milestone 5B.2)**
 
 ### Live Share (in development, not yet part of the product flow)

@@ -132,7 +132,7 @@ No Live Share behavior changed.
 - **Unchanged:** the player wire format (v0) and the relay (one player).
 - **Large transfers:** the transfer delay seen in 5A.1 / 5A.3 also shows on the real path (a token save during an 11.7 MB transfer reached the player after 3.7–5.6 s), with no data loss. It is deferred to Milestone 8.
 
-**Milestone 5B.1, the admission model and player protocol-v1 foundation (implemented 2026-10-03, released in 2.3.35; not yet in the product path):** details in [live-share-session-host-architecture.md](live-share-session-host-architecture.md) §6.3.
+**Milestone 5B.1, the admission model and player protocol-v1 foundation (implemented 2026-10-03, released in 2.3.35; in the product path since 5B.2, 2.3.36):** details in [live-share-session-host-architecture.md](live-share-session-host-architecture.md) §6.3.
 - **The admission model:** the host-authoritative room model, in the session page's memory only.
   - seats with stable ids and derived states;
   - the password (exact, 1–128 characters) and the room lock;
@@ -142,9 +142,9 @@ No Live Share behavior changed.
   - a sanitized admission state.
 - **Player protocol v1:** a strict codec with fixed reason codes and `surface-snapshot { surface, revision, payload }`. A small validator registry (Battle Map only) reuses the players' Battle Map validator.
 - **A deny-by-default send policy:** an unadmitted peer may be sent only admission state, its join result and session-ended.
-- **The product is unchanged:** it still speaks v0 to one player with no admission step. 5B.2 wires this in.
+- **As released in 2.3.35 the product was unchanged** (v0, one player, no admission step). 5B.2 wired it in (2.3.36).
 
-**Milestone 5B.2, admission enforced on real peers and multi-player rooms (implemented 2026-10-09, released in 2.3.36):** details in [live-share-session-host-architecture.md](live-share-session-host-architecture.md) §6.4.
+**Milestone 5B.2, admission enforced on real peers and multi-player rooms (released in 2.3.36, 2026-10-16):** details in [live-share-session-host-architecture.md](live-share-session-host-architecture.md) §6.4.
 - **One admission model per session**, owned by the session page (`session-players.js`), in memory only.
 - **A connection is not a player:** a new link is unadmitted and receives only the sanitized admission state.
   - The map, its assets and asset ids reach a player only after it joins a seat.
@@ -1694,9 +1694,9 @@ Only after the underlying networking has proven useful. *(Reconciled on 2026-10-
 *Exit:* the Milestone 4 behaviors all hold with the session owned by the session host page, and closing or reloading the Battle Map leaves the room and the players' map intact.
 
 **5B — Admission / room model** (built in three stages:
-- **5B.1:** the admission model and protocol-v1 foundation. Implemented 2026-10-03, released in 2.3.35 (ADR §6.3); not wired.
-- **5B.2:** host enforcement and multi-player relay / concurrency. Implemented 2026-10-09 (ADR §6.4).
-- **5B.3:** the player join flow.)
+- **5B.1:** the admission model and protocol-v1 foundation. Implemented 2026-10-03, released in 2.3.35 (ADR §6.3). Pure modules at first; in production since 5B.2 wired them to real peers.
+- **5B.2:** host enforcement and multi-player relay / concurrency. Released in 2.3.36 (2026-10-16; ADR §6.4).
+- **5B.3** (next): the player join flow.)
 - seats, optional password, room lock;
 - temporary seat credentials;
 - the join flow, with a mandatory admission gate;
