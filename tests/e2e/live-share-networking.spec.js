@@ -68,7 +68,8 @@ test.describe('Live Share networking (Milestone 0)', () => {
     // The ended room is gone from the relay: its link no longer finds a host.
     const late = await playerContext.newPage();
     await late.goto(host.joinUrl);
-    await expect(late.getByTestId('player-status')).toContainText('Signaling failure: No host is sharing this room');
+    await expect(late.getByTestId('player-status')).toHaveText("This Live Share session isn't running. The link may be old, or your DM hasn't started it yet.");
+    await expect(late.getByTestId('player-status-detail')).toContainText('Signaling failure: No host is sharing this room');
 
     await host.context.close();
     await playerContext.close();
@@ -99,7 +100,8 @@ test.describe('Live Share networking (Milestone 0)', () => {
 
     const second = await playerContext.newPage();
     await second.goto(host.joinUrl);
-    await expect(second.getByTestId('player-status')).toHaveText('Signaling failure: The room is full.');
+    await expect(second.getByTestId('player-status')).toHaveText('This Live Share room is full.');
+    await expect(second.getByTestId('player-status-detail')).toHaveText('Signaling failure: The room is full.');
     expect((await diagnostics(second)).signalingError).toMatchObject({ code: 'room-full' });
 
     await expect(player.getByTestId('player-status')).toHaveText('Connected to host');
@@ -113,7 +115,8 @@ test.describe('Live Share networking (Milestone 0)', () => {
 
   test('a link to a room with no host is reported as a signaling failure', async ({ page }) => {
     await page.goto(`${PAGE}#room=AbCdEfGhIjKlMnOpQrStUv`);
-    await expect(page.getByTestId('player-status')).toContainText('Signaling failure: No host is sharing this room');
+    await expect(page.getByTestId('player-status')).toContainText("This Live Share session isn't running");
+    await expect(page.getByTestId('player-status-detail')).toContainText('Signaling failure: No host is sharing this room');
     const diag = await diagnostics(page);
     expect(diag).toMatchObject({ roomFound: false, signaling: 'closed', signalingError: { code: 'no-host' } });
     expect(diag.peers).toEqual({});
@@ -136,7 +139,8 @@ test.describe('Live Share networking (Milestone 0)', () => {
     await player.goto(host.joinUrl.replace('#room=', '&forceRelay=1&iceTimeoutMs=15000#room='));
 
     // Reported as soon as gathering ends, well before the 15 s connection timeout.
-    await expect(player.getByTestId('player-status')).toContainText('WebRTC blocked in this browser', { timeout: 5000 });
+    await expect(player.getByTestId('player-status')).toHaveText('This browser is blocking the connection Live Share needs (WebRTC). A VPN or privacy extension can cause this.', { timeout: 5000 });
+    await expect(player.getByTestId('player-status-detail')).toContainText('WebRTC blocked in this browser');
     const playerLink = (await diagnostics(player)).peers.host;
     expect(playerLink.failure.kind).toBe('no-candidates');
     expect(playerLink.failure.message).toContain('gathered no network candidates');
@@ -167,8 +171,9 @@ test.describe('Live Share networking (Milestone 0)', () => {
     const player = await playerContext.newPage();
     await player.goto(joinUrl);
 
-    await expect(player.getByTestId('player-status')).toContainText('Connection failure (ICE)', { timeout: 15000 });
-    await expect(player.getByTestId('player-status')).toContainText('received no network candidates from the host');
+    await expect(player.getByTestId('player-status')).toHaveText("Couldn't reach the host's browser. Your network may be blocking the connection.", { timeout: 15000 });
+    await expect(player.getByTestId('player-status-detail')).toContainText('Connection failure (ICE)');
+    await expect(player.getByTestId('player-status-detail')).toContainText('received no network candidates from the host');
     const playerLink = (await diagnostics(player)).peers.host;
     // The player's own browser works: it generated candidates; it is the host that sent none.
     expect(playerLink.stage).toBe('answered');

@@ -167,13 +167,14 @@ describe('session players: joining', () => {
     const a = players.createSeat('Aria');
     const link = connect('p1');
     link.receive(join(a));
-    expect(link.types()).toEqual(['admission-state', 'join-result', 'surface-snapshot']);
+    expect(link.types()).toEqual(['admission-state', 'join-result', 'session-state', 'surface-snapshot']);
+    expect(link.last('session-state')).toEqual({ v: 1, type: 'session-state', surfaces: [{ surface: 'battle-map', available: true }] });
     const result = link.last('join-result');
     expect(result).toEqual({ v: 1, type: 'join-result', accepted: true, seat: { id: a, name: 'Aria' }, credential: expect.stringMatching(CREDENTIAL_PATTERN) });
     const { revision, ...payload } = snapshot;
     expect(link.last('surface-snapshot')).toEqual({ v: 1, type: 'surface-snapshot', surface: 'battle-map', revision, payload });
     link.receive({ v: 1, type: 'asset-request', assetIds: [ASSET_ID] });
-    expect(link.types().slice(3)).toEqual(['asset-meta', 'chunk']);
+    expect(link.types().slice(4)).toEqual(['asset-meta', 'chunk']);
     expect(players.counts()).toEqual({ links: 1, admitted: 1, waiting: 0 });
     expect(players.peerState('p1')).toBe('admitted');
   });
@@ -204,7 +205,7 @@ describe('session players: joining', () => {
     ]);
     l2.receive(join(b));
     expect(l2.last('join-result').accepted).toBe(true);
-    expect(gameplayOf(l2)).toEqual(['surface-snapshot']);
+    expect(gameplayOf(l2)).toEqual(['session-state', 'surface-snapshot']);
     expect(l1.last('join-result').credential).not.toBe(l2.last('join-result').credential);
   });
 
@@ -276,6 +277,26 @@ describe('session players: joining', () => {
 });
 
 describe('session players: publication delivery', () => {
+  it('an admitted player is told no map is shared yet, then that one is, once the DM shares it (waiting players are not)', () => {
+    const a = players.createSeat('A');
+    const committedSnapshot = snapshot;
+    snapshot = null; // nothing published yet
+    const link = connect('p1');
+    const waiting = connect('p2');
+    link.receive(join(a));
+    expect(link.last('session-state').surfaces).toEqual([{ surface: 'battle-map', available: false }]);
+    expect(link.types()).toEqual(['admission-state', 'join-result', 'session-state']);
+    snapshot = committedSnapshot;
+    players.committed();
+    expect(link.types().slice(-2)).toEqual(['session-state', 'surface-snapshot']);
+    expect(link.last('session-state').surfaces).toEqual([{ surface: 'battle-map', available: true }]);
+    snapshot = { ...snapshot, revision: 4 };
+    time.advance(200);
+    players.committed(); // still shared: no new session-state
+    expect(link.sent.filter((m) => m.type === 'session-state').length).toBe(2);
+    expect(waiting.types()).toEqual(['admission-state', 'admission-state']);
+  });
+
   it('a commit reaches every admitted player and no waiting one; a late joiner gets the current map', () => {
     const seats = ['A', 'B', 'C'].map((n) => players.createSeat(n));
     const links = ['p1', 'p2', 'p3'].map((id, i) => {

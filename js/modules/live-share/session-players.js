@@ -31,11 +31,15 @@
  * must go is sent session-ended with the model's reason, dropped from the senders at once and closed
  * after CLOSE_GRACE_MS (time for the message to arrive; the player closes on it). While closing, a
  * peer's messages are ignored. Unadmitted peers are sent the new admission state when it changes.
+ *
+ * Session state (5B.3): an admitted player is told whether a Battle Map is shared at all
+ * (session-state, right after its join-result, and again whenever that changes), so its page can say
+ * "the DM isn't sharing a map yet" instead of loading forever. Admitted players only, like the map.
  */
 import { createAdmissionModel } from './admission.js';
 import { createAttemptLimiter } from './admission-throttle.js';
 import { maySend, mayAccept } from './admission-gate.js';
-import { PROTOCOL_V1, parsePlayerMessage, admissionRequestOf, encodeAdmissionState, encodeJoinResult, encodeSessionEnded } from './protocol-v1.js';
+import { PROTOCOL_V1, encode, parsePlayerMessage, admissionRequestOf, encodeAdmissionState, encodeJoinResult, encodeSessionEnded } from './protocol-v1.js';
 import { createSnapshotSender } from './snapshot-sender.js';
 import { createAssetSender } from './asset-sender.js';
 
@@ -101,6 +105,10 @@ export function createSessionPlayers({
     off: (type, fn) => peer.link.off(type, fn),
   });
 
+  // Whether a Battle Map publication is committed, as the admitted players were last told.
+  let mapShared = null;
+  const sessionState = () => encode('session-state', { surfaces: [{ surface: 'battle-map', available: !!getSnapshot() }] });
+
   const snapshots = createSnapshotSender({ getSnapshot, setTimer, clearTimer, ...snapshotOptions });
   const assets = createAssetSender({ protocolVersion: PROTOCOL_V1, getAsset, hasAsset, setTimer, clearTimer, ...assetOptions });
 
@@ -146,7 +154,9 @@ export function createSessionPlayers({
     if (encoded.ok) send(peer, 'join-result', encoded.text);
     if (!result.ok) return;
     enforce(result.effects);
-    // Admitted: from now on the senders serve it, starting with the current publication.
+    // Admitted: told whether a map is shared, then the senders serve it the current publication.
+    const status = sessionState();
+    if (status.ok) send(peer, 'session-state', status.text);
     peer.lastAdmissionText = null;
     snapshots.addPeer(peer.id, gated(peer));
     assets.addPeer(peer.id, gated(peer));
@@ -238,6 +248,12 @@ export function createSessionPlayers({
     /** The host committed a new publication: admitted players get it now, and stale transfers end. */
     committed() {
       if (ended) return;
+      const shared = !!getSnapshot();
+      if (shared !== mapShared) {
+        mapShared = shared;
+        const status = sessionState();
+        for (const peer of [...peers.values()]) if (status.ok && !peer.closing && stateOf(peer.id) === 'admitted') send(peer, 'session-state', status.text);
+      }
       snapshots.sendNow();
       assets.assetsChanged();
     },

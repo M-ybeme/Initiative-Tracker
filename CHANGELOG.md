@@ -16,16 +16,25 @@ The DM's Toolbox has evolved through focused feature releases. Minor versions (2
 - **1.9.x**: Battle map measurement tools, persistent fog shapes, and generator integration across NPC/Tavern/Shop systems
 - **1.8.x**: Spell database expansion to 432+ spells, inventory management, loot generator overhaul, and character token generation
 
-**Current version: 2.3.36 (October 2026)**
+**Current version: 2.3.37 (October 2026)**
 
 ---
 
 ## [Unreleased]
 
+## [2.3.37] - 2026-10-16
+**The Live Share player join screen (Milestone 5B.3)**
+
 ### Live Share (in development, not yet part of the product flow)
+- Milestone 5B.3: the player join screen. A player who opens the join link sees what is happening: connecting, then a **Join Live Share** form with a seat list, a password field only when the DM set one, and a **Join Room** button. Then "Joining…", "Loading map…" and the map.
+- If joining fails the player stays on the form and is told why in plain words: wrong password, room locked, seat just taken (choose another), too many attempts. The form keeps the chosen seat and the typed password while the DM changes other seats or the lock.
+- With no seats yet the player waits ("No seats are available yet") and can join as soon as the DM adds one. If the DM hasn't shared a map yet, a joined player is told so instead of loading forever.
+- Leave Session frees the seat. Reloading the page doesn't: the seat stays reserved, and the player is told to ask the DM to reset it (reconnecting comes later).
+- Players are told why a session ended for them (the host ended it, they were removed, their seat was reset or disabled, or the connection was lost), and are told when the host runs a different version of the Toolbox. Technical connection details moved into a collapsed "Troubleshooting details" section.
 - Ending a session no longer briefly reports it as still running to the Battle Map, a relay hiccup while it closes no longer replaces "Session ended" with a signaling error, and a player arriving just as it ends is no longer listed on the Live Share page.
 
 ### Internal
+- Live Share: the host tells a player who has joined whether a map is shared (`session-state`). Browser tests drive the player join flow through its visible controls: joining, no seats, password, lock, the same-seat race, reload versus Leave, removal reasons, live room changes, no map yet and a version mismatch.
 - Browser tests prove the session teardown finishes by itself, both when players close their connections and, for a player that never does, after the 1 s grace (the Live Share diagnostics now record which). A unit test proves the send gate alone also stops an asset transfer already under way. Docs: relay-failure behavior and the send gate's test coverage corrected; 2.3.36 dated to its release day.
 
 ## [2.3.36] - 2026-10-16

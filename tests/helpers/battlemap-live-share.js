@@ -243,14 +243,21 @@ export async function addSeat(session, name) {
 }
 // The DM's controls for a seat on the session page ('rename' | 'enable' | 'disable' | 'kick' | 'reset').
 export const seatButton = (session, seatId, action) => session.locator(`[data-testid="seat"][data-seat-id="${seatId}"] button[data-action="${action}"]`);
-// The player picks a seat by name (with a password if given) and waits for the host's answer.
+// The player's presentation state on the join flow (5B.3: data-state on the player section).
+export const playerState = (player) => player.getByTestId('player').getAttribute('data-state');
+// The player picks a seat by name in the join form (with a password if given), presses Join Room and
+// waits for the host's answer. Returns the joined line ("Joined as …") or the refusal shown.
 export async function chooseSeat(player, name, { password } = {}) {
+  const option = player.getByTestId('join-seat').locator('option').filter({ hasText: new RegExp(`^${escapeRe(name)}$`) });
+  await expect(option).toHaveCount(1, { timeout: 15000 });
+  await expect(option).toBeEnabled({ timeout: 15000 });
+  await player.getByTestId('join-seat').selectOption({ label: name });
   if (password !== undefined) await player.getByTestId('join-password').fill(password);
-  const button = player.getByTestId('join-seat').filter({ hasText: new RegExp(`^${escapeRe(name)}$`) });
-  await expect(button).toBeEnabled({ timeout: 15000 });
-  await button.click();
-  await expect(player.getByTestId('join-status')).not.toHaveText('Joining…', { timeout: 15000 });
-  return player.getByTestId('join-status').textContent();
+  await expect(player.getByTestId('join-room')).toBeEnabled({ timeout: 15000 });
+  await player.getByTestId('join-room').click();
+  await expect(player.getByTestId('player')).not.toHaveAttribute('data-state', 'joining', { timeout: 15000 });
+  const joined = ['joined-loading', 'connected'].includes(await playerState(player));
+  return (joined ? player.getByTestId('join-status') : player.getByTestId('join-error')).textContent();
 }
 let seatCount = 0;
 // A player connected to the room behind joinUrl joins a new seat (added on that room's session page).

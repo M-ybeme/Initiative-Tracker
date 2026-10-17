@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta name="robots" content="noindex, nofollow" />
-  <title>The DM's Toolbox: Live Share (development prototype)</title>
+  <title>The DM's Toolbox: Live Share</title>
 
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" crossorigin="anonymous" />
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" />
@@ -20,17 +20,22 @@
     .ls-map:active { cursor: grabbing; }
     .ls-map-disconnected .ls-map { opacity: .55; filter: grayscale(.6); }
     .ls-map-disconnected #ls-map-status { color: var(--bs-warning); }
+    .ls-join { max-width: 28rem; }
+    .ls-join fieldset { min-width: 0; }
+    .ls-details > summary { cursor: pointer; }
   </style>
 </head>
 <body>
   <main class="container py-4" style="max-width: 1100px;">
     <!-- Live Share Milestones 0-2: networking proof of concept and remote Battle Map rendering. Not linked from the site navigation. -->
-    <div class="alert alert-warning" role="note">
-      <strong>Development prototype.</strong> Live Share test page (Milestones 0–3). This is not a
-      production room: anyone with the link can connect and see what the host shares.
+    <!-- The networking test host (no #room in the URL) is a development tool; a join link opens the
+         player (Live Share for players, Milestone 5B.3). -->
+    <div id="ls-dev-note" class="alert alert-warning d-none" role="note">
+      <strong>Development tool.</strong> Live Share networking test host (Milestone 0): it only sends a
+      test message. To share with players, use the Live Share page.
     </div>
 
-    <h1 class="h3 mb-3"><i class="bi bi-broadcast"></i> Live Share — networking test</h1>
+    <h1 class="h3 mb-3" id="ls-title"><i class="bi bi-broadcast"></i> Live Share</h1>
 
     <div id="ls-config-error" class="alert alert-danger d-none" role="alert"></div>
     <div id="ls-turn-note" class="alert alert-secondary small py-2 d-none" role="status" data-testid="turn-note"></div>
@@ -54,24 +59,44 @@
       </div>
     </section>
 
-    <!-- Player -->
-    <section id="ls-player" class="card mb-3 d-none">
-      <div class="card-body">
-        <h2 class="h5">Player</h2>
-        <p class="mb-2">Status: <span id="ls-player-status" data-testid="player-status">Connecting…</span></p>
-        <p class="mb-2">Seat: <span id="ls-join-status" data-testid="join-status">Not joined</span></p>
-        <!-- Joining (Milestone 5B.2: a working preview; the product join screen is 5B.3) -->
-        <div id="ls-join" class="mb-3 d-none" data-testid="join-panel">
-          <p id="ls-join-note" class="small text-body-secondary mb-2" data-testid="join-note"></p>
-          <div id="ls-join-password-row" class="mb-2 d-none">
-            <input id="ls-join-password" type="password" class="form-control form-control-sm" style="max-width: 16rem;" maxlength="128" autocomplete="off" placeholder="Room password" aria-label="Room password" data-testid="join-password" />
-          </div>
-          <div id="ls-join-seats" class="d-flex flex-wrap gap-2" data-testid="join-seats"></div>
-        </div>
-        <p class="mb-1 text-body-secondary">Message from host:</p>
-        <p id="ls-received" class="ls-message" data-testid="received-message"></p>
-        <button id="ls-leave" class="btn btn-outline-danger" data-testid="leave-session">Leave</button>
+    <!-- Player (Milestone 5B.3: the product join flow). data-state is the presentation state only
+         (js/live-share-dev.js); the host decides admission. -->
+    <section id="ls-player" class="mb-3 d-none" data-testid="player" data-state="connecting">
+      <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+        <p class="mb-0" role="status" aria-live="polite"><span class="text-body-secondary">Connection:</span> <span id="ls-player-status" data-testid="player-status">Connecting to the host…</span></p>
+        <button id="ls-leave" type="button" class="btn btn-sm btn-outline-danger" data-testid="leave-session">Leave Session</button>
       </div>
+
+      <!-- Joining: shown once the host has sent its room state -->
+      <div id="ls-join" class="card mb-3 ls-join d-none" data-testid="join-panel">
+        <div class="card-body">
+          <h2 class="h5" id="ls-join-title">Join Live Share</h2>
+          <p id="ls-join-note" class="mb-3" role="status" aria-live="polite" data-testid="join-note"></p>
+          <form id="ls-join-form" novalidate aria-labelledby="ls-join-title" aria-describedby="ls-join-error">
+            <fieldset id="ls-join-fields">
+              <div class="mb-3">
+                <label for="ls-join-seat" class="form-label">Seat</label>
+                <select id="ls-join-seat" class="form-select" data-testid="join-seat" aria-describedby="ls-join-seat-help">
+                  <option value="">Choose a seat…</option>
+                </select>
+                <div id="ls-join-seat-help" class="form-text d-none" data-testid="join-seat-help">Taken seats are in use. If one is yours (for example after reloading this page), ask the DM to reset it, then join again.</div>
+              </div>
+              <div id="ls-join-password-row" class="mb-3 d-none">
+                <label for="ls-join-password" class="form-label">Password</label>
+                <input id="ls-join-password" type="password" class="form-control" maxlength="128" autocomplete="off" autocapitalize="off" spellcheck="false" data-testid="join-password" />
+              </div>
+              <button id="ls-join-submit" type="submit" class="btn btn-primary" data-testid="join-room" disabled>Join Room</button>
+            </fieldset>
+            <p id="ls-join-error" class="text-danger mt-3 mb-0" role="alert" data-testid="join-error"></p>
+          </form>
+        </div>
+      </div>
+
+      <!-- Joined -->
+      <div id="ls-session" class="d-flex flex-wrap align-items-center gap-2 mb-2 d-none" data-testid="session-bar">
+        <h2 class="h5 mb-0" id="ls-join-status" tabindex="-1" data-testid="join-status">Not joined</h2>
+      </div>
+      <p id="ls-map-waiting" class="text-body-secondary d-none" role="status" aria-live="polite" data-testid="map-waiting"></p>
     </section>
 
     <!-- Player: the host's Battle Map, read-only (shown once the first snapshot arrives) -->
@@ -89,8 +114,14 @@
       </div>
     </section>
 
-    <section class="card">
+    <details class="card ls-details" id="ls-details">
+      <summary class="card-header small">Troubleshooting details</summary>
       <div class="card-body">
+        <p class="small mb-2">Last connection problem: <span id="ls-player-status-detail" data-testid="player-status-detail">none</span></p>
+        <div id="ls-hello" class="d-none">
+          <p class="mb-1 text-body-secondary small">Message from the test host:</p>
+          <p id="ls-received" class="ls-message" data-testid="received-message"></p>
+        </div>
         <div class="d-flex justify-content-between align-items-center mb-2">
           <h2 class="h6 mb-0">Diagnostics</h2>
           <button id="ls-copy-diag" class="btn btn-sm btn-outline-secondary">Copy diagnostics</button>
@@ -98,7 +129,7 @@
         <p class="small text-body-secondary mb-2">Contains connection states only: no room link, no IP addresses.</p>
         <pre id="ls-diag" class="ls-diag mb-0" data-testid="diagnostics"></pre>
       </div>
-    </section>
+    </details>
   </main>
 
   <script type="module" src="/js/live-share-dev.js"></script>

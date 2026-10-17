@@ -1,7 +1,8 @@
 const DM_TOOLBOX_BUILD = {
   name: "The DM's Toolbox",
-  version: "2.3.36",
+  version: "2.3.37",
   recentChanges: [
+    "New (Live Share, in development): players get a real join screen: they choose their seat, enter the password only if you set one, and press Join Room; if joining fails they stay on the form and are told why, they are told when no seats are open yet or no map is shared, and when a session ends they see why (ended, removed, seat reset or disabled); Leave Session frees their seat, but reloading the page keeps it reserved until you reset it",
     "New (Live Share, in development): players now join a seat before they see anything; the Live Share page can add, rename, disable, kick and reset seats, set a password and lock the room (working controls, not the final design), and up to 8 players can be connected at once",
     "New (Live Share, in development): groundwork for letting players join a room: seats the DM controls, an optional room password and lock, a private key per seat so a dropped player can take their seat back, and a stricter message format; nothing changes for players yet",
     "New (Live Share, in development): the Battle Map now shares through the Live Share page instead of running its own room, so closing or reloading the Battle Map no longer ends the session; players still see only your last saved map, and a map saved before Live Share starts is shared right away",

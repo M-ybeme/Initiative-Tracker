@@ -265,12 +265,12 @@ test.describe('Live Share remote structured rendering (Milestone 2)', () => {
 
     // Nothing private ever left the session page: no HP, images, editor state or fog. Before its first
     // snapshot (protocol v1 surface-snapshot) this player was sent only admission messages (the state
-    // when it connected, again when the seat was added, then its join result), and after it only
-    // snapshots.
+    // when it connected, again when the seat was added, then its join result) and the session state
+    // (a map is shared), and after it only snapshots.
     const sent = await sessionOf(host).evaluate(() => window.__lsSent);
     const types = sent.map((text) => JSON.parse(text).type);
     const first = types.indexOf('surface-snapshot');
-    expect(types.slice(0, first)).toEqual(['admission-state', 'admission-state', 'join-result']);
+    expect(types.slice(0, first)).toEqual(['admission-state', 'admission-state', 'join-result', 'session-state']);
     expect(types.slice(first).every((t) => t === 'surface-snapshot')).toBe(true);
     const snapshotTexts = sent.slice(first);
     expect(snapshotTexts.length).toBe(afterBurst.snapshotsSent);

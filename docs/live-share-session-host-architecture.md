@@ -437,7 +437,7 @@ The boundary's own "assets only from the active instance" check survives its mut
 Milestone 5B is built in three reviewable stages:
 - **5B.1:** the admission model and the protocol-v1 foundation. Pure modules and unit tests.
 - **5B.2:** host enforcement on real peers, and multi-player relay and concurrency.
-- **5B.3:** the real player join flow, end to end.
+- **5B.3:** the real player join flow, end to end (§6.5).
 
 **As built in 5B.1, nothing below was in the product path.** 5B.2 wired it to real peers: see §6.4.
 
@@ -662,6 +662,92 @@ Milestone 5B is built in three reviewable stages:
   - a large background to two players.
 - The existing Battle Map browser specs join a seat through the shared helpers.
 - 20 deliberate breakages were each caught by a test.
+
+### 6.5 The player join flow (5B.3, 2026-10-16)
+
+5B.3 turns the player page (`liveshare-dev.html` with `#room=…`, `js/live-share-dev.js`) into the product join experience. Admission and security are unchanged (§6.3, §6.4): the host decides, and nothing of the map reaches or is drawn on a page before the host's accepted `join-result`.
+
+**Presentation state** (`data-state` on the player section; it decides only what is shown, never what the player may receive):
+
+| State | Shown |
+|---|---|
+| `connecting` | "Connecting to the host…" |
+| `waiting-for-room` | connected; "Waiting for the room…" |
+| `ready-to-join` | the join form |
+| `joining` | "Joining…"; the form held (one request in flight) |
+| `join-rejected` | the join form, with the reason |
+| `joined-loading` | "Joined as …", "Loading map…" |
+| `connected` | the Battle Map, or "The DM isn't sharing a map yet…" |
+| `session-ended` | why it ended (host End, kick, reset, disable, or the player left) |
+| `host-disconnected` | "Connection to the host was lost." |
+| `unable-to-connect` | why the session couldn't be reached, where the network layer can tell |
+
+**The join form** (planning doc §11):
+- A labelled **Seat** list, a **Password** field only while the host says one is required, and **Join Room**.
+- Taken seats are listed, disabled, as "… — taken". Join Room is enabled only for an available seat, in an unlocked room, with a password typed when one is required. Enter submits.
+- **Choosing a seat reserves nothing.** The one join request goes only on Join Room, and the form is held until the host answers, so a second click or Enter sends nothing.
+- **Updated in place** from each admission state, never rebuilt:
+  - focus, the typed password and the chosen seat survive updates about other seats, renames, other players joining and lock changes;
+  - a chosen seat that is taken or removed meanwhile is cleared, with "The seat you chose was just taken. Choose another seat.";
+  - the password field is emptied when the host stops requiring one.
+- **No seats yet:** "No seats are available yet. Waiting for the host…". The page stays connected and updates when the DM adds one. 5B.3 adds no default seats: the DM creates them (planning doc §7).
+- **Locked:** "The room is locked. The DM isn't letting new players join right now."; Join Room is disabled. Unlocking re-enables it without a reload.
+
+**Refusals stay on the form**, with fixed copy per protocol-v1 reason code. Never exception text, parser messages or anything a peer controls:
+- `bad-password`: "That password is incorrect." The typed password is kept to correct, and focused.
+- `room-locked`: as above.
+- `seat-unavailable`: "That seat is no longer available. Choose another seat. If it was your seat, ask the DM to reset it."
+- `seat-disabled` and `unknown-seat`: the seat is gone; choose another.
+- `throttled`: "Too many attempts. Try again shortly."
+- `malformed-request`, `session-ended`, `already-admitted`, `invalid-credential`: short generic messages, with no credential jargon.
+- **The same-seat race:** the host admits one. The other player is told `seat-unavailable`, stays on the form with no map, sees the seat taken, and can choose another. If the host's update reaches it before it presses Join Room, it is told "just taken" instead.
+
+**Admitted:**
+- The password is cleared at once, the form goes, and "Joined as …" is focused.
+- The host sends `session-state` right after the `join-result` (and again when it changes): whether a Battle Map is shared. Admitted players only, through the gate. So the page shows "Loading map…" until the map arrives, or "The DM isn't sharing a map yet. It will appear here when they do."
+- The existing map, assets, pan, zoom and Fit are unchanged.
+- The seat credential in the `join-result` is not kept (Milestone 7).
+
+**Leaving, ending and losing the connection:**
+- **Leave Session** sends `leave`: the host releases the seat, and the page says "You left the session." (session-ended `left`).
+- **Closing or reloading the page is not a leave:** no `leave` is sent, and the seat stays `claimed-disconnected`.
+  - The admission state only says available or not, so a reloaded page shows its old seat as taken, and the hint under the list says to ask the DM to reset it.
+  - There is no reconnect, no stored credential and no automatic `rejoin-request` (Milestone 7).
+- **The host's reason is shown:**
+  - `ended`: "The host ended the session."
+  - `kicked`: "You were removed from the session."
+  - `seat-reset`: "Your seat was reset by the host."
+  - `seat-disabled`: "Your seat was disabled by the host."
+  - A connection lost without a reason: "Connection to the host was lost."
+- **Connection failures**, as far as the network layer can tell them apart:
+  - the session isn't running (no host);
+  - the room is full;
+  - WebRTC blocked in this browser;
+  - no network path to the host;
+  - otherwise "Unable to connect to this Live Share session."
+  - The technical text is kept in the collapsed **Troubleshooting details**, with the diagnostics.
+- **Another protocol version:** "The host is using a different version of The DM's Toolbox. Reload this page and try again." Strict rejection is unchanged; there is no negotiation.
+
+**Not applicable / unchanged:**
+- The player page has no Toolbox navigation, so nothing on it can navigate the session away (planning doc §11).
+- The host page is changed only by the `session-state` message. Seat, password and lock controls stay the functional 5B.2 ones; polishing them is 5C.
+- The page name and URL are unchanged (planning doc §30: a 5A/5C decision).
+- The Milestone 0 networking test host on the same page is now labelled a development tool. Its v0 `hello` shows only in the troubleshooting details.
+
+**Tests:** `tests/e2e/live-share-join-flow.spec.js` drives the visible controls. It covers:
+- the happy path through every state;
+- no seats;
+- password, including the requirement changing while a player waits;
+- lock;
+- the same-seat race;
+- a reload leaving the seat reserved, then a reset;
+- Leave;
+- the four removal reasons;
+- live updates keeping focus and form contents;
+- no map yet;
+- a version mismatch.
+
+Nine deliberate breakages of the product guarantees were each caught. The wire-level guarantees stay in `live-share-admission.spec.js`.
 
 ## 7. Assets when the Battle Map isn't the WebRTC owner
 
@@ -960,8 +1046,8 @@ Refreshing the session host is the only refresh that threatens the room; a surfa
 5. **5B:** admission and protocol v1, in three stages:
    - **5B.1:** the admission model and protocol-v1 foundation. Implemented on 2026-10-03 (§6.3), released in 2.3.35; in production since 5B.2.
    - **5B.2:** host enforcement on real peers, multi-player relay and concurrency. Implemented and released in 2.3.36 (2026-10-16; §6.4): admission is enforced, players speak v1, rooms take 8.
-   - **5B.3:** the player join flow (the product join and room-management UX).
-6. **5C:** product UX.
+   - **5B.3:** the player join flow. Implemented and released in 2.3.37 (2026-10-16; §6.5). **Milestone 5B is complete.**
+6. **5C:** product UX (next): polished host controls, connection status, session-host UX, the Battle Map indicator and "Open Live Share", and the `beforeunload` warning.
 
 ## 15. Decisions still to make
 

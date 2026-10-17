@@ -155,7 +155,22 @@ No Live Share behavior changed.
 - **Functional seat, password and lock controls** on the session page, and minimal join controls on the player page. The product join and room-management UX is 5B.3.
 - **No reconnect, credential storage, grace timer or pings** (Milestones 7 and 6).
 
-**Next:** Milestone 5B.3, the product join and room-management UX (§24). The Safari hidden-tab check is pending.
+**Milestone 5B.3, the player join flow (released in 2.3.37, 2026-10-16):** details in [live-share-session-host-architecture.md](live-share-session-host-architecture.md) §6.5.
+- **The product join screen** (§11): a labelled seat list (taken seats shown, disabled), the password field only when the host requires one, and an explicit **Join Room**.
+  - Choosing a seat reserves nothing; one request per Join Room.
+  - The form keeps focus, the typed password and the chosen seat through live room changes.
+  - A seat taken meanwhile is cleared, with an explanation.
+- **Clear progress and outcomes:** connecting, waiting for the room, joining, loading the map (or "the DM isn't sharing a map yet", from the host's new `session-state`), then the map.
+  - Refusals stay on the form, with fixed copy per reason.
+  - Removal and ending messages are reason-specific; a lost connection is "Connection to the host was lost."
+  - A host speaking another protocol version gets a "different version" message.
+- **No seats yet:** the player waits, connected, until the DM adds one (no default seats).
+- **Leave vs reload:** Leave Session releases the seat. Closing or reloading the page doesn't: the seat stays reserved and the player is told to ask the DM to reset it. No reconnect yet (Milestone 7).
+- **Diagnostics demoted** to a collapsed troubleshooting section; raw connection errors are no longer the main text.
+- **Host controls unchanged** (5C polishes them).
+- **Milestone 5B is complete** (5B.1-5B.3).
+
+**Next:** Milestone 5C, product UX: polished host controls, connection status, the session-host UX, the Battle Map indicator and "Open Live Share", and the `beforeunload` warning (§24). The Safari hidden-tab check is pending.
 
 **Backlog (Battle Map, found during the 2.3.27 and 2.3.28 reviews; not yet fixed):**
 - Pre-existing: a touch long-press (and Ctrl+click on a Mac, which is a primary-button press) starts a token drag before its menu opens, so on release an off-grid token snaps and the map is marked unsaved (the 2.3.28 right-click fix does not cover a primary-button press).
@@ -1696,7 +1711,7 @@ Only after the underlying networking has proven useful. *(Reconciled on 2026-10-
 **5B — Admission / room model** (built in three stages:
 - **5B.1:** the admission model and protocol-v1 foundation. Implemented 2026-10-03, released in 2.3.35 (ADR §6.3). Pure modules at first; in production since 5B.2 wired them to real peers.
 - **5B.2:** host enforcement and multi-player relay / concurrency. Released in 2.3.36 (2026-10-16; ADR §6.4).
-- **5B.3** (next): the player join flow.)
+- **5B.3:** the player join flow. Released in 2.3.37 (2026-10-16; ADR §6.5). **5B is complete.**)
 - seats, optional password, room lock;
 - temporary seat credentials;
 - the join flow, with a mandatory admission gate;
