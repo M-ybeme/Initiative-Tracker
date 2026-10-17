@@ -297,11 +297,18 @@ export function createSessionPlayers({
     /** The DM's seat list (admission.js seats(): no credentials, no password). */
     seats: () => admission.seats(),
     admissionState: () => admission.admissionState(),
-    /** Open links, and how many of them are admitted players (the player count surfaces see). */
+    /**
+     * Open links: admitted players (the player count surfaces see), players waiting to join, and links
+     * being closed (removed, told why, not yet closed), which are neither.
+     */
     counts() {
       let admitted = 0;
-      for (const id of peers.keys()) if (stateOf(id) === 'admitted') admitted += 1;
-      return { links: peers.size, admitted, waiting: peers.size - admitted };
+      let closing = 0;
+      for (const peer of peers.values()) {
+        if (peer.closing) closing += 1;
+        else if (stateOf(peer.id) === 'admitted') admitted += 1;
+      }
+      return { links: peers.size, admitted, waiting: peers.size - admitted - closing, closing };
     },
     /** 'admitted' | 'unadmitted' | null (no such open link). */
     peerState: (peerId) => (peers.has(peerId) ? stateOf(peerId) : null),

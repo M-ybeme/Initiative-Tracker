@@ -5,7 +5,7 @@
 // unchanged Milestone 0-4 wire format. The real Battle Map is not involved: it moves to this path in 5A.4.
 import { test, expect } from '@playwright/test';
 import { RELAY } from '../helpers/live-share.js';
-import { startRoom as startRoomOn, joinSeat } from '../helpers/battlemap-live-share.js';
+import { startRoom as startRoomOn, joinSeat, endSession } from '../helpers/battlemap-live-share.js';
 
 test.use({ launchOptions: { args: ['--disable-features=WebRtcHideLocalIpsWithMdns'] } });
 
@@ -60,7 +60,7 @@ test.describe('Live Share surface boundary (5A.3)', () => {
   test('a publisher commits through the boundary; players get it from the host, also after the publisher closed', async ({ browser }) => {
     const context = await browser.newContext();
     const host = await openHost(context);
-    await expect(host.page.getByTestId('surfaces')).toHaveText('No Toolbox page is connected to this session.');
+    await expect(host.page.getByTestId('surfaces')).toHaveText('No Battle Map tab is open.');
     const pub = await openPublisher(context);
     await expect(surfaceRows(host.page)).toHaveCount(1);
     await expect(surfaceRows(host.page).first()).toHaveAttribute('data-state', 'active');
@@ -79,7 +79,7 @@ test.describe('Live Share surface boundary (5A.3)', () => {
     // Starting the room asks surfaces to announce themselves; the active one offers by itself.
     const joinUrl = await startRoom(host.page);
     await expect.poll(async () => (await hostStore(host.page)).committed).toEqual({ revision: 1, backgroundRevision: 1, assets: 2 });
-    await expect(surfaceRows(host.page).first()).toHaveText('Battle Map: open, publishing · players see revision 1');
+    await expect(surfaceRows(host.page).first()).toHaveText('Battle Map: open, sharing');
     expect((await pub.page.evaluate(() => window.testPublisher.status())).lastCommitted).toEqual({ publicationSeq: 1, revision: 1 });
 
     const p1 = await joinPlayer(browser, joinUrl);
@@ -99,20 +99,20 @@ test.describe('Live Share surface boundary (5A.3)', () => {
     // The publisher closes: the host keeps the committed publication; the player keeps the map.
     await pub.page.close();
     await expect(surfaceRows(host.page).first()).toHaveAttribute('data-liveness', 'closed');
-    await expect(surfaceRows(host.page).first()).toHaveText('Battle Map: closed · players see revision 2');
+    await expect(surfaceRows(host.page).first()).toHaveText('Battle Map: closed');
     expect((await hostStore(host.page)).committed).toEqual({ revision: 2, backgroundRevision: 1, assets: 2 });
     await expect(p1.player.getByTestId('map-status')).toHaveText('Live — revision 2');
 
     // A late player (the relay allows one at a time until 5B) gets the map and its assets from the host.
     await p1.player.getByTestId('leave-session').click();
-    await expect(host.page.getByTestId('peer-list')).toHaveText('No players connected.', { timeout: 15000 });
+    await expect(host.page.getByTestId('player-count')).toHaveText('No players yet', { timeout: 15000 });
     const p2 = await joinPlayer(browser, joinUrl);
     await expect(p2.player.getByTestId('map-status')).toHaveText('Live — revision 2');
     await expect(p2.player.getByTestId('map-assets')).toHaveText('Map image shown.');
     await expect.poll(async () => (await diagnostics(p2.player)).assets.cached).toBe(2);
 
     // Ending the session clears the store.
-    await host.page.getByTestId('end-session').click();
+    await endSession(host.page);
     await expect.poll(async () => (await hostStore(host.page)).committed).toBeNull();
     expect((await hostStore(host.page)).heldAssets).toBe(0);
 
@@ -147,7 +147,7 @@ test.describe('Live Share surface boundary (5A.3)', () => {
     await expect.poll(async () => (await hostStore(host.page)).committed).toMatchObject({ revision: 2, backgroundRevision: 2 });
     await expect(surfaceRows(host.page)).toHaveCount(2);
     await expect(host.page.locator('[data-testid="surface"][data-state="active"]')).toHaveCount(1);
-    await expect(host.page.locator('[data-testid="surface"][data-state="inactive"]')).toHaveText('Battle Map: open in another tab (not publishing)');
+    await expect(host.page.locator('[data-testid="surface"][data-state="inactive"]')).toHaveText('Battle Map: open in another tab, not sharing');
 
     const p = await joinPlayer(browser, joinUrl);
     await expect(p.player.getByTestId('map-status')).toHaveText('Live — revision 2');

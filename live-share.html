@@ -13,90 +13,150 @@
 
   <style>
     .ls-diag { font-size: .8rem; max-height: 24rem; overflow: auto; white-space: pre-wrap; word-break: break-word; }
-    .ls-link { word-break: break-all; }
+    .ls-link { word-break: break-all; user-select: all; }
+    .ls-status-label { font-size: 1.1rem; font-weight: 600; }
+    #ls-session-card[data-state="live"] .ls-status-label { color: var(--bs-success); }
+    #ls-session-card[data-state="failed"] .ls-status-label,
+    #ls-session-card[data-state="lost"] .ls-status-label { color: var(--bs-danger); }
+    .ls-seat { min-width: 0; }
+    .ls-seat-name { overflow-wrap: anywhere; font-weight: 600; }
+    .ls-seat[data-state="claimed"] .ls-seat-state { color: var(--bs-success); }
+    .ls-seat[data-state="claimed-disconnected"] .ls-seat-state { color: var(--bs-warning); }
+    .ls-seat[data-state="disabled"] .ls-seat-name { opacity: .6; }
+    .ls-seat-edit input { max-width: 16rem; }
+    .ls-confirm { max-width: 32rem; width: calc(100% - 2rem); border: 1px solid var(--bs-border-color); border-radius: .5rem; background: var(--bs-body-bg); color: var(--bs-body-color); padding: 0; }
+    .ls-confirm::backdrop { background: rgba(0, 0, 0, .6); }
+    .ls-details > summary { cursor: pointer; }
   </style>
 </head>
 <body>
-  <!-- Live Share session host (Milestone 5A.2). This tab owns the Live Share room and every player
+  <!-- Live Share session host (Milestones 5A.2-5C). This tab owns the Live Share room and every player
        connection; Toolbox pages that share something publish to it (docs/live-share-session-host-
-       architecture.md). Not linked from the site navigation yet: the product flow arrives with 5B/5C. -->
+       architecture.md). Not linked from the site navigation yet (Milestone 9: experimental release). -->
   <main class="container py-4" style="max-width: 900px;">
-    <div class="alert alert-warning" role="note">
-      <strong>In development.</strong> Live Share is being built in stages. Players join a seat you add
-      below; the seat, password and lock controls are a working preview, not the finished design.
-    </div>
+    <h1 class="h3 mb-1"><i class="bi bi-broadcast" aria-hidden="true"></i> Live Share <span class="badge text-bg-secondary align-middle fs-6">Preview</span></h1>
+    <p class="text-body-secondary mb-3">Show your Battle Map to your players in their own browsers.</p>
 
-    <h1 class="h3 mb-1"><i class="bi bi-broadcast"></i> Live Share session</h1>
-    <p class="text-body-secondary mb-3">This tab keeps Live Share running for your players.</p>
-
-    <div id="ls-owner" class="alert alert-secondary" role="status" data-testid="owner-status" data-state="claiming">Checking whether another tab is already running Live Share…</div>
+    <div id="ls-owner" class="alert alert-secondary" role="status" data-testid="owner-status" data-state="claiming">Checking whether Live Share is already open in another tab…</div>
     <div id="ls-config-error" class="alert alert-danger d-none" role="alert"></div>
 
-    <section class="card mb-3">
-      <div class="card-body">
-        <h2 class="h5">Session</h2>
-        <p class="mb-2">Status: <span id="ls-host-status" data-testid="host-status">Not started</span></p>
-        <div class="d-flex flex-wrap gap-2 mb-2">
-          <button id="ls-start" class="btn btn-primary" data-testid="start-room" disabled>Start Live Share</button>
-          <button id="ls-copy" class="btn btn-outline-light" data-testid="copy-link" disabled>Copy join link</button>
-          <button id="ls-reveal" class="btn btn-outline-light" data-testid="reveal-link" disabled>Reveal join link</button>
-          <button id="ls-end" class="btn btn-outline-danger" data-testid="end-session" disabled>End session</button>
-        </div>
-        <p id="ls-link" class="ls-link small text-body-secondary d-none" data-testid="join-link"></p>
-        <p class="small text-body-secondary mb-0">Closing or reloading this tab ends the session for everyone.</p>
-      </div>
-    </section>
+    <div id="ls-host-ui" class="d-none">
+      <!-- Session -->
+      <section id="ls-session-card" class="card mb-3" data-state="idle" aria-labelledby="ls-session-title">
+        <div class="card-body">
+          <h2 class="h5" id="ls-session-title">Session</h2>
+          <p class="mb-1" role="status" aria-live="polite"><span class="ls-status-label" id="ls-host-status" data-testid="host-status" data-state="idle">Not running</span></p>
+          <p class="text-body-secondary mb-3" id="ls-host-detail" data-testid="host-detail"></p>
+          <div class="d-flex flex-wrap gap-2 mb-2">
+            <button id="ls-start" type="button" class="btn btn-primary" data-testid="start-room" disabled>Start Session</button>
+            <button id="ls-end" type="button" class="btn btn-outline-danger d-none" data-testid="end-session" disabled>End Session</button>
+          </div>
 
-    <section class="card mb-3">
-      <div class="card-body">
-        <h2 class="h5">Players</h2>
-        <p class="small mb-2" id="ls-player-count" data-testid="player-count">0 joined · 0 connected, not joined</p>
-        <ul id="ls-peers" class="list-group" data-testid="peer-list"></ul>
-      </div>
-    </section>
-
-    <section class="card mb-3">
-      <div class="card-body">
-        <h2 class="h5">Seats and access</h2>
-        <p class="small text-body-secondary">A player sees the map only after joining a seat. Seats, the password and the lock last for this session only.</p>
-        <div class="d-flex flex-wrap gap-2 mb-2">
-          <input id="ls-seat-name" class="form-control form-control-sm" style="max-width: 16rem;" maxlength="40" placeholder="Seat name (e.g. a character)" aria-label="Seat name" data-testid="seat-name" disabled />
-          <button id="ls-add-seat" class="btn btn-sm btn-outline-light" data-testid="add-seat" disabled>Add seat</button>
+          <div id="ls-link-box" class="d-none mt-3" data-testid="link-box">
+            <h3 class="h6 mb-1">Join link</h3>
+            <p class="small text-body-secondary mb-2">Send this link to your players. Anyone with it can ask to join, so share it only with your table (a password or the room lock below keeps others out).</p>
+            <div class="d-flex flex-wrap gap-2 align-items-center">
+              <button id="ls-copy" type="button" class="btn btn-sm btn-primary" data-testid="copy-link" disabled><i class="bi bi-clipboard" aria-hidden="true"></i> Copy Join Link</button>
+              <button id="ls-reveal" type="button" class="btn btn-sm btn-outline-light" data-testid="reveal-link" aria-expanded="false" aria-controls="ls-link" disabled>Show Join Link</button>
+              <span id="ls-copy-status" class="small" role="status" aria-live="polite" data-testid="copy-status"></span>
+            </div>
+            <p id="ls-link" class="ls-link small font-monospace bg-body-tertiary rounded p-2 mt-2 mb-0 d-none" data-testid="join-link"></p>
+            <p id="ls-link-warning" class="small text-warning mt-2 mb-0 d-none" data-testid="link-warning"><i class="bi bi-exclamation-triangle" aria-hidden="true"></i> No seats yet: players who open the link can't join until you add a seat below.</p>
+          </div>
         </div>
-        <ul id="ls-seats" class="list-group mb-3" data-testid="seat-list"></ul>
-        <div class="d-flex flex-wrap gap-2 align-items-center mb-2">
-          <input id="ls-password" type="password" class="form-control form-control-sm" style="max-width: 16rem;" maxlength="128" autocomplete="off" placeholder="Room password" aria-label="Room password" data-testid="room-password" disabled />
-          <button id="ls-set-password" class="btn btn-sm btn-outline-light" data-testid="set-password" disabled>Set password</button>
-          <button id="ls-clear-password" class="btn btn-sm btn-outline-light" data-testid="clear-password" disabled>Remove password</button>
-          <span id="ls-password-status" class="small text-body-secondary" data-testid="password-status"></span>
-        </div>
-        <div class="form-check">
-          <input id="ls-lock" class="form-check-input" type="checkbox" data-testid="lock-room" disabled />
-          <label class="form-check-label" for="ls-lock">Lock the room (no new players; joined players stay)</label>
-        </div>
-        <p id="ls-seat-error" class="small text-danger mb-0" role="alert" data-testid="seat-error"></p>
-      </div>
-    </section>
+      </section>
 
-    <section class="card mb-3">
-      <div class="card-body">
-        <h2 class="h5">Shared pages</h2>
-        <ul id="ls-surfaces" class="list-group" data-testid="surfaces"></ul>
-        <p class="small text-body-secondary mt-2 mb-0">Open the Battle Map in another tab of this browser: it shares its last saved map through this page.</p>
-      </div>
-    </section>
+      <!-- Players -->
+      <section id="ls-players-card" class="card mb-3 d-none" aria-labelledby="ls-players-title">
+        <div class="card-body">
+          <div class="d-flex flex-wrap justify-content-between align-items-baseline gap-2 mb-2">
+            <h2 class="h5 mb-0" id="ls-players-title">Players</h2>
+            <span id="ls-player-count" class="small" data-testid="player-count" role="status" aria-live="polite">No players yet</span>
+          </div>
+          <p class="small text-body-secondary">Add a seat for each player (a character name works well). A player picks a seat when they join, and sees the map only after joining.</p>
+          <form id="ls-add-form" class="d-flex flex-wrap gap-2 mb-3" novalidate>
+            <label for="ls-seat-name" class="visually-hidden">New seat name</label>
+            <input id="ls-seat-name" class="form-control form-control-sm" style="max-width: 16rem;" maxlength="40" autocomplete="off" placeholder="Player 1" data-testid="seat-name" />
+            <button id="ls-add-seat" type="submit" class="btn btn-sm btn-outline-light" data-testid="add-seat"><i class="bi bi-plus-lg" aria-hidden="true"></i> Add Seat</button>
+          </form>
+          <p id="ls-seat-error" class="small text-danger" role="alert" data-testid="seat-error"></p>
+          <p id="ls-no-seats" class="alert alert-warning small py-2" data-testid="no-seats">No seats yet. Players can't join until you add one.</p>
+          <ul id="ls-seats" class="list-group" data-testid="seat-list" aria-label="Seats"></ul>
+        </div>
+      </section>
 
-    <section class="card">
+      <!-- Room access -->
+      <section id="ls-access-card" class="card mb-3 d-none" aria-labelledby="ls-access-title">
+        <div class="card-body">
+          <h2 class="h5" id="ls-access-title">Room access</h2>
+
+          <h3 class="h6 mb-1">Password</h3>
+          <p class="mb-2"><span id="ls-password-status" data-testid="password-status" data-required="false">Off</span>
+            <span id="ls-password-help" class="small text-body-secondary"></span></p>
+          <div class="d-flex flex-wrap gap-2 mb-2" id="ls-password-actions">
+            <button id="ls-set-password" type="button" class="btn btn-sm btn-outline-light" data-testid="set-password" aria-expanded="false" aria-controls="ls-password-form">Set Password</button>
+            <button id="ls-clear-password" type="button" class="btn btn-sm btn-outline-light d-none" data-testid="clear-password">Remove Password</button>
+          </div>
+          <form id="ls-password-form" class="d-none mb-2" novalidate>
+            <label for="ls-password" class="form-label small mb-1" id="ls-password-label">New password</label>
+            <div class="d-flex flex-wrap gap-2 align-items-center">
+              <input id="ls-password" type="password" class="form-control form-control-sm" style="max-width: 16rem;" autocomplete="off" autocapitalize="off" spellcheck="false" aria-describedby="ls-password-error" data-testid="room-password" />
+              <button id="ls-show-password" type="button" class="btn btn-sm btn-outline-secondary" aria-controls="ls-password" data-testid="show-password">Show password</button>
+              <button type="submit" class="btn btn-sm btn-primary" data-testid="save-password">Save</button>
+              <button id="ls-cancel-password" type="button" class="btn btn-sm btn-outline-secondary" data-testid="cancel-password">Cancel</button>
+            </div>
+            <p id="ls-password-error" class="small text-danger mt-1 mb-0" role="alert" data-testid="password-error"></p>
+          </form>
+          <p class="small text-body-secondary">Players type it when they join. Changing or removing it affects only players who join from now on.</p>
+
+          <h3 class="h6 mb-1">Room lock</h3>
+          <p class="mb-2"><span id="ls-lock-status" data-testid="lock-status" data-locked="false">New players can join available seats.</span></p>
+          <button id="ls-lock" type="button" class="btn btn-sm btn-outline-light" data-testid="lock-room" aria-describedby="ls-lock-status"><i class="bi bi-lock" aria-hidden="true"></i> <span>Lock Room</span></button>
+          <p class="small text-body-secondary mt-2 mb-0">The lock is separate from the password: a locked room turns away new players even with the right password.</p>
+        </div>
+      </section>
+
+      <!-- Sharing -->
+      <section id="ls-sharing-card" class="card mb-3" aria-labelledby="ls-sharing-title">
+        <div class="card-body">
+          <h2 class="h5" id="ls-sharing-title">Sharing</h2>
+          <p class="mb-2" role="status" aria-live="polite"><span id="ls-share-status" data-testid="share-status" data-state="none"></span></p>
+          <ul id="ls-surfaces" class="list-group mb-2" data-testid="surfaces" aria-label="Open Toolbox pages"></ul>
+          <button id="ls-open-battlemap" type="button" class="btn btn-sm btn-outline-light" data-testid="open-battlemap" aria-describedby="ls-open-battlemap-note"><i class="bi bi-map" aria-hidden="true"></i> Open Battle Map</button>
+          <p id="ls-open-battlemap-note" class="small mt-2 mb-0" role="status" aria-live="polite" data-testid="open-battlemap-note"></p>
+          <p class="small text-body-secondary mt-2 mb-0">The Battle Map opens in its own tab. Players see your last saved map with your fog; unsaved edits, hidden tokens and HP stay private. Closing the Battle Map doesn't end the session.</p>
+        </div>
+      </section>
+    </div>
+
+    <details class="card ls-details" id="ls-details">
+      <summary class="card-header small">Troubleshooting details</summary>
       <div class="card-body">
-        <div class="d-flex justify-content-between align-items-center mb-2">
+        <p class="small mb-2">Last connection problem: <span id="ls-host-problem" data-testid="host-problem">none</span></p>
+        <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-2">
           <h2 class="h6 mb-0">Diagnostics</h2>
-          <button id="ls-copy-diag" class="btn btn-sm btn-outline-secondary">Copy diagnostics</button>
+          <span>
+            <span id="ls-copy-diag-status" class="small me-2" role="status" aria-live="polite"></span>
+            <button id="ls-copy-diag" type="button" class="btn btn-sm btn-outline-secondary" data-testid="copy-diagnostics">Copy diagnostics</button>
+          </span>
         </div>
-        <p class="small text-body-secondary mb-2">Contains connection states only: no room link, no IP addresses.</p>
+        <p class="small text-body-secondary mb-2">For bug reports. Contains connection states and counts only: no join link, password, seat names, IP addresses or map content.</p>
         <pre id="ls-diag" class="ls-diag mb-0" data-testid="diagnostics"></pre>
       </div>
-    </section>
+    </details>
   </main>
+
+  <!-- One confirmation for every destructive action (kick, reset, disable, End Session). -->
+  <dialog id="ls-confirm" class="ls-confirm" aria-labelledby="ls-confirm-title" aria-describedby="ls-confirm-body" data-testid="confirm-dialog">
+    <form method="dialog" class="p-3">
+      <h2 class="h5" id="ls-confirm-title"></h2>
+      <p id="ls-confirm-body" class="mb-3" data-testid="confirm-body"></p>
+      <div class="d-flex flex-wrap justify-content-end gap-2">
+        <button value="cancel" class="btn btn-outline-secondary" data-testid="confirm-cancel">Cancel</button>
+        <button value="confirm" id="ls-confirm-ok" class="btn btn-danger" data-testid="confirm-ok"></button>
+      </div>
+    </form>
+  </dialog>
 
   <script type="module" src="/js/live-share-host.js"></script>
 </body>

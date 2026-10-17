@@ -20,6 +20,12 @@ import {
   chooseSeat,
   joinSeat,
   seatButton,
+  seatAction,
+  seatRow,
+  setRoomPassword,
+  removeRoomPassword,
+  setRoomLocked,
+  endSession,
 } from '../helpers/battlemap-live-share.js';
 
 const BARD = { id: 't_bard', name: 'Bard', imgSrc: '/images/playerTokens/PlayerBardToken.png', x: 100, y: 100, w: 50, h: 50, rot: 0, showLabel: true };
@@ -101,8 +107,8 @@ test.describe('Live Share admission on real peers (5B.2)', () => {
     expect(d.snapshots).toMatchObject({ snapshotsSent: 0 });
     expect(d.assets).toMatchObject({ requests: 0, sent: 0 });
     expect(d.players).toMatchObject({ admitted: 0, waiting: 1, messagesRefused: 1, sendsBlocked: 0 });
-    await expect(playerCount(session)).toHaveText('0 joined · 1 connected, not joined');
-    await expect(host.getByTestId('bm-live-share-status')).toContainText('with 0 players');
+    await expect(playerCount(session)).toHaveText('1 waiting to join');
+    await expect(host.getByTestId('bm-live-share-status')).toContainText('0 players joined');
 
     // Joining: only now the map arrives, then its background and art.
     expect(await chooseSeat(p.player, 'Aria')).toBe('Joined as Aria');
@@ -113,8 +119,8 @@ test.describe('Live Share admission on real peers (5B.2)', () => {
     const firstGameplay = types.findIndex((t) => !ADMISSION.has(t));
     expect(types.slice(0, firstGameplay).at(-1)).toBe('join-result');
     expect(types.slice(firstGameplay, firstGameplay + 2)).toEqual(['session-state', 'surface-snapshot']); // whether a map is shared, then the map
-    await expect(playerCount(session)).toHaveText('1 joined · 0 connected, not joined');
-    await expect(host.getByTestId('bm-live-share-status')).toContainText('with 1 player.');
+    await expect(playerCount(session)).toHaveText('1 player joined');
+    await expect(host.getByTestId('bm-live-share-status')).toContainText('1 player joined.');
 
     expect(hostErrors).toEqual([]);
     expect(p.errors).toEqual([]);
@@ -135,8 +141,8 @@ test.describe('Live Share admission on real peers (5B.2)', () => {
       // Each asked for and got the assets itself.
       expect((await playerLog(p.player)).filter((m) => m.type === 'asset-meta').length).toBe(2);
     }
-    await expect(playerCount(session)).toHaveText('3 joined · 0 connected, not joined');
-    await expect(host.getByTestId('bm-live-share-status')).toContainText('with 3 players.');
+    await expect(playerCount(session)).toHaveText('3 players joined');
+    await expect(host.getByTestId('bm-live-share-status')).toContainText('3 players joined.');
     const seats = session.getByTestId('seat');
     await expect(seats).toHaveCount(3);
     for (const s of await seats.all()) await expect(s).toHaveAttribute('data-state', 'claimed');
@@ -154,7 +160,7 @@ test.describe('Live Share admission on real peers (5B.2)', () => {
     await expect(late.player.locator('.ls-background-image')).toHaveCount(1, { timeout: 15000 });
     await expect(late.player.locator('[data-token-id="t_hero"]')).toHaveAttribute('data-art', 'image', { timeout: 15000 });
     for (const p of players) await expect(p.player.getByTestId('map-status')).toHaveText(`Live — revision ${next.revision}`);
-    await expect(playerCount(session)).toHaveText('4 joined · 0 connected, not joined');
+    await expect(playerCount(session)).toHaveText('4 players joined');
 
     expect(hostErrors).toEqual([]);
     for (const p of [...players, late]) expect(p.errors).toEqual([]);
@@ -179,7 +185,7 @@ test.describe('Live Share admission on real peers (5B.2)', () => {
     const [winner, loser] = outcomes[0].accepted ? [one, two] : [two, one];
     await expect.poll(() => playerRevision(winner.player), { timeout: 15000 }).toBeGreaterThan(0);
     expect(await seatState(session, seatA)).toBe('claimed');
-    await expect(session.getByTestId('player-count')).toHaveText('1 joined · 1 connected, not joined');
+    await expect(session.getByTestId('player-count')).toHaveText('1 player joined · 1 waiting to join');
     // The loser: no gameplay, its seat list shows the seat taken, and it joins the other one.
     expect((await playerLog(loser.player)).every((m) => ADMISSION.has(m.type))).toBe(true);
     await expect(loser.player.getByTestId('join-seat').locator('option', { hasText: 'Aria — taken' })).toBeDisabled();
@@ -200,9 +206,8 @@ test.describe('Live Share admission on real peers (5B.2)', () => {
     const seatA = await addSeat(session, 'Aria');
     await addSeat(session, 'Brom');
     await addSeat(session, 'Cael');
-    await session.getByTestId('room-password').fill('open sesame');
-    await session.getByTestId('set-password').click();
-    await expect(session.getByTestId('password-status')).toHaveText('A password is required to join.');
+    await setRoomPassword(session, 'open sesame');
+    await expect(session.getByTestId('password-status')).toHaveText('Required');
 
     // Aria joins with the right password; the password never reaches a player.
     const aria = await connectPlayer(browser, joinUrl);
@@ -219,7 +224,7 @@ test.describe('Live Share admission on real peers (5B.2)', () => {
     await expect(session.locator('[data-testid="seat"][data-seat-id="s2"]')).toHaveAttribute('data-state', 'available');
 
     // Lock: the right password is refused; Aria stays and keeps getting saves.
-    await session.getByTestId('lock-room').check();
+    await setRoomLocked(session, true);
     const late = await connectPlayer(browser, joinUrl);
     await expect(late.player.getByTestId('join-note')).toHaveText("The room is locked. The DM isn't letting new players join right now.");
     await sendRaw(late.player, { v: 1, type: 'join-request', seatId: 's3', password: 'open sesame' });
@@ -231,7 +236,7 @@ test.describe('Live Share admission on real peers (5B.2)', () => {
     // limit trips), yet the valid credential reclaims the seat, while locked, with no password.
     await aria.context.close();
     await expect.poll(() => seatState(session, seatA), { timeout: 15000 }).toBe('claimed-disconnected');
-    await session.getByTestId('lock-room').uncheck();
+    await setRoomLocked(session, false);
     const flooders = [];
     for (let i = 0; i < 4; i++) {
       // (8 connections at most: these 4, the guesser, the locked-out player, and two more below.)
@@ -240,7 +245,7 @@ test.describe('Live Share admission on real peers (5B.2)', () => {
       for (let j = 0; j < 5; j++) await sendRaw(f.player, { v: 1, type: 'join-request', seatId: 's2', password: `flood${i}-${j}` });
     }
     await expect.poll(async () => (await diagnostics(session)).players.admission.throttled, { timeout: 10000 }).toBeGreaterThan(0);
-    await session.getByTestId('lock-room').check();
+    await setRoomLocked(session, true);
     const back = await connectPlayer(browser, joinUrl);
     await sendRaw(back.player, { v: 1, type: 'rejoin-request', seatId: seatA, credential: ariaCredential });
     await expect.poll(async () => (await playerLog(back.player)).filter((m) => m.type === 'join-result').map((m) => m.accepted), { timeout: 10000 }).toEqual([true]);
@@ -255,9 +260,9 @@ test.describe('Live Share admission on real peers (5B.2)', () => {
 
     // Unlocked and without a password: new claims still wait while the flood's room-wide limit lasts
     // (its minute), the deliberate cost of limiting password guesses.
-    await session.getByTestId('lock-room').uncheck();
-    await session.getByTestId('clear-password').click();
-    await expect(session.getByTestId('password-status')).toHaveText('No password.');
+    await setRoomLocked(session, false);
+    await removeRoomPassword(session);
+    await expect(session.getByTestId('password-status')).toHaveText('Off');
     expect(await chooseSeat(late.player, 'Cael')).toBe('Too many attempts. Try again shortly.');
     await expect(session.locator('[data-testid="seat"][data-seat-id="s3"]')).toHaveAttribute('data-state', 'available');
 
@@ -334,7 +339,7 @@ test.describe('Live Share admission on real peers (5B.2)', () => {
     test.setTimeout(120000);
     const { hostContext, host, session, hostErrors, joinUrl, moveAndSave } = await dmWithMap(browser);
     const [a, b, c] = [await joinedPlayer(browser, joinUrl, 'Aria'), await joinedPlayer(browser, joinUrl, 'Brom'), await joinedPlayer(browser, joinUrl, 'Cael')];
-    const seatId = async (name) => session.getByTestId('seat').filter({ hasText: `${name}:` }).getAttribute('data-seat-id');
+    const seatId = async (name) => seatRow(session, name).getAttribute('data-seat-id');
     const [sa, sb] = [await seatId('Aria'), await seatId('Brom')];
     const waiting = await connectPlayer(browser, joinUrl);
 
@@ -347,10 +352,10 @@ test.describe('Live Share admission on real peers (5B.2)', () => {
     await moveAndSave();
     let next = await hostSnapshot(host);
     for (const p of [b, c]) await expect.poll(() => playerRevision(p.player), { timeout: 15000 }).toBe(next.revision);
-    await expect(playerCount(session)).toHaveText('2 joined · 1 connected, not joined');
+    await expect(playerCount(session)).toHaveText('2 players joined · 1 waiting to join · 1 disconnected seat');
 
     // Kick B: only B is told and removed; its seat is free again (the waiting player sees that).
-    await seatButton(session, sb, 'kick').click();
+    await seatAction(session, sb, 'kick');
     await expect(b.player.getByTestId('player-status')).toHaveText('You were removed from the session.', { timeout: 10000 });
     await expect(b.player.getByTestId('map-status')).toContainText('Disconnected — showing the last map received');
     await expect.poll(() => seatState(session, sb)).toBe('available');
@@ -366,10 +371,10 @@ test.describe('Live Share admission on real peers (5B.2)', () => {
     await sendRaw(ghost.player, { v: 1, type: 'rejoin-request', seatId: sb, credential: bCredential });
     await expect.poll(async () => (await playerLog(ghost.player)).filter((m) => m.type === 'join-result').map((m) => m.reason)).toEqual(['invalid-credential']);
     expect(await chooseSeat(waiting.player, 'Brom')).toBe('Joined as Brom');
-    await expect(playerCount(session)).toHaveText('2 joined · 1 connected, not joined');
+    await expect(playerCount(session)).toHaveText('2 players joined · 1 waiting to join · 1 disconnected seat');
 
     // Reset C's seat: C is told its own reason.
-    await seatButton(session, await seatId('Cael'), 'reset').click();
+    await seatAction(session, await seatId('Cael'), 'reset');
     await expect(c.player.getByTestId('player-status')).toHaveText('Your seat was reset by the host.', { timeout: 10000 });
 
     expect(hostErrors).toEqual([]);
@@ -391,7 +396,7 @@ test.describe('Live Share admission on real peers (5B.2)', () => {
         if (m && m.type === 'session-status') window.__statuses.push(m.running ?? (m.payload && m.payload.running));
       };
     });
-    await session.getByTestId('end-session').click();
+    await endSession(session);
     // The host's own protocol-v1 session-ended reached every link, joined or not: read from what each
     // player's channel received (the relay's "host left" shows the same text, so the text proves nothing).
     const ended = async (p) => (await playerLog(p.player)).filter((m) => m.type === 'session-ended').map((m) => m.reason);
@@ -401,8 +406,9 @@ test.describe('Live Share admission on real peers (5B.2)', () => {
     // grace, and not by a later Start, which would force it).
     await expect.poll(async () => (await diagnostics(session)).signaling, { timeout: 10000 }).toBe('closed');
     expect((await diagnostics(session)).lastTeardown).toBe('players-closed');
-    await expect(session.getByTestId('seat-list')).toHaveText('Seats exist while a session runs.');
-    await expect(session.getByTestId('add-seat')).toBeDisabled();
+    // The seats are gone with the session (5C: the seat controls show only while one is live).
+    await expect(session.getByTestId('seat')).toHaveCount(0);
+    await expect(session.getByTestId('add-seat')).toBeHidden();
     await expect(host.getByTestId('bm-live-share-status')).toHaveAttribute('data-state', 'not-running');
     // From End on, the session was never reported as running (no running:true, players:0 blip).
     const statuses = await host.evaluate(() => window.__statuses);
@@ -414,7 +420,8 @@ test.describe('Live Share admission on real peers (5B.2)', () => {
     // A new session is a new admission model: none of the old seats exist.
     const fresh = await startRoom(session);
     expect(fresh).not.toBe(joinUrl);
-    await expect(session.getByTestId('seat-list')).toHaveText('No seats yet: add one for each player.');
+    await expect(session.getByTestId('seat')).toHaveCount(0);
+    await expect(session.getByTestId('no-seats')).toBeVisible();
 
     expect(hostErrors).toEqual([]);
     for (const p of [a, b, waiting]) expect(p.errors).toEqual([]);
@@ -439,7 +446,7 @@ test.describe('Live Share admission on real peers (5B.2)', () => {
     await joinSeat(stubborn, joinUrl, { name: 'Stubborn' });
     const polite = await joinedPlayer(browser, joinUrl, 'Polite');
 
-    await session.getByTestId('end-session').click();
+    await endSession(session);
     await expect(session.getByTestId('host-status')).toHaveText('Session ended'); // shown at once
     const ended = async (page) => (await playerLog(page)).filter((m) => m.type === 'session-ended').map((m) => m.reason);
     for (const page of [stubborn, polite.player]) await expect.poll(() => ended(page), { timeout: 10000 }).toEqual(['ended']);
@@ -461,11 +468,11 @@ test.describe('Live Share admission on real peers (5B.2)', () => {
   test('a player who leaves releases its seat; the host closes its connection', async ({ browser }) => {
     const { hostContext, session, hostErrors, joinUrl } = await dmWithMap(browser);
     const a = await joinedPlayer(browser, joinUrl, 'Aria');
-    const seatA = await session.getByTestId('seat').filter({ hasText: 'Aria:' }).getAttribute('data-seat-id');
+    const seatA = await seatRow(session, 'Aria').getAttribute('data-seat-id');
     await a.player.getByTestId('leave-session').click();
     await expect(a.player.getByTestId('player-status')).toHaveText('You left the session.', { timeout: 10000 });
     await expect.poll(() => seatState(session, seatA)).toBe('available');
-    await expect(session.getByTestId('player-count')).toHaveText('0 joined · 0 connected, not joined', { timeout: 10000 });
+    await expect(session.getByTestId('player-count')).toHaveText('No players yet', { timeout: 10000 });
     expect((await playerLog(a.player)).filter((m) => m.type === 'session-ended').map((m) => m.reason)).toEqual(['left']);
     expect(hostErrors).toEqual([]);
     expect(a.errors).toEqual([]);

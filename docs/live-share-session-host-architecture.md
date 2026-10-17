@@ -176,7 +176,7 @@ The host keeps the per-surface rules intact:
 | A surface crashes or hangs (no `unregister`) | A heartbeat with a generous timeout eventually marks it "not responding". **Liveness only affects the DM-facing status, never the committed publication** | — |
 | Player disconnects | Its link closes and its seat shows "Disconnected" (seat stays claimed). No automatic re-admission | Reconnect with the seat credential |
 | Session host reloads | Today's behavior, made explicit: the host socket closes, the relay ends the room (`HOST_LEFT`), players are told the session ended | Grace period and resume (§10) |
-| Session host closes (End, tab closed, crash) | The session ends: players get session-ended, connections close, credentials are discarded, surfaces show "Live Share not running" and keep working locally. A `beforeunload` warning protects the host tab while players are connected. **As built (5A.4):** End and closing the tab are told to surfaces (`session-status { running: false }`); a **crash is not detected yet**: there is no host heartbeat, so a surface keeps showing "running" (and the Battle Map keeps preparing assets) until the next session page says otherwise. A host heartbeat with a surface-side timeout is a follow-up | — |
+| Session host closes (End, tab closed, crash) | The session ends: players get session-ended, connections close, credentials are discarded, surfaces show "Live Share not running" and keep working locally. A `beforeunload` warning protects the host tab (as built in 5C, §6.6: whenever a session is live, players joined or not, since its link may already be out). **As built (5A.4):** End and closing the tab are told to surfaces (`session-status { running: false }`); a **crash is not detected yet**: there is no host heartbeat, so a surface keeps showing "running" (and the Battle Map keeps preparing assets) until the next session page says otherwise. A host heartbeat with a surface-side timeout is a follow-up | — |
 
 ## 6. The surface ↔ session host boundary
 
@@ -749,6 +749,125 @@ Milestone 5B is built in three reviewable stages:
 
 Nine deliberate breakages of the product guarantees were each caught. The wire-level guarantees stay in `live-share-admission.spec.js`.
 
+### 6.6 The DM's session UX (5C, 2026-10-16)
+
+5C turns the session host page (`live-share.html`, `js/live-share-host.js`) into a session-management page for a nontechnical DM, and polishes the Battle Map's Live Share panel (`js/battlemap-live-share.js`). Admission, protocol v1, the relay and the player page are unchanged. Every control calls the session players (`session-players.js`), so the admission model decides. The page only shows the model's state, and it never reads Battle Map state: what it says about sharing comes from the boundary's registry and the committed publication.
+
+**The page**, top to bottom:
+- **Session.** The status, with what it means for the DM:
+
+  | State | Shown |
+  |---|---|
+  | `idle` | "Not running", with Start Session |
+  | `starting` | "Starting…" (Start held: one session per click) |
+  | `live` | "Live", with End Session and the join link |
+  | `ended` | "Session ended": players disconnected, seats, password and link discarded, the Battle Map unchanged |
+  | `failed` | "Could not start Live Share", and why, where the network layer can tell (server unreachable, no relay configured, no WebRTC) |
+  | `lost` | "Connection problem": the relay connection failed after the session was live |
+
+  Raw errors go only to the troubleshooting details.
+- **Join link.** Hidden by default.
+  - Copy Join Link confirms "Join link copied." When the clipboard is refused, it shows the link, selected, to copy by hand.
+  - Show / Hide Join Link.
+  - The link never carries the password.
+- **Players.** Add Seat, the seat cards, and the counts:
+  - "N players joined · N waiting to join · N disconnected seats", or "No players yet";
+  - a link being closed (kicked, reset, disabled) counts as neither (`counts().closing`).
+- **Room access.**
+  - The password: Off / Required, with Set, Change and Remove Password.
+  - The lock: Lock Room / Unlock Room, with what each means.
+- **Sharing.** What players see, from the boundary:
+  - "Sharing your saved Battle Map…";
+  - "Preparing…";
+  - "The Battle Map has no saved map yet";
+  - "The Battle Map is closed (or isn't responding). Players still see the last map you shared.";
+  - a different version.
+
+  Also the open Battle Map tabs (the closed ones only while none is open), and Open Battle Map.
+- **Troubleshooting details** (collapsed): the last connection problem and the diagnostics, with Copy diagnostics.
+  - Counts and states only: no join link, password, seat names, credentials or IP addresses.
+  - It now also records `hostState` and `leaveWarning`.
+
+**Default seats: none (decided in 5C).** A session starts empty, and setup is made unmissable instead:
+- "No seats yet" shows next to the join link and in the seat list;
+- the seat-name field suggests the next free "Player N", so an empty Add Seat adds one.
+
+Pre-made seats were rejected for three reasons:
+- the best seat name is the character's;
+- the model has no "delete seat", so unused pre-made seats could only be disabled;
+- the 5B.3 player's "no seats yet" waiting state stays meaningful.
+
+**Seats**, each a card created once and then updated in place:
+- **States:** Available, Joined, Disconnected — seat reserved, Disabled.
+  - Only the actions that apply are shown: Rename and Disable (available); Rename, Disable, Reset Seat and Kick (joined); Rename, Disable and Reset Seat (reserved); Rename and Enable (disabled).
+  - **The buttons never move.** One fixed order, on their own left-aligned row under the name: Rename and Enable / Disable (one button whose label follows the state) first, since every state has them; then Reset Seat and Kick, which only a claimed seat has. A button shown, hidden or relabelled by a live update moves none of the others, so a press can't end on a different action than it started on.
+  - On a reserved seat, Reset Seat is highlighted in its usual place. Its hint says to reset it if the player needs to join again, and that Live Share doesn't reconnect players by itself yet.
+- **Add Seat:** a double click adds one seat. The `MAX_SEATS` limit (32, the model's) is said in words.
+- **Rename** edits in place: Save / Cancel, Enter saves, Escape cancels. The model's rule (1–40 characters, not only spaces) is reported in place.
+- **Confirmation first** (one `<dialog>`; Escape or Cancel keeps everything as it was):
+  - Kick: disconnected, seat available, "This isn't a ban".
+  - Reset Seat and Disable of a joined seat.
+  - Disable of a reserved seat: it releases the reservation.
+
+  The dialog is about the seat as it was when it opened: its state and the player connected to it. When the DM confirms, both are checked again; if either changed (the player left and someone else took the seat, or the seat was reset meanwhile), nothing is done and the page says "That seat changed while this confirmation was open. Review it and try again." A new occupant is never removed by a confirmation about the previous one. Status updates never close the dialog; it closes by itself only if the session ends. Afterwards focus returns to the seat's card.
+- Reset Seat on a reserved seat and Disable / Enable of an available seat act at once. The semantics are the model's, unchanged: kick and reset release the seat (`kicked` / `seat-reset`); disable releases it and disables it (`seat-disabled`).
+
+**Password and lock.**
+- The editor is hidden until Set / Change Password. The field is a password input (Show password while editing). The value is saved exactly as typed: 1–128 characters, checked here so it is never cut short silently; no trimming or case change.
+- Once saved, it is cleared from the page. It is never shown, logged or put in the diagnostics. Changing or removing it affects only new joins.
+- The lock is a separate button: a locked room refuses even the right password. Joined players stay.
+
+**Render stability.** The page gets frequent events: snapshot and asset sends, counts, heartbeats, and a 1 s diagnostics refresh. These are kept from disturbing the DM:
+- the seat cards and the Battle Map tab rows are keyed and updated in place (before 5C both lists were rebuilt, the tab list every second);
+- a rename being typed, a password being typed, a focused button and an open confirmation survive those updates.
+
+**Leaving the page (`beforeunload`).**
+- The browser's own leave dialog is armed only while the session is live in the owning tab. It disarms at End (and on a lost or failed session).
+- Not before Start, not in a second Live Share tab, never from the Battle Map. The Battle Map keeps only its own unsaved-changes warning.
+- End Session itself navigates nowhere, so it never triggers the dialog.
+- `pagehide` still ends the session at once (no recovery: Milestone 7).
+
+**A second Live Share tab** shows only "Live Share is already open in another tab of this browser. Switch to that tab… This tab takes over by itself if you close the other one." It has no session controls and starts no networking (the 5A.2 Web Lock rule is unchanged). A browser can't reliably focus an unrelated tab, so it gives directions, not a Focus button.
+
+**Open Battle Map / Open Live Share.**
+- Each page opens the other under a fixed window name (`dmtoolbox-battlemap`, `dmtoolbox-live-share`). An open page is focused, never reloaded.
+- A tab reaches the other by name only when one opened the other. Otherwise the browser gives a new blank window. The Battle Map then asks the Web Lock registry (`navigator.locks.query()`) whether a Live Share page holds the session host lock.
+  - If one does, it closes the blank window and says "Live Share is already open in another tab of this browser: switch to that tab." There is no second Live Share tab.
+  - If none does, it opens the Live Share page there.
+- Open Battle Map does the same the other way, with the boundary instead of a lock: if the Battle Map tab can't be reached by name and the boundary already had an open Battle Map when the button was pressed, the blank window is closed and the page says "The Battle Map is already open in another tab." There is no second editor of the same saved map. Only what was registered before the click counts, so a Battle Map the click itself opens (it registers later) is never closed. A Battle Map opened elsewhere that hasn't registered yet when the button is pressed can't be known, and a second one opens.
+- Their messages (already open, pop-up blocked) go to each button's own note, which the status refreshes never rewrite.
+
+**The Battle Map panel** stays small. It has no seat, password, lock or end controls; those are on the Live Share page. It says:
+- whether Live Share runs;
+- how many players joined;
+- whether this tab is the one sharing, or another Battle Map tab is ("Publish from this tab", as before);
+- whether players have the last save, with a separate note while there are unsaved edits: "they stay private until you save".
+
+**Decided in 5C: the player page keeps its name.** `liveshare-dev.html` stays the player page through Milestone 5. Renaming it changes only the join link's path, so the public names of both pages are set with Live Share's entry in the site navigation, at the experimental release (Milestone 9).
+
+**Not in 5C:**
+- reconnect, credential storage, host-refresh recovery (Milestone 7);
+- pings (6);
+- relay eviction or rate limits, and the large-transfer delay (8);
+- the Initiative Tracker.
+
+**Tests:** `tests/e2e/live-share-host-ux.spec.js` drives the visible controls, with real player pages for what players see:
+- the DM happy path (start, a seat renamed, a password, Show / Copy link, a player, lock, leave, End with Cancel and confirm);
+- the copy fallback;
+- seats: add, rename, disable / enable; kick and disable of a joined player, asked first, only that player removed;
+- a dropped player's reserved seat and Reset Seat;
+- password set, change and remove, never shown or sent;
+- the lock;
+- `beforeunload`, observed as the browser's real dialog through `page.close({ runBeforeUnload: true })`: armed only while live, disarmed at End, never in a second tab or from a saved Battle Map;
+- Open Battle Map / Open Live Share: the same window handed back (no new one created), a separately opened Battle Map or Live Share tab not duplicated, the pop-up-blocked note surviving the refreshes; new pages counted from the browser's page events, of any URL;
+- a confirmation not acting once its seat changed hands (Kick, Reset Seat, Disable);
+- seat buttons keeping their elements, order and position through every state, with a press and the keyboard focus on Rename across a state change still giving Rename;
+- the Battle Map panel;
+- live updates not disturbing a rename, a password or a confirmation;
+- a 360 px wide page without horizontal scroll.
+
+The session-host spec now accepts the leave dialog on reload, and checks that it is `beforeunload`. The other specs use the new helpers (`seatAction`, `renameSeat`, `setRoomPassword`, `setRoomLocked`, `endSession`). 17 deliberate breakages were each caught.
+
 ## 7. Assets when the Battle Map isn't the WebRTC owner
 
 - **What's sent to the host:** only player-safe output, the same bytes players get today.
@@ -1005,7 +1124,7 @@ Refreshing the session host is the only refresh that threatens the room; a surfa
 | A 16 MiB background over BroadcastChannel | One copy to the host (about 44 ms); per-surface data channels keep it away from other surfaces; size limits enforced before hashing | 5A |
 | A late player joins while the Battle Map is closed | Served the committed snapshot and assets from the host store | 5A |
 | Session host refreshes | Milestone 5: the session ends, clearly, for everyone. Milestone 7: grace period and resume | 5A (explicit end) / 7 |
-| Session host closed by accident | `beforeunload` warning while players are connected; otherwise the session ends | 5C (warning) |
+| Session host closed by accident | `beforeunload` warning while a session is live (5C, §6.6); otherwise the session ends | 5C (warning) |
 | A surface tab crashes | No `bye`; the heartbeat timeout marks it "not responding"; the publication is kept | 5A |
 | Stale BroadcastChannel publishers | Instance ids plus heartbeats; a silent instance loses its "active" role only for status, never data | 5A |
 | A malformed or hostile same-origin message | Validated like player input; unknown types ignored; never forwarded unvalidated | 5A |
@@ -1047,7 +1166,7 @@ Refreshing the session host is the only refresh that threatens the room; a surfa
    - **5B.1:** the admission model and protocol-v1 foundation. Implemented on 2026-10-03 (§6.3), released in 2.3.35; in production since 5B.2.
    - **5B.2:** host enforcement on real peers, multi-player relay and concurrency. Implemented and released in 2.3.36 (2026-10-16; §6.4): admission is enforced, players speak v1, rooms take 8.
    - **5B.3:** the player join flow. Implemented and released in 2.3.37 (2026-10-16; §6.5). **Milestone 5B is complete.**
-6. **5C:** product UX (next): polished host controls, connection status, session-host UX, the Battle Map indicator and "Open Live Share", and the `beforeunload` warning.
+6. **5C:** product UX: polished host controls, connection status, session-host UX, the Battle Map indicator and "Open Live Share", and the `beforeunload` warning. Implemented on 2026-10-16 (§6.6). **Milestone 5 is complete.**
 
 ## 15. Decisions still to make
 
@@ -1058,7 +1177,7 @@ Refreshing the session host is the only refresh that threatens the room; a surfa
 - **Safari's hidden-tab result:** a manual check on a Mac (§9). It doesn't block 5A.2, but a frozen or discarded hidden owner in Safari would reopen C/D for Safari.
 
 **During 5A, not blocking it:**
-- ~~the page name and URL of the session host~~ (decided in 5A.2: `live-share.html`, `/live-share`), and the product player page (still open; players use `liveshare-dev.html` until 5B/5C);
+- ~~the page name and URL of the session host~~ (decided in 5A.2: `live-share.html`, `/live-share`), ~~and the product player page~~ (decided in 5C, §6.6: `liveshare-dev.html` through Milestone 5; the public names come with the site navigation entry in Milestone 9);
 - ~~the duplicate-tab rule~~ (decided and implemented in 5A.3, §6.1: the latest registration wins, except that an empty tab never displaces one with a publication, and a manual claim holds while the claimed tab has a publication. The Battle Map's "Publish from this tab" button came in 5A.4);
 - ~~whether the Battle Map's `?liveshare=1` flag disappears in 5A~~ (decided in 5A.4: it stays only as a development shortcut that shows the Battle Map's Live Share panel before a session page is open. Nothing in the product depends on it; asset preparation follows whether a session is running, §6.2).
 

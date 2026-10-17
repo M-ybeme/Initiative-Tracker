@@ -186,7 +186,7 @@ test.describe('Battle Map staged Live Share publishing (2.3.27)', () => {
     await tokenMenu(host, heroCenter, 'toggleVisible');
     await expect(host.getByTestId('save-map')).toHaveAttribute('data-state', 'dirty');
     await p1.player.getByTestId('leave-session').click();
-    await expect(sessionOf(host).getByTestId('peer-list')).toContainText('No players connected.');
+    await expect(sessionOf(host).getByTestId('player-count')).toHaveText('No players yet');
     const p2 = await joinPlayer(browser, joinUrl);
     const joinedView = await expectShowing(p2.player, host);
     expect(joinedView.revision).toBe(B.revision);

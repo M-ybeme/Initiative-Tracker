@@ -22,6 +22,20 @@ The DM's Toolbox has evolved through focused feature releases. Minor versions (2
 
 ## [Unreleased]
 
+### Live Share (in development, not yet part of the product flow)
+- Milestone 5C: the Live Share page is now a page a DM can run a session from, in plain words. It shows the session's status (Not running, Live, Session ended, or what went wrong) with **Start Session** and **End Session**, the join link (hidden until you choose **Show Join Link**; **Copy Join Link** copies it without showing it), the players, room access and what's being shared. Technical details moved into a collapsed "Troubleshooting details" section.
+- Seats show their state (Available, Joined, Disconnected — seat reserved, Disabled) with only the actions that apply. Rename edits in place. Kicking a player, or resetting or disabling a seat someone is in, asks first; Kick says it isn't a ban. If that player leaves and someone else takes the seat while you're deciding, confirming does nothing and tells you the seat changed. A seat's buttons stay in the same place when its state changes, so a click never lands on a different action. A disconnected player's seat stays reserved, and **Reset Seat** is the highlighted action to let them join again.
+- Sessions still start with no seats, but the page says so next to the join link, and **Add Seat** suggests "Player 1", "Player 2"… so one click adds a seat.
+- The password has **Set**, **Change** and **Remove Password**. It's typed hidden (you can show it while typing), saved exactly as typed, and then cleared from the page. **Lock Room** / **Unlock Room** is separate, and says players already in the session stay.
+- The counts say how many players joined, how many are waiting to join, and how many seats are reserved for disconnected players.
+- **Sharing** says what players see: your saved Battle Map, that it's being prepared, that the Battle Map has nothing saved yet, or that it's closed and players still see the last map. **Open Battle Map** opens it in its own tab, or switches to the one it opened, without reloading it; if you already have the Battle Map open in a tab it can't switch to, it says so instead of opening a second one.
+- While a session is live, closing or reloading the Live Share tab asks first (the browser's own "leave this page?" dialog). It doesn't ask before you start, after you end, in a second Live Share tab, or when you close the Battle Map.
+- A second Live Share tab says Live Share is already open in another tab and offers no controls.
+- The Battle Map's Live Share panel is simpler. It shows how many players joined, whether this tab is the one sharing, whether players have your last save, and a note while you have unsaved edits ("they stay private until you save"). **Open Live Share** no longer opens a second Live Share tab when one is already open in a tab it can't switch to; it says where Live Share is instead.
+
+### Internal
+- Live Share: browser tests drive the DM's controls (`live-share-host-ux.spec.js`): the whole session, seats, kick and disable, a reserved seat and Reset, password, lock, the leave warning (observed as the browser's real dialog), Open Battle Map / Open Live Share, the Battle Map panel, live updates during edits, and a narrow screen. The other Live Share specs use shared helpers for the new controls. A link being closed is no longer counted as waiting to join.
+
 ## [2.3.37] - 2026-10-16
 **The Live Share player join screen (Milestone 5B.3)**
 

@@ -8,7 +8,7 @@
 // with the revisions it assigns), so "converged" means the same revision and the same geometry, names
 // and conditions. No images are asserted: map and token assets arrive in Milestone 3.
 import { test, expect } from '@playwright/test';
-import { openHost, startAndJoin, sessionOf, hostSnapshot, diagnostics, save } from '../helpers/battlemap-live-share.js';
+import { openHost, startAndJoin, sessionOf, hostSnapshot, diagnostics, save, endSession } from '../helpers/battlemap-live-share.js';
 
 test.use({ launchOptions: { args: ['--disable-features=WebRtcHideLocalIpsWithMdns'] } });
 
@@ -312,7 +312,7 @@ test.describe('Live Share remote structured rendering (Milestone 2)', () => {
     expect(JSON.stringify(await diagnostics(player))).not.toContain('Fighter');
 
     // The DM ends the session (on the session page): the player keeps the last map, marked disconnected.
-    await session.getByTestId('end-session').click();
+    await endSession(session);
     await expect(player.getByTestId('map-status')).toHaveText(`Disconnected — showing the last map received (revision ${latest.revision})`);
     expect(await playerModel(player)).toEqual(playerBefore);
 

@@ -6,7 +6,7 @@
 // live-share-battlemap-session.spec.js.
 import { test, expect } from '@playwright/test';
 import { RELAY } from '../helpers/live-share.js';
-import { startRoom as startRoomOn, joinSeat } from '../helpers/battlemap-live-share.js';
+import { startRoom as startRoomOn, joinSeat, endSession } from '../helpers/battlemap-live-share.js';
 
 test.use({ launchOptions: { args: ['--disable-features=WebRtcHideLocalIpsWithMdns'] } });
 
@@ -35,7 +35,7 @@ async function clickStartDespiteDisabled(page) {
 }
 async function expectNoRoomStarted(page) {
   await page.waitForTimeout(500); // a room would show "Connecting to relay…" at once, then open
-  await expect(page.getByTestId('host-status')).toHaveText('Not started');
+  await expect(page.getByTestId('host-status')).toHaveText('Not running');
   await expect(page.getByTestId('join-link')).toHaveText('');
   const d = await diagnostics(page);
   expect(d.signaling).toBe('idle');
@@ -70,8 +70,8 @@ test.describe('Live Share session host page (5A.2)', () => {
     const hostContext = await browser.newContext({ permissions: ['clipboard-read', 'clipboard-write'] });
     const { page: host, errors: hostErrors } = await openHostPage(hostContext);
     await expect(host).toHaveTitle("The DM's Toolbox: Live Share session");
-    await expect(host.getByText('This tab keeps Live Share running for your players.')).toBeVisible();
-    await expect(host.getByTestId('owner-status')).toHaveText(/This tab keeps Live Share running\. Keep it open while you share/);
+    await expect(host.getByText('Show your Battle Map to your players in their own browsers.')).toBeVisible();
+    await expect(host.getByTestId('host-detail')).toContainText('Keep this tab open while you play: closing or reloading it ends the session for everyone.');
     expect(await host.evaluate(() => window.name)).toBe('dmtoolbox-live-share');
     await expect(host.getByTestId('end-session')).toBeDisabled();
 
@@ -81,12 +81,14 @@ test.describe('Live Share session host page (5A.2)', () => {
     await host.getByTestId('reveal-link').click();
     await expect(host.getByTestId('join-link')).toBeVisible();
     await host.getByTestId('copy-link').click();
+    await expect(host.getByTestId('copy-status')).toHaveText('Join link copied.');
     expect(await host.evaluate(() => navigator.clipboard.readText())).toBe(joinUrl);
     await expect(host.getByTestId('start-room')).toBeDisabled();
 
     const p = await joinPlayer(browser, joinUrl);
-    await expect(host.getByTestId('peer')).toHaveText(/^Connection 1: Connected · joined as Seat \d+$/);
-    await expect(host.getByTestId('player-count')).toHaveText('1 joined · 0 connected, not joined');
+    await expect(host.getByTestId('seat')).toHaveAttribute('data-state', 'claimed');
+    await expect(host.getByTestId('seat-state')).toHaveText('Joined');
+    await expect(host.getByTestId('player-count')).toHaveText('1 player joined');
     await expect.poll(async () => Object.values((await diagnostics(host)).peers)[0]?.dataChannelState).toBe('open');
     // No surface publishes yet: the player is connected but receives no map.
     await p.player.waitForTimeout(1000);
@@ -98,10 +100,10 @@ test.describe('Live Share session host page (5A.2)', () => {
     expect(JSON.stringify(hostDiag)).not.toContain(joinUrl.split('#room=')[1]); // no room id in diagnostics
 
     // End: the player is told, the host is reset and can start again.
-    await host.getByTestId('end-session').click();
+    await endSession(host);
     await expect(host.getByTestId('host-status')).toHaveText('Session ended');
     await expect(p.player.getByTestId('player-status')).toHaveText('The host ended the session.', { timeout: 10000 });
-    await expect(host.getByTestId('peer-list')).toHaveText('No players connected.');
+    await expect(host.getByTestId('player-count')).toHaveText('No players yet');
     await expect(host.getByTestId('start-room')).toBeEnabled();
     await expect(host.getByTestId('end-session')).toBeDisabled();
     await expect(host.getByTestId('join-link')).toBeHidden();
@@ -120,7 +122,8 @@ test.describe('Live Share session host page (5A.2)', () => {
     await startRoom(first.page);
     const second = await openHostPage(context);
     await expect(second.page.getByTestId('owner-status')).toHaveAttribute('data-state', 'busy');
-    await expect(second.page.getByTestId('owner-status')).toHaveText(/Live Share is already running in another tab/);
+    await expect(second.page.getByTestId('owner-status')).toHaveText(/Live Share is already open in another tab of this browser\. Switch to that tab/);
+    await expect(second.page.getByTestId('start-room')).toBeHidden(); // no session controls in a second tab
     // The disabled button, and behind it start()'s own guard: neither starts a room.
     await clickStartDespiteDisabled(second.page);
     await expectNoRoomStarted(second.page);
@@ -136,8 +139,8 @@ test.describe('Live Share session host page (5A.2)', () => {
     // Closing the owner frees the lock: the waiting tab takes over (and still starts nothing itself).
     await first.page.close();
     await expect(second.page.getByTestId('owner-status')).toHaveAttribute('data-state', 'owner', { timeout: 10000 });
-    await expect(second.page.getByTestId('owner-status')).toHaveText(/The other Live Share tab closed: this tab now keeps Live Share running/);
-    await expect(second.page.getByTestId('host-status')).toHaveText('Not started');
+    await expect(second.page.getByTestId('owner-status')).toHaveText(/The other Live Share tab closed, so this tab runs Live Share now/);
+    await expect(second.page.getByTestId('host-status')).toHaveText('Not running');
     await expect(second.page.getByTestId('start-room')).toBeEnabled();
     await startRoom(second.page);
     expect(first.errors).toEqual([]);
@@ -150,10 +153,18 @@ test.describe('Live Share session host page (5A.2)', () => {
     const host = await openHostPage(context);
     const p1 = await joinPlayer(browser, await startRoom(host.page));
 
-    // Reload: the room ends; the reloaded page owns the lock again and can start a new room.
+    // Reload: the browser asks first (5C: the session is live), and leaving ends the room; the reloaded
+    // page owns the lock again and can start a new room.
+    const asked = new Promise((resolve) =>
+      host.page.once('dialog', async (d) => {
+        resolve(d.type());
+        await d.accept();
+      })
+    );
     await host.page.reload();
+    expect(await asked).toBe('beforeunload');
     await expect(p1.player.getByTestId('player-status')).toHaveText('The host ended the session.', { timeout: 10000 });
-    await expect(host.page.getByTestId('host-status')).toHaveText('Not started');
+    await expect(host.page.getByTestId('host-status')).toHaveText('Not running');
     await expect(host.page.getByTestId('owner-status')).toHaveAttribute('data-state', 'owner');
 
     // Close: the same for a player of the new room.
@@ -179,7 +190,7 @@ test.describe('Live Share session host page (5A.2)', () => {
     });
     const { page, errors } = await openHostPage(context);
     await expect(page.getByTestId('owner-status')).toHaveAttribute('data-state', 'unsupported');
-    await expect(page.getByTestId('owner-status')).toHaveText(/This browser cannot host Live Share/);
+    await expect(page.getByTestId('owner-status')).toHaveText(/This browser can't host Live Share/);
     await clickStartDespiteDisabled(page);
     await expectNoRoomStarted(page);
     expect((await diagnostics(page)).owner).toBe('unsupported');

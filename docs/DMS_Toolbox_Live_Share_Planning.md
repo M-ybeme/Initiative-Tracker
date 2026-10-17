@@ -170,7 +170,33 @@ No Live Share behavior changed.
 - **Host controls unchanged** (5C polishes them).
 - **Milestone 5B is complete** (5B.1-5B.3).
 
-**Next:** Milestone 5C, product UX: polished host controls, connection status, the session-host UX, the Battle Map indicator and "Open Live Share", and the `beforeunload` warning (§24). The Safari hidden-tab check is pending.
+**Milestone 5C, product UX on the DM's side (implemented 2026-10-16; not yet released):** details in [live-share-session-host-architecture.md](live-share-session-host-architecture.md) §6.6.
+- **The Live Share page** (`live-share.html`) is now a session-management page in plain words:
+  - **Session:** Not running / Starting… / Live / Session ended / Could not start / Connection problem, with Start Session and End Session;
+  - **Join link:** hidden by default, Copy Join Link (with a fallback that selects the link when the clipboard is refused), Show / Hide Join Link;
+  - **Players:** seat cards with each seat's state and only the actions that apply; counts of joined players, players waiting to join and disconnected seats;
+  - **Room access:** the password and the room lock, as separate controls;
+  - **Sharing:** what players see from the Battle Map, which Battle Map tabs are open, and Open Battle Map;
+  - **Troubleshooting details:** the diagnostics, collapsed.
+- **Default seats: none.** A session starts empty, but setup can't be missed: "No seats yet" shows next to the join link and in the seat list, and Add Seat suggests "Player 1", "Player 2"… so one click adds a seat. Reasons:
+  - the best seat name is the character's;
+  - the admission model has no "delete seat", so pre-made seats could only be disabled;
+  - an empty room keeps the 5B.3 player's "no seats yet" waiting state meaningful.
+- **Seat states for the DM:** Available, Joined, Disconnected — seat reserved (with "Reset this seat if the player needs to join again"; Reset Seat is highlighted), Disabled.
+  - The seat buttons keep one order and position whatever the state, so a live update never puts another action under the DM's pointer.
+  - Rename edits in place (Enter saves, Escape cancels; 1–40 characters, as the model rules).
+  - Kick, and Reset or Disable of a joined seat, ask first in one confirmation dialog. Kick says it isn't a ban. If the seat changed hands while the dialog was open, confirming does nothing and says so.
+  - Resetting or disabling a disconnected seat says what happens to the reservation.
+- **Password:** Off / Required; Set, Change and Remove Password. Typed hidden (Show password while editing), saved exactly as typed (1–128 characters, never trimmed or cut short), cleared from the page once saved, and never in the diagnostics.
+- **Lock:** Lock Room / Unlock Room, with "New players cannot join. Players already in the session stay connected."
+- **End Session asks first**, then shows "Session ended" at once; the graceful teardown is unchanged.
+- **Leaving the page warns** (the browser's own `beforeunload` dialog), only while a session is live in the tab that owns it. Not before Start, not after End, not in a second Live Share tab, and never from the Battle Map.
+- **A second Live Share tab** shows only "Live Share is already open in another tab of this browser. Switch to that tab…". Browsers can't reliably focus an unrelated tab, so it gives directions rather than a Focus button.
+- **The Battle Map panel** stays small: whether Live Share runs, how many players joined, whether this tab shares, whether players have the last save, and a note when there are unsaved edits ("they stay private until you save"). It has no room controls. **Open Live Share** focuses the Live Share tab when it can reach it. When it can't (tabs opened separately) and the session host's Web Lock says one is open, it opens no second tab and says where Live Share is.
+- **Unchanged:** admission, protocol v1, the relay, the player page and its URL (decided: the public page names come with the site navigation entry in Milestone 9, §30).
+- **Milestone 5 is complete** (5A, 5B, 5C): its exit holds. The Safari hidden-tab check is still pending (ADR §9). Live Share is still not linked from the site (Milestone 9).
+
+**Next:** Milestone 6, player ping (§24).
 
 **Backlog (Battle Map, found during the 2.3.27 and 2.3.28 reviews; not yet fixed):**
 - Pre-existing: a touch long-press (and Ctrl+click on a Mac, which is a primary-button press) starts a token drag before its menu opens, so on release an off-grid token snaps and the map is marked unsaved (the 2.3.28 right-click fix does not cover a primary-button press).
@@ -1721,7 +1747,7 @@ Only after the underlying networking has proven useful. *(Reconciled on 2026-10-
   - `surface-snapshot { surface, revision, payload }`, with per-surface validators;
 - **relay:** raise `maxPeersPerRoom` from the Milestone 0 limit of 1, and scale the host's rate allowance. A generic change, with no game state. (Done in 5B.2: 8 players.)
 
-**5C — Product UX**
+**5C — Product UX** (implemented 2026-10-16, ADR §6.6; the player join UI came in 5B.3. **Milestone 5 is complete.**)
 - polished host controls on the session host page, and the player join UI;
 - kick, reset and disable;
 - connection status;
@@ -1773,6 +1799,8 @@ Exit: typical home, mobile and remote-table setups connect consistently.
 ## Milestone 9 — Experimental Release
 
 Ship behind an experimental flag with documentation (including the ~~fog trust model~~ composited-background fog privacy model (§13.2) and a privacy explanation) and a troubleshooting guide. Use it at real tables and collect failure reports before expanding scope.
+
+Also part of it (from 5C): the entry to Live Share in the site navigation (the Battle Map's panel appears only once a Live Share page is open), and the public names of the Live Share pages (the player page is still `liveshare-dev.html`).
 
 ## Milestone 10 — Stable V1
 
@@ -2004,7 +2032,7 @@ Intentionally unresolved until the relevant milestone:
 - ~~**Hidden session host tab behavior** — **must be settled first in Milestone 5A, by a spike** (ADR §9). It decides between event-driven sending, a keep-visible warning, and the iframe-shell fallback.~~
   - Settled on 2026-10-02 for desktop Chrome and Firefox: outcome B, with the architecture unchanged. Committed publications are sent from the BroadcastChannel event, with timers only for coalescing.
   - **Safari still needs its manual check** (ADR §9).
-- **Session host page name and URL, and the product player page** — Milestone 5A/5C.
+- ~~**Session host page name and URL, and the product player page** — Milestone 5A/5C.~~ The session host page is `live-share.html` (5A.2). The player page stays `liveshare-dev.html` through Milestone 5 (decided in 5C): renaming it changes only the join link's path, so the public names of both pages are set together with Live Share's entry in the site navigation, at the experimental release (Milestone 9).
 - **Duplicate surface tabs** — recommended: the most recent registration is the active publisher, plus an explicit "publish from this tab" (Milestone 5A).
 - **Persisting a closed surface's publication across a session host refresh** — default no (Milestone 7).
 - **What players see when the Initiative Tracker page is closed** — decided with the tracker's design (§27).

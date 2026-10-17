@@ -122,7 +122,7 @@ describe('session players: a new connection is unadmitted', () => {
     time.advance(5000);
     expect(gameplayOf(link)).toEqual([]);
     expect(JSON.stringify(link.sent)).not.toContain('pw');
-    expect(players.counts()).toEqual({ links: 1, admitted: 0, waiting: 1 });
+    expect(players.counts()).toEqual({ links: 1, admitted: 0, waiting: 1, closing: 0 });
   });
 
   it('may not request assets, and learns nothing about them by trying', () => {
@@ -175,7 +175,7 @@ describe('session players: joining', () => {
     expect(link.last('surface-snapshot')).toEqual({ v: 1, type: 'surface-snapshot', surface: 'battle-map', revision, payload });
     link.receive({ v: 1, type: 'asset-request', assetIds: [ASSET_ID] });
     expect(link.types().slice(4)).toEqual(['asset-meta', 'chunk']);
-    expect(players.counts()).toEqual({ links: 1, admitted: 1, waiting: 0 });
+    expect(players.counts()).toEqual({ links: 1, admitted: 1, waiting: 0, closing: 0 });
     expect(players.peerState('p1')).toBe('admitted');
   });
 
@@ -393,6 +393,8 @@ describe('session players: leaving, disconnecting and DM actions', () => {
     players.kickSeat(seats[1]);
     expect(links[1].last('session-ended')).toEqual({ v: 1, type: 'session-ended', reason: 'kicked' });
     expect(players.peerState('pb')).toBe('unadmitted');
+    // While it closes it is neither a joined player nor one waiting to join (5C: the DM's counts).
+    expect(players.counts()).toEqual({ links: 4, admitted: 2, waiting: 1, closing: 1 });
     expect(waiting.last('admission-state').seats[1].available).toBe(true);
     // Messages from the kicked peer while it closes are ignored.
     links[1].receive({ v: 1, type: 'asset-request', assetIds: [ASSET_ID] });
@@ -439,7 +441,7 @@ describe('session players: leaving, disconnecting and DM actions', () => {
     players.end();
     for (const l of [...links, waiting]) expect(l.last('session-ended')).toEqual({ v: 1, type: 'session-ended', reason: 'ended' });
     expect(players.ended).toBe(true);
-    expect(players.counts()).toEqual({ links: 0, admitted: 0, waiting: 0 });
+    expect(players.counts()).toEqual({ links: 0, admitted: 0, waiting: 0, closing: 0 });
     expect(players.seats()).toEqual([]);
     expect(players.attach('late', fakeLink())).toBe(false);
     expect(() => players.createSeat('again')).toThrow();

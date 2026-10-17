@@ -7,6 +7,7 @@
 // Everything here runs the real pages and modules; nothing bypasses the BroadcastChannel boundary.
 import { test, expect } from '@playwright/test';
 import {
+  endSession,
   openHost,
   openBattleMap,
   startAndJoin,
@@ -73,7 +74,7 @@ test.describe('Live Share: the Battle Map publishes to the session page (5A.4)',
     // 1-3: the session host with a room open, then the Battle Map.
     const { hostContext, host, hostErrors, session } = await openHost(browser);
     await expect(liveShareState(host)).toHaveAttribute('data-state', 'active');
-    await expect(session.getByTestId('surface')).toHaveText(/Battle Map: open, publishing/);
+    await expect(session.getByTestId('surface')).toHaveText(/Battle Map: open, sharing/);
 
     // 4-7: a map is built and saved; a player joins and gets its structure, background and art.
     const A = await savedMapWithArt(host);
@@ -102,7 +103,7 @@ test.describe('Live Share: the Battle Map publishes to the session page (5A.4)',
     const assetsReceived = (await store(host)).assetsReceived;
     await host.close();
     await expect(session.getByTestId('surface')).toHaveAttribute('data-liveness', 'closed');
-    await expect(session.getByTestId('host-status')).toHaveText('Room open — waiting for players');
+    await expect(session.getByTestId('host-status')).toHaveAttribute('data-state', 'live');
     await p1.player.waitForTimeout(1000);
     await expect(p1.player.getByTestId('player-status')).toHaveText('Connected to host');
     expect(await playerRevision(p1.player)).toBe(B.revision);
@@ -110,7 +111,7 @@ test.describe('Live Share: the Battle Map publishes to the session page (5A.4)',
     expect(await session.evaluate(() => window.LiveShareSessionHost.committedSnapshot())).toEqual(B);
     // The session page still serves the assets: a late player (one at a time until 5B) gets them all.
     await p1.player.getByTestId('leave-session').click();
-    await expect(session.getByTestId('peer-list')).toHaveText('No players connected.', { timeout: 15000 });
+    await expect(session.getByTestId('player-count')).toHaveText('No players yet', { timeout: 15000 });
     const p2 = await joinPlayer(browser, await startRoom(session));
     await expect.poll(() => playerRevision(p2.player)).toBe(B.revision);
     await expect(p2.player.getByTestId('map-assets')).toHaveText('Map image shown.', { timeout: 15000 });
@@ -133,7 +134,7 @@ test.describe('Live Share: the Battle Map publishes to the session page (5A.4)',
     await expect.poll(() => playerRevision(p2.player), { timeout: 15000 }).toBe(B.revision + 1);
 
     // 18-20: ending the room on the session page ends it for the player; the Battle Map keeps working.
-    await session.getByTestId('end-session').click();
+    await endSession(session);
     await expect(p2.player.getByTestId('player-status')).toHaveText('The host ended the session.', { timeout: 10000 });
     await expect(liveShareState(reopened)).toHaveAttribute('data-state', 'not-running');
     expect(await session.evaluate(() => window.LiveShareSessionHost.committedSnapshot())).toBeNull();
@@ -280,7 +281,7 @@ test.describe('Live Share: the Battle Map publishes to the session page (5A.4)',
     await expect(liveShareState(tab2)).toHaveAttribute('data-state', 'inactive');
     await drag(tab2, { x: 125, y: 125 }, 100, 0);
     await save(tab2);
-    await expect(tab2.getByTestId('bm-live-share-status')).toHaveText('Live Share is using another Battle Map tab. Saving here does not update players.');
+    await expect(tab2.getByTestId('bm-live-share-status')).toHaveText("Another Battle Map tab is sharing. Saving here doesn't update players.");
     await tab2.waitForTimeout(1500);
     expect(await hostSnapshot(tab1)).toEqual(A);
     expect(await playerRevision(p.player)).toBe(A.revision);
@@ -314,7 +315,7 @@ test.describe('Live Share: the Battle Map publishes to the session page (5A.4)',
     const { hostContext, host, hostErrors, session } = await openHost(browser);
     await importMap(host, await makeMap(host), { tokens: [BARD] });
     await expect.poll(async () => (await hostSnapshot(host))?.background, { timeout: 15000 }).not.toBeNull();
-    await session.getByTestId('end-session').click();
+    await endSession(session);
     await expect(liveShareState(host)).toHaveAttribute('data-state', 'not-running');
     const rebuilds = () => host.evaluate(() => window.BattleMapLiveShare.getAssetDiagnostics().background.rebuilds);
     const before = await rebuilds();

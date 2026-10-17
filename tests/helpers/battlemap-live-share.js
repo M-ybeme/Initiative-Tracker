@@ -224,7 +224,7 @@ const roomSessions = new Map(); // join link -> its session page
 export async function startRoom(session) {
   if (await session.getByTestId('start-room').isEnabled()) {
     await session.getByTestId('start-room').click();
-    await expect(session.getByTestId('host-status')).toHaveText('Room open — waiting for players', { timeout: 15000 });
+    await expect(session.getByTestId('host-status')).toHaveAttribute('data-state', 'live', { timeout: 15000 });
   }
   const joinUrl = await session.getByTestId('join-link').textContent();
   roomSessions.set(joinUrl, session);
@@ -237,12 +237,51 @@ const escapeRe = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 export async function addSeat(session, name) {
   await session.getByTestId('seat-name').fill(name);
   await session.getByTestId('add-seat').click();
-  const row = session.getByTestId('seat').filter({ has: session.getByTestId('seat-label').filter({ hasText: new RegExp(`^${escapeRe(name)}: `) }) });
+  const row = seatRow(session, name);
   await expect(row).toHaveCount(1);
   return row.getAttribute('data-seat-id');
 }
+// A seat's card on the session page, by its exact name.
+export const seatRow = (session, name) => session.getByTestId('seat').filter({ has: session.getByTestId('seat-label').filter({ hasText: new RegExp(`^${escapeRe(name)}$`) }) });
 // The DM's controls for a seat on the session page ('rename' | 'enable' | 'disable' | 'kick' | 'reset').
 export const seatButton = (session, seatId, action) => session.locator(`[data-testid="seat"][data-seat-id="${seatId}"] button[data-action="${action}"]`);
+// 5C: the DM's seat action, confirming it when the page asks (kick; reset or disable of a claimed seat).
+export async function seatAction(session, seatId, action) {
+  await seatButton(session, seatId, action).click();
+  const dialog = session.getByTestId('confirm-dialog');
+  if (await dialog.isVisible()) await dialog.getByTestId('confirm-ok').click();
+  await expect(dialog).toBeHidden();
+}
+// Renames a seat with its inline editor.
+export async function renameSeat(session, seatId, name) {
+  await seatButton(session, seatId, 'rename').click();
+  const row = session.locator(`[data-testid="seat"][data-seat-id="${seatId}"]`);
+  await row.getByTestId('rename-input').fill(name);
+  await row.getByTestId('rename-save').click();
+  await expect(row.getByTestId('rename-input')).toBeHidden();
+}
+// The room password (5C: Set / Change Password opens an editor; Save sets it), and removing it.
+export async function setRoomPassword(session, password) {
+  await session.getByTestId('set-password').click();
+  await session.getByTestId('room-password').fill(password);
+  await session.getByTestId('save-password').click();
+  await expect(session.getByTestId('password-status')).toHaveAttribute('data-required', 'true');
+}
+export async function removeRoomPassword(session) {
+  await session.getByTestId('clear-password').click();
+  await expect(session.getByTestId('password-status')).toHaveAttribute('data-required', 'false');
+}
+// Locks or unlocks the room (5C: the Lock Room / Unlock Room button).
+export async function setRoomLocked(session, locked) {
+  if ((await session.getByTestId('lock-status').getAttribute('data-locked')) !== String(locked)) await session.getByTestId('lock-room').click();
+  await expect(session.getByTestId('lock-status')).toHaveAttribute('data-locked', String(locked));
+}
+// End Session, confirmed (5C asks first).
+export async function endSession(session) {
+  await session.getByTestId('end-session').click();
+  await session.getByTestId('confirm-dialog').getByTestId('confirm-ok').click();
+  await expect(session.getByTestId('host-status')).toHaveAttribute('data-state', 'ended');
+}
 // The player's presentation state on the join flow (5B.3: data-state on the player section).
 export const playerState = (player) => player.getByTestId('player').getAttribute('data-state');
 // The player picks a seat by name in the join form (with a password if given), presses Join Room and

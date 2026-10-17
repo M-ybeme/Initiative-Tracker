@@ -8,6 +8,7 @@
 // the background it displays; what left the host is checked from a log of every data-channel send.
 import { test, expect } from '@playwright/test';
 import {
+  endSession,
   HOST_PAGE,
   SECRET,
   hostSnapshot,
@@ -190,7 +191,7 @@ test.describe('Live Share player-visible background and assets (Milestone 3)', (
     // 19-20: the DM ends the session: every object URL is revoked; the structured map stays.
     const liveBefore = await player.evaluate(() => [...window.__lsUrls.created].filter((u) => !window.__lsUrls.revoked.has(u)).length);
     expect(liveBefore).toBeGreaterThanOrEqual(2); // background + token art
-    await sessionOf(host).getByTestId('end-session').click();
+    await endSession(sessionOf(host));
     await expect(player.getByTestId('map-status')).toContainText('Disconnected', { timeout: 10000 });
     await expect.poll(() => player.evaluate(() => [...window.__lsUrls.created].filter((u) => !window.__lsUrls.revoked.has(u)).length)).toBe(0);
     await expect(player.locator('.ls-background-image, [data-art="image"]')).toHaveCount(0);

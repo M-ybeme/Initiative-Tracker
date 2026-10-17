@@ -19,6 +19,12 @@ import {
   addSeat,
   chooseSeat,
   seatButton,
+  seatAction,
+  seatRow,
+  renameSeat,
+  setRoomPassword,
+  removeRoomPassword,
+  setRoomLocked,
   playerState,
   diagnostics,
 } from '../helpers/battlemap-live-share.js';
@@ -115,7 +121,7 @@ test.describe('Live Share player join flow (5B.3)', () => {
 
     await p.player.getByLabel('Seat').selectOption({ label: 'Aria' });
     // Choosing reserves nothing: the seat is still available on the host.
-    await expect(session.getByTestId('seat').filter({ hasText: 'Aria:' })).toHaveAttribute('data-state', 'available');
+    await expect(seatRow(session, 'Aria')).toHaveAttribute('data-state', 'available');
     await expect(p.player.getByTestId('join-room')).toBeEnabled();
     await p.player.getByTestId('join-room').click();
     await expect(p.player.getByTestId('join-status')).toHaveText('Joined as Aria');
@@ -163,8 +169,7 @@ test.describe('Live Share player join flow (5B.3)', () => {
     const p = await joinForm(browser, joinUrl);
     await expect(p.player.getByTestId('join-password')).toBeHidden();
     // The DM sets a password while the player waits: the field appears, labelled.
-    await session.getByTestId('room-password').fill('Open Sesame ');
-    await session.getByTestId('set-password').click();
+    await setRoomPassword(session, 'Open Sesame ');
     await expect(p.player.getByLabel('Password')).toBeVisible();
     await expect(p.player.getByLabel('Password')).toHaveAttribute('type', 'password');
 
@@ -190,7 +195,7 @@ test.describe('Live Share player join flow (5B.3)', () => {
     // The password is removed while another player waits with one typed: the field goes, emptied.
     const q = await joinForm(browser, joinUrl);
     await q.player.getByLabel('Password').fill('half typed');
-    await session.getByTestId('clear-password').click();
+    await removeRoomPassword(session);
     await expect(q.player.getByTestId('join-password')).toBeHidden();
     expect(await q.player.getByTestId('join-password').inputValue()).toBe('');
 
@@ -210,14 +215,14 @@ test.describe('Live Share player join flow (5B.3)', () => {
     await waiting.player.getByLabel('Seat').selectOption({ label: 'Brom' });
     await expect(waiting.player.getByTestId('join-room')).toBeEnabled();
 
-    await session.getByTestId('lock-room').check();
+    await setRoomLocked(session, true);
     await expect(waiting.player.getByTestId('join-note')).toHaveText("The room is locked. The DM isn't letting new players join right now.");
     await expect(waiting.player.getByTestId('join-room')).toBeDisabled();
     expect(await selectedSeat(waiting.player)).toBe('Brom'); // the choice is kept for later
     await expect(inside.player.getByTestId('join-status')).toHaveText('Joined as Aria');
     await expect(inside.player.getByTestId('player')).toHaveAttribute('data-state', 'connected');
 
-    await session.getByTestId('lock-room').uncheck();
+    await setRoomLocked(session, false);
     await expect(waiting.player.getByTestId('join-note')).toHaveText('Choose your seat to join the session.');
     await expect(waiting.player.getByTestId('join-room')).toBeEnabled();
     await waiting.player.getByTestId('join-room').click();
@@ -278,7 +283,7 @@ test.describe('Live Share player join flow (5B.3)', () => {
     await expect(p.player.getByTestId('join-note')).toHaveText('Every seat is taken right now. Waiting for the host…');
     await expect(p.player.getByTestId('join-room')).toBeDisabled();
 
-    await seatButton(session, seatA, 'reset').click();
+    await seatAction(session, seatA, 'reset');
     await expect(seatOption(p.player, 'Aria')).toBeEnabled();
     await expect(p.player.getByTestId('join-seat-help')).toBeHidden();
     expect(await chooseSeat(p.player, 'Aria')).toBe('Joined as Aria');
@@ -319,14 +324,15 @@ test.describe('Live Share player join flow (5B.3)', () => {
       players[n] = await joinForm(browser, joinUrl);
       expect(await chooseSeat(players[n].player, n)).toBe(`Joined as ${n}`);
     }
-    await seatButton(session, ids.Aria, 'kick').click();
-    await seatButton(session, ids.Brom, 'reset').click();
-    await seatButton(session, ids.Cael, 'disable').click();
+    await seatAction(session, ids.Aria, 'kick');
+    await seatAction(session, ids.Brom, 'reset');
+    await seatAction(session, ids.Cael, 'disable');
     await expect(players.Aria.player.getByTestId('player-status')).toHaveText('You were removed from the session.', { timeout: 10000 });
     await expect(players.Brom.player.getByTestId('player-status')).toHaveText('Your seat was reset by the host.', { timeout: 10000 });
     await expect(players.Cael.player.getByTestId('player-status')).toHaveText('Your seat was disabled by the host.', { timeout: 10000 });
     await expect(players.Dara.player.getByTestId('player')).toHaveAttribute('data-state', 'connected');
     await session.getByTestId('end-session').click();
+    await session.getByTestId('confirm-ok').click();
     await expect.poll(async () => (await playerLog(players.Dara.player)).filter((m) => m.type === 'session-ended').map((m) => m.reason), { timeout: 10000 }).toEqual(['ended']);
     await expect(players.Dara.player.getByTestId('player-status')).toHaveText('The host ended the session.', { timeout: 10000 });
     for (const n of names) await expect(players[n].player.getByTestId('player')).toHaveAttribute('data-state', 'session-ended');
@@ -347,23 +353,21 @@ test.describe('Live Share player join flow (5B.3)', () => {
     const seatA = await addSeat(session, 'Aria');
     const seatB = await addSeat(session, 'Brom');
     await addSeat(session, 'Cael');
-    await session.getByTestId('room-password').fill('pw');
-    await session.getByTestId('set-password').click();
+    await setRoomPassword(session, 'pw');
     const p = await joinForm(browser, joinUrl);
     await p.player.getByLabel('Seat').selectOption({ label: 'Brom' });
     await p.player.getByLabel('Password').fill('typing');
     await expect(p.player.getByLabel('Password')).toBeFocused();
 
     // Another seat is renamed, another player takes a third seat, the room locks and unlocks.
-    await session.getByTestId('seat-name').fill('Aria the Bold');
-    await seatButton(session, seatA, 'rename').click();
+    await renameSeat(session, seatA, 'Aria the Bold');
     await expect(seatOption(p.player, 'Aria the Bold')).toBeEnabled();
     const other = await joinForm(browser, joinUrl);
     expect(await chooseSeat(other.player, 'Cael', { password: 'pw' })).toBe('Joined as Cael');
     await expect(seatOption(p.player, 'Cael — taken')).toBeDisabled();
-    await session.getByTestId('lock-room').check();
+    await setRoomLocked(session, true);
     await expect(p.player.getByTestId('join-room')).toBeDisabled();
-    await session.getByTestId('lock-room').uncheck();
+    await setRoomLocked(session, false);
     await expect(p.player.getByTestId('join-room')).toBeEnabled();
     // None of that touched the form.
     await expect(p.player.getByLabel('Password')).toBeFocused();

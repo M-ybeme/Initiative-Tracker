@@ -29,14 +29,19 @@
  * role (the claimed tab then offers its last saved map, never unsaved edits).
  *
  * The small Live Share panel appears once a session page is open in this browser (or, for development,
- * with ?liveshare=1). Without one, the Battle Map behaves exactly as without Live Share.
+ * with ?liveshare=1). Without one, the Battle Map behaves exactly as without Live Share. The panel only
+ * says what players get (5C): whether Live Share runs, how many players joined, whether this tab is
+ * the one sharing, and whether players have the last save (unsaved edits stay private). Seats, the
+ * password, the lock and ending the session are on the Live Share page, which "Open Live Share"
+ * focuses or opens; it never opens a second Live Share tab while one is open (the session host's Web
+ * Lock says whether one is).
  *
  * Development query parameters, passed on to the session page by "Open Live Share":
  *   ?relay=ws://host:port  ?forceRelay=1  ?iceTimeoutMs=20000
  */
 import { createSurfacePublisher } from './modules/live-share/surface-publisher.js';
 import { fromProjection, BATTLE_MAP_SURFACE, BATTLE_MAP_SURFACE_VERSION } from './modules/live-share/battlemap-publication.js';
-import { SESSION_HOST_WINDOW } from './modules/live-share/session-host-lock.js';
+import { SESSION_HOST_WINDOW, SESSION_HOST_LOCK } from './modules/live-share/session-host-lock.js';
 
 const params = new URLSearchParams(location.search);
 const REJECTION_TEXT = {
@@ -113,7 +118,7 @@ function initLiveShare(seam) {
     if (!ui) {
       if (!heardHost && params.get('liveshare') !== '1') return; // no session page: no Live Share UI
       ui = buildPanel();
-      ui.open.addEventListener('click', openLiveShare);
+      ui.open.addEventListener('click', () => openLiveShare((text) => (ui.note.textContent = text)));
       ui.claim.addEventListener('click', () => publisher.claim());
     }
     const incompatible = status.roleReason === 'incompatible';
@@ -121,17 +126,17 @@ function initLiveShare(seam) {
     let text;
     if (!status.running) {
       state = 'not-running';
-      text = heardHost ? 'Live Share is open but not running. Start it on the Live Share page.' : 'Live Share is not running.';
+      text = heardHost ? 'Live Share is open but not running. Start a session on the Live Share page.' : 'Live Share is not running.';
     } else if (incompatible) {
       state = 'incompatible';
       text = 'The Live Share page is a different version of the Toolbox. Reload both pages.';
     } else if (status.active) {
       state = 'active';
       const n = status.players;
-      text = `Live Share is running: this tab shares its saved map with ${n} player${n === 1 ? '' : 's'}.`;
+      text = `Live Share is on · ${n} player${n === 1 ? '' : 's'} joined. This tab shares your saved map.`;
     } else {
       state = 'inactive';
-      text = 'Live Share is using another Battle Map tab. Saving here does not update players.';
+      text = "Another Battle Map tab is sharing. Saving here doesn't update players.";
     }
     ui.status.dataset.state = state;
     ui.status.textContent = text;
@@ -152,8 +157,16 @@ function initLiveShare(seam) {
       else pub = ['preparing', 'Preparing your saved map for players…'];
       [ui.publication.dataset.state, ui.publication.textContent] = pub;
     }
+    // Unsaved edits stay on this screen: players keep the last save until the DM saves again.
+    ui.unsaved.hidden = !(state === 'active' && unsaved() && seam.hasPublishedState());
     ui.claim.hidden = !(status.running && !status.active && !incompatible);
     markSaveButton(state === 'active');
+  }
+
+  // Unsaved edits (the Battle Map's own Save button state): players still have the last save.
+  function unsaved() {
+    const btn = document.getElementById('saveMapBtn');
+    return !!btn && btn.dataset.state === 'dirty';
   }
 
   // The save button says what saving does while this tab is sharing.
@@ -167,20 +180,42 @@ function initLiveShare(seam) {
   }
 }
 
-// Opens the session page, or focuses it if this browser already has it under its window name. A
-// named window that turns out to be blank is navigated there; an existing one is never reloaded
-// (reloading it would end the session).
-function openLiveShare() {
+// Opens the session page, or focuses it if this browser already has it under its window name. An
+// existing one is never reloaded (reloading it would end the session). A tab can reach the session
+// page by name only when one opened the other; otherwise the browser gives a new blank window. That
+// window becomes the session page only if no Live Share tab is open (nobody holds the session host's
+// Web Lock): a second one would only say "already open in another tab", so it is closed and the DM is
+// told where Live Share is instead.
+async function openLiveShare(note) {
   const url = new URL(location.pathname.endsWith('.html') ? 'live-share.html' : 'live-share', location.href);
   for (const key of ['relay', 'forceRelay', 'iceTimeoutMs']) if (params.has(key)) url.searchParams.set(key, params.get(key));
   const win = window.open('', SESSION_HOST_WINDOW);
-  if (!win) return; // blocked: nothing else would open either
+  if (!win) return note('Your browser blocked the new tab. Allow pop-ups for this site to open Live Share.');
+  let blank = false;
   try {
-    if (win.location.href === 'about:blank') win.location.href = url.href;
+    blank = win.location.href === 'about:blank';
   } catch {
     // Not readable: it is some other page under that name; leave it.
   }
+  if (blank) {
+    if (await liveShareOpenElsewhere()) {
+      win.close();
+      return note('Live Share is already open in another tab of this browser: switch to that tab.');
+    }
+    win.location.href = url.href;
+  }
+  note('');
   win.focus();
+}
+
+// Whether some tab of this browser holds the session host lock (a Live Share page is open).
+async function liveShareOpenElsewhere() {
+  try {
+    const { held = [] } = await navigator.locks.query();
+    return held.some((lock) => lock.name === SESSION_HOST_LOCK);
+  } catch {
+    return false;
+  }
 }
 
 function buildPanel() {
@@ -193,7 +228,7 @@ function buildPanel() {
     'position:fixed;right:12px;bottom:12px;z-index:1080;width:300px;max-height:70vh;overflow:auto;background:#0f1620;color:#e6edf3;border:1px solid #2a3a4c;border-radius:8px;padding:8px 12px;font-size:13px;box-shadow:0 4px 16px rgba(0,0,0,.5)';
   const title = document.createElement('summary');
   title.style.cssText = 'font-weight:600;margin-bottom:4px;cursor:pointer';
-  title.textContent = 'Live Share (in development)';
+  title.textContent = 'Live Share';
   const status = document.createElement('div');
   status.dataset.testid = 'bm-live-share-status';
   status.setAttribute('role', 'status');
@@ -202,7 +237,16 @@ function buildPanel() {
   publication.style.cssText = 'color:#9fb3c8;margin-top:4px';
   const note = document.createElement('div');
   note.style.cssText = 'color:#fbbf24;font-size:12px;margin-top:6px';
-  note.textContent = 'Players see your last SAVED map, with fog baked in; hidden tokens, the uncovered map, HP and DM-only data are never sent.';
+  note.textContent = 'Players see your last saved map, with your fog. Hidden tokens, the uncovered map, HP and DM-only data are never sent.';
+  const unsavedNote = document.createElement('div');
+  unsavedNote.dataset.testid = 'bm-live-share-unsaved';
+  unsavedNote.style.cssText = 'color:#9fb3c8;margin-top:2px';
+  unsavedNote.textContent = 'You have unsaved edits: they stay private until you save.';
+  unsavedNote.hidden = true;
+  const message = document.createElement('div');
+  message.dataset.testid = 'bm-live-share-note';
+  message.setAttribute('role', 'status');
+  message.style.cssText = 'color:#e6edf3;margin-top:4px';
   const button = (text, testid) => {
     const b = document.createElement('button');
     b.type = 'button';
@@ -217,7 +261,7 @@ function buildPanel() {
   const buttons = document.createElement('div');
   buttons.style.cssText = 'display:flex;flex-wrap:wrap;gap:4px;margin-top:6px';
   buttons.append(open, claim);
-  panel.append(title, status, publication, buttons, note);
+  panel.append(title, status, publication, unsavedNote, buttons, message, note);
   document.body.append(panel);
-  return { status, publication, open, claim };
+  return { status, publication, unsaved: unsavedNote, open, claim, note: message };
 }
